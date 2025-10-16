@@ -19,6 +19,7 @@ import Wallet from "@/pages/Wallet";
 import Leaderboard from "@/pages/Leaderboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import OutletPanel from "@/pages/OutletPanel";
+import Setup from "@/pages/Setup";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
