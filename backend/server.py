@@ -753,6 +753,22 @@ async def activate_outlet(outlet_id: str):
     return {"message": "Outlet activated"}
 
 # ========== ADMIN ROUTES ==========
+@api_router.post("/admin/promote")
+async def promote_user(email: str, role: str):
+    """Promote user to admin or outlet role"""
+    if role not in ["admin", "outlet", "user", "master_stockist", "sub_stockist"]:
+        raise HTTPException(status_code=400, detail="Invalid role")
+    
+    result = await db.users.update_one(
+        {"email": email},
+        {"$set": {"role": role}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": f"User promoted to {role} successfully"}
+
 @api_router.get("/admin/stats")
 async def get_admin_stats():
     """Get admin dashboard stats"""
