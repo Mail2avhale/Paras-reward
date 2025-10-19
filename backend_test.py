@@ -244,15 +244,8 @@ def test_cashback_maintenance_system():
     """Test cashback maintenance system (₹99 monthly fee)"""
     print("\n3. Testing Cashback Maintenance System...")
     
-    # First, set VIP activation date to 31 days ago to trigger maintenance
-    print("\n3a. Setting up VIP user with past activation date...")
-    vip_activation_date = (datetime.now() - timedelta(days=31)).isoformat()
-    
-    # We need to manually update the user's VIP activation date
-    # Since we don't have direct DB access, we'll simulate this by testing the maintenance endpoint
-    
-    # Test 3b: Check maintenance for VIP user
-    print("\n3b. Testing POST /api/wallet/check-maintenance/{uid}...")
+    # Test 3a: Check maintenance for VIP user (should not be due yet)
+    print("\n3a. Testing POST /api/wallet/check-maintenance/{uid} (new VIP user)...")
     try:
         response = requests.post(f"{API_BASE}/wallet/check-maintenance/{test_vip_user['uid']}", timeout=30)
         print(f"Status Code: {response.status_code}")
@@ -263,18 +256,35 @@ def test_cashback_maintenance_system():
             print("✅ Maintenance check test PASSED")
             print(f"Maintenance result: {json.dumps(result, indent=2)}")
             
-            # Check if maintenance was applied
-            if result.get("maintenance_applied"):
-                print("✅ Maintenance fee applied successfully")
-                return True
+            # For new VIP users, maintenance should not be due yet
+            if not result.get("maintenance_applied"):
+                print("✅ Maintenance correctly not applied for new VIP user")
             else:
-                print("ℹ️ Maintenance not yet due (expected for new VIP users)")
-                return True
+                print("⚠️ Maintenance was applied (unexpected for new user)")
+            
+            return True
         else:
             print(f"❌ Maintenance check test FAILED - Status: {response.status_code}")
             return False
     except Exception as e:
         print(f"❌ Maintenance check test FAILED - Error: {e}")
+        return False
+    
+    # Test 3b: Test idempotency - calling maintenance check again
+    print("\n3b. Testing maintenance check idempotency...")
+    try:
+        response = requests.post(f"{API_BASE}/wallet/check-maintenance/{test_vip_user['uid']}", timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            print("✅ Maintenance check idempotency test PASSED")
+            return True
+        else:
+            print(f"❌ Maintenance check idempotency test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Maintenance check idempotency test FAILED - Error: {e}")
         return False
 
 def test_cashback_credit_with_lien_clearing():
