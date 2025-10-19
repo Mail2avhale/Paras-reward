@@ -266,38 +266,175 @@ async def update_mined_coins(uid: str):
     return 0
 
 # ========== AUTH ROUTES ==========
-@api_router.post("/auth/login", response_model=User)
-async def login(user_login: UserLogin):
-    """Social login (Google)"""
-    # Check if user exists
-    existing_user = await db.users.find_one({"email": user_login.email})
+@api_router.post("/auth/register")
+async def register_user(request: Request):
+    """Enhanced user registration with duplicate checks"""
+    data = await request.json()
     
-    if existing_user:
-        # Update last login
-        await db.users.update_one(
-            {"email": user_login.email},
-            {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}}
-        )
-        if isinstance(existing_user.get('created_at'), str):
-            existing_user['created_at'] = datetime.fromisoformat(existing_user['created_at'])
-        if isinstance(existing_user.get('last_login'), str):
-            existing_user['last_login'] = datetime.fromisoformat(existing_user['last_login'])
-        if existing_user.get('membership_expiry') and isinstance(existing_user['membership_expiry'], str):
-            existing_user['membership_expiry'] = datetime.fromisoformat(existing_user['membership_expiry'])
-        return User(**existing_user)
+    # Check duplicates
+    for field in ["email", "mobile", "aadhaar_number", "pan_number"]:
+        if data.get(field):
+            if not await check_unique_fields(field, data[field]):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"{field.replace('_', ' ').title()} already registered"
+                )
     
-    # Create new user
-    new_user = User(
-        email=user_login.email,
-        name=user_login.name,
-        profile_picture=user_login.profile_picture
+    # Hash password if provided
+    if data.get('password'):
+        data['password_hash'] = hash_password(data['password'])
+        del data['password']
+    
+    # Create user
+    user = User(**data)
+    user_dict = user.model_dump()
+    
+    # Convert datetime fields
+    for field in ["created_at", "updated_at", "last_login"]:
+        if user_dict.get(field):
+            user_dict[field] = user_dict[field].isoformat()
+    
+    await db.users.insert_one(user_dict)
+    return {"message": "Registration successful", "uid": user.uid}
+
+@api_router.post("/auth/login")
+async def login(
+    identifier: str,
+    password: str,
+    device_id: Optional[str] = None,
+    ip_address: Optional[str] = None
+):
+    """User login with email/mobile and password"""
+    # Find user by email or mobile
+    user = await db.users.find_one({
+        "$or": [
+            {"email": identifier},
+            {"mobile": identifier},
+            {"uid": identifier}
+        ]
+    })
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify password
+    if user.get("password_hash"):
+        if not verify_password(password, user["password_hash"]):
+            raise HTTPException(status_code=401, detail="Invalid password")
+    
+    if user.get("is_banned"):
+        raise HTTPException(status_code=403, detail=f"Account suspended: {user.get('suspension_reason', 'Contact support')}")
+    
+    # Update last login and device info
+    update_data = {
+        "last_login": datetime.now(timezone.utc).isoformat(),
+    }
+    
+    if device_id:
+        update_data["device_id"] = device_id
+    if ip_address:
+        update_data["ip_address"] = ip_address
+    
+    await db.users.update_one(
+        {"uid": user["uid"]},
+        {
+            "$set": update_data,
+            "$inc": {"login_count": 1}
+        }
     )
-    doc = new_user.model_dump()
-    doc['created_at'] = doc['created_at'].isoformat()
-    doc['last_login'] = doc['last_login'].isoformat()
     
-    await db.users.insert_one(doc)
-    return new_user
+    # Convert datetime strings
+    for field in ["created_at", "updated_at", "last_login", "membership_expiry"]:
+        if user.get(field) and isinstance(user[field], str):
+            try:
+                user[field] = datetime.fromisoformat(user[field])
+            except:
+                pass
+    
+    # Remove password hash from response
+    if "password_hash" in user:
+        del user["password_hash"]
+    
+    return User(**user)
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(email: str):
+    """Request password reset"""
+    user = await db.users.find_one({"email": email})
+    if not user:
+        # Don't reveal if email exists
+        return {"message": "If the email exists, a reset link has been sent"}
+    
+    # Generate reset token
+    reset_token = generate_reset_token()
+    reset_expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+    
+    await db.users.update_one(
+        {"email": email},
+        {
+            "$set": {
+                "reset_token": reset_token,
+                "reset_token_expiry": reset_expiry.isoformat()
+            }
+        }
+    )
+    
+    # In production, send email here
+    # For now, return token (remove in production)
+    return {
+        "message": "Password reset token generated",
+        "reset_token": reset_token,
+        "note": "In production, this would be sent via email"
+    }
+
+@api_router.post("/auth/reset-password")
+async def reset_password(reset_token: str, new_password: str):
+    """Reset password using token"""
+    user = await db.users.find_one({"reset_token": reset_token})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="Invalid reset token")
+    
+    # Check if token expired
+    if user.get("reset_token_expiry"):
+        expiry = datetime.fromisoformat(user["reset_token_expiry"])
+        if datetime.now(timezone.utc) > expiry:
+            raise HTTPException(status_code=400, detail="Reset token expired")
+    
+    # Update password
+    await db.users.update_one(
+        {"uid": user["uid"]},
+        {
+            "$set": {
+                "password_hash": hash_password(new_password),
+                "reset_token": None,
+                "reset_token_expiry": None
+            }
+        }
+    )
+    
+    return {"message": "Password reset successful"}
+
+@api_router.post("/auth/change-password")
+async def change_password(uid: str, old_password: str, new_password: str):
+    """Change password for logged in user"""
+    user = await db.users.find_one({"uid": uid})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify old password
+    if user.get("password_hash"):
+        if not verify_password(old_password, user["password_hash"]):
+            raise HTTPException(status_code=401, detail="Current password is incorrect")
+    
+    # Update password
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": {"password_hash": hash_password(new_password)}}
+    )
+    
+    return {"message": "Password changed successfully"}
 
 @api_router.get("/auth/user/{uid}", response_model=User)
 async def get_user(uid: str):
