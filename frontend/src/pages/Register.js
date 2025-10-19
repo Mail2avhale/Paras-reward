@@ -23,6 +23,8 @@ const Register = () => {
     last_name: '',
     email: '',
     mobile: '',
+    password: '',
+    confirm_password: '',
     state: '',
     district: '',
     taluka: '',
