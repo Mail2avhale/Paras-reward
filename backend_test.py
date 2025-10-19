@@ -169,8 +169,7 @@ def test_invalid_data_formats():
     # Test invalid email format
     print("\n4a. Testing invalid email format...")
     invalid_email_data = {
-        "first_name": "Invalid",
-        "last_name": "Email",
+        "name": "Invalid Email",
         "email": "not-an-email",
         "mobile": f"6543210{datetime.now().strftime('%H%M')}",
         "password": "InvalidPass123!",
