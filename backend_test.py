@@ -137,8 +137,7 @@ def test_missing_fields():
     # Test missing email
     print("\n3a. Testing missing email...")
     missing_email_data = {
-        "first_name": "Test",
-        "last_name": "User",
+        "name": "Test User",
         # "email": missing
         "mobile": f"7654321{datetime.now().strftime('%H%M')}",
         "password": "TestPass123!",
