@@ -200,54 +200,34 @@ def setup_test_users():
     
     return True
 
-def make_user_vip_with_kyc(user_id):
-    """Helper function to make user VIP and approve KYC"""
+def create_test_product():
+    """Create a test product for stock movement testing"""
+    global test_product
+    
+    print("\n2. Creating test product...")
+    
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    
+    product_data = {
+        "name": f"Test Product {timestamp}",
+        "description": "Test product for stock movement testing",
+        "prc_price": 100.0,
+        "category": "Electronics",
+        "stock_quantity": 1000
+    }
+    
     try:
-        # Submit VIP payment
-        payment_data = {
-            "user_id": user_id,
-            "amount": 1000,
-            "date": datetime.now().strftime("%Y-%m-%d"),
-            "time": datetime.now().strftime("%H:%M"),
-            "utr_number": f"TEST{datetime.now().strftime('%Y%m%d%H%M%S')}",
-            "screenshot_url": "test_screenshot"
-        }
-        
-        payment_response = requests.post(f"{API_BASE}/membership/submit-payment", 
-                                       json=payment_data, timeout=30)
-        
-        if payment_response.status_code == 200:
-            payment_id = payment_response.json().get("payment_id")
-            
-            # Approve the payment
-            approval_data = {"action": "approve"}
-            requests.post(f"{API_BASE}/membership/payment/{payment_id}/action",
-                         json=approval_data, timeout=30)
-            
-            # Submit KYC
-            kyc_data = {
-                "aadhaar_front_base64": "test_aadhaar_front_image",
-                "aadhaar_back_base64": "test_aadhaar_back_image", 
-                "pan_front_base64": "test_pan_front_image"
-            }
-            
-            kyc_response = requests.post(f"{API_BASE}/kyc/submit/{user_id}",
-                                       json=kyc_data, timeout=30)
-            
-            if kyc_response.status_code == 200:
-                kyc_id = kyc_response.json().get("kyc_id")
-                
-                # Approve KYC
-                kyc_verify_data = {"action": "approve"}
-                requests.post(f"{API_BASE}/kyc/{kyc_id}/verify",
-                             json=kyc_verify_data, timeout=30)
-                
-                print("✅ User made VIP with approved KYC")
-                return True
-        
-        return False
+        response = requests.post(f"{API_BASE}/products", json=product_data, timeout=30)
+        if response.status_code == 200:
+            product = response.json()
+            test_product = product
+            print(f"✅ Test product created: {product.get('product_id')}")
+            return True
+        else:
+            print(f"❌ Failed to create test product: {response.status_code} - {response.text}")
+            return False
     except Exception as e:
-        print(f"❌ Error making user VIP: {e}")
+        print(f"❌ Error creating test product: {e}")
         return False
 
 def test_wallet_balance_retrieval():
