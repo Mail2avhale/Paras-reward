@@ -61,8 +61,22 @@ const Register = () => {
 
     try {
       // Validate required fields
-      if (!userForm.first_name || !userForm.last_name || !userForm.email || !userForm.mobile) {
+      if (!userForm.first_name || !userForm.last_name || !userForm.email || !userForm.mobile || !userForm.password) {
         toast.error('Please fill all required fields');
+        setLoading(false);
+        return;
+      }
+
+      // Validate password match
+      if (userForm.password !== userForm.confirm_password) {
+        toast.error('Passwords do not match');
+        setLoading(false);
+        return;
+      }
+
+      // Validate password length
+      if (userForm.password.length < 6) {
+        toast.error('Password must be at least 6 characters');
         setLoading(false);
         return;
       }
