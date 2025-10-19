@@ -44,8 +44,8 @@ const LoginNew = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      if (!loginData.email) {
-        toast.error('Please enter your email');
+      if (!loginData.identifier || !loginData.password) {
+        toast.error('Please enter your email/mobile and password');
         setLoading(false);
         return;
       }
@@ -55,7 +55,8 @@ const LoginNew = ({ onLogin }) => {
         null,
         {
           params: {
-            email: loginData.email,
+            identifier: loginData.identifier,
+            password: loginData.password,
             device_id: loginData.device_id,
             ip_address: loginData.ip_address
           }
