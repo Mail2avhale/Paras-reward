@@ -108,121 +108,122 @@ def setup_test_users():
     
     return True
 
-def test_duplicate_detection(existing_user_data):
-    """Test duplicate field detection for email, mobile, aadhaar_number, pan_number"""
-    print("\n2. Testing duplicate field detection...")
+def test_delivery_config_management():
+    """Test delivery configuration management endpoints"""
+    print("\n2. Testing Delivery Configuration Management...")
     
-    # Test duplicate email
-    print("\n2a. Testing duplicate email...")
-    duplicate_email_data = {
-        "first_name": "Priya",
-        "last_name": "Sharma",
-        "email": existing_user_data["email"],  # Same email
-        "mobile": f"8765432{datetime.now().strftime('%H%M')}",
-        "password": "AnotherPass123!",
-        "state": "Gujarat",
-        "district": "Ahmedabad", 
-        "pincode": "380001",
-        "aadhaar_number": f"9876{datetime.now().strftime('%H%M')}5432109",
-        "pan_number": f"XYZAB{datetime.now().strftime('%H%M')}C"
-    }
-    
+    # Test 2a: GET delivery config (should return default if none exists)
+    print("\n2a. Testing GET /api/admin/delivery-config (default config)...")
     try:
-        response = requests.post(REGISTER_URL, json=duplicate_email_data, timeout=30)
+        response = requests.get(f"{API_BASE}/admin/delivery-config", timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
-        if response.status_code == 400 and "email" in response.text.lower():
-            print("✅ Duplicate email detection test PASSED")
+        if response.status_code == 200:
+            config = response.json()
+            print("✅ GET delivery config test PASSED")
+            print(f"Default config: {json.dumps(config, indent=2)}")
         else:
-            print(f"❌ Duplicate email detection test FAILED - Expected 400 with email error")
-            
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Duplicate email test FAILED - Network error: {e}")
-
-    # Test duplicate mobile
-    print("\n2b. Testing duplicate mobile...")
-    duplicate_mobile_data = {
-        "first_name": "Amit",
-        "last_name": "Patel",
-        "email": f"amit.patel.{datetime.now().strftime('%Y%m%d%H%M%S')}@example.com",
-        "mobile": existing_user_data["mobile"],  # Same mobile
-        "password": "YetAnotherPass123!",
-        "state": "Rajasthan",
-        "district": "Jaipur",
-        "pincode": "302001", 
-        "aadhaar_number": f"5432{datetime.now().strftime('%H%M')}1098765",
-        "pan_number": f"PQRST{datetime.now().strftime('%H%M')}U"
+            print(f"❌ GET delivery config test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ GET delivery config test FAILED - Error: {e}")
+        return False
+    
+    # Test 2b: POST valid delivery config
+    print("\n2b. Testing POST /api/admin/delivery-config (valid config)...")
+    valid_config = {
+        "delivery_charge_rate": 0.10,  # 10%
+        "distribution_split": {
+            "master": 10,
+            "sub": 20,
+            "outlet": 60,
+            "company": 10
+        }
     }
     
     try:
-        response = requests.post(REGISTER_URL, json=duplicate_mobile_data, timeout=30)
+        response = requests.post(f"{API_BASE}/admin/delivery-config", json=valid_config, timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
-        if response.status_code == 400 and "mobile" in response.text.lower():
-            print("✅ Duplicate mobile detection test PASSED")
+        if response.status_code == 200:
+            print("✅ POST valid delivery config test PASSED")
         else:
-            print(f"❌ Duplicate mobile detection test FAILED - Expected 400 with mobile error")
-            
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Duplicate mobile test FAILED - Network error: {e}")
-
-    # Test duplicate aadhaar_number
-    print("\n2c. Testing duplicate aadhaar_number...")
-    duplicate_aadhaar_data = {
-        "first_name": "Sunita",
-        "last_name": "Verma",
-        "email": f"sunita.verma.{datetime.now().strftime('%Y%m%d%H%M%S')}@example.com",
-        "mobile": f"7654321{datetime.now().strftime('%H%M')}",
-        "password": "ThirdPass123!",
-        "state": "Uttar Pradesh",
-        "district": "Lucknow",
-        "pincode": "226001", 
-        "aadhaar_number": existing_user_data["aadhaar_number"],  # Same aadhaar
-        "pan_number": f"DUPAA{datetime.now().strftime('%H%M')}D"
+            print(f"❌ POST valid delivery config test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ POST valid delivery config test FAILED - Error: {e}")
+        return False
+    
+    # Test 2c: POST invalid config (split not summing to 100)
+    print("\n2c. Testing POST /api/admin/delivery-config (invalid total)...")
+    invalid_config = {
+        "delivery_charge_rate": 0.10,
+        "distribution_split": {
+            "master": 10,
+            "sub": 20,
+            "outlet": 50,  # Total = 90, not 100
+            "company": 10
+        }
     }
     
     try:
-        response = requests.post(REGISTER_URL, json=duplicate_aadhaar_data, timeout=30)
+        response = requests.post(f"{API_BASE}/admin/delivery-config", json=invalid_config, timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
-        if response.status_code == 400 and "aadhaar" in response.text.lower():
-            print("✅ Duplicate aadhaar detection test PASSED")
+        if response.status_code == 400:
+            print("✅ POST invalid total config test PASSED")
         else:
-            print(f"❌ Duplicate aadhaar detection test FAILED - Expected 400 with aadhaar error")
-            
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Duplicate aadhaar test FAILED - Network error: {e}")
-
-    # Test duplicate pan_number
-    print("\n2d. Testing duplicate pan_number...")
-    duplicate_pan_data = {
-        "first_name": "Vikram",
-        "last_name": "Gupta",
-        "email": f"vikram.gupta.{datetime.now().strftime('%Y%m%d%H%M%S')}@example.com",
-        "mobile": f"6543210{datetime.now().strftime('%H%M')}",
-        "password": "FourthPass123!",
-        "state": "Punjab",
-        "district": "Chandigarh",
-        "pincode": "160001", 
-        "aadhaar_number": f"4321{datetime.now().strftime('%H%M')}8765432",
-        "pan_number": existing_user_data["pan_number"]  # Same PAN
+            print(f"❌ POST invalid total config test FAILED - Expected 400, got {response.status_code}")
+    except Exception as e:
+        print(f"❌ POST invalid total config test FAILED - Error: {e}")
+    
+    # Test 2d: POST invalid rate (< 0 or > 1)
+    print("\n2d. Testing POST /api/admin/delivery-config (invalid rate)...")
+    invalid_rate_config = {
+        "delivery_charge_rate": 1.5,  # 150% - invalid
+        "distribution_split": {
+            "master": 10,
+            "sub": 20,
+            "outlet": 60,
+            "company": 10
+        }
     }
     
     try:
-        response = requests.post(REGISTER_URL, json=duplicate_pan_data, timeout=30)
+        response = requests.post(f"{API_BASE}/admin/delivery-config", json=invalid_rate_config, timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
-        if response.status_code == 400 and "pan" in response.text.lower():
-            print("✅ Duplicate PAN detection test PASSED")
+        if response.status_code == 400:
+            print("✅ POST invalid rate config test PASSED")
         else:
-            print(f"❌ Duplicate PAN detection test FAILED - Expected 400 with PAN error")
-            
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Duplicate PAN test FAILED - Network error: {e}")
+            print(f"❌ POST invalid rate config test FAILED - Expected 400, got {response.status_code}")
+    except Exception as e:
+        print(f"❌ POST invalid rate config test FAILED - Error: {e}")
+    
+    # Test 2e: GET delivery config after saving (verify persistence)
+    print("\n2e. Testing GET /api/admin/delivery-config (after saving)...")
+    try:
+        response = requests.get(f"{API_BASE}/admin/delivery-config", timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            config = response.json()
+            if config.get("delivery_charge_rate") == 0.10:
+                print("✅ GET delivery config persistence test PASSED")
+                print(f"Persisted config: {json.dumps(config, indent=2)}")
+            else:
+                print("❌ GET delivery config persistence test FAILED - Config not persisted correctly")
+        else:
+            print(f"❌ GET delivery config persistence test FAILED - Status: {response.status_code}")
+    except Exception as e:
+        print(f"❌ GET delivery config persistence test FAILED - Error: {e}")
+    
+    return True
 
 def test_name_auto_construction():
     """Test 'name' field auto-construction from first_name + middle_name + last_name"""
