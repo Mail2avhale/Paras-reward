@@ -62,104 +62,300 @@ const PaymentConfigSettings = () => {
   }
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Payment Configuration</h2>
-      <p className="text-gray-600 mb-8">Configure payment receiver details for VIP memberships</p>
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Configuration</h2>
+        <p className="text-gray-600 mb-6">Configure payment receiver details for VIP memberships</p>
 
-      <Card className="p-6 bg-white">
-        <div className="space-y-6">
-          {/* UPI Details */}
-          <div>
-            <h3 className="text-lg font-bold text-gray-900 mb-4">UPI Payment</h3>
-            <div className="space-y-4">
+        <Card className="p-6 bg-white">
+          <div className="space-y-6">
+            {/* UPI Details */}
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-4">UPI Payment</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">UPI ID</label>
+                  <Input
+                    placeholder="yourname@upi"
+                    value={config.upi_id}
+                    onChange={(e) => setConfig({...config, upi_id: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">QR Code URL</label>
+                  <Input
+                    placeholder="https://example.com/qr-code.png"
+                    value={config.qr_code_url}
+                    onChange={(e) => setConfig({...config, qr_code_url: e.target.value})}
+                  />
+                  {config.qr_code_url && (
+                    <img src={config.qr_code_url} alt="QR Preview" className="mt-2 w-48 h-48 object-contain border rounded" />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Bank Transfer</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Bank Name</label>
+                  <Input
+                    placeholder="State Bank of India"
+                    value={config.bank_name}
+                    onChange={(e) => setConfig({...config, bank_name: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Account Holder Name</label>
+                  <Input
+                    placeholder="John Doe"
+                    value={config.account_holder}
+                    onChange={(e) => setConfig({...config, account_holder: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Account Number</label>
+                  <Input
+                    placeholder="1234567890"
+                    value={config.account_number}
+                    onChange={(e) => setConfig({...config, account_number: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">IFSC Code</label>
+                  <Input
+                    placeholder="SBIN0001234"
+                    value={config.ifsc_code}
+                    onChange={(e) => setConfig({...config, ifsc_code: e.target.value})}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Instructions</h3>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">UPI ID</label>
-                <Input
-                  placeholder="yourname@upi"
-                  value={config.upi_id}
-                  onChange={(e) => setConfig({...config, upi_id: e.target.value})}
+                <label className="block text-sm font-medium text-gray-700 mb-2">Payment Instructions</label>
+                <textarea
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  rows="4"
+                  placeholder="Enter instructions for users making payment..."
+                  value={config.instructions}
+                  onChange={(e) => setConfig({...config, instructions: e.target.value})}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">QR Code URL</label>
-                <Input
-                  placeholder="https://example.com/qr-code.png"
-                  value={config.qr_code_url}
-                  onChange={(e) => setConfig({...config, qr_code_url: e.target.value})}
-                />
-                {config.qr_code_url && (
-                  <img src={config.qr_code_url} alt="QR Preview" className="mt-2 w-48 h-48 object-contain border rounded" />
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={fetchConfig}>
+                Reset
+              </Button>
+              <Button 
+                onClick={handleSave}
+                disabled={loading}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                {loading ? 'Saving...' : 'Save Configuration'}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+// Delivery Configuration Component
+const DeliveryConfigSettings = () => {
+  const [config, setConfig] = useState({
+    delivery_charge_rate: 0.10,
+    distribution_split: {
+      master: 10,
+      sub: 20,
+      outlet: 60,
+      company: 10
+    }
+  });
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
+
+  useEffect(() => {
+    fetchConfig();
+  }, []);
+
+  const fetchConfig = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/delivery-config`);
+      setConfig(response.data);
+    } catch (error) {
+      console.error('Error fetching config:', error);
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      await axios.post(`${API}/admin/delivery-config`, config);
+      toast.success('Delivery configuration saved successfully!');
+    } catch (error) {
+      console.error('Error saving config:', error);
+      toast.error(error.response?.data?.detail || 'Failed to save configuration');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateSplit = (entity, value) => {
+    const newSplit = { ...config.distribution_split, [entity]: parseFloat(value) || 0 };
+    setConfig({ ...config, distribution_split: newSplit });
+  };
+
+  const totalSplit = Object.values(config.distribution_split).reduce((sum, val) => sum + val, 0);
+
+  if (fetching) {
+    return <div className="text-center py-12">Loading...</div>;
+  }
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Delivery Charge Configuration</h2>
+        <p className="text-gray-600 mb-6">Configure delivery charge rate and distribution model</p>
+
+        <Card className="p-6 bg-white">
+          <div className="space-y-6">
+            {/* Delivery Charge Rate */}
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Delivery Charge Rate</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Rate (as decimal, e.g., 0.10 for 10%)
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="1"
+                    value={config.delivery_charge_rate}
+                    onChange={(e) => setConfig({...config, delivery_charge_rate: parseFloat(e.target.value) || 0})}
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Current: {(config.delivery_charge_rate * 100).toFixed(0)}% of order cash value
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Distribution Split */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Distribution Split (10% Model)</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Define how the delivery charge pool is distributed among entities. Total must equal 100%.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Master Stockist (%)</label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={config.distribution_split.master}
+                    onChange={(e) => updateSplit('master', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Sub Stockist (%)</label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={config.distribution_split.sub}
+                    onChange={(e) => updateSplit('sub', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Outlet (%)</label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={config.distribution_split.outlet}
+                    onChange={(e) => updateSplit('outlet', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Company (%)</label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={config.distribution_split.company}
+                    onChange={(e) => updateSplit('company', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Total Validation */}
+              <div className={`p-4 rounded-lg ${
+                Math.abs(totalSplit - 100) < 0.01 
+                  ? 'bg-green-50 border border-green-200' 
+                  : 'bg-red-50 border border-red-200'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">Total Distribution:</span>
+                  <span className={`text-xl font-bold ${
+                    Math.abs(totalSplit - 100) < 0.01 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {totalSplit.toFixed(1)}%
+                  </span>
+                </div>
+                {Math.abs(totalSplit - 100) >= 0.01 && (
+                  <p className="text-sm text-red-600 mt-1">
+                    Total must equal 100%. Current difference: {(totalSplit - 100).toFixed(1)}%
+                  </p>
                 )}
               </div>
-            </div>
-          </div>
 
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Bank Transfer</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Bank Name</label>
-                <Input
-                  placeholder="State Bank of India"
-                  value={config.bank_name}
-                  onChange={(e) => setConfig({...config, bank_name: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Account Holder Name</label>
-                <Input
-                  placeholder="John Doe"
-                  value={config.account_holder}
-                  onChange={(e) => setConfig({...config, account_holder: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Account Number</label>
-                <Input
-                  placeholder="1234567890"
-                  value={config.account_number}
-                  onChange={(e) => setConfig({...config, account_number: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">IFSC Code</label>
-                <Input
-                  placeholder="SBIN0001234"
-                  value={config.ifsc_code}
-                  onChange={(e) => setConfig({...config, ifsc_code: e.target.value})}
-                />
+              {/* Example Calculation */}
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="font-semibold text-blue-900 mb-2">Example Calculation</h4>
+                <p className="text-sm text-blue-800">
+                  For an order with ₹1,000 cash value:
+                </p>
+                <ul className="text-sm text-blue-800 mt-2 space-y-1">
+                  <li>• Delivery Charge Pool: ₹{(1000 * config.delivery_charge_rate).toFixed(2)}</li>
+                  <li>• Master: ₹{((1000 * config.delivery_charge_rate * config.distribution_split.master) / 100).toFixed(2)}</li>
+                  <li>• Sub: ₹{((1000 * config.delivery_charge_rate * config.distribution_split.sub) / 100).toFixed(2)}</li>
+                  <li>• Outlet: ₹{((1000 * config.delivery_charge_rate * config.distribution_split.outlet) / 100).toFixed(2)}</li>
+                  <li>• Company: ₹{((1000 * config.delivery_charge_rate * config.distribution_split.company) / 100).toFixed(2)}</li>
+                </ul>
               </div>
             </div>
-          </div>
 
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Instructions</h3>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Payment Instructions</label>
-              <textarea
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                rows="4"
-                placeholder="Enter instructions for users making payment..."
-                value={config.instructions}
-                onChange={(e) => setConfig({...config, instructions: e.target.value})}
-              />
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={fetchConfig}>
+                Reset
+              </Button>
+              <Button 
+                onClick={handleSave}
+                disabled={loading || Math.abs(totalSplit - 100) >= 0.01}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50"
+              >
+                {loading ? 'Saving...' : 'Save Configuration'}
+              </Button>
             </div>
           </div>
-
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={fetchConfig}>
-              Reset
-            </Button>
-            <Button 
-              onClick={handleSave}
-              disabled={loading}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
-            >
-              {loading ? 'Saving...' : 'Save Configuration'}
-            </Button>
-          </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };
