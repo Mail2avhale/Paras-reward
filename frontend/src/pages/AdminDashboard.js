@@ -180,11 +180,123 @@ const AdminDashboard = ({ user, onLogout }) => {
 
         {/* Tabs */}
         <Card className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl">
-          <Tabs defaultValue="payments" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
+          <Tabs defaultValue="users" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsTrigger value="users">User Management</TabsTrigger>
               <TabsTrigger data-testid="payments-tab" value="payments">VIP Payments</TabsTrigger>
               <TabsTrigger data-testid="kyc-tab" value="kyc">KYC Verifications</TabsTrigger>
             </TabsList>
+
+            {/* USER MANAGEMENT TAB */}
+            <TabsContent value="users" className="space-y-6">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
+                <div className="flex gap-3 w-full md:w-auto">
+                  <Input
+                    placeholder="Search by name, email, or mobile..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full md:w-64"
+                    icon={<Search className="h-4 w-4" />}
+                  />
+                  <select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="">All Roles</option>
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                    <option value="outlet">Outlet</option>
+                    <option value="master_stockist">Master Stockist</option>
+                    <option value="sub_stockist">Sub Stockist</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="text-sm text-gray-600 mb-4">
+                Total Users: <strong>{usersTotal}</strong>
+              </div>
+
+              {users.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No users found</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Name</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Mobile</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Role</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">PRC Balance</th>
+                        <th className="text-center py-3 px-4 font-semibold text-gray-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map((u) => (
+                        <tr key={u.uid} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-4 px-4">
+                            <div>
+                              <p className="font-medium text-gray-900">{u.name || 'N/A'}</p>
+                              <p className="text-xs text-gray-500">{u.uid}</p>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-gray-700">{u.email || 'N/A'}</td>
+                          <td className="py-4 px-4 text-gray-700">{u.mobile || 'N/A'}</td>
+                          <td className="py-4 px-4">
+                            <select
+                              value={u.role}
+                              onChange={(e) => handleRoleChange(u.uid, e.target.value)}
+                              className="px-3 py-1 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            >
+                              <option value="user">User</option>
+                              <option value="admin">Admin</option>
+                              <option value="outlet">Outlet</option>
+                              <option value="master_stockist">Master Stockist</option>
+                              <option value="sub_stockist">Sub Stockist</option>
+                            </select>
+                          </td>
+                          <td className="py-4 px-4">
+                            <button
+                              onClick={() => handleStatusChange(u.uid, !u.is_active)}
+                              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                u.is_active
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                  : 'bg-red-100 text-red-700 hover:bg-red-200'
+                              }`}
+                            >
+                              {u.is_active ? 'Active' : 'Inactive'}
+                            </button>
+                          </td>
+                          <td className="py-4 px-4">
+                            <p className="font-medium text-purple-600">
+                              {u.prc_balance?.toFixed(2) || '0.00'} PRC
+                            </p>
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="flex justify-center gap-2">
+                              <Button
+                                onClick={() => handleDeleteUser(u.uid, u.name)}
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </TabsContent>
 
             <TabsContent value="payments" className="space-y-4">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">VIP Payment Requests</h2>
