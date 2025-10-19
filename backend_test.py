@@ -314,36 +314,46 @@ def test_order_checkout_with_delivery_charge(product_id):
         print(f"❌ Order checkout test FAILED - Error: {e}")
         return None
 
-def test_invalid_data_formats():
-    """Test registration with invalid data formats"""
-    print("\n4. Testing invalid data formats...")
+def test_auto_distribution_on_delivery(order_id):
+    """Test auto-distribution when order is marked as delivered"""
+    print("\n5. Testing Auto-Distribution on Delivery...")
     
-    # Test invalid email format
-    print("\n4a. Testing invalid email format...")
-    invalid_email_data = {
-        "name": "Invalid Email",
-        "email": "not-an-email",
-        "mobile": f"6543210{datetime.now().strftime('%H%M')}",
-        "password": "InvalidPass123!",
-        "state": "Tamil Nadu",
-        "district": "Chennai",
-        "pincode": "600001",
-        "aadhaar_number": f"2222{datetime.now().strftime('%H%M')}3333444",
-        "pan_number": f"INVLD{datetime.now().strftime('%H%M')}Z"
+    if not order_id:
+        print("❌ Cannot test auto-distribution - no order ID")
+        return False
+    
+    # Test 5a: Mark order as delivered via outlet endpoint
+    print("\n5a. Testing POST /api/orders/{order_id}/deliver (outlet delivery)...")
+    
+    delivery_data = {
+        "outlet_id": test_outlet_id
     }
     
     try:
-        response = requests.post(REGISTER_URL, json=invalid_email_data, timeout=30)
+        response = requests.post(f"{API_BASE}/orders/{order_id}/deliver", 
+                               json=delivery_data, 
+                               timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
-        if response.status_code == 422 or response.status_code == 400:
-            print("✅ Invalid email format test PASSED")
-        else:
-            print(f"❌ Invalid email format test - Expected 400/422, got {response.status_code}")
+        if response.status_code == 200:
+            result = response.json()
+            print("✅ Outlet delivery test PASSED")
+            print(f"Distribution result: {json.dumps(result.get('distribution', {}), indent=2)}")
             
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Invalid email format test FAILED - Network error: {e}")
+            # Verify distribution was triggered
+            if result.get("distribution"):
+                print("✅ Auto-distribution triggered successfully")
+                return True
+            else:
+                print("❌ Auto-distribution was not triggered")
+                return False
+        else:
+            print(f"❌ Outlet delivery test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Outlet delivery test FAILED - Error: {e}")
+        return False
 
 def test_password_validation():
     """Test password validation"""
