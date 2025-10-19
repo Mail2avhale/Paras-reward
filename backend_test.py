@@ -125,6 +125,35 @@ def setup_test_users():
                 
                 if approve_response.status_code == 200:
                     print("✅ User promoted to VIP successfully")
+                    
+                    # Now submit and verify KYC
+                    print("Submitting and verifying KYC...")
+                    
+                    kyc_data = {
+                        "aadhaar_front_base64": "test_aadhaar_front_image",
+                        "aadhaar_back_base64": "test_aadhaar_back_image", 
+                        "pan_front_base64": "test_pan_front_image"
+                    }
+                    
+                    kyc_response = requests.post(f"{API_BASE}/kyc/submit/{vip_uid}",
+                                               json=kyc_data, timeout=30)
+                    
+                    if kyc_response.status_code == 200:
+                        kyc_id = kyc_response.json().get("kyc_id")
+                        print(f"KYC submitted: {kyc_id}")
+                        
+                        # Verify KYC
+                        kyc_verify_data = {"action": "approve"}
+                        verify_response = requests.post(f"{API_BASE}/kyc/{kyc_id}/verify",
+                                                      json=kyc_verify_data, timeout=30)
+                        
+                        if verify_response.status_code == 200:
+                            print("✅ KYC verified successfully")
+                        else:
+                            print(f"❌ Failed to verify KYC: {verify_response.status_code}")
+                    else:
+                        print(f"❌ Failed to submit KYC: {kyc_response.status_code}")
+                        
                 else:
                     print(f"❌ Failed to approve VIP payment: {approve_response.status_code}")
             else:
