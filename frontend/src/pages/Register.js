@@ -232,6 +232,30 @@ const Register = () => {
                       className="py-5"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
+                    <Input
+                      data-testid="reg-password"
+                      type="password"
+                      placeholder="Minimum 6 characters"
+                      value={userForm.password}
+                      onChange={(e) => setUserForm({...userForm, password: e.target.value})}
+                      required
+                      className="py-5"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password *</label>
+                    <Input
+                      data-testid="reg-confirm-password"
+                      type="password"
+                      placeholder="Re-enter password"
+                      value={userForm.confirm_password}
+                      onChange={(e) => setUserForm({...userForm, confirm_password: e.target.value})}
+                      required
+                      className="py-5"
+                    />
+                  </div>
                 </div>
               </div>
 
