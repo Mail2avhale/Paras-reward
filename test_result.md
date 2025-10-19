@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Fix user registration bug - NameError: check_unique_fields not defined. User reported registration not working despite previous fix attempt."
+user_problem_statement: "Debug mining session issue - User has started mining but frontend shows 'Mining Paused'. Need to investigate why backend shows active mining but frontend displays paused status."
 
 backend:
   - task: "User Registration Endpoint"
