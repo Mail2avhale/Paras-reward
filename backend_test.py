@@ -354,52 +354,59 @@ def test_stock_movement_valid_flows():
     
     return True
 
-def test_cashback_maintenance_system():
-    """Test cashback maintenance system (₹99 monthly fee)"""
-    print("\n3. Testing Cashback Maintenance System...")
+def test_stock_movement_invalid_flows():
+    """Test invalid stock movement flows (should fail)"""
+    print("\n4. Testing Stock Movement System - Invalid Flows...")
     
-    # Test 3a: Check maintenance for VIP user (should not be due yet)
-    print("\n3a. Testing POST /api/wallet/check-maintenance/{uid} (new VIP user)...")
+    # Test 4a: User → Outlet (reverse flow, should fail)
+    print("\n4a. Testing User → Outlet stock flow (should fail)...")
     try:
-        response = requests.post(f"{API_BASE}/wallet/check-maintenance/{test_vip_user['uid']}", timeout=30)
+        movement_data = {
+            "sender_id": test_regular_user["uid"],
+            "receiver_id": test_outlet_user["uid"],
+            "product_id": test_product["product_id"],
+            "quantity": 5,
+            "notes": "Invalid reverse flow"
+        }
+        
+        response = requests.post(f"{API_BASE}/stock/transfer/initiate", json=movement_data, timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
-        if response.status_code == 200:
-            result = response.json()
-            print("✅ Maintenance check test PASSED")
-            print(f"Maintenance result: {json.dumps(result, indent=2)}")
-            
-            # For new VIP users, maintenance should not be due yet
-            if not result.get("maintenance_applied"):
-                print("✅ Maintenance correctly not applied for new VIP user")
-            else:
-                print("⚠️ Maintenance was applied (unexpected for new user)")
-            
-            return True
+        if response.status_code == 400:
+            print("✅ User → Outlet invalid flow test PASSED (correctly rejected)")
         else:
-            print(f"❌ Maintenance check test FAILED - Status: {response.status_code}")
+            print(f"❌ User → Outlet invalid flow test FAILED - Expected 400, got {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ Maintenance check test FAILED - Error: {e}")
+        print(f"❌ User → Outlet invalid flow test FAILED - Error: {e}")
         return False
     
-    # Test 3b: Test idempotency - calling maintenance check again
-    print("\n3b. Testing maintenance check idempotency...")
+    # Test 4b: Master → Outlet (skipping Sub, should fail)
+    print("\n4b. Testing Master → Outlet stock flow (should fail - skips Sub)...")
     try:
-        response = requests.post(f"{API_BASE}/wallet/check-maintenance/{test_vip_user['uid']}", timeout=30)
+        movement_data = {
+            "sender_id": test_master_user["uid"],
+            "receiver_id": test_outlet_user["uid"],
+            "product_id": test_product["product_id"],
+            "quantity": 20,
+            "notes": "Invalid flow - skipping sub stockist"
+        }
+        
+        response = requests.post(f"{API_BASE}/stock/transfer/initiate", json=movement_data, timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
-        if response.status_code == 200:
-            print("✅ Maintenance check idempotency test PASSED")
-            return True
+        if response.status_code == 400:
+            print("✅ Master → Outlet invalid flow test PASSED (correctly rejected)")
         else:
-            print(f"❌ Maintenance check idempotency test FAILED - Status: {response.status_code}")
+            print(f"❌ Master → Outlet invalid flow test FAILED - Expected 400, got {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ Maintenance check idempotency test FAILED - Error: {e}")
+        print(f"❌ Master → Outlet invalid flow test FAILED - Error: {e}")
         return False
+    
+    return True
 
 def test_cashback_credit_with_lien_clearing():
     """Test cashback credit with lien clearing functionality"""
