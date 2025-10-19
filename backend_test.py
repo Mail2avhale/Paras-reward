@@ -87,10 +87,7 @@ def setup_test_users():
         "district": "Ahmedabad",
         "pincode": "380001",
         "aadhaar_number": f"2222{datetime.now().strftime('%H%M')}2222222",
-        "pan_number": f"VIPUS{datetime.now().strftime('%H%M')}V",
-        "membership_type": "vip",
-        "kyc_status": "verified",
-        "prc_balance": 1000.0  # Sufficient balance for orders
+        "pan_number": f"VIPUS{datetime.now().strftime('%H%M')}V"
     }
     
     try:
