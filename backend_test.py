@@ -97,8 +97,37 @@ def setup_test_users():
             test_vip_user = {"uid": vip_uid, **vip_data}
             print(f"✅ VIP user created: {vip_uid}")
             
-            # Update user to VIP status and verified KYC via direct database update
-            # Since we don't have direct DB access, we'll handle this in the order creation test
+            # Make user VIP by submitting and approving a payment
+            print("Making user VIP via payment approval...")
+            
+            # Submit VIP payment
+            payment_data = {
+                "user_id": vip_uid,
+                "amount": 1000,
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "time": datetime.now().strftime("%H:%M"),
+                "utr_number": f"TEST{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                "screenshot_url": "test_screenshot"
+            }
+            
+            payment_response = requests.post(f"{API_BASE}/membership/submit-payment", 
+                                           json=payment_data, timeout=30)
+            
+            if payment_response.status_code == 200:
+                payment_id = payment_response.json().get("payment_id")
+                print(f"Payment submitted: {payment_id}")
+                
+                # Approve the payment
+                approval_data = {"action": "approve"}
+                approve_response = requests.post(f"{API_BASE}/membership/payment/{payment_id}/action",
+                                               json=approval_data, timeout=30)
+                
+                if approve_response.status_code == 200:
+                    print("✅ User promoted to VIP successfully")
+                else:
+                    print(f"❌ Failed to approve VIP payment: {approve_response.status_code}")
+            else:
+                print(f"❌ Failed to submit VIP payment: {payment_response.status_code}")
             
         else:
             print(f"❌ Failed to create VIP user: {response.status_code} - {response.text}")
