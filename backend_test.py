@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend API Testing Script for Wallets & Maintenance Feature
-Tests the comprehensive wallet system including cashback, profit wallets, maintenance, and withdrawals
+Backend API Testing Script for Stock Movement, Security Deposit, and Annual Renewal Systems
+Tests the comprehensive stock movement hierarchy, security deposit returns, and annual renewal enforcement
 """
 
 import requests
