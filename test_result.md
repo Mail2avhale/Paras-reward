@@ -259,6 +259,18 @@ frontend:
         agent: "main"
         comment: "Updated deliverOrder function to send outlet_id when marking order as delivered. Now displays success message confirming automatic delivery charge distribution. Backend handles the distribution automatically."
 
+  - task: "Enhanced Wallet Page"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/WalletNew.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created comprehensive WalletNew.js component: Displays cashback_balance, profit_balance (for stockists/outlets), pending_lien status, maintenance_due indicator, days_until_maintenance. Separate tabs for cashback withdrawal (min ₹10, fee ₹5), profit withdrawal (min ₹50, fee ₹5, role-gated), cashback history, profit history. Payment modes: UPI or Bank Transfer. Withdrawal history shows status badges (pending/approved/completed/rejected), UTR numbers, admin notes. Updated App.js to use WalletNew component."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
