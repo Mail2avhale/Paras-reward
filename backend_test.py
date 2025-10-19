@@ -34,26 +34,23 @@ print(f"Registration endpoint: {REGISTER_URL}")
 print("=" * 60)
 
 def test_registration_endpoint():
-    """Test user registration endpoint comprehensively"""
+    """Test user registration endpoint with FRONTEND FORMAT"""
     
-    # Test 1: Valid registration with all required fields
-    print("\n1. Testing valid registration with all required fields...")
+    # Test 1: Valid registration with FRONTEND FORMAT (first_name, last_name, email, mobile, password, state, district, pincode, aadhaar_number, pan_number)
+    print("\n1. Testing valid registration with FRONTEND FORMAT...")
     
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     valid_user_data = {
-        "name": "Rajesh Kumar Singh",
-        "email": f"rajesh.kumar.{datetime.now().strftime('%Y%m%d%H%M%S')}@example.com",
+        "first_name": "Rajesh",
+        "last_name": "Singh", 
+        "email": f"rajesh.singh.{timestamp}@example.com",
         "mobile": f"9876543{datetime.now().strftime('%H%M')}",
         "password": "SecurePass123!",
         "state": "Maharashtra",
         "district": "Mumbai",
         "pincode": "400001",
         "aadhaar_number": f"1234{datetime.now().strftime('%H%M')}5678901",
-        "pan_number": f"ABCDE{datetime.now().strftime('%H%M')}F",
-        "middle_name": "Singh",
-        "taluka": "Mumbai City",
-        "village": "Bandra",
-        "upi_id": "rajesh@paytm",
-        "referral_code": "REF123"
+        "pan_number": f"ABCDE{datetime.now().strftime('%H%M')}F"
     }
     
     try:
@@ -62,15 +59,20 @@ def test_registration_endpoint():
         print(f"Response: {response.text}")
         
         if response.status_code == 200:
-            print("✅ Valid registration test PASSED")
-            return True, valid_user_data
+            response_data = response.json()
+            if "uid" in response_data:
+                print("✅ Valid registration test PASSED - UID returned")
+                return True, valid_user_data, response_data.get("uid")
+            else:
+                print("❌ Valid registration test FAILED - No UID in response")
+                return False, valid_user_data, None
         else:
             print(f"❌ Valid registration test FAILED - Expected 200, got {response.status_code}")
-            return False, valid_user_data
+            return False, valid_user_data, None
             
     except requests.exceptions.RequestException as e:
         print(f"❌ Valid registration test FAILED - Network error: {e}")
-        return False, valid_user_data
+        return False, valid_user_data, None
 
 def test_duplicate_detection(existing_user_data):
     """Test duplicate field detection"""
