@@ -37,8 +37,13 @@ const OutletPanel = ({ user, onLogout }) => {
     if (!verifiedOrder) return;
 
     try {
-      await axios.post(`${API}/orders/${verifiedOrder.order_id}/deliver`);
-      toast.success('Order marked as delivered!');
+      const response = await axios.post(`${API}/orders/${verifiedOrder.order_id}/deliver`, {
+        outlet_id: user?.uid || 'outlet_001' // Use actual outlet ID from user
+      });
+      toast.success('Order delivered! Delivery charges distributed automatically.');
+      if (response.data.distribution) {
+        console.log('Distribution result:', response.data.distribution);
+      }
       setSecretCode('');
       setVerifiedOrder(null);
     } catch (error) {
