@@ -111,7 +111,7 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 2
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "user"
