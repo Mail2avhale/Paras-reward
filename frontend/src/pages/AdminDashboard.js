@@ -599,8 +599,13 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
           )}
 
+          {/* Settings Tab - Payment Configuration */}
+          {activeTab === 'settings' && (
+            <PaymentConfigSettings />
+          )}
+
           {/* Other Tabs - Placeholder */}
-          {['master-stockist', 'sub-stockist', 'outlet', 'rewards', 'commissions', 'orders', 'marketplace', 'notifications', 'settings'].includes(activeTab) && (
+          {['master-stockist', 'sub-stockist', 'outlet', 'rewards', 'commissions', 'orders', 'marketplace', 'notifications'].includes(activeTab) && (
             <Card className="p-12 text-center bg-white">
               <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-2 capitalize">{activeTab.replace('-', ' ')}</h3>
