@@ -532,8 +532,7 @@ async def change_password(uid: str, request: Request):
     
     return {"message": "Password changed successfully"}
 
-@api_router.post("/auth/forgot-password")
-async def forgot_password_old(email: str):
+@api_router.post("/auth/reset-password")
     """Request password reset"""
     user = await db.users.find_one({"email": email})
     if not user:
