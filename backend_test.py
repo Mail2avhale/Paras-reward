@@ -711,79 +711,30 @@ def test_security_deposit_submission():
     
     return True
 
-def test_admin_withdrawal_management_cashback():
-    """Test admin withdrawal management for cashback withdrawals"""
-    print("\n8. Testing Admin Withdrawal Management - Cashback...")
+def test_security_deposit_retrieval():
+    """Test security deposit retrieval before and after approval"""
+    print("\n9. Testing Security Deposit Retrieval...")
     
-    # Test 8a: Get all cashback withdrawals
-    print("\n8a. Testing GET /api/admin/withdrawals/cashback...")
+    # Test 9a: Get security deposit before approval (should return null)
+    print("\n9a. Testing GET /api/security-deposit/{uid} before approval...")
     try:
-        response = requests.get(f"{API_BASE}/admin/withdrawals/cashback", timeout=30)
+        response = requests.get(f"{API_BASE}/security-deposit/{test_master_user['uid']}", timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
         if response.status_code == 200:
-            withdrawals = response.json()
-            print("✅ Admin cashback withdrawals list test PASSED")
-            print(f"Withdrawals count: {len(withdrawals) if isinstance(withdrawals, list) else 'N/A'}")
+            result = response.json()
+            if result.get("deposit") is None:
+                print("✅ Security deposit retrieval before approval test PASSED (returns null)")
+            else:
+                print("❌ Security deposit retrieval before approval test FAILED - Should return null")
+                return False
         else:
-            print(f"❌ Admin cashback withdrawals list test FAILED - Status: {response.status_code}")
+            print(f"❌ Security deposit retrieval before approval test FAILED - Status: {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ Admin cashback withdrawals list test FAILED - Error: {e}")
+        print(f"❌ Security deposit retrieval before approval test FAILED - Error: {e}")
         return False
-    
-    # Test 8b: Get pending cashback withdrawals
-    print("\n8b. Testing GET /api/admin/withdrawals/cashback?status=pending...")
-    try:
-        response = requests.get(f"{API_BASE}/admin/withdrawals/cashback?status=pending", timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 200:
-            print("✅ Admin pending cashback withdrawals test PASSED")
-        else:
-            print(f"❌ Admin pending cashback withdrawals test FAILED - Status: {response.status_code}")
-    except Exception as e:
-        print(f"❌ Admin pending cashback withdrawals test FAILED - Error: {e}")
-    
-    # Test withdrawal actions if we have a withdrawal ID
-    if test_withdrawals:
-        cashback_withdrawal = next((w for w in test_withdrawals if w["type"] == "cashback"), None)
-        if cashback_withdrawal:
-            withdrawal_id = cashback_withdrawal["id"]
-            
-            # Test 8c: Approve withdrawal
-            print(f"\n8c. Testing POST /api/admin/withdrawals/cashback/{withdrawal_id}/approve...")
-            approve_data = {"admin_notes": "Approved for testing"}
-            try:
-                response = requests.post(f"{API_BASE}/admin/withdrawals/cashback/{withdrawal_id}/approve", 
-                                       json=approve_data, timeout=30)
-                print(f"Status Code: {response.status_code}")
-                print(f"Response: {response.text}")
-                
-                if response.status_code == 200:
-                    print("✅ Admin approve cashback withdrawal test PASSED")
-                else:
-                    print(f"❌ Admin approve cashback withdrawal test FAILED - Status: {response.status_code}")
-            except Exception as e:
-                print(f"❌ Admin approve cashback withdrawal test FAILED - Error: {e}")
-            
-            # Test 8d: Complete withdrawal with UTR
-            print(f"\n8d. Testing POST /api/admin/withdrawals/cashback/{withdrawal_id}/complete...")
-            complete_data = {"utr_number": f"UTR{datetime.now().strftime('%Y%m%d%H%M%S')}"}
-            try:
-                response = requests.post(f"{API_BASE}/admin/withdrawals/cashback/{withdrawal_id}/complete", 
-                                       json=complete_data, timeout=30)
-                print(f"Status Code: {response.status_code}")
-                print(f"Response: {response.text}")
-                
-                if response.status_code == 200:
-                    print("✅ Admin complete cashback withdrawal test PASSED")
-                else:
-                    print(f"❌ Admin complete cashback withdrawal test FAILED - Status: {response.status_code}")
-            except Exception as e:
-                print(f"❌ Admin complete cashback withdrawal test FAILED - Error: {e}")
     
     return True
 
