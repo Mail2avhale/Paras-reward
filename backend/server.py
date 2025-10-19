@@ -3246,10 +3246,11 @@ async def get_user_renewal_status(user_id: str):
         raise HTTPException(status_code=404, detail="User not found")
     
     # Get latest renewal
-    renewal = await db.annual_renewals.find_one(
+    renewal = await db.annual_renewals.find(
         {"user_id": user_id},
         {"_id": 0}
-    ).sort("submitted_at", -1)
+    ).sort("submitted_at", -1).limit(1).to_list(1)
+    renewal = renewal[0] if renewal else None
     
     renewal_due_date = user.get("renewal_due_date")
     is_overdue = False
