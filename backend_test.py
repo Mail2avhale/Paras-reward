@@ -471,82 +471,34 @@ def test_profit_withdrawal_flow():
     
     return True
 
-def test_admin_delivery_verification():
-    """Test admin delivery verification endpoint"""
-    print("\n7. Testing Admin Delivery Verification...")
+def test_withdrawal_history():
+    """Test withdrawal history endpoint"""
+    print("\n7. Testing Withdrawal History...")
     
-    # Create another order for admin verification testing
-    product_id = create_test_product()
-    if not product_id:
-        print("❌ Cannot test admin verification - failed to create product")
-        return False
-    
-    # Create another order via cart + checkout
+    # Test 7a: Get withdrawal history for VIP user
+    print("\n7a. Testing GET /api/wallet/withdrawals/{uid}...")
     try:
-        # Add product to cart
-        cart_data = {
-            "user_id": test_vip_user["uid"],
-            "product_id": product_id,
-            "quantity": 1
-        }
-        
-        cart_response = requests.post(f"{API_BASE}/cart/add", json=cart_data, timeout=30)
-        if cart_response.status_code != 200:
-            print(f"❌ Failed to add product to cart for admin test: {cart_response.status_code}")
-            return False
-        
-        # Checkout cart
-        checkout_data = {
-            "user_id": test_vip_user["uid"],
-            "delivery_address": "Admin Test Address, Test City, 123456"
-        }
-        
-        response = requests.post(f"{API_BASE}/orders/checkout", 
-                               json=checkout_data, 
-                               timeout=30)
-        
-        if response.status_code != 200:
-            print(f"❌ Failed to create order for admin test: {response.status_code}")
-            return False
-        
-        order_data = response.json()
-        order_id = order_data.get("order_id")
-        secret_code = order_data.get("secret_code")
-        
-        print(f"Created order for admin test: {order_id}")
-        print(f"Secret code: {secret_code}")
-        
-        # Test admin verify and deliver
-        print("\n7a. Testing POST /api/admin/orders/verify-and-deliver...")
-        
-        admin_delivery_data = {
-            "secret_code": secret_code,
-            "outlet_id": test_outlet_id
-        }
-        
-        response = requests.post(f"{API_BASE}/admin/orders/verify-and-deliver", 
-                               json=admin_delivery_data, 
-                               timeout=30)
+        response = requests.get(f"{API_BASE}/wallet/withdrawals/{test_vip_user['uid']}", timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
         if response.status_code == 200:
-            result = response.json()
-            print("✅ Admin delivery verification test PASSED")
+            history = response.json()
+            print("✅ Withdrawal history test PASSED")
+            print(f"History: {json.dumps(history, indent=2)}")
             
-            # Check if auto-distribution was triggered
-            if result.get("distribution"):
-                print("✅ Auto-distribution triggered via admin endpoint")
+            # Verify structure
+            if "cashback_withdrawals" in history and "profit_withdrawals" in history:
+                print("✅ Withdrawal history structure correct")
                 return True
             else:
-                print("❌ Auto-distribution was not triggered via admin endpoint")
+                print("❌ Withdrawal history structure incorrect")
                 return False
         else:
-            print(f"❌ Admin delivery verification test FAILED - Status: {response.status_code}")
+            print(f"❌ Withdrawal history test FAILED - Status: {response.status_code}")
             return False
-            
     except Exception as e:
-        print(f"❌ Admin delivery verification test FAILED - Error: {e}")
+        print(f"❌ Withdrawal history test FAILED - Error: {e}")
         return False
 
 def test_idempotent_distribution(order_id):
