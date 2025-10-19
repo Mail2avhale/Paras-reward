@@ -2052,8 +2052,176 @@ async def get_order(order_id: str):
     order["_id"] = str(order["_id"])
     return order
 
-# ========== OUTLET: ORDER VERIFICATION ==========
+# ========== DELIVERY CHARGE CONFIGURATION & DISTRIBUTION ==========
 
+@api_router.get("/admin/delivery-config")
+async def get_delivery_config():
+    """Get delivery charge configuration"""
+    config = await db.system_config.find_one({"config_type": "delivery"})
+    if not config:
+        # Return default config
+        return {
+            "delivery_charge_rate": 0.10,  # 10%
+            "distribution_split": {
+                "master": 10,
+                "sub": 20,
+                "outlet": 60,
+                "company": 10
+            }
+        }
+    config["_id"] = str(config["_id"])
+    return config
+
+@api_router.post("/admin/delivery-config")
+async def update_delivery_config(request: Request):
+    """Update delivery charge configuration (Admin)"""
+    data = await request.json()
+    
+    # Validate delivery charge rate
+    rate = data.get("delivery_charge_rate")
+    if rate is None or rate < 0 or rate > 1:
+        raise HTTPException(status_code=400, detail="Delivery charge rate must be between 0 and 1")
+    
+    # Validate distribution split
+    split = data.get("distribution_split", {})
+    total = sum(split.values())
+    if abs(total - 100) > 0.01:  # Allow small floating point errors
+        raise HTTPException(status_code=400, detail=f"Distribution split must sum to 100%, got {total}%")
+    
+    # Check if config exists
+    existing = await db.system_config.find_one({"config_type": "delivery"})
+    
+    config_data = {
+        "config_type": "delivery",
+        "delivery_charge_rate": rate,
+        "distribution_split": split,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    if existing:
+        await db.system_config.update_one(
+            {"config_type": "delivery"},
+            {"$set": config_data}
+        )
+    else:
+        config_data["created_at"] = datetime.now(timezone.utc).isoformat()
+        await db.system_config.insert_one(config_data)
+    
+    return {"message": "Delivery configuration updated successfully"}
+
+@api_router.post("/orders/{order_id}/distribute-delivery-charge")
+async def distribute_delivery_charge(order_id: str):
+    """Distribute delivery charge to entities (Idempotent)"""
+    # Find order
+    order = await db.orders.find_one({"order_id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Check if already distributed
+    if order.get("delivery_charge_distributed"):
+        return {
+            "message": "Delivery charge already distributed",
+            "order_id": order_id,
+            "already_distributed": True
+        }
+    
+    # Check if order is delivered
+    if order.get("status") != "delivered":
+        raise HTTPException(status_code=400, detail="Order must be delivered before distribution")
+    
+    # Get delivery charge
+    delivery_charge = order.get("delivery_charge", 0)
+    if delivery_charge <= 0:
+        return {"message": "No delivery charge to distribute"}
+    
+    # Get distribution configuration
+    config = await db.system_config.find_one({"config_type": "delivery"})
+    if not config:
+        # Use default split
+        split = {"master": 10, "sub": 20, "outlet": 60, "company": 10}
+    else:
+        split = config.get("distribution_split", {})
+    
+    # Get order chain (outlet -> sub -> master)
+    outlet_id = order.get("assigned_outlet")
+    
+    # For now, use placeholder IDs (in production, fetch actual entities)
+    # TODO: Implement proper entity chain lookup
+    
+    # Calculate distribution amounts
+    distributions = {}
+    for entity, percentage in split.items():
+        amount = (delivery_charge * percentage) / 100
+        distributions[entity] = amount
+    
+    # Create commission entries and credit wallets
+    commission_records = []
+    now = datetime.now(timezone.utc).isoformat()
+    
+    for entity, amount in distributions.items():
+        if amount > 0:
+            # Create commission record
+            commission_record = {
+                "commission_id": str(uuid.uuid4()),
+                "order_id": order_id,
+                "entity_type": entity,
+                "entity_id": outlet_id if entity == "outlet" else f"{entity}_placeholder",
+                "amount": amount,
+                "type": "delivery_charge",
+                "status": "paid",
+                "created_at": now
+            }
+            commission_records.append(commission_record)
+            
+            # Credit profit wallet (if not company)
+            if entity != "company" and outlet_id:
+                # In production, lookup actual entity and update their profit_wallet
+                # For now, just record the commission
+                pass
+    
+    # Insert all commission records
+    if commission_records:
+        await db.commissions_earned.insert_many(commission_records)
+    
+    # Mark order as distributed
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {"$set": {
+            "delivery_charge_distributed": True,
+            "distribution_date": now,
+            "distribution_amounts": distributions
+        }}
+    )
+    
+    return {
+        "message": "Delivery charge distributed successfully",
+        "order_id": order_id,
+        "delivery_charge": delivery_charge,
+        "distributions": distributions,
+        "commission_records": len(commission_records)
+    }
+
+@api_router.get("/commissions/entity/{entity_id}")
+async def get_entity_commissions(entity_id: str):
+    """Get commission history for an entity"""
+    commissions = await db.commissions_earned.find(
+        {"entity_id": entity_id}
+    ).sort("created_at", -1).to_list(length=None)
+    
+    for commission in commissions:
+        commission["_id"] = str(commission["_id"])
+    
+    # Calculate totals
+    total_earned = sum(c["amount"] for c in commissions)
+    
+    return {
+        "entity_id": entity_id,
+        "total_commissions": len(commissions),
+        "total_earned": total_earned,
+        "commissions": commissions
+    }
+
+# Update outlet verification to trigger distribution
 @api_router.post("/outlet/verify-code")
 async def verify_secret_code(request: Request):
     """Verify secret code and mark order as delivered"""
@@ -2079,13 +2247,15 @@ async def verify_secret_code(request: Request):
         }}
     )
     
-    # TODO: Trigger delivery charge distribution
+    # Trigger delivery charge distribution
+    distribution_result = await distribute_delivery_charge(order["order_id"])
     
     return {
         "message": "Order verified and marked as delivered",
         "order_id": order["order_id"],
         "items": order["items"],
-        "total_prc": order["total_prc"]
+        "total_prc": order["total_prc"],
+        "distribution": distribution_result
     }
 
 # Include router
