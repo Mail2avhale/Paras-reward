@@ -1046,10 +1046,10 @@ async def get_product(product_id: str):
         product['created_at'] = datetime.fromisoformat(product['created_at'])
     return Product(**product)
 
-# ========== ORDER/REDEEM ROUTES ==========
-@api_router.post("/orders/{uid}", response_model=Order)
+# ========== ORDER/REDEEM ROUTES (Legacy Single Product) ==========
+@api_router.post("/orders/{uid}", response_model=OrderSingleProduct)
 async def create_order(uid: str, order_data: OrderCreate):
-    """Create order (Redeem product)"""
+    """Create order (Redeem product) - Legacy single product endpoint"""
     # Check user eligibility
     user = await db.users.find_one({"uid": uid})
     if not user:
