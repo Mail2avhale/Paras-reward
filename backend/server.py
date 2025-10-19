@@ -799,7 +799,8 @@ async def get_mining_status(uid: str):
     
     return {
         "current_balance": user.get("prc_balance", 0),
-        "mining_rate": mining_rate_per_hour,  # Always show potential rate
+        "mining_rate": mining_rate_per_hour,  # New field name
+        "mining_rate_per_hour": mining_rate_per_hour,  # Backward compatibility
         "base_rate": base_rate,
         "active_referrals": active_referrals,
         "total_mined": user.get("total_mined", 0),
