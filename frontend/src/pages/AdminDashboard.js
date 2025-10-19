@@ -953,12 +953,19 @@ const AdminDashboard = ({ user, onLogout }) => {
           )}
 
           {/* Other Tabs - Placeholder */}
-          {['master-stockist', 'sub-stockist', 'outlet', 'rewards', 'commissions', 'orders', 'marketplace', 'notifications'].includes(activeTab) && (
+          {['master-stockist', 'sub-stockist', 'outlet', 'rewards', 'commissions', 'orders', 'notifications'].includes(activeTab) && (
             <Card className="p-12 text-center bg-white">
               <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-2 capitalize">{activeTab.replace('-', ' ')}</h3>
               <p className="text-gray-500">This section is under development</p>
             </Card>
+          )}
+
+          {/* Marketplace Management */}
+          {activeTab === 'marketplace' && (
+            <div className="space-y-6">
+              <MarketplaceManagement />
+            </div>
           )}
         </div>
       </div>
