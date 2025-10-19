@@ -632,38 +632,160 @@ async def get_user(uid: str):
 # ========== MINING ROUTES ==========
 @api_router.post("/mining/start/{uid}")
 async def start_mining(uid: str):
-    """Start mining"""
-    await db.users.update_one(
-        {"uid": uid},
-        {"$set": {"mining_start_time": datetime.now(timezone.utc).isoformat()}}
-    )
-    return {"message": "Mining started", "timestamp": datetime.now(timezone.utc).isoformat()}
-
-@api_router.get("/mining/status/{uid}", response_model=MiningStatus)
-async def get_mining_status(uid: str):
-    """Get current mining status"""
-    # Update mined coins first
-    mined = await update_mined_coins(uid)
-    
+    """Start 24-hour mining session"""
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    now = datetime.now(timezone.utc)
+    session_end = now + timedelta(hours=24)
+    
+    # Check if there's an active session
+    if user.get("mining_start_time"):
+        start_time = datetime.fromisoformat(user["mining_start_time"]) if isinstance(user["mining_start_time"], str) else user["mining_start_time"]
+        if start_time.tzinfo is None:
+            start_time = start_time.replace(tzinfo=timezone.utc)
+        
+        # If session is still active (less than 24 hours)
+        if now < start_time + timedelta(hours=24):
+            remaining_hours = ((start_time + timedelta(hours=24)) - now).total_seconds() / 3600
+            return {
+                "message": "Mining session already active",
+                "session_active": True,
+                "session_start": start_time.isoformat(),
+                "session_end": (start_time + timedelta(hours=24)).isoformat(),
+                "remaining_hours": round(remaining_hours, 2)
+            }
+    
+    # Start new 24-hour session
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": {
+            "mining_start_time": now.isoformat(),
+            "mining_session_end": session_end.isoformat(),
+            "mining_active": True,
+            "last_login": now.isoformat()
+        }}
+    )
+    
+    return {
+        "message": "Mining started successfully",
+        "session_active": True,
+        "session_start": now.isoformat(),
+        "session_end": session_end.isoformat(),
+        "remaining_hours": 24
+    }
+
+@api_router.get("/mining/status/{uid}")
+async def get_mining_status(uid: str):
+    """Get current mining status with session info"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    now = datetime.now(timezone.utc)
+    session_active = False
+    remaining_hours = 0
+    session_start = None
+    session_end = None
+    mined_this_session = 0
+    
+    # Check if mining session is active
+    if user.get("mining_start_time") and user.get("mining_active"):
+        start_time = datetime.fromisoformat(user["mining_start_time"]) if isinstance(user["mining_start_time"], str) else user["mining_start_time"]
+        if start_time.tzinfo is None:
+            start_time = start_time.replace(tzinfo=timezone.utc)
+        
+        session_end_time = start_time + timedelta(hours=24)
+        
+        # Check if session is still within 24 hours
+        if now < session_end_time:
+            session_active = True
+            remaining_hours = (session_end_time - now).total_seconds() / 3600
+            session_start = start_time.isoformat()
+            session_end = session_end_time.isoformat()
+            
+            # Calculate mined coins during this session
+            elapsed_minutes = (now - start_time).total_seconds() / 60
+            rate_per_minute, base_rate, active_referrals = await calculate_mining_rate(uid)
+            mined_this_session = elapsed_minutes * rate_per_minute
+        else:
+            # Session expired, mark as inactive
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {"mining_active": False}}
+            )
+    
     rate_per_minute, base_rate, active_referrals = await calculate_mining_rate(uid)
     
-    return MiningStatus(
-        current_balance=user.get("prc_balance", 0),
-        mining_rate=rate_per_minute * 60,  # per hour
-        base_rate=base_rate,
-        active_referrals=active_referrals,
-        total_mined=user.get("total_mined", 0)
-    )
+    return {
+        "current_balance": user.get("prc_balance", 0),
+        "mining_rate_per_hour": rate_per_minute * 60 if session_active else 0,
+        "base_rate": base_rate,
+        "active_referrals": active_referrals,
+        "total_mined": user.get("total_mined", 0),
+        "session_active": session_active,
+        "remaining_hours": round(remaining_hours, 2) if session_active else 0,
+        "session_start": session_start,
+        "session_end": session_end,
+        "mined_this_session": round(mined_this_session, 2)
+    }
 
 @api_router.post("/mining/claim/{uid}")
 async def claim_mining(uid: str):
-    """Claim mined coins"""
-    mined = await update_mined_coins(uid)
-    return {"message": "Coins claimed", "amount": mined}
+    """Claim mined coins from current session"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if mining is active
+    if not user.get("mining_active") or not user.get("mining_start_time"):
+        raise HTTPException(status_code=400, detail="No active mining session")
+    
+    now = datetime.now(timezone.utc)
+    start_time = datetime.fromisoformat(user["mining_start_time"]) if isinstance(user["mining_start_time"], str) else user["mining_start_time"]
+    if start_time.tzinfo is None:
+        start_time = start_time.replace(tzinfo=timezone.utc)
+    
+    # Check if session is still active
+    session_end_time = start_time + timedelta(hours=24)
+    if now >= session_end_time:
+        # Session expired
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"mining_active": False}}
+        )
+        raise HTTPException(status_code=400, detail="Mining session expired. Please start a new session.")
+    
+    # Calculate mined coins
+    elapsed_minutes = (now - start_time).total_seconds() / 60
+    rate_per_minute, _, _ = await calculate_mining_rate(uid)
+    mined_amount = elapsed_minutes * rate_per_minute
+    
+    # Update user balance
+    new_balance = user.get("prc_balance", 0) + mined_amount
+    new_total_mined = user.get("total_mined", 0) + mined_amount
+    
+    # Check if user is VIP for coin validity
+    membership_type = user.get("membership_type", "free")
+    
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": {
+            "prc_balance": new_balance,
+            "total_mined": new_total_mined,
+            "mining_start_time": now.isoformat(),  # Reset session start for continuous mining
+            "mining_active": True
+        }}
+    )
+    
+    return {
+        "message": "Coins claimed successfully",
+        "amount": round(mined_amount, 2),
+        "new_balance": round(new_balance, 2),
+        "membership_type": membership_type,
+        "note": "Free users: coins valid for 24 hours only" if membership_type == "free" else "VIP: unlimited validity"
+    }
 
 # ========== TAP GAME ROUTES ==========
 @api_router.post("/game/tap/{uid}")
