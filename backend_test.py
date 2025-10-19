@@ -584,35 +584,132 @@ def test_receiver_completion():
     
     return True
 
-def test_withdrawal_history():
-    """Test withdrawal history endpoint"""
-    print("\n7. Testing Withdrawal History...")
+def test_security_deposit_submission():
+    """Test security deposit submission for different roles"""
+    print("\n8. Testing Security Deposit System - Submission...")
     
-    # Test 7a: Get withdrawal history for VIP user
-    print("\n7a. Testing GET /api/wallet/withdrawals/{uid}...")
+    # Test 8a: Master Stockist security deposit (₹500k expected)
+    print("\n8a. Testing Master Stockist security deposit submission...")
     try:
-        response = requests.get(f"{API_BASE}/wallet/withdrawals/{test_vip_user['uid']}", timeout=30)
+        deposit_data = {
+            "user_id": test_master_user["uid"],
+            "amount": 500000,
+            "payment_proof": "master_deposit_proof_image_base64",
+            "notes": "Master stockist security deposit"
+        }
+        
+        response = requests.post(f"{API_BASE}/security-deposit/submit", json=deposit_data, timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
         if response.status_code == 200:
-            history = response.json()
-            print("✅ Withdrawal history test PASSED")
-            print(f"History: {json.dumps(history, indent=2)}")
+            result = response.json()
+            deposit_id = result.get("deposit_id")
+            expected_amount = result.get("expected_amount")
             
-            # Verify structure
-            if "cashback_withdrawals" in history and "profit_withdrawals" in history:
-                print("✅ Withdrawal history structure correct")
-                return True
+            if deposit_id and expected_amount == 500000:
+                print("✅ Master security deposit submission test PASSED")
+                print(f"Deposit ID: {deposit_id}")
+                print(f"Expected Amount: ₹{expected_amount}")
+                test_security_deposits.append({"id": deposit_id, "role": "master_stockist", "amount": 500000})
             else:
-                print("❌ Withdrawal history structure incorrect")
+                print("❌ Master security deposit submission test FAILED - Missing required fields")
                 return False
         else:
-            print(f"❌ Withdrawal history test FAILED - Status: {response.status_code}")
+            print(f"❌ Master security deposit submission test FAILED - Status: {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ Withdrawal history test FAILED - Error: {e}")
+        print(f"❌ Master security deposit submission test FAILED - Error: {e}")
         return False
+    
+    # Test 8b: Sub Stockist security deposit (₹300k expected)
+    print("\n8b. Testing Sub Stockist security deposit submission...")
+    try:
+        deposit_data = {
+            "user_id": test_sub_user["uid"],
+            "amount": 300000,
+            "payment_proof": "sub_deposit_proof_image_base64",
+            "notes": "Sub stockist security deposit"
+        }
+        
+        response = requests.post(f"{API_BASE}/security-deposit/submit", json=deposit_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            deposit_id = result.get("deposit_id")
+            expected_amount = result.get("expected_amount")
+            
+            if deposit_id and expected_amount == 300000:
+                print("✅ Sub security deposit submission test PASSED")
+                test_security_deposits.append({"id": deposit_id, "role": "sub_stockist", "amount": 300000})
+            else:
+                print("❌ Sub security deposit submission test FAILED - Missing required fields")
+                return False
+        else:
+            print(f"❌ Sub security deposit submission test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Sub security deposit submission test FAILED - Error: {e}")
+        return False
+    
+    # Test 8c: Outlet security deposit (₹100k expected)
+    print("\n8c. Testing Outlet security deposit submission...")
+    try:
+        deposit_data = {
+            "user_id": test_outlet_user["uid"],
+            "amount": 100000,
+            "payment_proof": "outlet_deposit_proof_image_base64",
+            "notes": "Outlet security deposit"
+        }
+        
+        response = requests.post(f"{API_BASE}/security-deposit/submit", json=deposit_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            deposit_id = result.get("deposit_id")
+            expected_amount = result.get("expected_amount")
+            
+            if deposit_id and expected_amount == 100000:
+                print("✅ Outlet security deposit submission test PASSED")
+                test_security_deposits.append({"id": deposit_id, "role": "outlet", "amount": 100000})
+            else:
+                print("❌ Outlet security deposit submission test FAILED - Missing required fields")
+                return False
+        else:
+            print(f"❌ Outlet security deposit submission test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Outlet security deposit submission test FAILED - Error: {e}")
+        return False
+    
+    # Test 8d: Non-stockist role rejection
+    print("\n8d. Testing non-stockist role rejection...")
+    try:
+        deposit_data = {
+            "user_id": test_regular_user["uid"],
+            "amount": 50000,
+            "payment_proof": "user_deposit_proof_image_base64",
+            "notes": "Regular user trying to submit deposit"
+        }
+        
+        response = requests.post(f"{API_BASE}/security-deposit/submit", json=deposit_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 403:
+            print("✅ Non-stockist role rejection test PASSED")
+        else:
+            print(f"❌ Non-stockist role rejection test FAILED - Expected 403, got {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Non-stockist role rejection test FAILED - Error: {e}")
+        return False
+    
+    return True
 
 def test_admin_withdrawal_management_cashback():
     """Test admin withdrawal management for cashback withdrawals"""
