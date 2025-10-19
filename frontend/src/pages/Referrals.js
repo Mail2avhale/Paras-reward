@@ -40,10 +40,15 @@ const Referrals = ({ user, onLogout }) => {
 
   const fetchReferrals = async () => {
     try {
+      if (!user?.uid) {
+        console.error('User UID not available');
+        return;
+      }
       const response = await axios.get(`${API}/referral/list/${user.uid}`);
       setReferrals(response.data.referrals);
     } catch (error) {
       console.error('Error fetching referrals:', error);
+      toast.error('Failed to load referrals');
     }
   };
 
