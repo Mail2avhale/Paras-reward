@@ -15,7 +15,8 @@ const LoginNew = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loginData, setLoginData] = useState({
-    email: '',
+    identifier: '', // email, mobile, or uid
+    password: '',
     device_id: '',
     ip_address: ''
   });
