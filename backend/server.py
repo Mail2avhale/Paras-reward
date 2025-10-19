@@ -907,7 +907,7 @@ async def register_stockist(
     ]})
     
     if existing:
-        raise HTTPException(status_code=400, detail=\"Stockist already registered with these details")
+        raise HTTPException(status_code=400, detail="Stockist already registered with these details")
     
     stockist_data = {
         "stockist_id": str(uuid.uuid4()),
