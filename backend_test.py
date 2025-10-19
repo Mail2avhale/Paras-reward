@@ -408,63 +408,53 @@ def test_stock_movement_invalid_flows():
     
     return True
 
-def test_cashback_credit_with_lien_clearing():
-    """Test cashback credit with lien clearing functionality"""
-    print("\n4. Testing Cashback Credit with Lien Clearing...")
+def test_stock_movement_retrieval():
+    """Test stock movement retrieval for users"""
+    print("\n5. Testing Stock Movement Retrieval...")
     
-    # Test 4a: Credit cashback without lien
-    print("\n4a. Testing cashback credit without lien...")
+    # Test 5a: Get stock movements for master user (should show sent movements)
+    print("\n5a. Testing GET /api/stock/movements/{uid} for master user...")
     try:
-        # First, let's check current wallet status
-        wallet_response = requests.get(f"{API_BASE}/wallet/{test_vip_user['uid']}", timeout=30)
-        if wallet_response.status_code == 200:
-            wallet = wallet_response.json()
-            print(f"Current wallet status: {json.dumps(wallet, indent=2)}")
-        
-        # Test crediting cashback
-        print("\n4b. Testing POST /api/wallet/credit-cashback/{uid}...")
-        credit_data = {"amount": 100}
-        
-        response = requests.post(f"{API_BASE}/wallet/credit-cashback/{test_vip_user['uid']}", 
-                               json=credit_data, timeout=30)
+        response = requests.get(f"{API_BASE}/stock/movements/{test_master_user['uid']}", timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
         if response.status_code == 200:
-            result = response.json()
-            print("✅ Cashback credit test PASSED")
-            print(f"Credit result: {json.dumps(result, indent=2)}")
-            
-            # Verify the response structure
-            if "credited_amount" in result and "new_balance" in result:
-                print("✅ Cashback credit response structure correct")
-            
-            return True
+            movements = response.json()
+            if "sent" in movements and "received" in movements:
+                print("✅ Master user stock movements retrieval test PASSED")
+                print(f"Sent movements: {len(movements['sent'])}")
+                print(f"Received movements: {len(movements['received'])}")
+            else:
+                print("❌ Master user stock movements retrieval test FAILED - Missing sent/received arrays")
+                return False
         else:
-            print(f"❌ Cashback credit test FAILED - Status: {response.status_code}")
+            print(f"❌ Master user stock movements retrieval test FAILED - Status: {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ Cashback credit test FAILED - Error: {e}")
+        print(f"❌ Master user stock movements retrieval test FAILED - Error: {e}")
         return False
     
-    # Test 4c: Test partial amount credit
-    print("\n4c. Testing partial amount credit...")
+    # Test 5b: Get stock movements for outlet user (should show received movements)
+    print("\n5b. Testing GET /api/stock/movements/{uid} for outlet user...")
     try:
-        credit_data = {"amount": 50}
-        response = requests.post(f"{API_BASE}/wallet/credit-cashback/{test_vip_user['uid']}", 
-                               json=credit_data, timeout=30)
+        response = requests.get(f"{API_BASE}/stock/movements/{test_outlet_user['uid']}", timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
         if response.status_code == 200:
-            print("✅ Partial amount credit test PASSED")
-            return True
+            movements = response.json()
+            print("✅ Outlet user stock movements retrieval test PASSED")
+            print(f"Sent movements: {len(movements['sent'])}")
+            print(f"Received movements: {len(movements['received'])}")
         else:
-            print(f"❌ Partial amount credit test FAILED - Status: {response.status_code}")
+            print(f"❌ Outlet user stock movements retrieval test FAILED - Status: {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ Partial amount credit test FAILED - Error: {e}")
+        print(f"❌ Outlet user stock movements retrieval test FAILED - Error: {e}")
         return False
+    
+    return True
 
 def test_cashback_withdrawal_flow():
     """Test cashback withdrawal flow"""
