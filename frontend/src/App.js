@@ -18,7 +18,7 @@ import Marketplace from "@/pages/Marketplace";
 import Orders from "@/pages/Orders";
 import VIPMembership from "@/pages/VIPMembership";
 import KYCVerification from "@/pages/KYCVerification";
-import Wallet from "@/pages/Wallet";
+import WalletNew from "@/pages/WalletNew";
 import Leaderboard from "@/pages/Leaderboard";
 import Profile from "@/pages/Profile";
 import AdminDashboard from "@/pages/AdminDashboard";
