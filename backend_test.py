@@ -298,53 +298,56 @@ def test_mining_status_with_active_session():
         print(f"❌ Mining status with active session test FAILED - Error: {e}")
         return False
 
-def test_stock_movement_retrieval():
-    """Test stock movement retrieval for users"""
-    print("\n5. Testing Stock Movement Retrieval...")
+def test_mining_rate_calculation():
+    """Test mining rate calculation formula"""
+    print("\n5. Testing Mining Rate Calculation Formula...")
     
-    # Test 5a: Get stock movements for master user (should show sent movements)
-    print("\n5a. Testing GET /api/stock/movements/{uid} for master user...")
     try:
-        response = requests.get(f"{API_BASE}/stock/movements/{test_master_user['uid']}", timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
+        # Get mining status for user with no referrals
+        response = requests.get(f"{API_BASE}/mining/status/{test_user_no_mining['uid']}", timeout=30)
         
         if response.status_code == 200:
-            movements = response.json()
-            if "sent" in movements and "received" in movements:
-                print("✅ Master user stock movements retrieval test PASSED")
-                print(f"Sent movements: {len(movements['sent'])}")
-                print(f"Received movements: {len(movements['received'])}")
+            result = response.json()
+            
+            mining_rate_per_hour = result.get("mining_rate_per_hour", 0)
+            base_rate = result.get("base_rate", 0)
+            active_referrals = result.get("active_referrals", 0)
+            
+            # Get current day for calculation
+            current_day = datetime.now().day
+            
+            # Calculate expected rate using the formula:
+            # (current_day * base_rate) + (active_referrals * 0.1 * base_rate)
+            # Then divide by 1440 (minutes in a day) to get per-minute rate
+            # Multiply by 60 to get per-hour rate
+            
+            expected_total_rate = (current_day * base_rate) + (active_referrals * 0.1 * base_rate)
+            expected_per_minute_rate = expected_total_rate / 1440
+            expected_per_hour_rate = expected_per_minute_rate * 60
+            
+            print(f"Current Day: {current_day}")
+            print(f"Base Rate: {base_rate}")
+            print(f"Active Referrals: {active_referrals}")
+            print(f"Expected Total Rate: {expected_total_rate}")
+            print(f"Expected Per-Hour Rate: {expected_per_hour_rate}")
+            print(f"Actual Per-Hour Rate: {mining_rate_per_hour}")
+            
+            # Allow small floating point differences
+            rate_difference = abs(expected_per_hour_rate - mining_rate_per_hour)
+            tolerance = 0.01  # 1 cent tolerance
+            
+            if rate_difference <= tolerance:
+                print("✅ Mining rate calculation test PASSED - Formula is correct")
+                return True
             else:
-                print("❌ Master user stock movements retrieval test FAILED - Missing sent/received arrays")
+                print(f"❌ Mining rate calculation test FAILED - Expected: {expected_per_hour_rate}, Got: {mining_rate_per_hour}, Difference: {rate_difference}")
                 return False
         else:
-            print(f"❌ Master user stock movements retrieval test FAILED - Status: {response.status_code}")
+            print(f"❌ Mining rate calculation test FAILED - Status: {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ Master user stock movements retrieval test FAILED - Error: {e}")
+        print(f"❌ Mining rate calculation test FAILED - Error: {e}")
         return False
-    
-    # Test 5b: Get stock movements for outlet user (should show received movements)
-    print("\n5b. Testing GET /api/stock/movements/{uid} for outlet user...")
-    try:
-        response = requests.get(f"{API_BASE}/stock/movements/{test_outlet_user['uid']}", timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 200:
-            movements = response.json()
-            print("✅ Outlet user stock movements retrieval test PASSED")
-            print(f"Sent movements: {len(movements['sent'])}")
-            print(f"Received movements: {len(movements['received'])}")
-        else:
-            print(f"❌ Outlet user stock movements retrieval test FAILED - Status: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Outlet user stock movements retrieval test FAILED - Error: {e}")
-        return False
-    
-    return True
 
 def test_admin_stock_movement_approval():
     """Test admin approval flow for stock movements"""
