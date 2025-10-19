@@ -3070,7 +3070,7 @@ async def create_withdrawal_request(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    if user.get("kyc_status") != "approved":
+    if user.get("kyc_status") != "verified":
         raise HTTPException(status_code=403, detail="KYC verification required")
     
     # Check balance
