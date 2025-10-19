@@ -34,11 +34,12 @@ print(f"Testing Wallets & Maintenance Feature at: {BACKEND_URL}")
 print(f"API Base: {API_BASE}")
 print("=" * 80)
 
-# Test data for delivery charge testing
-test_admin_user = None
+# Test data for wallet testing
 test_vip_user = None
-test_order = None
-test_outlet_id = "outlet_123"
+test_free_user = None
+test_outlet_user = None
+test_admin_user = None
+test_withdrawals = []
 
 def setup_test_users():
     """Create test users for delivery charge testing"""
