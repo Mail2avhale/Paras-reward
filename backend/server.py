@@ -219,6 +219,29 @@ async def get_base_rate():
     total_users = await db.users.count_documents({})
     base_rate = 50 - (total_users // 100)
     return max(base_rate, 10)
+async def calculate_profile_completion(user: Dict) -> float:
+    """Calculate profile completion percentage"""
+    required_fields = [
+        "first_name", "last_name", "mobile", "email",
+        "state", "district", "pincode",
+        "aadhaar_number", "pan_number",
+        "bank_account_number", "upi_id"
+    ]
+    
+    completed = sum(1 for field in required_fields if user.get(field))
+    return (completed / len(required_fields)) * 100
+
+async def check_unique_fields(field_name: str, value: str, exclude_uid: Optional[str] = None):
+    """Check if field value is unique"""
+    if not value:
+        return True
+    
+    query = {field_name: value}
+    if exclude_uid:
+        query["uid"] = {"$ne": exclude_uid}
+    
+    existing = await db.users.find_one(query)
+    return existing is None
 
 async def get_active_referrals(uid: str):
     """Count active referrals (logged in within 24 hours)"""
