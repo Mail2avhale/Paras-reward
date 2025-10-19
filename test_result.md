@@ -345,9 +345,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Stock Movement System"
-    - "Security Deposit System"
-    - "Annual Renewal System"
+    - "Mining System Fix - Mining Rate Display"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
