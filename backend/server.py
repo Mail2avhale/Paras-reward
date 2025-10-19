@@ -275,12 +275,33 @@ async def check_unique_fields(field_name: str, value: str, exclude_uid: Optional
     return existing is None
 
 async def get_active_referrals(uid: str):
-    """Count active referrals (logged in within 24 hours)"""
-    yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
-    active_count = await db.users.count_documents({
+    """Count active referrals (with active mining sessions in last 24 hours)"""
+    now = datetime.now(timezone.utc)
+    yesterday = now - timedelta(hours=24)
+    
+    # Find referrals who:
+    # 1. Were referred by this user
+    # 2. Have logged in within 24 hours
+    # 3. Have an active mining session (mining_active = True and session not expired)
+    
+    referrals = await db.users.find({
         "referred_by": uid,
-        "last_login": {"$gte": yesterday.isoformat()}
-    })
+        "last_login": {"$gte": yesterday.isoformat()},
+        "mining_active": True
+    }).to_list(length=None)
+    
+    # Additional check: ensure their mining session hasn't expired
+    active_count = 0
+    for referral in referrals:
+        if referral.get("mining_start_time"):
+            start_time = datetime.fromisoformat(referral["mining_start_time"]) if isinstance(referral["mining_start_time"], str) else referral["mining_start_time"]
+            if start_time.tzinfo is None:
+                start_time = start_time.replace(tzinfo=timezone.utc)
+            
+            # Check if session is still within 24 hours
+            if now < start_time + timedelta(hours=24):
+                active_count += 1
+    
     return min(active_count, 200)  # Cap at 200
 
 async def calculate_mining_rate(uid: str):
