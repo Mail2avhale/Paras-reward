@@ -15,26 +15,41 @@ const Referrals = ({ user, onLogout }) => {
   const [referrals, setReferrals] = useState([]);
   const [copied, setCopied] = useState(false);
   const [applyCode, setApplyCode] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (user?.uid) {
       fetchReferralCode();
       fetchReferrals();
+    } else {
+      setError('User information not available. Please try logging out and logging back in.');
+      setLoading(false);
     }
   }, [user?.uid]);
 
   const fetchReferralCode = async () => {
     try {
+      setLoading(true);
+      setError(null);
+      
       if (!user?.uid) {
-        console.error('User UID not available');
-        toast.error('Unable to load referral code. Please refresh the page.');
-        return;
+        throw new Error('User UID not available');
       }
+      
       const response = await axios.get(`${API}/referral/code/${user.uid}`);
-      setReferralCode(response.data.referral_code);
+      
+      if (response.data.referral_code) {
+        setReferralCode(response.data.referral_code);
+      } else {
+        throw new Error('Referral code not found in response');
+      }
     } catch (error) {
       console.error('Error fetching referral code:', error);
+      setError(error.response?.data?.detail || error.message || 'Failed to load referral code');
       toast.error('Failed to load referral code');
+    } finally {
+      setLoading(false);
     }
   };
 
