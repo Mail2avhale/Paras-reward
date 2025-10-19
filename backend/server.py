@@ -2462,20 +2462,23 @@ async def distribute_delivery_charge(order_id: str):
             }
             commission_records.append(commission_record)
             
-            # Credit profit wallet automatically (if not company)
+            # Credit profit wallet automatically (if not company and wallet not frozen)
             if entity != "company":
                 if entity == "outlet" and outlet_id:
-                    # Credit outlet's profit wallet
-                    await db.users.update_one(
-                        {"uid": outlet_id, "role": "outlet"},
-                        {"$inc": {"profit_wallet_balance": amount}}
-                    )
+                    # Check if outlet's profit wallet is frozen (overdue renewal)
+                    outlet_user = await db.users.find_one({"uid": outlet_id})
+                    if outlet_user and not outlet_user.get("profit_wallet_frozen", False):
+                        # Credit outlet's profit wallet
+                        await db.users.update_one(
+                            {"uid": outlet_id, "role": "outlet"},
+                            {"$inc": {"profit_wallet_balance": amount}}
+                        )
                 elif entity == "master":
-                    # In production: Get order's master stockist and credit
+                    # In production: Get order's master stockist and credit (check frozen status)
                     # For now, using placeholder - will be enhanced later
                     pass
                 elif entity == "sub":
-                    # In production: Get order's sub stockist and credit
+                    # In production: Get order's sub stockist and credit (check frozen status)
                     # For now, using placeholder - will be enhanced later
                     pass
     
