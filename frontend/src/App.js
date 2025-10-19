@@ -20,6 +20,7 @@ import VIPMembership from "@/pages/VIPMembership";
 import KYCVerification from "@/pages/KYCVerification";
 import Wallet from "@/pages/Wallet";
 import Leaderboard from "@/pages/Leaderboard";
+import Profile from "@/pages/Profile";
 import AdminDashboard from "@/pages/AdminDashboard";
 import OutletPanel from "@/pages/OutletPanel";
 import Setup from "@/pages/Setup";
