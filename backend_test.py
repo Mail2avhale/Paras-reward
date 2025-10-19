@@ -34,12 +34,16 @@ print(f"Testing Wallets & Maintenance Feature at: {BACKEND_URL}")
 print(f"API Base: {API_BASE}")
 print("=" * 80)
 
-# Test data for wallet testing
-test_vip_user = None
-test_free_user = None
-test_outlet_user = None
+# Test data for comprehensive system testing
 test_admin_user = None
-test_withdrawals = []
+test_master_user = None
+test_sub_user = None
+test_outlet_user = None
+test_regular_user = None
+test_product = None
+test_stock_movements = []
+test_security_deposits = []
+test_renewals = []
 
 def setup_test_users():
     """Create test users for wallet testing"""
