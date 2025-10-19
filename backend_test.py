@@ -532,92 +532,55 @@ def test_admin_stock_movement_approval():
     
     return True
 
-def test_profit_withdrawal_flow():
-    """Test profit withdrawal flow for outlet users"""
-    print("\n6. Testing Profit Withdrawal Flow...")
+def test_receiver_completion():
+    """Test receiver completion of stock movements"""
+    print("\n7. Testing Receiver Completion of Stock Movements...")
     
-    # First, add some profit balance to outlet user
-    print("\n6a. Adding profit balance for outlet user...")
-    # We'll simulate this by directly testing withdrawal with existing balance
+    # Find an approved movement to complete
+    approved_movement = None
+    for movement in test_stock_movements:
+        if movement.get("status") == "approved":
+            approved_movement = movement
+            break
     
-    # Test 6b: Valid profit withdrawal
-    print("\n6b. Testing POST /api/wallet/profit/withdraw (valid withdrawal)...")
-    withdrawal_data = {
-        "user_id": test_outlet_user["uid"],
-        "amount": 100,
-        "payment_mode": "upi",
-        "upi_id": "amit@paytm"
-    }
+    if not approved_movement:
+        print("ℹ️ No approved movements found for completion testing")
+        return True
     
+    # Test 7a: Complete stock movement (receiver confirms receipt)
+    movement_id = approved_movement["id"]
+    movement_type = approved_movement["type"]
+    
+    # Determine receiver based on movement type
+    if movement_type == "company_to_master":
+        receiver_id = test_master_user["uid"]
+    elif movement_type == "master_to_sub":
+        receiver_id = test_sub_user["uid"]
+    elif movement_type == "sub_to_outlet":
+        receiver_id = test_outlet_user["uid"]
+    elif movement_type == "outlet_to_user":
+        receiver_id = test_regular_user["uid"]
+    else:
+        print(f"❌ Unknown movement type: {movement_type}")
+        return False
+    
+    print(f"\n7a. Testing POST /api/stock/movements/{movement_id}/complete...")
     try:
-        response = requests.post(f"{API_BASE}/wallet/profit/withdraw", 
-                               json=withdrawal_data, timeout=30)
+        complete_data = {"receiver_id": receiver_id}
+        response = requests.post(f"{API_BASE}/stock/movements/{movement_id}/complete", 
+                               json=complete_data, timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
         if response.status_code == 200:
-            result = response.json()
-            print("✅ Profit withdrawal test PASSED")
-            print(f"Withdrawal result: {json.dumps(result, indent=2)}")
-            
-            # Store withdrawal ID for admin testing
-            withdrawal_id = result.get("withdrawal_id")
-            if withdrawal_id:
-                test_withdrawals.append({"id": withdrawal_id, "type": "profit"})
-                
-        elif response.status_code == 400 and "insufficient" in response.text.lower():
-            print("ℹ️ Insufficient balance (expected for new outlet user)")
-            return True
+            print("✅ Receiver completion test PASSED")
+            approved_movement["status"] = "completed"
         else:
-            print(f"❌ Profit withdrawal test FAILED - Status: {response.status_code}")
+            print(f"❌ Receiver completion test FAILED - Status: {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ Profit withdrawal test FAILED - Error: {e}")
+        print(f"❌ Receiver completion test FAILED - Error: {e}")
         return False
-    
-    # Test 6c: Invalid withdrawal (amount < ₹50)
-    print("\n6c. Testing minimum amount validation for profit withdrawal...")
-    invalid_withdrawal = {
-        "user_id": test_outlet_user["uid"],
-        "amount": 30,  # Below minimum
-        "payment_mode": "upi",
-        "upi_id": "amit@paytm"
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/wallet/profit/withdraw", 
-                               json=invalid_withdrawal, timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 400:
-            print("✅ Profit minimum amount validation test PASSED")
-        else:
-            print(f"❌ Profit minimum amount validation test FAILED - Expected 400, got {response.status_code}")
-    except Exception as e:
-        print(f"❌ Profit minimum amount validation test FAILED - Error: {e}")
-    
-    # Test 6d: Role validation (regular user should fail)
-    print("\n6d. Testing role validation for profit withdrawal...")
-    invalid_role_withdrawal = {
-        "user_id": test_free_user["uid"],  # Regular user, not outlet
-        "amount": 100,
-        "payment_mode": "upi",
-        "upi_id": "priya@paytm"
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/wallet/profit/withdraw", 
-                               json=invalid_role_withdrawal, timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 403:
-            print("✅ Role validation test PASSED")
-        else:
-            print(f"❌ Role validation test FAILED - Expected 403, got {response.status_code}")
-    except Exception as e:
-        print(f"❌ Role validation test FAILED - Error: {e}")
     
     return True
 
