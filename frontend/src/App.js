@@ -66,7 +66,8 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Home />} />
-          <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
+          <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginNew onLogin={handleLogin} />} />
+          <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
           <Route path="/setup" element={<Setup />} />
           <Route path="/dashboard" element={user ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/mining" element={user ? <Mining user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
