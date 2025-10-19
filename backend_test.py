@@ -224,59 +224,79 @@ def start_mining_session():
         print(f"❌ Mining session start FAILED - Error: {e}")
         return False
 
-def test_stock_movement_invalid_flows():
-    """Test invalid stock movement flows (should fail)"""
-    print("\n4. Testing Stock Movement System - Invalid Flows...")
+def test_mining_status_with_active_session():
+    """Test mining status endpoint for user WITH active mining session"""
+    print("\n4. Testing Mining Status - User WITH active mining session...")
     
-    # Test 4a: User → Outlet (reverse flow, should fail)
-    print("\n4a. Testing User → Outlet stock flow (should fail)...")
     try:
-        movement_data = {
-            "sender_id": test_regular_user["uid"],
-            "receiver_id": test_outlet_user["uid"],
-            "product_id": test_product["product_id"],
-            "quantity": 5,
-            "notes": "Invalid reverse flow"
-        }
-        
-        response = requests.post(f"{API_BASE}/stock/transfer/initiate", json=movement_data, timeout=30)
+        response = requests.get(f"{API_BASE}/mining/status/{test_user_with_mining['uid']}", timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
-        if response.status_code == 400:
-            print("✅ User → Outlet invalid flow test PASSED (correctly rejected)")
+        if response.status_code == 200:
+            result = response.json()
+            
+            # Check required fields
+            required_fields = ["mining_rate_per_hour", "mining_rate", "base_rate", "active_referrals", "is_mining"]
+            missing_fields = []
+            
+            for field in required_fields:
+                if field not in result:
+                    missing_fields.append(field)
+            
+            if missing_fields:
+                print(f"❌ Mining status with active session test FAILED - Missing fields: {missing_fields}")
+                return False
+            
+            # Verify mining_rate_per_hour is NOT 0
+            mining_rate_per_hour = result.get("mining_rate_per_hour", 0)
+            mining_rate = result.get("mining_rate", 0)
+            base_rate = result.get("base_rate", 0)
+            active_referrals = result.get("active_referrals", 0)
+            is_mining = result.get("is_mining", False)
+            session_active = result.get("session_active", False)
+            
+            print(f"Mining Rate Per Hour: {mining_rate_per_hour}")
+            print(f"Mining Rate: {mining_rate}")
+            print(f"Base Rate: {base_rate}")
+            print(f"Active Referrals: {active_referrals}")
+            print(f"Is Mining: {is_mining}")
+            print(f"Session Active: {session_active}")
+            
+            # Verify mining rate is NOT 0
+            if mining_rate_per_hour == 0:
+                print("❌ Mining status with active session test FAILED - mining_rate_per_hour is 0 (should NOT be 0)")
+                return False
+            
+            # Verify mining_rate matches mining_rate_per_hour
+            if mining_rate != mining_rate_per_hour:
+                print(f"❌ Mining status with active session test FAILED - mining_rate ({mining_rate}) doesn't match mining_rate_per_hour ({mining_rate_per_hour})")
+                return False
+            
+            # Verify base_rate is positive
+            if base_rate <= 0:
+                print(f"❌ Mining status with active session test FAILED - base_rate ({base_rate}) should be positive")
+                return False
+            
+            # Verify is_mining is True (active session)
+            if not is_mining:
+                print(f"❌ Mining status with active session test FAILED - is_mining should be True for user with active session")
+                return False
+            
+            # Verify session_active is True
+            if not session_active:
+                print(f"❌ Mining status with active session test FAILED - session_active should be True")
+                return False
+            
+            print("✅ Mining status with active session test PASSED - All required fields present and mining rate is non-zero")
+            return True
+            
         else:
-            print(f"❌ User → Outlet invalid flow test FAILED - Expected 400, got {response.status_code}")
+            print(f"❌ Mining status with active session test FAILED - Status: {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ User → Outlet invalid flow test FAILED - Error: {e}")
+        print(f"❌ Mining status with active session test FAILED - Error: {e}")
         return False
-    
-    # Test 4b: Master → Outlet (skipping Sub, should fail)
-    print("\n4b. Testing Master → Outlet stock flow (should fail - skips Sub)...")
-    try:
-        movement_data = {
-            "sender_id": test_master_user["uid"],
-            "receiver_id": test_outlet_user["uid"],
-            "product_id": test_product["product_id"],
-            "quantity": 20,
-            "notes": "Invalid flow - skipping sub stockist"
-        }
-        
-        response = requests.post(f"{API_BASE}/stock/transfer/initiate", json=movement_data, timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 400:
-            print("✅ Master → Outlet invalid flow test PASSED (correctly rejected)")
-        else:
-            print(f"❌ Master → Outlet invalid flow test FAILED - Expected 400, got {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Master → Outlet invalid flow test FAILED - Error: {e}")
-        return False
-    
-    return True
 
 def test_stock_movement_retrieval():
     """Test stock movement retrieval for users"""
