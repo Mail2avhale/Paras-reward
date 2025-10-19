@@ -200,8 +200,7 @@ def test_password_validation():
     # Test weak password
     print("\n5a. Testing weak password...")
     weak_password_data = {
-        "first_name": "Weak",
-        "last_name": "Password",
+        "name": "Weak Password",
         "email": f"weak.password.{datetime.now().strftime('%Y%m%d%H%M%S')}@example.com",
         "mobile": f"5432109{datetime.now().strftime('%H%M')}",
         "password": "123",  # Very weak password
