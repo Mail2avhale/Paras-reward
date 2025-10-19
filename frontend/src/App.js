@@ -94,6 +94,7 @@ function App() {
           <Route path="/kyc" element={user ? <KYCVerification user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/wallet" element={user ? <Wallet user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/leaderboard" element={user ? <Leaderboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+          <Route path="/profile" element={user ? <Profile user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/admin" element={user && user.role === "admin" ? <AdminDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
           <Route path="/outlet" element={user && user.role === "outlet" ? <OutletPanel user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
         </Routes>
