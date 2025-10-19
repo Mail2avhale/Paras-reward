@@ -46,24 +46,53 @@ class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
     uid: str = Field(default_factory=lambda: str(uuid.uuid4()))
     email: Optional[str] = None
-    name: str
+    name: Optional[str] = None  # Made optional, will be constructed from first/last name
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
+    mobile: Optional[str] = None
     profile_picture: Optional[str] = None
     role: str = "user"  # user, admin, master_stockist, sub_stockist, outlet
     password_hash: Optional[str] = None
     reset_token: Optional[str] = None
     reset_token_expiry: Optional[datetime] = None
+    
+    # Address fields
+    state: Optional[str] = None
+    district: Optional[str] = None
+    taluka: Optional[str] = None
+    village: Optional[str] = None
+    pincode: Optional[str] = None
+    
+    # KYC fields
+    aadhaar_number: Optional[str] = None
+    pan_number: Optional[str] = None
+    upi_id: Optional[str] = None
+    
+    # Membership
     membership_type: str = "free"  # free, vip
     membership_expiry: Optional[datetime] = None
+    
+    # Wallets
     prc_balance: float = 0.0
     cash_wallet_balance: float = 0.0
     wallet_status: str = "active"  # active, frozen
     last_wallet_maintenance: Optional[datetime] = None
+    
+    # KYC Status
     kyc_status: str = "pending"  # pending, verified, rejected
+    
+    # Timestamps
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_login: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_active: bool = True
+    
+    # Referral
     referral_code: str = Field(default_factory=lambda: ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8)))
     referred_by: Optional[str] = None
+    
+    # Mining
     mining_start_time: Optional[datetime] = None
     total_mined: float = 0.0
     taps_today: int = 0
