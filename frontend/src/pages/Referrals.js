@@ -105,16 +105,32 @@ const Referrals = ({ user, onLogout }) => {
               Your Referral Code
             </h2>
             <div className="bg-white/20 backdrop-blur-sm p-6 rounded-2xl mb-4">
-              {referralCode ? (
+              {loading ? (
+                <div className="text-center py-4">
+                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-white border-r-transparent"></div>
+                  <p className="mt-2 text-white/70">Loading referral code...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-4">
+                  <p className="text-red-200 text-sm mb-2">{error}</p>
+                  <Button
+                    onClick={fetchReferralCode}
+                    size="sm"
+                    className="bg-white text-purple-600 hover:bg-gray-100"
+                  >
+                    Retry
+                  </Button>
+                </div>
+              ) : referralCode ? (
                 <p className="text-4xl font-bold text-center tracking-wider">{referralCode}</p>
               ) : (
-                <p className="text-2xl text-center text-white/70">Loading...</p>
+                <p className="text-2xl text-center text-white/70">No code available</p>
               )}
             </div>
             <Button
               data-testid="copy-code-btn"
               onClick={copyReferralCode}
-              disabled={!referralCode}
+              disabled={!referralCode || loading}
               className="w-full bg-white text-purple-600 hover:bg-gray-100 py-6 rounded-xl text-lg font-semibold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {copied ? (
