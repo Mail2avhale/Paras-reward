@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend API Testing Script for User Registration
-Tests the /api/auth/register endpoint thoroughly
+Backend API Testing Script for Delivery Charge Auto-Distribution
+Tests the delivery charge configuration and auto-distribution functionality
 """
 
 import requests
@@ -9,6 +9,7 @@ import json
 import sys
 import os
 from datetime import datetime
+import time
 
 # Get backend URL from frontend .env file
 def get_backend_url():
