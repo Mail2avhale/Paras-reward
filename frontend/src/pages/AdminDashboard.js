@@ -3,8 +3,9 @@ import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Package, CreditCard, FileText, CheckCircle, XCircle } from 'lucide-react';
+import { Users, Package, CreditCard, FileText, CheckCircle, XCircle, Search, Shield, UserCog, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -14,11 +15,16 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [stats, setStats] = useState(null);
   const [vipPayments, setVipPayments] = useState([]);
   const [kycDocuments, setKycDocuments] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [usersTotal, setUsersTotal] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
 
   useEffect(() => {
     fetchStats();
     fetchVIPPayments();
     fetchKYCDocuments();
+    fetchUsers();
   }, []);
 
   const fetchStats = async () => {
