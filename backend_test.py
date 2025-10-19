@@ -75,13 +75,14 @@ def test_registration_endpoint():
         return False, valid_user_data, None
 
 def test_duplicate_detection(existing_user_data):
-    """Test duplicate field detection"""
+    """Test duplicate field detection for email, mobile, aadhaar_number, pan_number"""
     print("\n2. Testing duplicate field detection...")
     
     # Test duplicate email
     print("\n2a. Testing duplicate email...")
     duplicate_email_data = {
-        "name": "Priya Sharma",
+        "first_name": "Priya",
+        "last_name": "Sharma",
         "email": existing_user_data["email"],  # Same email
         "mobile": f"8765432{datetime.now().strftime('%H%M')}",
         "password": "AnotherPass123!",
@@ -108,7 +109,8 @@ def test_duplicate_detection(existing_user_data):
     # Test duplicate mobile
     print("\n2b. Testing duplicate mobile...")
     duplicate_mobile_data = {
-        "name": "Amit Patel",
+        "first_name": "Amit",
+        "last_name": "Patel",
         "email": f"amit.patel.{datetime.now().strftime('%Y%m%d%H%M%S')}@example.com",
         "mobile": existing_user_data["mobile"],  # Same mobile
         "password": "YetAnotherPass123!",
@@ -131,6 +133,62 @@ def test_duplicate_detection(existing_user_data):
             
     except requests.exceptions.RequestException as e:
         print(f"❌ Duplicate mobile test FAILED - Network error: {e}")
+
+    # Test duplicate aadhaar_number
+    print("\n2c. Testing duplicate aadhaar_number...")
+    duplicate_aadhaar_data = {
+        "first_name": "Sunita",
+        "last_name": "Verma",
+        "email": f"sunita.verma.{datetime.now().strftime('%Y%m%d%H%M%S')}@example.com",
+        "mobile": f"7654321{datetime.now().strftime('%H%M')}",
+        "password": "ThirdPass123!",
+        "state": "Uttar Pradesh",
+        "district": "Lucknow",
+        "pincode": "226001", 
+        "aadhaar_number": existing_user_data["aadhaar_number"],  # Same aadhaar
+        "pan_number": f"DUPAA{datetime.now().strftime('%H%M')}D"
+    }
+    
+    try:
+        response = requests.post(REGISTER_URL, json=duplicate_aadhaar_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 400 and "aadhaar" in response.text.lower():
+            print("✅ Duplicate aadhaar detection test PASSED")
+        else:
+            print(f"❌ Duplicate aadhaar detection test FAILED - Expected 400 with aadhaar error")
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Duplicate aadhaar test FAILED - Network error: {e}")
+
+    # Test duplicate pan_number
+    print("\n2d. Testing duplicate pan_number...")
+    duplicate_pan_data = {
+        "first_name": "Vikram",
+        "last_name": "Gupta",
+        "email": f"vikram.gupta.{datetime.now().strftime('%Y%m%d%H%M%S')}@example.com",
+        "mobile": f"6543210{datetime.now().strftime('%H%M')}",
+        "password": "FourthPass123!",
+        "state": "Punjab",
+        "district": "Chandigarh",
+        "pincode": "160001", 
+        "aadhaar_number": f"4321{datetime.now().strftime('%H%M')}8765432",
+        "pan_number": existing_user_data["pan_number"]  # Same PAN
+    }
+    
+    try:
+        response = requests.post(REGISTER_URL, json=duplicate_pan_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 400 and "pan" in response.text.lower():
+            print("✅ Duplicate PAN detection test PASSED")
+        else:
+            print(f"❌ Duplicate PAN detection test FAILED - Expected 400 with PAN error")
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Duplicate PAN test FAILED - Network error: {e}")
 
 def test_missing_fields():
     """Test registration with missing required fields"""
