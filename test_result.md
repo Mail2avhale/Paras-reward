@@ -150,6 +150,30 @@ backend:
         agent: "testing"
         comment: "Login endpoint works correctly. Tested with existing user credentials. Accepts query parameters (identifier, password) and returns complete user object. No issues found."
 
+  - task: "Delivery Charge Configuration"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented GET /api/admin/delivery-config and POST /api/admin/delivery-config endpoints. Admin can configure delivery_charge_rate (0-1) and distribution_split (master/sub/outlet/company percentages must sum to 100%). Configuration stored in system_config collection with config_type='delivery'. Fixed bug in checkout where it was looking for 'percentage' field instead of 'delivery_charge_rate'."
+
+  - task: "Delivery Charge Auto-Distribution"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented POST /api/orders/{order_id}/distribute-delivery-charge endpoint. Automatically triggered when order is marked as delivered (both admin and outlet endpoints). Creates commission records in 'commissions_earned' collection. Distribution is idempotent - won't distribute twice. Calculates amounts based on admin-configured percentages. Updated both /api/orders/{order_id}/deliver (outlet) and /api/admin/orders/verify-and-deliver (admin) to trigger auto-distribution."
+
 frontend:
   - task: "User Registration Form"
     implemented: true
