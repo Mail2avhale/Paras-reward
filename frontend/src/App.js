@@ -20,7 +20,7 @@ import VIPMembership from "@/pages/VIPMembership";
 import KYCVerification from "@/pages/KYCVerification";
 import WalletNew from "@/pages/WalletNew";
 import Leaderboard from "@/pages/Leaderboard";
-import Profile from "@/pages/Profile";
+import ProfileEnhanced from "@/pages/ProfileEnhanced";
 import AdminDashboard from "@/pages/AdminDashboard";
 import MasterStockistDashboard from "@/pages/MasterStockistDashboard";
 import SubStockistDashboard from "@/pages/SubStockistDashboard";
