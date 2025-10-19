@@ -587,10 +587,25 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
 # ========== REFERRAL ROUTES ==========
 @api_router.get("/referral/code/{uid}")
 async def get_referral_code(uid: str):
-    """Get user's referral code"""
+    """Get user's referral code - generates one if missing"""
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Generate referral code if missing
+    if not user.get("referral_code"):
+        import secrets
+        import string
+        referral_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+        
+        # Update user with new referral code
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"referral_code": referral_code}}
+        )
+        
+        return {"referral_code": referral_code}
+    
     return {"referral_code": user.get("referral_code")}
 
 @api_router.post("/referral/apply/{uid}")
