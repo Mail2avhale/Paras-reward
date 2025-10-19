@@ -223,38 +223,268 @@ const Home = () => {
           </div>
         </div>
 
-          <div data-testid="feature-referral" className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center mb-6">
-              <Users className="h-8 w-8 text-white" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">Referral Bonus</h3>
-            <p className="text-gray-600">
-              Invite friends and get +10% bonus per active referral. Build your network and earn more!
+      {/* How It Works */}
+      <div className="bg-white/50 py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+              How It Works
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Start earning in 3 simple steps
             </p>
           </div>
 
-          <div data-testid="feature-leaderboard" className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
-            <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-orange-500 rounded-2xl flex items-center justify-center mb-6">
-              <Trophy className="h-8 w-8 text-white" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">Leaderboard</h3>
-            <p className="text-gray-600">
-              Compete with others and climb the leaderboard. Top miners get exclusive rewards!
-            </p>
-          </div>
-        </div>
+          <div className="max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Step 1 */}
+              <div className="relative">
+                <div className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold">
+                    1
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">Sign Up Free</h3>
+                  <p className="text-gray-600">
+                    Create your account in minutes with just your email and mobile number
+                  </p>
+                </div>
+                <div className="hidden md:block absolute top-1/2 right-0 transform translate-x-1/2 -translate-y-1/2">
+                  <ChevronRight className="h-8 w-8 text-purple-400" />
+                </div>
+              </div>
 
-        {/* CTA Section */}
-        <div className="mt-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-3xl p-12 text-center text-white shadow-2xl">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to Start Mining?</h2>
-          <p className="text-lg mb-8 opacity-90">Join thousands of users already earning PRC rewards</p>
-          <Link to="/login">
-            <Button data-testid="join-now-btn" size="lg" className="bg-white text-purple-600 hover:bg-gray-100 px-8 py-6 text-lg rounded-full shadow-xl hover:shadow-2xl transition-all duration-300">
-              Join Now
-            </Button>
-          </Link>
+              {/* Step 2 */}
+              <div className="relative">
+                <div className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold">
+                    2
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">Start Mining</h3>
+                  <p className="text-gray-600">
+                    Mine daily, play games, and refer friends to earn PRC coins
+                  </p>
+                </div>
+                <div className="hidden md:block absolute top-1/2 right-0 transform translate-x-1/2 -translate-y-1/2">
+                  <ChevronRight className="h-8 w-8 text-purple-400" />
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold">
+                  3
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">Redeem Rewards</h3>
+                <p className="text-gray-600">
+                  Shop from 5000+ products and redeem with your earned PRC coins
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Benefits Section */}
+      <div className="container mx-auto px-4 py-20">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+            Why Choose PARAS REWARD?
+          </h2>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            The most rewarding platform in India
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+          <div className="flex gap-4 items-start bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg">
+            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">100% Free to Join</h3>
+              <p className="text-gray-600">No registration fees, no hidden charges</p>
+            </div>
+          </div>
+
+          <div className="flex gap-4 items-start bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg">
+            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Daily Rewards</h3>
+              <p className="text-gray-600">Mine coins every day with increasing rewards</p>
+            </div>
+          </div>
+
+          <div className="flex gap-4 items-start bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg">
+            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="h-6 w-6 text-purple-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Real Products</h3>
+              <p className="text-gray-600">Redeem from thousands of genuine products</p>
+            </div>
+          </div>
+
+          <div className="flex gap-4 items-start bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg">
+            <div className="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="h-6 w-6 text-pink-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Cashback System</h3>
+              <p className="text-gray-600">Get 25% cashback on every purchase</p>
+            </div>
+          </div>
+
+          <div className="flex gap-4 items-start bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg">
+            <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="h-6 w-6 text-yellow-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Secure Platform</h3>
+              <p className="text-gray-600">KYC verified, safe and trusted</p>
+            </div>
+          </div>
+
+          <div className="flex gap-4 items-start bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg">
+            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="h-6 w-6 text-orange-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">24/7 Support</h3>
+              <p className="text-gray-600">Always here to help you succeed</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* All Pages Quick Links */}
+      <div className="bg-gradient-to-br from-purple-600 to-pink-600 py-16">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-white mb-4">
+              Explore All Features
+            </h2>
+            <p className="text-xl text-white/90">
+              Quick access to all pages
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 max-w-6xl mx-auto">
+            <Link to="/dashboard" className="bg-white/20 backdrop-blur-sm hover:bg-white/30 p-4 rounded-xl text-center transition-all hover:scale-105">
+              <Target className="h-8 w-8 text-white mx-auto mb-2" />
+              <div className="text-white font-medium">Dashboard</div>
+            </Link>
+            <Link to="/mining" className="bg-white/20 backdrop-blur-sm hover:bg-white/30 p-4 rounded-xl text-center transition-all hover:scale-105">
+              <Coins className="h-8 w-8 text-white mx-auto mb-2" />
+              <div className="text-white font-medium">Mining</div>
+            </Link>
+            <Link to="/game" className="bg-white/20 backdrop-blur-sm hover:bg-white/30 p-4 rounded-xl text-center transition-all hover:scale-105">
+              <Gamepad2 className="h-8 w-8 text-white mx-auto mb-2" />
+              <div className="text-white font-medium">Tap Game</div>
+            </Link>
+            <Link to="/referrals" className="bg-white/20 backdrop-blur-sm hover:bg-white/30 p-4 rounded-xl text-center transition-all hover:scale-105">
+              <Users className="h-8 w-8 text-white mx-auto mb-2" />
+              <div className="text-white font-medium">Referrals</div>
+            </Link>
+            <Link to="/marketplace" className="bg-white/20 backdrop-blur-sm hover:bg-white/30 p-4 rounded-xl text-center transition-all hover:scale-105">
+              <Store className="h-8 w-8 text-white mx-auto mb-2" />
+              <div className="text-white font-medium">Marketplace</div>
+            </Link>
+            <Link to="/vip" className="bg-white/20 backdrop-blur-sm hover:bg-white/30 p-4 rounded-xl text-center transition-all hover:scale-105">
+              <Trophy className="h-8 w-8 text-white mx-auto mb-2" />
+              <div className="text-white font-medium">VIP</div>
+            </Link>
+            <Link to="/wallet" className="bg-white/20 backdrop-blur-sm hover:bg-white/30 p-4 rounded-xl text-center transition-all hover:scale-105">
+              <Wallet className="h-8 w-8 text-white mx-auto mb-2" />
+              <div className="text-white font-medium">Wallet</div>
+            </Link>
+            <Link to="/kyc" className="bg-white/20 backdrop-blur-sm hover:bg-white/30 p-4 rounded-xl text-center transition-all hover:scale-105">
+              <Shield className="h-8 w-8 text-white mx-auto mb-2" />
+              <div className="text-white font-medium">KYC</div>
+            </Link>
+            <Link to="/orders" className="bg-white/20 backdrop-blur-sm hover:bg-white/30 p-4 rounded-xl text-center transition-all hover:scale-105">
+              <Gift className="h-8 w-8 text-white mx-auto mb-2" />
+              <div className="text-white font-medium">Orders</div>
+            </Link>
+            <Link to="/leaderboard" className="bg-white/20 backdrop-blur-sm hover:bg-white/30 p-4 rounded-xl text-center transition-all hover:scale-105">
+              <Award className="h-8 w-8 text-white mx-auto mb-2" />
+              <div className="text-white font-medium">Leaderboard</div>
+            </Link>
+            <Link to="/profile" className="bg-white/20 backdrop-blur-sm hover:bg-white/30 p-4 rounded-xl text-center transition-all hover:scale-105">
+              <User className="h-8 w-8 text-white mx-auto mb-2" />
+              <div className="text-white font-medium">Profile</div>
+            </Link>
+            <Link to="/setup" className="bg-white/20 backdrop-blur-sm hover:bg-white/30 p-4 rounded-xl text-center transition-all hover:scale-105">
+              <Settings className="h-8 w-8 text-white mx-auto mb-2" />
+              <div className="text-white font-medium">Setup</div>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Final CTA */}
+      <div className="container mx-auto px-4 py-20">
+        <div className="max-w-4xl mx-auto bg-gradient-to-r from-purple-600 to-pink-600 rounded-3xl p-12 text-center text-white shadow-2xl">
+          <h2 className="text-3xl sm:text-5xl font-bold mb-4">Ready to Start Earning?</h2>
+          <p className="text-lg sm:text-xl mb-8 opacity-90">Join thousands of users already mining PRC rewards daily</p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/register">
+              <Button size="lg" className="bg-white text-purple-600 hover:bg-gray-100 px-10 py-6 text-lg rounded-full shadow-xl hover:shadow-2xl transition-all">
+                Create Free Account
+                <Sparkles className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+            <Link to="/about">
+              <Button size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white/10 px-10 py-6 text-lg rounded-full">
+                Learn More
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-12">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <h3 className="text-xl font-bold mb-4">PARAS REWARD</h3>
+              <p className="text-gray-400">India's leading reward mining platform</p>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Quick Links</h4>
+              <ul className="space-y-2">
+                <li><Link to="/about" className="text-gray-400 hover:text-white transition-colors">About Us</Link></li>
+                <li><Link to="/contact" className="text-gray-400 hover:text-white transition-colors">Contact Us</Link></li>
+                <li><Link to="/terms" className="text-gray-400 hover:text-white transition-colors">Terms & Conditions</Link></li>
+                <li><Link to="/privacy" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Features</h4>
+              <ul className="space-y-2">
+                <li><Link to="/mining" className="text-gray-400 hover:text-white transition-colors">Mining</Link></li>
+                <li><Link to="/game" className="text-gray-400 hover:text-white transition-colors">Tap Game</Link></li>
+                <li><Link to="/referrals" className="text-gray-400 hover:text-white transition-colors">Referrals</Link></li>
+                <li><Link to="/marketplace" className="text-gray-400 hover:text-white transition-colors">Marketplace</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Account</h4>
+              <ul className="space-y-2">
+                <li><Link to="/login" className="text-gray-400 hover:text-white transition-colors">Login</Link></li>
+                <li><Link to="/register" className="text-gray-400 hover:text-white transition-colors">Register</Link></li>
+                <li><Link to="/vip" className="text-gray-400 hover:text-white transition-colors">VIP Membership</Link></li>
+                <li><Link to="/kyc" className="text-gray-400 hover:text-white transition-colors">KYC Verification</Link></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-gray-800 pt-8 text-center text-gray-400">
+            <p>&copy; 2025 PARAS REWARD. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
