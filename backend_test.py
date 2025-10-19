@@ -42,55 +42,26 @@ test_admin_user = None
 test_withdrawals = []
 
 def setup_test_users():
-    """Create test users for delivery charge testing"""
-    global test_admin_user, test_vip_user
+    """Create test users for wallet testing"""
+    global test_vip_user, test_free_user, test_outlet_user, test_admin_user
     
     print("\n1. Setting up test users...")
     
-    # Create admin user
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    microseconds = str(datetime.now().microsecond)[:3]  # Get first 3 digits of microseconds
-    admin_data = {
-        "first_name": "Admin",
-        "last_name": "User",
-        "email": f"admin.{timestamp}.{microseconds}@example.com",
-        "mobile": f"98765{timestamp[-6:]}",  # Use last 6 digits of timestamp
-        "password": "AdminPass123!",
+    microseconds = str(datetime.now().microsecond)[:3]
+    
+    # Create VIP user with KYC approved
+    vip_data = {
+        "first_name": "Rajesh",
+        "last_name": "Kumar",
+        "email": f"rajesh.{timestamp}.{microseconds}@example.com",
+        "mobile": f"98765{timestamp[-6:]}",
+        "password": "VIPPass123!",
         "state": "Maharashtra",
         "district": "Mumbai",
         "pincode": "400001",
-        "aadhaar_number": f"1111{timestamp[-8:]}111",
-        "pan_number": f"ADM{timestamp[-6:]}A",
-        "role": "admin"
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/auth/register", json=admin_data, timeout=30)
-        if response.status_code == 200:
-            admin_uid = response.json().get("uid")
-            # Promote to admin
-            requests.post(f"{API_BASE}/admin/promote", params={"email": admin_data["email"], "role": "admin"}, timeout=30)
-            test_admin_user = {"uid": admin_uid, **admin_data}
-            print(f"✅ Admin user created: {admin_uid}")
-        else:
-            print(f"❌ Failed to create admin user: {response.status_code} - {response.text}")
-            return False
-    except Exception as e:
-        print(f"❌ Error creating admin user: {e}")
-        return False
-    
-    # Create VIP user
-    vip_data = {
-        "first_name": "VIP",
-        "last_name": "Customer",
-        "email": f"vip.{timestamp}.{microseconds}@example.com",
-        "mobile": f"98766{timestamp[-6:]}",  # Different prefix to avoid collision
-        "password": "VIPPass123!",
-        "state": "Gujarat",
-        "district": "Ahmedabad",
-        "pincode": "380001",
-        "aadhaar_number": f"2222{timestamp[-8:]}222",
-        "pan_number": f"VIP{timestamp[-6:]}V"
+        "aadhaar_number": f"1234{timestamp[-8:]}567",
+        "pan_number": f"ABCD{timestamp[-5:]}E"
     }
     
     try:
@@ -100,78 +71,8 @@ def setup_test_users():
             test_vip_user = {"uid": vip_uid, **vip_data}
             print(f"✅ VIP user created: {vip_uid}")
             
-            # Make user VIP by submitting and approving a payment
-            print("Making user VIP via payment approval...")
-            
-            # Submit VIP payment
-            payment_data = {
-                "user_id": vip_uid,
-                "amount": 1000,
-                "date": datetime.now().strftime("%Y-%m-%d"),
-                "time": datetime.now().strftime("%H:%M"),
-                "utr_number": f"TEST{datetime.now().strftime('%Y%m%d%H%M%S')}",
-                "screenshot_url": "test_screenshot"
-            }
-            
-            payment_response = requests.post(f"{API_BASE}/membership/submit-payment", 
-                                           json=payment_data, timeout=30)
-            
-            if payment_response.status_code == 200:
-                payment_id = payment_response.json().get("payment_id")
-                print(f"Payment submitted: {payment_id}")
-                
-                # Approve the payment
-                approval_data = {"action": "approve"}
-                approve_response = requests.post(f"{API_BASE}/membership/payment/{payment_id}/action",
-                                               json=approval_data, timeout=30)
-                
-                if approve_response.status_code == 200:
-                    print("✅ User promoted to VIP successfully")
-                    
-                    # Now submit and verify KYC
-                    print("Submitting and verifying KYC...")
-                    
-                    kyc_data = {
-                        "aadhaar_front_base64": "test_aadhaar_front_image",
-                        "aadhaar_back_base64": "test_aadhaar_back_image", 
-                        "pan_front_base64": "test_pan_front_image"
-                    }
-                    
-                    kyc_response = requests.post(f"{API_BASE}/kyc/submit/{vip_uid}",
-                                               json=kyc_data, timeout=30)
-                    
-                    if kyc_response.status_code == 200:
-                        kyc_id = kyc_response.json().get("kyc_id")
-                        print(f"KYC submitted: {kyc_id}")
-                        
-                        # Verify KYC
-                        kyc_verify_data = {"action": "approve"}
-                        verify_response = requests.post(f"{API_BASE}/kyc/{kyc_id}/verify",
-                                                      json=kyc_verify_data, timeout=30)
-                        
-                        if verify_response.status_code == 200:
-                            print("✅ KYC verified successfully")
-                            
-                            # Add PRC balance via tap game
-                            print("Adding PRC balance via tap game...")
-                            tap_data = {"taps": 100}  # Add 100 PRC
-                            tap_response = requests.post(f"{API_BASE}/game/tap/{vip_uid}",
-                                                       json=tap_data, timeout=30)
-                            
-                            if tap_response.status_code == 200:
-                                print("✅ PRC balance added successfully")
-                            else:
-                                print(f"❌ Failed to add PRC balance: {tap_response.status_code}")
-                                
-                        else:
-                            print(f"❌ Failed to verify KYC: {verify_response.status_code}")
-                    else:
-                        print(f"❌ Failed to submit KYC: {kyc_response.status_code}")
-                        
-                else:
-                    print(f"❌ Failed to approve VIP payment: {approve_response.status_code}")
-            else:
-                print(f"❌ Failed to submit VIP payment: {payment_response.status_code}")
+            # Make user VIP and approve KYC
+            await make_user_vip_with_kyc(vip_uid)
             
         else:
             print(f"❌ Failed to create VIP user: {response.status_code} - {response.text}")
@@ -180,7 +81,114 @@ def setup_test_users():
         print(f"❌ Error creating VIP user: {e}")
         return False
     
+    # Create free user
+    free_data = {
+        "first_name": "Priya",
+        "last_name": "Sharma",
+        "email": f"priya.{timestamp}.{microseconds}@example.com",
+        "mobile": f"98766{timestamp[-6:]}",
+        "password": "FreePass123!",
+        "state": "Gujarat",
+        "district": "Ahmedabad",
+        "pincode": "380001",
+        "aadhaar_number": f"5678{timestamp[-8:]}901",
+        "pan_number": f"EFGH{timestamp[-5:]}I"
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/auth/register", json=free_data, timeout=30)
+        if response.status_code == 200:
+            free_uid = response.json().get("uid")
+            test_free_user = {"uid": free_uid, **free_data}
+            print(f"✅ Free user created: {free_uid}")
+        else:
+            print(f"❌ Failed to create free user: {response.status_code} - {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Error creating free user: {e}")
+        return False
+    
+    # Create outlet user
+    outlet_data = {
+        "first_name": "Amit",
+        "last_name": "Patel",
+        "email": f"amit.{timestamp}.{microseconds}@example.com",
+        "mobile": f"98767{timestamp[-6:]}",
+        "password": "OutletPass123!",
+        "state": "Karnataka",
+        "district": "Bangalore",
+        "pincode": "560001",
+        "aadhaar_number": f"9012{timestamp[-8:]}345",
+        "pan_number": f"IJKL{timestamp[-5:]}M",
+        "role": "outlet"
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/auth/register", json=outlet_data, timeout=30)
+        if response.status_code == 200:
+            outlet_uid = response.json().get("uid")
+            # Promote to outlet role
+            requests.post(f"{API_BASE}/admin/promote", params={"email": outlet_data["email"], "role": "outlet"}, timeout=30)
+            test_outlet_user = {"uid": outlet_uid, **outlet_data}
+            print(f"✅ Outlet user created: {outlet_uid}")
+        else:
+            print(f"❌ Failed to create outlet user: {response.status_code} - {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Error creating outlet user: {e}")
+        return False
+    
     return True
+
+def make_user_vip_with_kyc(user_id):
+    """Helper function to make user VIP and approve KYC"""
+    try:
+        # Submit VIP payment
+        payment_data = {
+            "user_id": user_id,
+            "amount": 1000,
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "time": datetime.now().strftime("%H:%M"),
+            "utr_number": f"TEST{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            "screenshot_url": "test_screenshot"
+        }
+        
+        payment_response = requests.post(f"{API_BASE}/membership/submit-payment", 
+                                       json=payment_data, timeout=30)
+        
+        if payment_response.status_code == 200:
+            payment_id = payment_response.json().get("payment_id")
+            
+            # Approve the payment
+            approval_data = {"action": "approve"}
+            requests.post(f"{API_BASE}/membership/payment/{payment_id}/action",
+                         json=approval_data, timeout=30)
+            
+            # Submit KYC
+            kyc_data = {
+                "aadhaar_front_base64": "test_aadhaar_front_image",
+                "aadhaar_back_base64": "test_aadhaar_back_image", 
+                "pan_front_base64": "test_pan_front_image"
+            }
+            
+            kyc_response = requests.post(f"{API_BASE}/kyc/submit/{user_id}",
+                                       json=kyc_data, timeout=30)
+            
+            if kyc_response.status_code == 200:
+                kyc_id = kyc_response.json().get("kyc_id")
+                
+                # Approve KYC
+                kyc_verify_data = {"action": "approve"}
+                requests.post(f"{API_BASE}/kyc/{kyc_id}/verify",
+                             json=kyc_verify_data, timeout=30)
+                
+                print("✅ User made VIP with approved KYC")
+                return True
+        
+        return False
+    except Exception as e:
+        print(f"❌ Error making user VIP: {e}")
+        return False
 
 def test_delivery_config_management():
     """Test delivery configuration management endpoints"""
