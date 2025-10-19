@@ -1,0 +1,171 @@
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { toast } from 'sonner';
+import { Mail, LogIn, Eye, EyeOff } from 'lucide-react';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
+
+const LoginNew = ({ onLogin }) => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginData, setLoginData] = useState({
+    email: '',
+    device_id: '',
+    ip_address: ''
+  });
+
+  // Generate device ID
+  useState(() => {
+    const deviceId = localStorage.getItem('device_id') || `DEV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem('device_id', deviceId);
+    setLoginData(prev => ({ ...prev, device_id: deviceId }));
+  }, []);
+
+  // Get IP address (optional - can use a service)
+  useState(async () => {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      setLoginData(prev => ({ ...prev, ip_address: data.ip }));
+    } catch (error) {
+      console.log('Could not fetch IP');
+    }
+  }, []);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (!loginData.email) {
+        toast.error('Please enter your email');
+        setLoading(false);
+        return;
+      }
+
+      const response = await axios.post(
+        `${API}/auth/login`,
+        null,
+        {
+          params: {
+            email: loginData.email,
+            device_id: loginData.device_id,
+            ip_address: loginData.ip_address
+          }
+        }
+      );
+
+      // Check if user is banned
+      if (response.data.is_banned) {
+        toast.error('Your account has been suspended. Please contact support.');
+        setLoading(false);
+        return;
+      }
+
+      toast.success('Login successful!');
+      onLogin(response.data);
+      
+      // Navigate based on role
+      if (response.data.role === 'admin' || response.data.role === 'sub_admin') {
+        navigate('/admin');
+      } else if (response.data.role === 'master_stockist') {
+        navigate('/master-dashboard');
+      } else if (response.data.role === 'sub_stockist') {
+        navigate('/sub-dashboard');
+      } else if (response.data.role === 'outlet') {
+        navigate('/outlet');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error(error.response?.data?.detail || 'Login failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4">
+      <Card className="w-full max-w-md bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl mb-4">
+            <LogIn className="h-10 w-10 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
+          <p className="text-gray-600">Sign in to your PARAS REWARD account</p>
+        </div>
+
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                data-testid="login-email-input"
+                type="email"
+                placeholder="your@email.com"
+                value={loginData.email}
+                onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                required
+                className="pl-10 py-6 rounded-xl border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+              />
+            </div>
+          </div>
+
+          <Button
+            data-testid="login-submit-btn"
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-6 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+          >
+            {loading ? (
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                Signing in...
+              </div>
+            ) : (
+              'Sign In'
+            )}
+          </Button>
+        </form>
+
+        <div className="mt-6">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">New to PARAS REWARD?</span>
+            </div>
+          </div>
+
+          <Link to="/register">
+            <Button
+              data-testid="goto-register-btn"
+              type="button"
+              className="w-full mt-4 bg-white border-2 border-purple-600 text-purple-600 hover:bg-purple-50 py-6 rounded-xl text-lg font-semibold transition-all"
+            >
+              Create New Account
+            </Button>
+          </Link>
+        </div>
+
+        <p className="text-center text-xs text-gray-500 mt-6">
+          By signing in, you agree to our{' '}
+          <Link to="/terms" className="text-purple-600 hover:underline">Terms & Conditions</Link>
+          {' '}and{' '}
+          <Link to="/privacy" className="text-purple-600 hover:underline">Privacy Policy</Link>
+        </p>
+      </Card>
+    </div>
+  );
+};
+
+export default LoginNew;
