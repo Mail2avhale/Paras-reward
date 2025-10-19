@@ -1659,6 +1659,435 @@ async def handle_payment_action(payment_id: str, request: Request):
         
         return {"message": "Payment rejected"}
 
+# ========== PRODUCT & MARKETPLACE MODELS ==========
+
+class Product(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    product_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    sku: str
+    description: Optional[str] = None
+    prc_price: float  # Price in PRC coins
+    cash_price: float  # Delivery/transaction fee in ₹
+    type: str  # physical or digital
+    category: Optional[str] = None
+    image_url: Optional[str] = None
+    
+    # Stock & Allocation
+    total_stock: int = 0
+    available_stock: int = 0
+    allocated_to: Optional[str] = None  # master/sub/outlet ID
+    
+    # Visibility
+    visible: bool = True
+    regions: Optional[list] = []  # List of states/regions
+    vip_only: bool = False
+    visible_from: Optional[datetime] = None
+    visible_till: Optional[datetime] = None
+    
+    # Metadata
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: Optional[str] = None
+
+class CartItem(BaseModel):
+    product_id: str
+    quantity: int
+    prc_price: float
+    cash_price: float
+
+class Order(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    order_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    items: list  # List of cart items
+    
+    # Pricing
+    total_prc: float
+    total_cash: float
+    delivery_charge: float
+    cashback_amount: float  # 25% of PRC value in ₹
+    
+    # Secret Code
+    secret_code: str = Field(default_factory=lambda: ''.join(secrets.choice(string.digits) for _ in range(6)))
+    
+    # Assignment
+    assigned_outlet: Optional[str] = None
+    
+    # Status
+    status: str = "pending"  # pending, confirmed, delivered, cancelled
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    confirmed_at: Optional[datetime] = None
+    delivered_at: Optional[datetime] = None
+    
+    # Delivery
+    delivery_address: Optional[str] = None
+    delivery_status: str = "pending"  # pending, assigned, in_transit, delivered
+
+# ========== PRODUCT MANAGEMENT (ADMIN) ==========
+
+@api_router.post("/admin/products")
+async def create_product(request: Request):
+    """Create new product (Admin)"""
+    data = await request.json()
+    
+    # Validate required fields
+    required = ["name", "sku", "prc_price", "cash_price", "type"]
+    for field in required:
+        if field not in data:
+            raise HTTPException(status_code=400, detail=f"{field} is required")
+    
+    # Check if SKU already exists
+    existing = await db.products.find_one({"sku": data["sku"]})
+    if existing:
+        raise HTTPException(status_code=400, detail="SKU already exists")
+    
+    product = Product(**data)
+    product_dict = product.model_dump()
+    
+    # Convert datetime fields
+    for field in ["created_at", "updated_at", "visible_from", "visible_till"]:
+        if product_dict.get(field):
+            product_dict[field] = product_dict[field].isoformat() if isinstance(product_dict[field], datetime) else product_dict[field]
+    
+    await db.products.insert_one(product_dict)
+    
+    return {"message": "Product created successfully", "product_id": product.product_id}
+
+@api_router.get("/admin/products")
+async def get_all_products_admin():
+    """Get all products (Admin)"""
+    products = await db.products.find().to_list(length=None)
+    for product in products:
+        product["_id"] = str(product["_id"])
+    return products
+
+@api_router.put("/admin/products/{product_id}")
+async def update_product(product_id: str, request: Request):
+    """Update product (Admin)"""
+    data = await request.json()
+    data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.products.update_one(
+        {"product_id": product_id},
+        {"$set": data}
+    )
+    
+    return {"message": "Product updated successfully"}
+
+@api_router.delete("/admin/products/{product_id}")
+async def delete_product(product_id: str):
+    """Delete product (Admin)"""
+    await db.products.delete_one({"product_id": product_id})
+    return {"message": "Product deleted successfully"}
+
+# ========== MARKETPLACE (USER) ==========
+
+@api_router.get("/marketplace/products")
+async def get_marketplace_products(user_id: str):
+    """Get visible products for user based on visibility rules"""
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    now = datetime.now(timezone.utc)
+    is_vip = user.get("membership_type") == "vip"
+    user_state = user.get("state")
+    
+    # Build query
+    query = {"visible": True}
+    
+    # Check scheduled visibility
+    query["$or"] = [
+        {"visible_from": None},
+        {"visible_from": {"$lte": now.isoformat()}}
+    ]
+    
+    products = await db.products.find(query).to_list(length=None)
+    
+    # Filter products based on rules
+    visible_products = []
+    for product in products:
+        # Check visibility till
+        if product.get("visible_till"):
+            if datetime.fromisoformat(product["visible_till"]) < now:
+                continue
+        
+        # Check VIP only
+        if product.get("vip_only") and not is_vip:
+            continue
+        
+        # Check region
+        if product.get("regions") and len(product["regions"]) > 0:
+            if user_state not in product["regions"]:
+                continue
+        
+        # Check stock
+        if product.get("available_stock", 0) <= 0:
+            continue
+        
+        product["_id"] = str(product["_id"])
+        visible_products.append(product)
+    
+    return visible_products
+
+# ========== CART MANAGEMENT ==========
+
+@api_router.post("/cart/add")
+async def add_to_cart(request: Request):
+    """Add item to cart"""
+    data = await request.json()
+    user_id = data.get("user_id")
+    product_id = data.get("product_id")
+    quantity = data.get("quantity", 1)
+    
+    # Get product
+    product = await db.products.find_one({"product_id": product_id})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Check stock
+    if product.get("available_stock", 0) < quantity:
+        raise HTTPException(status_code=400, detail="Insufficient stock")
+    
+    # Get or create cart
+    cart = await db.carts.find_one({"user_id": user_id})
+    
+    if not cart:
+        # Create new cart
+        cart = {
+            "cart_id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "items": [],
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+    
+    # Check if product already in cart
+    existing_item = None
+    for item in cart.get("items", []):
+        if item["product_id"] == product_id:
+            existing_item = item
+            break
+    
+    if existing_item:
+        # Update quantity
+        existing_item["quantity"] += quantity
+    else:
+        # Add new item
+        cart["items"].append({
+            "product_id": product_id,
+            "product_name": product["name"],
+            "quantity": quantity,
+            "prc_price": product["prc_price"],
+            "cash_price": product["cash_price"],
+            "image_url": product.get("image_url")
+        })
+    
+    # Save cart
+    if "_id" in cart:
+        await db.carts.update_one(
+            {"user_id": user_id},
+            {"$set": {"items": cart["items"], "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    else:
+        await db.carts.insert_one(cart)
+    
+    return {"message": "Item added to cart", "cart": cart}
+
+@api_router.get("/cart/{user_id}")
+async def get_cart(user_id: str):
+    """Get user's cart"""
+    cart = await db.carts.find_one({"user_id": user_id})
+    if cart:
+        cart["_id"] = str(cart["_id"])
+    return cart or {"items": []}
+
+@api_router.delete("/cart/{user_id}/item/{product_id}")
+async def remove_from_cart(user_id: str, product_id: str):
+    """Remove item from cart"""
+    cart = await db.carts.find_one({"user_id": user_id})
+    if not cart:
+        raise HTTPException(status_code=404, detail="Cart not found")
+    
+    cart["items"] = [item for item in cart["items"] if item["product_id"] != product_id]
+    
+    await db.carts.update_one(
+        {"user_id": user_id},
+        {"$set": {"items": cart["items"]}}
+    )
+    
+    return {"message": "Item removed from cart"}
+
+@api_router.delete("/cart/{user_id}")
+async def clear_cart(user_id: str):
+    """Clear entire cart"""
+    await db.carts.delete_one({"user_id": user_id})
+    return {"message": "Cart cleared"}
+
+# ========== ORDER & CHECKOUT ==========
+
+@api_router.post("/orders/checkout")
+async def checkout(request: Request):
+    """Checkout cart and create order with single secret code"""
+    data = await request.json()
+    user_id = data.get("user_id")
+    delivery_address = data.get("delivery_address")
+    
+    # Get user
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check VIP status
+    if user.get("membership_type") != "vip":
+        raise HTTPException(status_code=403, detail="VIP membership required for marketplace access")
+    
+    # Get cart
+    cart = await db.carts.find_one({"user_id": user_id})
+    if not cart or len(cart.get("items", [])) == 0:
+        raise HTTPException(status_code=400, detail="Cart is empty")
+    
+    # Calculate totals
+    total_prc = sum(item["prc_price"] * item["quantity"] for item in cart["items"])
+    total_cash = sum(item["cash_price"] * item["quantity"] for item in cart["items"])
+    
+    # Get delivery charge configuration (default 10%)
+    delivery_config = await db.system_config.find_one({"config_type": "delivery"})
+    delivery_percentage = delivery_config.get("percentage", 0.10) if delivery_config else 0.10
+    delivery_charge = total_cash * delivery_percentage
+    
+    # Calculate cashback (25% of PRC value converted to ₹, 10 PRC = ₹1)
+    cashback_amount = (total_prc * 0.25) / 10
+    
+    # Check if user has enough PRC
+    if user.get("prc_balance", 0) < total_prc:
+        raise HTTPException(status_code=400, detail="Insufficient PRC balance")
+    
+    # Atomic PRC deduction
+    new_prc_balance = user["prc_balance"] - total_prc
+    
+    # Handle delivery charge from cashback wallet
+    cashback_balance = user.get("cash_wallet_balance", 0)
+    delivery_charge_paid = 0
+    delivery_charge_lien = 0
+    
+    if cashback_balance >= delivery_charge:
+        # Deduct from cashback wallet
+        delivery_charge_paid = delivery_charge
+        new_cashback_balance = cashback_balance - delivery_charge
+    else:
+        # Partial payment or lien
+        delivery_charge_paid = cashback_balance
+        delivery_charge_lien = delivery_charge - cashback_balance
+        new_cashback_balance = 0
+    
+    # Add cashback from this order
+    new_cashback_balance += cashback_amount
+    
+    # Create order
+    order = Order(
+        user_id=user_id,
+        items=cart["items"],
+        total_prc=total_prc,
+        total_cash=total_cash,
+        delivery_charge=delivery_charge,
+        cashback_amount=cashback_amount,
+        delivery_address=delivery_address
+    )
+    
+    order_dict = order.model_dump()
+    order_dict["created_at"] = order_dict["created_at"].isoformat()
+    order_dict["delivery_charge_paid"] = delivery_charge_paid
+    order_dict["delivery_charge_lien"] = delivery_charge_lien
+    
+    # Update user balances
+    await db.users.update_one(
+        {"uid": user_id},
+        {"$set": {
+            "prc_balance": new_prc_balance,
+            "cash_wallet_balance": new_cashback_balance
+        }}
+    )
+    
+    # Update product stock
+    for item in cart["items"]:
+        await db.products.update_one(
+            {"product_id": item["product_id"]},
+            {"$inc": {"available_stock": -item["quantity"]}}
+        )
+    
+    # Save order
+    await db.orders.insert_one(order_dict)
+    
+    # Clear cart
+    await db.carts.delete_one({"user_id": user_id})
+    
+    return {
+        "message": "Order placed successfully",
+        "order_id": order.order_id,
+        "secret_code": order.secret_code,
+        "total_prc": total_prc,
+        "cashback_earned": cashback_amount,
+        "delivery_charge": delivery_charge,
+        "delivery_charge_paid": delivery_charge_paid,
+        "delivery_charge_lien": delivery_charge_lien
+    }
+
+@api_router.get("/orders/user/{user_id}")
+async def get_user_orders(user_id: str):
+    """Get all orders for user"""
+    orders = await db.orders.find({"user_id": user_id}).sort("created_at", -1).to_list(length=None)
+    for order in orders:
+        order["_id"] = str(order["_id"])
+    return orders
+
+@api_router.get("/orders/{order_id}")
+async def get_order(order_id: str):
+    """Get order details"""
+    order = await db.orders.find_one({"order_id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    order["_id"] = str(order["_id"])
+    return order
+
+# ========== OUTLET: ORDER VERIFICATION ==========
+
+@api_router.post("/outlet/verify-code")
+async def verify_secret_code(request: Request):
+    """Verify secret code and mark order as delivered"""
+    data = await request.json()
+    secret_code = data.get("secret_code")
+    outlet_id = data.get("outlet_id")
+    
+    # Find order by secret code
+    order = await db.orders.find_one({"secret_code": secret_code, "status": "pending"})
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Invalid or already used secret code")
+    
+    # Mark as delivered
+    now = datetime.now(timezone.utc)
+    await db.orders.update_one(
+        {"order_id": order["order_id"]},
+        {"$set": {
+            "status": "delivered",
+            "delivery_status": "delivered",
+            "delivered_at": now.isoformat(),
+            "assigned_outlet": outlet_id
+        }}
+    )
+    
+    # TODO: Trigger delivery charge distribution
+    
+    return {
+        "message": "Order verified and marked as delivered",
+        "order_id": order["order_id"],
+        "items": order["items"],
+        "total_prc": order["total_prc"]
+    }
+
 # Include router
 app.include_router(api_router)
 
