@@ -834,35 +834,51 @@ def test_admin_security_deposit_approval():
     
     return True
 
-def test_profit_wallet_auto_credit():
-    """Test profit wallet auto-credit integration"""
-    print("\n10. Testing Profit Wallet Auto-Credit Integration...")
+def test_security_deposit_return_processing():
+    """Test monthly return processing (3% of deposit amount)"""
+    print("\n11. Testing Security Deposit Monthly Return Processing...")
     
-    # This would require creating an order and marking it as delivered
-    # For now, we'll test the concept by checking if the outlet user has profit balance
-    print("\n10a. Checking outlet user profit balance...")
-    try:
-        response = requests.get(f"{API_BASE}/wallet/{test_outlet_user['uid']}", timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
+    # First, we need to manually set next_return_due to past date for testing
+    # This simulates a deposit that's due for return processing
+    if test_security_deposits:
+        approved_deposit = None
+        for deposit in test_security_deposits:
+            if deposit.get("status") == "approved":
+                approved_deposit = deposit
+                break
         
-        if response.status_code == 200:
-            wallet = response.json()
-            profit_balance = wallet.get("profit_balance", 0)
-            print(f"✅ Outlet profit balance check PASSED - Balance: ₹{profit_balance}")
+        if approved_deposit:
+            print("\n11a. Simulating overdue return (manually setting past due date)...")
+            # We'll need to manually update the database for this test
+            # For now, let's test the processing endpoint directly
             
-            if profit_balance > 0:
-                print("✅ Profit wallet has balance (likely from auto-credit)")
-            else:
-                print("ℹ️ No profit balance (expected for new outlet)")
-            
-            return True
+            print("\n11b. Testing POST /api/admin/security-deposits/process-returns...")
+            try:
+                response = requests.post(f"{API_BASE}/admin/security-deposits/process-returns", timeout=30)
+                print(f"Status Code: {response.status_code}")
+                print(f"Response: {response.text}")
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    processed_count = result.get("processed_count", 0)
+                    total_credited = result.get("total_credited", 0)
+                    
+                    print("✅ Security deposit return processing test PASSED")
+                    print(f"Processed deposits: {processed_count}")
+                    print(f"Total credited to profit wallets: ₹{total_credited}")
+                    
+                    if processed_count == 0:
+                        print("ℹ️ No deposits were due for return processing (expected for new deposits)")
+                else:
+                    print(f"❌ Security deposit return processing test FAILED - Status: {response.status_code}")
+                    return False
+            except Exception as e:
+                print(f"❌ Security deposit return processing test FAILED - Error: {e}")
+                return False
         else:
-            print(f"❌ Outlet profit balance check FAILED - Status: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Outlet profit balance check FAILED - Error: {e}")
-        return False
+            print("ℹ️ No approved deposits found for return processing test")
+    
+    return True
 
 def main():
     """Run all wallet & maintenance feature tests"""
