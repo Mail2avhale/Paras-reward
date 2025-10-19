@@ -28,11 +28,16 @@ if not BACKEND_URL:
     sys.exit(1)
 
 API_BASE = f"{BACKEND_URL}/api"
-REGISTER_URL = f"{API_BASE}/auth/register"
 
 print(f"Testing backend at: {BACKEND_URL}")
-print(f"Registration endpoint: {REGISTER_URL}")
-print("=" * 60)
+print(f"API Base: {API_BASE}")
+print("=" * 80)
+
+# Test data for delivery charge testing
+test_admin_user = None
+test_vip_user = None
+test_order = None
+test_outlet_id = "outlet_123"
 
 def test_registration_endpoint():
     """Test user registration endpoint with FRONTEND FORMAT"""
