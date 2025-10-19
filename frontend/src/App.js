@@ -22,6 +22,8 @@ import Wallet from "@/pages/Wallet";
 import Leaderboard from "@/pages/Leaderboard";
 import Profile from "@/pages/Profile";
 import AdminDashboard from "@/pages/AdminDashboard";
+import MasterStockistDashboard from "@/pages/MasterStockistDashboard";
+import SubStockistDashboard from "@/pages/SubStockistDashboard";
 import OutletPanel from "@/pages/OutletPanel";
 import Setup from "@/pages/Setup";
 import AboutUs from "@/pages/AboutUs";
