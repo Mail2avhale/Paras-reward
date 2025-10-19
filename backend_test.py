@@ -40,156 +40,93 @@ test_user_with_mining = None
 test_user_with_referrals = None
 
 def setup_test_users():
-    """Create test users for each role in the hierarchy"""
-    global test_admin_user, test_master_user, test_sub_user, test_outlet_user, test_regular_user
+    """Create test users for mining system testing"""
+    global test_user_no_mining, test_user_with_mining, test_user_with_referrals
     
-    print("\n1. Setting up test users for all roles...")
+    print("\n1. Setting up test users for mining system testing...")
     
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     microseconds = str(datetime.now().microsecond)[:3]
     
-    # Create Admin user (Company)
-    admin_data = {
-        "first_name": "Admin",
-        "last_name": "Company",
-        "email": f"admin.{timestamp}.{microseconds}@company.com",
-        "mobile": f"98760{timestamp[-6:]}",
-        "password": "AdminPass123!",
+    # Create User 1: No active mining session
+    user1_data = {
+        "first_name": "Mining",
+        "last_name": "TestUser1",
+        "email": f"mining1.{timestamp}.{microseconds}@example.com",
+        "mobile": f"98701{timestamp[-6:]}",
+        "password": "MiningPass123!",
         "state": "Maharashtra",
         "district": "Mumbai",
         "pincode": "400001",
         "aadhaar_number": f"1111{timestamp[-8:]}111",
-        "pan_number": f"ADMIN{timestamp[-4:]}A",
-        "role": "admin"
+        "pan_number": f"MIN1{timestamp[-5:]}A"
     }
     
     try:
-        response = requests.post(f"{API_BASE}/auth/register", json=admin_data, timeout=30)
+        response = requests.post(f"{API_BASE}/auth/register", json=user1_data, timeout=30)
         if response.status_code == 200:
-            admin_uid = response.json().get("uid")
-            # Promote to admin role
-            requests.post(f"{API_BASE}/admin/promote", params={"email": admin_data["email"], "role": "admin"}, timeout=30)
-            test_admin_user = {"uid": admin_uid, **admin_data}
-            print(f"✅ Admin user created: {admin_uid}")
+            user1_uid = response.json().get("uid")
+            test_user_no_mining = {"uid": user1_uid, **user1_data}
+            print(f"✅ Mining test user 1 (no mining) created: {user1_uid}")
         else:
-            print(f"❌ Failed to create admin user: {response.status_code} - {response.text}")
+            print(f"❌ Failed to create mining test user 1: {response.status_code} - {response.text}")
             return False
     except Exception as e:
-        print(f"❌ Error creating admin user: {e}")
+        print(f"❌ Error creating mining test user 1: {e}")
         return False
     
-    # Create Master Stockist
-    master_data = {
-        "first_name": "Master",
-        "last_name": "Stockist",
-        "email": f"master.{timestamp}.{microseconds}@example.com",
-        "mobile": f"98761{timestamp[-6:]}",
-        "password": "MasterPass123!",
-        "state": "Maharashtra",
-        "district": "Pune",
-        "pincode": "411001",
-        "aadhaar_number": f"2222{timestamp[-8:]}222",
-        "pan_number": f"MSTR{timestamp[-5:]}M"
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/auth/register", json=master_data, timeout=30)
-        if response.status_code == 200:
-            master_uid = response.json().get("uid")
-            # Promote to master_stockist role
-            requests.post(f"{API_BASE}/admin/promote", params={"email": master_data["email"], "role": "master_stockist"}, timeout=30)
-            test_master_user = {"uid": master_uid, **master_data}
-            print(f"✅ Master Stockist created: {master_uid}")
-        else:
-            print(f"❌ Failed to create master stockist: {response.status_code} - {response.text}")
-            return False
-    except Exception as e:
-        print(f"❌ Error creating master stockist: {e}")
-        return False
-    
-    # Create Sub Stockist
-    sub_data = {
-        "first_name": "Sub",
-        "last_name": "Stockist",
-        "email": f"sub.{timestamp}.{microseconds}@example.com",
-        "mobile": f"98762{timestamp[-6:]}",
-        "password": "SubPass123!",
+    # Create User 2: Will have active mining session
+    user2_data = {
+        "first_name": "Mining",
+        "last_name": "TestUser2",
+        "email": f"mining2.{timestamp}.{microseconds}@example.com",
+        "mobile": f"98702{timestamp[-6:]}",
+        "password": "MiningPass123!",
         "state": "Gujarat",
         "district": "Ahmedabad",
         "pincode": "380001",
-        "aadhaar_number": f"3333{timestamp[-8:]}333",
-        "pan_number": f"SUBS{timestamp[-5:]}S"
+        "aadhaar_number": f"2222{timestamp[-8:]}222",
+        "pan_number": f"MIN2{timestamp[-5:]}B"
     }
     
     try:
-        response = requests.post(f"{API_BASE}/auth/register", json=sub_data, timeout=30)
+        response = requests.post(f"{API_BASE}/auth/register", json=user2_data, timeout=30)
         if response.status_code == 200:
-            sub_uid = response.json().get("uid")
-            # Promote to sub_stockist role
-            requests.post(f"{API_BASE}/admin/promote", params={"email": sub_data["email"], "role": "sub_stockist"}, timeout=30)
-            test_sub_user = {"uid": sub_uid, **sub_data}
-            print(f"✅ Sub Stockist created: {sub_uid}")
+            user2_uid = response.json().get("uid")
+            test_user_with_mining = {"uid": user2_uid, **user2_data}
+            print(f"✅ Mining test user 2 (with mining) created: {user2_uid}")
         else:
-            print(f"❌ Failed to create sub stockist: {response.status_code} - {response.text}")
+            print(f"❌ Failed to create mining test user 2: {response.status_code} - {response.text}")
             return False
     except Exception as e:
-        print(f"❌ Error creating sub stockist: {e}")
+        print(f"❌ Error creating mining test user 2: {e}")
         return False
     
-    # Create Outlet
-    outlet_data = {
-        "first_name": "Outlet",
-        "last_name": "Owner",
-        "email": f"outlet.{timestamp}.{microseconds}@example.com",
-        "mobile": f"98763{timestamp[-6:]}",
-        "password": "OutletPass123!",
+    # Create User 3: Will have referrals
+    user3_data = {
+        "first_name": "Mining",
+        "last_name": "TestUser3",
+        "email": f"mining3.{timestamp}.{microseconds}@example.com",
+        "mobile": f"98703{timestamp[-6:]}",
+        "password": "MiningPass123!",
         "state": "Karnataka",
         "district": "Bangalore",
         "pincode": "560001",
-        "aadhaar_number": f"4444{timestamp[-8:]}444",
-        "pan_number": f"OUTL{timestamp[-5:]}O"
+        "aadhaar_number": f"3333{timestamp[-8:]}333",
+        "pan_number": f"MIN3{timestamp[-5:]}C"
     }
     
     try:
-        response = requests.post(f"{API_BASE}/auth/register", json=outlet_data, timeout=30)
+        response = requests.post(f"{API_BASE}/auth/register", json=user3_data, timeout=30)
         if response.status_code == 200:
-            outlet_uid = response.json().get("uid")
-            # Promote to outlet role
-            requests.post(f"{API_BASE}/admin/promote", params={"email": outlet_data["email"], "role": "outlet"}, timeout=30)
-            test_outlet_user = {"uid": outlet_uid, **outlet_data}
-            print(f"✅ Outlet user created: {outlet_uid}")
+            user3_uid = response.json().get("uid")
+            test_user_with_referrals = {"uid": user3_uid, **user3_data}
+            print(f"✅ Mining test user 3 (with referrals) created: {user3_uid}")
         else:
-            print(f"❌ Failed to create outlet user: {response.status_code} - {response.text}")
+            print(f"❌ Failed to create mining test user 3: {response.status_code} - {response.text}")
             return False
     except Exception as e:
-        print(f"❌ Error creating outlet user: {e}")
-        return False
-    
-    # Create Regular User
-    user_data = {
-        "first_name": "Regular",
-        "last_name": "Customer",
-        "email": f"customer.{timestamp}.{microseconds}@example.com",
-        "mobile": f"98764{timestamp[-6:]}",
-        "password": "UserPass123!",
-        "state": "Tamil Nadu",
-        "district": "Chennai",
-        "pincode": "600001",
-        "aadhaar_number": f"5555{timestamp[-8:]}555",
-        "pan_number": f"USER{timestamp[-5:]}U"
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/auth/register", json=user_data, timeout=30)
-        if response.status_code == 200:
-            user_uid = response.json().get("uid")
-            test_regular_user = {"uid": user_uid, **user_data}
-            print(f"✅ Regular user created: {user_uid}")
-        else:
-            print(f"❌ Failed to create regular user: {response.status_code} - {response.text}")
-            return False
-    except Exception as e:
-        print(f"❌ Error creating regular user: {e}")
+        print(f"❌ Error creating mining test user 3: {e}")
         return False
     
     return True
