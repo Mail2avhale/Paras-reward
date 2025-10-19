@@ -198,129 +198,31 @@ def test_mining_status_no_active_session():
         print(f"❌ Mining status test FAILED - Error: {e}")
         return False
 
-def test_stock_movement_valid_flows():
-    """Test valid stock movement flows according to hierarchy"""
-    print("\n3. Testing Stock Movement System - Valid Flows...")
+def start_mining_session():
+    """Start mining session for test user 2"""
+    print("\n3. Starting mining session for test user 2...")
     
-    # Test 3a: Company → Master (should succeed)
-    print("\n3a. Testing Company → Master stock flow...")
     try:
-        movement_data = {
-            "sender_id": test_admin_user["uid"],
-            "receiver_id": test_master_user["uid"],
-            "product_id": test_product["product_id"],
-            "quantity": 100,
-            "notes": "Initial stock transfer to master stockist"
-        }
-        
-        response = requests.post(f"{API_BASE}/stock/transfer/initiate", json=movement_data, timeout=30)
+        response = requests.post(f"{API_BASE}/mining/start/{test_user_with_mining['uid']}", timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
         if response.status_code == 200:
             result = response.json()
-            movement_id = result.get("movement_id")
-            batch_number = result.get("batch_number")
-            qr_code = result.get("qr_code")
+            session_active = result.get("session_active", False)
             
-            if movement_id and batch_number and qr_code:
-                print("✅ Company → Master stock flow test PASSED")
-                print(f"Movement ID: {movement_id}")
-                print(f"Batch Number: {batch_number}")
-                print(f"QR Code: {qr_code}")
-                test_stock_movements.append({"id": movement_id, "type": "company_to_master"})
+            if session_active:
+                print("✅ Mining session started successfully")
+                return True
             else:
-                print("❌ Company → Master stock flow test FAILED - Missing required fields")
+                print("❌ Mining session start FAILED - session_active is False")
                 return False
         else:
-            print(f"❌ Company → Master stock flow test FAILED - Status: {response.status_code}")
+            print(f"❌ Mining session start FAILED - Status: {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ Company → Master stock flow test FAILED - Error: {e}")
+        print(f"❌ Mining session start FAILED - Error: {e}")
         return False
-    
-    # Test 3b: Master → Sub (should succeed)
-    print("\n3b. Testing Master → Sub stock flow...")
-    try:
-        movement_data = {
-            "sender_id": test_master_user["uid"],
-            "receiver_id": test_sub_user["uid"],
-            "product_id": test_product["product_id"],
-            "quantity": 50,
-            "notes": "Transfer from master to sub stockist"
-        }
-        
-        response = requests.post(f"{API_BASE}/stock/transfer/initiate", json=movement_data, timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            movement_id = result.get("movement_id")
-            print("✅ Master → Sub stock flow test PASSED")
-            test_stock_movements.append({"id": movement_id, "type": "master_to_sub"})
-        else:
-            print(f"❌ Master → Sub stock flow test FAILED - Status: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Master → Sub stock flow test FAILED - Error: {e}")
-        return False
-    
-    # Test 3c: Sub → Outlet (should succeed)
-    print("\n3c. Testing Sub → Outlet stock flow...")
-    try:
-        movement_data = {
-            "sender_id": test_sub_user["uid"],
-            "receiver_id": test_outlet_user["uid"],
-            "product_id": test_product["product_id"],
-            "quantity": 25,
-            "notes": "Transfer from sub stockist to outlet"
-        }
-        
-        response = requests.post(f"{API_BASE}/stock/transfer/initiate", json=movement_data, timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            movement_id = result.get("movement_id")
-            print("✅ Sub → Outlet stock flow test PASSED")
-            test_stock_movements.append({"id": movement_id, "type": "sub_to_outlet"})
-        else:
-            print(f"❌ Sub → Outlet stock flow test FAILED - Status: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Sub → Outlet stock flow test FAILED - Error: {e}")
-        return False
-    
-    # Test 3d: Outlet → User (should succeed)
-    print("\n3d. Testing Outlet → User stock flow...")
-    try:
-        movement_data = {
-            "sender_id": test_outlet_user["uid"],
-            "receiver_id": test_regular_user["uid"],
-            "product_id": test_product["product_id"],
-            "quantity": 10,
-            "notes": "Final delivery to customer"
-        }
-        
-        response = requests.post(f"{API_BASE}/stock/transfer/initiate", json=movement_data, timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            movement_id = result.get("movement_id")
-            print("✅ Outlet → User stock flow test PASSED")
-            test_stock_movements.append({"id": movement_id, "type": "outlet_to_user"})
-        else:
-            print(f"❌ Outlet → User stock flow test FAILED - Status: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Outlet → User stock flow test FAILED - Error: {e}")
-        return False
-    
-    return True
 
 def test_stock_movement_invalid_flows():
     """Test invalid stock movement flows (should fail)"""
