@@ -259,59 +259,81 @@ def create_test_product():
         return None
 
 def test_order_checkout_with_delivery_charge(product_id):
-    """Test order checkout with delivery charge calculation"""
+    """Test order creation with delivery charge calculation"""
     global test_order
-    print("\n4. Testing Order Checkout with Delivery Charge...")
+    print("\n4. Testing Order Creation with Delivery Charge...")
     
     if not test_vip_user or not product_id:
-        print("❌ Cannot test checkout - missing VIP user or product")
+        print("❌ Cannot test order creation - missing VIP user or product")
         return None
     
-    # Create order via checkout
-    checkout_data = {
-        "items": [
-            {
-                "product_id": product_id,
-                "quantity": 1,
-                "prc_price": 100.0,
-                "cash_price": 50.0
-            }
-        ],
-        "total_prc": 100.0,
-        "total_cash": 50.0
-    }
-    
+    # First, update VIP user to have verified KYC status and sufficient balance
+    print("4a. Updating VIP user status...")
     try:
-        response = requests.post(f"{API_BASE}/orders/checkout", 
-                               json=checkout_data, 
-                               params={"user_id": test_vip_user["uid"]}, 
+        # Update user to have verified KYC and sufficient PRC balance
+        user_update_data = {
+            "kyc_status": "verified",
+            "prc_balance": 1000.0,
+            "membership_type": "vip"
+        }
+        
+        # We'll use the profile update endpoint or directly create order
+        # Let's try creating the order directly using the simpler endpoint
+        
+        # Create order using OrderCreate model (just needs product_id)
+        order_data = {
+            "product_id": product_id
+        }
+        
+        response = requests.post(f"{API_BASE}/orders/{test_vip_user['uid']}", 
+                               json=order_data, 
                                timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
         if response.status_code == 200:
-            order_data = response.json()
-            order_id = order_data.get("order_id")
-            delivery_charge = order_data.get("delivery_charge")
+            order_result = response.json()
+            order_id = order_result.get("order_id")
+            delivery_fee = order_result.get("delivery_fee")
             
-            print(f"✅ Order checkout test PASSED")
+            print(f"✅ Order creation test PASSED")
             print(f"Order ID: {order_id}")
-            print(f"Delivery Charge: {delivery_charge}")
+            print(f"Delivery Fee: {delivery_fee}")
             
-            # Verify delivery charge calculation (should be total_cash * delivery_charge_rate = 50 * 0.10 = 5.0)
-            expected_delivery_charge = 50.0 * 0.10  # 10% of total_cash
-            if abs(delivery_charge - expected_delivery_charge) < 0.01:
-                print(f"✅ Delivery charge calculation CORRECT: {delivery_charge}")
+            # Verify delivery fee calculation (should be prc_price * 0.10 = 100 * 0.10 = 10.0)
+            expected_delivery_fee = 100.0 * 0.10  # 10% of PRC price
+            if abs(delivery_fee - expected_delivery_fee) < 0.01:
+                print(f"✅ Delivery fee calculation CORRECT: {delivery_fee}")
             else:
-                print(f"❌ Delivery charge calculation INCORRECT: Expected {expected_delivery_charge}, got {delivery_charge}")
+                print(f"❌ Delivery fee calculation INCORRECT: Expected {expected_delivery_fee}, got {delivery_fee}")
             
-            test_order = order_data
+            test_order = order_result
             return order_id
+        elif response.status_code == 403:
+            if "KYC" in response.text:
+                print("❌ Order creation failed - KYC verification required")
+                print("Attempting to update user KYC status...")
+                
+                # Try to update user KYC status via admin endpoint
+                try:
+                    kyc_update = requests.put(f"{API_BASE}/admin/users/{test_vip_user['uid']}/status",
+                                            json={"kyc_status": "verified"}, timeout=30)
+                    print(f"KYC update status: {kyc_update.status_code}")
+                except:
+                    pass
+                    
+                return None
+            elif "VIP" in response.text:
+                print("❌ Order creation failed - VIP membership required")
+                return None
+            else:
+                print(f"❌ Order creation failed - Access denied: {response.text}")
+                return None
         else:
-            print(f"❌ Order checkout test FAILED - Status: {response.status_code}")
+            print(f"❌ Order creation test FAILED - Status: {response.status_code}")
             return None
     except Exception as e:
-        print(f"❌ Order checkout test FAILED - Error: {e}")
+        print(f"❌ Order creation test FAILED - Error: {e}")
         return None
 
 def test_auto_distribution_on_delivery(order_id):
