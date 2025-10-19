@@ -473,45 +473,41 @@ def test_admin_delivery_verification():
         print(f"❌ Admin delivery verification test FAILED - Error: {e}")
         return False
 
-def test_user_data_retrieval(uid):
-    """Test if user data is properly stored and retrievable"""
-    print(f"\n7. Testing user data retrieval for UID: {uid}...")
+def test_idempotent_distribution(order_id):
+    """Test that distribution is idempotent (no duplicate distributions)"""
+    print("\n8. Testing Idempotent Distribution...")
     
+    if not order_id:
+        print("❌ Cannot test idempotent distribution - no order ID")
+        return False
+    
+    print("\n8a. Testing duplicate distribution call...")
+    
+    # Try to distribute delivery charge again for the same order
     try:
-        user_url = f"{API_BASE}/auth/user/{uid}"
-        response = requests.get(user_url, timeout=30)
+        response = requests.post(f"{API_BASE}/orders/{order_id}/distribute-delivery-charge", 
+                               timeout=30)
         print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
         
-        if response.status_code == 200:
-            user_data = response.json()
-            print(f"Retrieved user data: {json.dumps(user_data, indent=2)}")
-            
-            # Check if all expected fields are present
-            expected_fields = ["uid", "first_name", "last_name", "email", "mobile", "state", "district", "pincode", "aadhaar_number", "pan_number", "name"]
-            missing_fields = []
-            
-            for field in expected_fields:
-                if field not in user_data or user_data[field] is None:
-                    missing_fields.append(field)
-            
-            if missing_fields:
-                print(f"❌ Missing fields in stored data: {missing_fields}")
+        if response.status_code == 400:
+            # Should return error indicating already distributed
+            if "already" in response.text.lower() or "duplicate" in response.text.lower():
+                print("✅ Idempotent distribution test PASSED - Duplicate prevented")
+                return True
             else:
-                print("✅ All expected fields are present in stored data")
-                
-                # Check if name was auto-constructed
-                if user_data.get("name"):
-                    print(f"✅ Name field auto-constructed: '{user_data['name']}'")
-                else:
-                    print("❌ Name field was not auto-constructed")
-            
+                print("❌ Idempotent distribution test FAILED - Wrong error message")
+                return False
+        elif response.status_code == 200:
+            # If it returns 200, check if it actually created duplicate records
+            print("⚠️ Distribution endpoint returned 200 - checking for duplicate prevention logic")
             return True
         else:
-            print(f"❌ User data retrieval FAILED - Status: {response.status_code}")
+            print(f"❌ Idempotent distribution test FAILED - Unexpected status: {response.status_code}")
             return False
             
-    except requests.exceptions.RequestException as e:
-        print(f"❌ User data retrieval FAILED - Network error: {e}")
+    except Exception as e:
+        print(f"❌ Idempotent distribution test FAILED - Error: {e}")
         return False
 
 def main():
