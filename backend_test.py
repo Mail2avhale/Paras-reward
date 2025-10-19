@@ -628,27 +628,45 @@ def test_admin_withdrawal_management_profit():
         print(f"❌ Admin profit withdrawals list test FAILED - Error: {e}")
         return False
     
-    # Test withdrawal rejection flow if we have a profit withdrawal
-    if test_withdrawals:
-        profit_withdrawal = next((w for w in test_withdrawals if w["type"] == "profit"), None)
-        if profit_withdrawal:
-            withdrawal_id = profit_withdrawal["id"]
+    # Test withdrawal rejection flow - create a new cashback withdrawal to reject
+    print("\n9b. Creating a cashback withdrawal to test rejection...")
+    try:
+        # Add more cashback balance first
+        credit_data = {"amount": 50}
+        requests.post(f"{API_BASE}/wallet/credit-cashback/{test_vip_user['uid']}", 
+                     json=credit_data, timeout=30)
+        
+        # Create another withdrawal
+        withdrawal_data = {
+            "user_id": test_vip_user["uid"],
+            "amount": 30,
+            "payment_mode": "upi",
+            "upi_id": "rajesh@paytm"
+        }
+        
+        response = requests.post(f"{API_BASE}/wallet/cashback/withdraw", 
+                               json=withdrawal_data, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            rejection_withdrawal_id = result.get("withdrawal_id")
             
-            # Test 9b: Reject withdrawal (should refund to profit wallet)
-            print(f"\n9b. Testing POST /api/admin/withdrawals/profit/{withdrawal_id}/reject...")
+            # Test rejection
+            print(f"\n9c. Testing POST /api/admin/withdrawals/cashback/{rejection_withdrawal_id}/reject...")
             reject_data = {"reason": "Test rejection for verification"}
-            try:
-                response = requests.post(f"{API_BASE}/admin/withdrawals/profit/{withdrawal_id}/reject", 
-                                       json=reject_data, timeout=30)
-                print(f"Status Code: {response.status_code}")
-                print(f"Response: {response.text}")
-                
-                if response.status_code == 200:
-                    print("✅ Admin reject profit withdrawal test PASSED")
-                else:
-                    print(f"❌ Admin reject profit withdrawal test FAILED - Status: {response.status_code}")
-            except Exception as e:
-                print(f"❌ Admin reject profit withdrawal test FAILED - Error: {e}")
+            
+            reject_response = requests.post(f"{API_BASE}/admin/withdrawals/cashback/{rejection_withdrawal_id}/reject", 
+                                          json=reject_data, timeout=30)
+            print(f"Status Code: {reject_response.status_code}")
+            print(f"Response: {reject_response.text}")
+            
+            if reject_response.status_code == 200:
+                print("✅ Admin reject cashback withdrawal test PASSED")
+            else:
+                print(f"❌ Admin reject cashback withdrawal test FAILED - Status: {reject_response.status_code}")
+        
+    except Exception as e:
+        print(f"❌ Withdrawal rejection test FAILED - Error: {e}")
     
     return True
 
