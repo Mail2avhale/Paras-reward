@@ -37,6 +37,59 @@ def generate_reset_token() -> str:
     """Generate password reset token"""
     return ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(32))
 
+# ========== RBAC UTILITIES ==========
+class RolePermissions:
+    """Define role-based permissions"""
+    ADMIN_ROLES = ["admin", "sub_admin"]
+    MANAGEMENT_ROLES = ["admin", "sub_admin", "manager"]
+    EMPLOYEE_ROLES = ["admin", "sub_admin", "manager", "employee"]
+    STOCKIST_ROLES = ["master_stockist", "sub_stockist", "outlet"]
+    ALL_ROLES = ["admin", "sub_admin", "manager", "employee", "master_stockist", "sub_stockist", "outlet", "user"]
+
+async def get_user_from_uid(uid: str):
+    """Get user from database by UID"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+async def verify_role(uid: str, allowed_roles: List[str]):
+    """Verify user has one of the allowed roles"""
+    user = await get_user_from_uid(uid)
+    user_role = user.get("role", "user")
+    
+    if user_role not in allowed_roles:
+        raise HTTPException(
+            status_code=403, 
+            detail=f"Access denied. Required roles: {', '.join(allowed_roles)}"
+        )
+    
+    return user
+
+async def verify_admin(uid: str):
+    """Verify user is admin or sub_admin"""
+    return await verify_role(uid, RolePermissions.ADMIN_ROLES)
+
+async def verify_management(uid: str):
+    """Verify user is admin, sub_admin, or manager"""
+    return await verify_role(uid, RolePermissions.MANAGEMENT_ROLES)
+
+async def verify_stockist(uid: str):
+    """Verify user is master_stockist, sub_stockist, or outlet"""
+    return await verify_role(uid, RolePermissions.STOCKIST_ROLES)
+
+def check_region_access(user: dict, target_region: str = None) -> bool:
+    """Check if user has access to target region (for sub_admin)"""
+    if user.get("role") == "admin":
+        return True  # Admin has access to all regions
+    
+    if user.get("role") == "sub_admin":
+        assigned_regions = user.get("assigned_regions", [])
+        if target_region and target_region not in assigned_regions:
+            return False
+    
+    return True
+
 # Create the main app
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
