@@ -625,6 +625,121 @@ async def update_profile(uid: str, request: Request):
     
     return {"message": "Profile updated successfully"}
 
+@api_router.post("/user/{uid}/upload-profile-picture")
+async def upload_profile_picture(uid: str, file: UploadFile = File(...)):
+    """Upload profile picture (stores as base64)"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Validate file type
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+    
+    # Read file content
+    content = await file.read()
+    
+    # Check file size (max 5MB)
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Image size must be less than 5MB")
+    
+    # Convert to base64
+    base64_image = base64.b64encode(content).decode('utf-8')
+    image_data_url = f"data:{file.content_type};base64,{base64_image}"
+    
+    # Update user profile
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": {
+            "profile_picture": image_data_url,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {
+        "message": "Profile picture uploaded successfully",
+        "profile_picture": image_data_url[:100] + "..."  # Return truncated preview
+    }
+
+@api_router.delete("/user/{uid}/profile-picture")
+async def delete_profile_picture(uid: str):
+    """Delete profile picture"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": {
+            "profile_picture": None,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Profile picture deleted successfully"}
+
+@api_router.put("/user/{uid}/complete-profile")
+async def complete_profile(uid: str, request: Request):
+    """Complete user profile with all additional fields"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    data = await request.json()
+    
+    # Check for duplicate fields
+    for field in ["mobile", "aadhaar_number", "pan_number"]:
+        if data.get(field):
+            existing = await db.users.find_one({field: data[field], "uid": {"$ne": uid}})
+            if existing:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"{field.replace('_', ' ').title()} already in use"
+                )
+    
+    # Build update data
+    update_data = {
+        "first_name": data.get("first_name"),
+        "middle_name": data.get("middle_name"),
+        "last_name": data.get("last_name"),
+        "mobile": data.get("mobile"),
+        "gender": data.get("gender"),
+        "date_of_birth": data.get("date_of_birth"),
+        "address_line1": data.get("address_line1"),
+        "address_line2": data.get("address_line2"),
+        "city": data.get("city"),
+        "state": data.get("state"),
+        "district": data.get("district"),
+        "pincode": data.get("pincode"),
+        "aadhaar_number": data.get("aadhaar_number"),
+        "pan_number": data.get("pan_number"),
+        "upi_id": data.get("upi_id"),
+        "profile_complete": True,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Remove None values
+    update_data = {k: v for k, v in update_data.items() if v is not None}
+    
+    # Update name
+    if any(f in data for f in ["first_name", "middle_name", "last_name"]):
+        name_parts = []
+        if data.get('first_name'):
+            name_parts.append(data['first_name'])
+        if data.get('middle_name'):
+            name_parts.append(data['middle_name'])
+        if data.get('last_name'):
+            name_parts.append(data['last_name'])
+        if name_parts:
+            update_data['name'] = ' '.join(name_parts)
+    
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Profile completed successfully", "profile_complete": True}
+
 @api_router.post("/user/{uid}/change-password")
 async def change_password(uid: str, request: Request):
     """Change user password"""
