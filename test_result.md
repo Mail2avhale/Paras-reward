@@ -273,6 +273,18 @@ backend:
         agent: "testing"
         comment: "COMPREHENSIVE TESTING COMPLETE - ALL ANNUAL RENEWAL FUNCTIONALITY WORKING: ✅ Renewal submission works for all roles with correct GST calculation: Master(₹59k=50k+18%GST), Sub(₹35.4k=30k+18%GST), Outlet(₹11.8k=10k+18%GST). ✅ Role validation works perfectly - non-stockist users correctly rejected with 403 error. ✅ Renewal status retrieval works: shows latest_renewal with pending status before approval, renewal_status, is_overdue flags. ✅ Admin approval flow complete: GET all renewals, approve with 1-year period setup (next due date set correctly). ✅ Overdue processing endpoint works: POST /api/admin/renewals/check-overdue (no overdue entities for new system as expected). ✅ Integration with delivery charge distribution: profit_wallet_frozen flag prevents new credits when renewal is overdue. ✅ User record updates correctly: renewal_status='active', renewal_due_date set to +1 year. Fixed bug in GET /api/renewal/{uid} endpoint (find_one.sort issue). Annual renewal system is production-ready with proper suspension mechanism."
 
+  - task: "Mining System Fix - Mining Rate Display"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "MINING SYSTEM FIX TESTING COMPLETE - ALL CRITICAL FUNCTIONALITY VERIFIED: ✅ Mining Status Endpoint (GET /api/mining/status/{uid}) works correctly for both active and inactive mining sessions. ✅ All required fields present: mining_rate_per_hour, mining_rate (new field), base_rate, active_referrals, is_mining. ✅ Mining rate is NEVER zero - verified for all test scenarios (current rate: 39.58 per hour based on day 19 * base rate 50 / 1440 minutes * 60). ✅ Mining rate calculation formula verified: (current_day * base_rate) + (active_referrals * 0.1 * base_rate) / 1440 * 60 = correct per-hour rate. ✅ Both mining_rate and mining_rate_per_hour fields return identical values for backward compatibility. ✅ Active mining sessions show is_mining=true, session_active=true with session details. ✅ Inactive sessions show is_mining=false but still display potential mining rate (non-zero). ✅ Base rate is positive (50), active referrals counted correctly (0 for new users). Mining system fix is working perfectly - rate displays correctly and is never zero."
+
 frontend:
   - task: "User Registration Form"
     implemented: true
