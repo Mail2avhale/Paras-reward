@@ -1955,7 +1955,7 @@ async def checkout(request: Request):
     
     # Get delivery charge configuration (default 10%)
     delivery_config = await db.system_config.find_one({"config_type": "delivery"})
-    delivery_percentage = delivery_config.get("percentage", 0.10) if delivery_config else 0.10
+    delivery_percentage = delivery_config.get("delivery_charge_rate", 0.10) if delivery_config else 0.10
     delivery_charge = total_cash * delivery_percentage
     
     # Calculate cashback (25% of PRC value converted to ₹, 10 PRC = ₹1)
