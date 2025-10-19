@@ -360,6 +360,288 @@ const DeliveryConfigSettings = () => {
   );
 };
 
+// Marketplace Management Component
+const MarketplaceManagement = () => {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    prc_price: 0,
+    category: '',
+    image_url: '',
+    stock_quantity: 0,
+    featured: false
+  });
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const response = await axios.get(`${API}/products`);
+      setProducts(response.data.products || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (editingProduct) {
+        await axios.put(`${API}/admin/products/${editingProduct.product_id}`, formData);
+        toast.success('Product updated successfully!');
+      } else {
+        await axios.post(`${API}/admin/products`, formData);
+        toast.success('Product created successfully!');
+      }
+      
+      setShowAddModal(false);
+      setEditingProduct(null);
+      resetForm();
+      fetchProducts();
+    } catch (error) {
+      console.error('Error saving product:', error);
+      toast.error(error.response?.data?.detail || 'Failed to save product');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (productId, productName) => {
+    if (!window.confirm(`Delete "${productName}"?`)) return;
+
+    try {
+      await axios.delete(`${API}/admin/products/${productId}`);
+      toast.success('Product deleted successfully!');
+      fetchProducts();
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast.error('Failed to delete product');
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      prc_price: 0,
+      category: '',
+      image_url: '',
+      stock_quantity: 0,
+      featured: false
+    });
+  };
+
+  const handleEdit = (product) => {
+    setEditingProduct(product);
+    setFormData({
+      name: product.name,
+      description: product.description,
+      prc_price: product.prc_price,
+      category: product.category || '',
+      image_url: product.image_url || '',
+      stock_quantity: product.stock_quantity || 0,
+      featured: product.featured || false
+    });
+    setShowAddModal(true);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Marketplace Management</h2>
+          <p className="text-gray-600 mt-1">Manage products available for redemption</p>
+        </div>
+        <Button 
+          onClick={() => {
+            resetForm();
+            setEditingProduct(null);
+            setShowAddModal(true);
+          }}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          <Package className="mr-2 h-4 w-4" />
+          Add Product
+        </Button>
+      </div>
+
+      {/* Add/Edit Modal */}
+      {showAddModal && (
+        <Card className="p-6 bg-white border-2 border-blue-200">
+          <h3 className="text-xl font-bold mb-4">{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Product Name *</label>
+                <Input
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  placeholder="Enter product name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Category</label>
+                <Input
+                  value={formData.category}
+                  onChange={(e) => setFormData({...formData, category: e.target.value})}
+                  placeholder="e.g., Electronics, Fashion"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Description *</label>
+              <textarea
+                required
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                placeholder="Product description"
+                className="w-full px-3 py-2 border rounded-md"
+                rows={3}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">PRC Price *</label>
+                <Input
+                  type="number"
+                  required
+                  min="0"
+                  value={formData.prc_price}
+                  onChange={(e) => setFormData({...formData, prc_price: parseFloat(e.target.value)})}
+                  placeholder="PRC coins required"
+                />
+                <p className="text-xs text-gray-500 mt-1">≈ ₹{(formData.prc_price / 10).toFixed(2)} (10 PRC = ₹1)</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Stock Quantity</label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.stock_quantity}
+                  onChange={(e) => setFormData({...formData, stock_quantity: parseInt(e.target.value)})}
+                  placeholder="Available quantity"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Image URL</label>
+              <Input
+                value={formData.image_url}
+                onChange={(e) => setFormData({...formData, image_url: e.target.value})}
+                placeholder="https://example.com/image.jpg"
+              />
+              {formData.image_url && (
+                <img src={formData.image_url} alt="Preview" className="mt-2 w-32 h-32 object-cover rounded border" />
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="featured"
+                checked={formData.featured}
+                onChange={(e) => setFormData({...formData, featured: e.target.checked})}
+                className="rounded"
+              />
+              <label htmlFor="featured" className="text-sm font-medium">Featured Product</label>
+            </div>
+
+            <div className="flex gap-3">
+              <Button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700">
+                {loading ? 'Saving...' : editingProduct ? 'Update Product' : 'Create Product'}
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={() => {
+                  setShowAddModal(false);
+                  setEditingProduct(null);
+                  resetForm();
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
+
+      {/* Products List */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {products.length === 0 ? (
+          <Card className="col-span-full p-12 text-center bg-white">
+            <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">No products yet. Add your first product!</p>
+          </Card>
+        ) : (
+          products.map((product) => (
+            <Card key={product.product_id} className="overflow-hidden bg-white">
+              <div className="aspect-square bg-gray-100 relative">
+                {product.image_url ? (
+                  <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Package className="h-16 w-16 text-gray-300" />
+                  </div>
+                )}
+                {product.featured && (
+                  <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 px-2 py-1 rounded text-xs font-bold">
+                    Featured
+                  </div>
+                )}
+              </div>
+              <div className="p-4">
+                <h3 className="font-bold text-lg mb-1">{product.name}</h3>
+                <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description}</p>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <div className="text-lg font-bold text-blue-600">{product.prc_price} PRC</div>
+                    <div className="text-xs text-gray-500">≈ ₹{(product.prc_price / 10).toFixed(2)}</div>
+                  </div>
+                  {product.stock_quantity !== undefined && (
+                    <div className="text-sm text-gray-600">
+                      Stock: {product.stock_quantity}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleEdit(product)}
+                    className="flex-1"
+                  >
+                    Edit
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="destructive"
+                    onClick={() => handleDelete(product.product_id, product.name)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
 const AdminDashboard = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
