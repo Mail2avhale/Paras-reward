@@ -768,7 +768,9 @@ async def get_mining_status(uid: str):
     mined_this_session = 0
     
     # Check if mining session is active
-    if user.get("mining_start_time") and user.get("mining_active"):
+    # Handle backward compatibility: mining_active can be True or None (for old sessions)
+    mining_active = user.get("mining_active")
+    if user.get("mining_start_time") and (mining_active is True or mining_active is None):
         start_time = datetime.fromisoformat(user["mining_start_time"]) if isinstance(user["mining_start_time"], str) else user["mining_start_time"]
         if start_time.tzinfo is None:
             start_time = start_time.replace(tzinfo=timezone.utc)
