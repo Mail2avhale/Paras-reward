@@ -97,17 +97,131 @@ const Home = () => {
         </div>
       </div>
 
-        {/* Features */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-20 max-w-6xl mx-auto">
-          <div data-testid="feature-mining" className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mb-6">
-              <Coins className="h-8 w-8 text-white" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">Daily Mining</h3>
-            <p className="text-gray-600">
-              Mine PRC coins every day with our dynamic formula. The more you engage, the more you earn!
+        {/* Key Features */}
+        <div className="container mx-auto px-4 py-20">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+              Powerful Features
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Everything you need to earn and redeem rewards in one platform
             </p>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+            {/* Feature 1 */}
+            <Card className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 border-transparent hover:border-purple-200">
+              <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mb-4">
+                <Coins className="h-7 w-7 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Daily Mining</h3>
+              <p className="text-gray-600 mb-4">
+                Mine PRC coins every 24 hours with dynamic rewards based on your activity
+              </p>
+              <Link to="/mining" className="text-purple-600 font-semibold flex items-center gap-1 hover:gap-2 transition-all">
+                Learn More <ChevronRight className="h-4 w-4" />
+              </Link>
+            </Card>
+
+            {/* Feature 2 */}
+            <Card className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 border-transparent hover:border-purple-200">
+              <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-orange-500 rounded-2xl flex items-center justify-center mb-4">
+                <Gamepad2 className="h-7 w-7 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Tap Game</h3>
+              <p className="text-gray-600 mb-4">
+                Play our engaging tap game daily and earn up to 100 PRC coins
+              </p>
+              <Link to="/game" className="text-purple-600 font-semibold flex items-center gap-1 hover:gap-2 transition-all">
+                Play Now <ChevronRight className="h-4 w-4" />
+              </Link>
+            </Card>
+
+            {/* Feature 3 */}
+            <Card className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 border-transparent hover:border-purple-200">
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mb-4">
+                <Users className="h-7 w-7 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Referral System</h3>
+              <p className="text-gray-600 mb-4">
+                Invite friends and get 10% bonus on their mining rate (up to 200 referrals)
+              </p>
+              <Link to="/referrals" className="text-purple-600 font-semibold flex items-center gap-1 hover:gap-2 transition-all">
+                Start Referring <ChevronRight className="h-4 w-4" />
+              </Link>
+            </Card>
+
+            {/* Feature 4 */}
+            <Card className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 border-transparent hover:border-purple-200">
+              <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mb-4">
+                <Store className="h-7 w-7 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Marketplace</h3>
+              <p className="text-gray-600 mb-4">
+                Redeem your PRC coins for real products from 5000+ items
+              </p>
+              <Link to="/marketplace" className="text-purple-600 font-semibold flex items-center gap-1 hover:gap-2 transition-all">
+                Browse Products <ChevronRight className="h-4 w-4" />
+              </Link>
+            </Card>
+
+            {/* Feature 5 */}
+            <Card className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 border-transparent hover:border-purple-200">
+              <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-2xl flex items-center justify-center mb-4">
+                <Trophy className="h-7 w-7 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">VIP Membership</h3>
+              <p className="text-gray-600 mb-4">
+                Unlock unlimited coin validity and exclusive benefits for just ₹1000/year
+              </p>
+              <Link to="/vip" className="text-purple-600 font-semibold flex items-center gap-1 hover:gap-2 transition-all">
+                Go VIP <ChevronRight className="h-4 w-4" />
+              </Link>
+            </Card>
+
+            {/* Feature 6 */}
+            <Card className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 border-transparent hover:border-purple-200">
+              <div className="w-14 h-14 bg-gradient-to-br from-red-500 to-pink-500 rounded-2xl flex items-center justify-center mb-4">
+                <Wallet className="h-7 w-7 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Cashback Wallet</h3>
+              <p className="text-gray-600 mb-4">
+                Get 25% cashback on every purchase, withdraw anytime with ₹10 minimum
+              </p>
+              <Link to="/wallet" className="text-purple-600 font-semibold flex items-center gap-1 hover:gap-2 transition-all">
+                View Wallet <ChevronRight className="h-4 w-4" />
+              </Link>
+            </Card>
+
+            {/* Feature 7 */}
+            <Card className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 border-transparent hover:border-purple-200">
+              <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center mb-4">
+                <Shield className="h-7 w-7 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">KYC Verification</h3>
+              <p className="text-gray-600 mb-4">
+                Secure your account with Aadhaar and PAN verification
+              </p>
+              <Link to="/kyc" className="text-purple-600 font-semibold flex items-center gap-1 hover:gap-2 transition-all">
+                Verify Now <ChevronRight className="h-4 w-4" />
+              </Link>
+            </Card>
+
+            {/* Feature 8 */}
+            <Card className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 border-transparent hover:border-purple-200">
+              <div className="w-14 h-14 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-2xl flex items-center justify-center mb-4">
+                <Award className="h-7 w-7 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Leaderboard</h3>
+              <p className="text-gray-600 mb-4">
+                Compete with others and climb the ranks to win exclusive rewards
+              </p>
+              <Link to="/leaderboard" className="text-purple-600 font-semibold flex items-center gap-1 hover:gap-2 transition-all">
+                View Rankings <ChevronRight className="h-4 w-4" />
+              </Link>
+            </Card>
+          </div>
+        </div>
 
           <div data-testid="feature-referral" className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
             <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center mb-6">
