@@ -78,6 +78,66 @@ const AdminDashboard = ({ user, onLogout }) => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const params = {};
+      if (searchQuery) params.search = searchQuery;
+      if (roleFilter) params.role = roleFilter;
+      
+      const response = await axios.get(`${API}/admin/users`, { params });
+      setUsers(response.data.users);
+      setUsersTotal(response.data.total);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  const handleRoleChange = async (uid, newRole) => {
+    try {
+      await axios.put(`${API}/admin/users/${uid}/role`, { role: newRole });
+      toast.success(`User role updated to ${newRole}`);
+      fetchUsers();
+      fetchStats();
+    } catch (error) {
+      console.error('Error updating role:', error);
+      toast.error(error.response?.data?.detail || 'Failed to update role');
+    }
+  };
+
+  const handleStatusChange = async (uid, isActive) => {
+    try {
+      await axios.put(`${API}/admin/users/${uid}/status`, { is_active: isActive });
+      toast.success(`User ${isActive ? 'activated' : 'deactivated'} successfully`);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast.error(error.response?.data?.detail || 'Failed to update status');
+    }
+  };
+
+  const handleDeleteUser = async (uid, userName) => {
+    if (!window.confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API}/admin/users/${uid}`);
+      toast.success('User deleted successfully');
+      fetchUsers();
+      fetchStats();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error(error.response?.data?.detail || 'Failed to delete user');
+    }
+  };
+
+  useEffect(() => {
+    const delaySearch = setTimeout(() => {
+      fetchUsers();
+    }, 500);
+    return () => clearTimeout(delaySearch);
+  }, [searchQuery, roleFilter]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       <Navbar user={user} onLogout={onLogout} />
