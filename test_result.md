@@ -185,15 +185,18 @@ backend:
 
   - task: "Cashback Wallet & Maintenance"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented comprehensive cashback wallet system: GET /api/wallet/{uid} (with maintenance status), POST /api/wallet/check-maintenance/{uid} (apply ₹99 monthly fee 30 days after VIP activation), POST /api/wallet/credit-cashback/{uid} (credits cashback, clears lien first), POST /api/wallet/cashback/withdraw (min ₹10, fee ₹5, requires KYC), GET /api/wallet/withdrawals/{uid} (history). Lien system tracks pending maintenance fees, never freezes wallet. cashback_withdrawals collection created."
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE TESTING COMPLETE - ALL CASHBACK WALLET FUNCTIONALITY WORKING: ✅ Wallet balance retrieval works for VIP and free users with all required fields (cashback_balance, profit_balance, pending_lien, maintenance_due, days_until_maintenance). ✅ Maintenance system correctly handles new VIP users (not yet due). ✅ Cashback credit system works perfectly with lien clearing logic. ✅ Withdrawal flow complete: min ₹10 validation, ₹5 fee calculation, KYC verification required, immediate balance deduction, withdrawal request creation. ✅ Withdrawal history endpoint returns correct structure with both cashback_withdrawals and profit_withdrawals arrays. Fixed KYC status check from 'approved' to 'verified' to match backend implementation."
 
   - task: "Profit Wallet & Withdrawals"
     implemented: true
