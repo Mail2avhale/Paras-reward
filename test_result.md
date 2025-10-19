@@ -260,15 +260,18 @@ backend:
 
   - task: "Annual Renewal System"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented annual renewal system: POST /api/renewal/submit (Master:₹50k+GST, Sub:₹30k+GST, Outlet:₹10k+GST), GET /api/renewal/{uid} (shows renewal_status, due_date, is_overdue, days_until_due, suspended flag), Admin endpoints: GET /api/admin/renewals (with status filter), POST /api/admin/renewals/{id}/approve (sets 1-year period from approval date), POST /api/admin/renewals/{id}/reject, POST /api/admin/renewals/check-overdue (finds overdue users, cancels pending withdrawals with refund, freezes profit_wallet to block new credits, sets renewal_status='overdue'). annual_renewals collection. Updated delivery charge distribution to check profit_wallet_frozen flag before crediting."
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE TESTING COMPLETE - ALL ANNUAL RENEWAL FUNCTIONALITY WORKING: ✅ Renewal submission works for all roles with correct GST calculation: Master(₹59k=50k+18%GST), Sub(₹35.4k=30k+18%GST), Outlet(₹11.8k=10k+18%GST). ✅ Role validation works perfectly - non-stockist users correctly rejected with 403 error. ✅ Renewal status retrieval works: shows latest_renewal with pending status before approval, renewal_status, is_overdue flags. ✅ Admin approval flow complete: GET all renewals, approve with 1-year period setup (next due date set correctly). ✅ Overdue processing endpoint works: POST /api/admin/renewals/check-overdue (no overdue entities for new system as expected). ✅ Integration with delivery charge distribution: profit_wallet_frozen flag prevents new credits when renewal is overdue. ✅ User record updates correctly: renewal_status='active', renewal_due_date set to +1 year. Fixed bug in GET /api/renewal/{uid} endpoint (find_one.sort issue). Annual renewal system is production-ready with proper suspension mechanism."
 
 frontend:
   - task: "User Registration Form"
