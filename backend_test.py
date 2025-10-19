@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """
-Backend API Testing Script for Delivery Charge Auto-Distribution
-Tests the delivery charge configuration and auto-distribution functionality
+Backend API Testing Script for Wallets & Maintenance Feature
+Tests the comprehensive wallet system including cashback, profit wallets, maintenance, and withdrawals
 """
 
 import requests
 import json
 import sys
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
+import uuid
 
 # Get backend URL from frontend .env file
 def get_backend_url():
@@ -29,7 +30,7 @@ if not BACKEND_URL:
 
 API_BASE = f"{BACKEND_URL}/api"
 
-print(f"Testing backend at: {BACKEND_URL}")
+print(f"Testing Wallets & Maintenance Feature at: {BACKEND_URL}")
 print(f"API Base: {API_BASE}")
 print("=" * 80)
 
