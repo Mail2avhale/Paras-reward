@@ -180,7 +180,8 @@ class ProductCreate(BaseModel):
     category: str
     stock_quantity: int = 0
 
-class Order(BaseModel):
+class OrderSingleProduct(BaseModel):
+    """Legacy model for single product orders (deprecated - use Order for multi-item carts)"""
     model_config = ConfigDict(extra="ignore")
     order_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
