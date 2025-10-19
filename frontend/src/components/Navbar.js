@@ -113,6 +113,10 @@ const Navbar = ({ user, onLogout }) => {
                 <DropdownMenuItem asChild>
                   <Link to="/leaderboard" className="cursor-pointer">Leaderboard</Link>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/profile" className="cursor-pointer">My Profile</Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/vip" className="cursor-pointer">VIP Membership</Link>
                 </DropdownMenuItem>
