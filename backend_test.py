@@ -511,38 +511,66 @@ def test_idempotent_distribution(order_id):
         return False
 
 def main():
-    """Run all registration tests"""
-    print("Starting comprehensive user registration endpoint testing...")
-    print(f"Target URL: {REGISTER_URL}")
+    """Run all delivery charge auto-distribution tests"""
+    print("Starting comprehensive Delivery Charge Auto-Distribution testing...")
+    print(f"Target API: {API_BASE}")
     
     # Test basic connectivity
     try:
-        response = requests.get(f"{API_BASE}/", timeout=10)
+        response = requests.get(f"{API_BASE}/admin/stats", timeout=10)
         print(f"Backend connectivity test - Status: {response.status_code}")
     except requests.exceptions.RequestException as e:
         print(f"❌ Backend connectivity FAILED: {e}")
         print("Cannot proceed with testing - backend is not accessible")
         return False
     
-    # Run all tests
-    success, user_data, uid = test_registration_endpoint()
+    # Run all tests in sequence
+    print("\n" + "=" * 80)
+    print("DELIVERY CHARGE AUTO-DISTRIBUTION COMPREHENSIVE TESTING")
+    print("=" * 80)
     
-    if success:
-        test_duplicate_detection(user_data)
-        if uid:
-            test_user_data_retrieval(uid)
+    # 1. Setup test users
+    if not setup_test_users():
+        print("❌ CRITICAL: Failed to setup test users - cannot continue")
+        return False
     
-    test_name_auto_construction()
-    test_missing_fields()
-    test_invalid_data_formats() 
-    test_password_validation()
-    test_edge_cases()
+    # 2. Test delivery configuration management
+    if not test_delivery_config_management():
+        print("❌ CRITICAL: Delivery configuration tests failed")
+        return False
     
-    print("\n" + "=" * 60)
-    print("Registration endpoint testing completed!")
+    # 3. Create test product
+    product_id = create_test_product()
+    if not product_id:
+        print("❌ CRITICAL: Failed to create test product - cannot continue")
+        return False
+    
+    # 4. Test order checkout with delivery charge
+    order_id = test_order_checkout_with_delivery_charge(product_id)
+    if not order_id:
+        print("❌ CRITICAL: Order checkout failed - cannot continue")
+        return False
+    
+    # 5. Test auto-distribution on delivery
+    if not test_auto_distribution_on_delivery(order_id):
+        print("❌ CRITICAL: Auto-distribution on delivery failed")
+        return False
+    
+    # 6. Test commission records verification
+    test_commission_records_verification(order_id)
+    
+    # 7. Test admin delivery verification
+    test_admin_delivery_verification()
+    
+    # 8. Test idempotent distribution
+    test_idempotent_distribution(order_id)
+    
+    print("\n" + "=" * 80)
+    print("DELIVERY CHARGE AUTO-DISTRIBUTION TESTING COMPLETED!")
+    print("=" * 80)
     print("Check the results above for any failures that need attention.")
     
-    return success
+    return True
 
 if __name__ == "__main__":
     main()
