@@ -448,6 +448,115 @@ async def forgot_password(email: str):
     # In production, send email here
     # For now, return token (remove in production)
     return {
+        "message": "Reset token generated",
+        "reset_token": reset_token  # Remove in production
+    }
+
+# ========== USER PROFILE ROUTES ==========
+
+@api_router.put("/user/{uid}/profile")
+async def update_profile(uid: str, request: Request):
+    """Update user profile"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    data = await request.json()
+    
+    # Fields that can be updated
+    updatable_fields = [
+        "first_name", "middle_name", "last_name", "mobile",
+        "state", "district", "taluka", "village", "pincode",
+        "aadhaar_number", "pan_number", "upi_id"
+    ]
+    
+    update_data = {}
+    for field in updatable_fields:
+        if field in data:
+            update_data[field] = data[field]
+    
+    # Update name if name components changed
+    if any(f in data for f in ["first_name", "middle_name", "last_name"]):
+        name_parts = []
+        if data.get('first_name') or user.get('first_name'):
+            name_parts.append(data.get('first_name', user.get('first_name', '')))
+        if data.get('middle_name') or user.get('middle_name'):
+            name_parts.append(data.get('middle_name', user.get('middle_name', '')))
+        if data.get('last_name') or user.get('last_name'):
+            name_parts.append(data.get('last_name', user.get('last_name', '')))
+        update_data['name'] = ' '.join(name_parts)
+    
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Profile updated successfully"}
+
+@api_router.post("/user/{uid}/change-password")
+async def change_password(uid: str, request: Request):
+    """Change user password"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    data = await request.json()
+    current_password = data.get("current_password")
+    new_password = data.get("new_password")
+    
+    if not current_password or not new_password:
+        raise HTTPException(status_code=400, detail="Both passwords are required")
+    
+    # Verify current password
+    if not user.get("password_hash"):
+        raise HTTPException(status_code=400, detail="Password not set for this account")
+    
+    if not verify_password(current_password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+    
+    # Validate new password
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
+    
+    # Update password
+    new_hash = hash_password(new_password)
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": {
+            "password_hash": new_hash,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Password changed successfully"}
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password_old(email: str):
+    """Request password reset"""
+    user = await db.users.find_one({"email": email})
+    if not user:
+        # Don't reveal if email exists
+        return {"message": "If the email exists, a reset link has been sent"}
+    
+    # Generate reset token
+    reset_token = generate_reset_token()
+    reset_expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+    
+    await db.users.update_one(
+        {"email": email},
+        {
+            "$set": {
+                "reset_token": reset_token,
+                "reset_token_expiry": reset_expiry.isoformat()
+            }
+        }
+    )
+    
+    # In production, send email here
+    # For now, return token (remove in production)
+    return {
         "message": "Password reset token generated",
         "reset_token": reset_token,
         "note": "In production, this would be sent via email"
