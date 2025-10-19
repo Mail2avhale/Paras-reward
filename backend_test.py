@@ -738,67 +738,99 @@ def test_security_deposit_retrieval():
     
     return True
 
-def test_admin_withdrawal_management_profit():
-    """Test admin withdrawal management for profit withdrawals"""
-    print("\n9. Testing Admin Withdrawal Management - Profit...")
+def test_admin_security_deposit_approval():
+    """Test admin approval of security deposits"""
+    print("\n10. Testing Admin Security Deposit Approval...")
     
-    # Test 9a: Get all profit withdrawals
-    print("\n9a. Testing GET /api/admin/withdrawals/profit...")
+    # Test 10a: Get all security deposits
+    print("\n10a. Testing GET /api/admin/security-deposits...")
     try:
-        response = requests.get(f"{API_BASE}/admin/withdrawals/profit", timeout=30)
+        response = requests.get(f"{API_BASE}/admin/security-deposits", timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
         if response.status_code == 200:
-            withdrawals = response.json()
-            print("✅ Admin profit withdrawals list test PASSED")
-            print(f"Withdrawals count: {len(withdrawals) if isinstance(withdrawals, list) else 'N/A'}")
+            result = response.json()
+            deposits = result.get("deposits", [])
+            count = result.get("count", 0)
+            print(f"✅ Admin security deposits list test PASSED")
+            print(f"Total deposits: {count}")
         else:
-            print(f"❌ Admin profit withdrawals list test FAILED - Status: {response.status_code}")
+            print(f"❌ Admin security deposits list test FAILED - Status: {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ Admin profit withdrawals list test FAILED - Error: {e}")
+        print(f"❌ Admin security deposits list test FAILED - Error: {e}")
         return False
     
-    # Test withdrawal rejection flow - create a new cashback withdrawal to reject
-    print("\n9b. Creating a cashback withdrawal to test rejection...")
-    try:
-        # Add more cashback balance first
-        credit_data = {"amount": 50}
-        requests.post(f"{API_BASE}/wallet/credit-cashback/{test_vip_user['uid']}", 
-                     json=credit_data, timeout=30)
+    # Test 10b: Approve security deposit
+    if test_security_deposits:
+        deposit_to_approve = test_security_deposits[0]  # Approve first deposit
+        deposit_id = deposit_to_approve["id"]
         
-        # Create another withdrawal
-        withdrawal_data = {
-            "user_id": test_vip_user["uid"],
-            "amount": 30,
-            "payment_mode": "upi",
-            "upi_id": "rajesh@paytm"
-        }
-        
-        response = requests.post(f"{API_BASE}/wallet/cashback/withdraw", 
-                               json=withdrawal_data, timeout=30)
-        
-        if response.status_code == 200:
-            result = response.json()
-            rejection_withdrawal_id = result.get("withdrawal_id")
+        print(f"\n10b. Testing POST /api/admin/security-deposits/{deposit_id}/approve...")
+        try:
+            approve_data = {
+                "admin_notes": "Approved for testing - 30-day return cycle starts now"
+            }
             
-            # Test rejection
-            print(f"\n9c. Testing POST /api/admin/withdrawals/cashback/{rejection_withdrawal_id}/reject...")
-            reject_data = {"reason": "Test rejection for verification"}
+            response = requests.post(f"{API_BASE}/admin/security-deposits/{deposit_id}/approve", 
+                                   json=approve_data, timeout=30)
+            print(f"Status Code: {response.status_code}")
+            print(f"Response: {response.text}")
             
-            reject_response = requests.post(f"{API_BASE}/admin/withdrawals/cashback/{rejection_withdrawal_id}/reject", 
-                                          json=reject_data, timeout=30)
-            print(f"Status Code: {reject_response.status_code}")
-            print(f"Response: {reject_response.text}")
-            
-            if reject_response.status_code == 200:
-                print("✅ Admin reject cashback withdrawal test PASSED")
+            if response.status_code == 200:
+                result = response.json()
+                next_return_due = result.get("next_return_due")
+                print("✅ Admin approve security deposit test PASSED")
+                print(f"Next return due: {next_return_due}")
+                deposit_to_approve["status"] = "approved"
+                deposit_to_approve["next_return_due"] = next_return_due
             else:
-                print(f"❌ Admin reject cashback withdrawal test FAILED - Status: {reject_response.status_code}")
+                print(f"❌ Admin approve security deposit test FAILED - Status: {response.status_code}")
+                return False
+        except Exception as e:
+            print(f"❌ Admin approve security deposit test FAILED - Error: {e}")
+            return False
+    
+    # Test 10c: Admin adjustment of deposit amount
+    if len(test_security_deposits) > 1:
+        deposit_to_adjust = test_security_deposits[1]  # Adjust second deposit (approve it first)
+        deposit_id = deposit_to_adjust["id"]
         
-    except Exception as e:
-        print(f"❌ Withdrawal rejection test FAILED - Error: {e}")
+        # First approve it
+        print(f"\n10c. Approving deposit for adjustment test...")
+        approve_data = {"admin_notes": "Approved for adjustment testing"}
+        requests.post(f"{API_BASE}/admin/security-deposits/{deposit_id}/approve", 
+                     json=approve_data, timeout=30)
+        
+        # Now adjust the amount
+        print(f"\n10d. Testing POST /api/admin/security-deposits/{deposit_id}/adjust...")
+        try:
+            new_amount = 250000  # Adjust sub stockist from 300k to 250k
+            adjust_data = {
+                "new_amount": new_amount,
+                "admin_notes": "Adjusted amount - return cycle resets from today"
+            }
+            
+            response = requests.post(f"{API_BASE}/admin/security-deposits/{deposit_id}/adjust", 
+                                   json=adjust_data, timeout=30)
+            print(f"Status Code: {response.status_code}")
+            print(f"Response: {response.text}")
+            
+            if response.status_code == 200:
+                result = response.json()
+                next_return_due = result.get("next_return_due")
+                print("✅ Admin adjust security deposit test PASSED")
+                print(f"New amount: ₹{new_amount}")
+                print(f"Next return due (reset): {next_return_due}")
+                deposit_to_adjust["amount"] = new_amount
+                deposit_to_adjust["status"] = "approved"
+            else:
+                print(f"❌ Admin adjust security deposit test FAILED - Status: {response.status_code}")
+                return False
+        except Exception as e:
+            print(f"❌ Admin adjust security deposit test FAILED - Error: {e}")
+            return False
     
     return True
 
