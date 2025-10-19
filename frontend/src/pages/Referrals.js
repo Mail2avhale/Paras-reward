@@ -90,12 +90,17 @@ const Referrals = ({ user, onLogout }) => {
               Your Referral Code
             </h2>
             <div className="bg-white/20 backdrop-blur-sm p-6 rounded-2xl mb-4">
-              <p className="text-4xl font-bold text-center tracking-wider">{referralCode}</p>
+              {referralCode ? (
+                <p className="text-4xl font-bold text-center tracking-wider">{referralCode}</p>
+              ) : (
+                <p className="text-2xl text-center text-white/70">Loading...</p>
+              )}
             </div>
             <Button
               data-testid="copy-code-btn"
               onClick={copyReferralCode}
-              className="w-full bg-white text-purple-600 hover:bg-gray-100 py-6 rounded-xl text-lg font-semibold shadow-lg transition-all"
+              disabled={!referralCode}
+              className="w-full bg-white text-purple-600 hover:bg-gray-100 py-6 rounded-xl text-lg font-semibold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {copied ? (
                 <>
