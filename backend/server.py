@@ -803,6 +803,420 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ========== V2 ENHANCED ENDPOINTS ==========
+
+# Cart System
+@api_router.post("/v2/cart/{uid}/add")
+async def add_to_cart_v2(uid: str, product_id: str, quantity: int = 1):
+    """Add item to cart - V2"""
+    cart = await db.carts.find_one({"user_id": uid})
+    
+    if not cart:
+        cart_data = {
+            "cart_id": str(uuid.uuid4()),
+            "user_id": uid,
+            "items": [{"product_id": product_id, "quantity": quantity}],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.carts.insert_one(cart_data)
+    else:
+        # Check if product already in cart
+        items = cart.get("items", [])
+        found = False
+        for item in items:
+            if item["product_id"] == product_id:
+                item["quantity"] += quantity
+                found = True
+                break
+        
+        if not found:
+            items.append({"product_id": product_id, "quantity": quantity})
+        
+        await db.carts.update_one(
+            {"user_id": uid},
+            {"$set": {"items": items, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    
+    return {"message": "Item added to cart"}
+
+@api_router.get("/v2/cart/{uid}")
+async def get_cart_v2(uid: str):
+    """Get cart with product details - V2"""
+    cart = await db.carts.find_one({"user_id": uid})
+    if not cart:
+        return {"items": [], "total_prc": 0, "total_items": 0}
+    
+    cart_items = []
+    total_prc = 0
+    
+    for item in cart.get("items", []):
+        product = await db.products.find_one({"product_id": item["product_id"]})
+        if product:
+            item_total = product["prc_price"] * item["quantity"]
+            cart_items.append({
+                "product_id": item["product_id"],
+                "name": product["name"],
+                "prc_price": product["prc_price"],
+                "quantity": item["quantity"],
+                "total": item_total,
+                "image_url": product.get("image_url")
+            })
+            total_prc += item_total
+    
+    return {"items": cart_items, "total_prc": total_prc, "total_items": len(cart_items)}
+
+@api_router.delete("/v2/cart/{uid}/item/{product_id}")
+async def remove_from_cart(uid: str, product_id: str):
+    """Remove item from cart"""
+    cart = await db.carts.find_one({"user_id": uid})
+    if cart:
+        items = [item for item in cart.get("items", []) if item["product_id"] != product_id]
+        await db.carts.update_one({"user_id": uid}, {"$set": {"items": items}})
+    return {"message": "Item removed"}
+
+# Stockist Management
+@api_router.post("/v2/stockist/register")
+async def register_stockist(
+    business_name: str,
+    owner_full_name: str,
+    business_type: str,
+    contact_number: str,
+    email: str,
+    state: str,
+    district: str,
+    taluka: str,
+    village: str,
+    pincode: str,
+    pan_number: str,
+    aadhaar_number: str,
+    user_id: str
+):
+    """Register new stockist/outlet"""
+    # Check if user exists
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check duplicates
+    existing = await db.stockists.find_one({"$or": [
+        {"email": email},
+        {"contact_number": contact_number},
+        {"pan_number": pan_number},
+        {"aadhaar_number": aadhaar_number}
+    ]})
+    
+    if existing:
+        raise HTTPException(status_code=400, detail=\"Stockist already registered with these details")
+    
+    stockist_data = {
+        "stockist_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "business_name": business_name,
+        "owner_full_name": owner_full_name,
+        "business_type": business_type,
+        "contact_number": contact_number,
+        "email": email,
+        "state": state,
+        "district": district,
+        "taluka": taluka,
+        "village": village,
+        "pincode": pincode,
+        "pan_number": pan_number,
+        "aadhaar_number": aadhaar_number,
+        "approval_status": "pending",
+        "is_active": False,
+        "profit_wallet": 0.0,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.stockists.insert_one(stockist_data)
+    return {"message": "Registration submitted for approval", "stockist_id": stockist_data["stockist_id"]}
+
+@api_router.get("/v2/stockists/pending")
+async def get_pending_stockists():
+    """Get all pending stockist registrations (Admin)"""
+    stockists = await db.stockists.find({"approval_status": "pending"}, {"_id": 0}).to_list(1000)
+    return {"stockists": stockists}
+
+@api_router.post("/v2/stockist/{stockist_id}/approve")
+async def approve_stockist(stockist_id: str, approved: bool):
+    """Approve or reject stockist (Admin)"""
+    stockist = await db.stockists.find_one({"stockist_id": stockist_id})
+    if not stockist:
+        raise HTTPException(status_code=404, detail="Stockist not found")
+    
+    status = "approved" if approved else "rejected"
+    update_data = {
+        "approval_status": status,
+        "is_active": approved,
+        "approved_at": datetime.now(timezone.utc).isoformat() if approved else None
+    }
+    
+    await db.stockists.update_one({"stockist_id": stockist_id}, {"$set": update_data})
+    
+    # Update user role
+    if approved:
+        role_map = {"master": "master_stockist", "sub": "sub_stockist", "outlet": "outlet"}
+        new_role = role_map.get(stockist["business_type"], "user")
+        await db.users.update_one(
+            {"uid": stockist["user_id"]},
+            {"$set": {"role": new_role}}
+        )
+    
+    return {"message": f"Stockist {status}"}
+
+# Support Ticket System
+@api_router.post("/v2/support/ticket")
+async def create_ticket(uid: str, subject: str, category: str, description: str, priority: str = "medium"):
+    """Create support ticket"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    ticket_data = {
+        "ticket_id": f"TKT-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}",
+        "user_id": uid,
+        "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or user.get('name', 'User'),
+        "user_email": user.get("email", ""),
+        "subject": subject,
+        "category": category,
+        "description": description,
+        "priority": priority,
+        "status": "open",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.support_tickets.insert_one(ticket_data)
+    return {"message": "Ticket created", "ticket_id": ticket_data["ticket_id"]}
+
+@api_router.get("/v2/support/tickets/{uid}")
+async def get_user_tickets(uid: str):
+    """Get user's support tickets"""
+    tickets = await db.support_tickets.find({"user_id": uid}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return {"tickets": tickets}
+
+@api_router.get("/v2/support/tickets")
+async def get_all_tickets(status: Optional[str] = None):
+    """Get all support tickets (Admin)"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    tickets = await db.support_tickets.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return {"tickets": tickets}
+
+@api_router.patch("/v2/support/ticket/{ticket_id}")
+async def update_ticket(
+    ticket_id: str,
+    status: Optional[str] = None,
+    admin_response: Optional[str] = None,
+    assigned_to: Optional[str] = None
+):
+    """Update support ticket (Admin)"""
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    
+    if status:
+        update_data["status"] = status
+        if status == "resolved":
+            update_data["resolved_at"] = datetime.now(timezone.utc).isoformat()
+    
+    if admin_response:
+        update_data["admin_response"] = admin_response
+    
+    if assigned_to:
+        update_data["assigned_to"] = assigned_to
+    
+    await db.support_tickets.update_one({"ticket_id": ticket_id}, {"$set": update_data})
+    return {"message": "Ticket updated"}
+
+# Settings Management
+@api_router.get("/v2/settings")
+async def get_settings():
+    """Get system settings"""
+    settings = await db.settings.find_one({}, {"_id": 0})
+    if not settings:
+        # Create default settings
+        default_settings = {
+            "mining_base_rate": 50.0,
+            "mining_base_rate_min": 10.0,
+            "mining_decrease_per_users": 100,
+            "referral_bonus_percentage": 0.10,
+            "max_referrals": 200,
+            "delivery_charge_rate": 0.10,
+            "delivery_split": {"master": 10, "sub": 20, "outlet": 60, "company": 10},
+            "cashback_percentage": 0.25,
+            "wallet_maintenance_fee": 99.0,
+            "withdrawal_min_amount": 10.0,
+            "withdrawal_fee": 5.0,
+            "vip_membership_fee": 1000.0,
+            "master_security_deposit": 500000.0,
+            "sub_security_deposit": 300000.0,
+            "outlet_security_deposit": 100000.0,
+            "security_deposit_return_rate": 0.03,
+            "master_renewal_fee": 50000.0,
+            "sub_renewal_fee": 30000.0,
+            "outlet_renewal_fee": 10000.0,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.settings.insert_one(default_settings)
+        return default_settings
+    return settings
+
+@api_router.patch("/v2/settings")
+async def update_settings(
+    mining_base_rate: Optional[float] = None,
+    delivery_charge_rate: Optional[float] = None,
+    cashback_percentage: Optional[float] = None,
+    delivery_split: Optional[str] = None,
+    wallet_maintenance_fee: Optional[float] = None,
+    vip_membership_fee: Optional[float] = None
+):
+    """Update system settings (Admin)"""
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    
+    if mining_base_rate is not None:
+        update_data["mining_base_rate"] = mining_base_rate
+    if delivery_charge_rate is not None:
+        update_data["delivery_charge_rate"] = delivery_charge_rate
+    if cashback_percentage is not None:
+        update_data["cashback_percentage"] = cashback_percentage
+    if delivery_split:
+        import json
+        update_data["delivery_split"] = json.loads(delivery_split)
+    if wallet_maintenance_fee is not None:
+        update_data["wallet_maintenance_fee"] = wallet_maintenance_fee
+    if vip_membership_fee is not None:
+        update_data["vip_membership_fee"] = vip_membership_fee
+    
+    await db.settings.update_one({}, {"$set": update_data}, upsert=True)
+    return {"message": "Settings updated"}
+
+# Withdrawal Management V2
+@api_router.post("/v2/withdrawal/request")
+async def create_withdrawal_request(
+    uid: str,
+    wallet_type: str,
+    amount: float,
+    payment_mode: str,
+    upi_id: Optional[str] = None,
+    bank_account: Optional[str] = None,
+    ifsc_code: Optional[str] = None
+):
+    """Create withdrawal request"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.get("kyc_status") != "approved":
+        raise HTTPException(status_code=403, detail="KYC verification required")
+    
+    # Check balance
+    balance_field = f"{wallet_type}_wallet_balance" if wallet_type == "profit" else "cashback_wallet_balance"
+    balance = user.get(balance_field, 0)
+    
+    settings = await db.settings.find_one({})
+    min_amount = settings.get("withdrawal_min_amount", 10.0)
+    fee = settings.get("withdrawal_fee", 5.0)
+    
+    if amount < min_amount:
+        raise HTTPException(status_code=400, detail=f"Minimum withdrawal amount is ₹{min_amount}")
+    
+    if balance < amount + fee:
+        raise HTTPException(status_code=400, detail="Insufficient balance")
+    
+    withdrawal_data = {
+        "withdrawal_id": str(uuid.uuid4()),
+        "user_id": uid,
+        "wallet_type": wallet_type,
+        "amount": amount,
+        "fee": fee,
+        "net_amount": amount,
+        "payment_mode": payment_mode,
+        "upi_id": upi_id,
+        "bank_account": bank_account,
+        "ifsc_code": ifsc_code,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.withdrawals.insert_one(withdrawal_data)
+    
+    # Deduct from wallet
+    await db.users.update_one(
+        {"uid": uid},
+        {"$inc": {balance_field: -(amount + fee)}}
+    )
+    
+    return {"message": "Withdrawal request submitted", "withdrawal_id": withdrawal_data["withdrawal_id"]}
+
+@api_router.get("/v2/withdrawals")
+async def get_all_withdrawals(status: Optional[str] = None):
+    """Get all withdrawal requests (Admin)"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    withdrawals = await db.withdrawals.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return {"withdrawals": withdrawals}
+
+@api_router.patch("/v2/withdrawal/{withdrawal_id}")
+async def update_withdrawal(
+    withdrawal_id: str,
+    action: str,
+    utr_number: Optional[str] = None,
+    admin_notes: Optional[str] = None
+):
+    """Update withdrawal status (Admin)"""
+    withdrawal = await db.withdrawals.find_one({"withdrawal_id": withdrawal_id})
+    if not withdrawal:
+        raise HTTPException(status_code=404, detail="Withdrawal not found")
+    
+    update_data = {
+        "status": action,
+        "processed_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    if utr_number:
+        update_data["utr_number"] = utr_number
+    if admin_notes:
+        update_data["admin_notes"] = admin_notes
+    
+    # If rejected, refund to wallet
+    if action == "rejected":
+        balance_field = f"{withdrawal['wallet_type']}_wallet_balance" if withdrawal['wallet_type'] == "profit" else "cashback_wallet_balance"
+        await db.users.update_one(
+            {"uid": withdrawal["user_id"]},
+            {"$inc": {balance_field: withdrawal["amount"] + withdrawal["fee"]}}
+        )
+    
+    await db.withdrawals.update_one({"withdrawal_id": withdrawal_id}, {"$set": update_data})
+    return {"message": f"Withdrawal {action}"}
+
+# Profit Wallet Stats
+@api_router.get("/v2/stockist/{stockist_id}/profit")
+async def get_stockist_profit(stockist_id: str):
+    """Get stockist profit wallet details"""
+    stockist = await db.stockists.find_one({"stockist_id": stockist_id})
+    if not stockist:
+        raise HTTPException(status_code=404, detail="Stockist not found")
+    
+    # Get commission entries
+    commissions = await db.commission_entries.find(
+        {"entity_id": stockist["user_id"]},
+        {"_id": 0}
+    ).sort("credited_at", -1).to_list(100)
+    
+    total_earned = sum(c.get("amount", 0) for c in commissions)
+    
+    return {
+        "stockist_id": stockist_id,
+        "profit_wallet": stockist.get("profit_wallet", 0),
+        "total_earned": total_earned,
+        "commissions": commissions
+    }
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
