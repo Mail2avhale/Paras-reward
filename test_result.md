@@ -228,6 +228,42 @@ backend:
         agent: "testing"
         comment: "COMPREHENSIVE TESTING COMPLETE - ALL ADMIN WITHDRAWAL MANAGEMENT WORKING: ✅ Cashback withdrawal listing works: GET /api/admin/withdrawals/cashback returns all withdrawals with count, status filtering works (?status=pending). ✅ Profit withdrawal listing works: GET /api/admin/withdrawals/profit returns empty array for new system. ✅ Approval workflow complete: POST /api/admin/withdrawals/cashback/{id}/approve works with admin_notes. ✅ Completion workflow complete: POST /api/admin/withdrawals/cashback/{id}/complete works with UTR number generation. ✅ Rejection workflow complete: POST /api/admin/withdrawals/cashback/{id}/reject works with refund to wallet (₹35 refunded correctly). All admin withdrawal management endpoints functioning perfectly."
 
+  - task: "Stock Movement System"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented stock movement system: POST /api/stock/transfer/initiate (sender creates request with auto-generated batch_number & qr_code, validates Company→Master→Sub→Outlet→Customer flow hierarchy), GET /api/stock/movements/{uid} (returns sent and received movements), Admin endpoints: GET /api/admin/stock/movements/pending, POST /api/admin/stock/movements/{id}/approve, POST /api/admin/stock/movements/{id}/reject, POST /api/stock/movements/{id}/complete (receiver confirms receipt). stock_movements collection with full traceability."
+
+  - task: "Security Deposit System"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented security deposit system: POST /api/security-deposit/submit (Master:₹500k, Sub:₹300k, Outlet:₹100k default amounts), GET /api/security-deposit/{uid} (shows deposit, monthly return amount, days until next return), Admin endpoints: GET /api/admin/security-deposits (with status filter), POST /api/admin/security-deposits/{id}/approve (sets 30-day return cycle), POST /api/admin/security-deposits/{id}/reject, POST /api/admin/security-deposits/{id}/adjust (admin can freely edit amount, recalculates return cycle from adjustment date), POST /api/admin/security-deposits/process-returns (auto-credits 3% monthly to profit_wallet for all due deposits). security_deposits collection."
+
+  - task: "Annual Renewal System"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented annual renewal system: POST /api/renewal/submit (Master:₹50k+GST, Sub:₹30k+GST, Outlet:₹10k+GST), GET /api/renewal/{uid} (shows renewal_status, due_date, is_overdue, days_until_due, suspended flag), Admin endpoints: GET /api/admin/renewals (with status filter), POST /api/admin/renewals/{id}/approve (sets 1-year period from approval date), POST /api/admin/renewals/{id}/reject, POST /api/admin/renewals/check-overdue (finds overdue users, cancels pending withdrawals with refund, freezes profit_wallet to block new credits, sets renewal_status='overdue'). annual_renewals collection. Updated delivery charge distribution to check profit_wallet_frozen flag before crediting."
+
 frontend:
   - task: "User Registration Form"
     implemented: true
