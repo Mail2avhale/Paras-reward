@@ -380,55 +380,62 @@ def test_mining_rate_never_zero():
     print("✅ Mining rate never zero test PASSED - All users have non-zero mining rates")
     return True
 
-def test_receiver_completion():
-    """Test receiver completion of stock movements"""
-    print("\n7. Testing Receiver Completion of Stock Movements...")
+def main():
+    """Run all Mining System Fix tests"""
+    print("Starting Mining System Fix testing...")
+    print(f"Target API: {API_BASE}")
     
-    # Find an approved movement to complete
-    approved_movement = None
-    for movement in test_stock_movements:
-        if movement.get("status") == "approved":
-            approved_movement = movement
-            break
-    
-    if not approved_movement:
-        print("ℹ️ No approved movements found for completion testing")
-        return True
-    
-    # Test 7a: Complete stock movement (receiver confirms receipt)
-    movement_id = approved_movement["id"]
-    movement_type = approved_movement["type"]
-    
-    # Determine receiver based on movement type
-    if movement_type == "company_to_master":
-        receiver_id = test_master_user["uid"]
-    elif movement_type == "master_to_sub":
-        receiver_id = test_sub_user["uid"]
-    elif movement_type == "sub_to_outlet":
-        receiver_id = test_outlet_user["uid"]
-    elif movement_type == "outlet_to_user":
-        receiver_id = test_regular_user["uid"]
-    else:
-        print(f"❌ Unknown movement type: {movement_type}")
-        return False
-    
-    print(f"\n7a. Testing POST /api/stock/movements/{movement_id}/complete...")
+    # Test basic connectivity
     try:
-        complete_data = {"receiver_id": receiver_id}
-        response = requests.post(f"{API_BASE}/stock/movements/{movement_id}/complete", 
-                               json=complete_data, timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 200:
-            print("✅ Receiver completion test PASSED")
-            approved_movement["status"] = "completed"
-        else:
-            print(f"❌ Receiver completion test FAILED - Status: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Receiver completion test FAILED - Error: {e}")
+        response = requests.get(f"{API_BASE}/admin/stats", timeout=10)
+        print(f"Backend connectivity test - Status: {response.status_code}")
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Backend connectivity FAILED: {e}")
+        print("Cannot proceed with testing - backend is not accessible")
         return False
+    
+    # Run all tests in sequence
+    print("\n" + "=" * 80)
+    print("MINING SYSTEM FIX COMPREHENSIVE TESTING")
+    print("=" * 80)
+    
+    # 1. Setup test users
+    if not setup_test_users():
+        print("❌ CRITICAL: Failed to setup test users - cannot continue")
+        return False
+    
+    # 2. Test mining status for user with NO active mining session
+    if not test_mining_status_no_active_session():
+        print("❌ CRITICAL: Mining status (no active session) test failed")
+        return False
+    
+    # 3. Start mining session for test user 2
+    if not start_mining_session():
+        print("❌ CRITICAL: Failed to start mining session - cannot continue with active session tests")
+        return False
+    
+    # 4. Test mining status for user WITH active mining session
+    if not test_mining_status_with_active_session():
+        print("❌ CRITICAL: Mining status (with active session) test failed")
+        return False
+    
+    # 5. Test mining rate calculation formula
+    if not test_mining_rate_calculation():
+        print("❌ CRITICAL: Mining rate calculation test failed")
+        return False
+    
+    # 6. Test that mining rate is never zero
+    if not test_mining_rate_never_zero():
+        print("❌ CRITICAL: Mining rate never zero test failed")
+        return False
+    
+    print("\n" + "=" * 80)
+    print("MINING SYSTEM FIX TESTING COMPLETED!")
+    print("=" * 80)
+    print("✅ ALL TESTS PASSED - Mining system fix is working correctly!")
+    print("✅ Mining rate displays correctly and is never zero")
+    print("✅ Mining rate calculation formula is working as expected")
+    print("✅ Both active and inactive mining sessions work properly")
     
     return True
 
