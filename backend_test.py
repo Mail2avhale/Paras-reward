@@ -331,7 +331,7 @@ def create_test_product():
         return None
 
 def test_order_checkout_with_delivery_charge(product_id):
-    """Test order creation with delivery charge calculation"""
+    """Test order creation with delivery charge calculation via cart + checkout"""
     global test_order
     print("\n4. Testing Order Creation with Delivery Charge...")
     
@@ -339,73 +339,62 @@ def test_order_checkout_with_delivery_charge(product_id):
         print("❌ Cannot test order creation - missing VIP user or product")
         return None
     
-    # First, update VIP user to have verified KYC status and sufficient balance
-    print("4a. Updating VIP user status...")
     try:
-        # Update user to have verified KYC and sufficient PRC balance
-        user_update_data = {
-            "kyc_status": "verified",
-            "prc_balance": 1000.0,
-            "membership_type": "vip"
+        # Step 1: Add product to cart
+        print("4a. Adding product to cart...")
+        cart_data = {
+            "user_id": test_vip_user["uid"],
+            "product_id": product_id,
+            "quantity": 1
         }
         
-        # We'll use the profile update endpoint or directly create order
-        # Let's try creating the order directly using the simpler endpoint
+        cart_response = requests.post(f"{API_BASE}/cart/add", json=cart_data, timeout=30)
+        print(f"Add to cart - Status Code: {cart_response.status_code}")
+        print(f"Add to cart - Response: {cart_response.text}")
         
-        # Create order using OrderCreate model (just needs product_id)
-        order_data = {
-            "product_id": product_id
+        if cart_response.status_code != 200:
+            print(f"❌ Failed to add product to cart: {cart_response.status_code}")
+            return None
+        
+        print("✅ Product added to cart successfully")
+        
+        # Step 2: Checkout cart
+        print("4b. Checking out cart...")
+        checkout_data = {
+            "user_id": test_vip_user["uid"],
+            "delivery_address": "Test Address, Test City, 123456"
         }
         
-        response = requests.post(f"{API_BASE}/orders/{test_vip_user['uid']}", 
-                               json=order_data, 
-                               timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
+        checkout_response = requests.post(f"{API_BASE}/orders/checkout", 
+                                        json=checkout_data, timeout=30)
+        print(f"Checkout - Status Code: {checkout_response.status_code}")
+        print(f"Checkout - Response: {checkout_response.text}")
         
-        if response.status_code == 200:
-            order_result = response.json()
+        if checkout_response.status_code == 200:
+            order_result = checkout_response.json()
             order_id = order_result.get("order_id")
-            delivery_fee = order_result.get("delivery_fee")
+            delivery_charge = order_result.get("delivery_charge")
             
-            print(f"✅ Order creation test PASSED")
+            print(f"✅ Order checkout test PASSED")
             print(f"Order ID: {order_id}")
-            print(f"Delivery Fee: {delivery_fee}")
+            print(f"Delivery Charge: {delivery_charge}")
             
-            # Verify delivery fee calculation (should be prc_price * 0.10 = 100 * 0.10 = 10.0)
-            expected_delivery_fee = 100.0 * 0.10  # 10% of PRC price
-            if abs(delivery_fee - expected_delivery_fee) < 0.01:
-                print(f"✅ Delivery fee calculation CORRECT: {delivery_fee}")
+            # Verify delivery charge calculation (should be total_cash * delivery_charge_rate)
+            # From the product: cash_price = 50.0, so delivery_charge should be 50.0 * 0.10 = 5.0
+            expected_delivery_charge = 50.0 * 0.10  # 10% of cash price
+            if delivery_charge and abs(delivery_charge - expected_delivery_charge) < 0.01:
+                print(f"✅ Delivery charge calculation CORRECT: {delivery_charge}")
             else:
-                print(f"❌ Delivery fee calculation INCORRECT: Expected {expected_delivery_fee}, got {delivery_fee}")
+                print(f"❌ Delivery charge calculation INCORRECT: Expected {expected_delivery_charge}, got {delivery_charge}")
             
             test_order = order_result
             return order_id
-        elif response.status_code == 403:
-            if "KYC" in response.text:
-                print("❌ Order creation failed - KYC verification required")
-                print("Attempting to update user KYC status...")
-                
-                # Try to update user KYC status via admin endpoint
-                try:
-                    kyc_update = requests.put(f"{API_BASE}/admin/users/{test_vip_user['uid']}/status",
-                                            json={"kyc_status": "verified"}, timeout=30)
-                    print(f"KYC update status: {kyc_update.status_code}")
-                except:
-                    pass
-                    
-                return None
-            elif "VIP" in response.text:
-                print("❌ Order creation failed - VIP membership required")
-                return None
-            else:
-                print(f"❌ Order creation failed - Access denied: {response.text}")
-                return None
         else:
-            print(f"❌ Order creation test FAILED - Status: {response.status_code}")
+            print(f"❌ Order checkout test FAILED - Status: {checkout_response.status_code}")
             return None
+            
     except Exception as e:
-        print(f"❌ Order creation test FAILED - Error: {e}")
+        print(f"❌ Order checkout test FAILED - Error: {e}")
         return None
 
 def test_auto_distribution_on_delivery(order_id):
