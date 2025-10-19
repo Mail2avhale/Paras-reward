@@ -2747,6 +2747,679 @@ async def complete_profit_withdrawal(withdrawal_id: str, request: Request):
     
     return {"message": "Withdrawal completed", "withdrawal_id": withdrawal_id, "utr_number": utr_number}
 
+# ========== STOCK MOVEMENT SYSTEM ==========
+def generate_batch_number():
+    """Generate unique batch number: BATCH-YYYYMMDD-XXXXX"""
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d')
+    random_suffix = ''.join(secrets.choice(string.digits) for _ in range(5))
+    return f"BATCH-{timestamp}-{random_suffix}"
+
+def generate_qr_code():
+    """Generate unique QR code: QR-XXXXXXXXXXXXX"""
+    random_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(13))
+    return f"QR-{random_code}"
+
+@api_router.post("/stock/transfer/initiate")
+async def initiate_stock_transfer(request: Request):
+    """Initiate stock transfer (sender creates request)"""
+    data = await request.json()
+    sender_id = data.get("sender_id")
+    receiver_id = data.get("receiver_id")
+    product_id = data.get("product_id")
+    quantity = data.get("quantity", 0)
+    notes = data.get("notes", "")
+    
+    if quantity <= 0:
+        raise HTTPException(status_code=400, detail="Quantity must be greater than 0")
+    
+    # Verify sender and receiver exist
+    sender = await db.users.find_one({"uid": sender_id})
+    receiver = await db.users.find_one({"uid": receiver_id})
+    
+    if not sender or not receiver:
+        raise HTTPException(status_code=404, detail="Sender or receiver not found")
+    
+    # Verify stock flow hierarchy: Company → Master → Sub → Outlet
+    sender_role = sender.get("role")
+    receiver_role = receiver.get("role")
+    
+    valid_flows = [
+        ("admin", "master_stockist"),
+        ("master_stockist", "sub_stockist"),
+        ("sub_stockist", "outlet"),
+        ("outlet", "user")
+    ]
+    
+    if (sender_role, receiver_role) not in valid_flows:
+        raise HTTPException(status_code=400, detail=f"Invalid stock flow: {sender_role} → {receiver_role}")
+    
+    # Get product details
+    product = await db.products.find_one({"product_id": product_id})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Create stock movement record
+    movement = {
+        "movement_id": str(uuid.uuid4()),
+        "batch_number": generate_batch_number(),
+        "qr_code": generate_qr_code(),
+        "product_id": product_id,
+        "product_name": product.get("name"),
+        "quantity": quantity,
+        "sender_id": sender_id,
+        "sender_name": f"{sender.get('first_name', '')} {sender.get('last_name', '')}".strip(),
+        "sender_role": sender_role,
+        "receiver_id": receiver_id,
+        "receiver_name": f"{receiver.get('first_name', '')} {receiver.get('last_name', '')}".strip(),
+        "receiver_role": receiver_role,
+        "status": "pending_admin",  # pending_admin, approved, rejected, completed
+        "notes": notes,
+        "admin_notes": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "approved_at": None,
+        "completed_at": None
+    }
+    
+    await db.stock_movements.insert_one(movement)
+    
+    return {
+        "message": "Stock transfer initiated. Awaiting admin approval.",
+        "movement_id": movement["movement_id"],
+        "batch_number": movement["batch_number"],
+        "qr_code": movement["qr_code"]
+    }
+
+@api_router.get("/stock/movements/{user_id}")
+async def get_user_stock_movements(user_id: str):
+    """Get stock movements for a user (as sender or receiver)"""
+    movements_as_sender = await db.stock_movements.find(
+        {"sender_id": user_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    movements_as_receiver = await db.stock_movements.find(
+        {"receiver_id": user_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    return {
+        "sent": movements_as_sender,
+        "received": movements_as_receiver
+    }
+
+@api_router.get("/admin/stock/movements/pending")
+async def get_pending_stock_movements():
+    """Get all pending stock movements for admin approval"""
+    movements = await db.stock_movements.find(
+        {"status": "pending_admin"},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(500)
+    
+    return {"movements": movements, "count": len(movements)}
+
+@api_router.post("/admin/stock/movements/{movement_id}/approve")
+async def approve_stock_movement(movement_id: str, request: Request):
+    """Admin approves stock movement"""
+    data = await request.json()
+    admin_notes = data.get("admin_notes", "")
+    
+    movement = await db.stock_movements.find_one({"movement_id": movement_id})
+    if not movement:
+        raise HTTPException(status_code=404, detail="Movement not found")
+    
+    if movement["status"] != "pending_admin":
+        raise HTTPException(status_code=400, detail=f"Movement is already {movement['status']}")
+    
+    await db.stock_movements.update_one(
+        {"movement_id": movement_id},
+        {"$set": {
+            "status": "approved",
+            "admin_notes": admin_notes,
+            "approved_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Stock movement approved", "movement_id": movement_id}
+
+@api_router.post("/admin/stock/movements/{movement_id}/reject")
+async def reject_stock_movement(movement_id: str, request: Request):
+    """Admin rejects stock movement"""
+    data = await request.json()
+    admin_notes = data.get("admin_notes", "Rejected by admin")
+    
+    movement = await db.stock_movements.find_one({"movement_id": movement_id})
+    if not movement:
+        raise HTTPException(status_code=404, detail="Movement not found")
+    
+    if movement["status"] != "pending_admin":
+        raise HTTPException(status_code=400, detail=f"Movement is already {movement['status']}")
+    
+    await db.stock_movements.update_one(
+        {"movement_id": movement_id},
+        {"$set": {
+            "status": "rejected",
+            "admin_notes": admin_notes,
+            "approved_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Stock movement rejected", "movement_id": movement_id}
+
+@api_router.post("/stock/movements/{movement_id}/complete")
+async def complete_stock_movement(movement_id: str, request: Request):
+    """Receiver confirms stock received"""
+    data = await request.json()
+    receiver_id = data.get("receiver_id")
+    
+    movement = await db.stock_movements.find_one({"movement_id": movement_id})
+    if not movement:
+        raise HTTPException(status_code=404, detail="Movement not found")
+    
+    if movement["receiver_id"] != receiver_id:
+        raise HTTPException(status_code=403, detail="Only receiver can complete this movement")
+    
+    if movement["status"] != "approved":
+        raise HTTPException(status_code=400, detail=f"Movement must be approved first. Current status: {movement['status']}")
+    
+    await db.stock_movements.update_one(
+        {"movement_id": movement_id},
+        {"$set": {
+            "status": "completed",
+            "completed_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Stock received and movement completed", "movement_id": movement_id}
+
+# ========== SECURITY DEPOSIT SYSTEM ==========
+@api_router.post("/security-deposit/submit")
+async def submit_security_deposit(request: Request):
+    """Entity submits security deposit payment proof"""
+    data = await request.json()
+    user_id = data.get("user_id")
+    amount = data.get("amount")
+    payment_proof = data.get("payment_proof")  # Image URL or base64
+    notes = data.get("notes", "")
+    
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify role
+    if user.get("role") not in ["master_stockist", "sub_stockist", "outlet"]:
+        raise HTTPException(status_code=403, detail="Only stockists and outlets can submit security deposits")
+    
+    # Get default amounts
+    default_amounts = {
+        "master_stockist": 500000,
+        "sub_stockist": 300000,
+        "outlet": 100000
+    }
+    
+    expected_amount = default_amounts.get(user.get("role"))
+    
+    # Create deposit record
+    deposit = {
+        "deposit_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
+        "role": user.get("role"),
+        "amount": amount,
+        "expected_amount": expected_amount,
+        "payment_proof": payment_proof,
+        "notes": notes,
+        "status": "pending",  # pending, approved, rejected
+        "admin_notes": None,
+        "submitted_at": datetime.now(timezone.utc).isoformat(),
+        "approved_at": None,
+        "last_return_credit": None,
+        "next_return_due": None,
+        "total_returns_paid": 0.0,
+        "monthly_return_rate": 0.03  # 3%
+    }
+    
+    await db.security_deposits.insert_one(deposit)
+    
+    return {
+        "message": "Security deposit submitted successfully",
+        "deposit_id": deposit["deposit_id"],
+        "expected_amount": expected_amount
+    }
+
+@api_router.get("/security-deposit/{user_id}")
+async def get_user_security_deposit(user_id: str):
+    """Get user's security deposit details"""
+    deposit = await db.security_deposits.find_one(
+        {"user_id": user_id, "status": "approved"},
+        {"_id": 0}
+    )
+    
+    if not deposit:
+        return {"deposit": None, "message": "No approved security deposit found"}
+    
+    # Calculate days until next return
+    next_due = deposit.get("next_return_due")
+    days_until_return = None
+    
+    if next_due:
+        if isinstance(next_due, str):
+            next_due = datetime.fromisoformat(next_due)
+        days_until_return = (next_due - datetime.now(timezone.utc)).days
+    
+    return {
+        "deposit": deposit,
+        "monthly_return_amount": deposit["amount"] * deposit["monthly_return_rate"],
+        "days_until_next_return": days_until_return
+    }
+
+@api_router.get("/admin/security-deposits")
+async def get_all_security_deposits(status: str = None):
+    """Get all security deposits (optionally filtered by status)"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    deposits = await db.security_deposits.find(query, {"_id": 0}).sort("submitted_at", -1).to_list(500)
+    return {"deposits": deposits, "count": len(deposits)}
+
+@api_router.post("/admin/security-deposits/{deposit_id}/approve")
+async def approve_security_deposit(deposit_id: str, request: Request):
+    """Admin approves security deposit"""
+    data = await request.json()
+    admin_notes = data.get("admin_notes", "")
+    adjusted_amount = data.get("adjusted_amount")  # Optional: admin can adjust amount
+    
+    deposit = await db.security_deposits.find_one({"deposit_id": deposit_id})
+    if not deposit:
+        raise HTTPException(status_code=404, detail="Deposit not found")
+    
+    if deposit["status"] != "pending":
+        raise HTTPException(status_code=400, detail=f"Deposit is already {deposit['status']}")
+    
+    final_amount = adjusted_amount if adjusted_amount else deposit["amount"]
+    approved_at = datetime.now(timezone.utc)
+    next_return_due = approved_at + timedelta(days=30)
+    
+    # Update deposit
+    await db.security_deposits.update_one(
+        {"deposit_id": deposit_id},
+        {"$set": {
+            "status": "approved",
+            "amount": final_amount,
+            "admin_notes": admin_notes,
+            "approved_at": approved_at.isoformat(),
+            "next_return_due": next_return_due.isoformat()
+        }}
+    )
+    
+    # Update user record
+    await db.users.update_one(
+        {"uid": deposit["user_id"]},
+        {"$set": {
+            "security_deposit_amount": final_amount,
+            "security_deposit_paid": True,
+            "security_deposit_date": approved_at.isoformat()
+        }}
+    )
+    
+    return {
+        "message": "Security deposit approved",
+        "deposit_id": deposit_id,
+        "amount": final_amount,
+        "next_return_due": next_return_due.isoformat()
+    }
+
+@api_router.post("/admin/security-deposits/{deposit_id}/reject")
+async def reject_security_deposit(deposit_id: str, request: Request):
+    """Admin rejects security deposit"""
+    data = await request.json()
+    admin_notes = data.get("admin_notes", "Rejected by admin")
+    
+    deposit = await db.security_deposits.find_one({"deposit_id": deposit_id})
+    if not deposit:
+        raise HTTPException(status_code=404, detail="Deposit not found")
+    
+    if deposit["status"] != "pending":
+        raise HTTPException(status_code=400, detail=f"Deposit is already {deposit['status']}")
+    
+    await db.security_deposits.update_one(
+        {"deposit_id": deposit_id},
+        {"$set": {
+            "status": "rejected",
+            "admin_notes": admin_notes,
+            "approved_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Security deposit rejected", "deposit_id": deposit_id}
+
+@api_router.post("/admin/security-deposits/{deposit_id}/adjust")
+async def adjust_security_deposit(deposit_id: str, request: Request):
+    """Admin adjusts security deposit amount (recalculates returns from new date)"""
+    data = await request.json()
+    new_amount = data.get("new_amount")
+    admin_notes = data.get("admin_notes", "")
+    
+    if not new_amount or new_amount <= 0:
+        raise HTTPException(status_code=400, detail="Invalid new amount")
+    
+    deposit = await db.security_deposits.find_one({"deposit_id": deposit_id})
+    if not deposit:
+        raise HTTPException(status_code=404, detail="Deposit not found")
+    
+    if deposit["status"] != "approved":
+        raise HTTPException(status_code=400, detail="Can only adjust approved deposits")
+    
+    # Reset return cycle from today
+    adjusted_at = datetime.now(timezone.utc)
+    next_return_due = adjusted_at + timedelta(days=30)
+    
+    await db.security_deposits.update_one(
+        {"deposit_id": deposit_id},
+        {"$set": {
+            "amount": new_amount,
+            "admin_notes": admin_notes,
+            "last_return_credit": adjusted_at.isoformat(),
+            "next_return_due": next_return_due.isoformat()
+        }}
+    )
+    
+    # Update user record
+    await db.users.update_one(
+        {"uid": deposit["user_id"]},
+        {"$set": {"security_deposit_amount": new_amount}}
+    )
+    
+    return {
+        "message": "Security deposit adjusted",
+        "deposit_id": deposit_id,
+        "new_amount": new_amount,
+        "next_return_due": next_return_due.isoformat()
+    }
+
+@api_router.post("/admin/security-deposits/process-returns")
+async def process_monthly_returns():
+    """Admin triggers monthly return processing (auto-credit 3% to profit wallets)"""
+    now = datetime.now(timezone.utc)
+    
+    # Find all approved deposits where next_return_due has passed
+    deposits = await db.security_deposits.find({
+        "status": "approved",
+        "next_return_due": {"$lte": now.isoformat()}
+    }).to_list(1000)
+    
+    processed_count = 0
+    total_credited = 0.0
+    
+    for deposit in deposits:
+        return_amount = deposit["amount"] * deposit.get("monthly_return_rate", 0.03)
+        
+        # Credit to user's profit wallet
+        await db.users.update_one(
+            {"uid": deposit["user_id"]},
+            {"$inc": {"profit_wallet_balance": return_amount}}
+        )
+        
+        # Update deposit record
+        next_return_due = now + timedelta(days=30)
+        await db.security_deposits.update_one(
+            {"deposit_id": deposit["deposit_id"]},
+            {"$set": {
+                "last_return_credit": now.isoformat(),
+                "next_return_due": next_return_due.isoformat()
+            },
+            "$inc": {"total_returns_paid": return_amount}}
+        )
+        
+        processed_count += 1
+        total_credited += return_amount
+    
+    return {
+        "message": f"Processed {processed_count} monthly returns",
+        "processed_count": processed_count,
+        "total_credited": total_credited
+    }
+
+# ========== ANNUAL RENEWAL SYSTEM ==========
+@api_router.post("/renewal/submit")
+async def submit_renewal_payment(request: Request):
+    """Entity submits annual renewal payment proof"""
+    data = await request.json()
+    user_id = data.get("user_id")
+    amount = data.get("amount")
+    payment_proof = data.get("payment_proof")
+    notes = data.get("notes", "")
+    
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify role
+    if user.get("role") not in ["master_stockist", "sub_stockist", "outlet"]:
+        raise HTTPException(status_code=403, detail="Only stockists and outlets need renewal")
+    
+    # Get default renewal amounts (base + 18% GST)
+    base_amounts = {
+        "master_stockist": 50000,
+        "sub_stockist": 30000,
+        "outlet": 10000
+    }
+    
+    base_amount = base_amounts.get(user.get("role"))
+    expected_amount = base_amount * 1.18  # Including 18% GST
+    
+    # Create renewal record
+    renewal = {
+        "renewal_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
+        "role": user.get("role"),
+        "amount": amount,
+        "base_amount": base_amount,
+        "expected_amount": expected_amount,
+        "payment_proof": payment_proof,
+        "notes": notes,
+        "status": "pending",  # pending, approved, rejected
+        "admin_notes": None,
+        "submitted_at": datetime.now(timezone.utc).isoformat(),
+        "approved_at": None,
+        "renewal_period_start": None,
+        "renewal_period_end": None
+    }
+    
+    await db.annual_renewals.insert_one(renewal)
+    
+    return {
+        "message": "Renewal payment submitted successfully",
+        "renewal_id": renewal["renewal_id"],
+        "expected_amount": expected_amount
+    }
+
+@api_router.get("/renewal/{user_id}")
+async def get_user_renewal_status(user_id: str):
+    """Get user's renewal status"""
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get latest renewal
+    renewal = await db.annual_renewals.find_one(
+        {"user_id": user_id},
+        {"_id": 0}
+    ).sort("submitted_at", -1)
+    
+    renewal_due_date = user.get("renewal_due_date")
+    is_overdue = False
+    days_until_due = None
+    
+    if renewal_due_date:
+        if isinstance(renewal_due_date, str):
+            renewal_due_date = datetime.fromisoformat(renewal_due_date)
+        days_until_due = (renewal_due_date - datetime.now(timezone.utc)).days
+        is_overdue = days_until_due < 0
+    
+    return {
+        "renewal_status": user.get("renewal_status", "active"),
+        "renewal_due_date": user.get("renewal_due_date"),
+        "is_overdue": is_overdue,
+        "days_until_due": days_until_due,
+        "latest_renewal": renewal,
+        "suspended": user.get("renewal_status") == "overdue"
+    }
+
+@api_router.get("/admin/renewals")
+async def get_all_renewals(status: str = None):
+    """Get all renewal submissions (optionally filtered by status)"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    renewals = await db.annual_renewals.find(query, {"_id": 0}).sort("submitted_at", -1).to_list(500)
+    return {"renewals": renewals, "count": len(renewals)}
+
+@api_router.post("/admin/renewals/{renewal_id}/approve")
+async def approve_renewal(renewal_id: str, request: Request):
+    """Admin approves renewal payment"""
+    data = await request.json()
+    admin_notes = data.get("admin_notes", "")
+    
+    renewal = await db.annual_renewals.find_one({"renewal_id": renewal_id})
+    if not renewal:
+        raise HTTPException(status_code=404, detail="Renewal not found")
+    
+    if renewal["status"] != "pending":
+        raise HTTPException(status_code=400, detail=f"Renewal is already {renewal['status']}")
+    
+    approved_at = datetime.now(timezone.utc)
+    renewal_period_start = approved_at
+    renewal_period_end = approved_at + timedelta(days=365)
+    
+    # Update renewal record
+    await db.annual_renewals.update_one(
+        {"renewal_id": renewal_id},
+        {"$set": {
+            "status": "approved",
+            "admin_notes": admin_notes,
+            "approved_at": approved_at.isoformat(),
+            "renewal_period_start": renewal_period_start.isoformat(),
+            "renewal_period_end": renewal_period_end.isoformat()
+        }}
+    )
+    
+    # Update user record - clear suspension and set next renewal date
+    await db.users.update_one(
+        {"uid": renewal["user_id"]},
+        {"$set": {
+            "renewal_status": "active",
+            "renewal_due_date": renewal_period_end.isoformat(),
+            "last_renewal_date": approved_at.isoformat()
+        }}
+    )
+    
+    return {
+        "message": "Renewal approved",
+        "renewal_id": renewal_id,
+        "next_renewal_due": renewal_period_end.isoformat()
+    }
+
+@api_router.post("/admin/renewals/{renewal_id}/reject")
+async def reject_renewal(renewal_id: str, request: Request):
+    """Admin rejects renewal payment"""
+    data = await request.json()
+    admin_notes = data.get("admin_notes", "Rejected by admin")
+    
+    renewal = await db.annual_renewals.find_one({"renewal_id": renewal_id})
+    if not renewal:
+        raise HTTPException(status_code=404, detail="Renewal not found")
+    
+    if renewal["status"] != "pending":
+        raise HTTPException(status_code=400, detail=f"Renewal is already {renewal['status']}")
+    
+    await db.annual_renewals.update_one(
+        {"renewal_id": renewal_id},
+        {"$set": {
+            "status": "rejected",
+            "admin_notes": admin_notes,
+            "approved_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Renewal rejected", "renewal_id": renewal_id}
+
+@api_router.post("/admin/renewals/check-overdue")
+async def check_overdue_renewals():
+    """Check and suspend entities with overdue renewals"""
+    now = datetime.now(timezone.utc)
+    
+    # Find users with overdue renewals
+    users = await db.users.find({
+        "role": {"$in": ["master_stockist", "sub_stockist", "outlet"]},
+        "renewal_due_date": {"$lte": now.isoformat()},
+        "renewal_status": {"$ne": "overdue"}
+    }).to_list(1000)
+    
+    suspended_count = 0
+    
+    for user in users:
+        user_id = user["uid"]
+        
+        # 1. Cancel and refund all pending withdrawals
+        pending_cashback = await db.cashback_withdrawals.find(
+            {"user_id": user_id, "status": "pending"}
+        ).to_list(100)
+        
+        pending_profit = await db.profit_withdrawals.find(
+            {"user_id": user_id, "status": "pending"}
+        ).to_list(100)
+        
+        # Refund cashback withdrawals
+        for withdrawal in pending_cashback:
+            refund_amount = withdrawal["amount"] + withdrawal["fee"]
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$inc": {"cashback_wallet_balance": refund_amount}}
+            )
+            await db.cashback_withdrawals.update_one(
+                {"withdrawal_id": withdrawal["withdrawal_id"]},
+                {"$set": {
+                    "status": "cancelled",
+                    "admin_notes": "Cancelled due to renewal non-payment",
+                    "processed_at": now.isoformat()
+                }}
+            )
+        
+        # Refund profit withdrawals
+        for withdrawal in pending_profit:
+            refund_amount = withdrawal["amount"] + withdrawal["fee"]
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$inc": {"profit_wallet_balance": refund_amount}}
+            )
+            await db.profit_withdrawals.update_one(
+                {"withdrawal_id": withdrawal["withdrawal_id"]},
+                {"$set": {
+                    "status": "cancelled",
+                    "admin_notes": "Cancelled due to renewal non-payment",
+                    "processed_at": now.isoformat()
+                }}
+            )
+        
+        # 2. Update user status to suspend commission/withdrawal rights
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {
+                "renewal_status": "overdue",
+                "profit_wallet_frozen": True  # Freeze profit wallet (no new credits)
+            }}
+        )
+        
+        suspended_count += 1
+    
+    return {
+        "message": f"Suspended {suspended_count} entities for overdue renewals",
+        "suspended_count": suspended_count
+    }
+
 # Include router
 app.include_router(api_router)
 
