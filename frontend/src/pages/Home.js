@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom';
 import { 
   Coins, Users, Trophy, Sparkles, Zap, Gift, Shield, 
   TrendingUp, Clock, Gamepad2, Store, Wallet, Award,
-  CheckCircle, ArrowRight, Star, Target, Gem, ChevronRight
+  CheckCircle, ArrowRight, Star, Target, Gem, ChevronRight,
+  Settings, User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
