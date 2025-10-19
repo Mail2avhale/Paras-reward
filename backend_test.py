@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend API Testing Script for Stock Movement, Security Deposit, and Annual Renewal Systems
-Tests the comprehensive stock movement hierarchy, security deposit returns, and annual renewal enforcement
+Backend API Testing Script for Mining System Fix
+Tests the mining rate calculation and display functionality
 """
 
 import requests
