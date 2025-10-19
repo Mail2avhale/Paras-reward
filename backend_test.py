@@ -210,10 +210,14 @@ def create_test_product():
     
     product_data = {
         "name": f"Test Product {timestamp}",
+        "sku": f"TEST-SKU-{timestamp}",
         "description": "Test product for stock movement testing",
         "prc_price": 100.0,
+        "cash_price": 50.0,
+        "type": "physical",
         "category": "Electronics",
-        "stock_quantity": 1000
+        "total_stock": 1000,
+        "available_stock": 1000
     }
     
     try:
