@@ -1,17 +1,48 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Shield, Store } from 'lucide-react';
+import { Shield, User, Mail, Phone, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const Setup = () => {
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState('admin');
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+  
+  const [formData, setFormData] = useState({
+    first_name: '',
+    middle_name: '',
+    last_name: '',
+    email: '',
+    mobile: '',
+    password: '',
+    confirm_password: ''
+  });
+
+  useEffect(() => {
+    checkAdminExists();
+  }, []);
+
+  const checkAdminExists = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/check-admin-exists`);
+      if (response.data.admin_exists) {
+        // Admin already exists, redirect to login
+        toast.info('Admin already exists. Please login.');
+        navigate('/login');
+      }
+    } catch (error) {
+      console.error('Error checking admin:', error);
+    } finally {
+      setChecking(false);
+    }
+  };
 
   const promoteUser = async () => {
     if (!email) {
