@@ -15,6 +15,155 @@ import { toast } from 'sonner';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Payment Configuration Component
+const PaymentConfigSettings = () => {
+  const [config, setConfig] = useState({
+    upi_id: '',
+    qr_code_url: '',
+    bank_name: '',
+    account_number: '',
+    ifsc_code: '',
+    account_holder: '',
+    instructions: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
+
+  useEffect(() => {
+    fetchConfig();
+  }, []);
+
+  const fetchConfig = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/payment-config`);
+      setConfig(response.data);
+    } catch (error) {
+      console.error('Error fetching config:', error);
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      await axios.post(`${API}/admin/payment-config`, config);
+      toast.success('Payment configuration saved successfully!');
+    } catch (error) {
+      console.error('Error saving config:', error);
+      toast.error('Failed to save configuration');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (fetching) {
+    return <div className="text-center py-12">Loading...</div>;
+  }
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">Payment Configuration</h2>
+      <p className="text-gray-600 mb-8">Configure payment receiver details for VIP memberships</p>
+
+      <Card className="p-6 bg-white">
+        <div className="space-y-6">
+          {/* UPI Details */}
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">UPI Payment</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">UPI ID</label>
+                <Input
+                  placeholder="yourname@upi"
+                  value={config.upi_id}
+                  onChange={(e) => setConfig({...config, upi_id: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">QR Code URL</label>
+                <Input
+                  placeholder="https://example.com/qr-code.png"
+                  value={config.qr_code_url}
+                  onChange={(e) => setConfig({...config, qr_code_url: e.target.value})}
+                />
+                {config.qr_code_url && (
+                  <img src={config.qr_code_url} alt="QR Preview" className="mt-2 w-48 h-48 object-contain border rounded" />
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Bank Transfer</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Bank Name</label>
+                <Input
+                  placeholder="State Bank of India"
+                  value={config.bank_name}
+                  onChange={(e) => setConfig({...config, bank_name: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Account Holder Name</label>
+                <Input
+                  placeholder="John Doe"
+                  value={config.account_holder}
+                  onChange={(e) => setConfig({...config, account_holder: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Account Number</label>
+                <Input
+                  placeholder="1234567890"
+                  value={config.account_number}
+                  onChange={(e) => setConfig({...config, account_number: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">IFSC Code</label>
+                <Input
+                  placeholder="SBIN0001234"
+                  value={config.ifsc_code}
+                  onChange={(e) => setConfig({...config, ifsc_code: e.target.value})}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Instructions</h3>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Payment Instructions</label>
+              <textarea
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                rows="4"
+                placeholder="Enter instructions for users making payment..."
+                value={config.instructions}
+                onChange={(e) => setConfig({...config, instructions: e.target.value})}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={fetchConfig}>
+              Reset
+            </Button>
+            <Button 
+              onClick={handleSave}
+              disabled={loading}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              {loading ? 'Saving...' : 'Save Configuration'}
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+};
+
 const AdminDashboard = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
