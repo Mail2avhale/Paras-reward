@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import LoginNew from "@/pages/LoginNew";
-import Register from "@/pages/Register";
+import RegisterSimple from "@/pages/RegisterSimple";
 import ForgotPassword from "@/pages/ForgotPassword";
 import Dashboard from "@/pages/Dashboard";
 import Mining from "@/pages/Mining";
