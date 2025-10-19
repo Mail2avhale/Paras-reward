@@ -1109,7 +1109,7 @@ async def create_order(uid: str, order_data: OrderCreate):
     
     return order
 
-@api_router.get("/orders/{uid}", response_model=List[OrderSingleProduct])
+@api_router.get("/orders/legacy/{uid}", response_model=List[OrderSingleProduct])
 async def get_user_orders(uid: str):
     """Get user's orders"""
     orders = await db.orders.find({"user_id": uid}, {"_id": 0}).to_list(1000)
