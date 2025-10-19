@@ -2547,6 +2547,195 @@ async def verify_secret_code(request: Request):
         "distribution": distribution_result
     }
 
+# ========== ADMIN WITHDRAWAL MANAGEMENT ==========
+@api_router.get("/admin/withdrawals/cashback")
+async def get_cashback_withdrawals(status: str = None):
+    """Get all cashback withdrawal requests (optionally filtered by status)"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    withdrawals = await db.cashback_withdrawals.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return {"withdrawals": withdrawals, "count": len(withdrawals)}
+
+@api_router.get("/admin/withdrawals/profit")
+async def get_profit_withdrawals(status: str = None):
+    """Get all profit withdrawal requests (optionally filtered by status)"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    withdrawals = await db.profit_withdrawals.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return {"withdrawals": withdrawals, "count": len(withdrawals)}
+
+@api_router.post("/admin/withdrawals/cashback/{withdrawal_id}/approve")
+async def approve_cashback_withdrawal(withdrawal_id: str, request: Request):
+    """Approve cashback withdrawal request"""
+    data = await request.json()
+    admin_notes = data.get("admin_notes", "")
+    
+    withdrawal = await db.cashback_withdrawals.find_one({"withdrawal_id": withdrawal_id})
+    if not withdrawal:
+        raise HTTPException(status_code=404, detail="Withdrawal not found")
+    
+    if withdrawal["status"] != "pending":
+        raise HTTPException(status_code=400, detail=f"Withdrawal is already {withdrawal['status']}")
+    
+    await db.cashback_withdrawals.update_one(
+        {"withdrawal_id": withdrawal_id},
+        {"$set": {
+            "status": "approved",
+            "admin_notes": admin_notes,
+            "processed_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Withdrawal approved", "withdrawal_id": withdrawal_id}
+
+@api_router.post("/admin/withdrawals/cashback/{withdrawal_id}/reject")
+async def reject_cashback_withdrawal(withdrawal_id: str, request: Request):
+    """Reject cashback withdrawal request and refund to wallet"""
+    data = await request.json()
+    admin_notes = data.get("admin_notes", "Rejected by admin")
+    
+    withdrawal = await db.cashback_withdrawals.find_one({"withdrawal_id": withdrawal_id})
+    if not withdrawal:
+        raise HTTPException(status_code=404, detail="Withdrawal not found")
+    
+    if withdrawal["status"] != "pending":
+        raise HTTPException(status_code=400, detail=f"Withdrawal is already {withdrawal['status']}")
+    
+    # Refund amount + fee back to user's cashback wallet
+    total_refund = withdrawal["amount"] + withdrawal["fee"]
+    await db.users.update_one(
+        {"uid": withdrawal["user_id"]},
+        {"$inc": {"cashback_wallet_balance": total_refund}}
+    )
+    
+    await db.cashback_withdrawals.update_one(
+        {"withdrawal_id": withdrawal_id},
+        {"$set": {
+            "status": "rejected",
+            "admin_notes": admin_notes,
+            "processed_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Withdrawal rejected and refunded", "withdrawal_id": withdrawal_id, "refunded_amount": total_refund}
+
+@api_router.post("/admin/withdrawals/cashback/{withdrawal_id}/complete")
+async def complete_cashback_withdrawal(withdrawal_id: str, request: Request):
+    """Mark cashback withdrawal as completed with UTR"""
+    data = await request.json()
+    utr_number = data.get("utr_number", "")
+    admin_notes = data.get("admin_notes", "")
+    
+    if not utr_number:
+        raise HTTPException(status_code=400, detail="UTR number is required")
+    
+    withdrawal = await db.cashback_withdrawals.find_one({"withdrawal_id": withdrawal_id})
+    if not withdrawal:
+        raise HTTPException(status_code=404, detail="Withdrawal not found")
+    
+    if withdrawal["status"] not in ["pending", "approved"]:
+        raise HTTPException(status_code=400, detail=f"Cannot complete withdrawal with status {withdrawal['status']}")
+    
+    await db.cashback_withdrawals.update_one(
+        {"withdrawal_id": withdrawal_id},
+        {"$set": {
+            "status": "completed",
+            "utr_number": utr_number,
+            "admin_notes": admin_notes,
+            "processed_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Withdrawal completed", "withdrawal_id": withdrawal_id, "utr_number": utr_number}
+
+@api_router.post("/admin/withdrawals/profit/{withdrawal_id}/approve")
+async def approve_profit_withdrawal(withdrawal_id: str, request: Request):
+    """Approve profit withdrawal request"""
+    data = await request.json()
+    admin_notes = data.get("admin_notes", "")
+    
+    withdrawal = await db.profit_withdrawals.find_one({"withdrawal_id": withdrawal_id})
+    if not withdrawal:
+        raise HTTPException(status_code=404, detail="Withdrawal not found")
+    
+    if withdrawal["status"] != "pending":
+        raise HTTPException(status_code=400, detail=f"Withdrawal is already {withdrawal['status']}")
+    
+    await db.profit_withdrawals.update_one(
+        {"withdrawal_id": withdrawal_id},
+        {"$set": {
+            "status": "approved",
+            "admin_notes": admin_notes,
+            "processed_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Withdrawal approved", "withdrawal_id": withdrawal_id}
+
+@api_router.post("/admin/withdrawals/profit/{withdrawal_id}/reject")
+async def reject_profit_withdrawal(withdrawal_id: str, request: Request):
+    """Reject profit withdrawal request and refund to wallet"""
+    data = await request.json()
+    admin_notes = data.get("admin_notes", "Rejected by admin")
+    
+    withdrawal = await db.profit_withdrawals.find_one({"withdrawal_id": withdrawal_id})
+    if not withdrawal:
+        raise HTTPException(status_code=404, detail="Withdrawal not found")
+    
+    if withdrawal["status"] != "pending":
+        raise HTTPException(status_code=400, detail=f"Withdrawal is already {withdrawal['status']}")
+    
+    # Refund amount + fee back to user's profit wallet
+    total_refund = withdrawal["amount"] + withdrawal["fee"]
+    await db.users.update_one(
+        {"uid": withdrawal["user_id"]},
+        {"$inc": {"profit_wallet_balance": total_refund}}
+    )
+    
+    await db.profit_withdrawals.update_one(
+        {"withdrawal_id": withdrawal_id},
+        {"$set": {
+            "status": "rejected",
+            "admin_notes": admin_notes,
+            "processed_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Withdrawal rejected and refunded", "withdrawal_id": withdrawal_id, "refunded_amount": total_refund}
+
+@api_router.post("/admin/withdrawals/profit/{withdrawal_id}/complete")
+async def complete_profit_withdrawal(withdrawal_id: str, request: Request):
+    """Mark profit withdrawal as completed with UTR"""
+    data = await request.json()
+    utr_number = data.get("utr_number", "")
+    admin_notes = data.get("admin_notes", "")
+    
+    if not utr_number:
+        raise HTTPException(status_code=400, detail="UTR number is required")
+    
+    withdrawal = await db.profit_withdrawals.find_one({"withdrawal_id": withdrawal_id})
+    if not withdrawal:
+        raise HTTPException(status_code=404, detail="Withdrawal not found")
+    
+    if withdrawal["status"] not in ["pending", "approved"]:
+        raise HTTPException(status_code=400, detail=f"Cannot complete withdrawal with status {withdrawal['status']}")
+    
+    await db.profit_withdrawals.update_one(
+        {"withdrawal_id": withdrawal_id},
+        {"$set": {
+            "status": "completed",
+            "utr_number": utr_number,
+            "admin_notes": admin_notes,
+            "processed_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Withdrawal completed", "withdrawal_id": withdrawal_id, "utr_number": utr_number}
+
 # Include router
 app.include_router(api_router)
 
