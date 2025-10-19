@@ -1,0 +1,510 @@
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import Navbar from '@/components/Navbar';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Wallet as WalletIcon, 
+  ArrowDownToLine, 
+  AlertCircle, 
+  Clock, 
+  CheckCircle2, 
+  XCircle, 
+  Info,
+  TrendingUp
+} from 'lucide-react';
+import { toast } from 'sonner';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
+
+const WalletNew = ({ user, onLogout }) => {
+  const [walletData, setWalletData] = useState(null);
+  const [withdrawals, setWithdrawals] = useState({ cashback_withdrawals: [], profit_withdrawals: [] });
+  const [loading, setLoading] = useState(false);
+  
+  // Cashback withdrawal form
+  const [cashbackAmount, setCashbackAmount] = useState('');
+  const [cashbackPaymentMode, setCashbackPaymentMode] = useState('upi');
+  const [cashbackUpiId, setCashbackUpiId] = useState('');
+  const [cashbackBankAccount, setCashbackBankAccount] = useState('');
+  const [cashbackIfsc, setCashbackIfsc] = useState('');
+  
+  // Profit withdrawal form
+  const [profitAmount, setProfitAmount] = useState('');
+  const [profitPaymentMode, setProfitPaymentMode] = useState('upi');
+  const [profitUpiId, setProfitUpiId] = useState('');
+  const [profitBankAccount, setProfitBankAccount] = useState('');
+  const [profitIfsc, setProfitIfsc] = useState('');
+
+  useEffect(() => {
+    fetchWalletData();
+    fetchWithdrawals();
+  }, []);
+
+  const fetchWalletData = async () => {
+    try {
+      const response = await axios.get(`${API}/wallet/${user.uid}`);
+      setWalletData(response.data);
+    } catch (error) {
+      console.error('Error fetching wallet:', error);
+    }
+  };
+
+  const fetchWithdrawals = async () => {
+    try {
+      const response = await axios.get(`${API}/wallet/withdrawals/${user.uid}`);
+      setWithdrawals(response.data);
+    } catch (error) {
+      console.error('Error fetching withdrawals:', error);
+    }
+  };
+
+  const handleCashbackWithdraw = async () => {
+    if (!cashbackAmount || parseFloat(cashbackAmount) < 10) {
+      toast.error('Minimum withdrawal amount is ₹10');
+      return;
+    }
+
+    if (cashbackPaymentMode === 'upi' && !cashbackUpiId) {
+      toast.error('Please enter UPI ID');
+      return;
+    }
+
+    if (cashbackPaymentMode === 'bank' && (!cashbackBankAccount || !cashbackIfsc)) {
+      toast.error('Please enter bank account details');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API}/wallet/cashback/withdraw`, {
+        user_id: user.uid,
+        amount: parseFloat(cashbackAmount),
+        payment_mode: cashbackPaymentMode,
+        upi_id: cashbackPaymentMode === 'upi' ? cashbackUpiId : null,
+        bank_account: cashbackPaymentMode === 'bank' ? cashbackBankAccount : null,
+        ifsc_code: cashbackPaymentMode === 'bank' ? cashbackIfsc : null
+      });
+      toast.success(response.data.message);
+      setCashbackAmount('');
+      setCashbackUpiId('');
+      setCashbackBankAccount('');
+      setCashbackIfsc('');
+      fetchWalletData();
+      fetchWithdrawals();
+    } catch (error) {
+      console.error('Error withdrawing:', error);
+      toast.error(error.response?.data?.detail || 'Withdrawal failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProfitWithdraw = async () => {
+    if (!profitAmount || parseFloat(profitAmount) < 50) {
+      toast.error('Minimum withdrawal amount is ₹50');
+      return;
+    }
+
+    if (profitPaymentMode === 'upi' && !profitUpiId) {
+      toast.error('Please enter UPI ID');
+      return;
+    }
+
+    if (profitPaymentMode === 'bank' && (!profitBankAccount || !profitIfsc)) {
+      toast.error('Please enter bank account details');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API}/wallet/profit/withdraw`, {
+        user_id: user.uid,
+        amount: parseFloat(profitAmount),
+        payment_mode: profitPaymentMode,
+        upi_id: profitPaymentMode === 'upi' ? profitUpiId : null,
+        bank_account: profitPaymentMode === 'bank' ? profitBankAccount : null,
+        ifsc_code: profitPaymentMode === 'bank' ? profitIfsc : null
+      });
+      toast.success(response.data.message);
+      setProfitAmount('');
+      setProfitUpiId('');
+      setProfitBankAccount('');
+      setProfitIfsc('');
+      fetchWalletData();
+      fetchWithdrawals();
+    } catch (error) {
+      console.error('Error withdrawing:', error);
+      toast.error(error.response?.data?.detail || 'Withdrawal failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const styles = {
+      pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      approved: 'bg-blue-100 text-blue-800 border-blue-200',
+      completed: 'bg-green-100 text-green-800 border-green-200',
+      rejected: 'bg-red-100 text-red-800 border-red-200'
+    };
+    
+    const icons = {
+      pending: <Clock className="h-4 w-4" />,
+      approved: <Info className="h-4 w-4" />,
+      completed: <CheckCircle2 className="h-4 w-4" />,
+      rejected: <XCircle className="h-4 w-4" />
+    };
+
+    return (
+      <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium border ${styles[status] || styles.pending}`}>
+        {icons[status] || icons.pending}
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </div>
+    );
+  };
+
+  const isStockistOrOutlet = ['master_stockist', 'sub_stockist', 'outlet'].includes(user?.role);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+      <Navbar user={user} onLogout={onLogout} />
+      
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-8">Wallet</h1>
+
+        {/* Wallet Balances */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* Cashback Wallet */}
+          <Card className="bg-gradient-to-br from-emerald-600 to-teal-600 text-white p-6 rounded-2xl shadow-xl">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <p className="text-sm opacity-90 mb-1">Cashback Wallet</p>
+                <h2 className="text-4xl font-bold">₹{walletData?.cashback_balance?.toFixed(2) || '0.00'}</h2>
+              </div>
+              <WalletIcon className="h-12 w-12 opacity-80" />
+            </div>
+            
+            {walletData?.pending_lien > 0 && (
+              <div className="mt-4 p-3 bg-red-500/20 border border-red-300/30 rounded-lg">
+                <div className="flex items-center gap-2 text-sm">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>Pending Maintenance Lien: ₹{walletData.pending_lien.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+            
+            {walletData?.maintenance_due && (
+              <div className="mt-2 p-2 bg-yellow-500/20 border border-yellow-300/30 rounded-lg text-xs">
+                Maintenance fee (₹99) due now
+              </div>
+            )}
+            
+            {walletData?.days_until_maintenance !== null && walletData?.days_until_maintenance > 0 && (
+              <div className="mt-2 text-xs opacity-75">
+                Next maintenance in {walletData.days_until_maintenance} days
+              </div>
+            )}
+          </Card>
+
+          {/* Profit Wallet (for stockists/outlets) */}
+          {isStockistOrOutlet && (
+            <Card className="bg-gradient-to-br from-purple-600 to-pink-600 text-white p-6 rounded-2xl shadow-xl">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <p className="text-sm opacity-90 mb-1">Profit Wallet</p>
+                  <h2 className="text-4xl font-bold">₹{walletData?.profit_balance?.toFixed(2) || '0.00'}</h2>
+                </div>
+                <TrendingUp className="h-12 w-12 opacity-80" />
+              </div>
+              <p className="text-sm opacity-75">Earnings from delivery charges & commissions</p>
+            </Card>
+          )}
+        </div>
+
+        {/* Tabs for Withdrawal and History */}
+        <Tabs defaultValue="cashback-withdraw" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+            <TabsTrigger value="cashback-withdraw">Cashback Withdraw</TabsTrigger>
+            {isStockistOrOutlet && <TabsTrigger value="profit-withdraw">Profit Withdraw</TabsTrigger>}
+            <TabsTrigger value="cashback-history">Cashback History</TabsTrigger>
+            {isStockistOrOutlet && <TabsTrigger value="profit-history">Profit History</TabsTrigger>}
+          </TabsList>
+
+          {/* Cashback Withdrawal */}
+          <TabsContent value="cashback-withdraw">
+            <Card className="p-6">
+              <h3 className="text-2xl font-bold mb-4">Withdraw from Cashback Wallet</h3>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div className="text-sm text-blue-900">
+                    <p className="font-semibold mb-1">Withdrawal Guidelines:</p>
+                    <ul className="space-y-1 text-xs">
+                      <li>• Minimum withdrawal: ₹10</li>
+                      <li>• Withdrawal fee: ₹5 per transaction</li>
+                      <li>• KYC verification required</li>
+                      <li>• Processing time: 1-3 business days</li>
+                      <li>• Cannot withdraw if pending maintenance lien exists</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Amount (₹)</label>
+                  <Input
+                    type="number"
+                    placeholder="Minimum ₹10"
+                    value={cashbackAmount}
+                    onChange={(e) => setCashbackAmount(e.target.value)}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    You'll receive: ₹{cashbackAmount ? (parseFloat(cashbackAmount) - 5).toFixed(2) : '0.00'} (after ₹5 fee)
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Payment Mode</label>
+                  <Select value={cashbackPaymentMode} onValueChange={setCashbackPaymentMode}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="upi">UPI</SelectItem>
+                      <SelectItem value="bank">Bank Transfer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {cashbackPaymentMode === 'upi' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">UPI ID</label>
+                    <Input
+                      placeholder="your-upi@paytm"
+                      value={cashbackUpiId}
+                      onChange={(e) => setCashbackUpiId(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {cashbackPaymentMode === 'bank' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Bank Account Number</label>
+                      <Input
+                        placeholder="Enter account number"
+                        value={cashbackBankAccount}
+                        onChange={(e) => setCashbackBankAccount(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">IFSC Code</label>
+                      <Input
+                        placeholder="Enter IFSC code"
+                        value={cashbackIfsc}
+                        onChange={(e) => setCashbackIfsc(e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+
+                <Button
+                  onClick={handleCashbackWithdraw}
+                  disabled={loading}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700"
+                >
+                  <ArrowDownToLine className="mr-2 h-5 w-5" />
+                  {loading ? 'Processing...' : 'Request Withdrawal'}
+                </Button>
+              </div>
+            </Card>
+          </TabsContent>
+
+          {/* Profit Withdrawal */}
+          {isStockistOrOutlet && (
+            <TabsContent value="profit-withdraw">
+              <Card className="p-6">
+                <h3 className="text-2xl font-bold mb-4">Withdraw from Profit Wallet</h3>
+                
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-start gap-3">
+                    <Info className="h-5 w-5 text-purple-600 mt-0.5" />
+                    <div className="text-sm text-purple-900">
+                      <p className="font-semibold mb-1">Withdrawal Guidelines:</p>
+                      <ul className="space-y-1 text-xs">
+                        <li>• Minimum withdrawal: ₹50</li>
+                        <li>• Withdrawal fee: ₹5 per transaction</li>
+                        <li>• Processing time: 1-3 business days</li>
+                        <li>• Admin approval required</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Amount (₹)</label>
+                    <Input
+                      type="number"
+                      placeholder="Minimum ₹50"
+                      value={profitAmount}
+                      onChange={(e) => setProfitAmount(e.target.value)}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      You'll receive: ₹{profitAmount ? (parseFloat(profitAmount) - 5).toFixed(2) : '0.00'} (after ₹5 fee)
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Payment Mode</label>
+                    <Select value={profitPaymentMode} onValueChange={setProfitPaymentMode}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="upi">UPI</SelectItem>
+                        <SelectItem value="bank">Bank Transfer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {profitPaymentMode === 'upi' && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">UPI ID</label>
+                      <Input
+                        placeholder="your-upi@paytm"
+                        value={profitUpiId}
+                        onChange={(e) => setProfitUpiId(e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  {profitPaymentMode === 'bank' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Bank Account Number</label>
+                        <Input
+                          placeholder="Enter account number"
+                          value={profitBankAccount}
+                          onChange={(e) => setProfitBankAccount(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">IFSC Code</label>
+                        <Input
+                          placeholder="Enter IFSC code"
+                          value={profitIfsc}
+                          onChange={(e) => setProfitIfsc(e.target.value)}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <Button
+                    onClick={handleProfitWithdraw}
+                    disabled={loading}
+                    className="w-full bg-purple-600 hover:bg-purple-700"
+                  >
+                    <ArrowDownToLine className="mr-2 h-5 w-5" />
+                    {loading ? 'Processing...' : 'Request Withdrawal'}
+                  </Button>
+                </div>
+              </Card>
+            </TabsContent>
+          )}
+
+          {/* Cashback Withdrawal History */}
+          <TabsContent value="cashback-history">
+            <Card className="p-6">
+              <h3 className="text-2xl font-bold mb-4">Cashback Withdrawal History</h3>
+              
+              {withdrawals.cashback_withdrawals.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <WalletIcon className="h-16 w-16 mx-auto mb-4 opacity-30" />
+                  <p>No withdrawal history yet</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {withdrawals.cashback_withdrawals.map((withdrawal) => (
+                    <Card key={withdrawal.withdrawal_id} className="p-4 border">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="text-lg font-bold">₹{withdrawal.amount.toFixed(2)}</span>
+                            {getStatusBadge(withdrawal.status)}
+                          </div>
+                          <div className="text-sm text-gray-600 space-y-1">
+                            <p>Net Amount: ₹{withdrawal.net_amount.toFixed(2)} (Fee: ₹{withdrawal.fee.toFixed(2)})</p>
+                            <p>Payment: {withdrawal.payment_mode.toUpperCase()} - {withdrawal.upi_id || withdrawal.bank_account}</p>
+                            <p>Requested: {new Date(withdrawal.created_at).toLocaleString()}</p>
+                            {withdrawal.utr_number && (
+                              <p className="text-green-600 font-medium">UTR: {withdrawal.utr_number}</p>
+                            )}
+                            {withdrawal.admin_notes && (
+                              <p className="text-sm italic">Note: {withdrawal.admin_notes}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+
+          {/* Profit Withdrawal History */}
+          {isStockistOrOutlet && (
+            <TabsContent value="profit-history">
+              <Card className="p-6">
+                <h3 className="text-2xl font-bold mb-4">Profit Withdrawal History</h3>
+                
+                {withdrawals.profit_withdrawals.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <TrendingUp className="h-16 w-16 mx-auto mb-4 opacity-30" />
+                    <p>No withdrawal history yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {withdrawals.profit_withdrawals.map((withdrawal) => (
+                      <Card key={withdrawal.withdrawal_id} className="p-4 border">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="text-lg font-bold">₹{withdrawal.amount.toFixed(2)}</span>
+                              {getStatusBadge(withdrawal.status)}
+                            </div>
+                            <div className="text-sm text-gray-600 space-y-1">
+                              <p>Net Amount: ₹{withdrawal.net_amount.toFixed(2)} (Fee: ₹{withdrawal.fee.toFixed(2)})</p>
+                              <p>Payment: {withdrawal.payment_mode.toUpperCase()} - {withdrawal.upi_id || withdrawal.bank_account}</p>
+                              <p>Requested: {new Date(withdrawal.created_at).toLocaleString()}</p>
+                              {withdrawal.utr_number && (
+                                <p className="text-green-600 font-medium">UTR: {withdrawal.utr_number}</p>
+                              )}
+                              {withdrawal.admin_notes && (
+                                <p className="text-sm italic">Note: {withdrawal.admin_notes}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            </TabsContent>
+          )}
+        </Tabs>
+      </div>
+    </div>
+  );
+};
+
+export default WalletNew;
