@@ -190,6 +190,30 @@ frontend:
         agent: "main"
         comment: "Frontend form looks properly implemented with validation. Issue likely in backend API call to /api/auth/register"
 
+  - task: "Admin Delivery Configuration UI"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/AdminDashboard.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "DeliveryConfigSettings component already exists in AdminDashboard. Allows admin to configure delivery_charge_rate and distribution_split percentages. Includes validation (total must = 100%), example calculations, and real-time feedback. Calls GET /api/admin/delivery-config on load and POST on save."
+
+  - task: "Outlet Delivery with Auto-Distribution"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/OutletPanel.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Updated deliverOrder function to send outlet_id when marking order as delivered. Now displays success message confirming automatic delivery charge distribution. Backend handles the distribution automatically."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
