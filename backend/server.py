@@ -1469,6 +1469,196 @@ async def get_user_details(uid: str):
     
     return user
 
+# ========== VIP MEMBERSHIP & PAYMENT CONFIGURATION ==========
+
+@api_router.get("/admin/payment-config")
+async def get_payment_config():
+    """Get admin payment configuration"""
+    config = await db.payment_config.find_one({})
+    if not config:
+        # Return default empty config
+        return {
+            "upi_id": "",
+            "qr_code_url": "",
+            "bank_name": "",
+            "account_number": "",
+            "ifsc_code": "",
+            "account_holder": "",
+            "instructions": "Please upload payment proof after making the payment."
+        }
+    config["_id"] = str(config["_id"])
+    return config
+
+@api_router.post("/admin/payment-config")
+async def update_payment_config(request: Request):
+    """Update admin payment configuration"""
+    data = await request.json()
+    
+    # Check if config exists
+    existing = await db.payment_config.find_one({})
+    
+    if existing:
+        # Update existing
+        await db.payment_config.update_one(
+            {"_id": existing["_id"]},
+            {"$set": {
+                "upi_id": data.get("upi_id", ""),
+                "qr_code_url": data.get("qr_code_url", ""),
+                "bank_name": data.get("bank_name", ""),
+                "account_number": data.get("account_number", ""),
+                "ifsc_code": data.get("ifsc_code", ""),
+                "account_holder": data.get("account_holder", ""),
+                "instructions": data.get("instructions", ""),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+    else:
+        # Create new
+        await db.payment_config.insert_one({
+            "upi_id": data.get("upi_id", ""),
+            "qr_code_url": data.get("qr_code_url", ""),
+            "bank_name": data.get("bank_name", ""),
+            "account_number": data.get("account_number", ""),
+            "ifsc_code": data.get("ifsc_code", ""),
+            "account_holder": data.get("account_holder", ""),
+            "instructions": data.get("instructions", ""),
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    return {"message": "Payment configuration updated successfully"}
+
+@api_router.post("/membership/submit-payment")
+async def submit_vip_payment(request: Request):
+    """Submit VIP payment proof"""
+    data = await request.json()
+    
+    # Validate required fields
+    required_fields = ["user_id", "amount", "date", "time", "utr_number"]
+    for field in required_fields:
+        if not data.get(field):
+            raise HTTPException(status_code=400, detail=f"{field} is required")
+    
+    # Validate amount (should be ₹1000)
+    if float(data["amount"]) != 1000:
+        raise HTTPException(status_code=400, detail="VIP membership costs ₹1000")
+    
+    # Check if user already has pending payment
+    existing = await db.vip_payments.find_one({
+        "user_id": data["user_id"],
+        "status": "pending"
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="You already have a pending payment request")
+    
+    # Create payment record
+    payment_id = str(uuid.uuid4())
+    payment_record = {
+        "payment_id": payment_id,
+        "user_id": data["user_id"],
+        "amount": float(data["amount"]),
+        "date": data["date"],
+        "time": data["time"],
+        "utr_number": data["utr_number"],
+        "screenshot_url": data.get("screenshot_url", ""),
+        "status": "pending",
+        "submitted_at": datetime.now(timezone.utc).isoformat(),
+        "approved_at": None,
+        "approved_by": None
+    }
+    
+    await db.vip_payments.insert_one(payment_record)
+    
+    return {
+        "message": "Payment submitted successfully. Please wait for admin approval.",
+        "payment_id": payment_id,
+        "status": "pending"
+    }
+
+@api_router.get("/membership/payments")
+async def get_vip_payments(status: Optional[str] = None):
+    """Get all VIP payment requests (Admin)"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    payments = await db.vip_payments.find(query).sort("submitted_at", -1).to_list(length=None)
+    
+    for payment in payments:
+        payment["_id"] = str(payment["_id"])
+    
+    return payments
+
+@api_router.get("/membership/payment/{user_id}")
+async def get_user_payment_status(user_id: str):
+    """Get user's VIP payment status"""
+    payment = await db.vip_payments.find_one(
+        {"user_id": user_id},
+        sort=[("submitted_at", -1)]
+    )
+    
+    if payment:
+        payment["_id"] = str(payment["_id"])
+        return payment
+    
+    return {"status": "none", "message": "No payment submitted"}
+
+@api_router.post("/membership/payment/{payment_id}/action")
+async def handle_payment_action(payment_id: str, request: Request):
+    """Approve or reject VIP payment (Admin)"""
+    data = await request.json()
+    action = data.get("action")  # "approve" or "reject"
+    
+    if action not in ["approve", "reject"]:
+        raise HTTPException(status_code=400, detail="Invalid action")
+    
+    # Find payment
+    payment = await db.vip_payments.find_one({"payment_id": payment_id})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    if payment["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Payment already processed")
+    
+    now = datetime.now(timezone.utc)
+    
+    if action == "approve":
+        # Update payment status
+        await db.vip_payments.update_one(
+            {"payment_id": payment_id},
+            {"$set": {
+                "status": "approved",
+                "approved_at": now.isoformat()
+            }}
+        )
+        
+        # Update user membership
+        expiry_date = now + timedelta(days=365)  # 1 year
+        await db.users.update_one(
+            {"uid": payment["user_id"]},
+            {"$set": {
+                "membership_type": "vip",
+                "membership_expiry": expiry_date.isoformat(),
+                "updated_at": now.isoformat()
+            }}
+        )
+        
+        return {
+            "message": "Payment approved. User upgraded to VIP.",
+            "membership_expiry": expiry_date.isoformat()
+        }
+    else:
+        # Reject payment
+        await db.vip_payments.update_one(
+            {"payment_id": payment_id},
+            {"$set": {
+                "status": "rejected",
+                "rejected_at": now.isoformat()
+            }}
+        )
+        
+        return {"message": "Payment rejected"}
+
 # Include router
 app.include_router(api_router)
 
