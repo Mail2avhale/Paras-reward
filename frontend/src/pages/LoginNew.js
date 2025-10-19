@@ -77,9 +77,9 @@ const LoginNew = ({ onLogin }) => {
       if (response.data.role === 'admin' || response.data.role === 'sub_admin') {
         navigate('/admin');
       } else if (response.data.role === 'master_stockist') {
-        navigate('/master-dashboard');
+        navigate('/master-stockist');
       } else if (response.data.role === 'sub_stockist') {
-        navigate('/sub-dashboard');
+        navigate('/sub-stockist');
       } else if (response.data.role === 'outlet') {
         navigate('/outlet');
       } else {
