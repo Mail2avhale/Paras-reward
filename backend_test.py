@@ -34,16 +34,10 @@ print(f"Testing Mining System Fix at: {BACKEND_URL}")
 print(f"API Base: {API_BASE}")
 print("=" * 80)
 
-# Test data for comprehensive system testing
-test_admin_user = None
-test_master_user = None
-test_sub_user = None
-test_outlet_user = None
-test_regular_user = None
-test_product = None
-test_stock_movements = []
-test_security_deposits = []
-test_renewals = []
+# Test data for mining system testing
+test_user_no_mining = None
+test_user_with_mining = None
+test_user_with_referrals = None
 
 def setup_test_users():
     """Create test users for each role in the hierarchy"""
