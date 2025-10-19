@@ -167,15 +167,18 @@ backend:
 
   - task: "Delivery Charge Auto-Distribution"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/backend/server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented POST /api/orders/{order_id}/distribute-delivery-charge endpoint. Automatically triggered when order is marked as delivered (both admin and outlet endpoints). Creates commission records in 'commissions_earned' collection. Distribution is idempotent - won't distribute twice. Calculates amounts based on admin-configured percentages. Updated both /api/orders/{order_id}/deliver (outlet) and /api/admin/orders/verify-and-deliver (admin) to trigger auto-distribution."
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL ISSUE FOUND - ORDER CREATION SYSTEM BROKEN: ✅ Distribution endpoint exists and handles non-existent orders correctly (returns 404). ✅ Distribution logic appears sound based on code review. ❌ MAJOR PROBLEM: Cannot test full distribution flow due to Order model conflicts in backend code. Two different Order models defined (lines 183 and 1715) causing validation errors. ❌ Cart system has ObjectId serialization issues causing 500 errors. ❌ Simple order creation endpoint (/api/orders/{uid}) fails due to model conflicts. IMPACT: Auto-distribution cannot be tested end-to-end because order creation is broken. Distribution endpoint logic is implemented correctly but untestable due to order system issues."
 
 frontend:
   - task: "User Registration Form"
