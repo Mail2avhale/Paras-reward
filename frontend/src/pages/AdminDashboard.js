@@ -554,62 +554,235 @@ const AdminDashboard = ({ user, onLogout }) => {
               )}
             </TabsContent>
 
-            <TabsContent value="kyc" className="space-y-4">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">KYC Verification Requests</h2>
-              {kycDocuments.filter(k => k.status === 'pending').length === 0 ? (
-                <p className="text-center py-8 text-gray-500">No pending KYC verifications</p>
+          {/* Users Tab */}
+          {activeTab === 'users' && (
+            <div>
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
+                <div className="flex gap-3 w-full md:w-auto">
+                  <Input
+                    placeholder="Search by name, email, or mobile..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full md:w-64"
+                  />
+                  <select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  >
+                    <option value="">All Roles</option>
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                    <option value="outlet">Outlet</option>
+                    <option value="master_stockist">Master Stockist</option>
+                    <option value="sub_stockist">Sub Stockist</option>
+                  </select>
+                </div>
+              </div>
+
+              <Card className="bg-white">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700">Name</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700">Email</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700">Mobile</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700">Role</th>
+                        <th className="text-left py-4 px-6 font-semibold text-gray-700">Status</th>
+                        <th className="text-center py-4 px-6 font-semibold text-gray-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.length === 0 ? (
+                        <tr>
+                          <td colSpan="6" className="text-center py-12 text-gray-500">
+                            No users found
+                          </td>
+                        </tr>
+                      ) : (
+                        users.map((u) => (
+                          <tr key={u.uid} className="border-b hover:bg-gray-50">
+                            <td className="py-4 px-6">
+                              <div className="font-medium text-gray-900">{u.name || 'N/A'}</div>
+                            </td>
+                            <td className="py-4 px-6 text-gray-700">{u.email || 'N/A'}</td>
+                            <td className="py-4 px-6 text-gray-700">{u.mobile || 'N/A'}</td>
+                            <td className="py-4 px-6">
+                              <select
+                                value={u.role}
+                                onChange={(e) => handleRoleChange(u.uid, e.target.value)}
+                                className="px-3 py-1 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                              >
+                                <option value="user">User</option>
+                                <option value="admin">Admin</option>
+                                <option value="outlet">Outlet</option>
+                                <option value="master_stockist">Master Stockist</option>
+                                <option value="sub_stockist">Sub Stockist</option>
+                              </select>
+                            </td>
+                            <td className="py-4 px-6">
+                              <button
+                                onClick={() => handleStatusChange(u.uid, !u.is_active)}
+                                className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                  u.is_active
+                                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                    : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                }`}
+                              >
+                                {u.is_active ? 'Active' : 'Inactive'}
+                              </button>
+                            </td>
+                            <td className="py-4 px-6 text-center">
+                              <Button
+                                onClick={() => handleDeleteUser(u.uid, u.name)}
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* Payments Tab */}
+          {activeTab === 'payments' && (
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">VIP Payment Approvals</h2>
+              {vipPayments.filter(p => p.status === 'pending').length === 0 ? (
+                <Card className="p-12 text-center bg-white">
+                  <CreditCard className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No pending VIP payments</p>
+                </Card>
               ) : (
-                kycDocuments.filter(k => k.status === 'pending').map((kyc, index) => (
-                  <Card key={kyc.kyc_id} data-testid={`kyc-${index}`} className="p-6 bg-gray-50">
-                    <div className="mb-4">
-                      <p className="text-sm text-gray-600">User ID</p>
-                      <p className="font-semibold text-gray-900 mb-4">{kyc.user_id.substring(0, 12)}...</p>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {vipPayments.filter(p => p.status === 'pending').map((payment, index) => (
+                    <Card key={payment.payment_id} className="p-6 bg-white">
+                      <div className="flex items-center justify-between mb-4">
                         <div>
-                          <p className="text-sm text-gray-600 mb-2">Aadhaar Front</p>
-                          {kyc.aadhaar_front && (
-                            <img src={kyc.aadhaar_front} alt="Aadhaar front" className="w-full rounded-lg" />
-                          )}
+                          <p className="font-bold text-gray-900">₹{payment.amount}</p>
+                          <p className="text-sm text-gray-600">{payment.user_id.substring(0, 12)}...</p>
+                        </div>
+                        <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
+                          Pending
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <p className="text-sm text-gray-600">Date & Time</p>
+                          <p className="font-semibold text-gray-900">{payment.date} {payment.time}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600 mb-2">Aadhaar Back</p>
-                          {kyc.aadhaar_back && (
-                            <img src={kyc.aadhaar_back} alt="Aadhaar back" className="w-full rounded-lg" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-600 mb-2">PAN Card</p>
-                          {kyc.pan_front && (
-                            <img src={kyc.pan_front} alt="PAN card" className="w-full rounded-lg" />
-                          )}
+                          <p className="text-sm text-gray-600">UTR Number</p>
+                          <p className="font-semibold text-gray-900">{payment.utr_number}</p>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex gap-3">
-                      <Button
-                        data-testid={`approve-kyc-${index}`}
-                        onClick={() => handleKYCAction(kyc.kyc_id, 'approve')}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Approve
-                      </Button>
-                      <Button
-                        data-testid={`reject-kyc-${index}`}
-                        onClick={() => handleKYCAction(kyc.kyc_id, 'reject')}
-                        className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                      >
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Reject
-                      </Button>
-                    </div>
-                  </Card>
-                ))
+                      {payment.screenshot_url && (
+                        <div className="mb-4">
+                          <img src={payment.screenshot_url} alt="Payment screenshot" className="w-full rounded-lg" />
+                        </div>
+                      )}
+                      <div className="flex gap-3">
+                        <Button
+                          onClick={() => handlePaymentAction(payment.payment_id, 'approve')}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Approve
+                        </Button>
+                        <Button
+                          onClick={() => handlePaymentAction(payment.payment_id, 'reject')}
+                          className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          <XCircle className="mr-2 h-4 w-4" />
+                          Reject
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               )}
-            </TabsContent>
-          </Tabs>
-        </Card>
+            </div>
+          )}
+
+          {/* KYC Tab */}
+          {activeTab === 'kyc' && (
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">KYC Verification Requests</h2>
+              {kycDocuments.filter(k => k.status === 'pending').length === 0 ? (
+                <Card className="p-12 text-center bg-white">
+                  <Shield className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No pending KYC verifications</p>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {kycDocuments.filter(k => k.status === 'pending').map((kyc, index) => (
+                    <Card key={kyc.kyc_id} className="p-6 bg-white">
+                      <div className="mb-4">
+                        <p className="text-sm text-gray-600">User ID</p>
+                        <p className="font-semibold text-gray-900 mb-4">{kyc.user_id.substring(0, 12)}...</p>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 mb-4">
+                        {kyc.aadhaar_front && (
+                          <div>
+                            <p className="text-xs text-gray-600 mb-2">Aadhaar Front</p>
+                            <img src={kyc.aadhaar_front} alt="Aadhaar front" className="w-full rounded" />
+                          </div>
+                        )}
+                        {kyc.aadhaar_back && (
+                          <div>
+                            <p className="text-xs text-gray-600 mb-2">Aadhaar Back</p>
+                            <img src={kyc.aadhaar_back} alt="Aadhaar back" className="w-full rounded" />
+                          </div>
+                        )}
+                        {kyc.pan_front && (
+                          <div>
+                            <p className="text-xs text-gray-600 mb-2">PAN Card</p>
+                            <img src={kyc.pan_front} alt="PAN" className="w-full rounded" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-3">
+                        <Button
+                          onClick={() => handleKYCAction(kyc.kyc_id, 'approve')}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Approve
+                        </Button>
+                        <Button
+                          onClick={() => handleKYCAction(kyc.kyc_id, 'reject')}
+                          className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          <XCircle className="mr-2 h-4 w-4" />
+                          Reject
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Other Tabs - Placeholder */}
+          {['master-stockist', 'sub-stockist', 'outlet', 'rewards', 'commissions', 'orders', 'marketplace', 'notifications', 'settings'].includes(activeTab) && (
+            <Card className="p-12 text-center bg-white">
+              <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-gray-900 mb-2 capitalize">{activeTab.replace('-', ' ')}</h3>
+              <p className="text-gray-500">This section is under development</p>
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   );
