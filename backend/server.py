@@ -398,6 +398,59 @@ async def update_mined_coins(uid: str):
     return 0
 
 # ========== AUTH ROUTES ==========
+@api_router.post("/auth/register/simple")
+async def simple_register(request: Request):
+    """Simplified registration - only email, password, and role required"""
+    data = await request.json()
+    
+    email = data.get("email")
+    password = data.get("password")
+    role = data.get("role", "user")  # user, master_stockist, sub_stockist, outlet
+    
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Email and password are required")
+    
+    # Validate email format
+    if "@" not in email:
+        raise HTTPException(status_code=400, detail="Invalid email format")
+    
+    # Check if email already exists
+    existing = await db.users.find_one({"email": email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Create minimal user
+    user_data = {
+        "uid": str(uuid.uuid4()),
+        "email": email,
+        "password_hash": hash_password(password),
+        "role": role,
+        "name": email.split("@")[0],  # Use email prefix as temporary name
+        "profile_complete": False,
+        "profile_picture": None,
+        "prc_balance": 0,
+        "total_mined": 0,
+        "cashback_wallet_balance": 0,
+        "profit_wallet_balance": 0,
+        "membership_type": "free",
+        "kyc_status": "not_submitted",
+        "is_active": True,
+        "is_banned": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Generate referral code
+    user_data["referral_code"] = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+    
+    await db.users.insert_one(user_data)
+    
+    return {
+        "message": "Registration successful! Please complete your profile.",
+        "uid": user_data["uid"],
+        "profile_complete": False
+    }
+
 @api_router.post("/auth/register")
 async def register_user(request: Request):
     """Enhanced user registration with duplicate checks"""
