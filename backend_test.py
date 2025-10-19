@@ -291,8 +291,8 @@ def test_cashback_credit_with_lien_clearing():
     """Test cashback credit with lien clearing functionality"""
     print("\n4. Testing Cashback Credit with Lien Clearing...")
     
-    # Test 4a: Set up a maintenance lien first
-    print("\n4a. Setting up maintenance lien...")
+    # Test 4a: Credit cashback without lien
+    print("\n4a. Testing cashback credit without lien...")
     try:
         # First, let's check current wallet status
         wallet_response = requests.get(f"{API_BASE}/wallet/{test_vip_user['uid']}", timeout=30)
@@ -300,8 +300,8 @@ def test_cashback_credit_with_lien_clearing():
             wallet = wallet_response.json()
             print(f"Current wallet status: {json.dumps(wallet, indent=2)}")
         
-        # Test crediting cashback with lien clearing
-        print("\n4b. Testing POST /api/wallet/credit-cashback/{uid} with lien...")
+        # Test crediting cashback
+        print("\n4b. Testing POST /api/wallet/credit-cashback/{uid}...")
         credit_data = {"amount": 100}
         
         response = requests.post(f"{API_BASE}/wallet/credit-cashback/{test_vip_user['uid']}", 
@@ -314,9 +314,9 @@ def test_cashback_credit_with_lien_clearing():
             print("✅ Cashback credit test PASSED")
             print(f"Credit result: {json.dumps(result, indent=2)}")
             
-            # Verify lien clearing logic
-            if "lien_cleared" in result:
-                print("✅ Lien clearing logic working")
+            # Verify the response structure
+            if "credited_amount" in result and "new_balance" in result:
+                print("✅ Cashback credit response structure correct")
             
             return True
         else:
@@ -324,6 +324,25 @@ def test_cashback_credit_with_lien_clearing():
             return False
     except Exception as e:
         print(f"❌ Cashback credit test FAILED - Error: {e}")
+        return False
+    
+    # Test 4c: Test partial amount credit
+    print("\n4c. Testing partial amount credit...")
+    try:
+        credit_data = {"amount": 50}
+        response = requests.post(f"{API_BASE}/wallet/credit-cashback/{test_vip_user['uid']}", 
+                               json=credit_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            print("✅ Partial amount credit test PASSED")
+            return True
+        else:
+            print(f"❌ Partial amount credit test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Partial amount credit test FAILED - Error: {e}")
         return False
 
 def test_cashback_withdrawal_flow():
