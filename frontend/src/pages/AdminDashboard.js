@@ -1,17 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Package, CreditCard, FileText, CheckCircle, XCircle, Search, Shield, UserCog, Trash2 } from 'lucide-react';
+import { 
+  Users, Package, CreditCard, FileText, CheckCircle, XCircle, 
+  Search, Shield, UserCog, Trash2, BarChart3, TrendingUp, TrendingDown,
+  Home, Store, Award, ShoppingCart, Bell, Settings, DollarSign,
+  ArrowUpRight, ArrowDownRight
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const AdminDashboard = ({ user, onLogout }) => {
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [stats, setStats] = useState(null);
   const [vipPayments, setVipPayments] = useState([]);
   const [kycDocuments, setKycDocuments] = useState([]);
@@ -138,12 +145,207 @@ const AdminDashboard = ({ user, onLogout }) => {
     return () => clearTimeout(delaySearch);
   }, [searchQuery, roleFilter]);
 
+  const menuItems = [
+    { id: 'dashboard', icon: Home, label: 'Dashboard' },
+    { id: 'master-stockist', icon: Package, label: 'Master Stockist' },
+    { id: 'sub-stockist', icon: Store, label: 'Sub Stockist' },
+    { id: 'outlet', icon: ShoppingCart, label: 'Outlet' },
+    { id: 'users', icon: Users, label: 'Users' },
+    { id: 'rewards', icon: Award, label: 'Rewards' },
+    { id: 'commissions', icon: DollarSign, label: 'Commissions' },
+    { id: 'orders', icon: ShoppingCart, label: 'Orders' },
+    { id: 'marketplace', icon: Store, label: 'Marketplace' },
+    { id: 'payments', icon: CreditCard, label: 'Payments' },
+    { id: 'notifications', icon: Bell, label: 'Notifications' },
+    { id: 'settings', icon: Settings, label: 'Settings' },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-      <Navbar user={user} onLogout={onLogout} />
-      
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-8">Admin Dashboard</h1>
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Sidebar */}
+      <div className="w-64 bg-white border-r border-gray-200 fixed h-full">
+        <div className="p-6">
+          <h1 className="text-2xl font-bold text-gray-900">paras<br/>rewards</h1>
+        </div>
+        
+        <nav className="px-3">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 mb-1 rounded-lg transition-all ${
+                  isActive 
+                    ? 'bg-indigo-600 text-white' 
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="font-medium">{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Main Content */}
+      <div className="ml-64 flex-1">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between">
+          <h2 className="text-3xl font-bold text-gray-900 capitalize">{activeTab.replace('-', ' ')}</h2>
+          <div className="flex items-center gap-4">
+            <Button variant="outline" onClick={onLogout}>
+              Logout
+            </Button>
+          </div>
+        </div>
+
+        {/* Content Area */}
+        <div className="p-8">
+          {activeTab === 'dashboard' && (
+            <div>
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <Card className="p-6 bg-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-600 text-sm font-medium">Total Users</span>
+                    <TrendingUp className="h-5 w-5 text-green-500" />
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 mb-1">
+                    {stats?.total_users?.toLocaleString() || '84,560'}
+                  </div>
+                  <div className="flex items-center text-sm text-green-600">
+                    <ArrowUpRight className="h-4 w-4 mr-1" />
+                    <span>12%</span>
+                  </div>
+                </Card>
+
+                <Card className="p-6 bg-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-600 text-sm font-medium">VIP Users</span>
+                    <TrendingUp className="h-5 w-5 text-green-500" />
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 mb-1">
+                    {stats?.vip_users?.toLocaleString() || '12,740'}
+                  </div>
+                  <div className="flex items-center text-sm text-green-600">
+                    <ArrowUpRight className="h-4 w-4 mr-1" />
+                    <span>9%</span>
+                  </div>
+                </Card>
+
+                <Card className="p-6 bg-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-600 text-sm font-medium">KYC Pending</span>
+                    <TrendingDown className="h-5 w-5 text-red-500" />
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 mb-1">
+                    {stats?.pending_kyc?.toLocaleString() || '1,023'}
+                  </div>
+                  <div className="flex items-center text-sm text-red-600">
+                    <ArrowDownRight className="h-4 w-4 mr-1" />
+                    <span>8% Decrease</span>
+                  </div>
+                </Card>
+
+                <Card className="p-6 bg-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-600 text-sm font-medium">Total Rewards</span>
+                    <TrendingUp className="h-5 w-5 text-green-500" />
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 mb-1">
+                    ₹5.72 Cr
+                  </div>
+                  <div className="flex items-center text-sm text-green-600">
+                    <ArrowUpRight className="h-4 w-4 mr-1" />
+                    <span>30%</span>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Chart and Fee Summary Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                {/* Summary Chart */}
+                <Card className="p-6 bg-white lg:col-span-2">
+                  <h3 className="text-xl font-bold text-gray-900 mb-6">Summary</h3>
+                  <div className="h-64 flex items-end justify-around gap-2">
+                    {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month, idx) => (
+                      <div key={month} className="flex-1 flex flex-col items-center gap-1">
+                        <div className="w-full flex items-end justify-center gap-1 h-48">
+                          <div 
+                            className="w-1/3 bg-indigo-600 rounded-t" 
+                            style={{ height: `${40 + idx * 10}%` }}
+                          ></div>
+                          <div 
+                            className="w-1/3 bg-indigo-400 rounded-t" 
+                            style={{ height: `${30 + idx * 8}%` }}
+                          ></div>
+                          <div 
+                            className="w-1/3 bg-pink-400 rounded-t" 
+                            style={{ height: `${25 + idx * 7}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs text-gray-600 mt-2">{month}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-center gap-6 mt-6">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-indigo-600 rounded"></div>
+                      <span className="text-sm text-gray-600">Transactions</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-indigo-400 rounded"></div>
+                      <span className="text-sm text-gray-600">Redeems</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-pink-400 rounded"></div>
+                      <span className="text-sm text-gray-600">Earnings</span>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Fee Summary */}
+                <Card className="p-6 bg-white">
+                  <h3 className="text-xl font-bold text-gray-900 mb-6">Fee Summary</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                      <span className="text-gray-600">Membership Fees</span>
+                      <span className="font-bold text-gray-900">₹2,00,000</span>
+                    </div>
+                    <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                      <span className="text-gray-600">Wallet Fees</span>
+                      <span className="font-bold text-gray-900">₹1,50,000</span>
+                    </div>
+                    <div className="flex items-center justify-between py-3">
+                      <span className="text-gray-600">Marketplace Charges</span>
+                      <span className="font-bold text-gray-900">₹50,000</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-8">
+                    <h4 className="text-lg font-bold text-gray-900 mb-4">Recently Paid VIP</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-gray-700">Shiv Prasad</span>
+                        <span className="font-semibold text-gray-900">₹2,400</span>
+                      </div>
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-gray-700">Kajal Sharma</span>
+                        <span className="font-semibold text-gray-900">₹8,250</span>
+                      </div>
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-gray-700">Rohit Shetty</span>
+                        <span className="font-semibold text-gray-900">₹5,100</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
