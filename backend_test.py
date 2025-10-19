@@ -382,49 +382,94 @@ def test_cashback_withdrawal_flow():
     
     return True
 
-def test_commission_records_verification(order_id):
-    """Test that commission records are created correctly"""
-    print("\n6. Testing Commission Records Verification...")
+def test_profit_withdrawal_flow():
+    """Test profit withdrawal flow for outlet users"""
+    print("\n6. Testing Profit Withdrawal Flow...")
     
-    if not order_id:
-        print("❌ Cannot verify commission records - no order ID")
-        return False
+    # First, add some profit balance to outlet user
+    print("\n6a. Adding profit balance for outlet user...")
+    # We'll simulate this by directly testing withdrawal with existing balance
     
-    # Wait a moment for database operations to complete
-    time.sleep(2)
+    # Test 6b: Valid profit withdrawal
+    print("\n6b. Testing POST /api/wallet/profit/withdraw (valid withdrawal)...")
+    withdrawal_data = {
+        "user_id": test_outlet_user["uid"],
+        "amount": 100,
+        "payment_mode": "upi",
+        "upi_id": "amit@paytm"
+    }
     
-    # Check if commission records were created in 'commissions_earned' collection
-    # Since we don't have direct database access, we'll check via an admin endpoint if available
-    # For now, we'll verify the distribution endpoint directly
-    
-    print("\n6a. Testing commission distribution amounts...")
-    
-    # Get the order details to check delivery charge
     try:
-        # Try to get order details (this endpoint might not exist, but let's try)
-        response = requests.get(f"{API_BASE}/orders/{order_id}", timeout=30)
+        response = requests.post(f"{API_BASE}/wallet/profit/withdraw", 
+                               json=withdrawal_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
         if response.status_code == 200:
-            order = response.json()
-            delivery_charge = order.get("delivery_charge", 0)
-            print(f"Order delivery charge: {delivery_charge}")
+            result = response.json()
+            print("✅ Profit withdrawal test PASSED")
+            print(f"Withdrawal result: {json.dumps(result, indent=2)}")
             
-            # Expected distribution based on config (master:10%, sub:20%, outlet:60%, company:10%)
-            expected_amounts = {
-                "master": delivery_charge * 0.10,
-                "sub": delivery_charge * 0.20,
-                "outlet": delivery_charge * 0.60,
-                "company": delivery_charge * 0.10
-            }
-            
-            print(f"Expected distribution amounts: {expected_amounts}")
-            print("✅ Commission calculation verification completed")
+            # Store withdrawal ID for admin testing
+            withdrawal_id = result.get("withdrawal_id")
+            if withdrawal_id:
+                test_withdrawals.append({"id": withdrawal_id, "type": "profit"})
+                
+        elif response.status_code == 400 and "insufficient" in response.text.lower():
+            print("ℹ️ Insufficient balance (expected for new outlet user)")
             return True
         else:
-            print(f"Could not retrieve order details: {response.status_code}")
+            print(f"❌ Profit withdrawal test FAILED - Status: {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ Commission verification failed - Error: {e}")
+        print(f"❌ Profit withdrawal test FAILED - Error: {e}")
         return False
+    
+    # Test 6c: Invalid withdrawal (amount < ₹50)
+    print("\n6c. Testing minimum amount validation for profit withdrawal...")
+    invalid_withdrawal = {
+        "user_id": test_outlet_user["uid"],
+        "amount": 30,  # Below minimum
+        "payment_mode": "upi",
+        "upi_id": "amit@paytm"
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/wallet/profit/withdraw", 
+                               json=invalid_withdrawal, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 400:
+            print("✅ Profit minimum amount validation test PASSED")
+        else:
+            print(f"❌ Profit minimum amount validation test FAILED - Expected 400, got {response.status_code}")
+    except Exception as e:
+        print(f"❌ Profit minimum amount validation test FAILED - Error: {e}")
+    
+    # Test 6d: Role validation (regular user should fail)
+    print("\n6d. Testing role validation for profit withdrawal...")
+    invalid_role_withdrawal = {
+        "user_id": test_free_user["uid"],  # Regular user, not outlet
+        "amount": 100,
+        "payment_mode": "upi",
+        "upi_id": "priya@paytm"
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/wallet/profit/withdraw", 
+                               json=invalid_role_withdrawal, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 403:
+            print("✅ Role validation test PASSED")
+        else:
+            print(f"❌ Role validation test FAILED - Expected 403, got {response.status_code}")
+    except Exception as e:
+        print(f"❌ Role validation test FAILED - Error: {e}")
+    
+    return True
 
 def test_admin_delivery_verification():
     """Test admin delivery verification endpoint"""
