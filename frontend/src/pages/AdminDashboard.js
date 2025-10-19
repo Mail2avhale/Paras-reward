@@ -944,9 +944,12 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
           )}
 
-          {/* Settings Tab - Payment Configuration */}
+          {/* Settings Tab - Payment & Delivery Configuration */}
           {activeTab === 'settings' && (
-            <PaymentConfigSettings />
+            <div className="space-y-8">
+              <PaymentConfigSettings />
+              <DeliveryConfigSettings />
+            </div>
           )}
 
           {/* Other Tabs - Placeholder */}
