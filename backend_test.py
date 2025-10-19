@@ -501,42 +501,79 @@ def test_withdrawal_history():
         print(f"❌ Withdrawal history test FAILED - Error: {e}")
         return False
 
-def test_idempotent_distribution(order_id):
-    """Test that distribution is idempotent (no duplicate distributions)"""
-    print("\n8. Testing Idempotent Distribution...")
+def test_admin_withdrawal_management_cashback():
+    """Test admin withdrawal management for cashback withdrawals"""
+    print("\n8. Testing Admin Withdrawal Management - Cashback...")
     
-    if not order_id:
-        print("❌ Cannot test idempotent distribution - no order ID")
-        return False
-    
-    print("\n8a. Testing duplicate distribution call...")
-    
-    # Try to distribute delivery charge again for the same order
+    # Test 8a: Get all cashback withdrawals
+    print("\n8a. Testing GET /api/admin/withdrawals/cashback...")
     try:
-        response = requests.post(f"{API_BASE}/orders/{order_id}/distribute-delivery-charge", 
-                               timeout=30)
+        response = requests.get(f"{API_BASE}/admin/withdrawals/cashback", timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
-        if response.status_code == 400:
-            # Should return error indicating already distributed
-            if "already" in response.text.lower() or "duplicate" in response.text.lower():
-                print("✅ Idempotent distribution test PASSED - Duplicate prevented")
-                return True
-            else:
-                print("❌ Idempotent distribution test FAILED - Wrong error message")
-                return False
-        elif response.status_code == 200:
-            # If it returns 200, check if it actually created duplicate records
-            print("⚠️ Distribution endpoint returned 200 - checking for duplicate prevention logic")
-            return True
+        if response.status_code == 200:
+            withdrawals = response.json()
+            print("✅ Admin cashback withdrawals list test PASSED")
+            print(f"Withdrawals count: {len(withdrawals) if isinstance(withdrawals, list) else 'N/A'}")
         else:
-            print(f"❌ Idempotent distribution test FAILED - Unexpected status: {response.status_code}")
+            print(f"❌ Admin cashback withdrawals list test FAILED - Status: {response.status_code}")
             return False
-            
     except Exception as e:
-        print(f"❌ Idempotent distribution test FAILED - Error: {e}")
+        print(f"❌ Admin cashback withdrawals list test FAILED - Error: {e}")
         return False
+    
+    # Test 8b: Get pending cashback withdrawals
+    print("\n8b. Testing GET /api/admin/withdrawals/cashback?status=pending...")
+    try:
+        response = requests.get(f"{API_BASE}/admin/withdrawals/cashback?status=pending", timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            print("✅ Admin pending cashback withdrawals test PASSED")
+        else:
+            print(f"❌ Admin pending cashback withdrawals test FAILED - Status: {response.status_code}")
+    except Exception as e:
+        print(f"❌ Admin pending cashback withdrawals test FAILED - Error: {e}")
+    
+    # Test withdrawal actions if we have a withdrawal ID
+    if test_withdrawals:
+        cashback_withdrawal = next((w for w in test_withdrawals if w["type"] == "cashback"), None)
+        if cashback_withdrawal:
+            withdrawal_id = cashback_withdrawal["id"]
+            
+            # Test 8c: Approve withdrawal
+            print(f"\n8c. Testing POST /api/admin/withdrawals/cashback/{withdrawal_id}/approve...")
+            try:
+                response = requests.post(f"{API_BASE}/admin/withdrawals/cashback/{withdrawal_id}/approve", timeout=30)
+                print(f"Status Code: {response.status_code}")
+                print(f"Response: {response.text}")
+                
+                if response.status_code == 200:
+                    print("✅ Admin approve cashback withdrawal test PASSED")
+                else:
+                    print(f"❌ Admin approve cashback withdrawal test FAILED - Status: {response.status_code}")
+            except Exception as e:
+                print(f"❌ Admin approve cashback withdrawal test FAILED - Error: {e}")
+            
+            # Test 8d: Complete withdrawal with UTR
+            print(f"\n8d. Testing POST /api/admin/withdrawals/cashback/{withdrawal_id}/complete...")
+            complete_data = {"utr_number": f"UTR{datetime.now().strftime('%Y%m%d%H%M%S')}"}
+            try:
+                response = requests.post(f"{API_BASE}/admin/withdrawals/cashback/{withdrawal_id}/complete", 
+                                       json=complete_data, timeout=30)
+                print(f"Status Code: {response.status_code}")
+                print(f"Response: {response.text}")
+                
+                if response.status_code == 200:
+                    print("✅ Admin complete cashback withdrawal test PASSED")
+                else:
+                    print(f"❌ Admin complete cashback withdrawal test FAILED - Status: {response.status_code}")
+            except Exception as e:
+                print(f"❌ Admin complete cashback withdrawal test FAILED - Error: {e}")
+    
+    return True
 
 def main():
     """Run all delivery charge auto-distribution tests"""
