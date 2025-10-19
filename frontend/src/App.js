@@ -94,7 +94,7 @@ function App() {
           <Route path="/orders" element={user ? <Orders user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/vip" element={user ? <VIPMembership user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/kyc" element={user ? <KYCVerification user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/wallet" element={user ? <Wallet user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+          <Route path="/wallet" element={user ? <WalletNew user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/leaderboard" element={user ? <Leaderboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/profile" element={user ? <Profile user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/admin" element={user && user.role === "admin" ? <AdminDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
