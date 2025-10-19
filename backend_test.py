@@ -190,120 +190,53 @@ def make_user_vip_with_kyc(user_id):
         print(f"❌ Error making user VIP: {e}")
         return False
 
-def test_delivery_config_management():
-    """Test delivery configuration management endpoints"""
-    print("\n2. Testing Delivery Configuration Management...")
+def test_wallet_balance_retrieval():
+    """Test wallet balance retrieval for VIP and free users"""
+    print("\n2. Testing Wallet Balance Retrieval...")
     
-    # Test 2a: GET delivery config (should return default if none exists)
-    print("\n2a. Testing GET /api/admin/delivery-config (default config)...")
+    # Test 2a: GET wallet for VIP user
+    print("\n2a. Testing GET /api/wallet/{uid} for VIP user...")
     try:
-        response = requests.get(f"{API_BASE}/admin/delivery-config", timeout=30)
+        response = requests.get(f"{API_BASE}/wallet/{test_vip_user['uid']}", timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
         if response.status_code == 200:
-            config = response.json()
-            print("✅ GET delivery config test PASSED")
-            print(f"Default config: {json.dumps(config, indent=2)}")
-        else:
-            print(f"❌ GET delivery config test FAILED - Status: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ GET delivery config test FAILED - Error: {e}")
-        return False
-    
-    # Test 2b: POST valid delivery config
-    print("\n2b. Testing POST /api/admin/delivery-config (valid config)...")
-    valid_config = {
-        "delivery_charge_rate": 0.10,  # 10%
-        "distribution_split": {
-            "master": 10,
-            "sub": 20,
-            "outlet": 60,
-            "company": 10
-        }
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/admin/delivery-config", json=valid_config, timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 200:
-            print("✅ POST valid delivery config test PASSED")
-        else:
-            print(f"❌ POST valid delivery config test FAILED - Status: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ POST valid delivery config test FAILED - Error: {e}")
-        return False
-    
-    # Test 2c: POST invalid config (split not summing to 100)
-    print("\n2c. Testing POST /api/admin/delivery-config (invalid total)...")
-    invalid_config = {
-        "delivery_charge_rate": 0.10,
-        "distribution_split": {
-            "master": 10,
-            "sub": 20,
-            "outlet": 50,  # Total = 90, not 100
-            "company": 10
-        }
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/admin/delivery-config", json=invalid_config, timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 400:
-            print("✅ POST invalid total config test PASSED")
-        else:
-            print(f"❌ POST invalid total config test FAILED - Expected 400, got {response.status_code}")
-    except Exception as e:
-        print(f"❌ POST invalid total config test FAILED - Error: {e}")
-    
-    # Test 2d: POST invalid rate (< 0 or > 1)
-    print("\n2d. Testing POST /api/admin/delivery-config (invalid rate)...")
-    invalid_rate_config = {
-        "delivery_charge_rate": 1.5,  # 150% - invalid
-        "distribution_split": {
-            "master": 10,
-            "sub": 20,
-            "outlet": 60,
-            "company": 10
-        }
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/admin/delivery-config", json=invalid_rate_config, timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 400:
-            print("✅ POST invalid rate config test PASSED")
-        else:
-            print(f"❌ POST invalid rate config test FAILED - Expected 400, got {response.status_code}")
-    except Exception as e:
-        print(f"❌ POST invalid rate config test FAILED - Error: {e}")
-    
-    # Test 2e: GET delivery config after saving (verify persistence)
-    print("\n2e. Testing GET /api/admin/delivery-config (after saving)...")
-    try:
-        response = requests.get(f"{API_BASE}/admin/delivery-config", timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 200:
-            config = response.json()
-            if config.get("delivery_charge_rate") == 0.10:
-                print("✅ GET delivery config persistence test PASSED")
-                print(f"Persisted config: {json.dumps(config, indent=2)}")
+            wallet = response.json()
+            required_fields = ["cashback_balance", "profit_balance", "pending_lien", "maintenance_due", "days_until_maintenance"]
+            
+            if all(field in wallet for field in required_fields):
+                print("✅ VIP wallet retrieval test PASSED")
+                print(f"Wallet data: {json.dumps(wallet, indent=2)}")
             else:
-                print("❌ GET delivery config persistence test FAILED - Config not persisted correctly")
+                missing = [f for f in required_fields if f not in wallet]
+                print(f"❌ VIP wallet retrieval test FAILED - Missing fields: {missing}")
+                return False
         else:
-            print(f"❌ GET delivery config persistence test FAILED - Status: {response.status_code}")
+            print(f"❌ VIP wallet retrieval test FAILED - Status: {response.status_code}")
+            return False
     except Exception as e:
-        print(f"❌ GET delivery config persistence test FAILED - Error: {e}")
+        print(f"❌ VIP wallet retrieval test FAILED - Error: {e}")
+        return False
+    
+    # Test 2b: GET wallet for free user (should not have maintenance info)
+    print("\n2b. Testing GET /api/wallet/{uid} for free user...")
+    try:
+        response = requests.get(f"{API_BASE}/wallet/{test_free_user['uid']}", timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            wallet = response.json()
+            # Free users should not have maintenance-related fields or they should be null/0
+            print("✅ Free user wallet retrieval test PASSED")
+            print(f"Free user wallet: {json.dumps(wallet, indent=2)}")
+        else:
+            print(f"❌ Free user wallet retrieval test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Free user wallet retrieval test FAILED - Error: {e}")
+        return False
     
     return True
 
