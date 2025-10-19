@@ -456,69 +456,79 @@ def test_stock_movement_retrieval():
     
     return True
 
-def test_cashback_withdrawal_flow():
-    """Test cashback withdrawal flow"""
-    print("\n5. Testing Cashback Withdrawal Flow...")
+def test_admin_stock_movement_approval():
+    """Test admin approval flow for stock movements"""
+    print("\n6. Testing Admin Stock Movement Approval Flow...")
     
-    # First, ensure user has some cashback balance
-    print("\n5a. Adding cashback balance for withdrawal test...")
-    credit_data = {"amount": 100}
-    requests.post(f"{API_BASE}/wallet/credit-cashback/{test_vip_user['uid']}", 
-                 json=credit_data, timeout=30)
-    
-    # Test 5b: Valid cashback withdrawal
-    print("\n5b. Testing POST /api/wallet/cashback/withdraw (valid withdrawal)...")
-    withdrawal_data = {
-        "user_id": test_vip_user["uid"],
-        "amount": 20,
-        "payment_mode": "upi",
-        "upi_id": "rajesh@paytm"
-    }
-    
+    # Test 6a: Get pending stock movements
+    print("\n6a. Testing GET /api/admin/stock/movements/pending...")
     try:
-        response = requests.post(f"{API_BASE}/wallet/cashback/withdraw", 
-                               json=withdrawal_data, timeout=30)
+        response = requests.get(f"{API_BASE}/admin/stock/movements/pending", timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
         if response.status_code == 200:
             result = response.json()
-            print("✅ Cashback withdrawal test PASSED")
-            print(f"Withdrawal result: {json.dumps(result, indent=2)}")
+            movements = result.get("movements", [])
+            count = result.get("count", 0)
+            print(f"✅ Admin pending movements retrieval test PASSED")
+            print(f"Pending movements count: {count}")
             
-            # Store withdrawal ID for admin testing
-            withdrawal_id = result.get("withdrawal_id")
-            if withdrawal_id:
-                test_withdrawals.append({"id": withdrawal_id, "type": "cashback"})
+            if count > 0:
+                print(f"Found {count} pending movements for approval testing")
             
         else:
-            print(f"❌ Cashback withdrawal test FAILED - Status: {response.status_code}")
+            print(f"❌ Admin pending movements retrieval test FAILED - Status: {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ Cashback withdrawal test FAILED - Error: {e}")
+        print(f"❌ Admin pending movements retrieval test FAILED - Error: {e}")
         return False
     
-    # Test 5c: Invalid withdrawal (amount < ₹10)
-    print("\n5c. Testing minimum amount validation...")
-    invalid_withdrawal = {
-        "user_id": test_vip_user["uid"],
-        "amount": 5,  # Below minimum
-        "payment_mode": "upi",
-        "upi_id": "rajesh@paytm"
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/wallet/cashback/withdraw", 
-                               json=invalid_withdrawal, timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
+    # Test 6b: Approve a stock movement
+    if test_stock_movements:
+        movement_to_approve = test_stock_movements[0]  # Approve first movement
+        movement_id = movement_to_approve["id"]
         
-        if response.status_code == 400:
-            print("✅ Minimum amount validation test PASSED")
-        else:
-            print(f"❌ Minimum amount validation test FAILED - Expected 400, got {response.status_code}")
-    except Exception as e:
-        print(f"❌ Minimum amount validation test FAILED - Error: {e}")
+        print(f"\n6b. Testing POST /api/admin/stock/movements/{movement_id}/approve...")
+        try:
+            approve_data = {"admin_notes": "Approved for testing purposes"}
+            response = requests.post(f"{API_BASE}/admin/stock/movements/{movement_id}/approve", 
+                                   json=approve_data, timeout=30)
+            print(f"Status Code: {response.status_code}")
+            print(f"Response: {response.text}")
+            
+            if response.status_code == 200:
+                print("✅ Admin approve stock movement test PASSED")
+                movement_to_approve["status"] = "approved"
+            else:
+                print(f"❌ Admin approve stock movement test FAILED - Status: {response.status_code}")
+                return False
+        except Exception as e:
+            print(f"❌ Admin approve stock movement test FAILED - Error: {e}")
+            return False
+    
+    # Test 6c: Reject a stock movement
+    if len(test_stock_movements) > 1:
+        movement_to_reject = test_stock_movements[1]  # Reject second movement
+        movement_id = movement_to_reject["id"]
+        
+        print(f"\n6c. Testing POST /api/admin/stock/movements/{movement_id}/reject...")
+        try:
+            reject_data = {"admin_notes": "Rejected for testing purposes"}
+            response = requests.post(f"{API_BASE}/admin/stock/movements/{movement_id}/reject", 
+                                   json=reject_data, timeout=30)
+            print(f"Status Code: {response.status_code}")
+            print(f"Response: {response.text}")
+            
+            if response.status_code == 200:
+                print("✅ Admin reject stock movement test PASSED")
+                movement_to_reject["status"] = "rejected"
+            else:
+                print(f"❌ Admin reject stock movement test FAILED - Status: {response.status_code}")
+                return False
+        except Exception as e:
+            print(f"❌ Admin reject stock movement test FAILED - Error: {e}")
+            return False
     
     return True
 
