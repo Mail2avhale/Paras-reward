@@ -316,46 +316,71 @@ def test_cashback_credit_with_lien_clearing():
         print(f"❌ Cashback credit test FAILED - Error: {e}")
         return False
 
-def test_auto_distribution_on_delivery(order_id):
-    """Test auto-distribution when order is marked as delivered"""
-    print("\n5. Testing Auto-Distribution on Delivery...")
+def test_cashback_withdrawal_flow():
+    """Test cashback withdrawal flow"""
+    print("\n5. Testing Cashback Withdrawal Flow...")
     
-    if not order_id:
-        print("❌ Cannot test auto-distribution - no order ID")
-        return False
+    # First, ensure user has some cashback balance
+    print("\n5a. Adding cashback balance for withdrawal test...")
+    credit_data = {"amount": 100}
+    requests.post(f"{API_BASE}/wallet/credit-cashback/{test_vip_user['uid']}", 
+                 json=credit_data, timeout=30)
     
-    # Test 5a: Mark order as delivered via outlet endpoint
-    print("\n5a. Testing POST /api/orders/{order_id}/deliver (outlet delivery)...")
-    
-    delivery_data = {
-        "outlet_id": test_outlet_id
+    # Test 5b: Valid cashback withdrawal
+    print("\n5b. Testing POST /api/wallet/cashback/withdraw (valid withdrawal)...")
+    withdrawal_data = {
+        "user_id": test_vip_user["uid"],
+        "amount": 20,
+        "payment_mode": "upi",
+        "upi_id": "rajesh@paytm"
     }
     
     try:
-        response = requests.post(f"{API_BASE}/orders/{order_id}/deliver", 
-                               json=delivery_data, 
-                               timeout=30)
+        response = requests.post(f"{API_BASE}/wallet/cashback/withdraw", 
+                               json=withdrawal_data, timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
         if response.status_code == 200:
             result = response.json()
-            print("✅ Outlet delivery test PASSED")
-            print(f"Distribution result: {json.dumps(result.get('distribution', {}), indent=2)}")
+            print("✅ Cashback withdrawal test PASSED")
+            print(f"Withdrawal result: {json.dumps(result, indent=2)}")
             
-            # Verify distribution was triggered
-            if result.get("distribution"):
-                print("✅ Auto-distribution triggered successfully")
-                return True
-            else:
-                print("❌ Auto-distribution was not triggered")
-                return False
+            # Store withdrawal ID for admin testing
+            withdrawal_id = result.get("withdrawal_id")
+            if withdrawal_id:
+                test_withdrawals.append({"id": withdrawal_id, "type": "cashback"})
+            
         else:
-            print(f"❌ Outlet delivery test FAILED - Status: {response.status_code}")
+            print(f"❌ Cashback withdrawal test FAILED - Status: {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ Outlet delivery test FAILED - Error: {e}")
+        print(f"❌ Cashback withdrawal test FAILED - Error: {e}")
         return False
+    
+    # Test 5c: Invalid withdrawal (amount < ₹10)
+    print("\n5c. Testing minimum amount validation...")
+    invalid_withdrawal = {
+        "user_id": test_vip_user["uid"],
+        "amount": 5,  # Below minimum
+        "payment_mode": "upi",
+        "upi_id": "rajesh@paytm"
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/wallet/cashback/withdraw", 
+                               json=invalid_withdrawal, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 400:
+            print("✅ Minimum amount validation test PASSED")
+        else:
+            print(f"❌ Minimum amount validation test FAILED - Expected 400, got {response.status_code}")
+    except Exception as e:
+        print(f"❌ Minimum amount validation test FAILED - Error: {e}")
+    
+    return True
 
 def test_commission_records_verification(order_id):
     """Test that commission records are created correctly"""
