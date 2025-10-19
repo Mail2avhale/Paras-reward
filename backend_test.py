@@ -545,8 +545,10 @@ def test_admin_withdrawal_management_cashback():
             
             # Test 8c: Approve withdrawal
             print(f"\n8c. Testing POST /api/admin/withdrawals/cashback/{withdrawal_id}/approve...")
+            approve_data = {"admin_notes": "Approved for testing"}
             try:
-                response = requests.post(f"{API_BASE}/admin/withdrawals/cashback/{withdrawal_id}/approve", timeout=30)
+                response = requests.post(f"{API_BASE}/admin/withdrawals/cashback/{withdrawal_id}/approve", 
+                                       json=approve_data, timeout=30)
                 print(f"Status Code: {response.status_code}")
                 print(f"Response: {response.text}")
                 
