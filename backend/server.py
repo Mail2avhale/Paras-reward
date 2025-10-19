@@ -94,6 +94,8 @@ class User(BaseModel):
     
     # Mining
     mining_start_time: Optional[datetime] = None
+    mining_session_end: Optional[datetime] = None
+    mining_active: bool = False
     total_mined: float = 0.0
     taps_today: int = 0
     last_tap_date: Optional[str] = None
