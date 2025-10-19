@@ -326,6 +326,17 @@ async def register_user(request: Request):
     """Enhanced user registration with duplicate checks"""
     data = await request.json()
     
+    # Construct full name from first, middle, last name if provided
+    if data.get('first_name') or data.get('last_name'):
+        name_parts = []
+        if data.get('first_name'):
+            name_parts.append(data['first_name'])
+        if data.get('middle_name'):
+            name_parts.append(data['middle_name'])
+        if data.get('last_name'):
+            name_parts.append(data['last_name'])
+        data['name'] = ' '.join(name_parts)
+    
     # Check duplicates
     for field in ["email", "mobile", "aadhaar_number", "pan_number"]:
         if data.get(field):
