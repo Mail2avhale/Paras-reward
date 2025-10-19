@@ -230,52 +230,126 @@ def create_test_product():
         print(f"❌ Error creating test product: {e}")
         return False
 
-def test_wallet_balance_retrieval():
-    """Test wallet balance retrieval for VIP and free users"""
-    print("\n2. Testing Wallet Balance Retrieval...")
+def test_stock_movement_valid_flows():
+    """Test valid stock movement flows according to hierarchy"""
+    print("\n3. Testing Stock Movement System - Valid Flows...")
     
-    # Test 2a: GET wallet for VIP user
-    print("\n2a. Testing GET /api/wallet/{uid} for VIP user...")
+    # Test 3a: Company → Master (should succeed)
+    print("\n3a. Testing Company → Master stock flow...")
     try:
-        response = requests.get(f"{API_BASE}/wallet/{test_vip_user['uid']}", timeout=30)
+        movement_data = {
+            "sender_id": test_admin_user["uid"],
+            "receiver_id": test_master_user["uid"],
+            "product_id": test_product["product_id"],
+            "quantity": 100,
+            "notes": "Initial stock transfer to master stockist"
+        }
+        
+        response = requests.post(f"{API_BASE}/stock/transfer/initiate", json=movement_data, timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
         if response.status_code == 200:
-            wallet = response.json()
-            required_fields = ["cashback_balance", "profit_balance", "pending_lien", "maintenance_due", "days_until_maintenance"]
+            result = response.json()
+            movement_id = result.get("movement_id")
+            batch_number = result.get("batch_number")
+            qr_code = result.get("qr_code")
             
-            if all(field in wallet for field in required_fields):
-                print("✅ VIP wallet retrieval test PASSED")
-                print(f"Wallet data: {json.dumps(wallet, indent=2)}")
+            if movement_id and batch_number and qr_code:
+                print("✅ Company → Master stock flow test PASSED")
+                print(f"Movement ID: {movement_id}")
+                print(f"Batch Number: {batch_number}")
+                print(f"QR Code: {qr_code}")
+                test_stock_movements.append({"id": movement_id, "type": "company_to_master"})
             else:
-                missing = [f for f in required_fields if f not in wallet]
-                print(f"❌ VIP wallet retrieval test FAILED - Missing fields: {missing}")
+                print("❌ Company → Master stock flow test FAILED - Missing required fields")
                 return False
         else:
-            print(f"❌ VIP wallet retrieval test FAILED - Status: {response.status_code}")
+            print(f"❌ Company → Master stock flow test FAILED - Status: {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ VIP wallet retrieval test FAILED - Error: {e}")
+        print(f"❌ Company → Master stock flow test FAILED - Error: {e}")
         return False
     
-    # Test 2b: GET wallet for free user (should not have maintenance info)
-    print("\n2b. Testing GET /api/wallet/{uid} for free user...")
+    # Test 3b: Master → Sub (should succeed)
+    print("\n3b. Testing Master → Sub stock flow...")
     try:
-        response = requests.get(f"{API_BASE}/wallet/{test_free_user['uid']}", timeout=30)
+        movement_data = {
+            "sender_id": test_master_user["uid"],
+            "receiver_id": test_sub_user["uid"],
+            "product_id": test_product["product_id"],
+            "quantity": 50,
+            "notes": "Transfer from master to sub stockist"
+        }
+        
+        response = requests.post(f"{API_BASE}/stock/transfer/initiate", json=movement_data, timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
         if response.status_code == 200:
-            wallet = response.json()
-            # Free users should not have maintenance-related fields or they should be null/0
-            print("✅ Free user wallet retrieval test PASSED")
-            print(f"Free user wallet: {json.dumps(wallet, indent=2)}")
+            result = response.json()
+            movement_id = result.get("movement_id")
+            print("✅ Master → Sub stock flow test PASSED")
+            test_stock_movements.append({"id": movement_id, "type": "master_to_sub"})
         else:
-            print(f"❌ Free user wallet retrieval test FAILED - Status: {response.status_code}")
+            print(f"❌ Master → Sub stock flow test FAILED - Status: {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ Free user wallet retrieval test FAILED - Error: {e}")
+        print(f"❌ Master → Sub stock flow test FAILED - Error: {e}")
+        return False
+    
+    # Test 3c: Sub → Outlet (should succeed)
+    print("\n3c. Testing Sub → Outlet stock flow...")
+    try:
+        movement_data = {
+            "sender_id": test_sub_user["uid"],
+            "receiver_id": test_outlet_user["uid"],
+            "product_id": test_product["product_id"],
+            "quantity": 25,
+            "notes": "Transfer from sub stockist to outlet"
+        }
+        
+        response = requests.post(f"{API_BASE}/stock/transfer/initiate", json=movement_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            movement_id = result.get("movement_id")
+            print("✅ Sub → Outlet stock flow test PASSED")
+            test_stock_movements.append({"id": movement_id, "type": "sub_to_outlet"})
+        else:
+            print(f"❌ Sub → Outlet stock flow test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Sub → Outlet stock flow test FAILED - Error: {e}")
+        return False
+    
+    # Test 3d: Outlet → User (should succeed)
+    print("\n3d. Testing Outlet → User stock flow...")
+    try:
+        movement_data = {
+            "sender_id": test_outlet_user["uid"],
+            "receiver_id": test_regular_user["uid"],
+            "product_id": test_product["product_id"],
+            "quantity": 10,
+            "notes": "Final delivery to customer"
+        }
+        
+        response = requests.post(f"{API_BASE}/stock/transfer/initiate", json=movement_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            movement_id = result.get("movement_id")
+            print("✅ Outlet → User stock flow test PASSED")
+            test_stock_movements.append({"id": movement_id, "type": "outlet_to_user"})
+        else:
+            print(f"❌ Outlet → User stock flow test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Outlet → User stock flow test FAILED - Error: {e}")
         return False
     
     return True
