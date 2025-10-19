@@ -793,11 +793,13 @@ async def get_mining_status(uid: str):
                 {"$set": {"mining_active": False}}
             )
     
+    # Always calculate mining rate (potential rate even if not actively mining)
     rate_per_minute, base_rate, active_referrals = await calculate_mining_rate(uid)
+    mining_rate_per_hour = rate_per_minute * 60
     
     return {
         "current_balance": user.get("prc_balance", 0),
-        "mining_rate_per_hour": rate_per_minute * 60 if session_active else 0,
+        "mining_rate": mining_rate_per_hour,  # Always show potential rate
         "base_rate": base_rate,
         "active_referrals": active_referrals,
         "total_mined": user.get("total_mined", 0),
@@ -805,7 +807,8 @@ async def get_mining_status(uid: str):
         "remaining_hours": round(remaining_hours, 2) if session_active else 0,
         "session_start": session_start,
         "session_end": session_end,
-        "mined_this_session": round(mined_this_session, 2)
+        "mined_this_session": round(mined_this_session, 2),
+        "is_mining": session_active
     }
 
 @api_router.post("/mining/claim/{uid}")
