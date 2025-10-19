@@ -190,6 +190,97 @@ def test_duplicate_detection(existing_user_data):
     except requests.exceptions.RequestException as e:
         print(f"❌ Duplicate PAN test FAILED - Network error: {e}")
 
+def test_name_auto_construction():
+    """Test 'name' field auto-construction from first_name + middle_name + last_name"""
+    print("\n3. Testing name auto-construction...")
+    
+    # Test 3a: first_name + last_name only
+    print("\n3a. Testing first_name + last_name combination...")
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    first_last_data = {
+        "first_name": "Anita",
+        "last_name": "Desai",
+        "email": f"anita.desai.{timestamp}@example.com",
+        "mobile": f"9111111{datetime.now().strftime('%H%M')}",
+        "password": "FirstLast123!",
+        "state": "Karnataka",
+        "district": "Bangalore",
+        "pincode": "560001",
+        "aadhaar_number": f"1111{datetime.now().strftime('%H%M')}1111111",
+        "pan_number": f"FIRST{datetime.now().strftime('%H%M')}L"
+    }
+    
+    try:
+        response = requests.post(REGISTER_URL, json=first_last_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            print("✅ First + Last name construction test PASSED")
+        else:
+            print(f"❌ First + Last name construction test FAILED - Status: {response.status_code}")
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ First + Last name test FAILED - Network error: {e}")
+
+    # Test 3b: first_name + middle_name + last_name
+    print("\n3b. Testing first_name + middle_name + last_name combination...")
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    full_name_data = {
+        "first_name": "Ravi",
+        "middle_name": "Kumar",
+        "last_name": "Sharma",
+        "email": f"ravi.kumar.sharma.{timestamp}@example.com",
+        "mobile": f"9222222{datetime.now().strftime('%H%M')}",
+        "password": "FullName123!",
+        "state": "Haryana",
+        "district": "Gurgaon",
+        "pincode": "122001",
+        "aadhaar_number": f"2222{datetime.now().strftime('%H%M')}2222222",
+        "pan_number": f"FULLM{datetime.now().strftime('%H%M')}N"
+    }
+    
+    try:
+        response = requests.post(REGISTER_URL, json=full_name_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            print("✅ Full name (first + middle + last) construction test PASSED")
+        else:
+            print(f"❌ Full name construction test FAILED - Status: {response.status_code}")
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Full name test FAILED - Network error: {e}")
+
+    # Test 3c: Only first_name
+    print("\n3c. Testing only first_name...")
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    first_only_data = {
+        "first_name": "Pradeep",
+        "email": f"pradeep.{timestamp}@example.com",
+        "mobile": f"9333333{datetime.now().strftime('%H%M')}",
+        "password": "FirstOnly123!",
+        "state": "Kerala",
+        "district": "Kochi",
+        "pincode": "682001",
+        "aadhaar_number": f"3333{datetime.now().strftime('%H%M')}3333333",
+        "pan_number": f"FIRSO{datetime.now().strftime('%H%M')}Y"
+    }
+    
+    try:
+        response = requests.post(REGISTER_URL, json=first_only_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            print("✅ First name only construction test PASSED")
+        else:
+            print(f"❌ First name only construction test FAILED - Status: {response.status_code}")
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ First name only test FAILED - Network error: {e}")
+
 def test_missing_fields():
     """Test registration with missing required fields"""
     print("\n3. Testing missing required fields...")
