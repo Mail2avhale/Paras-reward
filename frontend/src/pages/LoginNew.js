@@ -143,6 +143,12 @@ const LoginNew = ({ onLogin }) => {
             </div>
           </div>
 
+          <div className="text-right">
+            <Link to="/forgot-password" className="text-sm text-purple-600 hover:text-purple-700 font-medium">
+              Forgot Password?
+            </Link>
+          </div>
+
           <Button
             data-testid="login-submit-btn"
             type="submit"
