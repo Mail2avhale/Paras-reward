@@ -288,9 +288,6 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Cashback Wallet & Maintenance"
-    - "Profit Wallet & Withdrawals"
-    - "Admin Withdrawal Management"
     - "Enhanced Wallet Page"
   stuck_tasks: []
   test_all: false
