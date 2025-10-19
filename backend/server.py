@@ -25,6 +25,18 @@ db = client[os.environ['DB_NAME']]
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+def hash_password(password: str) -> str:
+    """Hash a password"""
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password"""
+    return pwd_context.verify(plain_password, hashed_password)
+
+def generate_reset_token() -> str:
+    """Generate password reset token"""
+    return ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(32))
+
 # Create the main app
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
