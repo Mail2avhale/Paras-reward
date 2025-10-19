@@ -285,6 +285,21 @@ backend:
         agent: "testing"
         comment: "MINING SYSTEM FIX TESTING COMPLETE - ALL CRITICAL FUNCTIONALITY VERIFIED: ✅ Mining Status Endpoint (GET /api/mining/status/{uid}) works correctly for both active and inactive mining sessions. ✅ All required fields present: mining_rate_per_hour, mining_rate (new field), base_rate, active_referrals, is_mining. ✅ Mining rate is NEVER zero - verified for all test scenarios (current rate: 39.58 per hour based on day 19 * base rate 50 / 1440 minutes * 60). ✅ Mining rate calculation formula verified: (current_day * base_rate) + (active_referrals * 0.1 * base_rate) / 1440 * 60 = correct per-hour rate. ✅ Both mining_rate and mining_rate_per_hour fields return identical values for backward compatibility. ✅ Active mining sessions show is_mining=true, session_active=true with session details. ✅ Inactive sessions show is_mining=false but still display potential mining rate (non-zero). ✅ Base rate is positive (50), active referrals counted correctly (0 for new users). Mining system fix is working perfectly - rate displays correctly and is never zero."
 
+  - task: "Mining Session Status Bug - Frontend Shows Mining Paused"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported mining session issue: frontend shows 'Mining Paused' despite user starting mining session"
+      - working: true
+        agent: "testing"
+        comment: "CRITICAL BUG FOUND AND FIXED: ✅ Root cause identified: Backend mining status logic required both mining_start_time AND mining_active=True, but old mining sessions had mining_active=None (backward compatibility issue). ✅ Fixed line 771 in server.py to handle mining_active=None as valid for old sessions. ✅ Tested all 6 users with mining data - all now show session_active=True correctly. ✅ Verified session timing calculations work properly (19+ hours remaining for active sessions). ✅ Frontend logic confirmed correct - checks session_active field to display 'Mining Active' vs 'Mining Paused'. ✅ All mining sessions now working: Santosh (19.06h remaining), Admin User (23.98h), Pramod (23.98h), Santosh Shamrao (21.54h), and test users. Bug completely resolved - users will now see 'Mining Active' when they have valid sessions."
+
 frontend:
   - task: "User Registration Form"
     implemented: true
