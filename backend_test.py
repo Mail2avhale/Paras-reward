@@ -106,8 +106,7 @@ def test_duplicate_detection(existing_user_data):
     # Test duplicate mobile
     print("\n2b. Testing duplicate mobile...")
     duplicate_mobile_data = {
-        "first_name": "Amit",
-        "last_name": "Patel",
+        "name": "Amit Patel",
         "email": f"amit.patel.{datetime.now().strftime('%Y%m%d%H%M%S')}@example.com",
         "mobile": existing_user_data["mobile"],  # Same mobile
         "password": "YetAnotherPass123!",
