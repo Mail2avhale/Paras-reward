@@ -49,6 +49,9 @@ class User(BaseModel):
     name: str
     profile_picture: Optional[str] = None
     role: str = "user"  # user, admin, master_stockist, sub_stockist, outlet
+    password_hash: Optional[str] = None
+    reset_token: Optional[str] = None
+    reset_token_expiry: Optional[datetime] = None
     membership_type: str = "free"  # free, vip
     membership_expiry: Optional[datetime] = None
     prc_balance: float = 0.0
