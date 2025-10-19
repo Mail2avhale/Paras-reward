@@ -221,11 +221,12 @@ def create_test_product():
     }
     
     try:
-        response = requests.post(f"{API_BASE}/products", json=product_data, timeout=30)
+        response = requests.post(f"{API_BASE}/admin/products", json=product_data, timeout=30)
         if response.status_code == 200:
-            product = response.json()
-            test_product = product
-            print(f"✅ Test product created: {product.get('product_id')}")
+            result = response.json()
+            product_id = result.get('product_id')
+            test_product = {"product_id": product_id, **product_data}
+            print(f"✅ Test product created: {product_id}")
             return True
         else:
             print(f"❌ Failed to create test product: {response.status_code} - {response.text}")
