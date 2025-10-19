@@ -152,15 +152,18 @@ backend:
 
   - task: "Delivery Charge Configuration"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented GET /api/admin/delivery-config and POST /api/admin/delivery-config endpoints. Admin can configure delivery_charge_rate (0-1) and distribution_split (master/sub/outlet/company percentages must sum to 100%). Configuration stored in system_config collection with config_type='delivery'. Fixed bug in checkout where it was looking for 'percentage' field instead of 'delivery_charge_rate'."
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE TESTING COMPLETE - ALL FUNCTIONALITY WORKING: ✅ GET /api/admin/delivery-config returns correct default config (rate=0.1, split=master:10/sub:20/outlet:60/company:10). ✅ POST /api/admin/delivery-config accepts valid configurations and persists correctly. ✅ Validation works perfectly: rejects invalid total percentages (!=100%) with proper error message. ✅ Validation rejects invalid rates (<0 or >1) with proper error message. ✅ Configuration persistence verified - saved config retrieved correctly after updates. All delivery configuration management endpoints working flawlessly."
 
   - task: "Delivery Charge Auto-Distribution"
     implemented: true
