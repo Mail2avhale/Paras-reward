@@ -1166,44 +1166,312 @@ async def deliver_order(order_id: str, request: Request):
 # ========== WALLET ROUTES ==========
 @api_router.get("/wallet/{uid}")
 async def get_wallet(uid: str):
-    """Get wallet balance"""
+    """Get wallet balance and status"""
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if maintenance is due (30 days after VIP activation)
+    maintenance_due = False
+    days_until_maintenance = None
+    
+    if user.get("vip_activation_date") and user.get("membership_type") == "vip":
+        vip_activation = user["vip_activation_date"]
+        if isinstance(vip_activation, str):
+            vip_activation = datetime.fromisoformat(vip_activation)
+        
+        last_maintenance = user.get("last_wallet_maintenance")
+        if last_maintenance:
+            if isinstance(last_maintenance, str):
+                last_maintenance = datetime.fromisoformat(last_maintenance)
+            next_maintenance = last_maintenance + timedelta(days=30)
+        else:
+            next_maintenance = vip_activation + timedelta(days=30)
+        
+        now = datetime.now(timezone.utc)
+        if now >= next_maintenance:
+            maintenance_due = True
+            days_until_maintenance = 0
+        else:
+            days_until_maintenance = (next_maintenance - now).days
     
     return {
-        "balance": user.get("cash_wallet_balance", 0),
-        "status": user.get("wallet_status", "active"),
-        "last_maintenance": user.get("last_wallet_maintenance")
+        "cashback_balance": user.get("cashback_wallet_balance", 0),
+        "profit_balance": user.get("profit_wallet_balance", 0),
+        "prc_balance": user.get("prc_balance", 0),
+        "wallet_status": user.get("wallet_status", "active"),
+        "pending_lien": user.get("wallet_maintenance_due", 0),
+        "last_maintenance": user.get("last_wallet_maintenance"),
+        "maintenance_due": maintenance_due,
+        "days_until_maintenance": days_until_maintenance,
+        "maintenance_fee": 99.0
     }
 
-@api_router.post("/wallet/{uid}/withdraw")
-async def withdraw_wallet(uid: str, withdrawal: WalletWithdrawal):
-    """Withdraw from wallet"""
+@api_router.post("/wallet/check-maintenance/{uid}")
+async def check_and_apply_maintenance(uid: str):
+    """Check and apply monthly maintenance fee (₹99) - called when adding cashback"""
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    if user.get("kyc_status") != "verified":
-        raise HTTPException(status_code=403, detail="KYC verification required")
+    # Only for VIP users
+    if user.get("membership_type") != "vip":
+        return {"maintenance_applied": False, "message": "Not a VIP user"}
     
-    if user.get("wallet_status") != "active":
-        raise HTTPException(status_code=403, detail="Wallet is frozen")
+    vip_activation = user.get("vip_activation_date")
+    if not vip_activation:
+        return {"maintenance_applied": False, "message": "VIP activation date not set"}
     
-    if withdrawal.amount < 100:
-        raise HTTPException(status_code=400, detail="Minimum withdrawal amount is ₹100")
+    if isinstance(vip_activation, str):
+        vip_activation = datetime.fromisoformat(vip_activation)
     
-    balance = user.get("cash_wallet_balance", 0)
-    if balance < withdrawal.amount + 5:  # +5 for fee
-        raise HTTPException(status_code=400, detail="Insufficient balance")
+    last_maintenance = user.get("last_wallet_maintenance")
+    if last_maintenance:
+        if isinstance(last_maintenance, str):
+            last_maintenance = datetime.fromisoformat(last_maintenance)
+        next_maintenance_due = last_maintenance + timedelta(days=30)
+    else:
+        next_maintenance_due = vip_activation + timedelta(days=30)
     
-    # Deduct amount + fee
+    now = datetime.now(timezone.utc)
+    
+    # Check if 30 days have passed
+    if now >= next_maintenance_due:
+        pending_lien = user.get("wallet_maintenance_due", 0)
+        new_lien = pending_lien + 99.0
+        
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {
+                "wallet_maintenance_due": new_lien,
+                "last_wallet_maintenance": now.isoformat(),
+                "wallet_status": "lien_pending" if new_lien > 0 else "active"
+            }}
+        )
+        
+        return {
+            "maintenance_applied": True,
+            "amount": 99.0,
+            "total_lien": new_lien,
+            "message": f"₹99 maintenance fee applied. Total pending lien: ₹{new_lien}"
+        }
+    
+    return {"maintenance_applied": False, "message": "Maintenance not yet due"}
+
+@api_router.post("/wallet/credit-cashback/{uid}")
+async def credit_cashback(uid: str, request: Request):
+    """Credit cashback to wallet (clears lien first)"""
+    data = await request.json()
+    amount = data.get("amount", 0)
+    
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Invalid amount")
+    
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    current_balance = user.get("cashback_wallet_balance", 0)
+    pending_lien = user.get("wallet_maintenance_due", 0)
+    
+    # Clear lien first
+    if pending_lien > 0:
+        if amount >= pending_lien:
+            # Clear all lien
+            remaining_amount = amount - pending_lien
+            new_balance = current_balance + remaining_amount
+            new_lien = 0
+            wallet_status = "active"
+            message = f"₹{amount} credited. ₹{pending_lien} used to clear lien. ₹{remaining_amount} added to balance."
+        else:
+            # Partial lien clearing
+            new_balance = current_balance
+            new_lien = pending_lien - amount
+            wallet_status = "lien_pending"
+            message = f"₹{amount} used to partially clear lien. Remaining lien: ₹{new_lien}"
+    else:
+        # No lien, add directly to balance
+        new_balance = current_balance + amount
+        new_lien = 0
+        wallet_status = "active"
+        message = f"₹{amount} credited to cashback wallet"
+    
     await db.users.update_one(
         {"uid": uid},
-        {"$inc": {"cash_wallet_balance": -(withdrawal.amount + 5)}}
+        {"$set": {
+            "cashback_wallet_balance": new_balance,
+            "wallet_maintenance_due": new_lien,
+            "wallet_status": wallet_status
+        }}
     )
     
-    return {"message": "Withdrawal processed", "amount": withdrawal.amount, "fee": 5}
+    return {
+        "message": message,
+        "credited_amount": amount,
+        "lien_cleared": pending_lien - new_lien if pending_lien > 0 else 0,
+        "new_balance": new_balance,
+        "remaining_lien": new_lien
+    }
+
+@api_router.post("/wallet/cashback/withdraw")
+async def request_cashback_withdrawal(request: Request):
+    """Request cashback wallet withdrawal"""
+    data = await request.json()
+    user_id = data.get("user_id")
+    amount = data.get("amount", 0)
+    payment_mode = data.get("payment_mode", "upi")
+    upi_id = data.get("upi_id")
+    bank_account = data.get("bank_account")
+    ifsc_code = data.get("ifsc_code")
+    
+    # Validate
+    if amount < 10:
+        raise HTTPException(status_code=400, detail="Minimum withdrawal amount is ₹10")
+    
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check KYC
+    if user.get("kyc_status") != "approved":
+        raise HTTPException(status_code=403, detail="KYC verification required for withdrawals")
+    
+    # Check balance (amount + fee)
+    cashback_balance = user.get("cashback_wallet_balance", 0)
+    total_required = amount + 5  # ₹5 fee
+    
+    if cashback_balance < total_required:
+        raise HTTPException(status_code=400, detail=f"Insufficient balance. Required: ₹{total_required} (including ₹5 fee)")
+    
+    # Check if there's pending lien
+    pending_lien = user.get("wallet_maintenance_due", 0)
+    if pending_lien > 0:
+        raise HTTPException(status_code=400, detail=f"Cannot withdraw. Pending maintenance lien: ₹{pending_lien}")
+    
+    # Create withdrawal request
+    withdrawal = {
+        "withdrawal_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
+        "wallet_type": "cashback",
+        "amount": amount,
+        "fee": 5.0,
+        "net_amount": amount - 5,
+        "payment_mode": payment_mode,
+        "upi_id": upi_id,
+        "bank_account": bank_account,
+        "ifsc_code": ifsc_code,
+        "status": "pending",
+        "utr_number": None,
+        "admin_notes": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "processed_at": None
+    }
+    
+    # Deduct from balance immediately (hold)
+    await db.users.update_one(
+        {"uid": user_id},
+        {"$inc": {"cashback_wallet_balance": -total_required}}
+    )
+    
+    # Insert withdrawal request
+    await db.cashback_withdrawals.insert_one(withdrawal)
+    
+    return {
+        "message": "Withdrawal request submitted successfully",
+        "withdrawal_id": withdrawal["withdrawal_id"],
+        "amount": amount,
+        "fee": 5.0,
+        "net_amount": amount - 5,
+        "status": "pending"
+    }
+
+@api_router.post("/wallet/profit/withdraw")
+async def request_profit_withdrawal(request: Request):
+    """Request profit wallet withdrawal (for stockists/outlets)"""
+    data = await request.json()
+    user_id = data.get("user_id")
+    amount = data.get("amount", 0)
+    payment_mode = data.get("payment_mode", "upi")
+    upi_id = data.get("upi_id")
+    bank_account = data.get("bank_account")
+    ifsc_code = data.get("ifsc_code")
+    
+    # Validate
+    if amount < 50:
+        raise HTTPException(status_code=400, detail="Minimum withdrawal amount is ₹50")
+    
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check role
+    if user.get("role") not in ["master_stockist", "sub_stockist", "outlet"]:
+        raise HTTPException(status_code=403, detail="Only stockists and outlets can withdraw from profit wallet")
+    
+    # Check balance (amount + fee)
+    profit_balance = user.get("profit_wallet_balance", 0)
+    total_required = amount + 5  # ₹5 fee
+    
+    if profit_balance < total_required:
+        raise HTTPException(status_code=400, detail=f"Insufficient balance. Required: ₹{total_required} (including ₹5 fee)")
+    
+    # Create withdrawal request
+    withdrawal = {
+        "withdrawal_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
+        "entity_type": user.get("role"),
+        "wallet_type": "profit",
+        "amount": amount,
+        "fee": 5.0,
+        "net_amount": amount - 5,
+        "payment_mode": payment_mode,
+        "upi_id": upi_id,
+        "bank_account": bank_account,
+        "ifsc_code": ifsc_code,
+        "status": "pending",
+        "utr_number": None,
+        "admin_notes": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "processed_at": None
+    }
+    
+    # Deduct from balance immediately (hold)
+    await db.users.update_one(
+        {"uid": user_id},
+        {"$inc": {"profit_wallet_balance": -total_required}}
+    )
+    
+    # Insert withdrawal request
+    await db.profit_withdrawals.insert_one(withdrawal)
+    
+    return {
+        "message": "Withdrawal request submitted successfully",
+        "withdrawal_id": withdrawal["withdrawal_id"],
+        "amount": amount,
+        "fee": 5.0,
+        "net_amount": amount - 5,
+        "status": "pending"
+    }
+
+@api_router.get("/wallet/withdrawals/{uid}")
+async def get_user_withdrawals(uid: str):
+    """Get user's withdrawal history"""
+    cashback_withdrawals = await db.cashback_withdrawals.find(
+        {"user_id": uid},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    profit_withdrawals = await db.profit_withdrawals.find(
+        {"user_id": uid},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    return {
+        "cashback_withdrawals": cashback_withdrawals,
+        "profit_withdrawals": profit_withdrawals
+    }
 
 # ========== LEADERBOARD ROUTES ==========
 @api_router.get("/leaderboard", response_model=List[LeaderboardEntry])
