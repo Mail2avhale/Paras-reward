@@ -131,15 +131,18 @@ backend:
 
   - task: "User Login Endpoint"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Login endpoint exists, needs testing after registration fix"
+      - working: true
+        agent: "testing"
+        comment: "Login endpoint works correctly. Tested with existing user credentials. Accepts query parameters (identifier, password) and returns complete user object. No issues found."
 
 frontend:
   - task: "User Registration Form"
