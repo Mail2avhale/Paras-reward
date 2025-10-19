@@ -125,6 +125,9 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "Backend logs show no errors on startup. Function check_unique_fields is defined at line 234. Need to test actual registration flow to identify issue."
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL ISSUES FOUND: 1) Frontend sends first_name/last_name but backend expects 'name' field - causes 500 error. 2) User model missing required fields: mobile, state, district, pincode, aadhaar_number, pan_number, etc. These fields are silently ignored due to extra='ignore'. 3) Duplicate detection only works for email, not mobile/aadhaar/pan because these fields aren't stored. 4) Registration works with 'name' field but frontend likely sends first_name/last_name."
 
   - task: "User Login Endpoint"
     implemented: true
