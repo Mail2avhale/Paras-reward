@@ -1078,8 +1078,8 @@ async def create_order(uid: str, order_data: OrderCreate):
     delivery_fee = prc_price * 0.10
     total_cash_fee = transaction_fee + delivery_fee
     
-    # Create order
-    order = Order(
+    # Create order (using legacy single product model)
+    order = OrderSingleProduct(
         user_id=uid,
         product_id=product["product_id"],
         product_name=product["name"],
