@@ -72,7 +72,7 @@ def setup_test_users():
             print(f"✅ VIP user created: {vip_uid}")
             
             # Make user VIP and approve KYC
-            await make_user_vip_with_kyc(vip_uid)
+            make_user_vip_with_kyc(vip_uid)
             
         else:
             print(f"❌ Failed to create VIP user: {response.status_code} - {response.text}")
