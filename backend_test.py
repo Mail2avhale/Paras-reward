@@ -399,40 +399,79 @@ def test_commission_records_verification(order_id):
         print(f"❌ Commission verification failed - Error: {e}")
         return False
 
-def test_edge_cases():
-    """Test edge cases"""
-    print("\n6. Testing edge cases...")
+def test_admin_delivery_verification():
+    """Test admin delivery verification endpoint"""
+    print("\n7. Testing Admin Delivery Verification...")
     
-    # Test empty JSON
-    print("\n6a. Testing empty JSON...")
+    # Create another order for admin verification testing
+    product_id = create_test_product()
+    if not product_id:
+        print("❌ Cannot test admin verification - failed to create product")
+        return False
+    
+    # Create another order
+    checkout_data = {
+        "items": [
+            {
+                "product_id": product_id,
+                "quantity": 1,
+                "prc_price": 100.0,
+                "cash_price": 50.0
+            }
+        ],
+        "total_prc": 100.0,
+        "total_cash": 50.0
+    }
+    
     try:
-        response = requests.post(REGISTER_URL, json={}, timeout=30)
+        response = requests.post(f"{API_BASE}/orders/checkout", 
+                               json=checkout_data, 
+                               params={"user_id": test_vip_user["uid"]}, 
+                               timeout=30)
+        
+        if response.status_code != 200:
+            print(f"❌ Failed to create order for admin test: {response.status_code}")
+            return False
+        
+        order_data = response.json()
+        order_id = order_data.get("order_id")
+        secret_code = order_data.get("secret_code")
+        
+        print(f"Created order for admin test: {order_id}")
+        print(f"Secret code: {secret_code}")
+        
+        # Test admin verify and deliver
+        print("\n7a. Testing POST /api/admin/orders/verify-and-deliver...")
+        
+        admin_delivery_data = {
+            "secret_code": secret_code,
+            "outlet_id": test_outlet_id
+        }
+        
+        response = requests.post(f"{API_BASE}/admin/orders/verify-and-deliver", 
+                               json=admin_delivery_data, 
+                               timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
-        if response.status_code in [400, 422]:
-            print("✅ Empty JSON test PASSED")
-        else:
-            print(f"❌ Empty JSON test - Expected 400/422, got {response.status_code}")
+        if response.status_code == 200:
+            result = response.json()
+            print("✅ Admin delivery verification test PASSED")
             
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Empty JSON test FAILED - Network error: {e}")
-
-    # Test malformed JSON
-    print("\n6b. Testing malformed JSON...")
-    try:
-        response = requests.post(REGISTER_URL, data="invalid json", 
-                               headers={'Content-Type': 'application/json'}, timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code in [400, 422]:
-            print("✅ Malformed JSON test PASSED")
+            # Check if auto-distribution was triggered
+            if result.get("distribution"):
+                print("✅ Auto-distribution triggered via admin endpoint")
+                return True
+            else:
+                print("❌ Auto-distribution was not triggered via admin endpoint")
+                return False
         else:
-            print(f"❌ Malformed JSON test - Expected 400/422, got {response.status_code}")
+            print(f"❌ Admin delivery verification test FAILED - Status: {response.status_code}")
+            return False
             
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Malformed JSON test FAILED - Network error: {e}")
+    except Exception as e:
+        print(f"❌ Admin delivery verification test FAILED - Error: {e}")
+        return False
 
 def test_user_data_retrieval(uid):
     """Test if user data is properly stored and retrievable"""
