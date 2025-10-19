@@ -39,46 +39,74 @@ test_vip_user = None
 test_order = None
 test_outlet_id = "outlet_123"
 
-def test_registration_endpoint():
-    """Test user registration endpoint with FRONTEND FORMAT"""
+def setup_test_users():
+    """Create test users for delivery charge testing"""
+    global test_admin_user, test_vip_user
     
-    # Test 1: Valid registration with FRONTEND FORMAT (first_name, last_name, email, mobile, password, state, district, pincode, aadhaar_number, pan_number)
-    print("\n1. Testing valid registration with FRONTEND FORMAT...")
+    print("\n1. Setting up test users...")
     
+    # Create admin user
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    valid_user_data = {
-        "first_name": "Rajesh",
-        "last_name": "Singh", 
-        "email": f"rajesh.singh.{timestamp}@example.com",
+    admin_data = {
+        "first_name": "Admin",
+        "last_name": "User",
+        "email": f"admin.{timestamp}@example.com",
         "mobile": f"9876543{datetime.now().strftime('%H%M')}",
-        "password": "SecurePass123!",
+        "password": "AdminPass123!",
         "state": "Maharashtra",
         "district": "Mumbai",
         "pincode": "400001",
-        "aadhaar_number": f"1234{datetime.now().strftime('%H%M')}5678901",
-        "pan_number": f"ABCDE{datetime.now().strftime('%H%M')}F"
+        "aadhaar_number": f"1111{datetime.now().strftime('%H%M')}1111111",
+        "pan_number": f"ADMIN{datetime.now().strftime('%H%M')}A",
+        "role": "admin"
     }
     
     try:
-        response = requests.post(REGISTER_URL, json=valid_user_data, timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
+        response = requests.post(f"{API_BASE}/auth/register", json=admin_data, timeout=30)
         if response.status_code == 200:
-            response_data = response.json()
-            if "uid" in response_data:
-                print("✅ Valid registration test PASSED - UID returned")
-                return True, valid_user_data, response_data.get("uid")
-            else:
-                print("❌ Valid registration test FAILED - No UID in response")
-                return False, valid_user_data, None
+            admin_uid = response.json().get("uid")
+            # Promote to admin
+            requests.post(f"{API_BASE}/admin/promote", params={"email": admin_data["email"], "role": "admin"}, timeout=30)
+            test_admin_user = {"uid": admin_uid, **admin_data}
+            print(f"✅ Admin user created: {admin_uid}")
         else:
-            print(f"❌ Valid registration test FAILED - Expected 200, got {response.status_code}")
-            return False, valid_user_data, None
-            
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Valid registration test FAILED - Network error: {e}")
-        return False, valid_user_data, None
+            print(f"❌ Failed to create admin user: {response.status_code} - {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Error creating admin user: {e}")
+        return False
+    
+    # Create VIP user
+    vip_data = {
+        "first_name": "VIP",
+        "last_name": "Customer",
+        "email": f"vip.{timestamp}@example.com",
+        "mobile": f"9876544{datetime.now().strftime('%H%M')}",
+        "password": "VIPPass123!",
+        "state": "Gujarat",
+        "district": "Ahmedabad",
+        "pincode": "380001",
+        "aadhaar_number": f"2222{datetime.now().strftime('%H%M')}2222222",
+        "pan_number": f"VIPUS{datetime.now().strftime('%H%M')}V",
+        "membership_type": "vip",
+        "kyc_status": "verified",
+        "prc_balance": 1000.0  # Sufficient balance for orders
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/auth/register", json=vip_data, timeout=30)
+        if response.status_code == 200:
+            vip_uid = response.json().get("uid")
+            test_vip_user = {"uid": vip_uid, **vip_data}
+            print(f"✅ VIP user created: {vip_uid}")
+        else:
+            print(f"❌ Failed to create VIP user: {response.status_code} - {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Error creating VIP user: {e}")
+        return False
+    
+    return True
 
 def test_duplicate_detection(existing_user_data):
     """Test duplicate field detection for email, mobile, aadhaar_number, pan_number"""
