@@ -3477,6 +3477,505 @@ async def check_overdue_renewals():
         "suspended_count": suspended_count
     }
 
+# ========== COMPREHENSIVE ADMIN DASHBOARD APIS ==========
+
+@api_router.get("/admin/dashboard/kpis")
+async def get_admin_kpis(request: Request):
+    """Get comprehensive KPIs for admin dashboard"""
+    # Verify admin access
+    admin_uid = request.headers.get("X-User-ID")
+    if admin_uid:
+        await verify_admin(admin_uid)
+    
+    # Total users
+    total_users = await db.users.count_documents({})
+    active_users = await db.users.count_documents({"is_active": True})
+    
+    # VIP count
+    vip_count = await db.users.count_documents({"membership_type": "vip"})
+    
+    # Active miners (users with active mining sessions)
+    active_miners = await db.users.count_documents({"mining_active": True})
+    
+    # PRC stats
+    all_users = await db.users.find({}, {"prc_balance": 1, "total_mined": 1}).to_list(10000)
+    total_prc_issued = sum(user.get("total_mined", 0) for user in all_users)
+    total_prc_balance = sum(user.get("prc_balance", 0) for user in all_users)
+    total_prc_redeemed = total_prc_issued - total_prc_balance
+    
+    # Cashback stats
+    all_cashback = await db.users.find({}, {"cashback_wallet_balance": 1}).to_list(10000)
+    total_cashback = sum(user.get("cashback_wallet_balance", 0) for user in all_cashback)
+    
+    # Pending withdrawals
+    pending_cashback_withdrawals = await db.cashback_withdrawals.count_documents({"status": "pending"})
+    pending_profit_withdrawals = await db.profit_withdrawals.count_documents({"status": "pending"})
+    
+    # Pending orders
+    pending_orders = await db.orders.count_documents({"status": "pending"})
+    
+    # Total membership fees collected
+    total_vip_payments = await db.vip_payments.count_documents({"status": "approved"})
+    total_membership_fees = total_vip_payments * 1000  # ₹1000 per VIP
+    
+    # Security deposits
+    approved_deposits = await db.security_deposits.find({"status": "approved"}).to_list(1000)
+    total_security_deposits = sum(d.get("amount", 0) for d in approved_deposits)
+    
+    # Annual renewals
+    approved_renewals = await db.annual_renewals.count_documents({"status": "approved"})
+    
+    # Stockist counts
+    master_count = await db.users.count_documents({"role": "master_stockist"})
+    sub_count = await db.users.count_documents({"role": "sub_stockist"})
+    outlet_count = await db.users.count_documents({"role": "outlet"})
+    
+    return {
+        "users": {
+            "total": total_users,
+            "active": active_users,
+            "vip": vip_count,
+            "master_stockists": master_count,
+            "sub_stockists": sub_count,
+            "outlets": outlet_count
+        },
+        "mining": {
+            "active_miners": active_miners,
+            "total_prc_issued": round(total_prc_issued, 2),
+            "total_prc_redeemed": round(total_prc_redeemed, 2),
+            "total_prc_balance": round(total_prc_balance, 2)
+        },
+        "financial": {
+            "total_cashback": round(total_cashback, 2),
+            "pending_cashback_withdrawals": pending_cashback_withdrawals,
+            "pending_profit_withdrawals": pending_profit_withdrawals,
+            "total_membership_fees": total_membership_fees,
+            "total_security_deposits": total_security_deposits,
+            "approved_renewals": approved_renewals
+        },
+        "orders": {
+            "pending": pending_orders,
+            "total": await db.orders.count_documents({})
+        }
+    }
+
+@api_router.get("/admin/dashboard/growth")
+async def get_growth_metrics(period: str = "daily"):
+    """Get growth metrics (daily/monthly)"""
+    now = datetime.now(timezone.utc)
+    
+    if period == "daily":
+        # Last 30 days
+        days = 30
+        date_format = "%Y-%m-%d"
+    else:
+        # Last 12 months
+        days = 365
+        date_format = "%Y-%m"
+    
+    start_date = now - timedelta(days=days)
+    
+    # Get user registrations by date
+    users = await db.users.find(
+        {"created_at": {"$gte": start_date.isoformat()}},
+        {"created_at": 1}
+    ).to_list(10000)
+    
+    # Group by date
+    registration_data = {}
+    for user in users:
+        created_at = user.get("created_at")
+        if isinstance(created_at, str):
+            created_at = datetime.fromisoformat(created_at)
+        date_key = created_at.strftime(date_format)
+        registration_data[date_key] = registration_data.get(date_key, 0) + 1
+    
+    # Get orders by date
+    orders = await db.orders.find(
+        {"created_at": {"$gte": start_date.isoformat()}},
+        {"created_at": 1, "total_cash": 1}
+    ).to_list(10000)
+    
+    order_data = {}
+    revenue_data = {}
+    for order in orders:
+        created_at = order.get("created_at")
+        if isinstance(created_at, str):
+            created_at = datetime.fromisoformat(created_at)
+        date_key = created_at.strftime(date_format)
+        order_data[date_key] = order_data.get(date_key, 0) + 1
+        revenue_data[date_key] = revenue_data.get(date_key, 0) + order.get("total_cash", 0)
+    
+    return {
+        "period": period,
+        "registrations": registration_data,
+        "orders": order_data,
+        "revenue": revenue_data
+    }
+
+@api_router.post("/admin/users/{uid}/freeze")
+async def freeze_user_account(uid: str, request: Request):
+    """Freeze user account (admin only)"""
+    data = await request.json()
+    admin_uid = data.get("admin_uid")
+    reason = data.get("reason", "Frozen by admin")
+    
+    await verify_admin(admin_uid)
+    
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": {
+            "is_active": False,
+            "freeze_reason": reason,
+            "frozen_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "User account frozen", "uid": uid}
+
+@api_router.post("/admin/users/{uid}/unfreeze")
+async def unfreeze_user_account(uid: str, request: Request):
+    """Unfreeze user account (admin only)"""
+    data = await request.json()
+    admin_uid = data.get("admin_uid")
+    
+    await verify_admin(admin_uid)
+    
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": {
+            "is_active": True,
+            "freeze_reason": None,
+            "unfrozen_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "User account unfrozen", "uid": uid}
+
+@api_router.post("/admin/users/{uid}/adjust-wallet")
+async def adjust_user_wallet(uid: str, request: Request):
+    """Manually adjust user wallet balance (admin only)"""
+    data = await request.json()
+    admin_uid = data.get("admin_uid")
+    wallet_type = data.get("wallet_type")  # cashback, profit, prc
+    adjustment_amount = data.get("amount", 0)
+    reason = data.get("reason", "Manual adjustment by admin")
+    
+    await verify_admin(admin_uid)
+    
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Determine field to update
+    field_map = {
+        "cashback": "cashback_wallet_balance",
+        "profit": "profit_wallet_balance",
+        "prc": "prc_balance"
+    }
+    
+    field = field_map.get(wallet_type)
+    if not field:
+        raise HTTPException(status_code=400, detail="Invalid wallet type")
+    
+    # Update wallet
+    await db.users.update_one(
+        {"uid": uid},
+        {"$inc": {field: adjustment_amount}}
+    )
+    
+    # Log adjustment
+    await db.wallet_adjustments.insert_one({
+        "adjustment_id": str(uuid.uuid4()),
+        "user_id": uid,
+        "admin_id": admin_uid,
+        "wallet_type": wallet_type,
+        "amount": adjustment_amount,
+        "reason": reason,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {
+        "message": "Wallet adjusted successfully",
+        "wallet_type": wallet_type,
+        "adjustment": adjustment_amount
+    }
+
+@api_router.get("/admin/audit-logs")
+async def get_audit_logs(limit: int = 100, action_type: str = None):
+    """Get system audit logs (admin only)"""
+    query = {}
+    if action_type:
+        query["action_type"] = action_type
+    
+    logs = await db.audit_logs.find(query, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(limit)
+    return {"logs": logs, "count": len(logs)}
+
+@api_router.post("/admin/audit-log")
+async def create_audit_log(request: Request):
+    """Create audit log entry"""
+    data = await request.json()
+    
+    log_entry = {
+        "log_id": str(uuid.uuid4()),
+        "user_id": data.get("user_id"),
+        "admin_id": data.get("admin_id"),
+        "action_type": data.get("action_type"),  # user_freeze, wallet_adjust, kyc_approve, etc.
+        "details": data.get("details", {}),
+        "ip_address": data.get("ip_address"),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.audit_logs.insert_one(log_entry)
+    return {"message": "Audit log created", "log_id": log_entry["log_id"]}
+
+@api_router.get("/admin/reports/financial")
+async def get_financial_report(start_date: str = None, end_date: str = None):
+    """Get financial report with profit & loss summary"""
+    
+    # If dates not provided, use last 30 days
+    if not end_date:
+        end_date = datetime.now(timezone.utc).isoformat()
+    if not start_date:
+        start_date = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    
+    # INFLOWS
+    # 1. VIP Membership fees
+    vip_payments = await db.vip_payments.find({
+        "status": "approved",
+        "submitted_at": {"$gte": start_date, "$lte": end_date}
+    }).to_list(1000)
+    vip_income = len(vip_payments) * 1000
+    
+    # 2. Annual Renewals
+    renewals = await db.annual_renewals.find({
+        "status": "approved",
+        "approved_at": {"$gte": start_date, "$lte": end_date}
+    }).to_list(1000)
+    renewal_income = sum(r.get("base_amount", 0) * 1.18 for r in renewals)
+    
+    # 3. Security Deposits (one-time, returnable)
+    deposits = await db.security_deposits.find({
+        "status": "approved",
+        "approved_at": {"$gte": start_date, "$lte": end_date}
+    }).to_list(1000)
+    deposit_income = sum(d.get("amount", 0) for d in deposits)
+    
+    # 4. Order revenues (cash collected)
+    orders = await db.orders.find({
+        "status": "delivered",
+        "delivered_at": {"$gte": start_date, "$lte": end_date}
+    }).to_list(1000)
+    order_revenue = sum(o.get("total_cash", 0) for o in orders)
+    
+    # OUTFLOWS
+    # 1. Cashback to users
+    cashback_given = sum(o.get("cashback_amount", 0) for o in orders)
+    
+    # 2. Delivery charge distribution (to stockists)
+    delivery_distribution = sum(o.get("delivery_charge", 0) for o in orders)
+    
+    # 3. Security deposit returns (3% monthly)
+    deposit_returns_paid = sum(d.get("total_returns_paid", 0) for d in deposits if d.get("total_returns_paid"))
+    
+    # 4. Withdrawals paid out
+    cashback_withdrawals = await db.cashback_withdrawals.find({
+        "status": "completed",
+        "processed_at": {"$gte": start_date, "$lte": end_date}
+    }).to_list(1000)
+    profit_withdrawals = await db.profit_withdrawals.find({
+        "status": "completed",
+        "processed_at": {"$gte": start_date, "$lte": end_date}
+    }).to_list(1000)
+    
+    withdrawal_payouts = sum(w.get("amount", 0) for w in cashback_withdrawals + profit_withdrawals)
+    
+    # SUMMARY
+    total_inflow = vip_income + renewal_income + deposit_income + order_revenue
+    total_outflow = cashback_given + delivery_distribution + deposit_returns_paid + withdrawal_payouts
+    net_profit = total_inflow - total_outflow
+    
+    return {
+        "period": {"start": start_date, "end": end_date},
+        "inflows": {
+            "vip_memberships": vip_income,
+            "annual_renewals": renewal_income,
+            "security_deposits": deposit_income,
+            "order_revenue": order_revenue,
+            "total": total_inflow
+        },
+        "outflows": {
+            "cashback_given": cashback_given,
+            "delivery_distribution": delivery_distribution,
+            "deposit_returns": deposit_returns_paid,
+            "withdrawal_payouts": withdrawal_payouts,
+            "total": total_outflow
+        },
+        "net_profit": net_profit,
+        "profit_margin": (net_profit / total_inflow * 100) if total_inflow > 0 else 0
+    }
+
+@api_router.get("/admin/reports/gst")
+async def get_gst_report(start_date: str = None, end_date: str = None):
+    """Get GST report for annual renewals"""
+    
+    if not end_date:
+        end_date = datetime.now(timezone.utc).isoformat()
+    if not start_date:
+        start_date = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    
+    renewals = await db.annual_renewals.find({
+        "status": "approved",
+        "approved_at": {"$gte": start_date, "$lte": end_date}
+    }).to_list(1000)
+    
+    gst_data = []
+    total_base = 0
+    total_gst = 0
+    
+    for renewal in renewals:
+        base = renewal.get("base_amount", 0)
+        gst = base * 0.18
+        total_base += base
+        total_gst += gst
+        
+        gst_data.append({
+            "renewal_id": renewal.get("renewal_id"),
+            "user_id": renewal.get("user_id"),
+            "user_name": renewal.get("user_name"),
+            "role": renewal.get("role"),
+            "base_amount": base,
+            "gst_amount": gst,
+            "total_amount": base + gst,
+            "approved_at": renewal.get("approved_at")
+        })
+    
+    return {
+        "period": {"start": start_date, "end": end_date},
+        "summary": {
+            "total_base": total_base,
+            "total_gst": total_gst,
+            "total_with_gst": total_base + total_gst,
+            "count": len(renewals)
+        },
+        "details": gst_data
+    }
+
+@api_router.get("/admin/formula/mining")
+async def get_mining_formula():
+    """Get current mining formula configuration"""
+    formula = await db.formulas.find_one({"formula_type": "mining"})
+    
+    if not formula:
+        # Return default formula
+        return {
+            "formula_type": "mining",
+            "base_rate": 50,
+            "referral_bonus_percentage": 10,
+            "max_referrals": 200,
+            "daily_decay_enabled": True,
+            "decay_per_100_users": 1,
+            "minimum_rate": 10
+        }
+    
+    formula["_id"] = str(formula["_id"])
+    return formula
+
+@api_router.post("/admin/formula/mining")
+async def update_mining_formula(request: Request):
+    """Update mining formula (admin only)"""
+    data = await request.json()
+    admin_uid = data.get("admin_uid")
+    
+    await verify_admin(admin_uid)
+    
+    formula_data = {
+        "formula_type": "mining",
+        "base_rate": data.get("base_rate", 50),
+        "referral_bonus_percentage": data.get("referral_bonus_percentage", 10),
+        "max_referrals": data.get("max_referrals", 200),
+        "daily_decay_enabled": data.get("daily_decay_enabled", True),
+        "decay_per_100_users": data.get("decay_per_100_users", 1),
+        "minimum_rate": data.get("minimum_rate", 10),
+        "updated_by": admin_uid,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.formulas.update_one(
+        {"formula_type": "mining"},
+        {"$set": formula_data},
+        upsert=True
+    )
+    
+    return {"message": "Mining formula updated successfully"}
+
+@api_router.get("/admin/employees")
+async def get_all_employees():
+    """Get all employees (admin, sub_admin, manager, employee)"""
+    employees = await db.users.find(
+        {"role": {"$in": ["admin", "sub_admin", "manager", "employee"]}},
+        {"_id": 0, "password": 0}
+    ).to_list(1000)
+    
+    return {"employees": employees, "count": len(employees)}
+
+@api_router.post("/admin/employees/create")
+async def create_employee(request: Request):
+    """Create new employee (admin only)"""
+    data = await request.json()
+    admin_uid = data.get("admin_uid")
+    
+    await verify_admin(admin_uid)
+    
+    # Check if email already exists
+    existing = await db.users.find_one({"email": data.get("email")})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already exists")
+    
+    employee = {
+        "uid": str(uuid.uuid4()),
+        "email": data.get("email"),
+        "password": hash_password(data.get("password")),
+        "first_name": data.get("first_name"),
+        "last_name": data.get("last_name"),
+        "role": data.get("role"),  # sub_admin, manager, employee
+        "employee_id": data.get("employee_id"),
+        "designation": data.get("designation"),
+        "assigned_regions": data.get("assigned_regions", []),  # For sub_admin
+        "permissions": data.get("permissions", []),
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": admin_uid
+    }
+    
+    await db.users.insert_one(employee)
+    
+    return {"message": "Employee created successfully", "uid": employee["uid"]}
+
+@api_router.put("/admin/employees/{uid}")
+async def update_employee(uid: str, request: Request):
+    """Update employee details (admin only)"""
+    data = await request.json()
+    admin_uid = data.get("admin_uid")
+    
+    await verify_admin(admin_uid)
+    
+    update_data = {
+        "first_name": data.get("first_name"),
+        "last_name": data.get("last_name"),
+        "designation": data.get("designation"),
+        "assigned_regions": data.get("assigned_regions", []),
+        "permissions": data.get("permissions", []),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Remove None values
+    update_data = {k: v for k, v in update_data.items() if v is not None}
+    
+    await db.users.update_one({"uid": uid}, {"$set": update_data})
+    
+    return {"message": "Employee updated successfully"}
+
 # Include router
 app.include_router(api_router)
 
