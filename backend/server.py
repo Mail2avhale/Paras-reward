@@ -1138,13 +1138,29 @@ async def verify_order(verify_data: OrderVerify):
     return {"message": "Order verified", "order": order}
 
 @api_router.post("/orders/{order_id}/deliver")
-async def deliver_order(order_id: str):
+async def deliver_order(order_id: str, request: Request):
     """Mark order as delivered (Outlet)"""
+    data = await request.json()
+    outlet_id = data.get("outlet_id")
+    
+    # Update order status
     await db.orders.update_one(
         {"order_id": order_id},
-        {"$set": {"status": "delivered", "delivered_at": datetime.now(timezone.utc).isoformat()}}
+        {"$set": {
+            "status": "delivered",
+            "delivery_status": "delivered",
+            "delivered_at": datetime.now(timezone.utc).isoformat(),
+            "assigned_outlet": outlet_id
+        }}
     )
-    return {"message": "Order delivered successfully"}
+    
+    # Trigger automatic delivery charge distribution
+    distribution_result = await distribute_delivery_charge(order_id)
+    
+    return {
+        "message": "Order delivered successfully",
+        "distribution": distribution_result
+    }
 
 # ========== WALLET ROUTES ==========
 @api_router.get("/wallet/{uid}")
