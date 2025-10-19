@@ -107,11 +107,11 @@ user_problem_statement: "Fix user registration bug - NameError: check_unique_fie
 backend:
   - task: "User Registration Endpoint"
     implemented: true
-    working: false
+    working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 2
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: false
         agent: "user"
@@ -128,6 +128,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "CRITICAL ISSUES FOUND: 1) Frontend sends first_name/last_name but backend expects 'name' field - causes 500 error. 2) User model missing required fields: mobile, state, district, pincode, aadhaar_number, pan_number, etc. These fields are silently ignored due to extra='ignore'. 3) Duplicate detection only works for email, not mobile/aadhaar/pan because these fields aren't stored. 4) Registration works with 'name' field but frontend likely sends first_name/last_name."
+      - working: "NA"
+        agent: "main"
+        comment: "FIXED: 1) Added all missing fields to User model (first_name, last_name, middle_name, mobile, state, district, taluka, village, pincode, aadhaar_number, pan_number, upi_id). 2) Updated registration endpoint to construct 'name' field from first_name + middle_name + last_name. 3) Made 'name' field optional. Backend restarted successfully. Initial logs show 200 OK responses. Needs retesting to confirm all scenarios work."
 
   - task: "User Login Endpoint"
     implemented: true
