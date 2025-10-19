@@ -183,6 +183,42 @@ backend:
         agent: "testing"
         comment: "COMPREHENSIVE TESTING COMPLETE - ALL CORE FUNCTIONALITY WORKING: ✅ Fixed ObjectId serialization issues in cart system. ✅ Fixed route conflicts between legacy /orders/{uid} and new /orders/checkout endpoints. ✅ Complete order flow works: VIP user creation, cart management, checkout with delivery charge calculation (10% of cash price). ✅ Auto-distribution triggers correctly on order delivery via POST /orders/{order_id}/deliver. ✅ Distribution amounts calculated correctly: master:10%, sub:20%, outlet:60%, company:10% of delivery charge. ✅ Commission records created in database with correct amounts. ✅ Idempotent distribution verified - duplicate calls return 'already distributed' message. ✅ All delivery configuration endpoints work with proper validation. Minor: Admin verify-and-deliver endpoint missing but core auto-distribution functionality is complete and working."
 
+  - task: "Cashback Wallet & Maintenance"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented comprehensive cashback wallet system: GET /api/wallet/{uid} (with maintenance status), POST /api/wallet/check-maintenance/{uid} (apply ₹99 monthly fee 30 days after VIP activation), POST /api/wallet/credit-cashback/{uid} (credits cashback, clears lien first), POST /api/wallet/cashback/withdraw (min ₹10, fee ₹5, requires KYC), GET /api/wallet/withdrawals/{uid} (history). Lien system tracks pending maintenance fees, never freezes wallet. cashback_withdrawals collection created."
+
+  - task: "Profit Wallet & Withdrawals"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented profit wallet system for Master/Sub/Outlet entities: POST /api/wallet/profit/withdraw (min ₹50, fee ₹5, role check), profit_withdrawals collection created. Updated delivery charge distribution to auto-credit profit_wallet_balance for outlet entities. profit_wallet_balance field added to user model."
+
+  - task: "Admin Withdrawal Management"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented complete admin withdrawal management: GET /api/admin/withdrawals/cashback (filter by status), GET /api/admin/withdrawals/profit, POST /api/admin/withdrawals/cashback/{id}/approve, POST /api/admin/withdrawals/cashback/{id}/reject (refunds to wallet), POST /api/admin/withdrawals/cashback/{id}/complete (requires UTR), corresponding profit withdrawal endpoints. Admin can approve, reject with reason, or complete with UTR number."
+
 frontend:
   - task: "User Registration Form"
     implemented: true
