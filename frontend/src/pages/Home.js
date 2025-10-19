@@ -1,6 +1,11 @@
 import { Link } from 'react-router-dom';
-import { Coins, Users, Trophy, Sparkles } from 'lucide-react';
+import { 
+  Coins, Users, Trophy, Sparkles, Zap, Gift, Shield, 
+  TrendingUp, Clock, Gamepad2, Store, Wallet, Award,
+  CheckCircle, ArrowRight, Star, Target, Gem, ChevronRight
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 
 const Home = () => {
   return (
