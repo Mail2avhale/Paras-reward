@@ -409,6 +409,47 @@ def test_edge_cases():
     except requests.exceptions.RequestException as e:
         print(f"❌ Malformed JSON test FAILED - Network error: {e}")
 
+def test_user_data_retrieval(uid):
+    """Test if user data is properly stored and retrievable"""
+    print(f"\n7. Testing user data retrieval for UID: {uid}...")
+    
+    try:
+        user_url = f"{API_BASE}/auth/user/{uid}"
+        response = requests.get(user_url, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            user_data = response.json()
+            print(f"Retrieved user data: {json.dumps(user_data, indent=2)}")
+            
+            # Check if all expected fields are present
+            expected_fields = ["uid", "first_name", "last_name", "email", "mobile", "state", "district", "pincode", "aadhaar_number", "pan_number", "name"]
+            missing_fields = []
+            
+            for field in expected_fields:
+                if field not in user_data or user_data[field] is None:
+                    missing_fields.append(field)
+            
+            if missing_fields:
+                print(f"❌ Missing fields in stored data: {missing_fields}")
+            else:
+                print("✅ All expected fields are present in stored data")
+                
+                # Check if name was auto-constructed
+                if user_data.get("name"):
+                    print(f"✅ Name field auto-constructed: '{user_data['name']}'")
+                else:
+                    print("❌ Name field was not auto-constructed")
+            
+            return True
+        else:
+            print(f"❌ User data retrieval FAILED - Status: {response.status_code}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ User data retrieval FAILED - Network error: {e}")
+        return False
+
 def main():
     """Run all registration tests"""
     print("Starting comprehensive user registration endpoint testing...")
@@ -424,11 +465,14 @@ def main():
         return False
     
     # Run all tests
-    success, user_data = test_registration_endpoint()
+    success, user_data, uid = test_registration_endpoint()
     
     if success:
         test_duplicate_detection(user_data)
+        if uid:
+            test_user_data_retrieval(uid)
     
+    test_name_auto_construction()
     test_missing_fields()
     test_invalid_data_formats() 
     test_password_validation()
