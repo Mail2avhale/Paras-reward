@@ -2457,16 +2457,27 @@ async def distribute_delivery_charge(order_id: str):
                 "entity_id": outlet_id if entity == "outlet" else f"{entity}_placeholder",
                 "amount": amount,
                 "type": "delivery_charge",
-                "status": "paid",
+                "status": "credited",
                 "created_at": now
             }
             commission_records.append(commission_record)
             
-            # Credit profit wallet (if not company)
-            if entity != "company" and outlet_id:
-                # In production, lookup actual entity and update their profit_wallet
-                # For now, just record the commission
-                pass
+            # Credit profit wallet automatically (if not company)
+            if entity != "company":
+                if entity == "outlet" and outlet_id:
+                    # Credit outlet's profit wallet
+                    await db.users.update_one(
+                        {"uid": outlet_id, "role": "outlet"},
+                        {"$inc": {"profit_wallet_balance": amount}}
+                    )
+                elif entity == "master":
+                    # In production: Get order's master stockist and credit
+                    # For now, using placeholder - will be enhanced later
+                    pass
+                elif entity == "sub":
+                    # In production: Get order's sub stockist and credit
+                    # For now, using placeholder - will be enhanced later
+                    pass
     
     # Insert all commission records
     if commission_records:
