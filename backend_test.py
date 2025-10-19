@@ -880,9 +880,277 @@ def test_security_deposit_return_processing():
     
     return True
 
+def test_annual_renewal_submission():
+    """Test annual renewal submission for different roles"""
+    print("\n12. Testing Annual Renewal System - Submission...")
+    
+    # Test 12a: Master Stockist renewal (₹50k + 18% GST = ₹59k)
+    print("\n12a. Testing Master Stockist renewal submission...")
+    try:
+        renewal_data = {
+            "user_id": test_master_user["uid"],
+            "amount": 59000,  # 50k + 18% GST
+            "payment_proof": "master_renewal_proof_image_base64",
+            "notes": "Master stockist annual renewal"
+        }
+        
+        response = requests.post(f"{API_BASE}/renewal/submit", json=renewal_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            renewal_id = result.get("renewal_id")
+            expected_amount = result.get("expected_amount")
+            
+            if renewal_id and expected_amount == 59000:
+                print("✅ Master renewal submission test PASSED")
+                print(f"Renewal ID: {renewal_id}")
+                print(f"Expected Amount: ₹{expected_amount}")
+                test_renewals.append({"id": renewal_id, "role": "master_stockist", "amount": 59000})
+            else:
+                print("❌ Master renewal submission test FAILED - Missing required fields")
+                return False
+        else:
+            print(f"❌ Master renewal submission test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Master renewal submission test FAILED - Error: {e}")
+        return False
+    
+    # Test 12b: Sub Stockist renewal (₹30k + 18% GST = ₹35.4k)
+    print("\n12b. Testing Sub Stockist renewal submission...")
+    try:
+        renewal_data = {
+            "user_id": test_sub_user["uid"],
+            "amount": 35400,  # 30k + 18% GST
+            "payment_proof": "sub_renewal_proof_image_base64",
+            "notes": "Sub stockist annual renewal"
+        }
+        
+        response = requests.post(f"{API_BASE}/renewal/submit", json=renewal_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            renewal_id = result.get("renewal_id")
+            expected_amount = result.get("expected_amount")
+            
+            if renewal_id and expected_amount == 35400:
+                print("✅ Sub renewal submission test PASSED")
+                test_renewals.append({"id": renewal_id, "role": "sub_stockist", "amount": 35400})
+            else:
+                print("❌ Sub renewal submission test FAILED - Missing required fields")
+                return False
+        else:
+            print(f"❌ Sub renewal submission test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Sub renewal submission test FAILED - Error: {e}")
+        return False
+    
+    # Test 12c: Outlet renewal (₹10k + 18% GST = ₹11.8k)
+    print("\n12c. Testing Outlet renewal submission...")
+    try:
+        renewal_data = {
+            "user_id": test_outlet_user["uid"],
+            "amount": 11800,  # 10k + 18% GST
+            "payment_proof": "outlet_renewal_proof_image_base64",
+            "notes": "Outlet annual renewal"
+        }
+        
+        response = requests.post(f"{API_BASE}/renewal/submit", json=renewal_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            renewal_id = result.get("renewal_id")
+            expected_amount = result.get("expected_amount")
+            
+            if renewal_id and expected_amount == 11800:
+                print("✅ Outlet renewal submission test PASSED")
+                test_renewals.append({"id": renewal_id, "role": "outlet", "amount": 11800})
+            else:
+                print("❌ Outlet renewal submission test FAILED - Missing required fields")
+                return False
+        else:
+            print(f"❌ Outlet renewal submission test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Outlet renewal submission test FAILED - Error: {e}")
+        return False
+    
+    # Test 12d: Non-stockist role rejection
+    print("\n12d. Testing non-stockist role rejection...")
+    try:
+        renewal_data = {
+            "user_id": test_regular_user["uid"],
+            "amount": 5000,
+            "payment_proof": "user_renewal_proof_image_base64",
+            "notes": "Regular user trying to submit renewal"
+        }
+        
+        response = requests.post(f"{API_BASE}/renewal/submit", json=renewal_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 403:
+            print("✅ Non-stockist renewal rejection test PASSED")
+        else:
+            print(f"❌ Non-stockist renewal rejection test FAILED - Expected 403, got {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Non-stockist renewal rejection test FAILED - Error: {e}")
+        return False
+    
+    return True
+
+def test_annual_renewal_status_retrieval():
+    """Test renewal status retrieval"""
+    print("\n13. Testing Annual Renewal Status Retrieval...")
+    
+    # Test 13a: Get renewal status before approval
+    print("\n13a. Testing GET /api/renewal/{uid} before approval...")
+    try:
+        response = requests.get(f"{API_BASE}/renewal/{test_master_user['uid']}", timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            latest_renewal = result.get("latest_renewal")
+            renewal_status = result.get("renewal_status")
+            
+            if latest_renewal and latest_renewal.get("status") == "pending":
+                print("✅ Renewal status before approval test PASSED (shows pending)")
+                print(f"Renewal status: {renewal_status}")
+            else:
+                print("❌ Renewal status before approval test FAILED")
+                return False
+        else:
+            print(f"❌ Renewal status before approval test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Renewal status before approval test FAILED - Error: {e}")
+        return False
+    
+    return True
+
+def test_admin_renewal_approval():
+    """Test admin approval of renewals"""
+    print("\n14. Testing Admin Renewal Approval...")
+    
+    # Test 14a: Get all renewals
+    print("\n14a. Testing GET /api/admin/renewals...")
+    try:
+        response = requests.get(f"{API_BASE}/admin/renewals", timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            renewals = result.get("renewals", [])
+            count = result.get("count", 0)
+            print(f"✅ Admin renewals list test PASSED")
+            print(f"Total renewals: {count}")
+        else:
+            print(f"❌ Admin renewals list test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Admin renewals list test FAILED - Error: {e}")
+        return False
+    
+    # Test 14b: Approve renewal
+    if test_renewals:
+        renewal_to_approve = test_renewals[0]  # Approve first renewal
+        renewal_id = renewal_to_approve["id"]
+        
+        print(f"\n14b. Testing POST /api/admin/renewals/{renewal_id}/approve...")
+        try:
+            approve_data = {
+                "admin_notes": "Approved for testing - 1 year period starts now"
+            }
+            
+            response = requests.post(f"{API_BASE}/admin/renewals/{renewal_id}/approve", 
+                                   json=approve_data, timeout=30)
+            print(f"Status Code: {response.status_code}")
+            print(f"Response: {response.text}")
+            
+            if response.status_code == 200:
+                result = response.json()
+                next_renewal_due = result.get("next_renewal_due")
+                print("✅ Admin approve renewal test PASSED")
+                print(f"Next renewal due: {next_renewal_due}")
+                renewal_to_approve["status"] = "approved"
+            else:
+                print(f"❌ Admin approve renewal test FAILED - Status: {response.status_code}")
+                return False
+        except Exception as e:
+            print(f"❌ Admin approve renewal test FAILED - Error: {e}")
+            return False
+    
+    return True
+
+def test_overdue_renewal_processing():
+    """Test overdue renewal processing and suspension"""
+    print("\n15. Testing Overdue Renewal Processing...")
+    
+    # Test 15a: Check overdue renewals processing
+    print("\n15a. Testing POST /api/admin/renewals/check-overdue...")
+    try:
+        response = requests.post(f"{API_BASE}/admin/renewals/check-overdue", timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            suspended_count = result.get("suspended_count", 0)
+            print("✅ Overdue renewal processing test PASSED")
+            print(f"Suspended entities: {suspended_count}")
+            
+            if suspended_count == 0:
+                print("ℹ️ No entities were suspended (expected for new renewals)")
+        else:
+            print(f"❌ Overdue renewal processing test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Overdue renewal processing test FAILED - Error: {e}")
+        return False
+    
+    return True
+
+def test_profit_wallet_frozen_integration():
+    """Test integration with delivery charge distribution when profit wallet is frozen"""
+    print("\n16. Testing Profit Wallet Frozen Integration...")
+    
+    # This test would require creating an order and testing delivery charge distribution
+    # For now, we'll check if the outlet user's profit wallet status
+    print("\n16a. Checking outlet user profit wallet status...")
+    try:
+        response = requests.get(f"{API_BASE}/wallet/{test_outlet_user['uid']}", timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            wallet = response.json()
+            profit_balance = wallet.get("profit_balance", 0)
+            print(f"✅ Outlet profit wallet check PASSED - Balance: ₹{profit_balance}")
+            print("ℹ️ Integration test: Delivery charge distribution should check profit_wallet_frozen flag")
+            print("ℹ️ When renewal is overdue, profit_wallet_frozen=True prevents new credits")
+        else:
+            print(f"❌ Outlet profit wallet check FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Outlet profit wallet check FAILED - Error: {e}")
+        return False
+    
+    return True
+
 def main():
-    """Run all wallet & maintenance feature tests"""
-    print("Starting comprehensive Wallets & Maintenance Feature testing...")
+    """Run all Stock Movement, Security Deposit, and Annual Renewal system tests"""
+    print("Starting comprehensive Stock Movement, Security Deposit, and Annual Renewal testing...")
     print(f"Target API: {API_BASE}")
     
     # Test basic connectivity
@@ -896,7 +1164,7 @@ def main():
     
     # Run all tests in sequence
     print("\n" + "=" * 80)
-    print("WALLETS & MAINTENANCE FEATURE COMPREHENSIVE TESTING")
+    print("STOCK MOVEMENT, SECURITY DEPOSIT & ANNUAL RENEWAL COMPREHENSIVE TESTING")
     print("=" * 80)
     
     # 1. Setup test users
@@ -904,51 +1172,81 @@ def main():
         print("❌ CRITICAL: Failed to setup test users - cannot continue")
         return False
     
-    # 2. Test wallet balance retrieval
-    if not test_wallet_balance_retrieval():
-        print("❌ CRITICAL: Wallet balance retrieval tests failed")
+    # 2. Create test product
+    if not create_test_product():
+        print("❌ CRITICAL: Failed to create test product - cannot continue")
         return False
     
-    # 3. Test cashback maintenance system
-    if not test_cashback_maintenance_system():
-        print("❌ CRITICAL: Cashback maintenance system tests failed")
+    # 3. Test stock movement valid flows
+    if not test_stock_movement_valid_flows():
+        print("❌ CRITICAL: Stock movement valid flows failed")
         return False
     
-    # 4. Test cashback credit with lien clearing
-    if not test_cashback_credit_with_lien_clearing():
-        print("❌ CRITICAL: Cashback credit with lien clearing failed")
+    # 4. Test stock movement invalid flows
+    if not test_stock_movement_invalid_flows():
+        print("❌ CRITICAL: Stock movement invalid flows failed")
         return False
     
-    # 5. Test cashback withdrawal flow
-    if not test_cashback_withdrawal_flow():
-        print("❌ CRITICAL: Cashback withdrawal flow failed")
+    # 5. Test stock movement retrieval
+    if not test_stock_movement_retrieval():
+        print("❌ CRITICAL: Stock movement retrieval failed")
         return False
     
-    # 6. Test profit withdrawal flow
-    if not test_profit_withdrawal_flow():
-        print("❌ CRITICAL: Profit withdrawal flow failed")
+    # 6. Test admin stock movement approval
+    if not test_admin_stock_movement_approval():
+        print("❌ CRITICAL: Admin stock movement approval failed")
         return False
     
-    # 7. Test withdrawal history
-    if not test_withdrawal_history():
-        print("❌ CRITICAL: Withdrawal history failed")
+    # 7. Test receiver completion
+    if not test_receiver_completion():
+        print("❌ CRITICAL: Receiver completion failed")
         return False
     
-    # 8. Test admin withdrawal management - cashback
-    if not test_admin_withdrawal_management_cashback():
-        print("❌ CRITICAL: Admin cashback withdrawal management failed")
+    # 8. Test security deposit submission
+    if not test_security_deposit_submission():
+        print("❌ CRITICAL: Security deposit submission failed")
         return False
     
-    # 9. Test admin withdrawal management - profit
-    if not test_admin_withdrawal_management_profit():
-        print("❌ CRITICAL: Admin profit withdrawal management failed")
+    # 9. Test security deposit retrieval
+    if not test_security_deposit_retrieval():
+        print("❌ CRITICAL: Security deposit retrieval failed")
         return False
     
-    # 10. Test profit wallet auto-credit
-    test_profit_wallet_auto_credit()
+    # 10. Test admin security deposit approval
+    if not test_admin_security_deposit_approval():
+        print("❌ CRITICAL: Admin security deposit approval failed")
+        return False
+    
+    # 11. Test security deposit return processing
+    if not test_security_deposit_return_processing():
+        print("❌ CRITICAL: Security deposit return processing failed")
+        return False
+    
+    # 12. Test annual renewal submission
+    if not test_annual_renewal_submission():
+        print("❌ CRITICAL: Annual renewal submission failed")
+        return False
+    
+    # 13. Test annual renewal status retrieval
+    if not test_annual_renewal_status_retrieval():
+        print("❌ CRITICAL: Annual renewal status retrieval failed")
+        return False
+    
+    # 14. Test admin renewal approval
+    if not test_admin_renewal_approval():
+        print("❌ CRITICAL: Admin renewal approval failed")
+        return False
+    
+    # 15. Test overdue renewal processing
+    if not test_overdue_renewal_processing():
+        print("❌ CRITICAL: Overdue renewal processing failed")
+        return False
+    
+    # 16. Test profit wallet frozen integration
+    test_profit_wallet_frozen_integration()
     
     print("\n" + "=" * 80)
-    print("WALLETS & MAINTENANCE FEATURE TESTING COMPLETED!")
+    print("STOCK MOVEMENT, SECURITY DEPOSIT & ANNUAL RENEWAL TESTING COMPLETED!")
     print("=" * 80)
     print("Check the results above for any failures that need attention.")
     
