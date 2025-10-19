@@ -492,24 +492,28 @@ def test_admin_delivery_verification():
         print("❌ Cannot test admin verification - failed to create product")
         return False
     
-    # Create another order
-    checkout_data = {
-        "items": [
-            {
-                "product_id": product_id,
-                "quantity": 1,
-                "prc_price": 100.0,
-                "cash_price": 50.0
-            }
-        ],
-        "total_prc": 100.0,
-        "total_cash": 50.0
-    }
-    
+    # Create another order via cart + checkout
     try:
+        # Add product to cart
+        cart_data = {
+            "user_id": test_vip_user["uid"],
+            "product_id": product_id,
+            "quantity": 1
+        }
+        
+        cart_response = requests.post(f"{API_BASE}/cart/add", json=cart_data, timeout=30)
+        if cart_response.status_code != 200:
+            print(f"❌ Failed to add product to cart for admin test: {cart_response.status_code}")
+            return False
+        
+        # Checkout cart
+        checkout_data = {
+            "user_id": test_vip_user["uid"],
+            "delivery_address": "Admin Test Address, Test City, 123456"
+        }
+        
         response = requests.post(f"{API_BASE}/orders/checkout", 
                                json=checkout_data, 
-                               params={"user_id": test_vip_user["uid"]}, 
                                timeout=30)
         
         if response.status_code != 200:
