@@ -258,37 +258,61 @@ def create_test_product():
         print(f"❌ Error creating test product: {e}")
         return None
 
-def test_missing_fields():
-    """Test registration with missing required fields"""
-    print("\n3. Testing missing required fields...")
+def test_order_checkout_with_delivery_charge(product_id):
+    """Test order checkout with delivery charge calculation"""
+    global test_order
+    print("\n4. Testing Order Checkout with Delivery Charge...")
     
-    # Test missing email
-    print("\n3a. Testing missing email...")
-    missing_email_data = {
-        "name": "Test User",
-        # "email": missing
-        "mobile": f"7654321{datetime.now().strftime('%H%M')}",
-        "password": "TestPass123!",
-        "state": "Karnataka",
-        "district": "Bangalore",
-        "pincode": "560001",
-        "aadhaar_number": f"1111{datetime.now().strftime('%H%M')}2222333",
-        "pan_number": f"TESTX{datetime.now().strftime('%H%M')}Y"
+    if not test_vip_user or not product_id:
+        print("❌ Cannot test checkout - missing VIP user or product")
+        return None
+    
+    # Create order via checkout
+    checkout_data = {
+        "items": [
+            {
+                "product_id": product_id,
+                "quantity": 1,
+                "prc_price": 100.0,
+                "cash_price": 50.0
+            }
+        ],
+        "total_prc": 100.0,
+        "total_cash": 50.0
     }
     
     try:
-        response = requests.post(REGISTER_URL, json=missing_email_data, timeout=30)
+        response = requests.post(f"{API_BASE}/orders/checkout", 
+                               json=checkout_data, 
+                               params={"user_id": test_vip_user["uid"]}, 
+                               timeout=30)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
-        # The endpoint might still work without email as it's optional in the User model
-        if response.status_code in [200, 400]:
-            print("✅ Missing email test completed (behavior depends on implementation)")
-        else:
-            print(f"❌ Missing email test - Unexpected status: {response.status_code}")
+        if response.status_code == 200:
+            order_data = response.json()
+            order_id = order_data.get("order_id")
+            delivery_charge = order_data.get("delivery_charge")
             
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Missing email test FAILED - Network error: {e}")
+            print(f"✅ Order checkout test PASSED")
+            print(f"Order ID: {order_id}")
+            print(f"Delivery Charge: {delivery_charge}")
+            
+            # Verify delivery charge calculation (should be total_cash * delivery_charge_rate = 50 * 0.10 = 5.0)
+            expected_delivery_charge = 50.0 * 0.10  # 10% of total_cash
+            if abs(delivery_charge - expected_delivery_charge) < 0.01:
+                print(f"✅ Delivery charge calculation CORRECT: {delivery_charge}")
+            else:
+                print(f"❌ Delivery charge calculation INCORRECT: Expected {expected_delivery_charge}, got {delivery_charge}")
+            
+            test_order = order_data
+            return order_id
+        else:
+            print(f"❌ Order checkout test FAILED - Status: {response.status_code}")
+            return None
+    except Exception as e:
+        print(f"❌ Order checkout test FAILED - Error: {e}")
+        return None
 
 def test_invalid_data_formats():
     """Test registration with invalid data formats"""
