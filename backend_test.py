@@ -47,17 +47,18 @@ def setup_test_users():
     
     # Create admin user
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    microseconds = str(datetime.now().microsecond)[:3]  # Get first 3 digits of microseconds
     admin_data = {
         "first_name": "Admin",
         "last_name": "User",
-        "email": f"admin.{timestamp}@example.com",
-        "mobile": f"9876543{datetime.now().strftime('%H%M')}",
+        "email": f"admin.{timestamp}.{microseconds}@example.com",
+        "mobile": f"98765{timestamp[-6:]}",  # Use last 6 digits of timestamp
         "password": "AdminPass123!",
         "state": "Maharashtra",
         "district": "Mumbai",
         "pincode": "400001",
-        "aadhaar_number": f"1111{datetime.now().strftime('%H%M')}1111111",
-        "pan_number": f"ADMIN{datetime.now().strftime('%H%M')}A",
+        "aadhaar_number": f"1111{timestamp[-8:]}111",
+        "pan_number": f"ADM{timestamp[-6:]}A",
         "role": "admin"
     }
     
