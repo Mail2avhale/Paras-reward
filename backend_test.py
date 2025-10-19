@@ -131,39 +131,71 @@ def setup_test_users():
     
     return True
 
-def create_test_product():
-    """Create a test product for stock movement testing"""
-    global test_product
-    
-    print("\n2. Creating test product...")
-    
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    
-    product_data = {
-        "name": f"Test Product {timestamp}",
-        "sku": f"TEST-SKU-{timestamp}",
-        "description": "Test product for stock movement testing",
-        "prc_price": 100.0,
-        "cash_price": 50.0,
-        "type": "physical",
-        "category": "Electronics",
-        "total_stock": 1000,
-        "available_stock": 1000
-    }
+def test_mining_status_no_active_session():
+    """Test mining status endpoint for user with NO active mining session"""
+    print("\n2. Testing Mining Status - User with NO active mining session...")
     
     try:
-        response = requests.post(f"{API_BASE}/admin/products", json=product_data, timeout=30)
+        response = requests.get(f"{API_BASE}/mining/status/{test_user_no_mining['uid']}", timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
         if response.status_code == 200:
             result = response.json()
-            product_id = result.get('product_id')
-            test_product = {"product_id": product_id, **product_data}
-            print(f"✅ Test product created: {product_id}")
+            
+            # Check required fields
+            required_fields = ["mining_rate_per_hour", "mining_rate", "base_rate", "active_referrals", "is_mining"]
+            missing_fields = []
+            
+            for field in required_fields:
+                if field not in result:
+                    missing_fields.append(field)
+            
+            if missing_fields:
+                print(f"❌ Mining status test FAILED - Missing fields: {missing_fields}")
+                return False
+            
+            # Verify mining_rate_per_hour is NOT 0
+            mining_rate_per_hour = result.get("mining_rate_per_hour", 0)
+            mining_rate = result.get("mining_rate", 0)
+            base_rate = result.get("base_rate", 0)
+            active_referrals = result.get("active_referrals", 0)
+            is_mining = result.get("is_mining", False)
+            
+            print(f"Mining Rate Per Hour: {mining_rate_per_hour}")
+            print(f"Mining Rate: {mining_rate}")
+            print(f"Base Rate: {base_rate}")
+            print(f"Active Referrals: {active_referrals}")
+            print(f"Is Mining: {is_mining}")
+            
+            # Verify mining rate is NOT 0
+            if mining_rate_per_hour == 0:
+                print("❌ Mining status test FAILED - mining_rate_per_hour is 0 (should NOT be 0)")
+                return False
+            
+            # Verify mining_rate matches mining_rate_per_hour
+            if mining_rate != mining_rate_per_hour:
+                print(f"❌ Mining status test FAILED - mining_rate ({mining_rate}) doesn't match mining_rate_per_hour ({mining_rate_per_hour})")
+                return False
+            
+            # Verify base_rate is positive
+            if base_rate <= 0:
+                print(f"❌ Mining status test FAILED - base_rate ({base_rate}) should be positive")
+                return False
+            
+            # Verify is_mining is False (no active session)
+            if is_mining:
+                print(f"❌ Mining status test FAILED - is_mining should be False for user with no active session")
+                return False
+            
+            print("✅ Mining status test PASSED - All required fields present and mining rate is non-zero")
             return True
+            
         else:
-            print(f"❌ Failed to create test product: {response.status_code} - {response.text}")
+            print(f"❌ Mining status test FAILED - Status: {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ Error creating test product: {e}")
+        print(f"❌ Mining status test FAILED - Error: {e}")
         return False
 
 def test_stock_movement_valid_flows():
