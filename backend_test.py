@@ -96,6 +96,10 @@ def setup_test_users():
             vip_uid = response.json().get("uid")
             test_vip_user = {"uid": vip_uid, **vip_data}
             print(f"✅ VIP user created: {vip_uid}")
+            
+            # Update user to VIP status and verified KYC via direct database update
+            # Since we don't have direct DB access, we'll handle this in the order creation test
+            
         else:
             print(f"❌ Failed to create VIP user: {response.status_code} - {response.text}")
             return False
