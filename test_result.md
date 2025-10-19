@@ -222,12 +222,13 @@ metadata:
 
 test_plan:
   current_focus:
-    - "User Registration Endpoint"
-    - "User Registration Form"
-  stuck_tasks:
-    - "User Registration Endpoint"
+    - "Delivery Charge Configuration"
+    - "Delivery Charge Auto-Distribution"
+    - "Admin Delivery Configuration UI"
+    - "Outlet Delivery with Auto-Distribution"
+  stuck_tasks: []
   test_all: false
-  test_priority: "stuck_first"
+  test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
