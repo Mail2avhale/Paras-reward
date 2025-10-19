@@ -75,7 +75,7 @@ function App() {
         <Routes>
           <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Home />} />
           <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginNew onLogin={handleLogin} />} />
-          <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
+          <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <RegisterSimple />} />
           <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" /> : <ForgotPassword />} />
           <Route path="/setup" element={<Setup />} />
           
