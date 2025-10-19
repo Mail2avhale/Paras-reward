@@ -279,10 +279,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Delivery Charge Configuration"
-    - "Delivery Charge Auto-Distribution"
-    - "Admin Delivery Configuration UI"
-    - "Outlet Delivery with Auto-Distribution"
+    - "Cashback Wallet & Maintenance"
+    - "Profit Wallet & Withdrawals"
+    - "Admin Withdrawal Management"
+    - "Enhanced Wallet Page"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
