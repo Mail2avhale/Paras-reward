@@ -349,80 +349,35 @@ def test_mining_rate_calculation():
         print(f"❌ Mining rate calculation test FAILED - Error: {e}")
         return False
 
-def test_admin_stock_movement_approval():
-    """Test admin approval flow for stock movements"""
-    print("\n6. Testing Admin Stock Movement Approval Flow...")
+def test_mining_rate_never_zero():
+    """Test that mining rate is never zero under various conditions"""
+    print("\n6. Testing Mining Rate Never Zero...")
     
-    # Test 6a: Get pending stock movements
-    print("\n6a. Testing GET /api/admin/stock/movements/pending...")
-    try:
-        response = requests.get(f"{API_BASE}/admin/stock/movements/pending", timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            movements = result.get("movements", [])
-            count = result.get("count", 0)
-            print(f"✅ Admin pending movements retrieval test PASSED")
-            print(f"Pending movements count: {count}")
-            
-            if count > 0:
-                print(f"Found {count} pending movements for approval testing")
-            
-        else:
-            print(f"❌ Admin pending movements retrieval test FAILED - Status: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Admin pending movements retrieval test FAILED - Error: {e}")
-        return False
+    # Test all created users to ensure none have zero mining rate
+    test_users = [test_user_no_mining, test_user_with_mining, test_user_with_referrals]
     
-    # Test 6b: Approve a stock movement
-    if test_stock_movements:
-        movement_to_approve = test_stock_movements[0]  # Approve first movement
-        movement_id = movement_to_approve["id"]
-        
-        print(f"\n6b. Testing POST /api/admin/stock/movements/{movement_id}/approve...")
+    for i, user in enumerate(test_users, 1):
+        print(f"\n6.{chr(96+i)}. Testing mining rate for user {i}...")
         try:
-            approve_data = {"admin_notes": "Approved for testing purposes"}
-            response = requests.post(f"{API_BASE}/admin/stock/movements/{movement_id}/approve", 
-                                   json=approve_data, timeout=30)
-            print(f"Status Code: {response.status_code}")
-            print(f"Response: {response.text}")
+            response = requests.get(f"{API_BASE}/mining/status/{user['uid']}", timeout=30)
             
             if response.status_code == 200:
-                print("✅ Admin approve stock movement test PASSED")
-                movement_to_approve["status"] = "approved"
+                result = response.json()
+                mining_rate_per_hour = result.get("mining_rate_per_hour", 0)
+                
+                if mining_rate_per_hour == 0:
+                    print(f"❌ Mining rate never zero test FAILED - User {i} has zero mining rate")
+                    return False
+                else:
+                    print(f"✅ User {i} mining rate: {mining_rate_per_hour} (non-zero)")
             else:
-                print(f"❌ Admin approve stock movement test FAILED - Status: {response.status_code}")
+                print(f"❌ Mining rate never zero test FAILED - Status: {response.status_code} for user {i}")
                 return False
         except Exception as e:
-            print(f"❌ Admin approve stock movement test FAILED - Error: {e}")
+            print(f"❌ Mining rate never zero test FAILED - Error: {e} for user {i}")
             return False
     
-    # Test 6c: Reject a stock movement
-    if len(test_stock_movements) > 1:
-        movement_to_reject = test_stock_movements[1]  # Reject second movement
-        movement_id = movement_to_reject["id"]
-        
-        print(f"\n6c. Testing POST /api/admin/stock/movements/{movement_id}/reject...")
-        try:
-            reject_data = {"admin_notes": "Rejected for testing purposes"}
-            response = requests.post(f"{API_BASE}/admin/stock/movements/{movement_id}/reject", 
-                                   json=reject_data, timeout=30)
-            print(f"Status Code: {response.status_code}")
-            print(f"Response: {response.text}")
-            
-            if response.status_code == 200:
-                print("✅ Admin reject stock movement test PASSED")
-                movement_to_reject["status"] = "rejected"
-            else:
-                print(f"❌ Admin reject stock movement test FAILED - Status: {response.status_code}")
-                return False
-        except Exception as e:
-            print(f"❌ Admin reject stock movement test FAILED - Error: {e}")
-            return False
-    
+    print("✅ Mining rate never zero test PASSED - All users have non-zero mining rates")
     return True
 
 def test_receiver_completion():
