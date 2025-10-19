@@ -324,7 +324,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Enhanced Wallet Page"
+    - "Stock Movement System"
+    - "Security Deposit System"
+    - "Annual Renewal System"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
