@@ -1001,6 +1001,203 @@ async def get_admin_stats():
         "pending_payments": pending_payments
     }
 
+# ========== ADMIN USER MANAGEMENT ROUTES ==========
+
+@api_router.get("/admin/check-admin-exists")
+async def check_admin_exists():
+    """Check if any admin user exists in the system"""
+    admin = await db.users.find_one({"role": "admin"})
+    return {"admin_exists": admin is not None}
+
+@api_router.post("/admin/create-first-admin")
+async def create_first_admin(request: Request):
+    """Create the first admin user - only works if no admin exists"""
+    # Check if admin already exists
+    existing_admin = await db.users.find_one({"role": "admin"})
+    if existing_admin:
+        raise HTTPException(status_code=400, detail="Admin user already exists")
+    
+    data = await request.json()
+    
+    # Validate required fields
+    required_fields = ["email", "password", "first_name", "last_name", "mobile"]
+    for field in required_fields:
+        if not data.get(field):
+            raise HTTPException(status_code=400, detail=f"{field} is required")
+    
+    # Check if email or mobile already exists
+    existing_user = await db.users.find_one({
+        "$or": [
+            {"email": data["email"]},
+            {"mobile": data["mobile"]}
+        ]
+    })
+    
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email or mobile already registered")
+    
+    # Construct name
+    name_parts = [data["first_name"]]
+    if data.get("middle_name"):
+        name_parts.append(data["middle_name"])
+    name_parts.append(data["last_name"])
+    data["name"] = " ".join(name_parts)
+    
+    # Hash password
+    data["password_hash"] = hash_password(data["password"])
+    del data["password"]
+    
+    # Set role to admin
+    data["role"] = "admin"
+    
+    # Create admin user
+    user = User(**data)
+    user_dict = user.model_dump()
+    
+    # Convert datetime fields
+    for field in ["created_at", "updated_at", "last_login"]:
+        if user_dict.get(field):
+            user_dict[field] = user_dict[field].isoformat()
+    
+    await db.users.insert_one(user_dict)
+    
+    return {
+        "message": "Admin user created successfully",
+        "uid": user.uid,
+        "email": user.email
+    }
+
+@api_router.get("/admin/users")
+async def get_all_users(
+    role: Optional[str] = None,
+    search: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50
+):
+    """Get all users with optional filtering (Admin only)"""
+    query = {}
+    
+    # Filter by role
+    if role:
+        query["role"] = role
+    
+    # Search by name, email, or mobile
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"email": {"$regex": search, "$options": "i"}},
+            {"mobile": {"$regex": search, "$options": "i"}}
+        ]
+    
+    # Get total count
+    total = await db.users.count_documents(query)
+    
+    # Get users
+    users = await db.users.find(query).skip(skip).limit(limit).to_list(length=limit)
+    
+    # Remove sensitive data
+    for user in users:
+        user.pop("password_hash", None)
+        user.pop("reset_token", None)
+        user["_id"] = str(user["_id"])
+    
+    return {
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "users": users
+    }
+
+@api_router.put("/admin/users/{uid}/role")
+async def update_user_role(uid: str, request: Request):
+    """Update user role (Admin only)"""
+    data = await request.json()
+    new_role = data.get("role")
+    
+    # Validate role
+    valid_roles = ["user", "admin", "master_stockist", "sub_stockist", "outlet"]
+    if new_role not in valid_roles:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {', '.join(valid_roles)}")
+    
+    # Find user
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Update role
+    result = await db.users.update_one(
+        {"uid": uid},
+        {"$set": {
+            "role": new_role,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    if result.modified_count > 0:
+        return {"message": f"User role updated to {new_role}", "uid": uid, "role": new_role}
+    else:
+        return {"message": "No changes made", "uid": uid, "role": new_role}
+
+@api_router.put("/admin/users/{uid}/status")
+async def update_user_status(uid: str, request: Request):
+    """Activate or deactivate user account (Admin only)"""
+    data = await request.json()
+    is_active = data.get("is_active")
+    
+    if is_active is None:
+        raise HTTPException(status_code=400, detail="is_active field is required")
+    
+    # Find user
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Update status
+    result = await db.users.update_one(
+        {"uid": uid},
+        {"$set": {
+            "is_active": is_active,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    status_text = "activated" if is_active else "deactivated"
+    return {"message": f"User {status_text} successfully", "uid": uid, "is_active": is_active}
+
+@api_router.delete("/admin/users/{uid}")
+async def delete_user(uid: str):
+    """Delete a user (Admin only) - Use with caution"""
+    # Find user
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Prevent deleting the last admin
+    if user.get("role") == "admin":
+        admin_count = await db.users.count_documents({"role": "admin"})
+        if admin_count <= 1:
+            raise HTTPException(status_code=400, detail="Cannot delete the last admin user")
+    
+    # Delete user
+    result = await db.users.delete_one({"uid": uid})
+    
+    return {"message": "User deleted successfully", "uid": uid}
+
+@api_router.get("/admin/users/{uid}")
+async def get_user_details(uid: str):
+    """Get detailed user information (Admin only)"""
+    user = await db.users.find_one({"uid": uid})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Remove sensitive data
+    user.pop("password_hash", None)
+    user.pop("reset_token", None)
+    user["_id"] = str(user["_id"])
+    
+    return user
+
 # Include router
 app.include_router(api_router)
 
