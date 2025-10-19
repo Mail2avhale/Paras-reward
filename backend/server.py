@@ -1911,6 +1911,10 @@ async def add_to_cart(request: Request):
     else:
         await db.carts.insert_one(cart)
     
+    # Remove MongoDB ObjectId for JSON serialization
+    if "_id" in cart:
+        cart["_id"] = str(cart["_id"])
+    
     return {"message": "Item added to cart", "cart": cart}
 
 @api_router.get("/cart/{user_id}")
