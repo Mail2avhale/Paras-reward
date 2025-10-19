@@ -55,6 +55,9 @@ const Navbar = ({ user, onLogout }) => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem asChild>
+                  <Link to="/profile" className="cursor-pointer">My Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
                   <Link to="/vip" className="cursor-pointer">VIP Membership</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
