@@ -149,6 +149,18 @@ def setup_test_users():
                         
                         if verify_response.status_code == 200:
                             print("✅ KYC verified successfully")
+                            
+                            # Add PRC balance via tap game
+                            print("Adding PRC balance via tap game...")
+                            tap_data = {"taps": 100}  # Add 100 PRC
+                            tap_response = requests.post(f"{API_BASE}/game/tap/{vip_uid}",
+                                                       json=tap_data, timeout=30)
+                            
+                            if tap_response.status_code == 200:
+                                print("✅ PRC balance added successfully")
+                            else:
+                                print(f"❌ Failed to add PRC balance: {tap_response.status_code}")
+                                
                         else:
                             print(f"❌ Failed to verify KYC: {verify_response.status_code}")
                     else:
