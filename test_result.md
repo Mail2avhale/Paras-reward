@@ -360,7 +360,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Mining System Fix - Mining Rate Display"
+    - "Mining Session Status Bug - Frontend Shows Mining Paused"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
