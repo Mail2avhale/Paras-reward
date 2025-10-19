@@ -79,8 +79,7 @@ def test_duplicate_detection(existing_user_data):
     # Test duplicate email
     print("\n2a. Testing duplicate email...")
     duplicate_email_data = {
-        "first_name": "Priya",
-        "last_name": "Sharma",
+        "name": "Priya Sharma",
         "email": existing_user_data["email"],  # Same email
         "mobile": f"8765432{datetime.now().strftime('%H%M')}",
         "password": "AnotherPass123!",
