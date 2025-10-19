@@ -1,0 +1,234 @@
+import { useState } from 'react';
+import axios from 'axios';
+import { useNavigate, Link } from 'react-router-dom';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
+import { toast } from 'sonner';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
+
+const RegisterSimple = () => {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    confirmPassword: '',
+    role: 'user'
+  });
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Email validation
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Invalid email format';
+    }
+
+    // Password validation
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+
+    // Confirm password validation
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      toast.error('Please fix the errors in the form');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await axios.post(`${API}/auth/register/simple`, {
+        email: formData.email,
+        password: formData.password,
+        role: formData.role
+      });
+
+      toast.success('Registration successful! Please login to continue.');
+      
+      // Navigate to login
+      navigate('/login');
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast.error(error.response?.data?.detail || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear error for this field
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md p-8 shadow-2xl">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <User className="h-10 w-10 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
+          <p className="text-gray-600">Join PARAS Reward and start earning!</p>
+        </div>
+
+        {/* Info Banner */}
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-blue-900">
+              <p className="font-semibold mb-1">Quick Registration</p>
+              <p>Just email & password to get started. Complete your profile later!</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Registration Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Role Selection */}
+          <div>
+            <Label htmlFor="role">Register As</Label>
+            <Select value={formData.role} onValueChange={(value) => handleChange('role', value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="user">User</SelectItem>
+                <SelectItem value="master_stockist">Master Stockist</SelectItem>
+                <SelectItem value="sub_stockist">Sub Stockist</SelectItem>
+                <SelectItem value="outlet">Outlet</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500 mt-1">
+              {formData.role === 'user' && 'Individual user - mine and redeem PRC coins'}
+              {formData.role === 'master_stockist' && 'Master Stockist - manage regions and sub-stockists'}
+              {formData.role === 'sub_stockist' && 'Sub Stockist - manage outlets in your area'}
+              {formData.role === 'outlet' && 'Outlet - verify orders and deliver products'}
+            </p>
+          </div>
+
+          {/* Email */}
+          <div>
+            <Label htmlFor="email">Email Address</Label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                id="email"
+                type="email"
+                placeholder="your@email.com"
+                value={formData.email}
+                onChange={(e) => handleChange('email', e.target.value)}
+                className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
+              />
+            </div>
+            {errors.email && (
+              <div className="flex items-center gap-1 mt-1 text-red-600 text-sm">
+                <AlertCircle className="h-4 w-4" />
+                <span>{errors.email}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Password */}
+          <div>
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                id="password"
+                type="password"
+                placeholder="Min 6 characters"
+                value={formData.password}
+                onChange={(e) => handleChange('password', e.target.value)}
+                className={`pl-10 ${errors.password ? 'border-red-500' : ''}`}
+              />
+            </div>
+            {errors.password && (
+              <div className="flex items-center gap-1 mt-1 text-red-600 text-sm">
+                <AlertCircle className="h-4 w-4" />
+                <span>{errors.password}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Confirm Password */}
+          <div>
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="Re-enter password"
+                value={formData.confirmPassword}
+                onChange={(e) => handleChange('confirmPassword', e.target.value)}
+                className={`pl-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+              />
+            </div>
+            {errors.confirmPassword && (
+              <div className="flex items-center gap-1 mt-1 text-red-600 text-sm">
+                <AlertCircle className="h-4 w-4" />
+                <span>{errors.confirmPassword}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Submit Button */}
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-6 text-lg font-semibold"
+          >
+            {loading ? 'Creating Account...' : 'Create Account'}
+          </Button>
+        </form>
+
+        {/* Login Link */}
+        <div className="mt-6 text-center">
+          <p className="text-gray-600">
+            Already have an account?{' '}
+            <Link to="/login" className="text-purple-600 hover:text-purple-700 font-semibold">
+              Login here
+            </Link>
+          </p>
+        </div>
+
+        {/* Terms */}
+        <div className="mt-6 text-center text-xs text-gray-500">
+          By creating an account, you agree to our{' '}
+          <Link to="/terms" className="text-purple-600 hover:underline">Terms & Conditions</Link>
+          {' '}and{' '}
+          <Link to="/privacy" className="text-purple-600 hover:underline">Privacy Policy</Link>
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+export default RegisterSimple;
