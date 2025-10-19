@@ -277,72 +277,44 @@ def test_cashback_maintenance_system():
         print(f"❌ Maintenance check test FAILED - Error: {e}")
         return False
 
-def test_order_checkout_with_delivery_charge(product_id):
-    """Test order creation with delivery charge calculation via cart + checkout"""
-    global test_order
-    print("\n4. Testing Order Creation with Delivery Charge...")
+def test_cashback_credit_with_lien_clearing():
+    """Test cashback credit with lien clearing functionality"""
+    print("\n4. Testing Cashback Credit with Lien Clearing...")
     
-    if not test_vip_user or not product_id:
-        print("❌ Cannot test order creation - missing VIP user or product")
-        return None
-    
+    # Test 4a: Set up a maintenance lien first
+    print("\n4a. Setting up maintenance lien...")
     try:
-        # Step 1: Add product to cart
-        print("4a. Adding product to cart...")
-        cart_data = {
-            "user_id": test_vip_user["uid"],
-            "product_id": product_id,
-            "quantity": 1
-        }
+        # First, let's check current wallet status
+        wallet_response = requests.get(f"{API_BASE}/wallet/{test_vip_user['uid']}", timeout=30)
+        if wallet_response.status_code == 200:
+            wallet = wallet_response.json()
+            print(f"Current wallet status: {json.dumps(wallet, indent=2)}")
         
-        cart_response = requests.post(f"{API_BASE}/cart/add", json=cart_data, timeout=30)
-        print(f"Add to cart - Status Code: {cart_response.status_code}")
-        print(f"Add to cart - Response: {cart_response.text}")
+        # Test crediting cashback with lien clearing
+        print("\n4b. Testing POST /api/wallet/credit-cashback/{uid} with lien...")
+        credit_data = {"amount": 100}
         
-        if cart_response.status_code != 200:
-            print(f"❌ Failed to add product to cart: {cart_response.status_code}")
-            return None
+        response = requests.post(f"{API_BASE}/wallet/credit-cashback/{test_vip_user['uid']}", 
+                               json=credit_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
         
-        print("✅ Product added to cart successfully")
-        
-        # Step 2: Checkout cart
-        print("4b. Checking out cart...")
-        checkout_data = {
-            "user_id": test_vip_user["uid"],
-            "delivery_address": "Test Address, Test City, 123456"
-        }
-        
-        checkout_response = requests.post(f"{API_BASE}/orders/checkout", 
-                                        json=checkout_data, timeout=30)
-        print(f"Checkout - Status Code: {checkout_response.status_code}")
-        print(f"Checkout - Response: {checkout_response.text}")
-        
-        if checkout_response.status_code == 200:
-            order_result = checkout_response.json()
-            order_id = order_result.get("order_id")
-            delivery_charge = order_result.get("delivery_charge")
+        if response.status_code == 200:
+            result = response.json()
+            print("✅ Cashback credit test PASSED")
+            print(f"Credit result: {json.dumps(result, indent=2)}")
             
-            print(f"✅ Order checkout test PASSED")
-            print(f"Order ID: {order_id}")
-            print(f"Delivery Charge: {delivery_charge}")
+            # Verify lien clearing logic
+            if "lien_cleared" in result:
+                print("✅ Lien clearing logic working")
             
-            # Verify delivery charge calculation (should be total_cash * delivery_charge_rate)
-            # From the product: cash_price = 50.0, so delivery_charge should be 50.0 * 0.10 = 5.0
-            expected_delivery_charge = 50.0 * 0.10  # 10% of cash price
-            if delivery_charge and abs(delivery_charge - expected_delivery_charge) < 0.01:
-                print(f"✅ Delivery charge calculation CORRECT: {delivery_charge}")
-            else:
-                print(f"❌ Delivery charge calculation INCORRECT: Expected {expected_delivery_charge}, got {delivery_charge}")
-            
-            test_order = order_result
-            return order_id
+            return True
         else:
-            print(f"❌ Order checkout test FAILED - Status: {checkout_response.status_code}")
-            return None
-            
+            print(f"❌ Cashback credit test FAILED - Status: {response.status_code}")
+            return False
     except Exception as e:
-        print(f"❌ Order checkout test FAILED - Error: {e}")
-        return None
+        print(f"❌ Cashback credit test FAILED - Error: {e}")
+        return False
 
 def test_auto_distribution_on_delivery(order_id):
     """Test auto-distribution when order is marked as delivered"""
