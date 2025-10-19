@@ -73,7 +73,16 @@ function App() {
           <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Home />} />
           <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginNew onLogin={handleLogin} />} />
           <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
+          <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" /> : <ForgotPassword />} />
           <Route path="/setup" element={<Setup />} />
+          
+          {/* Static Pages */}
+          <Route path="/about" element={<AboutUs />} />
+          <Route path="/contact" element={<ContactUs />} />
+          <Route path="/terms" element={<TermsAndConditions />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          
+          {/* Protected Routes */}
           <Route path="/dashboard" element={user ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/mining" element={user ? <Mining user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/game" element={user ? <TapGame user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
