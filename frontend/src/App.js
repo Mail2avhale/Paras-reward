@@ -5,7 +5,7 @@ import axios from "axios";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 
-import Home from "@/pages/Home";
+import HomeFintech from "@/pages/HomeFintech";
 import Login from "@/pages/Login";
 import LoginNew from "@/pages/LoginNew";
 import RegisterSimple from "@/pages/RegisterSimple";
