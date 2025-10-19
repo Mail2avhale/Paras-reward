@@ -81,14 +81,14 @@ def setup_test_users():
     vip_data = {
         "first_name": "VIP",
         "last_name": "Customer",
-        "email": f"vip.{timestamp}@example.com",
-        "mobile": f"9876544{datetime.now().strftime('%H%M')}",
+        "email": f"vip.{timestamp}.{microseconds}@example.com",
+        "mobile": f"98766{timestamp[-6:]}",  # Different prefix to avoid collision
         "password": "VIPPass123!",
         "state": "Gujarat",
         "district": "Ahmedabad",
         "pincode": "380001",
-        "aadhaar_number": f"2222{datetime.now().strftime('%H%M')}2222222",
-        "pan_number": f"VIPUS{datetime.now().strftime('%H%M')}V"
+        "aadhaar_number": f"2222{timestamp[-8:]}222",
+        "pan_number": f"VIP{timestamp[-6:]}V"
     }
     
     try:
