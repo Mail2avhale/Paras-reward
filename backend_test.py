@@ -40,8 +40,7 @@ def test_registration_endpoint():
     print("\n1. Testing valid registration with all required fields...")
     
     valid_user_data = {
-        "first_name": "Rajesh",
-        "last_name": "Kumar", 
+        "name": "Rajesh Kumar Singh",
         "email": f"rajesh.kumar.{datetime.now().strftime('%Y%m%d%H%M%S')}@example.com",
         "mobile": f"9876543{datetime.now().strftime('%H%M')}",
         "password": "SecurePass123!",
