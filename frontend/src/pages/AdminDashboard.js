@@ -398,9 +398,19 @@ const MarketplaceManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Debug: Log form data
+    console.log('Form Data being submitted:', formData);
+    
     // Validate required fields
     if (!formData.name || !formData.sku || !formData.prc_price || !formData.cash_price || !formData.type) {
       toast.error('Please fill all required fields');
+      console.error('Missing fields:', {
+        name: !!formData.name,
+        sku: !!formData.sku,
+        prc_price: !!formData.prc_price,
+        cash_price: !!formData.cash_price,
+        type: !!formData.type
+      });
       return;
     }
 
@@ -413,11 +423,30 @@ const MarketplaceManagement = () => {
     setLoading(true);
 
     try {
+      // Prepare data with all required fields explicitly
+      const productData = {
+        name: formData.name,
+        sku: formData.sku,
+        description: formData.description || '',
+        prc_price: parseFloat(formData.prc_price) || 0,
+        cash_price: parseFloat(formData.cash_price) || 0,
+        type: formData.type,
+        category: formData.category || '',
+        image_url: formData.image_url || '',
+        total_stock: parseInt(formData.total_stock) || 0,
+        available_stock: parseInt(formData.available_stock) || 0,
+        visible: formData.visible !== false,
+        vip_only: formData.vip_only || false
+      };
+
+      console.log('Sending product data:', productData);
+
       if (editingProduct) {
-        await axios.put(`${API}/admin/products/${editingProduct.product_id}`, formData);
+        await axios.put(`${API}/admin/products/${editingProduct.product_id}`, productData);
         toast.success('Product updated successfully!');
       } else {
-        await axios.post(`${API}/admin/products`, formData);
+        const response = await axios.post(`${API}/admin/products`, productData);
+        console.log('Create product response:', response.data);
         toast.success('Product created successfully!');
       }
       
@@ -427,6 +456,7 @@ const MarketplaceManagement = () => {
       fetchProducts();
     } catch (error) {
       console.error('Error saving product:', error);
+      console.error('Error response:', error.response?.data);
       toast.error(error.response?.data?.detail || 'Failed to save product');
     } finally {
       setLoading(false);
