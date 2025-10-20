@@ -916,6 +916,8 @@ const AdminDashboard = ({ user, onLogout }) => {
 
   const menuItems = [
     { id: 'dashboard', icon: Home, label: 'Dashboard' },
+    { id: 'stockist-management', icon: UserCog, label: 'Stockist Management' },
+    { id: 'financial-management', icon: DollarSign, label: 'Financial Management' },
     { id: 'master-stockist', icon: Package, label: 'Master Stockist' },
     { id: 'sub-stockist', icon: Store, label: 'Sub Stockist' },
     { id: 'outlet', icon: ShoppingCart, label: 'Outlet' },
