@@ -245,7 +245,7 @@ class OrderSingleProduct(BaseModel):
     transaction_fee: float
     delivery_fee: float
     total_cash_fee: float
-    secret_code: str = Field(default_factory=lambda: f"PRC-{''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))}")
+    secret_code: str = Field(default_factory=lambda: ''.join(secrets.choice(string.digits) for _ in range(6)))
     status: str = "pending"  # pending, verified, delivered, cancelled
     outlet_id: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
