@@ -1397,6 +1397,27 @@ async def checkout(request: Request):
 
 # ========== ORDER/REDEEM ROUTES (Legacy Single Product) ==========
 
+@api_router.post("/orders/verify")
+async def verify_order(verify_data: OrderVerify):
+    """Verify order with secret code (Outlet)"""
+    order = await db.orders.find_one({"secret_code": verify_data.secret_code})
+    if not order:
+        raise HTTPException(status_code=404, detail="Invalid secret code")
+    
+    if order.get("status") != "pending":
+        raise HTTPException(status_code=400, detail="Order already processed")
+    
+    # Update order status
+    await db.orders.update_one(
+        {"secret_code": verify_data.secret_code},
+        {"$set": {"status": "verified"}}
+    )
+    
+    # Remove MongoDB _id for JSON serialization
+    order["_id"] = str(order["_id"])
+    
+    return {"message": "Order verified", "order": order}
+
 @api_router.post("/orders/{uid}", response_model=OrderSingleProduct)
 async def create_order_alias(uid: str, order_data: OrderCreate):
     """Create order - Backward compatibility alias"""
