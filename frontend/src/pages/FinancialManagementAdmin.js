@@ -452,7 +452,7 @@ const FinancialManagementAdmin = () => {
                   placeholder="3"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Monthly return: ₹{(depositForm.amount && depositForm.monthly_return_rate) ? (parseFloat(depositForm.amount) * parseFloat(depositForm.monthly_return_rate)).toLocaleString('en-IN') : '0'}
+                  Monthly return: ₹{(depositForm.amount && depositForm.monthly_return_rate) ? (parseFloat(depositForm.amount || 0) * parseFloat(depositForm.monthly_return_rate || 0)).toLocaleString('en-IN', {maximumFractionDigits: 0}) : '0'}
                 </p>
               </div>
 
