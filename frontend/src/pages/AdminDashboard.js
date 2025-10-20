@@ -453,12 +453,17 @@ const MarketplaceManagement = () => {
     setEditingProduct(product);
     setFormData({
       name: product.name,
-      description: product.description,
+      sku: product.sku,
+      description: product.description || '',
       prc_price: product.prc_price,
+      cash_price: product.cash_price,
+      type: product.type || 'physical',
       category: product.category || '',
       image_url: product.image_url || '',
-      stock_quantity: product.stock_quantity || 0,
-      featured: product.featured || false
+      total_stock: product.total_stock || 0,
+      available_stock: product.available_stock || 0,
+      visible: product.visible !== false,
+      vip_only: product.vip_only || false
     });
     setShowAddModal(true);
   };
