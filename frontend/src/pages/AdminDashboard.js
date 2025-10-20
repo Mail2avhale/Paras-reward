@@ -402,13 +402,12 @@ const MarketplaceManagement = () => {
     console.log('Form Data being submitted:', formData);
     
     // Validate required fields
-    if (!formData.name || !formData.sku || !formData.prc_price || !formData.cash_price || !formData.type) {
+    if (!formData.name || !formData.sku || !formData.prc_price || !formData.type) {
       toast.error('Please fill all required fields');
       console.error('Missing fields:', {
         name: !!formData.name,
         sku: !!formData.sku,
         prc_price: !!formData.prc_price,
-        cash_price: !!formData.cash_price,
         type: !!formData.type
       });
       return;
