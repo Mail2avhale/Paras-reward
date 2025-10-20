@@ -363,8 +363,8 @@ def check_orders_in_database(test_users):
     total_orders_found = 0
     
     for test_user in test_users:
-        uid = vip_user["uid"]
-        name = vip_user["name"]
+        uid = test_user["uid"]
+        name = test_user["name"]
         
         print(f"\n3.1. Checking orders for: {name} (UID: {uid})")
         
