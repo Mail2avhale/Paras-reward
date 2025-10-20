@@ -1052,6 +1052,34 @@ const AdminDashboard = ({ user, onLogout }) => {
                 </Card>
               </div>
 
+              {/* Additional Stats Row */}
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
+                <Card className="p-4 bg-gradient-to-br from-purple-50 to-purple-100">
+                  <div className="text-sm font-medium text-purple-600 mb-1">Master Stockists</div>
+                  <div className="text-2xl font-bold text-purple-900">{stats?.users?.master_stockists || 0}</div>
+                </Card>
+
+                <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100">
+                  <div className="text-sm font-medium text-blue-600 mb-1">Sub Stockists</div>
+                  <div className="text-2xl font-bold text-blue-900">{stats?.users?.sub_stockists || 0}</div>
+                </Card>
+
+                <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100">
+                  <div className="text-sm font-medium text-green-600 mb-1">Outlets</div>
+                  <div className="text-2xl font-bold text-green-900">{stats?.users?.outlets || 0}</div>
+                </Card>
+
+                <Card className="p-4 bg-gradient-to-br from-yellow-50 to-yellow-100">
+                  <div className="text-sm font-medium text-yellow-600 mb-1">VIP Pending</div>
+                  <div className="text-2xl font-bold text-yellow-900">{stats?.vip_payments?.pending || 0}</div>
+                </Card>
+
+                <Card className="p-4 bg-gradient-to-br from-red-50 to-red-100">
+                  <div className="text-sm font-medium text-red-600 mb-1">Withdrawals Pending</div>
+                  <div className="text-2xl font-bold text-red-900">{stats?.withdrawals?.pending_count || 0}</div>
+                </Card>
+              </div>
+
               {/* Chart and Fee Summary Row */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 {/* Summary Chart */}
