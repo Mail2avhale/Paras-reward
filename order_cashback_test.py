@@ -374,12 +374,13 @@ def test_specific_user_orders_and_cashback():
     # Step 7: Check Orders collection structure
     print(f"\n7. Checking Orders collection structure...")
     
+    user_id_field = None  # Initialize variable
+    
     if existing_orders:
         sample_order = existing_orders[0]
         print(f"\n   📋 Sample Order Structure:")
         
         # Check for user_id field variations
-        user_id_field = None
         if "user_id" in sample_order:
             user_id_field = "user_id"
         elif "uid" in sample_order:
