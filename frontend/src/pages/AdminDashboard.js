@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import ImageUpload from '@/components/ImageUpload';
 import StockistManagementAdmin from '@/pages/StockistManagementAdmin';
 import FinancialManagementAdmin from '@/pages/FinancialManagementAdmin';
+import AdvancedUserManagement from '@/pages/AdvancedUserManagement';
+import AdvancedOrderManagement from '@/pages/AdvancedOrderManagement';
 import { 
   Users, Package, CreditCard, FileText, CheckCircle, XCircle, 
   Search, Shield, UserCog, Trash2, BarChart3, TrendingUp, TrendingDown,
