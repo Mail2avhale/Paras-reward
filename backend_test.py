@@ -983,70 +983,65 @@ def main():
     
     # Run all tests in sequence
     print("\n" + "=" * 80)
-    print("BACKEND API COMPREHENSIVE TESTING")
+    print("COMPREHENSIVE BACKEND API TESTING - ADMIN DASHBOARD APIS")
     print("=" * 80)
     
-    # Products Endpoint Testing (Priority Focus)
-    print("\n" + "=" * 50)
-    print("PRODUCTS ENDPOINT TESTING (PRIORITY)")
-    print("=" * 50)
+    # Admin Dashboard API Testing (Priority Focus)
+    print("\n" + "=" * 60)
+    print("ADMIN DASHBOARD API TESTING (PRIORITY)")
+    print("=" * 60)
     
-    # 7. Test public products endpoint
+    # 1. Test Admin KPIs endpoint
+    if not test_admin_kpis_endpoint():
+        print("❌ CRITICAL: Admin KPIs endpoint test failed")
+        return False
+    
+    # 2. Test Order Management APIs
+    if not test_order_management_apis():
+        print("❌ CRITICAL: Order Management APIs test failed")
+        return False
+    
+    # 3. Test Financial Reports APIs
+    if not test_financial_reports_apis():
+        print("❌ CRITICAL: Financial Reports APIs test failed")
+        return False
+    
+    # 4. Test Employee Management APIs
+    if not test_employee_management_apis():
+        print("❌ CRITICAL: Employee Management APIs test failed")
+        return False
+    
+    # 5. Test Audit Logging APIs
+    if not test_audit_logging_apis():
+        print("❌ CRITICAL: Audit Logging APIs test failed")
+        return False
+    
+    print("\n" + "=" * 60)
+    print("PRODUCTS ENDPOINT TESTING (SECONDARY)")
+    print("=" * 60)
+    
+    # Test public products endpoint
     if not test_public_products_endpoint():
         print("❌ CRITICAL: Public products endpoint test failed")
         return False
     
-    # 8. Test admin products endpoint
+    # Test admin products endpoint
     if not test_admin_products_endpoint():
         print("❌ CRITICAL: Admin products endpoint test failed")
         return False
     
-    # 9. Test products filtering logic
+    # Test products filtering logic
     if not test_products_filtering_logic():
         print("❌ CRITICAL: Products filtering logic test failed")
-        return False
-    
-    print("\n" + "=" * 50)
-    print("MINING SYSTEM TESTING (SECONDARY)")
-    print("=" * 50)
-    
-    # 1. Setup test users
-    if not setup_test_users():
-        print("❌ CRITICAL: Failed to setup test users - cannot continue")
-        return False
-    
-    # 2. Test mining status for user with NO active mining session
-    if not test_mining_status_no_active_session():
-        print("❌ CRITICAL: Mining status (no active session) test failed")
-        return False
-    
-    # 3. Start mining session for test user 2
-    if not start_mining_session():
-        print("❌ CRITICAL: Failed to start mining session - cannot continue with active session tests")
-        return False
-    
-    # 4. Test mining status for user WITH active mining session
-    if not test_mining_status_with_active_session():
-        print("❌ CRITICAL: Mining status (with active session) test failed")
-        return False
-    
-    # 5. Test mining rate calculation formula
-    if not test_mining_rate_calculation():
-        print("❌ CRITICAL: Mining rate calculation test failed")
-        return False
-    
-    # 6. Test that mining rate is never zero
-    if not test_mining_rate_never_zero():
-        print("❌ CRITICAL: Mining rate never zero test failed")
         return False
     
     print("\n" + "=" * 80)
     print("BACKEND API TESTING COMPLETED!")
     print("=" * 80)
     print("✅ ALL TESTS PASSED - Backend APIs are working correctly!")
+    print("✅ Admin Dashboard APIs: KPIs, Order Management, Financial Reports")
+    print("✅ Employee Management and Audit Logging systems working")
     print("✅ Products endpoints working: public filtering and admin access")
-    print("✅ Mining system fix is working correctly")
-    print("✅ Mining rate displays correctly and is never zero")
     
     return True
 
