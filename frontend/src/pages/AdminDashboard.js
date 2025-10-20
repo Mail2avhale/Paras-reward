@@ -753,10 +753,6 @@ const MarketplaceManagement = () => {
                     <span className="font-bold text-blue-600">{product.prc_price} PRC</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Cash Fee:</span>
-                    <span className="font-semibold text-green-600">₹{product.cash_price}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Stock:</span>
                     <span className="font-semibold">{product.available_stock || 0}/{product.total_stock || 0}</span>
                   </div>
