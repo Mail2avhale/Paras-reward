@@ -1387,12 +1387,47 @@ const AdminDashboard = ({ user, onLogout }) => {
           )}
 
           {/* Other Tabs - Placeholder */}
-          {['master-stockist', 'sub-stockist', 'outlet', 'rewards', 'commissions', 'orders', 'notifications'].includes(activeTab) && (
+          {['master-stockist', 'sub-stockist', 'outlet'].includes(activeTab) && (
             <Card className="p-12 text-center bg-white">
               <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-2 capitalize">{activeTab.replace('-', ' ')}</h3>
               <p className="text-gray-500">This section is under development</p>
             </Card>
+          )}
+
+          {/* Orders Management */}
+          {activeTab === 'orders' && (
+            <div className="space-y-6">
+              <OrdersManagement />
+            </div>
+          )}
+
+          {/* Commissions Management */}
+          {activeTab === 'commissions' && (
+            <div className="space-y-6">
+              <CommissionsManagement />
+            </div>
+          )}
+
+          {/* Rewards Management */}
+          {activeTab === 'rewards' && (
+            <div className="space-y-6">
+              <RewardsManagement />
+            </div>
+          )}
+
+          {/* Notifications */}
+          {activeTab === 'notifications' && (
+            <div className="space-y-6">
+              <NotificationsManagement />
+            </div>
+          )}
+
+          {/* Settings */}
+          {activeTab === 'settings' && (
+            <div className="space-y-6">
+              <SettingsManagement />
+            </div>
           )}
 
           {/* Marketplace Management */}
