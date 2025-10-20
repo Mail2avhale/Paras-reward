@@ -30,7 +30,7 @@ if not BACKEND_URL:
 
 API_BASE = f"{BACKEND_URL}/api"
 
-print(f"Testing Mining System Fix at: {BACKEND_URL}")
+print(f"Testing VIP Checkout Issues at: {BACKEND_URL}")
 print(f"API Base: {API_BASE}")
 print("=" * 80)
 
