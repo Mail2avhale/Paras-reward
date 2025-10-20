@@ -34,6 +34,394 @@ print(f"Testing VIP Checkout Issues at: {BACKEND_URL}")
 print(f"API Base: {API_BASE}")
 print("=" * 80)
 
+# VIP Checkout Investigation Functions
+def investigate_vip_user_status():
+    """Check VIP User Status - membership_type field value"""
+    print("\n" + "=" * 80)
+    print("1. INVESTIGATING VIP USER STATUS")
+    print("=" * 80)
+    
+    # Test users to check
+    test_users = [
+        "admin@paras.com",
+        "santosh@paras.com", 
+        "test@paras.com"
+    ]
+    
+    vip_users_found = []
+    
+    for email in test_users:
+        print(f"\n1.1. Checking user: {email}")
+        
+        try:
+            # Try to login to get user data
+            response = requests.post(
+                f"{API_BASE}/auth/login",
+                params={
+                    "identifier": email,
+                    "password": "admin123"  # Common test password
+                },
+                timeout=30
+            )
+            
+            print(f"     Login Status: {response.status_code}")
+            
+            if response.status_code == 200:
+                user_data = response.json()
+                membership_type = user_data.get("membership_type")
+                uid = user_data.get("uid")
+                name = user_data.get("name")
+                
+                print(f"     ✅ User found: {name} (UID: {uid})")
+                print(f"     📋 membership_type: '{membership_type}'")
+                print(f"     📋 kyc_status: '{user_data.get('kyc_status')}'")
+                print(f"     📋 role: '{user_data.get('role')}'")
+                print(f"     📋 is_active: {user_data.get('is_active')}")
+                
+                if membership_type and membership_type.lower() == "vip":
+                    vip_users_found.append({
+                        "email": email,
+                        "uid": uid,
+                        "name": name,
+                        "membership_type": membership_type,
+                        "kyc_status": user_data.get("kyc_status"),
+                        "user_data": user_data
+                    })
+                    print(f"     🎯 VIP USER FOUND!")
+                else:
+                    print(f"     ⚠️  Not VIP (membership_type: '{membership_type}')")
+                    
+            elif response.status_code == 401:
+                print(f"     ❌ Wrong password for {email}")
+            elif response.status_code == 404:
+                print(f"     ❌ User not found: {email}")
+            else:
+                print(f"     ❓ Unexpected status: {response.status_code}")
+                
+        except Exception as e:
+            print(f"     ❌ Error checking {email}: {e}")
+    
+    print(f"\n📊 SUMMARY: Found {len(vip_users_found)} VIP users")
+    for vip_user in vip_users_found:
+        print(f"   - {vip_user['name']} ({vip_user['email']}) - membership_type: '{vip_user['membership_type']}'")
+    
+    return vip_users_found
+
+def test_cart_and_checkout_flow(vip_users):
+    """Test Cart & Checkout Flow for VIP users"""
+    print("\n" + "=" * 80)
+    print("2. TESTING CART & CHECKOUT FLOW")
+    print("=" * 80)
+    
+    if not vip_users:
+        print("❌ No VIP users found to test cart & checkout flow")
+        return False
+    
+    # Use first VIP user for testing
+    test_user = vip_users[0]
+    uid = test_user["uid"]
+    name = test_user["name"]
+    
+    print(f"\n2.1. Testing with VIP user: {name} (UID: {uid})")
+    
+    # Step 1: Get available products
+    print(f"\n2.2. Getting available products...")
+    try:
+        response = requests.get(f"{API_BASE}/products", timeout=30)
+        if response.status_code == 200:
+            products = response.json()
+            print(f"     ✅ Found {len(products)} products")
+            
+            if len(products) == 0:
+                print("     ❌ No products available for testing")
+                return False
+                
+            # Use first product for testing
+            test_product = products[0]
+            product_id = test_product.get("product_id")
+            product_name = test_product.get("name")
+            prc_price = test_product.get("prc_price")
+            cash_price = test_product.get("cash_price")
+            
+            print(f"     📦 Test Product: {product_name}")
+            print(f"     💰 PRC Price: {prc_price}")
+            print(f"     💵 Cash Price: {cash_price}")
+            
+        else:
+            print(f"     ❌ Failed to get products: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"     ❌ Error getting products: {e}")
+        return False
+    
+    # Step 2: Add product to cart
+    print(f"\n2.3. Adding product to cart...")
+    try:
+        cart_data = {
+            "product_id": product_id,
+            "quantity": 1
+        }
+        
+        response = requests.post(f"{API_BASE}/cart/add", json=cart_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            print(f"     ✅ Product added to cart successfully")
+        else:
+            print(f"     ❌ Failed to add to cart: {response.status_code}")
+            # Continue with checkout test anyway
+            
+    except Exception as e:
+        print(f"     ❌ Error adding to cart: {e}")
+    
+    # Step 3: Get cart contents
+    print(f"\n2.4. Getting cart contents...")
+    try:
+        response = requests.get(f"{API_BASE}/cart/{uid}", timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            cart_data = response.json()
+            print(f"     ✅ Cart retrieved successfully")
+            print(f"     📋 Cart items: {len(cart_data.get('items', []))}")
+        else:
+            print(f"     ❌ Failed to get cart: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error getting cart: {e}")
+    
+    # Step 4: Attempt checkout
+    print(f"\n2.5. Attempting checkout...")
+    try:
+        checkout_data = {
+            "user_id": uid,
+            "delivery_address": {
+                "street": "123 Test Street",
+                "city": "Test City", 
+                "state": "Test State",
+                "pincode": "123456"
+            }
+        }
+        
+        response = requests.post(f"{API_BASE}/orders/checkout", json=checkout_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            print(f"     ✅ Checkout successful!")
+            checkout_result = response.json()
+            order_id = checkout_result.get("order_id")
+            if order_id:
+                print(f"     📋 Order ID: {order_id}")
+                return {"success": True, "order_id": order_id, "user": test_user}
+        else:
+            print(f"     ❌ CHECKOUT FAILED - Status: {response.status_code}")
+            print(f"     🔍 EXACT ERROR MESSAGE: {response.text}")
+            return {"success": False, "error": response.text, "status": response.status_code, "user": test_user}
+            
+    except Exception as e:
+        print(f"     ❌ Error during checkout: {e}")
+        return {"success": False, "error": str(e), "user": test_user}
+
+def check_orders_in_database(vip_users):
+    """Check Orders - List all orders for VIP users"""
+    print("\n" + "=" * 80)
+    print("3. CHECKING ORDERS IN DATABASE")
+    print("=" * 80)
+    
+    if not vip_users:
+        print("❌ No VIP users found to check orders")
+        return False
+    
+    total_orders_found = 0
+    
+    for vip_user in vip_users:
+        uid = vip_user["uid"]
+        name = vip_user["name"]
+        
+        print(f"\n3.1. Checking orders for: {name} (UID: {uid})")
+        
+        try:
+            # Try different order endpoints
+            endpoints_to_try = [
+                f"/orders/{uid}",
+                f"/orders/legacy/{uid}",
+                f"/admin/orders/all?user_id={uid}"
+            ]
+            
+            for endpoint in endpoints_to_try:
+                print(f"\n     Trying: GET {endpoint}")
+                response = requests.get(f"{API_BASE}{endpoint}", timeout=30)
+                print(f"     Status: {response.status_code}")
+                
+                if response.status_code == 200:
+                    orders_data = response.json()
+                    
+                    # Handle different response formats
+                    if isinstance(orders_data, list):
+                        orders = orders_data
+                    elif isinstance(orders_data, dict):
+                        orders = orders_data.get("orders", orders_data.get("data", []))
+                    else:
+                        orders = []
+                    
+                    print(f"     ✅ Found {len(orders)} orders")
+                    total_orders_found += len(orders)
+                    
+                    # Show order details
+                    for i, order in enumerate(orders[:3]):  # Show first 3 orders
+                        order_id = order.get("order_id")
+                        status = order.get("status")
+                        created_at = order.get("created_at")
+                        total_amount = order.get("total_amount") or order.get("total_cash_fee")
+                        
+                        print(f"       Order {i+1}: {order_id}")
+                        print(f"         Status: {status}")
+                        print(f"         Created: {created_at}")
+                        print(f"         Amount: {total_amount}")
+                    
+                    if len(orders) > 3:
+                        print(f"       ... and {len(orders) - 3} more orders")
+                    
+                    break  # Found orders, no need to try other endpoints
+                    
+                elif response.status_code == 404:
+                    print(f"     ⚠️  Endpoint not found or no orders")
+                else:
+                    print(f"     ❌ Error: {response.status_code}")
+                    
+        except Exception as e:
+            print(f"     ❌ Error checking orders for {name}: {e}")
+    
+    print(f"\n📊 TOTAL ORDERS FOUND: {total_orders_found}")
+    return total_orders_found > 0
+
+def check_cashback_wallet(vip_users):
+    """Check Cashback Wallet - Verify cashback balance"""
+    print("\n" + "=" * 80)
+    print("4. CHECKING CASHBACK WALLET")
+    print("=" * 80)
+    
+    if not vip_users:
+        print("❌ No VIP users found to check cashback wallet")
+        return False
+    
+    for vip_user in vip_users:
+        uid = vip_user["uid"]
+        name = vip_user["name"]
+        
+        print(f"\n4.1. Checking cashback wallet for: {name} (UID: {uid})")
+        
+        try:
+            # Get wallet information
+            response = requests.get(f"{API_BASE}/wallet/{uid}", timeout=30)
+            print(f"     Status: {response.status_code}")
+            
+            if response.status_code == 200:
+                wallet_data = response.json()
+                print(f"     ✅ Wallet data retrieved")
+                
+                # Extract wallet balances
+                cashback_balance = wallet_data.get("cashback_balance", 0)
+                profit_balance = wallet_data.get("profit_balance", 0)
+                prc_balance = wallet_data.get("prc_balance", 0)
+                wallet_status = wallet_data.get("wallet_status", "unknown")
+                pending_lien = wallet_data.get("pending_lien", 0)
+                maintenance_due = wallet_data.get("maintenance_due", False)
+                
+                print(f"     💰 Cashback Balance: ₹{cashback_balance}")
+                print(f"     💼 Profit Balance: ₹{profit_balance}")
+                print(f"     🪙 PRC Balance: {prc_balance}")
+                print(f"     📊 Wallet Status: {wallet_status}")
+                print(f"     ⚠️  Pending Lien: ₹{pending_lien}")
+                print(f"     🔧 Maintenance Due: {maintenance_due}")
+                
+                # Check if user has any cashback (indicating successful orders)
+                if cashback_balance > 0:
+                    print(f"     🎯 USER HAS CASHBACK - Orders have been processed!")
+                else:
+                    print(f"     ⚠️  No cashback balance - May indicate no successful orders")
+                    
+            else:
+                print(f"     ❌ Failed to get wallet data: {response.status_code}")
+                print(f"     Response: {response.text}")
+                
+        except Exception as e:
+            print(f"     ❌ Error checking wallet for {name}: {e}")
+    
+    return True
+
+def run_vip_checkout_investigation():
+    """Main function to run VIP checkout investigation"""
+    print("\n" + "🔍" * 80)
+    print("VIP CHECKOUT ISSUES INVESTIGATION")
+    print("🔍" * 80)
+    
+    # Step 1: Check VIP User Status
+    vip_users = investigate_vip_user_status()
+    
+    # Step 2: Test Cart & Checkout Flow
+    checkout_result = test_cart_and_checkout_flow(vip_users)
+    
+    # Step 3: Check Orders in Database
+    orders_exist = check_orders_in_database(vip_users)
+    
+    # Step 4: Check Cashback Wallet
+    check_cashback_wallet(vip_users)
+    
+    # Final Summary
+    print("\n" + "📋" * 80)
+    print("VIP CHECKOUT INVESTIGATION SUMMARY")
+    print("📋" * 80)
+    
+    print(f"\n1. VIP USERS FOUND: {len(vip_users)}")
+    for vip_user in vip_users:
+        print(f"   - {vip_user['name']} ({vip_user['email']}) - membership_type: '{vip_user['membership_type']}'")
+    
+    print(f"\n2. CHECKOUT TEST RESULT:")
+    if checkout_result:
+        if checkout_result.get("success"):
+            print(f"   ✅ Checkout SUCCESSFUL - Order ID: {checkout_result.get('order_id')}")
+        else:
+            print(f"   ❌ Checkout FAILED")
+            print(f"   🔍 Error: {checkout_result.get('error')}")
+            print(f"   📊 Status Code: {checkout_result.get('status')}")
+    else:
+        print(f"   ⚠️  Checkout test not performed (no VIP users)")
+    
+    print(f"\n3. ORDERS IN DATABASE:")
+    if orders_exist:
+        print(f"   ✅ Orders found in database")
+    else:
+        print(f"   ❌ No orders found in database")
+    
+    print(f"\n4. POTENTIAL ISSUES IDENTIFIED:")
+    issues_found = []
+    
+    if len(vip_users) == 0:
+        issues_found.append("No VIP users found - check membership_type values")
+    
+    if checkout_result and not checkout_result.get("success"):
+        issues_found.append(f"Checkout failing - {checkout_result.get('error')}")
+    
+    if not orders_exist:
+        issues_found.append("No orders in database - checkout may not be creating orders")
+    
+    if len(issues_found) == 0:
+        print(f"   ✅ No major issues identified")
+    else:
+        for i, issue in enumerate(issues_found, 1):
+            print(f"   {i}. {issue}")
+    
+    return {
+        "vip_users": vip_users,
+        "checkout_result": checkout_result,
+        "orders_exist": orders_exist,
+        "issues": issues_found
+    }
+
 # Test data for mining system testing
 test_user_no_mining = None
 test_user_with_mining = None
