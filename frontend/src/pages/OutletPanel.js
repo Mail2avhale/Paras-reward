@@ -29,11 +29,10 @@ const OutletPanel = ({ user, onLogout }) => {
       const walletRes = await axios.get(`${API}/wallet/${user.uid}`);
       setWalletData(walletRes.data);
 
-      const depositRes = await axios.get(`${API}/security-deposit/${user.uid}`);
-      setSecurityDeposit(depositRes.data);
-
-      const renewalRes = await axios.get(`${API}/renewal/${user.uid}`);
-      setRenewalStatus(renewalRes.data);
+      // Fetch financial info (deposit + renewal)
+      const financialRes = await axios.get(`${API}/stockist/${user.uid}/financial-info`);
+      setSecurityDeposit(financialRes.data.security_deposit);
+      setRenewalStatus(financialRes.data.renewal);
 
       const movementsRes = await axios.get(`${API}/stock/movements/${user.uid}`);
       setStockMovements(movementsRes.data);
