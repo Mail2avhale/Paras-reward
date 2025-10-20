@@ -156,12 +156,16 @@ const MasterStockistDashboard = ({ user, onLogout }) => {
               </span>
             </div>
             {renewalStatus ? (
-              <div className="text-sm text-gray-600 space-y-1">
-                <p>Due Date: <span className="font-semibold">{renewalStatus.renewal_due_date ? new Date(renewalStatus.renewal_due_date).toLocaleDateString() : 'N/A'}</span></p>
-                <p>Days Until Due: <span className="font-semibold">{renewalStatus.days_until_due || 'N/A'}</span></p>
-                {renewalStatus.is_overdue && (
-                  <p className="text-red-600 font-semibold">⚠️ Renewal Overdue</p>
-                )}
+              <div>
+                <div className="text-2xl font-bold text-blue-600 mb-2">
+                  ₹{renewalStatus.total_amount?.toLocaleString() || 0}
+                </div>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <p>Base Amount: <span className="font-semibold">₹{(renewalStatus.base_amount || 0).toLocaleString()}</span></p>
+                  <p>GST ({((renewalStatus.gst_rate || 0) * 100).toFixed(0)}%): <span className="font-semibold">₹{(renewalStatus.gst_amount || 0).toLocaleString()}</span></p>
+                  <p>Valid Until: <span className="font-semibold">{renewalStatus.renewal_end_date ? new Date(renewalStatus.renewal_end_date).toLocaleDateString() : 'N/A'}</span></p>
+                  <p className="text-xs text-gray-500 mt-2">Created: {new Date(renewalStatus.created_at).toLocaleDateString()}</p>
+                </div>
               </div>
             ) : (
               <p className="text-gray-500">Annual Fee: ₹50,000 + GST</p>
