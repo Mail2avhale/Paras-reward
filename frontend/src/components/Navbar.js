@@ -145,21 +145,28 @@ const Navbar = ({ user, onLogout }) => {
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard" className="cursor-pointer">Dashboard</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/mining" className="cursor-pointer">Mining</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/game" className="cursor-pointer">Game</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/referrals" className="cursor-pointer">Referrals</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/marketplace" className="cursor-pointer">Marketplace</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/leaderboard" className="cursor-pointer">Leaderboard</Link>
-                </DropdownMenuItem>
+                
+                {/* Regular User Features - Only for users */}
+                {isRegularUser && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link to="/mining" className="cursor-pointer">Mining</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/game" className="cursor-pointer">Game</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/referrals" className="cursor-pointer">Referrals</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/marketplace" className="cursor-pointer">Marketplace</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/leaderboard" className="cursor-pointer">Leaderboard</Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/profile" className="cursor-pointer">My Profile</Link>
