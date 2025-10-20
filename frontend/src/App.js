@@ -27,6 +27,7 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import MasterStockistDashboard from "@/pages/MasterStockistDashboard";
 import SubStockistDashboard from "@/pages/SubStockistDashboard";
 import OutletPanel from "@/pages/OutletPanel";
+import StockRequestSystem from "@/pages/StockRequestSystem";
 import Setup from "@/pages/Setup";
 import AboutUs from "@/pages/AboutUs";
 import ContactUs from "@/pages/ContactUs";
