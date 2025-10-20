@@ -1405,13 +1405,58 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
           )}
 
-          {/* Other Tabs - Placeholder */}
-          {['master-stockist', 'sub-stockist', 'outlet'].includes(activeTab) && (
-            <Card className="p-12 text-center bg-white">
-              <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-2 capitalize">{activeTab.replace('-', ' ')}</h3>
-              <p className="text-gray-500">This section is under development</p>
-            </Card>
+          {/* Master Stockist Tab */}
+          {activeTab === 'master-stockist' && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-gray-900">Master Stockist Management</h2>
+              <p className="text-gray-600">View and manage all Master Stockists</p>
+              <Card className="p-6">
+                <p className="text-center text-gray-600">
+                  Go to <strong>Stockist Management</strong> tab and filter by "Master Stockist" role to manage Master Stockists.
+                </p>
+                <div className="mt-4 text-center">
+                  <Button onClick={() => setActiveTab('stockist-management')} className="bg-purple-600 hover:bg-purple-700">
+                    Go to Stockist Management
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* Sub Stockist Tab */}
+          {activeTab === 'sub-stockist' && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-gray-900">Sub Stockist Management</h2>
+              <p className="text-gray-600">View and manage all Sub Stockists</p>
+              <Card className="p-6">
+                <p className="text-center text-gray-600">
+                  Go to <strong>Stockist Management</strong> tab and filter by "Sub Stockist" role to manage Sub Stockists.
+                </p>
+                <div className="mt-4 text-center">
+                  <Button onClick={() => setActiveTab('stockist-management')} className="bg-purple-600 hover:bg-purple-700">
+                    Go to Stockist Management
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* Outlet Tab */}
+          {activeTab === 'outlet' && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-gray-900">Outlet Management</h2>
+              <p className="text-gray-600">View and manage all Outlets</p>
+              <Card className="p-6">
+                <p className="text-center text-gray-600">
+                  Go to <strong>Stockist Management</strong> tab and filter by "Outlet" role to manage Outlets.
+                </p>
+                <div className="mt-4 text-center">
+                  <Button onClick={() => setActiveTab('stockist-management')} className="bg-purple-600 hover:bg-purple-700">
+                    Go to Stockist Management
+                  </Button>
+                </div>
+              </Card>
+            </div>
           )}
 
           {/* Orders Management */}
