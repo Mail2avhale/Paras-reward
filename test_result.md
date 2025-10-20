@@ -406,6 +406,18 @@ backend:
         agent: "testing"
         comment: "COMPREHENSIVE TESTING COMPLETE - LOGIN CASE SENSITIVITY FIX WORKING PERFECTLY: ✅ ALL TEST CASES PASSED (5/5): 'Santosh@paras.com' (mixed case), 'SANTOSH@PARAS.COM' (uppercase), 'santosh@paras.com' (lowercase), 'Test@paras.com' (mixed), 'ADMIN@PARAS.COM' (uppercase) all work correctly. ✅ EXPECTED BEHAVIOR CONFIRMED: All email case variations find users correctly and return 401 'Invalid password' for wrong passwords (not 404 'User not found'). ✅ MOBILE AND UID LOGIN UNAFFECTED: Both mobile number and UID login continue to work properly. ✅ CASE-INSENSITIVE EMAIL MATCHING: Implementation at lines 504-510 in server.py works correctly with normalized_identifier and regex matching with '$options: i'. Fix is complete and production-ready."
 
+  - task: "KYC and VIP Payment Admin Endpoints"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE TESTING COMPLETE - ALL KYC & VIP PAYMENT ADMIN ENDPOINTS WORKING: ✅ KYC ENDPOINTS: GET /api/kyc/list returns 16 documents with proper structure (kyc_id, user_id, status, submitted_at). POST /api/kyc/{kyc_id}/verify works correctly for both approve and reject actions with proper success messages. Invalid KYC ID handling returns 404 as expected. ✅ VIP PAYMENT ENDPOINTS: GET /api/membership/payments returns 15 payment requests with complete structure (payment_id, user_id, amount, status, created_at, utr_number). POST /api/membership/payment/{payment_id}/action works correctly for both approve and reject actions. Invalid payment ID handling returns 404 as expected. ✅ DATABASE STATUS VERIFIED: 16 KYC documents (0 pending, 16 verified), 15 VIP payments (0 pending, 15 approved) - all processed correctly. ✅ RESPONSE FORMAT: All endpoints return properly formatted JSON for frontend consumption with no ObjectId serialization issues. ✅ ERROR HANDLING: All endpoints handle invalid IDs correctly and return appropriate HTTP status codes. All admin endpoints are production-ready and functioning correctly for KYC and VIP payment management."
+
 frontend:
   - task: "User Registration Form"
     implemented: true
