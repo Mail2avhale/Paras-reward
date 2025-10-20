@@ -171,28 +171,61 @@ const Navbar = ({ user, onLogout }) => {
                 <DropdownMenuItem asChild>
                   <Link to="/profile" className="cursor-pointer">My Profile</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/vip" className="cursor-pointer">VIP Membership</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/kyc" className="cursor-pointer">KYC Verification</Link>
-                </DropdownMenuItem>
+                
+                {/* VIP & KYC - Only for regular users */}
+                {isRegularUser && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link to="/vip" className="cursor-pointer">VIP Membership</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/kyc" className="cursor-pointer">KYC Verification</Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                
+                {/* Wallet - Show for all */}
                 <DropdownMenuItem asChild>
                   <Link to="/wallet" className="cursor-pointer">Wallet</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/orders" className="cursor-pointer">My Orders</Link>
-                </DropdownMenuItem>
-                {user.role === 'admin' && (
+                
+                {/* Orders - Only for regular users */}
+                {isRegularUser && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/orders" className="cursor-pointer">My Orders</Link>
+                  </DropdownMenuItem>
+                )}
+                
+                <DropdownMenuSeparator />
+                
+                {/* Admin Panel */}
+                {isAdmin && (
                   <DropdownMenuItem asChild>
                     <Link to="/admin" className="cursor-pointer font-semibold text-purple-600">Admin Panel</Link>
                   </DropdownMenuItem>
                 )}
-                {user.role === 'outlet' && (
+                
+                {/* Stockist Panels */}
+                {user.role === 'master_stockist' && (
                   <DropdownMenuItem asChild>
-                    <Link to="/outlet" className="cursor-pointer font-semibold text-purple-600">Outlet Panel</Link>
+                    <Link to="/master-stockist" className="cursor-pointer font-semibold text-blue-600">Stockist Panel</Link>
                   </DropdownMenuItem>
                 )}
+                {user.role === 'sub_stockist' && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/sub-stockist" className="cursor-pointer font-semibold text-blue-600">Stockist Panel</Link>
+                  </DropdownMenuItem>
+                )}
+                
+                {/* Outlet Panel */}
+                {isOutlet && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/outlet" className="cursor-pointer font-semibold text-green-600">Outlet Panel</Link>
+                  </DropdownMenuItem>
+                )}
+                
+                <DropdownMenuSeparator />
+                
                 <DropdownMenuItem onClick={onLogout} className="cursor-pointer text-red-600">
                   Logout
                 </DropdownMenuItem>
