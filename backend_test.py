@@ -911,10 +911,12 @@ def test_audit_logging_apis():
         
         if response.status_code == 200:
             result = response.json()
+            print(f"Audit log response: {result}")
             audit_id = result.get("audit_id")
             
             if not audit_id:
                 print("❌ Audit log creation test FAILED - No audit_id returned")
+                print(f"Response content: {result}")
                 return False
             
             print(f"✅ Audit log creation test PASSED - ID: {audit_id}")
