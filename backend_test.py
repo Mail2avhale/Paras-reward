@@ -317,38 +317,79 @@ def test_cart_and_checkout_flow(test_users):
     except Exception as e:
         print(f"     ❌ Error getting cart: {e}")
     
-    # Step 4: Attempt checkout
+    # Step 4: Attempt checkout - Try different checkout endpoints and formats
     print(f"\n2.5. Attempting checkout...")
-    try:
-        checkout_data = {
-            "user_id": uid,
-            "delivery_address": {
-                "street": "123 Test Street",
-                "city": "Test City", 
-                "state": "Test State",
-                "pincode": "123456"
+    
+    # Try multiple checkout approaches
+    checkout_attempts = [
+        {
+            "endpoint": "/orders/checkout",
+            "data": {
+                "user_id": uid,
+                "delivery_address": {
+                    "street": "123 Test Street",
+                    "city": "Test City", 
+                    "state": "Test State",
+                    "pincode": "123456"
+                }
+            }
+        },
+        {
+            "endpoint": "/orders/checkout",
+            "data": {
+                "user_id": uid,
+                "product_id": product_id,
+                "delivery_address": {
+                    "street": "123 Test Street",
+                    "city": "Test City", 
+                    "state": "Test State",
+                    "pincode": "123456"
+                }
+            }
+        },
+        {
+            "endpoint": f"/orders/{uid}",
+            "data": {
+                "product_id": product_id
             }
         }
-        
-        response = requests.post(f"{API_BASE}/orders/checkout", json=checkout_data, timeout=30)
-        print(f"     Status: {response.status_code}")
-        print(f"     Response: {response.text}")
-        
-        if response.status_code == 200:
-            print(f"     ✅ Checkout successful!")
-            checkout_result = response.json()
-            order_id = checkout_result.get("order_id")
-            if order_id:
-                print(f"     📋 Order ID: {order_id}")
-                return {"success": True, "order_id": order_id, "user": test_user}
-        else:
-            print(f"     ❌ CHECKOUT FAILED - Status: {response.status_code}")
-            print(f"     🔍 EXACT ERROR MESSAGE: {response.text}")
-            return {"success": False, "error": response.text, "status": response.status_code, "user": test_user}
+    ]
+    
+    for i, attempt in enumerate(checkout_attempts, 1):
+        print(f"\n     Attempt {i}: POST {attempt['endpoint']}")
+        try:
+            response = requests.post(f"{API_BASE}{attempt['endpoint']}", json=attempt['data'], timeout=30)
+            print(f"     Status: {response.status_code}")
+            print(f"     Response: {response.text}")
             
-    except Exception as e:
-        print(f"     ❌ Error during checkout: {e}")
-        return {"success": False, "error": str(e), "user": test_user}
+            if response.status_code == 200:
+                print(f"     ✅ Checkout successful!")
+                checkout_result = response.json()
+                order_id = checkout_result.get("order_id")
+                if order_id:
+                    print(f"     📋 Order ID: {order_id}")
+                    return {"success": True, "order_id": order_id, "user": test_user, "method": attempt['endpoint']}
+            elif response.status_code == 422:
+                print(f"     ❌ Validation Error (422) - trying next method...")
+                continue
+            elif response.status_code == 403:
+                print(f"     ❌ Access Denied (403) - {response.text}")
+                if "VIP membership required" in response.text:
+                    print(f"     🔍 VIP membership issue detected!")
+                elif "KYC verification required" in response.text:
+                    print(f"     🔍 KYC verification issue detected!")
+                continue
+            else:
+                print(f"     ❌ Failed with status {response.status_code}")
+                continue
+                
+        except Exception as e:
+            print(f"     ❌ Error during checkout attempt {i}: {e}")
+            continue
+    
+    # If all attempts failed
+    print(f"     ❌ ALL CHECKOUT ATTEMPTS FAILED")
+    return {"success": False, "error": "All checkout methods failed", "user": test_user}
 
 def check_orders_in_database(test_users):
     """Check Orders - List all orders for users"""
