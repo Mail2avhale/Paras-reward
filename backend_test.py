@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend API Testing Script - VIP Checkout Issues Investigation
-Tests VIP user status, cart & checkout flow, orders, and cashback wallet functionality
+Backend API Testing Script - Password Recovery + Support Tickets Testing
+Tests new password recovery system and support ticket functionality
 """
 
 import requests
