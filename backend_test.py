@@ -350,19 +350,19 @@ def test_cart_and_checkout_flow(test_users):
         print(f"     ❌ Error during checkout: {e}")
         return {"success": False, "error": str(e), "user": test_user}
 
-def check_orders_in_database(vip_users):
-    """Check Orders - List all orders for VIP users"""
+def check_orders_in_database(test_users):
+    """Check Orders - List all orders for users"""
     print("\n" + "=" * 80)
     print("3. CHECKING ORDERS IN DATABASE")
     print("=" * 80)
     
-    if not vip_users:
-        print("❌ No VIP users found to check orders")
+    if not test_users:
+        print("❌ No users found to check orders")
         return False
     
     total_orders_found = 0
     
-    for vip_user in vip_users:
+    for test_user in test_users:
         uid = vip_user["uid"]
         name = vip_user["name"]
         
