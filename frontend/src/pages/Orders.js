@@ -16,10 +16,12 @@ const Orders = ({ user, onLogout }) => {
 
   const fetchOrders = async () => {
     try {
-      const response = await axios.get(`${API}/orders/${user.uid}`);
+      const response = await axios.get(`${API}/orders/user/${user.uid}`);
       setOrders(response.data);
     } catch (error) {
       console.error('Error fetching orders:', error);
+      // Set empty array on error so UI doesn't break
+      setOrders([]);
     }
   };
 
