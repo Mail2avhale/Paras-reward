@@ -3329,28 +3329,49 @@ def main():
         return False
 
 def main():
-    """Main function to run VIP checkout investigation"""
+    """Main function to run password recovery and support ticket tests"""
     print("=" * 80)
-    print("BACKEND API TESTING - VIP CHECKOUT ISSUES INVESTIGATION")
+    print("BACKEND API TESTING - PASSWORD RECOVERY + SUPPORT TICKETS")
     print("=" * 80)
     
-    # Run the VIP checkout investigation
-    result = run_vip_checkout_investigation()
+    # Run the password recovery and support ticket tests
+    results = run_password_recovery_and_support_tests()
     
-    # Determine success based on results
-    success = len(result.get("issues", [])) == 0
+    # Print summary
+    print("\n" + "=" * 80)
+    print("TEST RESULTS SUMMARY")
+    print("=" * 80)
+    
+    test_results = [
+        ("Password Recovery Verify", results.get("password_recovery_verify", False)),
+        ("Password Recovery Reset", results.get("password_recovery_reset", False)),
+        ("Support Ticket Creation", results.get("support_ticket_creation", False)),
+        ("Support Ticket Retrieval", results.get("support_ticket_retrieval", False)),
+        ("Support Ticket Details", results.get("support_ticket_details", False)),
+        ("Support Ticket Replies", results.get("support_ticket_replies", False)),
+        ("Admin Support Tickets", results.get("admin_support_tickets", False)),
+        ("Admin Ticket Updates", results.get("admin_ticket_updates", False))
+    ]
+    
+    passed_tests = 0
+    total_tests = len(test_results)
+    
+    for test_name, passed in test_results:
+        status = "✅ PASS" if passed else "❌ FAIL"
+        print(f"{status} - {test_name}")
+        if passed:
+            passed_tests += 1
+    
+    print(f"\nOVERALL: {passed_tests}/{total_tests} tests passed")
+    
+    success = passed_tests == total_tests
     
     if success:
-        print("\n" + "=" * 80)
-        print("✅ VIP CHECKOUT INVESTIGATION COMPLETED - NO MAJOR ISSUES FOUND")
-        print("=" * 80)
+        print("\n🎉 ALL TESTS PASSED - PASSWORD RECOVERY + SUPPORT TICKETS WORKING!")
     else:
-        print("\n" + "=" * 80)
-        print("❌ VIP CHECKOUT INVESTIGATION COMPLETED - ISSUES IDENTIFIED")
-        print("Issues found:")
-        for issue in result.get("issues", []):
-            print(f"  - {issue}")
-        print("=" * 80)
+        print(f"\n⚠️  {total_tests - passed_tests} TESTS FAILED - ISSUES NEED ATTENTION")
+    
+    print("=" * 80)
     
     return success
 
