@@ -1785,19 +1785,164 @@ async def promote_user(email: str, role: str):
 
 @api_router.get("/admin/stats")
 async def get_admin_stats():
-    """Get admin dashboard stats"""
+    """Get comprehensive admin dashboard KPIs"""
+    # User Statistics
     total_users = await db.users.count_documents({})
     vip_users = await db.users.count_documents({"membership_type": "vip"})
+    free_users = await db.users.count_documents({"membership_type": {"$ne": "vip"}})
+    
+    # Stockist Statistics
+    master_stockists = await db.users.count_documents({"role": "master_stockist"})
+    sub_stockists = await db.users.count_documents({"role": "sub_stockist"})
+    outlets = await db.users.count_documents({"role": "outlet"})
+    
+    # Orders Statistics
     total_orders = await db.orders.count_documents({})
+    pending_orders = await db.orders.count_documents({"status": "pending"})
+    delivered_orders = await db.orders.count_documents({"status": "delivered"})
+    
+    # KYC Statistics
+    total_kyc = await db.kyc_documents.count_documents({})
     pending_kyc = await db.kyc_documents.count_documents({"status": "pending"})
-    pending_payments = await db.vip_payments.count_documents({"status": "pending"})
+    verified_kyc = await db.kyc_documents.count_documents({"status": "verified"})
+    rejected_kyc = await db.kyc_documents.count_documents({"status": "rejected"})
+    
+    # VIP Payments Statistics
+    total_vip_requests = await db.vip_payments.count_documents({})
+    pending_vip_approvals = await db.vip_payments.count_documents({"status": "pending"})
+    approved_vip = await db.vip_payments.count_documents({"status": "approved"})
+    
+    # Withdrawal Statistics
+    pending_cashback_withdrawals = await db.cashback_withdrawals.count_documents({"status": "pending"})
+    pending_profit_withdrawals = await db.profit_withdrawals.count_documents({"status": "pending"})
+    total_pending_withdrawals = pending_cashback_withdrawals + pending_profit_withdrawals
+    
+    # Calculate total withdrawal amounts pending
+    cashback_pipeline = [
+        {"$match": {"status": "pending"}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]
+    profit_pipeline = [
+        {"$match": {"status": "pending"}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]
+    
+    cashback_result = await db.cashback_withdrawals.aggregate(cashback_pipeline).to_list(1)
+    profit_result = await db.profit_withdrawals.aggregate(profit_pipeline).to_list(1)
+    
+    pending_cashback_amount = cashback_result[0]["total"] if cashback_result else 0
+    pending_profit_amount = profit_result[0]["total"] if profit_result else 0
+    total_pending_withdrawal_amount = pending_cashback_amount + pending_profit_amount
+    
+    # Product Statistics
+    total_products = await db.products.count_documents({})
+    active_products = await db.products.count_documents({"is_active": True, "visible": True})
+    
+    # Financial Overview - Calculate total revenue from delivered orders
+    revenue_pipeline = [
+        {"$match": {"status": "delivered"}},
+        {"$group": {"_id": None, "total_cash": {"$sum": "$total_cash_price"}}}
+    ]
+    revenue_result = await db.orders.aggregate(revenue_pipeline).to_list(1)
+    total_revenue = revenue_result[0]["total_cash"] if revenue_result else 0
+    
+    # Stock Movement Statistics
+    pending_stock_movements = await db.stock_movements.count_documents({"status": "pending"})
+    approved_stock_movements = await db.stock_movements.count_documents({"status": "approved"})
+    
+    # Security Deposit Statistics
+    pending_deposits = await db.security_deposits.count_documents({"status": "pending"})
+    approved_deposits = await db.security_deposits.count_documents({"status": "approved"})
+    
+    # Calculate total security deposit amount
+    deposit_pipeline = [
+        {"$match": {"status": "approved"}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]
+    deposit_result = await db.security_deposits.aggregate(deposit_pipeline).to_list(1)
+    total_security_deposits = deposit_result[0]["total"] if deposit_result else 0
+    
+    # Annual Renewal Statistics
+    pending_renewals = await db.annual_renewals.count_documents({"status": "pending"})
+    active_renewals = await db.annual_renewals.count_documents({"status": "active"})
+    overdue_entities = await db.users.count_documents({"renewal_status": "overdue"})
+    
+    # Recent Activity - Get last 5 activities (orders, withdrawals, KYC)
+    recent_orders = await db.orders.find({}).sort("created_at", -1).limit(5).to_list(5)
+    recent_withdrawals = await db.cashback_withdrawals.find({}).sort("created_at", -1).limit(5).to_list(5)
     
     return {
-        "total_users": total_users,
-        "vip_users": vip_users,
-        "total_orders": total_orders,
-        "pending_kyc": pending_kyc,
-        "pending_payments": pending_payments
+        "users": {
+            "total": total_users,
+            "vip": vip_users,
+            "free": free_users,
+            "master_stockists": master_stockists,
+            "sub_stockists": sub_stockists,
+            "outlets": outlets
+        },
+        "orders": {
+            "total": total_orders,
+            "pending": pending_orders,
+            "delivered": delivered_orders
+        },
+        "kyc": {
+            "total": total_kyc,
+            "pending": pending_kyc,
+            "verified": verified_kyc,
+            "rejected": rejected_kyc
+        },
+        "vip_payments": {
+            "total": total_vip_requests,
+            "pending": pending_vip_approvals,
+            "approved": approved_vip
+        },
+        "withdrawals": {
+            "pending_count": total_pending_withdrawals,
+            "pending_cashback": pending_cashback_withdrawals,
+            "pending_profit": pending_profit_withdrawals,
+            "pending_amount": total_pending_withdrawal_amount,
+            "pending_cashback_amount": pending_cashback_amount,
+            "pending_profit_amount": pending_profit_amount
+        },
+        "products": {
+            "total": total_products,
+            "active": active_products
+        },
+        "financial": {
+            "total_revenue": total_revenue,
+            "total_security_deposits": total_security_deposits
+        },
+        "stock_movements": {
+            "pending": pending_stock_movements,
+            "approved": approved_stock_movements
+        },
+        "security_deposits": {
+            "pending": pending_deposits,
+            "approved": approved_deposits
+        },
+        "renewals": {
+            "pending": pending_renewals,
+            "active": active_renewals,
+            "overdue": overdue_entities
+        },
+        "recent_activity": {
+            "orders": [
+                {
+                    "order_id": order.get("order_id"),
+                    "status": order.get("status"),
+                    "total_cash_price": order.get("total_cash_price"),
+                    "created_at": order.get("created_at").isoformat() if order.get("created_at") else None
+                } for order in recent_orders
+            ],
+            "withdrawals": [
+                {
+                    "withdrawal_id": withdrawal.get("withdrawal_id"),
+                    "amount": withdrawal.get("amount"),
+                    "status": withdrawal.get("status"),
+                    "created_at": withdrawal.get("created_at").isoformat() if withdrawal.get("created_at") else None
+                } for withdrawal in recent_withdrawals
+            ]
+        }
     }
 
 # ========== ADMIN USER MANAGEMENT ROUTES ==========
