@@ -2084,14 +2084,4 @@ const SettingsManagement = () => {
   );
 };
 
-const MarketplaceManagement = () => {
-  return (
-    <Card className="p-12 text-center">
-      <Store className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-      <h3 className="text-xl font-semibold text-gray-900 mb-2">Marketplace Management</h3>
-      <p className="text-gray-600">Feature coming soon - Manage products and marketplace settings</p>
-    </Card>
-  );
-};
-
 export default AdminDashboard;
