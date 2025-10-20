@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend API Testing Script for Admin Dashboard APIs
-Tests comprehensive admin dashboard functionality including KPIs, order management, 
-financial reports, employee management, and audit logging
+Backend API Testing Script - VIP Checkout Issues Investigation
+Tests VIP user status, cart & checkout flow, orders, and cashback wallet functionality
 """
 
 import requests
