@@ -74,7 +74,7 @@ async def main():
             
             if result.modified_count > 0:
                 print("\n✅ SUCCESS! User is now an ADMIN.")
-                print(f"   They can now access: https://crypto-rewards-22.preview.emergentagent.com/admin")
+                print(f"   They can now access: https://crypto-mine-app-1.preview.emergentagent.com/admin")
                 print("\n💡 Tip: User needs to logout and login again to see admin dashboard.")
             else:
                 print("\n⚠️  User was already an admin or update failed.")

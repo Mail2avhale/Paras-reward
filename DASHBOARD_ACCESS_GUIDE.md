@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://crypto-rewards-22.preview.emergentagent.com/setup
+   https://crypto-mine-app-1.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
