@@ -1931,7 +1931,7 @@ async def get_admin_stats():
                     "order_id": order.get("order_id"),
                     "status": order.get("status"),
                     "total_cash_price": order.get("total_cash_price"),
-                    "created_at": order.get("created_at").isoformat() if order.get("created_at") else None
+                    "created_at": order.get("created_at").isoformat() if order.get("created_at") and hasattr(order.get("created_at"), 'isoformat') else order.get("created_at")
                 } for order in recent_orders
             ],
             "withdrawals": [
@@ -1939,7 +1939,7 @@ async def get_admin_stats():
                     "withdrawal_id": withdrawal.get("withdrawal_id"),
                     "amount": withdrawal.get("amount"),
                     "status": withdrawal.get("status"),
-                    "created_at": withdrawal.get("created_at").isoformat() if withdrawal.get("created_at") else None
+                    "created_at": withdrawal.get("created_at").isoformat() if withdrawal.get("created_at") and hasattr(withdrawal.get("created_at"), 'isoformat') else withdrawal.get("created_at")
                 } for withdrawal in recent_withdrawals
             ]
         }
