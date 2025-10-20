@@ -5,6 +5,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ImageUpload from '@/components/ImageUpload';
+import StockistManagementAdmin from '@/pages/StockistManagementAdmin';
+import FinancialManagementAdmin from '@/pages/FinancialManagementAdmin';
 import { 
   Users, Package, CreditCard, FileText, CheckCircle, XCircle, 
   Search, Shield, UserCog, Trash2, BarChart3, TrendingUp, TrendingDown,
