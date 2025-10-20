@@ -10,6 +10,8 @@ import Login from "@/pages/Login";
 import LoginNew from "@/pages/LoginNew";
 import RegisterSimple from "@/pages/RegisterSimple";
 import ForgotPassword from "@/pages/ForgotPassword";
+import ForgotPasswordNew from "@/pages/ForgotPasswordNew";
+import SupportTickets from "@/pages/SupportTickets";
 import Dashboard from "@/pages/Dashboard";
 import Mining from "@/pages/Mining";
 import TapGame from "@/pages/TapGame";
