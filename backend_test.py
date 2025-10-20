@@ -162,8 +162,17 @@ def test_password_recovery_verify(test_users):
         print("❌ No users found to test password recovery")
         return False
     
-    # Use first user for testing
-    test_user = test_users[0]
+    # Find user with complete profile data for testing
+    test_user = None
+    for user in test_users:
+        user_data = user["user_data"]
+        if user_data.get("pan_number") and user_data.get("mobile"):
+            test_user = user
+            break
+    
+    if not test_user:
+        print("❌ No user with complete profile data found for password recovery testing")
+        return False
     user_data = test_user["user_data"]
     email = test_user["email"]
     
