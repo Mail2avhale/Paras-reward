@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Package, CheckCircle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Package, CheckCircle, DollarSign, Truck, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -13,6 +14,36 @@ const API = `${BACKEND_URL}/api`;
 const OutletPanel = ({ user, onLogout }) => {
   const [secretCode, setSecretCode] = useState('');
   const [verifiedOrder, setVerifiedOrder] = useState(null);
+  const [walletData, setWalletData] = useState(null);
+  const [securityDeposit, setSecurityDeposit] = useState(null);
+  const [renewalStatus, setRenewalStatus] = useState(null);
+  const [stockMovements, setStockMovements] = useState({ received: [] });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      const walletRes = await axios.get(`${API}/wallet/${user.uid}`);
+      setWalletData(walletRes.data);
+
+      const depositRes = await axios.get(`${API}/security-deposit/${user.uid}`);
+      setSecurityDeposit(depositRes.data);
+
+      const renewalRes = await axios.get(`${API}/renewal/${user.uid}`);
+      setRenewalStatus(renewalRes.data);
+
+      const movementsRes = await axios.get(`${API}/stock/movements/${user.uid}`);
+      setStockMovements(movementsRes.data);
+
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      setLoading(false);
+    }
+  };
 
   const verifyCode = async () => {
     if (!secretCode) {
@@ -25,10 +56,9 @@ const OutletPanel = ({ user, onLogout }) => {
         secret_code: secretCode
       });
       setVerifiedOrder(response.data.order);
-      toast.success('Order verified successfully!');
+      toast.success('Order verified!');
     } catch (error) {
-      console.error('Error verifying code:', error);
-      toast.error(error.response?.data?.detail || 'Invalid secret code');
+      toast.error(error.response?.data?.detail || 'Invalid code');
       setVerifiedOrder(null);
     }
   };
@@ -37,99 +67,267 @@ const OutletPanel = ({ user, onLogout }) => {
     if (!verifiedOrder) return;
 
     try {
-      const response = await axios.post(`${API}/orders/${verifiedOrder.order_id}/deliver`, {
-        outlet_id: user?.uid || 'outlet_001' // Use actual outlet ID from user
+      await axios.post(`${API}/orders/${verifiedOrder.order_id}/deliver`, {
+        outlet_id: user?.uid
       });
-      toast.success('Order delivered! Delivery charges distributed automatically.');
-      if (response.data.distribution) {
-        console.log('Distribution result:', response.data.distribution);
-      }
+      toast.success('Order delivered! Charges distributed.');
       setSecretCode('');
       setVerifiedOrder(null);
+      fetchDashboardData();
     } catch (error) {
-      console.error('Error delivering order:', error);
-      toast.error('Failed to deliver order');
+      toast.error(error.response?.data?.detail || 'Delivery failed');
     }
   };
+
+  const handleWithdrawal = async () => {
+    try {
+      const amount = prompt('Enter withdrawal amount (min ₹50):');
+      if (!amount || parseFloat(amount) < 50) {
+        toast.error('Minimum ₹50');
+        return;
+      }
+
+      await axios.post(`${API}/wallet/profit/withdraw`, {
+        uid: user.uid,
+        amount: parseFloat(amount),
+        payment_mode: 'upi'
+      });
+
+      toast.success('Withdrawal requested');
+      fetchDashboardData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+        <Navbar user={user} onLogout={onLogout} />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       <Navbar user={user} onLogout={onLogout} />
       
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-8">Outlet Panel</h1>
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-2">Outlet Dashboard</h1>
+          <p className="text-gray-600">Manage orders and track earnings</p>
+        </div>
 
-        {/* Verify Code */}
-        <Card data-testid="verify-section" className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Verify Secret Code</h2>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Enter Secret Code</label>
-              <Input
-                data-testid="secret-code-input"
-                type="text"
-                placeholder="PRC-XXXXXXXX"
-                value={secretCode}
-                onChange={(e) => setSecretCode(e.target.value.toUpperCase())}
-                className="py-6 text-lg rounded-xl"
-              />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-2xl shadow-xl">
+            <DollarSign className="h-8 w-8 opacity-80 mb-2" />
+            <div className="text-3xl font-bold mb-1">₹{walletData?.profit_balance?.toLocaleString() || 0}</div>
+            <div className="text-purple-100">Profit Wallet</div>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-2xl shadow-xl">
+            <Package className="h-8 w-8 opacity-80 mb-2" />
+            <div className="text-3xl font-bold mb-1">{stockMovements.received?.length || 0}</div>
+            <div className="text-green-100">Stock Received</div>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-2xl shadow-xl">
+            <Truck className="h-8 w-8 opacity-80 mb-2" />
+            <div className="text-3xl font-bold mb-1">60%</div>
+            <div className="text-blue-100">Commission Rate</div>
+          </Card>
+
+          <Card className={`bg-gradient-to-br ${renewalStatus?.is_overdue ? 'from-red-500 to-red-600' : 'from-teal-500 to-teal-600'} text-white p-6 rounded-2xl shadow-xl`}>
+            {renewalStatus?.is_overdue ? <AlertCircle className="h-8 w-8 opacity-80 mb-2" /> : <CheckCircle className="h-8 w-8 opacity-80 mb-2" />}
+            <div className="text-2xl font-bold mb-1">{renewalStatus?.renewal_status || 'N/A'}</div>
+            <div className="text-white opacity-90">Status</div>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Card className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Security Deposit</h3>
+              <span className={`px-3 py-1 rounded-full text-sm ${
+                securityDeposit?.status === 'approved' ? 'bg-green-100 text-green-700' :
+                securityDeposit?.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                'bg-gray-100 text-gray-700'
+              }`}>
+                {securityDeposit?.status || 'Not Submitted'}
+              </span>
             </div>
+            {securityDeposit ? (
+              <div>
+                <div className="text-3xl font-bold text-purple-600 mb-2">
+                  ₹{securityDeposit.amount?.toLocaleString() || 0}
+                </div>
+                <div className="text-sm text-gray-600">
+                  <p>Monthly (3%): <span className="font-semibold">₹{((securityDeposit.amount || 0) * 0.03).toLocaleString()}</span></p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-500">Required: ₹1,00,000</p>
+            )}
+          </Card>
 
-            <Button
-              data-testid="verify-btn"
-              onClick={verifyCode}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-6 rounded-xl text-lg font-semibold shadow-lg transition-all"
+          <Card className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Annual Renewal</h3>
+              <span className={`px-3 py-1 rounded-full text-sm ${
+                renewalStatus?.is_overdue ? 'bg-red-100 text-red-700' :
+                renewalStatus?.renewal_status === 'active' ? 'bg-green-100 text-green-700' :
+                'bg-gray-100 text-gray-700'
+              }`}>
+                {renewalStatus?.renewal_status || 'N/A'}
+              </span>
+            </div>
+            {renewalStatus ? (
+              <div className="text-sm text-gray-600">
+                <p>Due: {renewalStatus.renewal_due_date ? new Date(renewalStatus.renewal_due_date).toLocaleDateString() : 'N/A'}</p>
+                {renewalStatus.is_overdue && <p className="text-red-600 mt-1">⚠️ Overdue</p>}
+              </div>
+            ) : (
+              <p className="text-gray-500">Fee: ₹10,000 + GST</p>
+            )}
+          </Card>
+        </div>
+
+        <Card className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-1">Profit Wallet</h3>
+              <p className="text-gray-600">Balance: <span className="font-bold text-purple-600">₹{walletData?.profit_balance?.toLocaleString() || 0}</span></p>
+            </div>
+            <Button 
+              onClick={handleWithdrawal}
+              className="bg-purple-600 hover:bg-purple-700"
+              disabled={!walletData?.profit_balance || walletData.profit_balance < 50}
             >
-              Verify Code
+              Withdraw
             </Button>
           </div>
         </Card>
 
-        {/* Verified Order */}
-        {verifiedOrder && (
-          <Card data-testid="verified-order" className="bg-gradient-to-br from-green-600 to-emerald-600 text-white p-8 rounded-3xl shadow-2xl">
-            <div className="flex items-center justify-center mb-6">
-              <CheckCircle className="h-16 w-16" />
-            </div>
-            
-            <h2 className="text-3xl font-bold text-center mb-8">Order Verified!</h2>
-            
-            <div className="bg-white/20 backdrop-blur-sm p-6 rounded-2xl mb-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm opacity-90 mb-1">Product</p>
-                  <p className="font-bold text-lg">{verifiedOrder.product_name}</p>
-                </div>
-                <div>
-                  <p className="text-sm opacity-90 mb-1">PRC Amount</p>
-                  <p className="font-bold text-lg">{verifiedOrder.prc_amount} PRC</p>
-                </div>
-                <div>
-                  <p className="text-sm opacity-90 mb-1">Cash Fees</p>
-                  <p className="font-bold text-lg">₹{verifiedOrder.total_cash_fee.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-sm opacity-90 mb-1">Order Date</p>
-                  <p className="font-bold text-lg">{new Date(verifiedOrder.created_at).toLocaleDateString()}</p>
+        <Card className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl">
+          <Tabs defaultValue="orders" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsTrigger value="orders">Deliver Orders</TabsTrigger>
+              <TabsTrigger value="stock">Stock</TabsTrigger>
+              <TabsTrigger value="earnings">Earnings</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="orders">
+              <div className="max-w-2xl mx-auto">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Verify & Deliver Orders</h2>
+                
+                <Card className="p-8 mb-6 bg-gradient-to-br from-purple-50 to-blue-50">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Customer Secret Code</label>
+                      <Input
+                        type="text"
+                        placeholder="Enter 6-digit code"
+                        value={secretCode}
+                        onChange={(e) => setSecretCode(e.target.value)}
+                        className="text-center text-2xl tracking-widest"
+                        maxLength={6}
+                      />
+                    </div>
+                    <Button 
+                      onClick={verifyCode} 
+                      className="w-full bg-purple-600 hover:bg-purple-700"
+                      size="lg"
+                    >
+                      Verify Code
+                    </Button>
+                  </div>
+                </Card>
+
+                {verifiedOrder && (
+                  <Card className="p-6 border-2 border-green-500 bg-green-50">
+                    <div className="flex items-center gap-2 mb-4">
+                      <CheckCircle className="h-6 w-6 text-green-600" />
+                      <h3 className="text-xl font-bold text-green-900">Order Verified</h3>
+                    </div>
+                    <div className="space-y-2 mb-6">
+                      <p><span className="font-semibold">Order ID:</span> {verifiedOrder.order_id}</p>
+                      <p><span className="font-semibold">Customer:</span> {verifiedOrder.uid}</p>
+                      <p><span className="font-semibold">Items:</span> {verifiedOrder.items?.length || 0}</p>
+                      <p><span className="font-semibold">Total PRC:</span> {verifiedOrder.total_prc_price} PRC</p>
+                    </div>
+                    <Button 
+                      onClick={deliverOrder}
+                      className="w-full bg-green-600 hover:bg-green-700"
+                      size="lg"
+                    >
+                      <Package className="mr-2 h-5 w-5" />
+                      Confirm Delivery
+                    </Button>
+                  </Card>
+                )}
+
+                <div className="mt-8 p-4 bg-blue-50 rounded-lg">
+                  <h4 className="font-semibold text-blue-900 mb-2">How it works:</h4>
+                  <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                    <li>Customer provides 6-digit secret code</li>
+                    <li>Enter code and click Verify</li>
+                    <li>Check order details</li>
+                    <li>Click Confirm Delivery</li>
+                    <li>Delivery commission (60%) credited automatically</li>
+                  </ol>
                 </div>
               </div>
-            </div>
+            </TabsContent>
 
-            <Button
-              data-testid="deliver-btn"
-              onClick={deliverOrder}
-              className="w-full bg-white text-green-600 hover:bg-gray-100 py-6 rounded-xl text-lg font-semibold shadow-lg transition-all"
-            >
-              <Package className="mr-2 h-5 w-5" />
-              Mark as Delivered
-            </Button>
+            <TabsContent value="stock">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Stock Received</h2>
+              {stockMovements.received?.length > 0 ? (
+                <div className="space-y-2">
+                  {stockMovements.received.map((movement, idx) => (
+                    <Card key={idx} className="p-4 border-l-4 border-green-500">
+                      <div className="flex justify-between">
+                        <div>
+                          <p className="font-semibold">{movement.product_name || 'Product'}</p>
+                          <p className="text-sm text-gray-600">Quantity: {movement.quantity}</p>
+                          <p className="text-xs text-gray-500">Batch: {movement.batch_number}</p>
+                        </div>
+                        <span className="px-3 py-1 rounded-full text-xs bg-green-100 text-green-700 h-fit">
+                          {movement.status}
+                        </span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-8">No stock received yet</p>
+              )}
+            </TabsContent>
 
-            <p className="text-center text-sm opacity-90 mt-4">
-              Collect ₹{verifiedOrder.total_cash_fee.toFixed(2)} cash from customer
-            </p>
-          </Card>
-        )}
+            <TabsContent value="earnings">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Earnings</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="p-4 border-l-4 border-purple-500">
+                  <p className="text-sm text-gray-600 mb-1">Balance</p>
+                  <p className="text-2xl font-bold text-purple-600">₹{walletData?.profit_balance?.toLocaleString() || 0}</p>
+                </Card>
+                <Card className="p-4 border-l-4 border-green-500">
+                  <p className="text-sm text-gray-600 mb-1">Monthly (3%)</p>
+                  <p className="text-2xl font-bold text-green-600">₹{((securityDeposit?.amount || 0) * 0.03).toLocaleString()}</p>
+                </Card>
+                <Card className="p-4 border-l-4 border-blue-500">
+                  <p className="text-sm text-gray-600 mb-1">Commission</p>
+                  <p className="text-2xl font-bold text-blue-600">60%</p>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </Card>
       </div>
     </div>
   );
