@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import ImageUpload from '@/components/ImageUpload';
 import { 
   Crown, CheckCircle, XCircle, Upload, Calendar, Clock, 
   CreditCard, Image, QrCode, Building, AlertCircle, Loader
