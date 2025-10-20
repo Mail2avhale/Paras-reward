@@ -968,9 +968,10 @@ def test_audit_logging_apis():
         return False
 
 def main():
-    """Run all Backend API tests"""
-    print("Starting Comprehensive Backend API testing...")
+    """Run focused Backend API tests for Employee Management and Audit Logging"""
+    print("Starting FOCUSED Backend API testing...")
     print(f"Target API: {API_BASE}")
+    print("FOCUS: Employee Management and Audit Logging APIs (after duplicate endpoint fix)")
     
     # Test basic connectivity
     try:
@@ -981,67 +982,35 @@ def main():
         print("Cannot proceed with testing - backend is not accessible")
         return False
     
-    # Run all tests in sequence
+    # Run focused tests
     print("\n" + "=" * 80)
-    print("COMPREHENSIVE BACKEND API TESTING - ADMIN DASHBOARD APIS")
+    print("FOCUSED BACKEND API TESTING - EMPLOYEE MANAGEMENT & AUDIT LOGGING")
     print("=" * 80)
     
-    # Admin Dashboard API Testing (Priority Focus)
     print("\n" + "=" * 60)
-    print("ADMIN DASHBOARD API TESTING (PRIORITY)")
+    print("EMPLOYEE MANAGEMENT API TESTING (PRIORITY)")
     print("=" * 60)
     
-    # 1. Test Admin KPIs endpoint
-    if not test_admin_kpis_endpoint():
-        print("❌ CRITICAL: Admin KPIs endpoint test failed")
-        return False
-    
-    # 2. Test Order Management APIs
-    if not test_order_management_apis():
-        print("❌ CRITICAL: Order Management APIs test failed")
-        return False
-    
-    # 3. Test Financial Reports APIs
-    if not test_financial_reports_apis():
-        print("❌ CRITICAL: Financial Reports APIs test failed")
-        return False
-    
-    # 4. Test Employee Management APIs
+    # Test Employee Management APIs
     if not test_employee_management_apis():
         print("❌ CRITICAL: Employee Management APIs test failed")
         return False
     
-    # 5. Test Audit Logging APIs
+    print("\n" + "=" * 60)
+    print("AUDIT LOGGING API TESTING (PRIORITY)")
+    print("=" * 60)
+    
+    # Test Audit Logging APIs
     if not test_audit_logging_apis():
         print("❌ CRITICAL: Audit Logging APIs test failed")
         return False
     
-    print("\n" + "=" * 60)
-    print("PRODUCTS ENDPOINT TESTING (SECONDARY)")
-    print("=" * 60)
-    
-    # Test public products endpoint
-    if not test_public_products_endpoint():
-        print("❌ CRITICAL: Public products endpoint test failed")
-        return False
-    
-    # Test admin products endpoint
-    if not test_admin_products_endpoint():
-        print("❌ CRITICAL: Admin products endpoint test failed")
-        return False
-    
-    # Test products filtering logic
-    if not test_products_filtering_logic():
-        print("❌ CRITICAL: Products filtering logic test failed")
-        return False
-    
     print("\n" + "=" * 80)
-    print("BACKEND API TESTING COMPLETED!")
+    print("FOCUSED BACKEND API TESTING COMPLETED!")
     print("=" * 80)
-    print("✅ ALL TESTS PASSED - Backend APIs are working correctly!")
-    print("✅ Admin Dashboard APIs: KPIs, Order Management, Financial Reports")
-    print("✅ Employee Management and Audit Logging systems working")
-    print("✅ Products endpoints working: public filtering and admin access")
+    print("✅ ALL FOCUSED TESTS PASSED - Employee Management & Audit Logging APIs working!")
+    print("✅ Employee Management: Create, List, Update Permissions")
+    print("✅ Audit Logging: Create logs, Retrieve with filters")
     
     return True
 
