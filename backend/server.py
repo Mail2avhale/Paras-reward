@@ -5576,56 +5576,6 @@ class BalanceAdjustRequest(BaseModel):
     operation: str  # add, deduct, set
     notes: Optional[str] = None
 
-@api_router.get("/admin/users/all")
-async def get_all_users_admin(
-    page: int = 1, 
-    limit: int = 50, 
-    search: Optional[str] = None,
-    role: Optional[str] = None,
-    membership: Optional[str] = None,
-    kyc_status: Optional[str] = None
-):
-    """Admin endpoint to get all users with filters and pagination"""
-    query = {}
-    
-    # Search filter
-    if search:
-        query["$or"] = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"email": {"$regex": search, "$options": "i"}},
-            {"mobile": {"$regex": search, "$options": "i"}},
-            {"uid": {"$regex": search, "$options": "i"}}
-        ]
-    
-    # Role filter
-    if role:
-        query["role"] = role
-    
-    # Membership filter
-    if membership:
-        query["membership_type"] = membership
-    
-    # KYC filter
-    if kyc_status:
-        query["kyc_status"] = kyc_status
-    
-    skip = (page - 1) * limit
-    users = await db.users.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=None)
-    total = await db.users.count_documents(query)
-    
-    # Remove sensitive data
-    for user in users:
-        user.pop("password_hash", None)
-        user.pop("_id", None)
-    
-    return {
-        "users": users,
-        "total": total,
-        "page": page,
-        "limit": limit,
-        "pages": (total + limit - 1) // limit
-    }
-
 @api_router.put("/admin/users/{uid}/update")
 async def update_user_admin(uid: str, request: UserUpdateRequest):
     """Admin updates user details"""
