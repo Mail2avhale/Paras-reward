@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend API Testing Script - Password Recovery + Support Tickets Testing
-Tests new password recovery system and support ticket functionality
+Backend API Testing Script - Admin Stockist & Financial Management Testing
+Tests new admin stockist management and financial management endpoints
 """
 
 import requests
