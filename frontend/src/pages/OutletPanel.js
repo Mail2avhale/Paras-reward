@@ -166,8 +166,11 @@ const OutletPanel = ({ user, onLogout }) => {
                 <div className="text-3xl font-bold text-purple-600 mb-2">
                   ₹{securityDeposit.amount?.toLocaleString() || 0}
                 </div>
-                <div className="text-sm text-gray-600">
-                  <p>Monthly (3%): <span className="font-semibold">₹{((securityDeposit.amount || 0) * 0.03).toLocaleString()}</span></p>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <p>Monthly Return: <span className="font-semibold text-green-600">₹{(securityDeposit.monthly_return_amount || 0).toLocaleString()}</span> ({((securityDeposit.monthly_return_rate || 0) * 100).toFixed(1)}%)</p>
+                  <p>Total Returned: <span className="font-semibold text-blue-600">₹{(securityDeposit.total_returned || 0).toLocaleString()}</span></p>
+                  <p>Balance Pending: <span className="font-semibold text-orange-600">₹{(securityDeposit.balance_pending || 0).toLocaleString()}</span></p>
+                  <p className="text-xs text-gray-500 mt-2">Created: {new Date(securityDeposit.created_at).toLocaleDateString()}</p>
                 </div>
               </div>
             ) : (
@@ -179,20 +182,27 @@ const OutletPanel = ({ user, onLogout }) => {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-900">Annual Renewal</h3>
               <span className={`px-3 py-1 rounded-full text-sm ${
-                renewalStatus?.is_overdue ? 'bg-red-100 text-red-700' :
-                renewalStatus?.renewal_status === 'active' ? 'bg-green-100 text-green-700' :
+                renewalStatus?.status === 'approved' ? 'bg-green-100 text-green-700' :
+                renewalStatus?.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                 'bg-gray-100 text-gray-700'
               }`}>
-                {renewalStatus?.renewal_status || 'N/A'}
+                {renewalStatus?.status || 'Not Submitted'}
               </span>
             </div>
             {renewalStatus ? (
-              <div className="text-sm text-gray-600">
-                <p>Due: {renewalStatus.renewal_due_date ? new Date(renewalStatus.renewal_due_date).toLocaleDateString() : 'N/A'}</p>
-                {renewalStatus.is_overdue && <p className="text-red-600 mt-1">⚠️ Overdue</p>}
+              <div>
+                <div className="text-2xl font-bold text-blue-600 mb-2">
+                  ₹{renewalStatus.total_amount?.toLocaleString() || 0}
+                </div>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <p>Base Amount: <span className="font-semibold">₹{(renewalStatus.base_amount || 0).toLocaleString()}</span></p>
+                  <p>GST ({((renewalStatus.gst_rate || 0) * 100).toFixed(0)}%): <span className="font-semibold">₹{(renewalStatus.gst_amount || 0).toLocaleString()}</span></p>
+                  <p>Valid Until: <span className="font-semibold">{renewalStatus.renewal_end_date ? new Date(renewalStatus.renewal_end_date).toLocaleDateString() : 'N/A'}</span></p>
+                  <p className="text-xs text-gray-500 mt-2">Created: {new Date(renewalStatus.created_at).toLocaleDateString()}</p>
+                </div>
               </div>
             ) : (
-              <p className="text-gray-500">Fee: ₹10,000 + GST</p>
+              <p className="text-gray-500">Annual Fee: ₹10,000 + GST</p>
             )}
           </Card>
         </div>
