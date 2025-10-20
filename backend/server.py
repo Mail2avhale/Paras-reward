@@ -1509,16 +1509,17 @@ async def deliver_order(order_id: str, request: Request):
             "status": "delivered",
             "delivery_status": "delivered",
             "delivered_at": datetime.now(timezone.utc).isoformat(),
+            "outlet_id": outlet_id,
             "assigned_outlet": outlet_id
         }}
     )
     
-    # Trigger automatic delivery charge distribution
+    # Trigger automatic commission distribution
     distribution_result = await distribute_delivery_charge(order_id)
     
     return {
         "message": "Order delivered successfully",
-        "distribution": distribution_result
+        "commission_distributed": distribution_result
     }
 
 
