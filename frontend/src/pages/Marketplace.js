@@ -55,19 +55,17 @@ const Marketplace = ({ user, onLogout }) => {
   };
 
   const addToCart = async (product) => {
-    if (userData?.membership_type !== 'vip') {
-      toast.error('VIP membership required!');
-      navigate('/vip');
-      return;
-    }
-
-    if (userData?.kyc_status !== 'verified') {
-      toast.error('Please complete KYC verification first!');
-      navigate('/kyc');
-      return;
-    }
-
+    // Fetch fresh user data before checking VIP status
     try {
+      const userResponse = await axios.get(`${API}/users/${user.uid}`);
+      const freshUserData = userResponse.data;
+      
+      if (freshUserData?.membership_type !== 'vip') {
+        toast.error('VIP membership required!');
+        navigate('/vip');
+        return;
+      }
+
       await axios.post(`${API}/cart/add`, {
         user_id: user.uid,
         product_id: product.product_id,
@@ -75,6 +73,7 @@ const Marketplace = ({ user, onLogout }) => {
       });
       toast.success('Added to cart!');
       fetchCart();
+      fetchUserData(); // Refresh user data
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to add to cart');
     }
