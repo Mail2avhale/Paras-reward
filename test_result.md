@@ -437,6 +437,66 @@ frontend:
         agent: "main"
         comment: "Created comprehensive WalletNew.js component: Displays cashback_balance, profit_balance (for stockists/outlets), pending_lien status, maintenance_due indicator, days_until_maintenance. Separate tabs for cashback withdrawal (min ₹10, fee ₹5), profit withdrawal (min ₹50, fee ₹5, role-gated), cashback history, profit history. Payment modes: UPI or Bank Transfer. Withdrawal history shows status badges (pending/approved/completed/rejected), UTR numbers, admin notes. Updated App.js to use WalletNew component."
 
+  - task: "Role-Based Navigation - Mobile Menu"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/Navbar.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "PHASE 1 COMPLETE - Role-based navigation now fully implemented for mobile menu. Updated mobile navigation to match desktop behavior: ✅ Regular users see Mining, Game, Referrals, Marketplace, Leaderboard, VIP, KYC, Orders. ✅ Admin users see only Admin Panel link, no mining/games/referrals. ✅ Master Stockist users see Master Stockist Panel, no mining/games. ✅ Sub Stockist users see Sub Stockist Panel, no mining/games. ✅ Outlet users see Outlet Panel, no mining/games. ✅ All role-specific users have access to Profile and Wallet. Mobile menu now properly implements RBAC."
+
+  - task: "Admin Dashboard - Full Implementation"
+    implemented: false
+    working: "NA"
+    file: "/app/frontend/src/pages/AdminDashboard.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Pending: Complete admin dashboard with KPI widgets, enhanced user management, stock management, order management, financial reports, employee management, audit logs."
+
+  - task: "Master Stockist Dashboard"
+    implemented: false
+    working: "NA"
+    file: "/app/frontend/src/pages/MasterStockistDashboard.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Pending: Master Stockist dashboard with stock management, sub-stockist allocation, orders, profit wallet, security deposit status, renewal status."
+
+  - task: "Sub Stockist Dashboard"
+    implemented: false
+    working: "NA"
+    file: "/app/frontend/src/pages/SubStockistDashboard.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Pending: Sub Stockist dashboard with stock management, outlet allocation, orders, profit wallet, security deposit status, renewal status."
+
+  - task: "Outlet Dashboard Enhancement"
+    implemented: false
+    working: "NA"
+    file: "/app/frontend/src/pages/OutletPanel.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Pending: Enhanced Outlet dashboard with customer order management, profit wallet details, security deposit status, renewal status, delivery tracking."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
@@ -445,7 +505,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Products Endpoint Visibility Fix"
+    - "Role-Based Navigation - Mobile Menu"
+    - "Admin Dashboard KPIs APIs"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
