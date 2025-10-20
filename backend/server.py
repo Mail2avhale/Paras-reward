@@ -5027,6 +5027,488 @@ async def update_ticket(ticket_id: str, request: TicketUpdateRequest):
     return {"message": "Ticket updated successfully", "updates": update_data}
 
 
+# ========== ADMIN STOCKIST MANAGEMENT ROUTES ==========
+
+class StockistCreateRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+    role: str  # master_stockist, sub_stockist, outlet
+    mobile: Optional[str] = None
+    state: Optional[str] = None
+    district: Optional[str] = None
+    pincode: Optional[str] = None
+    parent_id: Optional[str] = None  # For assignment (sub -> master, outlet -> sub)
+
+class StockistEditRequest(BaseModel):
+    name: Optional[str] = None
+    mobile: Optional[str] = None
+    state: Optional[str] = None
+    district: Optional[str] = None
+    pincode: Optional[str] = None
+    parent_id: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class StockistAssignRequest(BaseModel):
+    stockist_id: str
+    parent_id: str
+
+@api_router.post("/admin/stockists/create")
+async def create_stockist(request: StockistCreateRequest):
+    """Admin creates a new stockist (Master/Sub/Outlet)"""
+    # Validate role
+    if request.role not in ["master_stockist", "sub_stockist", "outlet"]:
+        raise HTTPException(status_code=400, detail="Invalid role. Must be master_stockist, sub_stockist, or outlet")
+    
+    # Check if email already exists
+    existing = await db.users.find_one({"email": request.email.lower()})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already exists")
+    
+    # Validate parent assignment
+    if request.parent_id:
+        parent = await db.users.find_one({"uid": request.parent_id})
+        if not parent:
+            raise HTTPException(status_code=404, detail="Parent not found")
+        
+        # Validate hierarchy: sub must have master parent, outlet must have sub parent
+        if request.role == "sub_stockist" and parent.get("role") != "master_stockist":
+            raise HTTPException(status_code=400, detail="Sub Stockist must be assigned to a Master Stockist")
+        if request.role == "outlet" and parent.get("role") != "sub_stockist":
+            raise HTTPException(status_code=400, detail="Outlet must be assigned to a Sub Stockist")
+    
+    # Create user
+    user_data = {
+        "uid": str(uuid.uuid4()),
+        "email": request.email.lower(),
+        "password_hash": hash_password(request.password),
+        "name": request.name,
+        "role": request.role,
+        "mobile": request.mobile,
+        "state": request.state,
+        "district": request.district,
+        "pincode": request.pincode,
+        "parent_id": request.parent_id,
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "membership_type": "free",
+        "kyc_status": "pending",
+        "prc_balance": 0,
+        "cashback_wallet_balance": 0,
+        "profit_wallet_balance": 0,
+        "security_deposit_paid": False,
+        "renewal_status": "pending"
+    }
+    
+    await db.users.insert_one(user_data)
+    
+    # Log action
+    await db.audit_logs.insert_one({
+        "log_id": str(uuid.uuid4()),
+        "action": "create_stockist",
+        "entity_type": "user",
+        "entity_id": user_data["uid"],
+        "performed_by": "admin",
+        "changes": {"role": request.role, "email": request.email},
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {
+        "message": f"{request.role.replace('_', ' ').title()} created successfully",
+        "uid": user_data["uid"],
+        "email": user_data["email"],
+        "role": user_data["role"]
+    }
+
+@api_router.put("/admin/stockists/{uid}/edit")
+async def edit_stockist(uid: str, request: StockistEditRequest):
+    """Admin edits stockist details"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="Stockist not found")
+    
+    if user.get("role") not in ["master_stockist", "sub_stockist", "outlet"]:
+        raise HTTPException(status_code=400, detail="User is not a stockist")
+    
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    
+    if request.name:
+        update_data["name"] = request.name
+    if request.mobile:
+        update_data["mobile"] = request.mobile
+    if request.state:
+        update_data["state"] = request.state
+    if request.district:
+        update_data["district"] = request.district
+    if request.pincode:
+        update_data["pincode"] = request.pincode
+    if request.parent_id is not None:
+        # Validate parent
+        parent = await db.users.find_one({"uid": request.parent_id})
+        if not parent:
+            raise HTTPException(status_code=404, detail="Parent not found")
+        update_data["parent_id"] = request.parent_id
+    if request.is_active is not None:
+        update_data["is_active"] = request.is_active
+    
+    await db.users.update_one({"uid": uid}, {"$set": update_data})
+    
+    # Log action
+    await db.audit_logs.insert_one({
+        "log_id": str(uuid.uuid4()),
+        "action": "edit_stockist",
+        "entity_type": "user",
+        "entity_id": uid,
+        "performed_by": "admin",
+        "changes": update_data,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"message": "Stockist updated successfully", "updates": update_data}
+
+@api_router.delete("/admin/stockists/{uid}")
+async def delete_stockist(uid: str):
+    """Admin deletes/deactivates a stockist"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="Stockist not found")
+    
+    if user.get("role") not in ["master_stockist", "sub_stockist", "outlet"]:
+        raise HTTPException(status_code=400, detail="User is not a stockist")
+    
+    # Soft delete - deactivate instead of removing
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": {
+            "is_active": False,
+            "deactivated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Log action
+    await db.audit_logs.insert_one({
+        "log_id": str(uuid.uuid4()),
+        "action": "delete_stockist",
+        "entity_type": "user",
+        "entity_id": uid,
+        "performed_by": "admin",
+        "changes": {"is_active": False},
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"message": "Stockist deactivated successfully"}
+
+@api_router.post("/admin/stockists/assign")
+async def assign_stockist(request: StockistAssignRequest):
+    """Admin assigns a stockist to a parent"""
+    stockist = await db.users.find_one({"uid": request.stockist_id})
+    if not stockist:
+        raise HTTPException(status_code=404, detail="Stockist not found")
+    
+    parent = await db.users.find_one({"uid": request.parent_id})
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent not found")
+    
+    # Validate hierarchy
+    stockist_role = stockist.get("role")
+    parent_role = parent.get("role")
+    
+    if stockist_role == "sub_stockist" and parent_role != "master_stockist":
+        raise HTTPException(status_code=400, detail="Sub Stockist must be assigned to a Master Stockist")
+    if stockist_role == "outlet" and parent_role != "sub_stockist":
+        raise HTTPException(status_code=400, detail="Outlet must be assigned to a Sub Stockist")
+    if stockist_role == "master_stockist":
+        raise HTTPException(status_code=400, detail="Master Stockist cannot be assigned to anyone")
+    
+    # Update assignment
+    await db.users.update_one(
+        {"uid": request.stockist_id},
+        {"$set": {
+            "parent_id": request.parent_id,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Log action
+    await db.audit_logs.insert_one({
+        "log_id": str(uuid.uuid4()),
+        "action": "assign_stockist",
+        "entity_type": "user",
+        "entity_id": request.stockist_id,
+        "performed_by": "admin",
+        "changes": {"parent_id": request.parent_id},
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {
+        "message": f"{stockist_role.replace('_', ' ').title()} assigned successfully",
+        "stockist_name": stockist.get("name"),
+        "parent_name": parent.get("name")
+    }
+
+@api_router.get("/admin/stockists")
+async def get_all_stockists(role: Optional[str] = None, status: Optional[str] = None):
+    """Admin gets all stockists with optional filters"""
+    query = {"role": {"$in": ["master_stockist", "sub_stockist", "outlet"]}}
+    
+    if role:
+        query["role"] = role
+    if status == "active":
+        query["is_active"] = True
+    elif status == "inactive":
+        query["is_active"] = False
+    
+    stockists = await db.users.find(query).to_list(length=None)
+    
+    # Remove sensitive data
+    for stockist in stockists:
+        stockist.pop("password_hash", None)
+        stockist.pop("_id", None)
+    
+    return {"stockists": stockists, "count": len(stockists)}
+
+
+# ========== ADMIN SECURITY DEPOSIT MANUAL ENTRY ROUTES ==========
+
+class SecurityDepositManualEntry(BaseModel):
+    user_id: str
+    amount: float
+    monthly_return_rate: float = 0.03  # 3% default
+    notes: Optional[str] = None
+
+@api_router.post("/admin/security-deposit/manual-entry")
+async def create_security_deposit_manual(request: SecurityDepositManualEntry):
+    """Admin manually creates a security deposit entry"""
+    # Verify user exists and is a stockist
+    user = await db.users.find_one({"uid": request.user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.get("role") not in ["master_stockist", "sub_stockist", "outlet"]:
+        raise HTTPException(status_code=400, detail="User must be a stockist")
+    
+    # Check if already has a deposit
+    existing = await db.security_deposits.find_one({"user_id": request.user_id, "status": {"$in": ["pending", "approved"]}})
+    if existing:
+        raise HTTPException(status_code=400, detail="User already has an active security deposit")
+    
+    # Calculate monthly return
+    monthly_return = request.amount * request.monthly_return_rate
+    
+    # Create deposit entry
+    deposit = {
+        "deposit_id": str(uuid.uuid4()),
+        "user_id": request.user_id,
+        "user_name": user.get("name", ""),
+        "user_role": user.get("role", ""),
+        "amount": request.amount,
+        "monthly_return_rate": request.monthly_return_rate,
+        "monthly_return_amount": monthly_return,
+        "balance_pending": request.amount,  # Full amount pending initially
+        "total_returned": 0,
+        "status": "approved",  # Auto-approved since admin is creating
+        "payment_method": "admin_entry",
+        "notes": request.notes or f"Manual entry by admin on {datetime.now(timezone.utc).strftime('%Y-%m-%d')}",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "approved_at": datetime.now(timezone.utc).isoformat(),
+        "approved_by": "admin",
+        "next_return_due": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
+        "return_history": []
+    }
+    
+    await db.security_deposits.insert_one(deposit)
+    
+    # Update user record
+    await db.users.update_one(
+        {"uid": request.user_id},
+        {"$set": {
+            "security_deposit_paid": True,
+            "security_deposit_amount": request.amount,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Log action
+    await db.audit_logs.insert_one({
+        "log_id": str(uuid.uuid4()),
+        "action": "create_security_deposit_manual",
+        "entity_type": "security_deposit",
+        "entity_id": deposit["deposit_id"],
+        "performed_by": "admin",
+        "changes": {"amount": request.amount, "user_id": request.user_id},
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {
+        "message": "Security deposit entry created successfully",
+        "deposit_id": deposit["deposit_id"],
+        "amount": request.amount,
+        "monthly_return": monthly_return,
+        "balance_pending": request.amount
+    }
+
+@api_router.put("/admin/security-deposit/{deposit_id}/edit")
+async def edit_security_deposit(deposit_id: str, request: Request):
+    """Admin edits security deposit details"""
+    deposit = await db.security_deposits.find_one({"deposit_id": deposit_id})
+    if not deposit:
+        raise HTTPException(status_code=404, detail="Security deposit not found")
+    
+    data = await request.json()
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    
+    if "amount" in data:
+        new_amount = float(data["amount"])
+        monthly_return = new_amount * deposit.get("monthly_return_rate", 0.03)
+        update_data["amount"] = new_amount
+        update_data["monthly_return_amount"] = monthly_return
+        
+        # Recalculate balance pending
+        total_returned = deposit.get("total_returned", 0)
+        update_data["balance_pending"] = new_amount - total_returned
+    
+    if "monthly_return_rate" in data:
+        rate = float(data["monthly_return_rate"])
+        amount = data.get("amount", deposit.get("amount", 0))
+        update_data["monthly_return_rate"] = rate
+        update_data["monthly_return_amount"] = amount * rate
+    
+    if "notes" in data:
+        update_data["notes"] = data["notes"]
+    
+    if "balance_pending" in data:
+        update_data["balance_pending"] = float(data["balance_pending"])
+    
+    await db.security_deposits.update_one({"deposit_id": deposit_id}, {"$set": update_data})
+    
+    # Log action
+    await db.audit_logs.insert_one({
+        "log_id": str(uuid.uuid4()),
+        "action": "edit_security_deposit",
+        "entity_type": "security_deposit",
+        "entity_id": deposit_id,
+        "performed_by": "admin",
+        "changes": update_data,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"message": "Security deposit updated successfully", "updates": update_data}
+
+
+# ========== ADMIN RENEWAL MANUAL ENTRY ROUTES ==========
+
+class RenewalManualEntry(BaseModel):
+    user_id: str
+    amount: float
+    gst_rate: float = 0.18  # 18% GST
+    notes: Optional[str] = None
+
+@api_router.post("/admin/renewal/manual-entry")
+async def create_renewal_manual(request: RenewalManualEntry):
+    """Admin manually creates a renewal entry"""
+    # Verify user exists and is a stockist
+    user = await db.users.find_one({"uid": request.user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.get("role") not in ["master_stockist", "sub_stockist", "outlet"]:
+        raise HTTPException(status_code=400, detail="User must be a stockist")
+    
+    # Calculate total with GST
+    gst_amount = request.amount * request.gst_rate
+    total_amount = request.amount + gst_amount
+    
+    # Create renewal entry
+    renewal = {
+        "renewal_id": str(uuid.uuid4()),
+        "user_id": request.user_id,
+        "user_name": user.get("name", ""),
+        "user_role": user.get("role", ""),
+        "base_amount": request.amount,
+        "gst_rate": request.gst_rate,
+        "gst_amount": gst_amount,
+        "total_amount": total_amount,
+        "status": "approved",  # Auto-approved since admin is creating
+        "payment_method": "admin_entry",
+        "notes": request.notes or f"Manual entry by admin on {datetime.now(timezone.utc).strftime('%Y-%m-%d')}",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "approved_at": datetime.now(timezone.utc).isoformat(),
+        "approved_by": "admin",
+        "renewal_start_date": datetime.now(timezone.utc).isoformat(),
+        "renewal_end_date": (datetime.now(timezone.utc) + timedelta(days=365)).isoformat()
+    }
+    
+    await db.annual_renewals.insert_one(renewal)
+    
+    # Update user record
+    await db.users.update_one(
+        {"uid": request.user_id},
+        {"$set": {
+            "renewal_status": "active",
+            "renewal_due_date": renewal["renewal_end_date"],
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Log action
+    await db.audit_logs.insert_one({
+        "log_id": str(uuid.uuid4()),
+        "action": "create_renewal_manual",
+        "entity_type": "annual_renewal",
+        "entity_id": renewal["renewal_id"],
+        "performed_by": "admin",
+        "changes": {"amount": request.amount, "user_id": request.user_id},
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {
+        "message": "Renewal entry created successfully",
+        "renewal_id": renewal["renewal_id"],
+        "base_amount": request.amount,
+        "gst_amount": gst_amount,
+        "total_amount": total_amount,
+        "valid_until": renewal["renewal_end_date"]
+    }
+
+@api_router.put("/admin/renewal/{renewal_id}/edit")
+async def edit_renewal(renewal_id: str, request: Request):
+    """Admin edits renewal details"""
+    renewal = await db.annual_renewals.find_one({"renewal_id": renewal_id})
+    if not renewal:
+        raise HTTPException(status_code=404, detail="Renewal not found")
+    
+    data = await request.json()
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    
+    if "base_amount" in data:
+        base_amount = float(data["base_amount"])
+        gst_rate = data.get("gst_rate", renewal.get("gst_rate", 0.18))
+        gst_amount = base_amount * gst_rate
+        total_amount = base_amount + gst_amount
+        
+        update_data["base_amount"] = base_amount
+        update_data["gst_amount"] = gst_amount
+        update_data["total_amount"] = total_amount
+    
+    if "notes" in data:
+        update_data["notes"] = data["notes"]
+    
+    await db.annual_renewals.update_one({"renewal_id": renewal_id}, {"$set": update_data})
+    
+    # Log action
+    await db.audit_logs.insert_one({
+        "log_id": str(uuid.uuid4()),
+        "action": "edit_renewal",
+        "entity_type": "annual_renewal",
+        "entity_id": renewal_id,
+        "performed_by": "admin",
+        "changes": update_data,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"message": "Renewal updated successfully", "updates": update_data}
+
+
 # Include router
 app.include_router(api_router)
 
