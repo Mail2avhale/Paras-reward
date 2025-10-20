@@ -143,9 +143,9 @@ const FinancialManagementAdmin = () => {
   const openEditDeposit = (deposit) => {
     setSelectedDeposit(deposit);
     setDepositForm({
-      amount: deposit.amount.toString(),
-      monthly_return_rate: deposit.monthly_return_rate.toString(),
-      balance_pending: deposit.balance_pending.toString(),
+      amount: (deposit.amount || 0).toString(),
+      monthly_return_rate: (deposit.monthly_return_rate || 0.03).toString(),
+      balance_pending: (deposit.balance_pending || deposit.amount || 0).toString(),
       notes: deposit.notes || ''
     });
     setShowEditDepositModal(true);
