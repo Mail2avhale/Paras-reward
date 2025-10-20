@@ -2170,37 +2170,6 @@ async def get_admin_stats():
             "withdrawals": recent_withdrawals
         }
     }
-            "pending": pending_stock_movements,
-            "approved": approved_stock_movements
-        },
-        "security_deposits": {
-            "pending": pending_deposits,
-            "approved": approved_deposits
-        },
-        "renewals": {
-            "pending": pending_renewals,
-            "active": active_renewals,
-            "overdue": overdue_entities
-        },
-        "recent_activity": {
-            "orders": [
-                {
-                    "order_id": order.get("order_id"),
-                    "status": order.get("status"),
-                    "total_cash_price": order.get("total_cash_price"),
-                    "created_at": order.get("created_at").isoformat() if order.get("created_at") and hasattr(order.get("created_at"), 'isoformat') else order.get("created_at")
-                } for order in recent_orders
-            ],
-            "withdrawals": [
-                {
-                    "withdrawal_id": withdrawal.get("withdrawal_id"),
-                    "amount": withdrawal.get("amount"),
-                    "status": withdrawal.get("status"),
-                    "created_at": withdrawal.get("created_at").isoformat() if withdrawal.get("created_at") and hasattr(withdrawal.get("created_at"), 'isoformat') else withdrawal.get("created_at")
-                } for withdrawal in recent_withdrawals
-            ]
-        }
-    }
 
 # ========== ADMIN USER MANAGEMENT ROUTES ==========
 
