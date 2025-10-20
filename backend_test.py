@@ -969,11 +969,212 @@ def test_audit_logging_apis():
         print(f"❌ Audit logging test FAILED - Error: {e}")
         return False
 
+def test_login_issue_santosh():
+    """Test login issue for user Santosh@paras.com - Debug 'User not found' error"""
+    print("\n" + "=" * 80)
+    print("DEBUGGING LOGIN ISSUE FOR USER: Santosh@paras.com")
+    print("=" * 80)
+    
+    target_email = "Santosh@paras.com"
+    
+    # Step 1: Check if user exists with exact email
+    print(f"\n1. Checking if user exists with exact email: {target_email}")
+    try:
+        # Try to get all users and search for this email
+        response = requests.get(f"{API_BASE}/admin/users", timeout=30)
+        if response.status_code == 200:
+            users_data = response.json()
+            users = users_data.get("users", [])
+            print(f"Total users in database: {len(users)}")
+            
+            # Search for exact match
+            exact_match = None
+            for user in users:
+                if user.get("email") == target_email:
+                    exact_match = user
+                    break
+            
+            if exact_match:
+                print(f"✅ FOUND exact match: {exact_match.get('email')} (UID: {exact_match.get('uid')})")
+                print(f"   Name: {exact_match.get('name', 'N/A')}")
+                print(f"   Role: {exact_match.get('role', 'N/A')}")
+                print(f"   Active: {exact_match.get('is_active', 'N/A')}")
+            else:
+                print(f"❌ NO exact match found for: {target_email}")
+        else:
+            print(f"❌ Failed to get users list - Status: {response.status_code}")
+            # Try alternative approach - direct login test
+            print("Proceeding with direct login test...")
+    except Exception as e:
+        print(f"❌ Error checking users: {e}")
+    
+    # Step 2: Check for case-insensitive matches
+    print(f"\n2. Checking for case-insensitive matches...")
+    try:
+        response = requests.get(f"{API_BASE}/admin/users", timeout=30)
+        if response.status_code == 200:
+            users_data = response.json()
+            users = users_data.get("users", [])
+            
+            # Search for case-insensitive matches
+            case_matches = []
+            for user in users:
+                user_email = user.get("email", "")
+                if user_email.lower() == target_email.lower() and user_email != target_email:
+                    case_matches.append(user)
+            
+            if case_matches:
+                print(f"✅ FOUND {len(case_matches)} case-insensitive matches:")
+                for match in case_matches:
+                    print(f"   Email: {match.get('email')} (UID: {match.get('uid')})")
+                    print(f"   Name: {match.get('name', 'N/A')}")
+            else:
+                print(f"❌ NO case-insensitive matches found")
+        else:
+            print(f"❌ Failed to get users for case check - Status: {response.status_code}")
+    except Exception as e:
+        print(f"❌ Error checking case-insensitive matches: {e}")
+    
+    # Step 3: Search for partial matches (santosh in email)
+    print(f"\n3. Searching for partial matches (santosh in email)...")
+    try:
+        response = requests.get(f"{API_BASE}/admin/users", timeout=30)
+        if response.status_code == 200:
+            users_data = response.json()
+            users = users_data.get("users", [])
+            
+            # Search for partial matches
+            partial_matches = []
+            for user in users:
+                user_email = user.get("email", "")
+                if "santosh" in user_email.lower():
+                    partial_matches.append(user)
+            
+            if partial_matches:
+                print(f"✅ FOUND {len(partial_matches)} partial matches:")
+                for match in partial_matches:
+                    print(f"   Email: {match.get('email')} (UID: {match.get('uid')})")
+                    print(f"   Name: {match.get('name', 'N/A')}")
+                    print(f"   Role: {match.get('role', 'N/A')}")
+            else:
+                print(f"❌ NO partial matches found for 'santosh'")
+        else:
+            print(f"❌ Failed to get users for partial search - Status: {response.status_code}")
+    except Exception as e:
+        print(f"❌ Error searching partial matches: {e}")
+    
+    # Step 4: Test login endpoint with the exact email
+    print(f"\n4. Testing login endpoint with email: {target_email}")
+    try:
+        # Test with a common password (we don't know the actual password)
+        test_passwords = ["password", "123456", "santosh123", "Password123", "admin"]
+        
+        for password in test_passwords:
+            print(f"\n   Testing with password: {password}")
+            
+            # Test using query parameters (as per the API)
+            response = requests.post(
+                f"{API_BASE}/auth/login",
+                params={
+                    "identifier": target_email,
+                    "password": password
+                },
+                timeout=30
+            )
+            
+            print(f"   Status Code: {response.status_code}")
+            print(f"   Response: {response.text}")
+            
+            if response.status_code == 404:
+                print(f"   ❌ User not found (404) - confirms the issue")
+            elif response.status_code == 401:
+                print(f"   ✅ User found but wrong password (401) - user exists!")
+                return True
+            elif response.status_code == 200:
+                print(f"   ✅ Login successful! User exists and password is correct")
+                return True
+            else:
+                print(f"   ❓ Unexpected status: {response.status_code}")
+    except Exception as e:
+        print(f"❌ Error testing login: {e}")
+    
+    # Step 5: Test login with lowercase version
+    print(f"\n5. Testing login with lowercase email: {target_email.lower()}")
+    try:
+        response = requests.post(
+            f"{API_BASE}/auth/login",
+            params={
+                "identifier": target_email.lower(),
+                "password": "password"  # Test password
+            },
+            timeout=30
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 404:
+            print(f"❌ User not found with lowercase email either")
+        elif response.status_code == 401:
+            print(f"✅ User found with lowercase email! Case sensitivity issue confirmed")
+        elif response.status_code == 200:
+            print(f"✅ Login successful with lowercase email!")
+    except Exception as e:
+        print(f"❌ Error testing lowercase login: {e}")
+    
+    # Step 6: Test with other users to verify login endpoint works
+    print(f"\n6. Testing login endpoint with other users to verify it works...")
+    try:
+        response = requests.get(f"{API_BASE}/admin/users", timeout=30)
+        if response.status_code == 200:
+            users_data = response.json()
+            users = users_data.get("users", [])
+            
+            # Test with first 3 users
+            test_count = 0
+            for user in users[:3]:
+                if test_count >= 3:
+                    break
+                    
+                user_email = user.get("email")
+                if user_email and user_email != target_email:
+                    print(f"\n   Testing login with user: {user_email}")
+                    
+                    response = requests.post(
+                        f"{API_BASE}/auth/login",
+                        params={
+                            "identifier": user_email,
+                            "password": "wrongpassword"  # Intentionally wrong
+                        },
+                        timeout=30
+                    )
+                    
+                    print(f"   Status Code: {response.status_code}")
+                    
+                    if response.status_code == 404:
+                        print(f"   ❌ User not found - login endpoint might have issues")
+                    elif response.status_code == 401:
+                        print(f"   ✅ User found (wrong password) - login endpoint works")
+                    elif response.status_code == 200:
+                        print(f"   ✅ Login successful - login endpoint works")
+                    
+                    test_count += 1
+        else:
+            print(f"❌ Failed to get users for login testing - Status: {response.status_code}")
+    except Exception as e:
+        print(f"❌ Error testing other users: {e}")
+    
+    print(f"\n" + "=" * 80)
+    print("LOGIN ISSUE INVESTIGATION COMPLETED")
+    print("=" * 80)
+    
+    return False  # Issue not resolved, just investigated
+
 def main():
-    """Run focused Backend API tests for Employee Management and Audit Logging"""
-    print("Starting FOCUSED Backend API testing...")
+    """Run login issue investigation for Santosh@paras.com"""
+    print("Starting LOGIN ISSUE INVESTIGATION...")
     print(f"Target API: {API_BASE}")
-    print("FOCUS: Employee Management and Audit Logging APIs (after duplicate endpoint fix)")
+    print("FOCUS: Debug login issue for user Santosh@paras.com")
     
     # Test basic connectivity
     try:
@@ -984,35 +1185,8 @@ def main():
         print("Cannot proceed with testing - backend is not accessible")
         return False
     
-    # Run focused tests
-    print("\n" + "=" * 80)
-    print("FOCUSED BACKEND API TESTING - EMPLOYEE MANAGEMENT & AUDIT LOGGING")
-    print("=" * 80)
-    
-    print("\n" + "=" * 60)
-    print("EMPLOYEE MANAGEMENT API TESTING (PRIORITY)")
-    print("=" * 60)
-    
-    # Test Employee Management APIs
-    if not test_employee_management_apis():
-        print("❌ CRITICAL: Employee Management APIs test failed")
-        return False
-    
-    print("\n" + "=" * 60)
-    print("AUDIT LOGGING API TESTING (PRIORITY)")
-    print("=" * 60)
-    
-    # Test Audit Logging APIs
-    if not test_audit_logging_apis():
-        print("❌ CRITICAL: Audit Logging APIs test failed")
-        return False
-    
-    print("\n" + "=" * 80)
-    print("FOCUSED BACKEND API TESTING COMPLETED!")
-    print("=" * 80)
-    print("✅ ALL FOCUSED TESTS PASSED - Employee Management & Audit Logging APIs working!")
-    print("✅ Employee Management: Create, List, Update Permissions")
-    print("✅ Audit Logging: Create logs, Retrieve with filters")
+    # Run login issue investigation
+    test_login_issue_santosh()
     
     return True
 
