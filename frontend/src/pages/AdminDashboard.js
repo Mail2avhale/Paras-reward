@@ -1164,39 +1164,6 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
           )}
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-          <Card data-testid="total-users-stat" className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg">
-            <Users className="h-8 w-8 text-purple-600 mb-3" />
-            <p className="text-sm text-gray-600 mb-1">Total Users</p>
-            <p className="text-3xl font-bold text-gray-900">{stats?.total_users || 0}</p>
-          </Card>
-
-          <Card data-testid="vip-users-stat" className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg">
-            <Users className="h-8 w-8 text-yellow-600 mb-3" />
-            <p className="text-sm text-gray-600 mb-1">VIP Users</p>
-            <p className="text-3xl font-bold text-gray-900">{stats?.vip_users || 0}</p>
-          </Card>
-
-          <Card data-testid="total-orders-stat" className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg">
-            <Package className="h-8 w-8 text-blue-600 mb-3" />
-            <p className="text-sm text-gray-600 mb-1">Total Orders</p>
-            <p className="text-3xl font-bold text-gray-900">{stats?.total_orders || 0}</p>
-          </Card>
-
-          <Card data-testid="pending-payments-stat" className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg">
-            <CreditCard className="h-8 w-8 text-green-600 mb-3" />
-            <p className="text-sm text-gray-600 mb-1">Pending Payments</p>
-            <p className="text-3xl font-bold text-gray-900">{stats?.pending_payments || 0}</p>
-          </Card>
-
-          <Card data-testid="pending-kyc-stat" className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg">
-            <FileText className="h-8 w-8 text-orange-600 mb-3" />
-            <p className="text-sm text-gray-600 mb-1">Pending KYC</p>
-            <p className="text-3xl font-bold text-gray-900">{stats?.pending_kyc || 0}</p>
-          </Card>
-        </div>
-
           {/* Users Tab */}
           {activeTab === 'users' && (
             <div>
