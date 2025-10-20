@@ -1407,4 +1407,276 @@ const AdminDashboard = ({ user, onLogout }) => {
   );
 };
 
+// Stock Movement Management Component
+const StockMovementManagement = () => {
+  const [movements, setMovements] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [stockists, setStockists] = useState({ masters: [], subs: [], outlets: [] });
+  const [showInitiateModal, setShowInitiateModal] = useState(false);
+  const [formData, setFormData] = useState({
+    product_id: '',
+    product_name: '',
+    quantity: 0,
+    sender_type: 'company',
+    sender_id: 'COMPANY',
+    receiver_type: 'master_stockist',
+    receiver_id: ''
+  });
+
+  useEffect(() => {
+    fetchMovements();
+    fetchProducts();
+    fetchStockists();
+  }, []);
+
+  const fetchMovements = async () => {
+    try {
+      // Fetch all movements (admin can see all)
+      const response = await axios.get(`${API}/admin/stock/movements`);
+      setMovements(response.data || []);
+    } catch (error) {
+      console.error('Error fetching movements:', error);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/products`);
+      setProducts(response.data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
+
+  const fetchStockists = async () => {
+    try {
+      const usersRes = await axios.get(`${API}/admin/users`);
+      const users = usersRes.data.users || [];
+      
+      setStockists({
+        masters: users.filter(u => u.role === 'master_stockist'),
+        subs: users.filter(u => u.role === 'sub_stockist'),
+        outlets: users.filter(u => u.role === 'outlet')
+      });
+    } catch (error) {
+      console.error('Error fetching stockists:', error);
+    }
+  };
+
+  const initiateTransfer = async () => {
+    try {
+      // Find product details
+      const product = products.find(p => p.product_id === formData.product_id);
+      
+      await axios.post(`${API}/stock/transfer/initiate`, {
+        ...formData,
+        product_name: product?.name || formData.product_name
+      });
+      
+      toast.success('Stock transfer initiated successfully');
+      setShowInitiateModal(false);
+      setFormData({
+        product_id: '',
+        product_name: '',
+        quantity: 0,
+        sender_type: 'company',
+        sender_id: 'COMPANY',
+        receiver_type: 'master_stockist',
+        receiver_id: ''
+      });
+      fetchMovements();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to initiate transfer');
+    }
+  };
+
+  const handleApprove = async (movementId) => {
+    try {
+      await axios.post(`${API}/admin/stock/movements/${movementId}/approve`);
+      toast.success('Transfer approved');
+      fetchMovements();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to approve');
+    }
+  };
+
+  const handleReject = async (movementId) => {
+    try {
+      await axios.post(`${API}/admin/stock/movements/${movementId}/reject`);
+      toast.success('Transfer rejected');
+      fetchMovements();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to reject');
+    }
+  };
+
+  const getReceiverOptions = () => {
+    switch (formData.receiver_type) {
+      case 'master_stockist':
+        return stockists.masters;
+      case 'sub_stockist':
+        return stockists.subs;
+      case 'outlet':
+        return stockists.outlets;
+      default:
+        return [];
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Stock Movement Management</h2>
+          <p className="text-gray-600">Company → Master → Sub → Outlet</p>
+        </div>
+        <Button onClick={() => setShowInitiateModal(true)} className="bg-purple-600 hover:bg-purple-700">
+          <Package className="mr-2 h-4 w-4" />
+          Initiate Transfer
+        </Button>
+      </div>
+
+      {/* Stock Movements List */}
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold mb-4">All Stock Movements</h3>
+        <div className="space-y-3">
+          {movements.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">No stock movements yet</p>
+          ) : (
+            movements.map((movement) => (
+              <Card key={movement.movement_id} className="p-4 border-l-4 border-purple-500">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                        movement.status === 'completed' ? 'bg-green-100 text-green-700' :
+                        movement.status === 'approved' ? 'bg-blue-100 text-blue-700' :
+                        movement.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                        'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {movement.status}
+                      </span>
+                      <span className="text-xs text-gray-500">Batch: {movement.batch_number}</span>
+                    </div>
+                    <p className="font-semibold text-gray-900">{movement.product_name}</p>
+                    <p className="text-sm text-gray-600">Quantity: {movement.quantity}</p>
+                    <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
+                      <span>{movement.sender_type}: {movement.sender_id}</span>
+                      <ArrowDownRight className="h-4 w-4" />
+                      <span>{movement.receiver_type}: {movement.receiver_id}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Created: {new Date(movement.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                  {movement.status === 'pending' && (
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => handleApprove(movement.movement_id)}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleReject(movement.movement_id)}
+                      >
+                        Reject
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
+      </Card>
+
+      {/* Initiate Transfer Modal */}
+      {showInitiateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4 p-6">
+            <h3 className="text-xl font-bold mb-4">Initiate Stock Transfer</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Product *</label>
+                <select
+                  className="w-full border rounded p-2"
+                  value={formData.product_id}
+                  onChange={(e) => setFormData({...formData, product_id: e.target.value})}
+                >
+                  <option value="">Select Product</option>
+                  {products.map(product => (
+                    <option key={product.product_id} value={product.product_id}>
+                      {product.name} (Stock: {product.available_stock})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Quantity *</label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={formData.quantity}
+                  onChange={(e) => setFormData({...formData, quantity: parseInt(e.target.value) || 0})}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Receiver Type *</label>
+                <select
+                  className="w-full border rounded p-2"
+                  value={formData.receiver_type}
+                  onChange={(e) => setFormData({...formData, receiver_type: e.target.value, receiver_id: ''})}
+                >
+                  <option value="master_stockist">Master Stockist</option>
+                  <option value="sub_stockist">Sub Stockist</option>
+                  <option value="outlet">Outlet</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Receiver *</label>
+                <select
+                  className="w-full border rounded p-2"
+                  value={formData.receiver_id}
+                  onChange={(e) => setFormData({...formData, receiver_id: e.target.value})}
+                >
+                  <option value="">Select Receiver</option>
+                  {getReceiverOptions().map(user => (
+                    <option key={user.uid} value={user.uid}>
+                      {user.name || user.email} ({user.uid})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button
+                  onClick={initiateTransfer}
+                  disabled={!formData.product_id || !formData.receiver_id || formData.quantity <= 0}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700"
+                >
+                  Initiate Transfer
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowInitiateModal(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default AdminDashboard;
