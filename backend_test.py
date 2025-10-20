@@ -423,19 +423,19 @@ def check_orders_in_database(test_users):
     print(f"\n📊 TOTAL ORDERS FOUND: {total_orders_found}")
     return total_orders_found > 0
 
-def check_cashback_wallet(vip_users):
+def check_cashback_wallet(test_users):
     """Check Cashback Wallet - Verify cashback balance"""
     print("\n" + "=" * 80)
     print("4. CHECKING CASHBACK WALLET")
     print("=" * 80)
     
-    if not vip_users:
-        print("❌ No VIP users found to check cashback wallet")
+    if not test_users:
+        print("❌ No users found to check cashback wallet")
         return False
     
-    for vip_user in vip_users:
-        uid = vip_user["uid"]
-        name = vip_user["name"]
+    for test_user in test_users:
+        uid = test_user["uid"]
+        name = test_user["name"]
         
         print(f"\n4.1. Checking cashback wallet for: {name} (UID: {uid})")
         
