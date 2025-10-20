@@ -5509,6 +5509,320 @@ async def edit_renewal(renewal_id: str, request: Request):
     return {"message": "Renewal updated successfully", "updates": update_data}
 
 
+# ========== ADMIN USER MANAGEMENT ROUTES ==========
+
+class UserUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    mobile: Optional[str] = None
+    role: Optional[str] = None
+    membership_type: Optional[str] = None
+    kyc_status: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class BalanceAdjustRequest(BaseModel):
+    balance_type: str  # prc_balance, cashback_wallet_balance, profit_wallet_balance
+    amount: float
+    operation: str  # add, deduct, set
+    notes: Optional[str] = None
+
+@api_router.get("/admin/users/all")
+async def get_all_users_admin(
+    page: int = 1, 
+    limit: int = 50, 
+    search: Optional[str] = None,
+    role: Optional[str] = None,
+    membership: Optional[str] = None,
+    kyc_status: Optional[str] = None
+):
+    """Admin endpoint to get all users with filters and pagination"""
+    query = {}
+    
+    # Search filter
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"email": {"$regex": search, "$options": "i"}},
+            {"mobile": {"$regex": search, "$options": "i"}},
+            {"uid": {"$regex": search, "$options": "i"}}
+        ]
+    
+    # Role filter
+    if role:
+        query["role"] = role
+    
+    # Membership filter
+    if membership:
+        query["membership_type"] = membership
+    
+    # KYC filter
+    if kyc_status:
+        query["kyc_status"] = kyc_status
+    
+    skip = (page - 1) * limit
+    users = await db.users.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=None)
+    total = await db.users.count_documents(query)
+    
+    # Remove sensitive data
+    for user in users:
+        user.pop("password_hash", None)
+        user.pop("_id", None)
+    
+    return {
+        "users": users,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "pages": (total + limit - 1) // limit
+    }
+
+@api_router.put("/admin/users/{uid}/update")
+async def update_user_admin(uid: str, request: UserUpdateRequest):
+    """Admin updates user details"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    
+    if request.name:
+        update_data["name"] = request.name
+    if request.email:
+        # Check if email already exists
+        existing = await db.users.find_one({"email": request.email.lower(), "uid": {"$ne": uid}})
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already exists")
+        update_data["email"] = request.email.lower()
+    if request.mobile:
+        update_data["mobile"] = request.mobile
+    if request.role:
+        update_data["role"] = request.role
+    if request.membership_type:
+        update_data["membership_type"] = request.membership_type
+    if request.kyc_status:
+        update_data["kyc_status"] = request.kyc_status
+    if request.is_active is not None:
+        update_data["is_active"] = request.is_active
+    
+    await db.users.update_one({"uid": uid}, {"$set": update_data})
+    
+    # Log action
+    await db.audit_logs.insert_one({
+        "log_id": str(uuid.uuid4()),
+        "action": "update_user",
+        "entity_type": "user",
+        "entity_id": uid,
+        "performed_by": "admin",
+        "changes": update_data,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"message": "User updated successfully", "updates": update_data}
+
+@api_router.post("/admin/users/{uid}/adjust-balance")
+async def adjust_user_balance(uid: str, request: BalanceAdjustRequest):
+    """Admin adjusts user balance (PRC, cashback, profit)"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if request.balance_type not in ["prc_balance", "cashback_wallet_balance", "profit_wallet_balance"]:
+        raise HTTPException(status_code=400, detail="Invalid balance type")
+    
+    current_balance = user.get(request.balance_type, 0)
+    
+    if request.operation == "add":
+        new_balance = current_balance + request.amount
+    elif request.operation == "deduct":
+        new_balance = current_balance - request.amount
+        if new_balance < 0:
+            raise HTTPException(status_code=400, detail="Insufficient balance")
+    elif request.operation == "set":
+        new_balance = request.amount
+    else:
+        raise HTTPException(status_code=400, detail="Invalid operation")
+    
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": {
+            request.balance_type: new_balance,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Log action
+    await db.audit_logs.insert_one({
+        "log_id": str(uuid.uuid4()),
+        "action": "adjust_balance",
+        "entity_type": "user",
+        "entity_id": uid,
+        "performed_by": "admin",
+        "changes": {
+            "balance_type": request.balance_type,
+            "operation": request.operation,
+            "amount": request.amount,
+            "old_balance": current_balance,
+            "new_balance": new_balance,
+            "notes": request.notes
+        },
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {
+        "message": "Balance adjusted successfully",
+        "balance_type": request.balance_type,
+        "old_balance": current_balance,
+        "new_balance": new_balance
+    }
+
+@api_router.delete("/admin/users/{uid}/delete")
+async def delete_user_admin(uid: str):
+    """Admin deactivates/deletes a user"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Soft delete - deactivate
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": {
+            "is_active": False,
+            "deactivated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Log action
+    await db.audit_logs.insert_one({
+        "log_id": str(uuid.uuid4()),
+        "action": "delete_user",
+        "entity_type": "user",
+        "entity_id": uid,
+        "performed_by": "admin",
+        "changes": {"is_active": False},
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"message": "User deactivated successfully"}
+
+
+# ========== ADMIN ORDER MANAGEMENT ROUTES ==========
+
+@api_router.get("/admin/orders/all")
+async def get_all_orders_admin(
+    page: int = 1,
+    limit: int = 50,
+    status: Optional[str] = None,
+    search: Optional[str] = None
+):
+    """Admin endpoint to get all orders with filters"""
+    query = {}
+    
+    if status:
+        query["status"] = status
+    
+    if search:
+        query["$or"] = [
+            {"order_id": {"$regex": search, "$options": "i"}},
+            {"user_id": {"$regex": search, "$options": "i"}},
+            {"secret_code": {"$regex": search, "$options": "i"}}
+        ]
+    
+    skip = (page - 1) * limit
+    orders = await db.orders.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=None)
+    total = await db.orders.count_documents(query)
+    
+    # Enrich with user data
+    for order in orders:
+        order.pop("_id", None)
+        user = await db.users.find_one({"uid": order.get("user_id")})
+        if user:
+            order["user_name"] = user.get("name", "Unknown")
+            order["user_email"] = user.get("email", "")
+    
+    return {
+        "orders": orders,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "pages": (total + limit - 1) // limit
+    }
+
+@api_router.get("/admin/orders/{order_id}/details")
+async def get_order_details_admin(order_id: str):
+    """Admin gets detailed order information"""
+    order = await db.orders.find_one({"order_id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    order.pop("_id", None)
+    
+    # Get user details
+    user = await db.users.find_one({"uid": order.get("user_id")})
+    if user:
+        order["user_details"] = {
+            "name": user.get("name"),
+            "email": user.get("email"),
+            "mobile": user.get("mobile"),
+            "membership_type": user.get("membership_type")
+        }
+    
+    return order
+
+@api_router.put("/admin/orders/{order_id}/status")
+async def update_order_status_admin(order_id: str, status: str, notes: Optional[str] = None):
+    """Admin updates order status"""
+    order = await db.orders.find_one({"order_id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    valid_statuses = ["pending", "verified", "delivered", "cancelled"]
+    if status not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid_statuses}")
+    
+    update_data = {
+        "status": status,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    if status == "delivered":
+        update_data["delivered_at"] = datetime.now(timezone.utc).isoformat()
+    elif status == "cancelled":
+        update_data["cancelled_at"] = datetime.now(timezone.utc).isoformat()
+        # Refund PRC to user
+        user = await db.users.find_one({"uid": order.get("user_id")})
+        if user:
+            total_prc = order.get("total_prc", 0)
+            await db.users.update_one(
+                {"uid": user["uid"]},
+                {"$inc": {"prc_balance": total_prc}}
+            )
+            # Deduct cashback if already credited
+            cashback = order.get("cashback_amount", 0)
+            if cashback > 0:
+                await db.users.update_one(
+                    {"uid": user["uid"]},
+                    {"$inc": {"cashback_wallet_balance": -cashback}}
+                )
+    
+    if notes:
+        update_data["admin_notes"] = notes
+    
+    await db.orders.update_one({"order_id": order_id}, {"$set": update_data})
+    
+    # Log action
+    await db.audit_logs.insert_one({
+        "log_id": str(uuid.uuid4()),
+        "action": "update_order_status",
+        "entity_type": "order",
+        "entity_id": order_id,
+        "performed_by": "admin",
+        "changes": {"status": status, "notes": notes},
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"message": f"Order status updated to {status}", "order_id": order_id}
+
+
 # Include router
 app.include_router(api_router)
 
