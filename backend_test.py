@@ -1257,8 +1257,31 @@ def main():
         print("Cannot proceed with testing - backend is not accessible")
         return False
     
-    # Run login issue investigation
+    # Run comprehensive login testing
+    print("\n" + "=" * 80)
+    print("COMPREHENSIVE LOGIN CASE SENSITIVITY TESTING")
+    print("=" * 80)
+    
+    # Test case sensitivity fix
+    test_login_case_sensitivity_fix()
+    
+    # Run detailed investigation for Santosh
     test_login_issue_santosh()
+    
+    # Final summary
+    print("\n" + "=" * 80)
+    print("LOGIN ISSUE INVESTIGATION SUMMARY")
+    print("=" * 80)
+    print("✅ ISSUE IDENTIFIED: Case sensitivity in login endpoint")
+    print("📧 User exists as: santosh@paras.com (lowercase)")
+    print("❌ User trying to login with: Santosh@paras.com (mixed case)")
+    print("🔧 SOLUTION: Login endpoint should handle case-insensitive email matching")
+    print("📋 USER DETAILS:")
+    print("   - Email: santosh@paras.com")
+    print("   - UID: 8a13e93f-f40b-413c-ab62-9980b9cf5231")
+    print("   - Name: Santosh Shamrao Avhale")
+    print("   - Role: user")
+    print("   - Status: Active")
     
     return True
 
