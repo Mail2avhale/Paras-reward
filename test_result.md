@@ -418,6 +418,18 @@ backend:
         agent: "testing"
         comment: "COMPREHENSIVE TESTING COMPLETE - ALL KYC & VIP PAYMENT ADMIN ENDPOINTS WORKING: ✅ KYC ENDPOINTS: GET /api/kyc/list returns 16 documents with proper structure (kyc_id, user_id, status, submitted_at). POST /api/kyc/{kyc_id}/verify works correctly for both approve and reject actions with proper success messages. Invalid KYC ID handling returns 404 as expected. ✅ VIP PAYMENT ENDPOINTS: GET /api/membership/payments returns 15 payment requests with complete structure (payment_id, user_id, amount, status, created_at, utr_number). POST /api/membership/payment/{payment_id}/action works correctly for both approve and reject actions. Invalid payment ID handling returns 404 as expected. ✅ DATABASE STATUS VERIFIED: 16 KYC documents (0 pending, 16 verified), 15 VIP payments (0 pending, 15 approved) - all processed correctly. ✅ RESPONSE FORMAT: All endpoints return properly formatted JSON for frontend consumption with no ObjectId serialization issues. ✅ ERROR HANDLING: All endpoints handle invalid IDs correctly and return appropriate HTTP status codes. All admin endpoints are production-ready and functioning correctly for KYC and VIP payment management."
 
+  - task: "VIP Checkout Issues Investigation"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL VIP CHECKOUT ISSUES IDENTIFIED: ❌ CHECKOUT BLOCKED BY KYC: VIP users cannot complete checkout because kyc_status='pending' (requires 'verified'). Found 13 VIP users with correct membership_type='vip' but all have kyc_status='pending'. ❌ CART SYSTEM BUG: Cart add works (POST /api/cart/add returns success) but cart retrieval (GET /api/cart/{uid}) shows empty items array. Cart created with user_id=null instead of actual user ID. ❌ CHECKOUT API VALIDATION: Multiple checkout endpoints tried - /api/orders/checkout requires product_id field, /api/orders/{uid} requires KYC verification. ✅ MEMBERSHIP TYPE CORRECT: No case sensitivity issue - all VIP users have membership_type='vip' (lowercase). ✅ ORDERS & CASHBACK WORKING: Found existing orders in database and user 'Rajesh Kumar' has ₹200 cashback balance proving system works when conditions are met. ROOT CAUSE: KYC verification requirement blocks VIP checkout + cart user association bug prevents proper cart-to-checkout flow."
+
 frontend:
   - task: "User Registration Form"
     implemented: true
