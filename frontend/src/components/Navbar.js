@@ -194,6 +194,11 @@ const Navbar = ({ user, onLogout }) => {
                   <Link to="/wallet" className="cursor-pointer">Wallet</Link>
                 </DropdownMenuItem>
                 
+                {/* Support - Show for all */}
+                <DropdownMenuItem asChild>
+                  <Link to="/support" className="cursor-pointer">Support</Link>
+                </DropdownMenuItem>
+                
                 {/* Orders - Only for regular users */}
                 {isRegularUser && (
                   <DropdownMenuItem asChild>
