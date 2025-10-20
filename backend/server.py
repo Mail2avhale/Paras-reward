@@ -1294,6 +1294,12 @@ async def get_product(product_id: str):
     return Product(**product)
 
 # ========== ORDER/REDEEM ROUTES (Legacy Single Product) ==========
+
+@api_router.post("/orders/{uid}", response_model=OrderSingleProduct)
+async def create_order_alias(uid: str, order_data: OrderCreate):
+    """Create order - Backward compatibility alias"""
+    return await create_order_legacy(uid, order_data)
+
 @api_router.post("/orders/legacy/{uid}", response_model=OrderSingleProduct)
 async def create_order(uid: str, order_data: OrderCreate):
     """Create order (Redeem product) - Legacy single product endpoint"""
