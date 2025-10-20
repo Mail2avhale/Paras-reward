@@ -634,12 +634,17 @@ metadata:
 
 test_plan:
   current_focus:
-    - "VIP Checkout Issues Investigation"
+    - "Profile-Based Password Recovery"
+    - "Support Ticket System Backend"
+    - "Support Tickets User Page"
+    - "Admin Support Tickets Management"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
+  - agent: "main"
+    message: "STARTING COMPREHENSIVE IMPLEMENTATION - Phase 1 & 2 COMPLETE: Password Recovery + Support Tickets. ✅ Implemented profile-based password recovery with 2-field verification (any 2 from PAN/Aadhaar/Phone/Name). ✅ Complete support ticket system (user creation, admin management, replies, status updates). ✅ Frontend pages: ForgotPasswordNew.js (4-step wizard), SupportTickets.js (user page). ✅ Admin Support Tickets tab in AdminDashboard. ✅ Routes and navigation updated. Backend restarted successfully. Ready for comprehensive testing of new features."
   - agent: "main"
     message: "STARTING COMPREHENSIVE IMPLEMENTATION - Phase 1: Password Recovery + Support Tickets + Advanced Admin. Implementing profile-based password recovery with 2-field verification (user picks any 2 from PAN/Aadhaar/Phone/Name), Support Ticket System (Option A), and Advanced Admin sections (Settings, Notifications, Orders, Commissions, Rewards). Stock Movement UI already partially complete in AdminDashboard."
   - agent: "main"
