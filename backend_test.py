@@ -1520,19 +1520,83 @@ def test_checkout_endpoint_with_cart():
     
     return False
 
-def run_vip_checkout_investigation():
-    """Main function to run VIP checkout investigation"""
+def run_password_recovery_and_support_tests():
+    """Main function to run password recovery and support ticket tests"""
     print("\n" + "🔍" * 80)
-    print("VIP CHECKOUT ISSUES INVESTIGATION")
+    print("PASSWORD RECOVERY + SUPPORT TICKETS TESTING")
     print("🔍" * 80)
     
-    # Run the focused checkout test
-    checkout_success = test_checkout_endpoint_with_cart()
+    # Get existing users for testing
+    test_users = get_existing_users()
     
-    return {
-        "checkout_success": checkout_success,
-        "test_completed": True
-    }
+    if not test_users:
+        print("❌ No users found for testing - cannot proceed")
+        return {
+            "password_recovery_verify": False,
+            "password_recovery_reset": False,
+            "support_ticket_creation": False,
+            "support_ticket_retrieval": False,
+            "support_ticket_details": False,
+            "support_ticket_replies": False,
+            "admin_support_tickets": False,
+            "admin_ticket_updates": False,
+            "test_completed": False
+        }
+    
+    # Run all tests
+    results = {}
+    
+    try:
+        results["password_recovery_verify"] = test_password_recovery_verify(test_users)
+    except Exception as e:
+        print(f"❌ Password recovery verify test failed with error: {e}")
+        results["password_recovery_verify"] = False
+    
+    try:
+        results["password_recovery_reset"] = test_password_recovery_reset(test_users)
+    except Exception as e:
+        print(f"❌ Password recovery reset test failed with error: {e}")
+        results["password_recovery_reset"] = False
+    
+    try:
+        results["support_ticket_creation"] = test_support_ticket_creation(test_users)
+    except Exception as e:
+        print(f"❌ Support ticket creation test failed with error: {e}")
+        results["support_ticket_creation"] = False
+    
+    try:
+        results["support_ticket_retrieval"] = test_support_ticket_retrieval(test_users)
+    except Exception as e:
+        print(f"❌ Support ticket retrieval test failed with error: {e}")
+        results["support_ticket_retrieval"] = False
+    
+    try:
+        results["support_ticket_details"] = test_support_ticket_details(test_users)
+    except Exception as e:
+        print(f"❌ Support ticket details test failed with error: {e}")
+        results["support_ticket_details"] = False
+    
+    try:
+        results["support_ticket_replies"] = test_support_ticket_replies(test_users)
+    except Exception as e:
+        print(f"❌ Support ticket replies test failed with error: {e}")
+        results["support_ticket_replies"] = False
+    
+    try:
+        results["admin_support_tickets"] = test_admin_support_tickets()
+    except Exception as e:
+        print(f"❌ Admin support tickets test failed with error: {e}")
+        results["admin_support_tickets"] = False
+    
+    try:
+        results["admin_ticket_updates"] = test_admin_ticket_updates(test_users)
+    except Exception as e:
+        print(f"❌ Admin ticket updates test failed with error: {e}")
+        results["admin_ticket_updates"] = False
+    
+    results["test_completed"] = True
+    
+    return results
 
 # Test data for mining system testing
 test_user_no_mining = None
