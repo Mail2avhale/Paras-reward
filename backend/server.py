@@ -4749,6 +4749,411 @@ async def get_stockist_profit(stockist_id: str):
         "commissions": commissions
     }
 
+
+# ========== ENHANCED ADMIN ORDER MANAGEMENT ==========
+
+@api_router.get("/admin/orders/all")
+async def get_all_orders_admin(
+    status: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50
+):
+    """Get all orders with optional status filter (Admin)"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    total = await db.orders.count_documents(query)
+    orders = await db.orders.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+    
+    # Remove MongoDB _id and format dates
+    for order in orders:
+        order["_id"] = str(order["_id"])
+        if order.get("created_at"):
+            if isinstance(order["created_at"], str):
+                order["created_at"] = order["created_at"]
+            else:
+                order["created_at"] = order["created_at"].isoformat()
+    
+    return {
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "orders": orders
+    }
+
+@api_router.get("/admin/orders/{order_id}")
+async def get_order_details_admin(order_id: str):
+    """Get detailed order information (Admin)"""
+    order = await db.orders.find_one({"order_id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Get user details
+    user = await db.users.find_one({"uid": order.get("uid")})
+    
+    # Get commission details if distributed
+    commissions = await db.commissions_earned.find({"order_id": order_id}).to_list(length=10)
+    
+    order["_id"] = str(order["_id"])
+    if order.get("created_at"):
+        if isinstance(order["created_at"], str):
+            order["created_at"] = order["created_at"]
+        else:
+            order["created_at"] = order["created_at"].isoformat()
+    
+    return {
+        "order": order,
+        "user": {
+            "uid": user.get("uid") if user else None,
+            "name": user.get("name") if user else None,
+            "email": user.get("email") if user else None,
+            "mobile": user.get("mobile") if user else None
+        },
+        "commissions": commissions
+    }
+
+@api_router.post("/admin/orders/{order_id}/assign")
+async def assign_order_to_outlet(order_id: str, request: Request):
+    """Assign order to outlet (Admin)"""
+    data = await request.json()
+    outlet_id = data.get("outlet_id")
+    
+    if not outlet_id:
+        raise HTTPException(status_code=400, detail="outlet_id is required")
+    
+    # Verify outlet exists
+    outlet = await db.users.find_one({"uid": outlet_id, "role": "outlet"})
+    if not outlet:
+        raise HTTPException(status_code=404, detail="Outlet not found")
+    
+    # Update order
+    result = await db.orders.update_one(
+        {"order_id": order_id},
+        {"$set": {
+            "assigned_outlet_id": outlet_id,
+            "assigned_at": datetime.now(timezone.utc).isoformat(),
+            "status": "assigned"
+        }}
+    )
+    
+    if result.modified_count > 0:
+        return {"message": "Order assigned to outlet", "outlet_id": outlet_id}
+    else:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+# ========== FINANCIAL REPORTS & ANALYTICS ==========
+
+@api_router.get("/admin/reports/revenue")
+async def get_revenue_report(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """Get revenue report with date filtering (Admin)"""
+    query = {"status": "delivered"}
+    
+    if start_date:
+        query["delivered_at"] = {"$gte": start_date}
+    if end_date:
+        if "delivered_at" not in query:
+            query["delivered_at"] = {}
+        query["delivered_at"]["$lte"] = end_date
+    
+    # Total revenue
+    revenue_pipeline = [
+        {"$match": query},
+        {"$group": {
+            "_id": None,
+            "total_cash_revenue": {"$sum": "$total_cash_price"},
+            "total_prc_spent": {"$sum": "$total_prc_price"},
+            "total_delivery_charges": {"$sum": "$delivery_charge"},
+            "total_orders": {"$sum": 1}
+        }}
+    ]
+    
+    revenue_result = await db.orders.aggregate(revenue_pipeline).to_list(1)
+    revenue_data = revenue_result[0] if revenue_result else {
+        "total_cash_revenue": 0,
+        "total_prc_spent": 0,
+        "total_delivery_charges": 0,
+        "total_orders": 0
+    }
+    
+    # Revenue by product
+    product_pipeline = [
+        {"$match": query},
+        {"$unwind": "$items"},
+        {"$group": {
+            "_id": "$items.product_id",
+            "product_name": {"$first": "$items.name"},
+            "total_quantity": {"$sum": "$items.quantity"},
+            "total_revenue": {"$sum": {"$multiply": ["$items.quantity", "$items.cash_price"]}}
+        }},
+        {"$sort": {"total_revenue": -1}},
+        {"$limit": 10}
+    ]
+    
+    top_products = await db.orders.aggregate(product_pipeline).to_list(10)
+    
+    return {
+        "summary": revenue_data,
+        "top_products": top_products
+    }
+
+@api_router.get("/admin/reports/commissions")
+async def get_commission_report():
+    """Get commission distribution report (Admin)"""
+    # Total commissions by entity type
+    pipeline = [
+        {"$group": {
+            "_id": "$entity_type",
+            "total_amount": {"$sum": "$amount"},
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    commissions_by_type = await db.commissions_earned.aggregate(pipeline).to_list(10)
+    
+    # Top earners
+    top_earners_pipeline = [
+        {"$group": {
+            "_id": "$entity_id",
+            "entity_type": {"$first": "$entity_type"},
+            "total_earned": {"$sum": "$amount"}
+        }},
+        {"$sort": {"total_earned": -1}},
+        {"$limit": 10}
+    ]
+    
+    top_earners = await db.commissions_earned.aggregate(top_earners_pipeline).to_list(10)
+    
+    # Get entity names
+    for earner in top_earners:
+        user = await db.users.find_one({"uid": earner["_id"]})
+        if user:
+            earner["name"] = user.get("name")
+            earner["email"] = user.get("email")
+    
+    return {
+        "by_type": commissions_by_type,
+        "top_earners": top_earners
+    }
+
+@api_router.get("/admin/reports/withdrawals")
+async def get_withdrawal_report(status: Optional[str] = None):
+    """Get withdrawal statistics report (Admin)"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    # Cashback withdrawals
+    cashback_pipeline = [
+        {"$match": query},
+        {"$group": {
+            "_id": "$status",
+            "total_amount": {"$sum": "$amount"},
+            "total_fee": {"$sum": "$fee"},
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    cashback_stats = await db.cashback_withdrawals.aggregate(cashback_pipeline).to_list(10)
+    
+    # Profit withdrawals
+    profit_stats = await db.profit_withdrawals.aggregate(cashback_pipeline).to_list(10)
+    
+    return {
+        "cashback_withdrawals": cashback_stats,
+        "profit_withdrawals": profit_stats
+    }
+
+# ========== AUDIT LOGGING SYSTEM ==========
+
+@api_router.post("/admin/audit/log")
+async def create_audit_log(request: Request):
+    """Create audit log entry (Internal use)"""
+    data = await request.json()
+    
+    log_entry = {
+        "log_id": str(uuid.uuid4()),
+        "action": data.get("action"),
+        "entity_type": data.get("entity_type"),
+        "entity_id": data.get("entity_id"),
+        "performed_by": data.get("performed_by"),
+        "changes": data.get("changes", {}),
+        "ip_address": data.get("ip_address"),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.audit_logs.insert_one(log_entry)
+    return {"message": "Audit log created", "log_id": log_entry["log_id"]}
+
+@api_router.get("/admin/audit/logs")
+async def get_audit_logs(
+    action: Optional[str] = None,
+    entity_type: Optional[str] = None,
+    performed_by: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100
+):
+    """Get audit logs with filtering (Admin)"""
+    query = {}
+    
+    if action:
+        query["action"] = action
+    if entity_type:
+        query["entity_type"] = entity_type
+    if performed_by:
+        query["performed_by"] = performed_by
+    
+    total = await db.audit_logs.count_documents(query)
+    logs = await db.audit_logs.find(query).sort("timestamp", -1).skip(skip).limit(limit).to_list(length=limit)
+    
+    # Remove MongoDB _id
+    for log in logs:
+        log["_id"] = str(log["_id"])
+    
+    return {
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "logs": logs
+    }
+
+# ========== EMPLOYEE MANAGEMENT ==========
+
+@api_router.post("/admin/employees/create")
+async def create_employee(request: Request):
+    """Create sub-admin, manager, or employee (Admin only)"""
+    data = await request.json()
+    
+    # Validate role
+    valid_roles = ["sub_admin", "manager", "employee"]
+    if data.get("role") not in valid_roles:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {', '.join(valid_roles)}")
+    
+    # Required fields
+    required_fields = ["email", "password", "first_name", "last_name", "mobile", "role"]
+    for field in required_fields:
+        if not data.get(field):
+            raise HTTPException(status_code=400, detail=f"{field} is required")
+    
+    # Check duplicates
+    existing_user = await db.users.find_one({
+        "$or": [
+            {"email": data["email"]},
+            {"mobile": data["mobile"]}
+        ]
+    })
+    
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email or mobile already registered")
+    
+    # Construct name
+    name_parts = [data["first_name"]]
+    if data.get("middle_name"):
+        name_parts.append(data["middle_name"])
+    name_parts.append(data["last_name"])
+    data["name"] = " ".join(name_parts)
+    
+    # Hash password
+    data["password_hash"] = hash_password(data["password"])
+    del data["password"]
+    
+    # Add employee-specific fields
+    if data["role"] == "sub_admin":
+        data["assigned_regions"] = data.get("assigned_regions", [])
+    
+    data["permissions"] = data.get("permissions", [])
+    
+    # Create user
+    user = User(**data)
+    user_dict = user.model_dump()
+    
+    # Convert datetime fields
+    for field in ["created_at", "updated_at", "last_login"]:
+        if user_dict.get(field):
+            user_dict[field] = user_dict[field].isoformat()
+    
+    await db.users.insert_one(user_dict)
+    
+    # Create audit log
+    await db.audit_logs.insert_one({
+        "log_id": str(uuid.uuid4()),
+        "action": "employee_created",
+        "entity_type": "user",
+        "entity_id": user.uid,
+        "performed_by": data.get("created_by", "admin"),
+        "changes": {"role": data["role"], "name": data["name"]},
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {
+        "message": f"{data['role']} created successfully",
+        "uid": user.uid,
+        "email": user.email,
+        "role": data["role"]
+    }
+
+@api_router.get("/admin/employees")
+async def get_employees(role: Optional[str] = None):
+    """Get all employees (sub-admins, managers, employees) (Admin only)"""
+    query = {"role": {"$in": ["sub_admin", "manager", "employee"]}}
+    
+    if role:
+        query["role"] = role
+    
+    employees = await db.users.find(query).to_list(length=1000)
+    
+    # Remove sensitive data
+    for emp in employees:
+        emp.pop("password_hash", None)
+        emp.pop("reset_token", None)
+        emp["_id"] = str(emp["_id"])
+    
+    return {
+        "total": len(employees),
+        "employees": employees
+    }
+
+@api_router.put("/admin/employees/{uid}/permissions")
+async def update_employee_permissions(uid: str, request: Request):
+    """Update employee permissions (Admin only)"""
+    data = await request.json()
+    permissions = data.get("permissions", [])
+    
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.get("role") not in ["sub_admin", "manager", "employee"]:
+        raise HTTPException(status_code=400, detail="User is not an employee")
+    
+    result = await db.users.update_one(
+        {"uid": uid},
+        {"$set": {
+            "permissions": permissions,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Create audit log
+    await db.audit_logs.insert_one({
+        "log_id": str(uuid.uuid4()),
+        "action": "permissions_updated",
+        "entity_type": "user",
+        "entity_id": uid,
+        "performed_by": data.get("updated_by", "admin"),
+        "changes": {"permissions": permissions},
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    
+    if result.modified_count > 0:
+        return {"message": "Permissions updated", "uid": uid, "permissions": permissions}
+    else:
+        return {"message": "No changes made", "uid": uid}
+
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
