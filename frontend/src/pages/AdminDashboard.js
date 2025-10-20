@@ -1722,4 +1722,345 @@ const StockMovementManagement = () => {
   );
 };
 
+// Admin Support Tickets Management Component
+const AdminSupportTickets = () => {
+  const [tickets, setTickets] = useState([]);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [replyMessage, setReplyMessage] = useState('');
+  const [updateData, setUpdateData] = useState({
+    status: '',
+    priority: '',
+    resolution_notes: ''
+  });
+
+  useEffect(() => {
+    fetchTickets();
+  }, [filterStatus, filterCategory]);
+
+  const fetchTickets = async () => {
+    try {
+      let url = `${API}/admin/support/tickets?`;
+      if (filterStatus) url += `status=${filterStatus}&`;
+      if (filterCategory) url += `category=${filterCategory}&`;
+      
+      const response = await axios.get(url);
+      setTickets(response.data.tickets || []);
+    } catch (error) {
+      console.error('Error fetching tickets:', error);
+      toast.error('Failed to load tickets');
+    }
+  };
+
+  const handleViewTicket = async (ticketId) => {
+    try {
+      const response = await axios.get(`${API}/support/tickets/${ticketId}`);
+      setSelectedTicket(response.data);
+      setUpdateData({
+        status: response.data.status,
+        priority: response.data.priority,
+        resolution_notes: response.data.resolution_notes || ''
+      });
+    } catch (error) {
+      console.error('Error fetching ticket details:', error);
+      toast.error('Failed to load ticket details');
+    }
+  };
+
+  const handleSendReply = async () => {
+    if (!replyMessage.trim()) {
+      toast.error('Please enter a message');
+      return;
+    }
+
+    try {
+      const adminUser = JSON.parse(localStorage.getItem('paras_user'));
+      await axios.post(`${API}/support/tickets/${selectedTicket.ticket_id}/reply`, {
+        ticket_id: selectedTicket.ticket_id,
+        user_id: adminUser.uid,
+        message: replyMessage
+      });
+
+      toast.success('Reply sent successfully');
+      setReplyMessage('');
+      handleViewTicket(selectedTicket.ticket_id);
+    } catch (error) {
+      console.error('Error sending reply:', error);
+      toast.error('Failed to send reply');
+    }
+  };
+
+  const handleUpdateTicket = async () => {
+    try {
+      await axios.put(`${API}/admin/support/tickets/${selectedTicket.ticket_id}`, updateData);
+      toast.success('Ticket updated successfully');
+      handleViewTicket(selectedTicket.ticket_id);
+      fetchTickets();
+    } catch (error) {
+      console.error('Error updating ticket:', error);
+      toast.error('Failed to update ticket');
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'open': return 'bg-yellow-100 text-yellow-700';
+      case 'in_progress': return 'bg-blue-100 text-blue-700';
+      case 'resolved': return 'bg-green-100 text-green-700';
+      case 'closed': return 'bg-gray-100 text-gray-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'high': return 'bg-red-100 text-red-700';
+      case 'medium': return 'bg-yellow-100 text-yellow-700';
+      case 'low': return 'bg-green-100 text-green-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  if (selectedTicket) {
+    return (
+      <div className="space-y-6">
+        <Button
+          onClick={() => setSelectedTicket(null)}
+          variant="outline"
+        >
+          <ArrowDownRight className="mr-2 h-4 w-4 rotate-180" />
+          Back to Tickets
+        </Button>
+
+        <Card className="p-6">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">{selectedTicket.subject}</h2>
+              <div className="flex gap-2 items-center mt-2">
+                <p className="text-sm text-gray-600">Category: {selectedTicket.category}</p>
+                <span className="text-gray-400">|</span>
+                <p className="text-sm text-gray-600">User: {selectedTicket.user_name}</p>
+                <span className="text-gray-400">|</span>
+                <p className="text-sm text-gray-600">Email: {selectedTicket.user_email}</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(selectedTicket.status)}`}>
+                {selectedTicket.status}
+              </span>
+              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getPriorityColor(selectedTicket.priority)}`}>
+                {selectedTicket.priority}
+              </span>
+            </div>
+          </div>
+
+          <div className="border-t pt-4 mb-6">
+            <p className="text-gray-700 whitespace-pre-wrap">{selectedTicket.description}</p>
+            <p className="text-xs text-gray-500 mt-2">
+              Created: {new Date(selectedTicket.created_at).toLocaleString()}
+            </p>
+          </div>
+
+          {/* Update Ticket Form */}
+          <Card className="p-4 bg-blue-50 mb-6">
+            <h3 className="font-semibold text-gray-900 mb-3">Update Ticket</h3>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  className="w-full border rounded p-2"
+                  value={updateData.status}
+                  onChange={(e) => setUpdateData({...updateData, status: e.target.value})}
+                >
+                  <option value="open">Open</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                <select
+                  className="w-full border rounded p-2"
+                  value={updateData.priority}
+                  onChange={(e) => setUpdateData({...updateData, priority: e.target.value})}
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+              <div className="flex items-end">
+                <Button
+                  onClick={handleUpdateTicket}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                >
+                  Update Ticket
+                </Button>
+              </div>
+            </div>
+            <div className="mt-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Resolution Notes (Optional)</label>
+              <textarea
+                className="w-full border rounded p-2"
+                rows="2"
+                placeholder="Add notes about the resolution..."
+                value={updateData.resolution_notes}
+                onChange={(e) => setUpdateData({...updateData, resolution_notes: e.target.value})}
+              />
+            </div>
+          </Card>
+
+          {/* Replies */}
+          <div className="space-y-4 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Conversation ({selectedTicket.replies?.length || 0} replies)
+            </h3>
+            {selectedTicket.replies && selectedTicket.replies.length > 0 ? (
+              <div className="space-y-3">
+                {selectedTicket.replies.map((reply) => (
+                  <div
+                    key={reply.reply_id}
+                    className={`p-4 rounded-lg ${
+                      reply.user_role === 'admin' || reply.user_role === 'sub_admin'
+                        ? 'bg-blue-50 border border-blue-200'
+                        : 'bg-gray-50 border border-gray-200'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="font-semibold text-gray-900">
+                        {reply.user_name}
+                        {(reply.user_role === 'admin' || reply.user_role === 'sub_admin') && (
+                          <span className="ml-2 text-xs bg-blue-600 text-white px-2 py-0.5 rounded">
+                            Admin
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(reply.created_at).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-gray-700 whitespace-pre-wrap">{reply.message}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-4">No replies yet</p>
+            )}
+          </div>
+
+          {/* Reply Input */}
+          <div className="border-t pt-4">
+            <h4 className="font-semibold text-gray-900 mb-2">Add Reply</h4>
+            <textarea
+              className="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows="4"
+              placeholder="Type your response..."
+              value={replyMessage}
+              onChange={(e) => setReplyMessage(e.target.value)}
+            />
+            <Button
+              onClick={handleSendReply}
+              className="mt-2 bg-blue-600 hover:bg-blue-700"
+            >
+              Send Reply
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">Support Tickets Management</h2>
+      </div>
+
+      {/* Filters */}
+      <Card className="p-4">
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Filter by Status</label>
+            <select
+              className="w-full border rounded p-2"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+            >
+              <option value="">All Statuses</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="resolved">Resolved</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Filter by Category</label>
+            <select
+              className="w-full border rounded p-2"
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+            >
+              <option value="">All Categories</option>
+              <option value="Account Issues">Account Issues</option>
+              <option value="Mining">Mining</option>
+              <option value="Marketplace">Marketplace</option>
+              <option value="Wallet">Wallet</option>
+              <option value="KYC/VIP">KYC/VIP</option>
+              <option value="Orders">Orders</option>
+              <option value="Technical">Technical</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+      </Card>
+
+      {/* Tickets List */}
+      <div className="space-y-3">
+        {tickets.length === 0 ? (
+          <Card className="p-12 text-center">
+            <HeadphonesIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Support Tickets</h3>
+            <p className="text-gray-600">No tickets match your filters</p>
+          </Card>
+        ) : (
+          tickets.map((ticket) => (
+            <Card
+              key={ticket.ticket_id}
+              className="p-4 hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => handleViewTicket(ticket.ticket_id)}
+            >
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900">{ticket.subject}</h3>
+                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                      {ticket.category}
+                    </span>
+                  </div>
+                  <p className="text-gray-600 line-clamp-1">{ticket.description}</p>
+                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                    <span>User: {ticket.user_name}</span>
+                    <span>Email: {ticket.user_email}</span>
+                    <span>Created: {new Date(ticket.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(ticket.status)}`}>
+                    {ticket.status}
+                  </span>
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getPriorityColor(ticket.priority)}`}>
+                    {ticket.priority}
+                  </span>
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
 export default AdminDashboard;
