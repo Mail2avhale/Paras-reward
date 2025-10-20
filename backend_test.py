@@ -556,6 +556,40 @@ def test_checkout_endpoint_with_cart():
             # Check if user is VIP
             if membership_type != "vip":
                 print(f"⚠️  User is not VIP - this will cause checkout to fail")
+                
+                # Try to upgrade user to VIP for testing
+                print(f"   Attempting to upgrade user to VIP for testing...")
+                try:
+                    # First, let's try to update the user directly in the database
+                    # We'll simulate a VIP payment approval
+                    vip_payment_data = {
+                        "user_id": user_id,
+                        "amount": 999.0,
+                        "date": "2025-01-01",
+                        "time": "12:00:00",
+                        "utr_number": "TEST123456789"
+                    }
+                    
+                    # Submit VIP payment
+                    payment_response = requests.post(f"{API_BASE}/membership/payment/{user_id}", json=vip_payment_data, timeout=30)
+                    if payment_response.status_code == 200:
+                        payment_result = payment_response.json()
+                        payment_id = payment_result.get("payment_id")
+                        print(f"   ✅ VIP payment submitted: {payment_id}")
+                        
+                        # Approve the payment
+                        approve_data = {"action": "approve"}
+                        approve_response = requests.post(f"{API_BASE}/membership/payment/{payment_id}/action", json=approve_data, timeout=30)
+                        if approve_response.status_code == 200:
+                            print(f"   ✅ VIP payment approved - user should now be VIP")
+                            membership_type = "vip"  # Update for our test
+                        else:
+                            print(f"   ❌ Failed to approve VIP payment: {approve_response.status_code}")
+                    else:
+                        print(f"   ❌ Failed to submit VIP payment: {payment_response.status_code}")
+                        
+                except Exception as e:
+                    print(f"   ❌ Error upgrading to VIP: {e}")
             
         else:
             print(f"❌ Failed to login user {test_user_email}: {response.status_code}")
