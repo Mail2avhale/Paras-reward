@@ -504,12 +504,37 @@ const MarketplaceManagement = () => {
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium mb-2">SKU *</label>
+                <Input
+                  required
+                  value={formData.sku}
+                  onChange={(e) => setFormData({...formData, sku: e.target.value.toUpperCase()})}
+                  placeholder="e.g., PROD-001"
+                  disabled={!!editingProduct}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
                 <label className="block text-sm font-medium mb-2">Category</label>
                 <Input
                   value={formData.category}
                   onChange={(e) => setFormData({...formData, category: e.target.value})}
                   placeholder="e.g., Electronics, Fashion"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Product Type *</label>
+                <select
+                  required
+                  value={formData.type}
+                  onChange={(e) => setFormData({...formData, type: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-md"
+                >
+                  <option value="physical">Physical</option>
+                  <option value="digital">Digital</option>
+                </select>
               </div>
             </div>
 
@@ -532,20 +557,57 @@ const MarketplaceManagement = () => {
                   type="number"
                   required
                   min="0"
+                  step="0.01"
                   value={formData.prc_price}
-                  onChange={(e) => setFormData({...formData, prc_price: parseFloat(e.target.value)})}
+                  onChange={(e) => setFormData({...formData, prc_price: parseFloat(e.target.value) || 0})}
                   placeholder="PRC coins required"
                 />
                 <p className="text-xs text-gray-500 mt-1">≈ ₹{(formData.prc_price / 10).toFixed(2)} (10 PRC = ₹1)</p>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Stock Quantity</label>
+                <label className="block text-sm font-medium mb-2">Cash Price (Delivery Fee) *</label>
                 <Input
                   type="number"
+                  required
                   min="0"
-                  value={formData.stock_quantity}
-                  onChange={(e) => setFormData({...formData, stock_quantity: parseInt(e.target.value)})}
-                  placeholder="Available quantity"
+                  step="0.01"
+                  value={formData.cash_price}
+                  onChange={(e) => setFormData({...formData, cash_price: parseFloat(e.target.value) || 0})}
+                  placeholder="Delivery/transaction fee in ₹"
+                />
+                <p className="text-xs text-gray-500 mt-1">Cash amount for delivery/processing</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Total Stock *</label>
+                <Input
+                  type="number"
+                  required
+                  min="0"
+                  value={formData.total_stock}
+                  onChange={(e) => {
+                    const stock = parseInt(e.target.value) || 0;
+                    setFormData({
+                      ...formData, 
+                      total_stock: stock,
+                      available_stock: stock // Auto-set available = total for new products
+                    });
+                  }}
+                  placeholder="Total available quantity"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Available Stock *</label>
+                <Input
+                  type="number"
+                  required
+                  min="0"
+                  max={formData.total_stock}
+                  value={formData.available_stock}
+                  onChange={(e) => setFormData({...formData, available_stock: parseInt(e.target.value) || 0})}
+                  placeholder="Currently available"
                 />
               </div>
             </div>
@@ -562,15 +624,27 @@ const MarketplaceManagement = () => {
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="featured"
-                checked={formData.featured}
-                onChange={(e) => setFormData({...formData, featured: e.target.checked})}
-                className="rounded"
-              />
-              <label htmlFor="featured" className="text-sm font-medium">Featured Product</label>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="visible"
+                  checked={formData.visible}
+                  onChange={(e) => setFormData({...formData, visible: e.target.checked})}
+                  className="rounded"
+                />
+                <label htmlFor="visible" className="text-sm font-medium">Visible to Users</label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="vip_only"
+                  checked={formData.vip_only}
+                  onChange={(e) => setFormData({...formData, vip_only: e.target.checked})}
+                  className="rounded"
+                />
+                <label htmlFor="vip_only" className="text-sm font-medium">VIP Only</label>
+              </div>
             </div>
 
             <div className="flex gap-3">
