@@ -397,6 +397,19 @@ const MarketplaceManagement = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.name || !formData.sku || !formData.prc_price || !formData.cash_price || !formData.type) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
+    // Validate SKU format
+    if (formData.sku.length < 3) {
+      toast.error('SKU must be at least 3 characters');
+      return;
+    }
+
     setLoading(true);
 
     try {
