@@ -2643,14 +2643,8 @@ async def checkout(request: Request):
     if not cart or len(cart.get("items", [])) == 0:
         raise HTTPException(status_code=400, detail="Cart is empty")
     
-    # Calculate totals
+    # Calculate totals (no cash_price, only PRC)
     total_prc = sum(item["prc_price"] * item["quantity"] for item in cart["items"])
-    total_cash = sum(item["cash_price"] * item["quantity"] for item in cart["items"])
-    
-    # Get delivery charge configuration (default 10%)
-    delivery_config = await db.system_config.find_one({"config_type": "delivery"})
-    delivery_percentage = delivery_config.get("delivery_charge_rate", 0.10) if delivery_config else 0.10
-    delivery_charge = total_cash * delivery_percentage
     
     # Calculate cashback (25% of PRC value converted to ₹, 10 PRC = ₹1)
     cashback_amount = (total_prc * 0.25) / 10
@@ -2662,46 +2656,31 @@ async def checkout(request: Request):
     # Atomic PRC deduction
     new_prc_balance = user["prc_balance"] - total_prc
     
-    # Handle delivery charge from cashback wallet
-    cashback_balance = user.get("cash_wallet_balance", 0)
-    delivery_charge_paid = 0
-    delivery_charge_lien = 0
-    
-    if cashback_balance >= delivery_charge:
-        # Deduct from cashback wallet
-        delivery_charge_paid = delivery_charge
-        new_cashback_balance = cashback_balance - delivery_charge
-    else:
-        # Partial payment or lien
-        delivery_charge_paid = cashback_balance
-        delivery_charge_lien = delivery_charge - cashback_balance
-        new_cashback_balance = 0
-    
-    # Add cashback from this order
-    new_cashback_balance += cashback_amount
+    # Get current cashback balance (try both field names for backward compatibility)
+    current_cashback = user.get("cashback_balance", user.get("cash_wallet_balance", 0))
+    new_cashback_balance = current_cashback + cashback_amount
     
     # Create order
     order = Order(
         user_id=user_id,
         items=cart["items"],
         total_prc=total_prc,
-        total_cash=total_cash,
-        delivery_charge=delivery_charge,
+        total_cash=0,  # No cash payment required
+        delivery_charge=0,  # No delivery charge
         cashback_amount=cashback_amount,
-        delivery_address=delivery_address
+        delivery_address=delivery_address or "N/A"
     )
     
     order_dict = order.model_dump()
     order_dict["created_at"] = order_dict["created_at"].isoformat()
-    order_dict["delivery_charge_paid"] = delivery_charge_paid
-    order_dict["delivery_charge_lien"] = delivery_charge_lien
     
-    # Update user balances
+    # Update user balances (use cashback_balance as primary field)
     await db.users.update_one(
         {"uid": user_id},
         {"$set": {
             "prc_balance": new_prc_balance,
-            "cash_wallet_balance": new_cashback_balance
+            "cashback_balance": new_cashback_balance,
+            "cash_wallet_balance": new_cashback_balance  # Keep both for compatibility
         }}
     )
     
@@ -2724,9 +2703,8 @@ async def checkout(request: Request):
         "secret_code": order.secret_code,
         "total_prc": total_prc,
         "cashback_earned": cashback_amount,
-        "delivery_charge": delivery_charge,
-        "delivery_charge_paid": delivery_charge_paid,
-        "delivery_charge_lien": delivery_charge_lien
+        "new_prc_balance": new_prc_balance,
+        "new_cashback_balance": new_cashback_balance
     }
 
 @api_router.get("/orders/user/{user_id}")
