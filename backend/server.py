@@ -501,10 +501,13 @@ async def login(
     ip_address: Optional[str] = None
 ):
     """User login with email/mobile and password"""
-    # Find user by email or mobile
+    # Normalize email to lowercase for case-insensitive matching
+    normalized_identifier = identifier.lower() if '@' in identifier else identifier
+    
+    # Find user by email (case-insensitive), mobile, or UID
     user = await db.users.find_one({
         "$or": [
-            {"email": identifier},
+            {"email": {"$regex": f"^{normalized_identifier}$", "$options": "i"}},
             {"mobile": identifier},
             {"uid": identifier}
         ]
