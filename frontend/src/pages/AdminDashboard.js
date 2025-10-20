@@ -368,12 +368,17 @@ const MarketplaceManagement = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
+    sku: '',
     description: '',
     prc_price: 0,
+    cash_price: 0,
+    type: 'physical',
     category: '',
     image_url: '',
-    stock_quantity: 0,
-    featured: false
+    total_stock: 0,
+    available_stock: 0,
+    visible: true,
+    vip_only: false
   });
 
   useEffect(() => {
