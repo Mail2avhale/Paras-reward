@@ -152,11 +152,60 @@ const FinancialManagementAdmin = () => {
   };
 
   const formatCurrency = (amount) => {
+    // Handle null, undefined, or NaN values
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount)) {
+      return '₹0';
+    }
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0
-    }).format(amount);
+    }).format(numericAmount);
+  };
+
+  // Helper function to calculate monthly return if missing
+  const getMonthlyReturn = (deposit) => {
+    if (deposit.monthly_return_amount !== undefined && deposit.monthly_return_amount !== null) {
+      return deposit.monthly_return_amount;
+    }
+    // Calculate from amount and rate
+    const amount = parseFloat(deposit.amount) || 0;
+    const rate = parseFloat(deposit.monthly_return_rate) || 0.03;
+    return amount * rate;
+  };
+
+  // Helper function to calculate balance pending if missing
+  const getBalancePending = (deposit) => {
+    if (deposit.balance_pending !== undefined && deposit.balance_pending !== null) {
+      return deposit.balance_pending;
+    }
+    // Calculate from amount - total_returned
+    const amount = parseFloat(deposit.amount) || 0;
+    const returned = parseFloat(deposit.total_returned || deposit.total_returns_paid) || 0;
+    return amount - returned;
+  };
+
+  // Helper function to get GST amount
+  const getGSTAmount = (renewal) => {
+    if (renewal.gst_amount !== undefined && renewal.gst_amount !== null) {
+      return renewal.gst_amount;
+    }
+    // Calculate from base_amount and gst_rate
+    const baseAmount = parseFloat(renewal.base_amount || renewal.amount) || 0;
+    const gstRate = parseFloat(renewal.gst_rate) || 0.18;
+    return baseAmount * gstRate;
+  };
+
+  // Helper function to get total amount
+  const getTotalAmount = (renewal) => {
+    if (renewal.total_amount !== undefined && renewal.total_amount !== null) {
+      return renewal.total_amount;
+    }
+    // Calculate from base_amount + gst_amount
+    const baseAmount = parseFloat(renewal.base_amount || renewal.amount) || 0;
+    const gstAmount = getGSTAmount(renewal);
+    return baseAmount + gstAmount;
   };
 
   return (
