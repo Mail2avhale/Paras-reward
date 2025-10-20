@@ -375,14 +375,14 @@ const FinancialManagementAdmin = () => {
                           </span>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-right">
-                          <div className="font-semibold text-gray-900">{formatCurrency(renewal.base_amount)}</div>
+                          <div className="font-semibold text-gray-900">{formatCurrency(renewal.base_amount || renewal.amount || 0)}</div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-right">
-                          <div className="font-semibold text-gray-700">{formatCurrency(renewal.gst_amount)}</div>
-                          <div className="text-xs text-gray-500">({(renewal.gst_rate * 100)}%)</div>
+                          <div className="font-semibold text-gray-700">{formatCurrency(getGSTAmount(renewal))}</div>
+                          <div className="text-xs text-gray-500">({((renewal.gst_rate || 0.18) * 100)}%)</div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-right">
-                          <div className="font-bold text-purple-600">{formatCurrency(renewal.total_amount)}</div>
+                          <div className="font-bold text-purple-600">{formatCurrency(getTotalAmount(renewal))}</div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-700">{new Date(renewal.renewal_end_date).toLocaleDateString()}</div>
