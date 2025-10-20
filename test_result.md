@@ -505,8 +505,11 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Role-Based Navigation - Mobile Menu"
     - "Admin Dashboard KPIs APIs"
+    - "Order Management and Assignment APIs"
+    - "Financial Reports and Reconciliation"
+    - "Employee Management APIs"
+    - "Audit Logging System"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
