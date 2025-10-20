@@ -506,6 +506,13 @@ const MarketplaceManagement = () => {
       {showAddModal && (
         <Card className="p-6 bg-white border-2 border-blue-200">
           <h3 className="text-xl font-bold mb-4">{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
+          
+          {/* Info Banner */}
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900">
+            <p className="font-semibold mb-1">Required Fields:</p>
+            <p>Product Name, SKU, PRC Price, Cash Price, Type, Total Stock, Available Stock</p>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
