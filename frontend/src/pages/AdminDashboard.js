@@ -1424,6 +1424,13 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
           )}
 
+          {/* Support Tickets */}
+          {activeTab === 'support' && (
+            <div className="space-y-6">
+              <AdminSupportTickets />
+            </div>
+          )}
+
           {/* Settings */}
           {activeTab === 'settings' && (
             <div className="space-y-6">
