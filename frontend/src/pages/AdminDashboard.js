@@ -372,7 +372,6 @@ const MarketplaceManagement = () => {
     sku: '',
     description: '',
     prc_price: 0,
-    cash_price: 0,
     type: 'physical',
     category: '',
     image_url: '',
