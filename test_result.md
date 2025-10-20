@@ -314,16 +314,16 @@ backend:
 
 backend:
   - task: "Admin Dashboard KPIs APIs"
-    implemented: false
+    implemented: true
     working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Pending implementation: Admin KPI endpoints for total users, active users, total revenue, pending orders, pending KYC, pending VIP approvals, pending withdrawals, etc."
+        comment: "IMPLEMENTED: Enhanced GET /api/admin/stats endpoint with comprehensive KPIs including: User statistics (total, VIP, free, stockists by type), Order statistics (total, pending, delivered), KYC statistics (total, pending, verified, rejected), VIP payment statistics, Withdrawal statistics with pending amounts, Product statistics, Financial overview (total revenue, security deposits), Stock movement statistics, Security deposit statistics, Annual renewal statistics, Recent activity (orders and withdrawals). Returns structured JSON with all dashboard metrics."
 
   - task: "Stock Management with Allocations"
     implemented: false
