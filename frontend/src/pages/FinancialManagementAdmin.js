@@ -375,12 +375,12 @@ const FinancialManagementAdmin = () => {
                   type="number"
                   step="0.01"
                   required
-                  value={(parseFloat(depositForm.monthly_return_rate) * 100).toFixed(2)}
-                  onChange={(e) => setDepositForm({...depositForm, monthly_return_rate: (parseFloat(e.target.value) / 100).toString()})}
+                  value={depositForm.monthly_return_rate ? (parseFloat(depositForm.monthly_return_rate) * 100).toFixed(2) : '3'}
+                  onChange={(e) => setDepositForm({...depositForm, monthly_return_rate: (parseFloat(e.target.value || 0) / 100).toString()})}
                   placeholder="3"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Monthly return: ₹{depositForm.amount ? (parseFloat(depositForm.amount) * parseFloat(depositForm.monthly_return_rate)).toLocaleString('en-IN') : '0'}
+                  Monthly return: ₹{(depositForm.amount && depositForm.monthly_return_rate) ? (parseFloat(depositForm.amount) * parseFloat(depositForm.monthly_return_rate)).toLocaleString('en-IN') : '0'}
                 </p>
               </div>
 
