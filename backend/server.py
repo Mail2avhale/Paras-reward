@@ -1491,6 +1491,9 @@ async def verify_order(verify_data: OrderVerify):
         {"$set": {"status": "verified"}}
     )
     
+    # Remove MongoDB _id for JSON serialization
+    order["_id"] = str(order["_id"])
+    
     return {"message": "Order verified", "order": order}
 
 @api_router.post("/orders/{order_id}/deliver")
