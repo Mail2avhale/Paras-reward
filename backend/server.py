@@ -2935,6 +2935,8 @@ async def distribute_delivery_charge(order_id: str):
         "commission_records": len(commission_records)
     }
 
+# ========== WALLET ROUTES ==========
+
 @api_router.get("/commissions/entity/{entity_id}")
 async def get_entity_commissions(entity_id: str):
     """Get commission history for an entity"""
