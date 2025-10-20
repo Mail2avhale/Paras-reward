@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Backend API Testing Script for Mining System Fix
-Tests the mining rate calculation and display functionality
+Backend API Testing Script for Admin Dashboard APIs
+Tests comprehensive admin dashboard functionality including KPIs, order management, 
+financial reports, employee management, and audit logging
 """
 
 import requests
