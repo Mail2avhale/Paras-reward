@@ -5559,6 +5559,35 @@ async def edit_renewal(renewal_id: str, request: Request):
     return {"message": "Renewal updated successfully", "updates": update_data}
 
 
+# ========== STOCKIST FINANCIAL INFO ROUTES ==========
+
+@api_router.get("/stockist/{uid}/financial-info")
+async def get_stockist_financial_info(uid: str):
+    """Get security deposit and renewal info for a stockist"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get security deposit
+    deposit = await db.security_deposits.find_one({"user_id": uid, "status": "approved"})
+    if deposit:
+        deposit.pop("_id", None)
+    
+    # Get renewal
+    renewal = await db.annual_renewals.find_one({"user_id": uid, "status": "approved"}, sort=[("created_at", -1)])
+    if renewal:
+        renewal.pop("_id", None)
+    
+    return {
+        "security_deposit": deposit,
+        "renewal": renewal,
+        "user_info": {
+            "security_deposit_paid": user.get("security_deposit_paid", False),
+            "renewal_status": user.get("renewal_status", "pending")
+        }
+    }
+
+
 # ========== ADMIN USER MANAGEMENT ROUTES ==========
 
 class UserUpdateRequest(BaseModel):
