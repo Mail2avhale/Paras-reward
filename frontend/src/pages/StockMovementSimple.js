@@ -322,42 +322,57 @@ const StockMovementSimple = () => {
           </Card>
         ) : (
           <div className="space-y-3">
-            {movements.slice(0, 10).map((movement) => (
-              <Card key={movement.movement_id} className="p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className={`px-3 py-2 rounded-lg ${getStockistColor(movement.from_type)}`}>
-                      {getStockistIcon(movement.from_type)}
-                    </div>
-                    
-                    <ArrowRight className="h-5 w-5 text-gray-400" />
-                    
-                    <div className={`px-3 py-2 rounded-lg ${getStockistColor(movement.to_type)}`}>
-                      {getStockistIcon(movement.to_type)}
+            {movements.slice(0, 10).map((movement) => {
+              // Determine types from roles
+              const fromType = movement.sender_role === 'admin' ? 'company' : 
+                              movement.sender_role === 'master_stockist' ? 'master' :
+                              movement.sender_role === 'sub_stockist' ? 'sub' : 'outlet';
+              const toType = movement.receiver_role === 'master_stockist' ? 'master' :
+                            movement.receiver_role === 'sub_stockist' ? 'sub' :
+                            movement.receiver_role === 'outlet' ? 'outlet' : 'user';
+              
+              return (
+                <Card key={movement.movement_id} className="p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className={`px-3 py-2 rounded-lg ${getStockistColor(fromType)}`}>
+                        {getStockistIcon(fromType)}
+                      </div>
+                      
+                      <ArrowRight className="h-5 w-5 text-gray-400" />
+                      
+                      <div className={`px-3 py-2 rounded-lg ${getStockistColor(toType)}`}>
+                        {getStockistIcon(toType)}
+                      </div>
+
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900">{movement.product_name || 'Product'}</p>
+                        <p className="text-sm text-gray-600">Quantity: {movement.quantity}</p>
+                        <p className="text-xs text-gray-500">
+                          From: {movement.sender_name || 'Company'} → To: {movement.receiver_name || 'N/A'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(movement.created_at).toLocaleString()}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900">{movement.product_name || 'Product'}</p>
-                      <p className="text-sm text-gray-600">Quantity: {movement.quantity}</p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(movement.created_at).toLocaleString()}
-                      </p>
+                    <div>
+                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                        movement.status === 'completed' ? 'bg-green-100 text-green-700' :
+                        movement.status === 'approved' ? 'bg-blue-100 text-blue-700' :
+                        movement.status === 'pending_admin' ? 'bg-yellow-100 text-yellow-700' :
+                        movement.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {movement.status === 'completed' && <CheckCircle className="inline h-4 w-4 mr-1" />}
+                        {movement.status?.replace('_', ' ').toUpperCase()}
+                      </span>
                     </div>
                   </div>
-
-                  <div>
-                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                      movement.status === 'completed' ? 'bg-green-100 text-green-700' :
-                      movement.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {movement.status === 'completed' && <CheckCircle className="inline h-4 w-4 mr-1" />}
-                      {movement.status?.toUpperCase()}
-                    </span>
-                  </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
