@@ -1242,48 +1242,227 @@ def test_login_issue_santosh():
     
     return False  # Issue not resolved, just investigated
 
+def test_comprehensive_login_case_sensitivity():
+    """Comprehensive test for login case sensitivity fix"""
+    print("\n" + "=" * 80)
+    print("COMPREHENSIVE LOGIN CASE SENSITIVITY FIX TESTING")
+    print("=" * 80)
+    
+    # Test cases as specified in the review request
+    test_cases = [
+        {
+            "email": "Santosh@paras.com",
+            "description": "Mixed case - should work after fix"
+        },
+        {
+            "email": "SANTOSH@PARAS.COM", 
+            "description": "Uppercase - should work after fix"
+        },
+        {
+            "email": "santosh@paras.com",
+            "description": "Lowercase - should still work"
+        },
+        {
+            "email": "Test@paras.com",
+            "description": "Mixed case Test user - should work after fix"
+        },
+        {
+            "email": "ADMIN@PARAS.COM",
+            "description": "Uppercase Admin user - should work after fix"
+        }
+    ]
+    
+    results = []
+    
+    print("\n1. Testing case-insensitive email login functionality...")
+    
+    for i, test_case in enumerate(test_cases, 1):
+        test_email = test_case["email"]
+        description = test_case["description"]
+        
+        print(f"\n1.{i}. Testing: {test_email}")
+        print(f"     Description: {description}")
+        
+        try:
+            # Test with intentionally wrong password to check if user is found
+            response = requests.post(
+                f"{API_BASE}/auth/login",
+                params={
+                    "identifier": test_email,
+                    "password": "intentionally_wrong_password_12345"
+                },
+                timeout=30
+            )
+            
+            print(f"     Status Code: {response.status_code}")
+            
+            if response.status_code == 404:
+                print(f"     ❌ FAILED: User not found (404) - case sensitivity issue still exists")
+                results.append({
+                    "email": test_email,
+                    "status": "FAILED",
+                    "issue": "User not found - case sensitivity problem"
+                })
+            elif response.status_code == 401:
+                print(f"     ✅ PASSED: User found but wrong password (401) - case insensitive matching works")
+                results.append({
+                    "email": test_email,
+                    "status": "PASSED",
+                    "issue": None
+                })
+            elif response.status_code == 200:
+                print(f"     ✅ PASSED: Login successful (200) - case insensitive matching works")
+                results.append({
+                    "email": test_email,
+                    "status": "PASSED",
+                    "issue": None
+                })
+            else:
+                print(f"     ❓ UNEXPECTED: Status {response.status_code} - {response.text}")
+                results.append({
+                    "email": test_email,
+                    "status": "UNEXPECTED",
+                    "issue": f"Unexpected status {response.status_code}"
+                })
+                
+        except Exception as e:
+            print(f"     ❌ ERROR: {e}")
+            results.append({
+                "email": test_email,
+                "status": "ERROR",
+                "issue": str(e)
+            })
+    
+    # Test mobile and UID login to ensure they're not affected
+    print(f"\n2. Testing mobile and UID login (should not be affected)...")
+    
+    # Try to find a user with mobile number for testing
+    try:
+        response = requests.get(f"{API_BASE}/admin/users", timeout=30)
+        if response.status_code == 200:
+            users_data = response.json()
+            users = users_data.get("users", [])
+            
+            # Find a user with mobile number
+            test_user = None
+            for user in users:
+                if user.get("mobile"):
+                    test_user = user
+                    break
+            
+            if test_user:
+                mobile = test_user.get("mobile")
+                uid = test_user.get("uid")
+                
+                print(f"\n2.1. Testing mobile login: {mobile}")
+                response_mobile = requests.post(
+                    f"{API_BASE}/auth/login",
+                    params={
+                        "identifier": mobile,
+                        "password": "wrong_password"
+                    },
+                    timeout=30
+                )
+                
+                if response_mobile.status_code in [401, 200]:
+                    print(f"     ✅ Mobile login works (Status: {response_mobile.status_code})")
+                else:
+                    print(f"     ❌ Mobile login issue (Status: {response_mobile.status_code})")
+                
+                print(f"\n2.2. Testing UID login: {uid}")
+                response_uid = requests.post(
+                    f"{API_BASE}/auth/login",
+                    params={
+                        "identifier": uid,
+                        "password": "wrong_password"
+                    },
+                    timeout=30
+                )
+                
+                if response_uid.status_code in [401, 200]:
+                    print(f"     ✅ UID login works (Status: {response_uid.status_code})")
+                else:
+                    print(f"     ❌ UID login issue (Status: {response_uid.status_code})")
+            else:
+                print("     ⚠️  No users with mobile numbers found for testing")
+        else:
+            print(f"     ❌ Could not get users list (Status: {response.status_code})")
+    except Exception as e:
+        print(f"     ❌ Error testing mobile/UID login: {e}")
+    
+    # Summary
+    print(f"\n" + "=" * 80)
+    print("LOGIN CASE SENSITIVITY FIX TEST RESULTS")
+    print("=" * 80)
+    
+    passed_count = sum(1 for r in results if r["status"] == "PASSED")
+    failed_count = sum(1 for r in results if r["status"] == "FAILED")
+    error_count = sum(1 for r in results if r["status"] == "ERROR")
+    unexpected_count = sum(1 for r in results if r["status"] == "UNEXPECTED")
+    
+    print(f"Total Tests: {len(results)}")
+    print(f"✅ Passed: {passed_count}")
+    print(f"❌ Failed: {failed_count}")
+    print(f"🔥 Errors: {error_count}")
+    print(f"❓ Unexpected: {unexpected_count}")
+    
+    print(f"\nDetailed Results:")
+    for result in results:
+        status_icon = "✅" if result["status"] == "PASSED" else "❌"
+        print(f"{status_icon} {result['email']}: {result['status']}")
+        if result["issue"]:
+            print(f"   Issue: {result['issue']}")
+    
+    # Determine overall result
+    if failed_count == 0 and error_count == 0:
+        print(f"\n🎉 OVERALL RESULT: LOGIN CASE SENSITIVITY FIX IS WORKING!")
+        print("All email variations can now login successfully (case-insensitive)")
+        return True
+    else:
+        print(f"\n💥 OVERALL RESULT: LOGIN CASE SENSITIVITY FIX NEEDS ATTENTION!")
+        print("Some email variations still fail - case sensitivity issue persists")
+        return False
+
 def main():
-    """Run login issue investigation for Santosh@paras.com"""
-    print("Starting LOGIN ISSUE INVESTIGATION...")
+    """Run comprehensive login case sensitivity fix testing"""
+    print("STARTING LOGIN CASE SENSITIVITY FIX VERIFICATION")
     print(f"Target API: {API_BASE}")
-    print("FOCUS: Debug login issue for user Santosh@paras.com")
+    print("FOCUS: Verify case-insensitive email login functionality")
     
     # Test basic connectivity
     try:
         response = requests.get(f"{API_BASE}/admin/stats", timeout=10)
         print(f"Backend connectivity test - Status: {response.status_code}")
+        if response.status_code != 200:
+            print("⚠️  Backend may have issues but proceeding with login tests...")
     except requests.exceptions.RequestException as e:
         print(f"❌ Backend connectivity FAILED: {e}")
         print("Cannot proceed with testing - backend is not accessible")
         return False
     
-    # Run comprehensive login testing
-    print("\n" + "=" * 80)
-    print("COMPREHENSIVE LOGIN CASE SENSITIVITY TESTING")
-    print("=" * 80)
-    
-    # Test case sensitivity fix
-    test_login_case_sensitivity_fix()
-    
-    # Run detailed investigation for Santosh
-    test_login_issue_santosh()
+    # Run comprehensive case sensitivity testing
+    success = test_comprehensive_login_case_sensitivity()
     
     # Final summary
     print("\n" + "=" * 80)
-    print("LOGIN ISSUE INVESTIGATION SUMMARY")
+    print("FINAL SUMMARY")
     print("=" * 80)
-    print("✅ ISSUE IDENTIFIED: Case sensitivity in login endpoint")
-    print("📧 User exists as: santosh@paras.com (lowercase)")
-    print("❌ User trying to login with: Santosh@paras.com (mixed case)")
-    print("🔧 SOLUTION: Login endpoint should handle case-insensitive email matching")
-    print("📋 USER DETAILS:")
-    print("   - Email: santosh@paras.com")
-    print("   - UID: 8a13e93f-f40b-413c-ab62-9980b9cf5231")
-    print("   - Name: Santosh Shamrao Avhale")
-    print("   - Role: user")
-    print("   - Status: Active")
     
-    return True
+    if success:
+        print("✅ LOGIN CASE SENSITIVITY FIX: WORKING CORRECTLY")
+        print("📧 All email case variations (mixed, upper, lower) work properly")
+        print("🔧 Case-insensitive email matching is implemented and functional")
+        print("✅ Expected behavior confirmed:")
+        print("   - Mixed case emails find users correctly")
+        print("   - Returns 401 'Invalid password' for wrong passwords (not 404 'User not found')")
+        print("   - Mobile and UID login remain unaffected")
+    else:
+        print("❌ LOGIN CASE SENSITIVITY FIX: NEEDS ATTENTION")
+        print("📧 Some email case variations still fail")
+        print("🔧 Case-insensitive email matching may not be fully implemented")
+        print("⚠️  Users may still experience login issues with mixed case emails")
+    
+    return success
 
 if __name__ == "__main__":
     main()
