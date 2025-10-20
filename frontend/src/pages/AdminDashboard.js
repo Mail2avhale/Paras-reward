@@ -543,6 +543,14 @@ const MarketplaceManagement = () => {
             <p>Product Name, SKU, PRC Price, Cash Price, Type, Total Stock, Available Stock</p>
           </div>
 
+          {/* Debug Info - Remove after testing */}
+          <div className="mb-4 p-3 bg-gray-100 border border-gray-300 rounded text-xs">
+            <p className="font-semibold mb-1">Debug Info:</p>
+            <p>SKU: "{formData.sku}" (length: {formData.sku?.length || 0})</p>
+            <p>Name: "{formData.name}"</p>
+            <p>Type: "{formData.type}"</p>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
