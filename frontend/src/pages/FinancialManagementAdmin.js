@@ -297,45 +297,59 @@ const FinancialManagementAdmin = () => {
               <p className="text-gray-600">Create renewal fee entries for stockists</p>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {renewals.map((renewal) => (
-                <Card key={renewal.renewal_id} className="p-4">
-                  <div className="mb-3">
-                    <h3 className="font-semibold text-gray-900">{renewal.user_name}</h3>
-                    <p className="text-sm text-gray-600">{renewal.user_role?.replace('_', ' ')}</p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Base Amount:</span>
-                      <span className="font-semibold text-gray-900">{formatCurrency(renewal.base_amount)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">GST ({(renewal.gst_rate * 100)}%):</span>
-                      <span className="font-semibold text-gray-700">{formatCurrency(renewal.gst_amount)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm border-t pt-2">
-                      <span className="text-gray-600 font-medium">Total Amount:</span>
-                      <span className="font-bold text-purple-600">{formatCurrency(renewal.total_amount)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Valid Until:</span>
-                      <span className="text-sm text-gray-700">
-                        {new Date(renewal.renewal_end_date).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="pt-2 border-t">
-                      <p className="text-xs text-gray-500">
-                        Created: {new Date(renewal.created_at).toLocaleDateString()}
-                      </p>
-                      {renewal.notes && (
-                        <p className="text-xs text-gray-600 mt-1">{renewal.notes}</p>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Base Amount</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">GST</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Amount</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valid Until</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {renewals.map((renewal) => (
+                      <tr key={renewal.renewal_id} className="hover:bg-gray-50">
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="font-medium text-gray-900">{renewal.user_name}</div>
+                          {renewal.notes && (
+                            <div className="text-xs text-gray-500 truncate max-w-xs">{renewal.notes}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700">
+                            {renewal.user_role?.replace('_', ' ').toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-right">
+                          <div className="font-semibold text-gray-900">{formatCurrency(renewal.base_amount)}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-right">
+                          <div className="font-semibold text-gray-700">{formatCurrency(renewal.gst_amount)}</div>
+                          <div className="text-xs text-gray-500">({(renewal.gst_rate * 100)}%)</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-right">
+                          <div className="font-bold text-purple-600">{formatCurrency(renewal.total_amount)}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-700">{new Date(renewal.renewal_end_date).toLocaleDateString()}</div>
+                          <div className="text-xs text-gray-500">Created: {new Date(renewal.created_at).toLocaleDateString()}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-center">
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">
+                            {renewal.status?.toUpperCase() || 'ACTIVE'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           )}
         </div>
       )}
