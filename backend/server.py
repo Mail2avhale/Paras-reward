@@ -3321,6 +3321,18 @@ async def get_pending_stock_movements():
     
     return {"movements": movements, "count": len(movements)}
 
+
+
+@api_router.get("/admin/stock/movements")
+async def get_all_stock_movements():
+    """Get all stock movements (admin view)"""
+    movements = await db.stock_movements.find(
+        {},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(1000)
+    
+    return movements
+
 @api_router.post("/admin/stock/movements/{movement_id}/approve")
 async def approve_stock_movement(movement_id: str, request: Request):
     """Admin approves stock movement"""
