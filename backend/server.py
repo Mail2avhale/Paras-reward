@@ -4363,6 +4363,7 @@ async def get_order_details_admin(order_id: str):
     # Get commission details if distributed
     commissions = await db.commissions_earned.find({"order_id": order_id}).to_list(length=10)
     
+    # Convert ObjectIds to strings
     order["_id"] = str(order["_id"])
     if order.get("created_at"):
         if isinstance(order["created_at"], str):
@@ -4370,15 +4371,21 @@ async def get_order_details_admin(order_id: str):
         else:
             order["created_at"] = order["created_at"].isoformat()
     
+    # Convert ObjectIds in commissions
+    for commission in commissions:
+        if "_id" in commission:
+            commission["_id"] = str(commission["_id"])
+    
     return {
         "order": order,
-        "user": {
+        "user_details": {
             "uid": user.get("uid") if user else None,
             "name": user.get("name") if user else None,
             "email": user.get("email") if user else None,
             "mobile": user.get("mobile") if user else None
         },
-        "commissions": commissions
+        "items": order.get("items", []),
+        "commission_breakdown": commissions
     }
 
 @api_router.post("/admin/orders/{order_id}/assign")
