@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 
@@ -18,6 +18,11 @@ const ImageUpload = ({
   const [preview, setPreview] = useState(value || null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Sync preview with value prop
+  useEffect(() => {
+    setPreview(value || null);
+  }, [value]);
 
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
