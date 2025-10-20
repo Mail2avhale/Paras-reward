@@ -78,7 +78,7 @@ function App() {
           <Route path="/" element={user ? <Navigate to="/dashboard" /> : <HomeFintech />} />
           <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginNew onLogin={handleLogin} />} />
           <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <RegisterSimple />} />
-          <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" /> : <ForgotPassword />} />
+          <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" /> : <ForgotPasswordNew />} />
           <Route path="/setup" element={<Setup />} />
           
           {/* Static Pages */}
@@ -89,6 +89,7 @@ function App() {
           
           {/* Protected Routes */}
           <Route path="/dashboard" element={user ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+          <Route path="/support" element={user ? <SupportTickets user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/mining" element={user ? <Mining user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/game" element={user ? <TapGame user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/referrals" element={user ? <Referrals user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
