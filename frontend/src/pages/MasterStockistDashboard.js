@@ -133,8 +133,10 @@ const MasterStockistDashboard = ({ user, onLogout }) => {
                   ₹{securityDeposit.amount?.toLocaleString() || 0}
                 </div>
                 <div className="text-sm text-gray-600 space-y-1">
-                  <p>Monthly Return (3%): <span className="font-semibold">₹{((securityDeposit.amount || 0) * 0.03).toLocaleString()}</span></p>
-                  <p>Days Until Next Return: <span className="font-semibold">{securityDeposit.days_until_next_return || 'N/A'}</span></p>
+                  <p>Monthly Return: <span className="font-semibold text-green-600">₹{(securityDeposit.monthly_return_amount || 0).toLocaleString()}</span> ({((securityDeposit.monthly_return_rate || 0) * 100).toFixed(1)}%)</p>
+                  <p>Total Returned: <span className="font-semibold text-blue-600">₹{(securityDeposit.total_returned || 0).toLocaleString()}</span></p>
+                  <p>Balance Pending: <span className="font-semibold text-orange-600">₹{(securityDeposit.balance_pending || 0).toLocaleString()}</span></p>
+                  <p className="text-xs text-gray-500 mt-2">Created: {new Date(securityDeposit.created_at).toLocaleDateString()}</p>
                 </div>
               </div>
             ) : (
