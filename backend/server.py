@@ -2934,31 +2934,6 @@ async def distribute_delivery_charge(order_id: str):
         "distributions": {k: round(v, 2) for k, v in distributions.items()},
         "commission_records": len(commission_records)
     }
-                    # In production: Get order's sub stockist and credit (check frozen status)
-                    # For now, using placeholder - will be enhanced later
-                    pass
-    
-    # Insert all commission records
-    if commission_records:
-        await db.commissions_earned.insert_many(commission_records)
-    
-    # Mark order as distributed
-    await db.orders.update_one(
-        {"order_id": order_id},
-        {"$set": {
-            "delivery_charge_distributed": True,
-            "distribution_date": now,
-            "distribution_amounts": distributions
-        }}
-    )
-    
-    return {
-        "message": "Delivery charge distributed successfully",
-        "order_id": order_id,
-        "delivery_charge": delivery_charge,
-        "distributions": distributions,
-        "commission_records": len(commission_records)
-    }
 
 @api_router.get("/commissions/entity/{entity_id}")
 async def get_entity_commissions(entity_id: str):
