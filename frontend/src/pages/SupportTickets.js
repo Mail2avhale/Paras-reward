@@ -40,7 +40,7 @@ const SupportTickets = () => {
   ];
 
   useEffect(() => {
-    const loggedUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const loggedUser = JSON.parse(localStorage.getItem('paras_user') || '{}');
     if (!loggedUser.uid) {
       navigate('/login');
       return;
