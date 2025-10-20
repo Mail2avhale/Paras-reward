@@ -438,8 +438,8 @@ const FinancialManagementAdmin = () => {
                 <Input
                   type="number"
                   step="0.01"
-                  value={(parseFloat(depositForm.monthly_return_rate) * 100).toFixed(2)}
-                  onChange={(e) => setDepositForm({...depositForm, monthly_return_rate: (parseFloat(e.target.value) / 100).toString()})}
+                  value={depositForm.monthly_return_rate ? (parseFloat(depositForm.monthly_return_rate) * 100).toFixed(2) : '3'}
+                  onChange={(e) => setDepositForm({...depositForm, monthly_return_rate: (parseFloat(e.target.value || 0) / 100).toString()})}
                 />
               </div>
 
