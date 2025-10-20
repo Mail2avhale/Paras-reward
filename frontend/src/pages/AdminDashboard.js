@@ -692,18 +692,30 @@ const MarketplaceManagement = () => {
                 )}
               </div>
               <div className="p-4">
-                <h3 className="font-bold text-lg mb-1">{product.name}</h3>
-                <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description}</p>
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <div className="text-lg font-bold text-blue-600">{product.prc_price} PRC</div>
-                    <div className="text-xs text-gray-500">≈ ₹{(product.prc_price / 10).toFixed(2)}</div>
-                  </div>
-                  {product.stock_quantity !== undefined && (
-                    <div className="text-sm text-gray-600">
-                      Stock: {product.stock_quantity}
-                    </div>
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-bold text-lg flex-1">{product.name}</h3>
+                  {!product.visible && (
+                    <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">Hidden</span>
                   )}
+                  {product.vip_only && (
+                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded ml-1">VIP</span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mb-2">SKU: {product.sku}</p>
+                <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description}</p>
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">PRC Price:</span>
+                    <span className="font-bold text-blue-600">{product.prc_price} PRC</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Cash Fee:</span>
+                    <span className="font-semibold text-green-600">₹{product.cash_price}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Stock:</span>
+                    <span className="font-semibold">{product.available_stock || 0}/{product.total_stock || 0}</span>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <Button 
