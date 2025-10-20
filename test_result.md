@@ -300,6 +300,18 @@ backend:
         agent: "testing"
         comment: "CRITICAL BUG FOUND AND FIXED: ✅ Root cause identified: Backend mining status logic required both mining_start_time AND mining_active=True, but old mining sessions had mining_active=None (backward compatibility issue). ✅ Fixed line 771 in server.py to handle mining_active=None as valid for old sessions. ✅ Tested all 6 users with mining data - all now show session_active=True correctly. ✅ Verified session timing calculations work properly (19+ hours remaining for active sessions). ✅ Frontend logic confirmed correct - checks session_active field to display 'Mining Active' vs 'Mining Paused'. ✅ All mining sessions now working: Santosh (19.06h remaining), Admin User (23.98h), Pramod (23.98h), Santosh Shamrao (21.54h), and test users. Bug completely resolved - users will now see 'Mining Active' when they have valid sessions."
 
+  - task: "Products Endpoint Visibility Fix"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PRODUCTS ENDPOINT TESTING COMPLETE - ALL REQUIREMENTS VERIFIED: ✅ PUBLIC PRODUCTS ENDPOINT (GET /api/products): Returns 15 products correctly, all have is_active=true and visible=true, proper field structure with product_id, name, sku, prc_price, cash_price. ✅ NO _ID FIELD: Confirmed _id field is properly excluded from responses. ✅ ADMIN PRODUCTS ENDPOINT (GET /api/admin/products): Returns all 15 products regardless of visibility status, includes additional metadata fields. ✅ FILTERING LOGIC VERIFIED: Public endpoint correctly filters only active and visible products, admin endpoint shows all products. ✅ FIELD VALIDATION: All required fields present (product_id, name, sku, prc_price, cash_price, is_active, visible). ✅ RESPONSE FORMAT: Both endpoints return valid JSON arrays with proper datetime serialization. Products are now fully visible to users in marketplace - 15 products available with correct filtering and field structure."
+
 frontend:
   - task: "User Registration Form"
     implemented: true
