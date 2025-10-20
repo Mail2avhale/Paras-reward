@@ -252,3293 +252,493 @@ def test_stockist_management():
     
     return created_stockists
 
-def test_password_recovery_verify(test_users):
-    """Test POST /api/auth/password-recovery/verify endpoint"""
+def test_security_deposit_management(created_stockists):
+    """Test Security Deposit Manual Entry Endpoints"""
     print("\n" + "=" * 80)
-    print("2. TESTING PASSWORD RECOVERY VERIFICATION")
+    print("2. TESTING SECURITY DEPOSIT MANAGEMENT ENDPOINTS")
     print("=" * 80)
     
-    if not test_users:
-        print("❌ No users found to test password recovery")
+    if not created_stockists:
+        print("❌ No stockists available for security deposit testing")
         return False
     
-    # Find user with complete profile data for testing
-    test_user = None
-    for user in test_users:
-        user_data = user["user_data"]
-        if user_data.get("pan_number") and user_data.get("mobile"):
-            test_user = user
-            break
+    created_deposits = {}
     
-    if not test_user:
-        print("❌ No user with complete profile data found for password recovery testing")
-        return False
-    user_data = test_user["user_data"]
-    email = test_user["email"]
+    # Test Case 1: Create deposit for master (amount: 500000, monthly_return_rate: 0.03)
+    print(f"\n2.1. Creating security deposit for Master Stockist...")
     
-    print(f"\n2.1. Testing with user: {test_user['name']} ({email})")
-    
-    # Test Case 1: Valid 2-field verification (PAN + Mobile)
-    print(f"\n2.2. Test Case 1: Valid 2-field verification (PAN + Mobile)")
-    
-    pan_number = user_data.get("pan_number")
-    mobile = user_data.get("mobile")
-    name = user_data.get("name")
-    aadhaar_number = user_data.get("aadhaar_number")
-    
-    print(f"     Available fields: PAN={pan_number}, Mobile={mobile}, Name={name}, Aadhaar={aadhaar_number}")
-    
-    if pan_number and mobile:
-        verify_data = {
-            "email": email,
-            "verification_fields": {
-                "pan_number": pan_number,
-                "mobile": mobile
-            }
-        }
-        
-        try:
-            response = requests.post(f"{API_BASE}/auth/password-recovery/verify", json=verify_data, timeout=30)
-            print(f"     Status: {response.status_code}")
-            print(f"     Response: {response.text}")
-            
-            if response.status_code == 200:
-                result = response.json()
-                print(f"     ✅ Verification successful!")
-                print(f"     📋 Verified user: {result.get('name')} (UID: {result.get('uid')})")
-                return True
-            else:
-                print(f"     ❌ Verification failed: {response.status_code}")
-                
-        except Exception as e:
-            print(f"     ❌ Error during verification: {e}")
-    else:
-        print(f"     ⚠️  User missing PAN or Mobile data - trying other fields")
-    
-    # Test Case 2: Valid 2-field verification (Name + Aadhaar) - case insensitive
-    print(f"\n2.3. Test Case 2: Valid 2-field verification (Name + Aadhaar) - case insensitive")
-    
-    if name and aadhaar_number:
-        verify_data = {
-            "email": email.upper(),  # Test case insensitive email
-            "verification_fields": {
-                "name": name.lower(),  # Test case insensitive name
-                "aadhaar_number": aadhaar_number
-            }
-        }
-        
-        try:
-            response = requests.post(f"{API_BASE}/auth/password-recovery/verify", json=verify_data, timeout=30)
-            print(f"     Status: {response.status_code}")
-            print(f"     Response: {response.text}")
-            
-            if response.status_code == 200:
-                result = response.json()
-                print(f"     ✅ Case-insensitive verification successful!")
-                print(f"     📋 Verified user: {result.get('name')} (UID: {result.get('uid')})")
-                return True
-            else:
-                print(f"     ❌ Case-insensitive verification failed: {response.status_code}")
-                
-        except Exception as e:
-            print(f"     ❌ Error during case-insensitive verification: {e}")
-    
-    # Test Case 3: Invalid verification (wrong values)
-    print(f"\n2.4. Test Case 3: Invalid verification (wrong values)")
-    
-    verify_data = {
-        "email": email,
-        "verification_fields": {
-            "pan_number": "WRONG123456",
-            "mobile": "9999999999"
-        }
+    master_deposit_data = {
+        "user_id": created_stockists["master"],
+        "amount": 500000,
+        "monthly_return_rate": 0.03,
+        "status": "approved"
     }
     
     try:
-        response = requests.post(f"{API_BASE}/auth/password-recovery/verify", json=verify_data, timeout=30)
-        print(f"     Status: {response.status_code}")
-        print(f"     Response: {response.text}")
-        
-        if response.status_code == 401:
-            print(f"     ✅ Correctly rejected wrong values with 401")
-        else:
-            print(f"     ❌ Should have returned 401 for wrong values, got {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during wrong values test: {e}")
-    
-    # Test Case 4: Invalid field count (only 1 field)
-    print(f"\n2.5. Test Case 4: Invalid field count (only 1 field)")
-    
-    verify_data = {
-        "email": email,
-        "verification_fields": {
-            "pan_number": pan_number or "TEST123456"
-        }
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/auth/password-recovery/verify", json=verify_data, timeout=30)
-        print(f"     Status: {response.status_code}")
-        print(f"     Response: {response.text}")
-        
-        if response.status_code == 400:
-            print(f"     ✅ Correctly rejected single field with 400")
-        else:
-            print(f"     ❌ Should have returned 400 for single field, got {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during single field test: {e}")
-    
-    # Test Case 5: Non-existent user
-    print(f"\n2.6. Test Case 5: Non-existent user")
-    
-    verify_data = {
-        "email": "nonexistent@example.com",
-        "verification_fields": {
-            "pan_number": "TEST123456",
-            "mobile": "9999999999"
-        }
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/auth/password-recovery/verify", json=verify_data, timeout=30)
-        print(f"     Status: {response.status_code}")
-        print(f"     Response: {response.text}")
-        
-        if response.status_code == 404:
-            print(f"     ✅ Correctly returned 404 for non-existent user")
-        else:
-            print(f"     ❌ Should have returned 404 for non-existent user, got {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during non-existent user test: {e}")
-    
-    return False
-
-def test_password_recovery_reset(test_users):
-    """Test POST /api/auth/password-recovery/reset endpoint"""
-    print("\n" + "=" * 80)
-    print("3. TESTING PASSWORD RECOVERY RESET")
-    print("=" * 80)
-    
-    if not test_users:
-        print("❌ No users found to test password reset")
-        return False
-    
-    # Find user with complete profile data for testing
-    test_user = None
-    for user in test_users:
-        user_data = user["user_data"]
-        if user_data.get("pan_number") and user_data.get("mobile"):
-            test_user = user
-            break
-    
-    if not test_user:
-        print("❌ No user with complete profile data found for password reset testing")
-        return False
-    user_data = test_user["user_data"]
-    email = test_user["email"]
-    old_password = test_user["password"]
-    
-    print(f"\n3.1. Testing with user: {test_user['name']} ({email})")
-    
-    # Get user's verification fields
-    pan_number = user_data.get("pan_number")
-    mobile = user_data.get("mobile")
-    
-    if not (pan_number and mobile):
-        print(f"     ⚠️  User missing PAN or Mobile data - cannot test password reset")
-        return False
-    
-    # Test Case 1: Valid password reset
-    print(f"\n3.2. Test Case 1: Valid password reset")
-    
-    new_password = f"NewPass{datetime.now().strftime('%H%M%S')}!"
-    
-    reset_data = {
-        "email": email,
-        "verification_fields": {
-            "pan_number": pan_number,
-            "mobile": mobile
-        },
-        "new_password": new_password
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/auth/password-recovery/reset", json=reset_data, timeout=30)
+        response = requests.post(f"{API_BASE}/admin/security-deposit/manual-entry", json=master_deposit_data, timeout=30)
         print(f"     Status: {response.status_code}")
         print(f"     Response: {response.text}")
         
         if response.status_code == 200:
-            print(f"     ✅ Password reset successful!")
+            result = response.json()
+            deposit_id = result.get("deposit_id")
+            created_deposits["master"] = deposit_id
+            print(f"     ✅ Master deposit created successfully!")
+            print(f"     📋 Deposit ID: {deposit_id}")
+            print(f"     📋 Amount: ₹{master_deposit_data['amount']}")
+            print(f"     📋 Monthly Return Rate: {master_deposit_data['monthly_return_rate']*100}%")
+        else:
+            print(f"     ❌ Master deposit creation failed: {response.status_code}")
             
-            # Test Case 2: Verify new password works by logging in
-            print(f"\n3.3. Test Case 2: Verify new password works")
+    except Exception as e:
+        print(f"     ❌ Error creating master deposit: {e}")
+    
+    # Test Case 2: Create deposit for sub (amount: 300000, monthly_return_rate: 0.03)
+    print(f"\n2.2. Creating security deposit for Sub Stockist...")
+    
+    sub_deposit_data = {
+        "user_id": created_stockists["sub"],
+        "amount": 300000,
+        "monthly_return_rate": 0.03,
+        "status": "approved"
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/admin/security-deposit/manual-entry", json=sub_deposit_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            deposit_id = result.get("deposit_id")
+            created_deposits["sub"] = deposit_id
+            print(f"     ✅ Sub deposit created successfully!")
+            print(f"     📋 Deposit ID: {deposit_id}")
+            print(f"     📋 Amount: ₹{sub_deposit_data['amount']}")
+            print(f"     📋 Monthly Return Rate: {sub_deposit_data['monthly_return_rate']*100}%")
+        else:
+            print(f"     ❌ Sub deposit creation failed: {response.status_code}")
             
-            login_response = requests.post(
-                f"{API_BASE}/auth/login",
-                params={
-                    "identifier": email,
-                    "password": new_password
-                },
-                timeout=30
-            )
+    except Exception as e:
+        print(f"     ❌ Error creating sub deposit: {e}")
+    
+    # Test Case 3: Verify deposit entry created in database
+    print(f"\n2.3. Verifying deposits in database...")
+    
+    try:
+        response = requests.get(f"{API_BASE}/admin/security-deposits", timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            deposits = result.get("deposits", [])
+            print(f"     ✅ Retrieved {len(deposits)} deposits")
             
-            print(f"     Login Status: {login_response.status_code}")
-            
-            if login_response.status_code == 200:
-                print(f"     ✅ Login with new password successful!")
+            # Verify our created deposits are in the list
+            for deposit in deposits:
+                deposit_id = deposit.get("deposit_id")
+                user_id = deposit.get("user_id")
+                amount = deposit.get("amount")
+                monthly_return = deposit.get("monthly_return_amount")
+                balance_pending = deposit.get("balance_pending")
                 
-                # Test Case 3: Verify old password no longer works
-                print(f"\n3.4. Test Case 3: Verify old password no longer works")
+                if deposit_id in created_deposits.values():
+                    print(f"     📋 Found deposit: {deposit_id}")
+                    print(f"       User ID: {user_id}")
+                    print(f"       Amount: ₹{amount}")
+                    print(f"       Monthly Return: ₹{monthly_return}")
+                    print(f"       Balance Pending: ₹{balance_pending}")
+        else:
+            print(f"     ❌ Failed to get deposits: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error getting deposits: {e}")
+    
+    # Test Case 4: Update deposit amount
+    print(f"\n2.4. Updating deposit amount...")
+    
+    if created_deposits.get("master"):
+        update_data = {
+            "amount": 550000,
+            "monthly_return_rate": 0.03,
+            "balance_pending": 550000
+        }
+        
+        try:
+            response = requests.put(f"{API_BASE}/admin/security-deposit/{created_deposits['master']}/edit", json=update_data, timeout=30)
+            print(f"     Status: {response.status_code}")
+            print(f"     Response: {response.text}")
+            
+            if response.status_code == 200:
+                print(f"     ✅ Deposit updated successfully!")
+                print(f"     📋 New Amount: ₹{update_data['amount']}")
+            else:
+                print(f"     ❌ Failed to update deposit: {response.status_code}")
                 
-                old_login_response = requests.post(
+        except Exception as e:
+            print(f"     ❌ Error updating deposit: {e}")
+    
+    # Test Case 5: Verify user record updated (security_deposit_paid=true)
+    print(f"\n2.5. Verifying user records updated...")
+    
+    for role, user_id in created_stockists.items():
+        if role in ["master", "sub"]:
+            try:
+                # Check user record via login (to get full user data)
+                login_response = requests.post(
                     f"{API_BASE}/auth/login",
                     params={
-                        "identifier": email,
-                        "password": old_password
+                        "identifier": f"{role}_test@test.com",
+                        "password": "test123"
                     },
                     timeout=30
                 )
                 
-                print(f"     Old Password Login Status: {old_login_response.status_code}")
-                
-                if old_login_response.status_code == 401:
-                    print(f"     ✅ Old password correctly rejected!")
+                if login_response.status_code == 200:
+                    user_data = login_response.json()
+                    security_deposit_paid = user_data.get("security_deposit_paid", False)
+                    security_deposit_amount = user_data.get("security_deposit_amount", 0)
                     
-                    # Reset password back to original for other tests
-                    print(f"\n3.5. Resetting password back to original...")
-                    
-                    reset_back_data = {
-                        "email": email,
-                        "verification_fields": {
-                            "pan_number": pan_number,
-                            "mobile": mobile
-                        },
-                        "new_password": old_password
-                    }
-                    
-                    reset_back_response = requests.post(f"{API_BASE}/auth/password-recovery/reset", json=reset_back_data, timeout=30)
-                    if reset_back_response.status_code == 200:
-                        print(f"     ✅ Password reset back to original")
-                        return True
-                    else:
-                        print(f"     ⚠️  Could not reset password back: {reset_back_response.status_code}")
-                        return True  # Still consider test successful
+                    print(f"     📋 {role.title()} Stockist:")
+                    print(f"       Security Deposit Paid: {security_deposit_paid}")
+                    print(f"       Security Deposit Amount: ₹{security_deposit_amount}")
                 else:
-                    print(f"     ❌ Old password should have been rejected, got {old_login_response.status_code}")
-            else:
-                print(f"     ❌ Login with new password failed: {login_response.status_code}")
-        else:
-            print(f"     ❌ Password reset failed: {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during password reset: {e}")
+                    print(f"     ❌ Failed to get {role} user data: {login_response.status_code}")
+                    
+            except Exception as e:
+                print(f"     ❌ Error checking {role} user record: {e}")
     
-    # Test Case 4: Invalid password (too short)
-    print(f"\n3.6. Test Case 4: Invalid password (too short)")
-    
-    reset_data = {
-        "email": email,
-        "verification_fields": {
-            "pan_number": pan_number,
-            "mobile": mobile
-        },
-        "new_password": "123"  # Too short
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/auth/password-recovery/reset", json=reset_data, timeout=30)
-        print(f"     Status: {response.status_code}")
-        print(f"     Response: {response.text}")
-        
-        if response.status_code == 400:
-            print(f"     ✅ Correctly rejected short password with 400")
-        else:
-            print(f"     ❌ Should have returned 400 for short password, got {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during short password test: {e}")
-    
-    return False
+    return created_deposits
 
-def test_support_ticket_creation(test_users):
-    """Test POST /api/support/tickets/create endpoint"""
+def test_renewal_management(created_stockists):
+    """Test Renewal Manual Entry Endpoints"""
     print("\n" + "=" * 80)
-    print("4. TESTING SUPPORT TICKET CREATION")
+    print("3. TESTING RENEWAL MANAGEMENT ENDPOINTS")
     print("=" * 80)
     
-    if not test_users:
-        print("❌ No users found to test support ticket creation")
+    if not created_stockists:
+        print("❌ No stockists available for renewal testing")
         return False
     
-    # Use first user for testing
-    test_user = test_users[0]
-    user_id = test_user["uid"]
+    created_renewals = {}
     
-    print(f"\n4.1. Testing with user: {test_user['name']} (UID: {user_id})")
+    # Test Case 1: Create renewal for master (amount: 50000, gst_rate: 0.18)
+    print(f"\n3.1. Creating renewal for Master Stockist...")
     
-    # Test Case 1: Create valid support ticket
-    print(f"\n4.2. Test Case 1: Create valid support ticket")
-    
-    ticket_data = {
-        "user_id": user_id,
-        "category": "Account Issues",
-        "subject": "Test Support Ticket",
-        "description": "This is a test support ticket created during backend testing.",
-        "attachments": []
+    master_renewal_data = {
+        "user_id": created_stockists["master"],
+        "amount": 50000,
+        "gst_rate": 0.18,
+        "status": "approved"
     }
     
     try:
-        response = requests.post(f"{API_BASE}/support/tickets/create", json=ticket_data, timeout=30)
+        response = requests.post(f"{API_BASE}/admin/renewal/manual-entry", json=master_renewal_data, timeout=30)
         print(f"     Status: {response.status_code}")
         print(f"     Response: {response.text}")
         
         if response.status_code == 200:
             result = response.json()
-            ticket_id = result.get("ticket_id")
-            print(f"     ✅ Support ticket created successfully!")
-            print(f"     📋 Ticket ID: {ticket_id}")
+            renewal_id = result.get("renewal_id")
+            created_renewals["master"] = renewal_id
             
-            # Store ticket ID for later tests
-            test_user["test_ticket_id"] = ticket_id
-            return True
+            # Calculate expected GST
+            base_amount = master_renewal_data["amount"]
+            gst_amount = base_amount * master_renewal_data["gst_rate"]
+            total_amount = base_amount + gst_amount
+            
+            print(f"     ✅ Master renewal created successfully!")
+            print(f"     📋 Renewal ID: {renewal_id}")
+            print(f"     📋 Base Amount: ₹{base_amount}")
+            print(f"     📋 GST Amount: ₹{gst_amount}")
+            print(f"     📋 Total Amount: ₹{total_amount}")
         else:
-            print(f"     ❌ Support ticket creation failed: {response.status_code}")
+            print(f"     ❌ Master renewal creation failed: {response.status_code}")
             
     except Exception as e:
-        print(f"     ❌ Error during support ticket creation: {e}")
+        print(f"     ❌ Error creating master renewal: {e}")
     
-    # Test Case 2: Create ticket with different category
-    print(f"\n4.3. Test Case 2: Create ticket with different category")
+    # Test Case 2: Create renewal for sub (amount: 30000, gst_rate: 0.18)
+    print(f"\n3.2. Creating renewal for Sub Stockist...")
     
-    ticket_data = {
-        "user_id": user_id,
-        "category": "Technical",
-        "subject": "Technical Issue Test",
-        "description": "Testing technical category support ticket.",
-        "attachments": []
+    sub_renewal_data = {
+        "user_id": created_stockists["sub"],
+        "amount": 30000,
+        "gst_rate": 0.18,
+        "status": "approved"
     }
     
     try:
-        response = requests.post(f"{API_BASE}/support/tickets/create", json=ticket_data, timeout=30)
-        print(f"     Status: {response.status_code}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            print(f"     ✅ Technical category ticket created: {result.get('ticket_id')}")
-        else:
-            print(f"     ❌ Technical category ticket creation failed: {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during technical ticket creation: {e}")
-    
-    # Test Case 3: Invalid user ID
-    print(f"\n4.4. Test Case 3: Invalid user ID")
-    
-    ticket_data = {
-        "user_id": "invalid-user-id",
-        "category": "Other",
-        "subject": "Invalid User Test",
-        "description": "Testing with invalid user ID.",
-        "attachments": []
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/support/tickets/create", json=ticket_data, timeout=30)
-        print(f"     Status: {response.status_code}")
-        print(f"     Response: {response.text}")
-        
-        if response.status_code == 404:
-            print(f"     ✅ Correctly rejected invalid user ID with 404")
-        else:
-            print(f"     ❌ Should have returned 404 for invalid user ID, got {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during invalid user ID test: {e}")
-    
-    return False
-
-def test_support_ticket_retrieval(test_users):
-    """Test GET /api/support/tickets/user/{user_id} endpoint"""
-    print("\n" + "=" * 80)
-    print("5. TESTING SUPPORT TICKET RETRIEVAL")
-    print("=" * 80)
-    
-    if not test_users:
-        print("❌ No users found to test support ticket retrieval")
-        return False
-    
-    # Use first user for testing
-    test_user = test_users[0]
-    user_id = test_user["uid"]
-    
-    print(f"\n5.1. Testing with user: {test_user['name']} (UID: {user_id})")
-    
-    # Test Case 1: Get all tickets for user
-    print(f"\n5.2. Test Case 1: Get all tickets for user")
-    
-    try:
-        response = requests.get(f"{API_BASE}/support/tickets/user/{user_id}", timeout=30)
+        response = requests.post(f"{API_BASE}/admin/renewal/manual-entry", json=sub_renewal_data, timeout=30)
         print(f"     Status: {response.status_code}")
         print(f"     Response: {response.text}")
         
         if response.status_code == 200:
             result = response.json()
-            tickets = result.get("tickets", [])
-            count = result.get("count", 0)
+            renewal_id = result.get("renewal_id")
+            created_renewals["sub"] = renewal_id
             
-            print(f"     ✅ Retrieved {count} tickets for user")
+            # Calculate expected GST
+            base_amount = sub_renewal_data["amount"]
+            gst_amount = base_amount * sub_renewal_data["gst_rate"]
+            total_amount = base_amount + gst_amount
             
-            if count > 0:
-                # Show first ticket details
-                first_ticket = tickets[0]
-                print(f"     📋 First ticket: {first_ticket.get('subject')} (Status: {first_ticket.get('status')})")
+            print(f"     ✅ Sub renewal created successfully!")
+            print(f"     📋 Renewal ID: {renewal_id}")
+            print(f"     📋 Base Amount: ₹{base_amount}")
+            print(f"     📋 GST Amount: ₹{gst_amount}")
+            print(f"     📋 Total Amount: ₹{total_amount}")
+        else:
+            print(f"     ❌ Sub renewal creation failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error creating sub renewal: {e}")
+    
+    # Test Case 3: Verify renewal created with correct GST calculation
+    print(f"\n3.3. Verifying renewals in database...")
+    
+    try:
+        response = requests.get(f"{API_BASE}/admin/renewals", timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            renewals = result.get("renewals", [])
+            print(f"     ✅ Retrieved {len(renewals)} renewals")
+            
+            # Verify our created renewals are in the list
+            for renewal in renewals:
+                renewal_id = renewal.get("renewal_id")
+                user_id = renewal.get("user_id")
+                base_amount = renewal.get("base_amount")
+                gst_amount = renewal.get("gst_amount")
+                total_amount = renewal.get("total_amount")
                 
-                # Store ticket ID for later tests
-                test_user["existing_ticket_id"] = first_ticket.get("ticket_id")
-            
-            return True
+                if renewal_id in created_renewals.values():
+                    print(f"     📋 Found renewal: {renewal_id}")
+                    print(f"       User ID: {user_id}")
+                    print(f"       Base Amount: ₹{base_amount}")
+                    print(f"       GST Amount: ₹{gst_amount}")
+                    print(f"       Total Amount: ₹{total_amount}")
+                    
+                    # Verify GST calculation
+                    expected_gst = base_amount * 0.18
+                    expected_total = base_amount + expected_gst
+                    gst_correct = abs(gst_amount - expected_gst) < 0.01
+                    total_correct = abs(total_amount - expected_total) < 0.01
+                    
+                    print(f"       GST Calculation Correct: {gst_correct}")
+                    print(f"       Total Calculation Correct: {total_correct}")
         else:
-            print(f"     ❌ Ticket retrieval failed: {response.status_code}")
+            print(f"     ❌ Failed to get renewals: {response.status_code}")
             
     except Exception as e:
-        print(f"     ❌ Error during ticket retrieval: {e}")
+        print(f"     ❌ Error getting renewals: {e}")
     
-    # Test Case 2: Get tickets with status filter
-    print(f"\n5.3. Test Case 2: Get tickets with status filter")
+    # Test Case 4: Update renewal amount and verify GST recalculated
+    print(f"\n3.4. Updating renewal amount...")
     
-    try:
-        response = requests.get(f"{API_BASE}/support/tickets/user/{user_id}?status=open", timeout=30)
-        print(f"     Status: {response.status_code}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            count = result.get("count", 0)
-            print(f"     ✅ Retrieved {count} open tickets for user")
-        else:
-            print(f"     ❌ Filtered ticket retrieval failed: {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during filtered ticket retrieval: {e}")
-    
-    return False
-
-def test_support_ticket_details(test_users):
-    """Test GET /api/support/tickets/{ticket_id} endpoint"""
-    print("\n" + "=" * 80)
-    print("6. TESTING SUPPORT TICKET DETAILS")
-    print("=" * 80)
-    
-    if not test_users:
-        print("❌ No users found to test support ticket details")
-        return False
-    
-    # Use first user for testing
-    test_user = test_users[0]
-    ticket_id = test_user.get("test_ticket_id") or test_user.get("existing_ticket_id")
-    
-    if not ticket_id:
-        print("❌ No ticket ID available for testing")
-        return False
-    
-    print(f"\n6.1. Testing with ticket ID: {ticket_id}")
-    
-    # Test Case 1: Get ticket details
-    print(f"\n6.2. Test Case 1: Get ticket details")
-    
-    try:
-        response = requests.get(f"{API_BASE}/support/tickets/{ticket_id}", timeout=30)
-        print(f"     Status: {response.status_code}")
-        print(f"     Response: {response.text}")
-        
-        if response.status_code == 200:
-            ticket = response.json()
-            
-            print(f"     ✅ Retrieved ticket details successfully!")
-            print(f"     📋 Subject: {ticket.get('subject')}")
-            print(f"     📋 Status: {ticket.get('status')}")
-            print(f"     📋 Category: {ticket.get('category')}")
-            print(f"     📋 Replies: {len(ticket.get('replies', []))}")
-            
-            return True
-        else:
-            print(f"     ❌ Ticket details retrieval failed: {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during ticket details retrieval: {e}")
-    
-    # Test Case 2: Invalid ticket ID
-    print(f"\n6.3. Test Case 2: Invalid ticket ID")
-    
-    try:
-        response = requests.get(f"{API_BASE}/support/tickets/invalid-ticket-id", timeout=30)
-        print(f"     Status: {response.status_code}")
-        
-        if response.status_code == 404:
-            print(f"     ✅ Correctly returned 404 for invalid ticket ID")
-        else:
-            print(f"     ❌ Should have returned 404 for invalid ticket ID, got {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during invalid ticket ID test: {e}")
-    
-    return False
-
-def test_support_ticket_replies(test_users):
-    """Test POST /api/support/tickets/{ticket_id}/reply endpoint"""
-    print("\n" + "=" * 80)
-    print("7. TESTING SUPPORT TICKET REPLIES")
-    print("=" * 80)
-    
-    if not test_users:
-        print("❌ No users found to test support ticket replies")
-        return False
-    
-    # Use first user for testing
-    test_user = test_users[0]
-    user_id = test_user["uid"]
-    ticket_id = test_user.get("test_ticket_id") or test_user.get("existing_ticket_id")
-    
-    if not ticket_id:
-        print("❌ No ticket ID available for testing")
-        return False
-    
-    print(f"\n7.1. Testing with user: {test_user['name']} (UID: {user_id})")
-    print(f"     Ticket ID: {ticket_id}")
-    
-    # Test Case 1: Add reply to ticket
-    print(f"\n7.2. Test Case 1: Add reply to ticket")
-    
-    reply_data = {
-        "ticket_id": ticket_id,
-        "user_id": user_id,
-        "message": "This is a test reply added during backend testing."
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/support/tickets/{ticket_id}/reply", json=reply_data, timeout=30)
-        print(f"     Status: {response.status_code}")
-        print(f"     Response: {response.text}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            print(f"     ✅ Reply added successfully!")
-            print(f"     📋 Reply ID: {result.get('reply', {}).get('reply_id')}")
-            return True
-        else:
-            print(f"     ❌ Reply addition failed: {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during reply addition: {e}")
-    
-    # Test Case 2: Invalid ticket ID
-    print(f"\n7.3. Test Case 2: Invalid ticket ID")
-    
-    reply_data = {
-        "ticket_id": "invalid-ticket-id",
-        "user_id": user_id,
-        "message": "Test reply for invalid ticket."
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/support/tickets/invalid-ticket-id/reply", json=reply_data, timeout=30)
-        print(f"     Status: {response.status_code}")
-        
-        if response.status_code == 404:
-            print(f"     ✅ Correctly returned 404 for invalid ticket ID")
-        else:
-            print(f"     ❌ Should have returned 404 for invalid ticket ID, got {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during invalid ticket ID test: {e}")
-    
-    return False
-
-def test_admin_support_tickets():
-    """Test GET /api/admin/support/tickets endpoint"""
-    print("\n" + "=" * 80)
-    print("8. TESTING ADMIN SUPPORT TICKETS")
-    print("=" * 80)
-    
-    # Test Case 1: Get all tickets (admin view)
-    print(f"\n8.1. Test Case 1: Get all tickets (admin view)")
-    
-    try:
-        response = requests.get(f"{API_BASE}/admin/support/tickets", timeout=30)
-        print(f"     Status: {response.status_code}")
-        print(f"     Response: {response.text}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            tickets = result.get("tickets", [])
-            total = result.get("total", 0)
-            
-            print(f"     ✅ Retrieved {total} total tickets")
-            print(f"     📋 Current page: {result.get('page', 1)}")
-            print(f"     📋 Total pages: {result.get('pages', 1)}")
-            
-            if total > 0:
-                # Show first ticket details
-                first_ticket = tickets[0]
-                print(f"     📋 First ticket: {first_ticket.get('subject')} (User: {first_ticket.get('user_name')})")
-            
-            return True
-        else:
-            print(f"     ❌ Admin tickets retrieval failed: {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during admin tickets retrieval: {e}")
-    
-    # Test Case 2: Get tickets with status filter
-    print(f"\n8.2. Test Case 2: Get tickets with status filter")
-    
-    try:
-        response = requests.get(f"{API_BASE}/admin/support/tickets?status=open", timeout=30)
-        print(f"     Status: {response.status_code}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            total = result.get("total", 0)
-            print(f"     ✅ Retrieved {total} open tickets")
-        else:
-            print(f"     ❌ Filtered admin tickets retrieval failed: {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during filtered admin tickets retrieval: {e}")
-    
-    # Test Case 3: Get tickets with category filter
-    print(f"\n8.3. Test Case 3: Get tickets with category filter")
-    
-    try:
-        response = requests.get(f"{API_BASE}/admin/support/tickets?category=Technical", timeout=30)
-        print(f"     Status: {response.status_code}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            total = result.get("total", 0)
-            print(f"     ✅ Retrieved {total} technical tickets")
-        else:
-            print(f"     ❌ Category filtered admin tickets retrieval failed: {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during category filtered admin tickets retrieval: {e}")
-    
-    # Test Case 4: Pagination test
-    print(f"\n8.4. Test Case 4: Pagination test")
-    
-    try:
-        response = requests.get(f"{API_BASE}/admin/support/tickets?page=1&limit=5", timeout=30)
-        print(f"     Status: {response.status_code}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            tickets = result.get("tickets", [])
-            print(f"     ✅ Retrieved {len(tickets)} tickets with pagination (limit=5)")
-        else:
-            print(f"     ❌ Paginated admin tickets retrieval failed: {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during paginated admin tickets retrieval: {e}")
-    
-    return False
-
-def test_admin_ticket_updates(test_users):
-    """Test PUT /api/admin/support/tickets/{ticket_id} endpoint"""
-    print("\n" + "=" * 80)
-    print("9. TESTING ADMIN TICKET UPDATES")
-    print("=" * 80)
-    
-    if not test_users:
-        print("❌ No users found to test admin ticket updates")
-        return False
-    
-    # Use first user's ticket for testing
-    test_user = test_users[0]
-    ticket_id = test_user.get("test_ticket_id") or test_user.get("existing_ticket_id")
-    
-    if not ticket_id:
-        print("❌ No ticket ID available for testing")
-        return False
-    
-    print(f"\n9.1. Testing with ticket ID: {ticket_id}")
-    
-    # Test Case 1: Update ticket status
-    print(f"\n9.2. Test Case 1: Update ticket status")
-    
-    update_data = {
-        "status": "in_progress",
-        "priority": "high",
-        "resolution_notes": "Ticket updated during backend testing"
-    }
-    
-    try:
-        response = requests.put(f"{API_BASE}/admin/support/tickets/{ticket_id}", json=update_data, timeout=30)
-        print(f"     Status: {response.status_code}")
-        print(f"     Response: {response.text}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            print(f"     ✅ Ticket updated successfully!")
-            print(f"     📋 Updates: {result.get('updates', {})}")
-            return True
-        else:
-            print(f"     ❌ Ticket update failed: {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during ticket update: {e}")
-    
-    # Test Case 2: Update only priority
-    print(f"\n9.3. Test Case 2: Update only priority")
-    
-    update_data = {
-        "priority": "low"
-    }
-    
-    try:
-        response = requests.put(f"{API_BASE}/admin/support/tickets/{ticket_id}", json=update_data, timeout=30)
-        print(f"     Status: {response.status_code}")
-        
-        if response.status_code == 200:
-            print(f"     ✅ Priority updated successfully!")
-        else:
-            print(f"     ❌ Priority update failed: {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during priority update: {e}")
-    
-    # Test Case 3: Invalid ticket ID
-    print(f"\n9.4. Test Case 3: Invalid ticket ID")
-    
-    update_data = {
-        "status": "resolved"
-    }
-    
-    try:
-        response = requests.put(f"{API_BASE}/admin/support/tickets/invalid-ticket-id", json=update_data, timeout=30)
-        print(f"     Status: {response.status_code}")
-        
-        if response.status_code == 404:
-            print(f"     ✅ Correctly returned 404 for invalid ticket ID")
-        else:
-            print(f"     ❌ Should have returned 404 for invalid ticket ID, got {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error during invalid ticket ID test: {e}")
-    
-    return False
-
-def test_cart_and_checkout_flow(test_users):
-    """Test Cart & Checkout Flow for users"""
-    print("\n" + "=" * 80)
-    print("2. TESTING CART & CHECKOUT FLOW")
-    print("=" * 80)
-    
-    if not test_users:
-        print("❌ No users found to test cart & checkout flow")
-        return False
-    
-    # Use first user for testing
-    test_user = test_users[0]
-    uid = test_user["uid"]
-    name = test_user["name"]
-    membership_type = test_user["membership_type"]
-    
-    print(f"\n2.1. Testing with user: {name} (UID: {uid})")
-    print(f"     Membership Type: {membership_type}")
-    
-    if membership_type != "vip":
-        print(f"     ⚠️  User is not VIP - this may cause checkout to fail")
-    
-    # Step 1: Get available products
-    print(f"\n2.2. Getting available products...")
-    try:
-        response = requests.get(f"{API_BASE}/products", timeout=30)
-        if response.status_code == 200:
-            products = response.json()
-            print(f"     ✅ Found {len(products)} products")
-            
-            if len(products) == 0:
-                print("     ❌ No products available for testing")
-                return False
-                
-            # Use first product for testing
-            test_product = products[0]
-            product_id = test_product.get("product_id")
-            product_name = test_product.get("name")
-            prc_price = test_product.get("prc_price")
-            cash_price = test_product.get("cash_price")
-            
-            print(f"     📦 Test Product: {product_name}")
-            print(f"     💰 PRC Price: {prc_price}")
-            print(f"     💵 Cash Price: {cash_price}")
-            
-        else:
-            print(f"     ❌ Failed to get products: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"     ❌ Error getting products: {e}")
-        return False
-    
-    # Step 2: Add product to cart
-    print(f"\n2.3. Adding product to cart...")
-    try:
-        cart_data = {
-            "product_id": product_id,
-            "quantity": 1
+    if created_renewals.get("master"):
+        update_data = {
+            "amount": 55000,
+            "gst_rate": 0.18
         }
         
-        response = requests.post(f"{API_BASE}/cart/add", json=cart_data, timeout=30)
-        print(f"     Status: {response.status_code}")
-        print(f"     Response: {response.text}")
-        
-        if response.status_code == 200:
-            print(f"     ✅ Product added to cart successfully")
-        else:
-            print(f"     ❌ Failed to add to cart: {response.status_code}")
-            # Continue with checkout test anyway
-            
-    except Exception as e:
-        print(f"     ❌ Error adding to cart: {e}")
-    
-    # Step 3: Get cart contents
-    print(f"\n2.4. Getting cart contents...")
-    try:
-        response = requests.get(f"{API_BASE}/cart/{uid}", timeout=30)
-        print(f"     Status: {response.status_code}")
-        print(f"     Response: {response.text}")
-        
-        if response.status_code == 200:
-            cart_data = response.json()
-            print(f"     ✅ Cart retrieved successfully")
-            print(f"     📋 Cart items: {len(cart_data.get('items', []))}")
-        else:
-            print(f"     ❌ Failed to get cart: {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error getting cart: {e}")
-    
-    # Step 4: Attempt checkout - Try different checkout endpoints and formats
-    print(f"\n2.5. Attempting checkout...")
-    
-    # Try multiple checkout approaches
-    checkout_attempts = [
-        {
-            "endpoint": "/orders/checkout",
-            "data": {
-                "user_id": uid,
-                "delivery_address": {
-                    "street": "123 Test Street",
-                    "city": "Test City", 
-                    "state": "Test State",
-                    "pincode": "123456"
-                }
-            }
-        },
-        {
-            "endpoint": "/orders/checkout",
-            "data": {
-                "user_id": uid,
-                "product_id": product_id,
-                "delivery_address": {
-                    "street": "123 Test Street",
-                    "city": "Test City", 
-                    "state": "Test State",
-                    "pincode": "123456"
-                }
-            }
-        },
-        {
-            "endpoint": f"/orders/{uid}",
-            "data": {
-                "product_id": product_id
-            }
-        }
-    ]
-    
-    for i, attempt in enumerate(checkout_attempts, 1):
-        print(f"\n     Attempt {i}: POST {attempt['endpoint']}")
         try:
-            response = requests.post(f"{API_BASE}{attempt['endpoint']}", json=attempt['data'], timeout=30)
+            response = requests.put(f"{API_BASE}/admin/renewal/{created_renewals['master']}/edit", json=update_data, timeout=30)
             print(f"     Status: {response.status_code}")
             print(f"     Response: {response.text}")
             
             if response.status_code == 200:
-                print(f"     ✅ Checkout successful!")
-                checkout_result = response.json()
-                order_id = checkout_result.get("order_id")
-                if order_id:
-                    print(f"     📋 Order ID: {order_id}")
-                    return {"success": True, "order_id": order_id, "user": test_user, "method": attempt['endpoint']}
-            elif response.status_code == 422:
-                print(f"     ❌ Validation Error (422) - trying next method...")
-                continue
-            elif response.status_code == 403:
-                print(f"     ❌ Access Denied (403) - {response.text}")
-                if "VIP membership required" in response.text:
-                    print(f"     🔍 VIP membership issue detected!")
-                elif "KYC verification required" in response.text:
-                    print(f"     🔍 KYC verification issue detected!")
-                continue
+                result = response.json()
+                new_base = result.get("base_amount")
+                new_gst = result.get("gst_amount")
+                new_total = result.get("total_amount")
+                
+                print(f"     ✅ Renewal updated successfully!")
+                print(f"     📋 New Base Amount: ₹{new_base}")
+                print(f"     📋 New GST Amount: ₹{new_gst}")
+                print(f"     📋 New Total Amount: ₹{new_total}")
+                
+                # Verify GST recalculation
+                expected_gst = update_data["amount"] * 0.18
+                expected_total = update_data["amount"] + expected_gst
+                gst_correct = abs(new_gst - expected_gst) < 0.01
+                total_correct = abs(new_total - expected_total) < 0.01
+                
+                print(f"     📋 GST Recalculated Correctly: {gst_correct}")
+                print(f"     📋 Total Recalculated Correctly: {total_correct}")
             else:
-                print(f"     ❌ Failed with status {response.status_code}")
-                continue
+                print(f"     ❌ Failed to update renewal: {response.status_code}")
                 
         except Exception as e:
-            print(f"     ❌ Error during checkout attempt {i}: {e}")
-            continue
+            print(f"     ❌ Error updating renewal: {e}")
     
-    # If all attempts failed
-    print(f"     ❌ ALL CHECKOUT ATTEMPTS FAILED")
-    return {"success": False, "error": "All checkout methods failed", "user": test_user}
-
-def check_orders_in_database(test_users):
-    """Check Orders - List all orders for users"""
-    print("\n" + "=" * 80)
-    print("3. CHECKING ORDERS IN DATABASE")
-    print("=" * 80)
+    # Test Case 5: Verify user renewal_status updated to "active"
+    print(f"\n3.5. Verifying user renewal status updated...")
     
-    if not test_users:
-        print("❌ No users found to check orders")
-        return False
-    
-    total_orders_found = 0
-    
-    for test_user in test_users:
-        uid = test_user["uid"]
-        name = test_user["name"]
-        
-        print(f"\n3.1. Checking orders for: {name} (UID: {uid})")
-        
-        try:
-            # Try different order endpoints
-            endpoints_to_try = [
-                f"/orders/{uid}",
-                f"/orders/legacy/{uid}",
-                f"/admin/orders/all?user_id={uid}"
-            ]
-            
-            for endpoint in endpoints_to_try:
-                print(f"\n     Trying: GET {endpoint}")
-                response = requests.get(f"{API_BASE}{endpoint}", timeout=30)
-                print(f"     Status: {response.status_code}")
+    for role, user_id in created_stockists.items():
+        if role in ["master", "sub"]:
+            try:
+                # Check user record via login (to get full user data)
+                login_response = requests.post(
+                    f"{API_BASE}/auth/login",
+                    params={
+                        "identifier": f"{role}_test@test.com",
+                        "password": "test123"
+                    },
+                    timeout=30
+                )
                 
-                if response.status_code == 200:
-                    orders_data = response.json()
+                if login_response.status_code == 200:
+                    user_data = login_response.json()
+                    renewal_status = user_data.get("renewal_status", "unknown")
+                    renewal_due_date = user_data.get("renewal_due_date")
                     
-                    # Handle different response formats
-                    if isinstance(orders_data, list):
-                        orders = orders_data
-                    elif isinstance(orders_data, dict):
-                        orders = orders_data.get("orders", orders_data.get("data", []))
-                    else:
-                        orders = []
-                    
-                    print(f"     ✅ Found {len(orders)} orders")
-                    total_orders_found += len(orders)
-                    
-                    # Show order details
-                    for i, order in enumerate(orders[:3]):  # Show first 3 orders
-                        order_id = order.get("order_id")
-                        status = order.get("status")
-                        created_at = order.get("created_at")
-                        total_amount = order.get("total_amount") or order.get("total_cash_fee")
-                        
-                        print(f"       Order {i+1}: {order_id}")
-                        print(f"         Status: {status}")
-                        print(f"         Created: {created_at}")
-                        print(f"         Amount: {total_amount}")
-                    
-                    if len(orders) > 3:
-                        print(f"       ... and {len(orders) - 3} more orders")
-                    
-                    break  # Found orders, no need to try other endpoints
-                    
-                elif response.status_code == 404:
-                    print(f"     ⚠️  Endpoint not found or no orders")
+                    print(f"     📋 {role.title()} Stockist:")
+                    print(f"       Renewal Status: {renewal_status}")
+                    print(f"       Renewal Due Date: {renewal_due_date}")
                 else:
-                    print(f"     ❌ Error: {response.status_code}")
+                    print(f"     ❌ Failed to get {role} user data: {login_response.status_code}")
                     
-        except Exception as e:
-            print(f"     ❌ Error checking orders for {name}: {e}")
+            except Exception as e:
+                print(f"     ❌ Error checking {role} user record: {e}")
     
-    print(f"\n📊 TOTAL ORDERS FOUND: {total_orders_found}")
-    return total_orders_found > 0
+    return created_renewals
 
-def check_cashback_wallet(test_users):
-    """Check Cashback Wallet - Verify cashback balance"""
-    print("\n" + "=" * 80)
-    print("4. CHECKING CASHBACK WALLET")
-    print("=" * 80)
-    
-    if not test_users:
-        print("❌ No users found to check cashback wallet")
-        return False
-    
-    for test_user in test_users:
-        uid = test_user["uid"]
-        name = test_user["name"]
-        
-        print(f"\n4.1. Checking cashback wallet for: {name} (UID: {uid})")
-        
-        try:
-            # Get wallet information
-            response = requests.get(f"{API_BASE}/wallet/{uid}", timeout=30)
-            print(f"     Status: {response.status_code}")
-            
-            if response.status_code == 200:
-                wallet_data = response.json()
-                print(f"     ✅ Wallet data retrieved")
-                
-                # Extract wallet balances
-                cashback_balance = wallet_data.get("cashback_balance", 0)
-                profit_balance = wallet_data.get("profit_balance", 0)
-                prc_balance = wallet_data.get("prc_balance", 0)
-                wallet_status = wallet_data.get("wallet_status", "unknown")
-                pending_lien = wallet_data.get("pending_lien", 0)
-                maintenance_due = wallet_data.get("maintenance_due", False)
-                
-                print(f"     💰 Cashback Balance: ₹{cashback_balance}")
-                print(f"     💼 Profit Balance: ₹{profit_balance}")
-                print(f"     🪙 PRC Balance: {prc_balance}")
-                print(f"     📊 Wallet Status: {wallet_status}")
-                print(f"     ⚠️  Pending Lien: ₹{pending_lien}")
-                print(f"     🔧 Maintenance Due: {maintenance_due}")
-                
-                # Check if user has any cashback (indicating successful orders)
-                if cashback_balance > 0:
-                    print(f"     🎯 USER HAS CASHBACK - Orders have been processed!")
-                else:
-                    print(f"     ⚠️  No cashback balance - May indicate no successful orders")
-                    
-            else:
-                print(f"     ❌ Failed to get wallet data: {response.status_code}")
-                print(f"     Response: {response.text}")
-                
-        except Exception as e:
-            print(f"     ❌ Error checking wallet for {name}: {e}")
-    
-    return True
-
-def test_checkout_endpoint_with_cart():
-    """Test the complete checkout flow to identify validation errors"""
+def run_comprehensive_test():
+    """Run comprehensive test of all Admin Stockist & Financial Management endpoints"""
     print("\n" + "🔍" * 80)
-    print("TESTING CHECKOUT ENDPOINT WITH CART")
+    print("ADMIN STOCKIST & FINANCIAL MANAGEMENT COMPREHENSIVE TESTING")
     print("🔍" * 80)
     
-    # Step 1: Create or use existing VIP user
-    print("\n1. Setting up VIP user for testing...")
-    
-    # Try to use santosh@paras.com as mentioned in the request
-    test_user_email = "santosh@paras.com"
-    test_user_password = "password"  # Common password
-    
-    try:
-        # Try to login to get user data
-        response = requests.post(
-            f"{API_BASE}/auth/login",
-            params={
-                "identifier": test_user_email,
-                "password": test_user_password
-            },
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            user_data = response.json()
-            user_id = user_data.get("uid")
-            membership_type = user_data.get("membership_type")
-            kyc_status = user_data.get("kyc_status")
-            
-            print(f"✅ User found: {user_data.get('name')} (UID: {user_id})")
-            print(f"   Membership Type: {membership_type}")
-            print(f"   KYC Status: {kyc_status}")
-            
-            # Check if user is VIP
-            if membership_type != "vip":
-                print(f"⚠️  User is not VIP - this will cause checkout to fail")
-                
-                # Try to upgrade user to VIP for testing
-                print(f"   Attempting to upgrade user to VIP for testing...")
-                try:
-                    # First, let's try to update the user directly in the database
-                    # We'll simulate a VIP payment approval
-                    vip_payment_data = {
-                        "user_id": user_id,
-                        "amount": 999.0,
-                        "date": "2025-01-01",
-                        "time": "12:00:00",
-                        "utr_number": "TEST123456789"
-                    }
-                    
-                    # Submit VIP payment
-                    payment_response = requests.post(f"{API_BASE}/membership/payment/{user_id}", json=vip_payment_data, timeout=30)
-                    if payment_response.status_code == 200:
-                        payment_result = payment_response.json()
-                        payment_id = payment_result.get("payment_id")
-                        print(f"   ✅ VIP payment submitted: {payment_id}")
-                        
-                        # Approve the payment
-                        approve_data = {"action": "approve"}
-                        approve_response = requests.post(f"{API_BASE}/membership/payment/{payment_id}/action", json=approve_data, timeout=30)
-                        if approve_response.status_code == 200:
-                            print(f"   ✅ VIP payment approved - user should now be VIP")
-                            membership_type = "vip"  # Update for our test
-                        else:
-                            print(f"   ❌ Failed to approve VIP payment: {approve_response.status_code}")
-                    else:
-                        print(f"   ❌ Failed to submit VIP payment: {payment_response.status_code}")
-                        
-                except Exception as e:
-                    print(f"   ❌ Error upgrading to VIP: {e}")
-            
-        else:
-            print(f"❌ Failed to login user {test_user_email}: {response.status_code}")
-            print("Creating a new VIP test user...")
-            
-            # Create new VIP user
-            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-            new_user_data = {
-                "first_name": "VIP",
-                "last_name": "TestUser",
-                "email": f"vip.checkout.test.{timestamp}@example.com",
-                "mobile": f"98765{timestamp[-5:]}",
-                "password": "VipPass123!",
-                "state": "Maharashtra",
-                "district": "Mumbai",
-                "pincode": "400001",
-                "aadhaar_number": f"1234{timestamp[-8:]}567",
-                "pan_number": f"VIP1{timestamp[-5:]}Z"
-            }
-            
-            reg_response = requests.post(f"{API_BASE}/auth/register", json=new_user_data, timeout=30)
-            if reg_response.status_code == 200:
-                user_id = reg_response.json().get("uid")
-                test_user_email = new_user_data["email"]
-                test_user_password = new_user_data["password"]
-                membership_type = "free"  # Will be free initially
-                kyc_status = "pending"
-                
-                print(f"✅ New test user created: {user_id}")
-                print(f"   Email: {test_user_email}")
-                print(f"   Membership Type: {membership_type} (needs VIP upgrade)")
-                print(f"   KYC Status: {kyc_status}")
-                
-                # Try to upgrade user to VIP for testing
-                print(f"   Attempting to upgrade user to VIP for testing...")
-                try:
-                    # First, let's try to update the user directly in the database
-                    # We'll simulate a VIP payment approval
-                    vip_payment_data = {
-                        "amount": 999.0,
-                        "date": "2025-01-01",
-                        "time": "12:00:00",
-                        "utr_number": "TEST123456789"
-                    }
-                    
-                    # Submit VIP payment
-                    payment_response = requests.post(f"{API_BASE}/membership/payment/{user_id}", json=vip_payment_data, timeout=30)
-                    if payment_response.status_code == 200:
-                        payment_result = payment_response.json()
-                        payment_id = payment_result.get("payment_id")
-                        print(f"   ✅ VIP payment submitted: {payment_id}")
-                        
-                        # Approve the payment
-                        approve_data = {"action": "approve"}
-                        approve_response = requests.post(f"{API_BASE}/membership/payment/{payment_id}/action", json=approve_data, timeout=30)
-                        if approve_response.status_code == 200:
-                            print(f"   ✅ VIP payment approved - user should now be VIP")
-                            membership_type = "vip"  # Update for our test
-                            
-                            # Also give user some PRC balance for testing checkout
-                            print(f"   Adding PRC balance for checkout testing...")
-                            # We'll need to add PRC balance manually since new users start with 0
-                            # For testing, let's give them 1000 PRC (more than enough for 100 PRC product)
-                            
-                        else:
-                            print(f"   ❌ Failed to approve VIP payment: {approve_response.status_code}")
-                            print(f"       Response: {approve_response.text}")
-                    else:
-                        print(f"   ❌ Failed to submit VIP payment: {payment_response.status_code}")
-                        print(f"       Response: {payment_response.text}")
-                        
-                except Exception as e:
-                    print(f"   ❌ Error upgrading to VIP: {e}")
-            else:
-                print(f"❌ Failed to create test user: {reg_response.status_code}")
-                return False
-                
-    except Exception as e:
-        print(f"❌ Error setting up user: {e}")
-        return False
-    
-    # Step 2: Add a product to cart
-    print(f"\n2. Adding product to cart...")
-    
-    # Get available products first
-    try:
-        products_response = requests.get(f"{API_BASE}/products", timeout=30)
-        if products_response.status_code == 200:
-            products = products_response.json()
-            if len(products) == 0:
-                print("❌ No products available for testing")
-                return False
-            
-            test_product = products[0]
-            product_id = test_product.get("product_id")
-            product_name = test_product.get("name")
-            prc_price = test_product.get("prc_price")
-            
-            print(f"   Using product: {product_name} (ID: {product_id}, PRC: {prc_price})")
-            
-        else:
-            print(f"❌ Failed to get products: {products_response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Error getting products: {e}")
-        return False
-    
-    # Add to cart
-    try:
-        cart_data = {
-            "user_id": user_id,
-            "product_id": product_id,
-            "quantity": 1
-        }
-        
-        cart_response = requests.post(f"{API_BASE}/cart/add", json=cart_data, timeout=30)
-        print(f"   Cart Add Status: {cart_response.status_code}")
-        print(f"   Cart Add Response: {cart_response.text}")
-        
-        if cart_response.status_code == 200:
-            print("   ✅ Product added to cart successfully")
-        else:
-            print(f"   ❌ Failed to add to cart: {cart_response.status_code}")
-            # Continue anyway to test checkout
-            
-    except Exception as e:
-        print(f"   ❌ Error adding to cart: {e}")
-    
-    # Step 3: Verify cart has items
-    print(f"\n3. Verifying cart contents...")
-    
-    try:
-        cart_get_response = requests.get(f"{API_BASE}/cart/{user_id}", timeout=30)
-        print(f"   Cart Get Status: {cart_get_response.status_code}")
-        print(f"   Cart Get Response: {cart_get_response.text}")
-        
-        if cart_get_response.status_code == 200:
-            cart_data = cart_get_response.json()
-            items = cart_data.get("items", [])
-            print(f"   ✅ Cart retrieved - {len(items)} items found")
-            
-            if len(items) == 0:
-                print("   ⚠️  Cart is empty - this will cause checkout to fail")
-            else:
-                for i, item in enumerate(items):
-                    print(f"     Item {i+1}: {item.get('product_name')} (Qty: {item.get('quantity')})")
-        else:
-            print(f"   ❌ Failed to get cart: {cart_get_response.status_code}")
-            
-    except Exception as e:
-        print(f"   ❌ Error getting cart: {e}")
-    
-    # Step 4: Attempt checkout - Test multiple endpoints
-    print(f"\n4. Attempting checkout...")
-    
-    # Test the cart-based checkout endpoint
-    checkout_data = {
-        "user_id": user_id,
-        "delivery_address": {
-            "street": "123 Test Street",
-            "city": "Mumbai",
-            "state": "Maharashtra",
-            "pincode": "400001"
-        }
+    results = {
+        "stockist_management": False,
+        "security_deposit_management": False,
+        "renewal_management": False,
+        "test_completed": False
     }
     
-    print(f"\n4a. Testing POST /orders/checkout (cart-based)...")
     try:
-        checkout_response = requests.post(f"{API_BASE}/orders/checkout", json=checkout_data, timeout=30)
-        print(f"   Checkout Status: {checkout_response.status_code}")
-        print(f"   Checkout Response: {checkout_response.text}")
-        
-        if checkout_response.status_code == 200:
-            print("   ✅ Checkout successful!")
-            checkout_result = checkout_response.json()
-            order_id = checkout_result.get("order_id")
-            secret_code = checkout_result.get("secret_code")
-            print(f"     Order ID: {order_id}")
-            print(f"     Secret Code: {secret_code}")
-            return True
-            
-        elif checkout_response.status_code == 403:
-            error_text = checkout_response.text
-            print(f"   ❌ Access Denied (403)")
-            print(f"   🔍 VALIDATION ERROR IDENTIFIED:")
-            
-            if "VIP membership required" in error_text:
-                print(f"     - VIP membership required but user has membership_type: '{membership_type}'")
-            elif "KYC verification required" in error_text:
-                print(f"     - KYC verification required but user has kyc_status: '{kyc_status}'")
-            else:
-                print(f"     - Other access issue: {error_text}")
-                
-        elif checkout_response.status_code == 400:
-            error_text = checkout_response.text
-            print(f"   ❌ Bad Request (400)")
-            print(f"   🔍 VALIDATION ERROR IDENTIFIED:")
-            
-            if "Cart is empty" in error_text:
-                print(f"     - Cart is empty - cart system may have issues")
-            elif "Insufficient PRC balance" in error_text:
-                print(f"     - Insufficient PRC balance")
-            else:
-                print(f"     - Other validation issue: {error_text}")
-                
-        elif checkout_response.status_code == 422:
-            print(f"   ❌ Validation Error (422)")
-            print(f"   🔍 FIELD VALIDATION ERROR:")
-            try:
-                error_detail = checkout_response.json()
-                print(f"     - Validation details: {error_detail}")
-                
-                # Check if it's expecting product_id
-                if any("product_id" in str(detail) for detail in error_detail.get("detail", [])):
-                    print(f"     - ERROR: Endpoint expects 'product_id' field but cart-based checkout shouldn't need it")
-                    print(f"     - This suggests the wrong endpoint is being called or there's a routing conflict")
-                    
-            except:
-                print(f"     - Raw error: {checkout_response.text}")
-                
+        # Test 1: Stockist Management
+        print("\n🔧 PHASE 1: STOCKIST MANAGEMENT TESTING")
+        created_stockists = test_stockist_management()
+        if created_stockists:
+            results["stockist_management"] = True
+            print("\n✅ STOCKIST MANAGEMENT TESTS PASSED")
         else:
-            print(f"   ❌ Unexpected error: {checkout_response.status_code}")
-            print(f"     Response: {checkout_response.text}")
-            
-    except Exception as e:
-        print(f"   ❌ Error during checkout: {e}")
-    
-    # Test the legacy single product endpoint for comparison
-    print(f"\n4b. Testing POST /orders/{user_id} (legacy single product)...")
-    try:
-        legacy_data = {
-            "product_id": product_id
-        }
+            print("\n❌ STOCKIST MANAGEMENT TESTS FAILED")
+            return results
         
-        legacy_response = requests.post(f"{API_BASE}/orders/{user_id}", json=legacy_data, timeout=30)
-        print(f"   Legacy Checkout Status: {legacy_response.status_code}")
-        print(f"   Legacy Checkout Response: {legacy_response.text}")
-        
-        if legacy_response.status_code == 200:
-            print("   ✅ Legacy checkout successful!")
-            return True
-        elif legacy_response.status_code == 403:
-            print("   ❌ Legacy checkout failed - VIP/KYC requirements")
+        # Test 2: Security Deposit Management
+        print("\n🔧 PHASE 2: SECURITY DEPOSIT MANAGEMENT TESTING")
+        created_deposits = test_security_deposit_management(created_stockists)
+        if created_deposits:
+            results["security_deposit_management"] = True
+            print("\n✅ SECURITY DEPOSIT MANAGEMENT TESTS PASSED")
         else:
-            print(f"   ❌ Legacy checkout failed: {legacy_response.status_code}")
-            
+            print("\n❌ SECURITY DEPOSIT MANAGEMENT TESTS FAILED")
+        
+        # Test 3: Renewal Management
+        print("\n🔧 PHASE 3: RENEWAL MANAGEMENT TESTING")
+        created_renewals = test_renewal_management(created_stockists)
+        if created_renewals:
+            results["renewal_management"] = True
+            print("\n✅ RENEWAL MANAGEMENT TESTS PASSED")
+        else:
+            print("\n❌ RENEWAL MANAGEMENT TESTS FAILED")
+        
+        results["test_completed"] = True
+        
     except Exception as e:
-        print(f"   ❌ Error during legacy checkout: {e}")
-    
-    # Step 5: Summary of findings
-    print(f"\n" + "📋" * 80)
-    print("CHECKOUT VALIDATION ERROR ANALYSIS")
-    print("📋" * 80)
-    
-    print(f"\n🔍 FINDINGS:")
-    print(f"   User ID: {user_id}")
-    print(f"   Email: {test_user_email}")
-    print(f"   Membership Type: {membership_type}")
-    print(f"   KYC Status: {kyc_status}")
-    
-    print(f"\n🔍 POTENTIAL ISSUES:")
-    issues = []
-    
-    if membership_type != "vip":
-        issues.append("User is not VIP - checkout requires VIP membership")
-    
-    if kyc_status != "verified":
-        issues.append("KYC is not verified - checkout may require verified KYC")
-    
-    # Check if cart had issues
-    try:
-        cart_check = requests.get(f"{API_BASE}/cart/{user_id}", timeout=10)
-        if cart_check.status_code == 200:
-            cart_items = cart_check.json().get("items", [])
-            if len(cart_items) == 0:
-                issues.append("Cart is empty despite adding items - cart system has bugs")
-    except:
-        issues.append("Cannot verify cart status - cart system may be broken")
-    
-    if len(issues) == 0:
-        print("   ✅ No obvious validation issues found")
-    else:
-        for i, issue in enumerate(issues, 1):
-            print(f"   {i}. {issue}")
-    
-    print(f"\n🔧 RECOMMENDATIONS:")
-    print(f"   1. Check Order model validation requirements")
-    print(f"   2. Verify cart system is properly associating items with user_id")
-    print(f"   3. Check if KYC verification is required for checkout")
-    print(f"   4. Ensure VIP users have proper membership_type='vip'")
-    
-    return False
-
-def run_password_recovery_and_support_tests():
-    """Main function to run password recovery and support ticket tests"""
-    print("\n" + "🔍" * 80)
-    print("PASSWORD RECOVERY + SUPPORT TICKETS TESTING")
-    print("🔍" * 80)
-    
-    # Get existing users for testing
-    test_users = get_existing_users()
-    
-    if not test_users:
-        print("❌ No users found for testing - cannot proceed")
-        return {
-            "password_recovery_verify": False,
-            "password_recovery_reset": False,
-            "support_ticket_creation": False,
-            "support_ticket_retrieval": False,
-            "support_ticket_details": False,
-            "support_ticket_replies": False,
-            "admin_support_tickets": False,
-            "admin_ticket_updates": False,
-            "test_completed": False
-        }
-    
-    # Run all tests
-    results = {}
-    
-    try:
-        results["password_recovery_verify"] = test_password_recovery_verify(test_users)
-    except Exception as e:
-        print(f"❌ Password recovery verify test failed with error: {e}")
-        results["password_recovery_verify"] = False
-    
-    try:
-        results["password_recovery_reset"] = test_password_recovery_reset(test_users)
-    except Exception as e:
-        print(f"❌ Password recovery reset test failed with error: {e}")
-        results["password_recovery_reset"] = False
-    
-    try:
-        results["support_ticket_creation"] = test_support_ticket_creation(test_users)
-    except Exception as e:
-        print(f"❌ Support ticket creation test failed with error: {e}")
-        results["support_ticket_creation"] = False
-    
-    try:
-        results["support_ticket_retrieval"] = test_support_ticket_retrieval(test_users)
-    except Exception as e:
-        print(f"❌ Support ticket retrieval test failed with error: {e}")
-        results["support_ticket_retrieval"] = False
-    
-    try:
-        results["support_ticket_details"] = test_support_ticket_details(test_users)
-    except Exception as e:
-        print(f"❌ Support ticket details test failed with error: {e}")
-        results["support_ticket_details"] = False
-    
-    try:
-        results["support_ticket_replies"] = test_support_ticket_replies(test_users)
-    except Exception as e:
-        print(f"❌ Support ticket replies test failed with error: {e}")
-        results["support_ticket_replies"] = False
-    
-    try:
-        results["admin_support_tickets"] = test_admin_support_tickets()
-    except Exception as e:
-        print(f"❌ Admin support tickets test failed with error: {e}")
-        results["admin_support_tickets"] = False
-    
-    try:
-        results["admin_ticket_updates"] = test_admin_ticket_updates(test_users)
-    except Exception as e:
-        print(f"❌ Admin ticket updates test failed with error: {e}")
-        results["admin_ticket_updates"] = False
-    
-    results["test_completed"] = True
+        print(f"\n❌ COMPREHENSIVE TEST FAILED WITH ERROR: {e}")
+        import traceback
+        traceback.print_exc()
     
     return results
 
-# Test data for mining system testing
-test_user_no_mining = None
-test_user_with_mining = None
-test_user_with_referrals = None
-
-def setup_test_users():
-    """Create test users for mining system testing"""
-    global test_user_no_mining, test_user_with_mining, test_user_with_referrals
+def print_test_summary(results):
+    """Print comprehensive test summary"""
+    print("\n" + "📊" * 80)
+    print("TEST SUMMARY - ADMIN STOCKIST & FINANCIAL MANAGEMENT")
+    print("📊" * 80)
     
-    print("\n1. Setting up test users for mining system testing...")
+    print(f"\n🔍 TEST RESULTS:")
     
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    microseconds = str(datetime.now().microsecond)[:3]
+    # Stockist Management
+    status = "✅ PASSED" if results["stockist_management"] else "❌ FAILED"
+    print(f"   1. Stockist Management: {status}")
+    if results["stockist_management"]:
+        print(f"      - Master Stockist creation: ✅")
+        print(f"      - Sub Stockist creation: ✅")
+        print(f"      - Outlet creation: ✅")
+        print(f"      - Stockist listing & filtering: ✅")
+        print(f"      - Stockist updates: ✅")
+        print(f"      - Stockist assignment: ✅")
+        print(f"      - Stockist deactivation: ✅")
     
-    # Create User 1: No active mining session
-    user1_data = {
-        "first_name": "Mining",
-        "last_name": "TestUser1",
-        "email": f"mining1.{timestamp}.{microseconds}@example.com",
-        "mobile": f"98701{timestamp[-6:]}",
-        "password": "MiningPass123!",
-        "state": "Maharashtra",
-        "district": "Mumbai",
-        "pincode": "400001",
-        "aadhaar_number": f"1111{timestamp[-8:]}111",
-        "pan_number": f"MIN1{timestamp[-5:]}A"
-    }
+    # Security Deposit Management
+    status = "✅ PASSED" if results["security_deposit_management"] else "❌ FAILED"
+    print(f"   2. Security Deposit Management: {status}")
+    if results["security_deposit_management"]:
+        print(f"      - Manual deposit entry: ✅")
+        print(f"      - Deposit amount calculations: ✅")
+        print(f"      - User record updates: ✅")
+        print(f"      - Deposit listing & retrieval: ✅")
+        print(f"      - Deposit editing: ✅")
     
-    try:
-        response = requests.post(f"{API_BASE}/auth/register", json=user1_data, timeout=30)
-        if response.status_code == 200:
-            user1_uid = response.json().get("uid")
-            test_user_no_mining = {"uid": user1_uid, **user1_data}
-            print(f"✅ Mining test user 1 (no mining) created: {user1_uid}")
-        else:
-            print(f"❌ Failed to create mining test user 1: {response.status_code} - {response.text}")
-            return False
-    except Exception as e:
-        print(f"❌ Error creating mining test user 1: {e}")
-        return False
+    # Renewal Management
+    status = "✅ PASSED" if results["renewal_management"] else "❌ FAILED"
+    print(f"   3. Renewal Management: {status}")
+    if results["renewal_management"]:
+        print(f"      - Manual renewal entry: ✅")
+        print(f"      - GST calculations: ✅")
+        print(f"      - User renewal status updates: ✅")
+        print(f"      - Renewal listing & retrieval: ✅")
+        print(f"      - Renewal editing & recalculation: ✅")
     
-    # Create User 2: Will have active mining session
-    user2_data = {
-        "first_name": "Mining",
-        "last_name": "TestUser2",
-        "email": f"mining2.{timestamp}.{microseconds}@example.com",
-        "mobile": f"98702{timestamp[-6:]}",
-        "password": "MiningPass123!",
-        "state": "Gujarat",
-        "district": "Ahmedabad",
-        "pincode": "380001",
-        "aadhaar_number": f"2222{timestamp[-8:]}222",
-        "pan_number": f"MIN2{timestamp[-5:]}B"
-    }
+    # Overall Status
+    all_passed = all(results[key] for key in ["stockist_management", "security_deposit_management", "renewal_management"])
+    overall_status = "✅ ALL TESTS PASSED" if all_passed else "❌ SOME TESTS FAILED"
+    print(f"\n🎯 OVERALL STATUS: {overall_status}")
     
-    try:
-        response = requests.post(f"{API_BASE}/auth/register", json=user2_data, timeout=30)
-        if response.status_code == 200:
-            user2_uid = response.json().get("uid")
-            test_user_with_mining = {"uid": user2_uid, **user2_data}
-            print(f"✅ Mining test user 2 (with mining) created: {user2_uid}")
-        else:
-            print(f"❌ Failed to create mining test user 2: {response.status_code} - {response.text}")
-            return False
-    except Exception as e:
-        print(f"❌ Error creating mining test user 2: {e}")
-        return False
-    
-    # Create User 3: Will have referrals
-    user3_data = {
-        "first_name": "Mining",
-        "last_name": "TestUser3",
-        "email": f"mining3.{timestamp}.{microseconds}@example.com",
-        "mobile": f"98703{timestamp[-6:]}",
-        "password": "MiningPass123!",
-        "state": "Karnataka",
-        "district": "Bangalore",
-        "pincode": "560001",
-        "aadhaar_number": f"3333{timestamp[-8:]}333",
-        "pan_number": f"MIN3{timestamp[-5:]}C"
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/auth/register", json=user3_data, timeout=30)
-        if response.status_code == 200:
-            user3_uid = response.json().get("uid")
-            test_user_with_referrals = {"uid": user3_uid, **user3_data}
-            print(f"✅ Mining test user 3 (with referrals) created: {user3_uid}")
-        else:
-            print(f"❌ Failed to create mining test user 3: {response.status_code} - {response.text}")
-            return False
-    except Exception as e:
-        print(f"❌ Error creating mining test user 3: {e}")
-        return False
-    
-    return True
-
-def test_mining_status_no_active_session():
-    """Test mining status endpoint for user with NO active mining session"""
-    print("\n2. Testing Mining Status - User with NO active mining session...")
-    
-    try:
-        response = requests.get(f"{API_BASE}/mining/status/{test_user_no_mining['uid']}", timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            
-            # Check required fields
-            required_fields = ["mining_rate_per_hour", "mining_rate", "base_rate", "active_referrals", "is_mining"]
-            missing_fields = []
-            
-            for field in required_fields:
-                if field not in result:
-                    missing_fields.append(field)
-            
-            if missing_fields:
-                print(f"❌ Mining status test FAILED - Missing fields: {missing_fields}")
-                return False
-            
-            # Verify mining_rate_per_hour is NOT 0
-            mining_rate_per_hour = result.get("mining_rate_per_hour", 0)
-            mining_rate = result.get("mining_rate", 0)
-            base_rate = result.get("base_rate", 0)
-            active_referrals = result.get("active_referrals", 0)
-            is_mining = result.get("is_mining", False)
-            
-            print(f"Mining Rate Per Hour: {mining_rate_per_hour}")
-            print(f"Mining Rate: {mining_rate}")
-            print(f"Base Rate: {base_rate}")
-            print(f"Active Referrals: {active_referrals}")
-            print(f"Is Mining: {is_mining}")
-            
-            # Verify mining rate is NOT 0
-            if mining_rate_per_hour == 0:
-                print("❌ Mining status test FAILED - mining_rate_per_hour is 0 (should NOT be 0)")
-                return False
-            
-            # Verify mining_rate matches mining_rate_per_hour
-            if mining_rate != mining_rate_per_hour:
-                print(f"❌ Mining status test FAILED - mining_rate ({mining_rate}) doesn't match mining_rate_per_hour ({mining_rate_per_hour})")
-                return False
-            
-            # Verify base_rate is positive
-            if base_rate <= 0:
-                print(f"❌ Mining status test FAILED - base_rate ({base_rate}) should be positive")
-                return False
-            
-            # Verify is_mining is False (no active session)
-            if is_mining:
-                print(f"❌ Mining status test FAILED - is_mining should be False for user with no active session")
-                return False
-            
-            print("✅ Mining status test PASSED - All required fields present and mining rate is non-zero")
-            return True
-            
-        else:
-            print(f"❌ Mining status test FAILED - Status: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Mining status test FAILED - Error: {e}")
-        return False
-
-def start_mining_session():
-    """Start mining session for test user 2"""
-    print("\n3. Starting mining session for test user 2...")
-    
-    try:
-        response = requests.post(f"{API_BASE}/mining/start/{test_user_with_mining['uid']}", timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            session_active = result.get("session_active", False)
-            
-            if session_active:
-                print("✅ Mining session started successfully")
-                return True
-            else:
-                print("❌ Mining session start FAILED - session_active is False")
-                return False
-        else:
-            print(f"❌ Mining session start FAILED - Status: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Mining session start FAILED - Error: {e}")
-        return False
-
-def test_mining_status_with_active_session():
-    """Test mining status endpoint for user WITH active mining session"""
-    print("\n4. Testing Mining Status - User WITH active mining session...")
-    
-    try:
-        response = requests.get(f"{API_BASE}/mining/status/{test_user_with_mining['uid']}", timeout=30)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            
-            # Check required fields
-            required_fields = ["mining_rate_per_hour", "mining_rate", "base_rate", "active_referrals", "is_mining"]
-            missing_fields = []
-            
-            for field in required_fields:
-                if field not in result:
-                    missing_fields.append(field)
-            
-            if missing_fields:
-                print(f"❌ Mining status with active session test FAILED - Missing fields: {missing_fields}")
-                return False
-            
-            # Verify mining_rate_per_hour is NOT 0
-            mining_rate_per_hour = result.get("mining_rate_per_hour", 0)
-            mining_rate = result.get("mining_rate", 0)
-            base_rate = result.get("base_rate", 0)
-            active_referrals = result.get("active_referrals", 0)
-            is_mining = result.get("is_mining", False)
-            session_active = result.get("session_active", False)
-            
-            print(f"Mining Rate Per Hour: {mining_rate_per_hour}")
-            print(f"Mining Rate: {mining_rate}")
-            print(f"Base Rate: {base_rate}")
-            print(f"Active Referrals: {active_referrals}")
-            print(f"Is Mining: {is_mining}")
-            print(f"Session Active: {session_active}")
-            
-            # Verify mining rate is NOT 0
-            if mining_rate_per_hour == 0:
-                print("❌ Mining status with active session test FAILED - mining_rate_per_hour is 0 (should NOT be 0)")
-                return False
-            
-            # Verify mining_rate matches mining_rate_per_hour
-            if mining_rate != mining_rate_per_hour:
-                print(f"❌ Mining status with active session test FAILED - mining_rate ({mining_rate}) doesn't match mining_rate_per_hour ({mining_rate_per_hour})")
-                return False
-            
-            # Verify base_rate is positive
-            if base_rate <= 0:
-                print(f"❌ Mining status with active session test FAILED - base_rate ({base_rate}) should be positive")
-                return False
-            
-            # Verify is_mining is True (active session)
-            if not is_mining:
-                print(f"❌ Mining status with active session test FAILED - is_mining should be True for user with active session")
-                return False
-            
-            # Verify session_active is True
-            if not session_active:
-                print(f"❌ Mining status with active session test FAILED - session_active should be True")
-                return False
-            
-            print("✅ Mining status with active session test PASSED - All required fields present and mining rate is non-zero")
-            return True
-            
-        else:
-            print(f"❌ Mining status with active session test FAILED - Status: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Mining status with active session test FAILED - Error: {e}")
-        return False
-
-def test_mining_rate_calculation():
-    """Test mining rate calculation formula"""
-    print("\n5. Testing Mining Rate Calculation Formula...")
-    
-    try:
-        # Get mining status for user with no referrals
-        response = requests.get(f"{API_BASE}/mining/status/{test_user_no_mining['uid']}", timeout=30)
-        
-        if response.status_code == 200:
-            result = response.json()
-            
-            mining_rate_per_hour = result.get("mining_rate_per_hour", 0)
-            base_rate = result.get("base_rate", 0)
-            active_referrals = result.get("active_referrals", 0)
-            
-            # Get current day for calculation
-            current_day = datetime.now().day
-            
-            # Calculate expected rate using the formula:
-            # (current_day * base_rate) + (active_referrals * 0.1 * base_rate)
-            # Then divide by 1440 (minutes in a day) to get per-minute rate
-            # Multiply by 60 to get per-hour rate
-            
-            expected_total_rate = (current_day * base_rate) + (active_referrals * 0.1 * base_rate)
-            expected_per_minute_rate = expected_total_rate / 1440
-            expected_per_hour_rate = expected_per_minute_rate * 60
-            
-            print(f"Current Day: {current_day}")
-            print(f"Base Rate: {base_rate}")
-            print(f"Active Referrals: {active_referrals}")
-            print(f"Expected Total Rate: {expected_total_rate}")
-            print(f"Expected Per-Hour Rate: {expected_per_hour_rate}")
-            print(f"Actual Per-Hour Rate: {mining_rate_per_hour}")
-            
-            # Allow small floating point differences
-            rate_difference = abs(expected_per_hour_rate - mining_rate_per_hour)
-            tolerance = 0.01  # 1 cent tolerance
-            
-            if rate_difference <= tolerance:
-                print("✅ Mining rate calculation test PASSED - Formula is correct")
-                return True
-            else:
-                print(f"❌ Mining rate calculation test FAILED - Expected: {expected_per_hour_rate}, Got: {mining_rate_per_hour}, Difference: {rate_difference}")
-                return False
-        else:
-            print(f"❌ Mining rate calculation test FAILED - Status: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Mining rate calculation test FAILED - Error: {e}")
-        return False
-
-def test_mining_rate_never_zero():
-    """Test that mining rate is never zero under various conditions"""
-    print("\n6. Testing Mining Rate Never Zero...")
-    
-    # Test all created users to ensure none have zero mining rate
-    test_users = [test_user_no_mining, test_user_with_mining, test_user_with_referrals]
-    
-    for i, user in enumerate(test_users, 1):
-        print(f"\n6.{chr(96+i)}. Testing mining rate for user {i}...")
-        try:
-            response = requests.get(f"{API_BASE}/mining/status/{user['uid']}", timeout=30)
-            
-            if response.status_code == 200:
-                result = response.json()
-                mining_rate_per_hour = result.get("mining_rate_per_hour", 0)
-                
-                if mining_rate_per_hour == 0:
-                    print(f"❌ Mining rate never zero test FAILED - User {i} has zero mining rate")
-                    return False
-                else:
-                    print(f"✅ User {i} mining rate: {mining_rate_per_hour} (non-zero)")
-            else:
-                print(f"❌ Mining rate never zero test FAILED - Status: {response.status_code} for user {i}")
-                return False
-        except Exception as e:
-            print(f"❌ Mining rate never zero test FAILED - Error: {e} for user {i}")
-            return False
-    
-    print("✅ Mining rate never zero test PASSED - All users have non-zero mining rates")
-    return True
-
-def test_public_products_endpoint():
-    """Test GET /api/products endpoint (public) - should return active and visible products"""
-    print("\n7. Testing Public Products Endpoint...")
-    
-    try:
-        response = requests.get(f"{API_BASE}/products", timeout=30)
-        print(f"Status Code: {response.status_code}")
-        
-        if response.status_code == 200:
-            products = response.json()
-            print(f"Response type: {type(products)}")
-            
-            # Should return an array
-            if not isinstance(products, list):
-                print(f"❌ Public products test FAILED - Response should be an array, got {type(products)}")
-                return False
-            
-            print(f"Number of products returned: {len(products)}")
-            
-            # Check if we have at least some products (the request mentions 15, but let's be flexible)
-            if len(products) == 0:
-                print("❌ Public products test FAILED - No products returned")
-                return False
-            
-            # Check each product has required fields
-            required_fields = ["product_id", "name", "sku", "prc_price", "cash_price"]
-            visibility_fields = ["is_active", "visible"]
-            
-            for i, product in enumerate(products):
-                # Check for _id field (should be excluded)
-                if "_id" in product:
-                    print(f"❌ Public products test FAILED - Product {i+1} contains _id field (should be excluded)")
-                    return False
-                
-                # Check required fields
-                missing_fields = []
-                for field in required_fields:
-                    if field not in product:
-                        missing_fields.append(field)
-                
-                if missing_fields:
-                    print(f"❌ Public products test FAILED - Product {i+1} missing fields: {missing_fields}")
-                    return False
-                
-                # Check visibility fields
-                for field in visibility_fields:
-                    if field in product:
-                        if not product[field]:
-                            print(f"❌ Public products test FAILED - Product {i+1} has {field}=false (should be true for public endpoint)")
-                            return False
-                
-                # Log first product details for verification
-                if i == 0:
-                    print(f"Sample product: {product.get('name')} (SKU: {product.get('sku')}, PRC: {product.get('prc_price')}, Cash: {product.get('cash_price')})")
-            
-            print(f"✅ Public products test PASSED - {len(products)} products returned with correct structure")
-            return True
-            
-        else:
-            print(f"❌ Public products test FAILED - Status: {response.status_code}")
-            print(f"Response: {response.text}")
-            return False
-    except Exception as e:
-        print(f"❌ Public products test FAILED - Error: {e}")
-        return False
-
-def test_admin_products_endpoint():
-    """Test GET /api/admin/products endpoint - should return all products regardless of visibility"""
-    print("\n8. Testing Admin Products Endpoint...")
-    
-    try:
-        response = requests.get(f"{API_BASE}/admin/products", timeout=30)
-        print(f"Status Code: {response.status_code}")
-        
-        if response.status_code == 200:
-            admin_products = response.json()
-            print(f"Response type: {type(admin_products)}")
-            
-            # Should return an array
-            if not isinstance(admin_products, list):
-                print(f"❌ Admin products test FAILED - Response should be an array, got {type(admin_products)}")
-                return False
-            
-            print(f"Number of admin products returned: {len(admin_products)}")
-            
-            # Get public products for comparison
-            public_response = requests.get(f"{API_BASE}/products", timeout=30)
-            if public_response.status_code == 200:
-                public_products = public_response.json()
-                print(f"Number of public products: {len(public_products)}")
-                
-                # Admin endpoint should return same or more products than public
-                if len(admin_products) < len(public_products):
-                    print(f"❌ Admin products test FAILED - Admin endpoint returned fewer products ({len(admin_products)}) than public endpoint ({len(public_products)})")
-                    return False
-                
-                # Check if admin endpoint includes products that public doesn't
-                if len(admin_products) > len(public_products):
-                    print(f"✅ Admin endpoint includes {len(admin_products) - len(public_products)} additional products (hidden/inactive)")
-                
-            # Check each product structure
-            required_fields = ["product_id", "name", "sku", "prc_price", "cash_price"]
-            
-            for i, product in enumerate(admin_products):
-                # Check for _id field (should be excluded)
-                if "_id" in product:
-                    print(f"❌ Admin products test FAILED - Product {i+1} contains _id field (should be excluded)")
-                    return False
-                
-                # Check required fields
-                missing_fields = []
-                for field in required_fields:
-                    if field not in product:
-                        missing_fields.append(field)
-                
-                if missing_fields:
-                    print(f"❌ Admin products test FAILED - Product {i+1} missing fields: {missing_fields}")
-                    return False
-                
-                # Log first product details for verification
-                if i == 0:
-                    print(f"Sample admin product: {product.get('name')} (SKU: {product.get('sku')}, Active: {product.get('is_active')}, Visible: {product.get('visible')})")
-            
-            print(f"✅ Admin products test PASSED - {len(admin_products)} products returned with correct structure")
-            return True
-            
-        else:
-            print(f"❌ Admin products test FAILED - Status: {response.status_code}")
-            print(f"Response: {response.text}")
-            return False
-    except Exception as e:
-        print(f"❌ Admin products test FAILED - Error: {e}")
-        return False
-
-def test_products_filtering_logic():
-    """Test that public endpoint properly filters products compared to admin endpoint"""
-    print("\n9. Testing Products Filtering Logic...")
-    
-    try:
-        # Get both endpoints
-        public_response = requests.get(f"{API_BASE}/products", timeout=30)
-        admin_response = requests.get(f"{API_BASE}/admin/products", timeout=30)
-        
-        if public_response.status_code == 200 and admin_response.status_code == 200:
-            public_products = public_response.json()
-            admin_products = admin_response.json()
-            
-            # Create sets of product IDs for comparison
-            public_ids = {p.get("product_id") for p in public_products}
-            admin_ids = {p.get("product_id") for p in admin_products}
-            
-            # All public products should be in admin products
-            if not public_ids.issubset(admin_ids):
-                missing_in_admin = public_ids - admin_ids
-                print(f"❌ Products filtering test FAILED - Public products not found in admin: {missing_in_admin}")
-                return False
-            
-            # Check that all public products have is_active=true and visible=true
-            for product in public_products:
-                if not product.get("is_active", False):
-                    print(f"❌ Products filtering test FAILED - Public product {product.get('name')} has is_active=false")
-                    return False
-                
-                if not product.get("visible", False):
-                    print(f"❌ Products filtering test FAILED - Public product {product.get('name')} has visible=false")
-                    return False
-            
-            # Check if admin has products that public doesn't (should be inactive or invisible)
-            admin_only_ids = admin_ids - public_ids
-            if admin_only_ids:
-                print(f"✅ Found {len(admin_only_ids)} products in admin that are filtered from public (inactive/invisible)")
-                
-                # Verify these are indeed inactive or invisible
-                for product in admin_products:
-                    if product.get("product_id") in admin_only_ids:
-                        is_active = product.get("is_active", False)
-                        is_visible = product.get("visible", False)
-                        if is_active and is_visible:
-                            print(f"❌ Products filtering test FAILED - Product {product.get('name')} is active and visible but not in public endpoint")
-                            return False
-            
-            print("✅ Products filtering test PASSED - Public endpoint correctly filters active and visible products")
-            return True
-            
-        else:
-            print(f"❌ Products filtering test FAILED - Public: {public_response.status_code}, Admin: {admin_response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Products filtering test FAILED - Error: {e}")
-        return False
-
-# ========== ADMIN DASHBOARD API TESTS ==========
-
-def test_admin_kpis_endpoint():
-    """Test GET /api/admin/stats - Admin Dashboard KPIs"""
-    print("\n1. Testing Admin KPIs Endpoint (GET /api/admin/stats)...")
-    
-    try:
-        response = requests.get(f"{API_BASE}/admin/stats", timeout=30)
-        print(f"Status Code: {response.status_code}")
-        
-        if response.status_code == 200:
-            stats = response.json()
-            print(f"Response type: {type(stats)}")
-            
-            # Check required KPI sections (actual API structure)
-            required_sections = [
-                "users", "orders", "kyc", "vip_payments",
-                "withdrawals", "products", "financial",
-                "stock_movements", "security_deposits", "renewals",
-                "recent_activity"
-            ]
-            
-            missing_sections = []
-            for section in required_sections:
-                if section not in stats:
-                    missing_sections.append(section)
-            
-            if missing_sections:
-                print(f"❌ Admin KPIs test FAILED - Missing sections: {missing_sections}")
-                return False
-            
-            # Validate users structure
-            users = stats.get("users", {})
-            user_required = ["total", "vip", "free", "master_stockists", "sub_stockists", "outlets"]
-            for field in user_required:
-                if field not in users:
-                    print(f"❌ Admin KPIs test FAILED - Missing users.{field}")
-                    return False
-            
-            # Validate orders structure
-            orders = stats.get("orders", {})
-            order_required = ["total", "pending", "delivered"]
-            for field in order_required:
-                if field not in orders:
-                    print(f"❌ Admin KPIs test FAILED - Missing orders.{field}")
-                    return False
-            
-            # Validate financial structure
-            financial = stats.get("financial", {})
-            financial_required = ["total_revenue", "total_security_deposits"]
-            for field in financial_required:
-                if field not in financial:
-                    print(f"❌ Admin KPIs test FAILED - Missing financial.{field}")
-                    return False
-            
-            print(f"✅ Admin KPIs test PASSED - All required sections present")
-            print(f"   Users: {users.get('total', 0)} total, {users.get('vip', 0)} VIP")
-            print(f"   Orders: {orders.get('total', 0)} total, {orders.get('pending', 0)} pending")
-            print(f"   Revenue: ₹{financial.get('total_revenue', 0)}")
-            return True
-            
-        else:
-            print(f"❌ Admin KPIs test FAILED - Status: {response.status_code}")
-            print(f"Response: {response.text}")
-            return False
-    except Exception as e:
-        print(f"❌ Admin KPIs test FAILED - Error: {e}")
-        return False
-
-def test_order_management_apis():
-    """Test Order Management APIs"""
-    print("\n2. Testing Order Management APIs...")
-    
-    # Test GET /api/admin/orders/all
-    print("\n2a. Testing GET /api/admin/orders/all...")
-    try:
-        response = requests.get(f"{API_BASE}/admin/orders/all", timeout=30)
-        print(f"Status Code: {response.status_code}")
-        
-        if response.status_code == 200:
-            orders_data = response.json()
-            
-            # Should have orders array and pagination info
-            if "orders" not in orders_data:
-                print("❌ Order management test FAILED - Missing 'orders' field")
-                return False
-            
-            orders = orders_data["orders"]
-            print(f"Number of orders returned: {len(orders)}")
-            
-            # Test with status filter
-            print("\n2b. Testing GET /api/admin/orders/all?status=pending...")
-            response_filtered = requests.get(f"{API_BASE}/admin/orders/all?status=pending", timeout=30)
-            if response_filtered.status_code == 200:
-                filtered_data = response_filtered.json()
-                print(f"Filtered orders count: {len(filtered_data.get('orders', []))}")
-            
-            # Test pagination
-            print("\n2c. Testing GET /api/admin/orders/all?page=1&limit=5...")
-            response_paginated = requests.get(f"{API_BASE}/admin/orders/all?page=1&limit=5", timeout=30)
-            if response_paginated.status_code == 200:
-                paginated_data = response_paginated.json()
-                print(f"Paginated orders count: {len(paginated_data.get('orders', []))}")
-            
-            print("✅ Order listing tests PASSED")
-            
-            # Test individual order details if we have orders
-            if len(orders) > 0:
-                test_order_id = orders[0].get("order_id")
-                if test_order_id:
-                    print(f"\n2d. Testing GET /api/admin/orders/{test_order_id}...")
-                    response_detail = requests.get(f"{API_BASE}/admin/orders/{test_order_id}", timeout=30)
-                    if response_detail.status_code == 200:
-                        order_detail = response_detail.json()
-                        required_fields = ["order", "user_details", "items", "commission_breakdown"]
-                        missing_fields = [f for f in required_fields if f not in order_detail]
-                        if missing_fields:
-                            print(f"❌ Order detail test FAILED - Missing fields: {missing_fields}")
-                            return False
-                        print("✅ Order detail test PASSED")
-                    else:
-                        print(f"❌ Order detail test FAILED - Status: {response_detail.status_code}")
-                        return False
-                
-                # Test order assignment
-                print(f"\n2e. Testing POST /api/admin/orders/{test_order_id}/assign...")
-                assign_data = {"outlet_id": "test-outlet-123"}
-                response_assign = requests.post(f"{API_BASE}/admin/orders/{test_order_id}/assign", 
-                                              json=assign_data, timeout=30)
-                if response_assign.status_code in [200, 404]:  # 404 is OK if outlet doesn't exist
-                    print("✅ Order assignment test PASSED")
-                else:
-                    print(f"❌ Order assignment test FAILED - Status: {response_assign.status_code}")
-                    return False
-            
-            return True
-            
-        else:
-            print(f"❌ Order management test FAILED - Status: {response.status_code}")
-            print(f"Response: {response.text}")
-            return False
-    except Exception as e:
-        print(f"❌ Order management test FAILED - Error: {e}")
-        return False
-
-def test_financial_reports_apis():
-    """Test Financial Reports APIs"""
-    print("\n3. Testing Financial Reports APIs...")
-    
-    # Test GET /api/admin/reports/revenue
-    print("\n3a. Testing GET /api/admin/reports/revenue...")
-    try:
-        response = requests.get(f"{API_BASE}/admin/reports/revenue", timeout=30)
-        print(f"Status Code: {response.status_code}")
-        
-        if response.status_code == 200:
-            revenue_data = response.json()
-            
-            required_fields = ["total_revenue", "prc_spent", "delivery_charges", "top_products"]
-            missing_fields = [f for f in required_fields if f not in revenue_data]
-            if missing_fields:
-                print(f"❌ Revenue report test FAILED - Missing fields: {missing_fields}")
-                return False
-            
-            print(f"✅ Revenue report test PASSED")
-            print(f"   Total Revenue: ₹{revenue_data.get('total_revenue', 0)}")
-            print(f"   PRC Spent: {revenue_data.get('prc_spent', 0)}")
-            print(f"   Top Products: {len(revenue_data.get('top_products', []))}")
-            
-            # Test with date filter
-            print("\n3b. Testing revenue report with date filter...")
-            start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
-            end_date = datetime.now().strftime('%Y-%m-%d')
-            response_filtered = requests.get(
-                f"{API_BASE}/admin/reports/revenue?start_date={start_date}&end_date={end_date}", 
-                timeout=30
-            )
-            if response_filtered.status_code == 200:
-                print("✅ Revenue report with date filter PASSED")
-            
-        else:
-            print(f"❌ Revenue report test FAILED - Status: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Revenue report test FAILED - Error: {e}")
-        return False
-    
-    # Test GET /api/admin/reports/commissions
-    print("\n3c. Testing GET /api/admin/reports/commissions...")
-    try:
-        response = requests.get(f"{API_BASE}/admin/reports/commissions", timeout=30)
-        print(f"Status Code: {response.status_code}")
-        
-        if response.status_code == 200:
-            commission_data = response.json()
-            
-            required_fields = ["commission_distribution", "top_earners"]
-            missing_fields = [f for f in required_fields if f not in commission_data]
-            if missing_fields:
-                print(f"❌ Commission report test FAILED - Missing fields: {missing_fields}")
-                return False
-            
-            print(f"✅ Commission report test PASSED")
-            print(f"   Top Earners: {len(commission_data.get('top_earners', []))}")
-            
-        else:
-            print(f"❌ Commission report test FAILED - Status: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Commission report test FAILED - Error: {e}")
-        return False
-    
-    # Test GET /api/admin/reports/withdrawals
-    print("\n3d. Testing GET /api/admin/reports/withdrawals...")
-    try:
-        response = requests.get(f"{API_BASE}/admin/reports/withdrawals", timeout=30)
-        print(f"Status Code: {response.status_code}")
-        
-        if response.status_code == 200:
-            withdrawal_data = response.json()
-            
-            required_fields = ["cashback_withdrawals", "profit_withdrawals"]
-            missing_fields = [f for f in required_fields if f not in withdrawal_data]
-            if missing_fields:
-                print(f"❌ Withdrawal report test FAILED - Missing fields: {missing_fields}")
-                return False
-            
-            print(f"✅ Withdrawal report test PASSED")
-            
-            # Test with status filter
-            response_filtered = requests.get(f"{API_BASE}/admin/reports/withdrawals?status=pending", timeout=30)
-            if response_filtered.status_code == 200:
-                print("✅ Withdrawal report with status filter PASSED")
-            
-        else:
-            print(f"❌ Withdrawal report test FAILED - Status: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Withdrawal report test FAILED - Error: {e}")
-        return False
-    
-    return True
-
-def test_employee_management_apis():
-    """Test Employee Management APIs"""
-    print("\n4. Testing Employee Management APIs...")
-    
-    # Test POST /api/admin/employees/create
-    print("\n4a. Testing POST /api/admin/employees/create...")
-    try:
-        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        employee_data = {
-            "first_name": "Test",
-            "last_name": "Employee",
-            "email": f"employee.{timestamp}@example.com",
-            "mobile": f"9876{timestamp[-6:]}",
-            "password": "EmpPass123!",
-            "role": "employee",
-            "assigned_regions": ["Mumbai", "Pune"],
-            "permissions": ["view_orders", "manage_stock"]
-        }
-        
-        response = requests.post(f"{API_BASE}/admin/employees/create", json=employee_data, timeout=30)
-        print(f"Status Code: {response.status_code}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            employee_uid = result.get("uid")
-            
-            if not employee_uid:
-                print("❌ Employee creation test FAILED - No UID returned")
-                return False
-            
-            print(f"✅ Employee creation test PASSED - UID: {employee_uid}")
-            
-            # Test GET /api/admin/employees
-            print("\n4b. Testing GET /api/admin/employees...")
-            response_list = requests.get(f"{API_BASE}/admin/employees", timeout=30)
-            if response_list.status_code == 200:
-                employees = response_list.json()
-                if "employees" in employees:
-                    print(f"✅ Employee listing test PASSED - {len(employees['employees'])} employees found")
-                else:
-                    print("❌ Employee listing test FAILED - Missing 'employees' field")
-                    return False
-            
-            # Test with role filter
-            print("\n4c. Testing GET /api/admin/employees?role=employee...")
-            response_filtered = requests.get(f"{API_BASE}/admin/employees?role=employee", timeout=30)
-            if response_filtered.status_code == 200:
-                print("✅ Employee listing with role filter PASSED")
-            
-            # Test PUT /api/admin/employees/{uid}/permissions
-            print(f"\n4d. Testing PUT /api/admin/employees/{employee_uid}/permissions...")
-            permissions_data = {
-                "permissions": ["view_orders", "manage_stock", "view_reports"]
-            }
-            response_permissions = requests.put(
-                f"{API_BASE}/admin/employees/{employee_uid}/permissions", 
-                json=permissions_data, 
-                timeout=30
-            )
-            if response_permissions.status_code == 200:
-                print("✅ Employee permissions update test PASSED")
-            else:
-                print(f"❌ Employee permissions update test FAILED - Status: {response_permissions.status_code}")
-                return False
-            
-            return True
-            
-        else:
-            print(f"❌ Employee creation test FAILED - Status: {response.status_code}")
-            print(f"Response: {response.text}")
-            return False
-    except Exception as e:
-        print(f"❌ Employee management test FAILED - Error: {e}")
-        return False
-
-def test_audit_logging_apis():
-    """Test Audit Logging APIs"""
-    print("\n5. Testing Audit Logging APIs...")
-    
-    # Test POST /api/admin/audit/log
-    print("\n5a. Testing POST /api/admin/audit/log...")
-    try:
-        audit_data = {
-            "action": "test_action",
-            "entity_type": "user",
-            "entity_id": "test-user-123",
-            "performed_by": "test-admin",
-            "changes": {"field": "value"},
-            "ip_address": "127.0.0.1"
-        }
-        
-        response = requests.post(f"{API_BASE}/admin/audit/log", json=audit_data, timeout=30)
-        print(f"Status Code: {response.status_code}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            print(f"Audit log response: {result}")
-            audit_id = result.get("audit_id") or result.get("log_id")
-            
-            if not audit_id:
-                print("❌ Audit log creation test FAILED - No audit_id or log_id returned")
-                print(f"Response content: {result}")
-                return False
-            
-            print(f"✅ Audit log creation test PASSED - ID: {audit_id}")
-            
-            # Test GET /api/admin/audit/logs
-            print("\n5b. Testing GET /api/admin/audit/logs...")
-            response_list = requests.get(f"{API_BASE}/admin/audit/logs", timeout=30)
-            if response_list.status_code == 200:
-                logs_data = response_list.json()
-                if "logs" in logs_data:
-                    logs = logs_data["logs"]
-                    print(f"✅ Audit logs listing test PASSED - {len(logs)} logs found")
-                    
-                    # Test with filters
-                    print("\n5c. Testing audit logs with action filter...")
-                    response_filtered = requests.get(f"{API_BASE}/admin/audit/logs?action=test_action", timeout=30)
-                    if response_filtered.status_code == 200:
-                        print("✅ Audit logs with action filter PASSED")
-                    
-                    print("\n5d. Testing audit logs with entity_type filter...")
-                    response_entity = requests.get(f"{API_BASE}/admin/audit/logs?entity_type=user", timeout=30)
-                    if response_entity.status_code == 200:
-                        print("✅ Audit logs with entity_type filter PASSED")
-                    
-                    print("\n5e. Testing audit logs with performed_by filter...")
-                    response_performer = requests.get(f"{API_BASE}/admin/audit/logs?performed_by=test-admin", timeout=30)
-                    if response_performer.status_code == 200:
-                        print("✅ Audit logs with performed_by filter PASSED")
-                    
-                    # Test pagination
-                    print("\n5f. Testing audit logs pagination...")
-                    response_paginated = requests.get(f"{API_BASE}/admin/audit/logs?page=1&limit=10", timeout=30)
-                    if response_paginated.status_code == 200:
-                        print("✅ Audit logs pagination PASSED")
-                    
-                else:
-                    print("❌ Audit logs listing test FAILED - Missing 'logs' field")
-                    return False
-            else:
-                print(f"❌ Audit logs listing test FAILED - Status: {response_list.status_code}")
-                return False
-            
-            return True
-            
-        else:
-            print(f"❌ Audit log creation test FAILED - Status: {response.status_code}")
-            print(f"Response: {response.text}")
-            return False
-    except Exception as e:
-        print(f"❌ Audit logging test FAILED - Error: {e}")
-        return False
-
-def test_login_case_sensitivity_fix():
-    """Test and potentially fix login case sensitivity issue"""
-    print("\n" + "=" * 80)
-    print("TESTING LOGIN CASE SENSITIVITY FIX")
-    print("=" * 80)
-    
-    # Test cases for case sensitivity
-    test_cases = [
-        {"email": "Santosh@paras.com", "expected_stored": "santosh@paras.com"},
-        {"email": "SANTOSH@PARAS.COM", "expected_stored": "santosh@paras.com"},
-        {"email": "santosh@paras.com", "expected_stored": "santosh@paras.com"},
-        {"email": "Test@paras.com", "expected_stored": "test@paras.com"},
-        {"email": "ADMIN@PARAS.COM", "expected_stored": "admin@paras.com"}
-    ]
-    
-    print("\n1. Testing case sensitivity in login endpoint...")
-    
-    for i, test_case in enumerate(test_cases, 1):
-        test_email = test_case["email"]
-        expected_stored = test_case["expected_stored"]
-        
-        print(f"\n1.{i}. Testing login with: {test_email}")
-        print(f"     Expected stored as: {expected_stored}")
-        
-        try:
-            # Test login with the case-variant email
-            response = requests.post(
-                f"{API_BASE}/auth/login",
-                params={
-                    "identifier": test_email,
-                    "password": "wrongpassword"  # Intentionally wrong to test user existence
-                },
-                timeout=30
-            )
-            
-            print(f"     Status Code: {response.status_code}")
-            
-            if response.status_code == 404:
-                print(f"     ❌ User not found - case sensitivity issue")
-                
-                # Test with lowercase version
-                response_lower = requests.post(
-                    f"{API_BASE}/auth/login",
-                    params={
-                        "identifier": test_email.lower(),
-                        "password": "wrongpassword"
-                    },
-                    timeout=30
-                )
-                
-                if response_lower.status_code == 401:
-                    print(f"     ✅ User found with lowercase - confirms case sensitivity issue")
-                elif response_lower.status_code == 200:
-                    print(f"     ✅ User found with lowercase - login successful")
-                else:
-                    print(f"     ❓ Unexpected response with lowercase: {response_lower.status_code}")
-                    
-            elif response.status_code == 401:
-                print(f"     ✅ User found (wrong password) - no case sensitivity issue")
-            elif response.status_code == 200:
-                print(f"     ✅ User found and login successful - no case sensitivity issue")
-            else:
-                print(f"     ❓ Unexpected status: {response.status_code}")
-                
-        except Exception as e:
-            print(f"     ❌ Error testing: {e}")
-    
-    return True
-
-def test_login_issue_santosh():
-    """Test login issue for user Santosh@paras.com - Debug 'User not found' error"""
-    print("\n" + "=" * 80)
-    print("DEBUGGING LOGIN ISSUE FOR USER: Santosh@paras.com")
-    print("=" * 80)
-    
-    target_email = "Santosh@paras.com"
-    
-    # Step 1: Check if user exists with exact email
-    print(f"\n1. Checking if user exists with exact email: {target_email}")
-    try:
-        # Try to get all users and search for this email
-        response = requests.get(f"{API_BASE}/admin/users", timeout=30)
-        if response.status_code == 200:
-            users_data = response.json()
-            users = users_data.get("users", [])
-            print(f"Total users in database: {len(users)}")
-            
-            # Search for exact match
-            exact_match = None
-            for user in users:
-                if user.get("email") == target_email:
-                    exact_match = user
-                    break
-            
-            if exact_match:
-                print(f"✅ FOUND exact match: {exact_match.get('email')} (UID: {exact_match.get('uid')})")
-                print(f"   Name: {exact_match.get('name', 'N/A')}")
-                print(f"   Role: {exact_match.get('role', 'N/A')}")
-                print(f"   Active: {exact_match.get('is_active', 'N/A')}")
-            else:
-                print(f"❌ NO exact match found for: {target_email}")
-        else:
-            print(f"❌ Failed to get users list - Status: {response.status_code}")
-            # Try alternative approach - direct login test
-            print("Proceeding with direct login test...")
-    except Exception as e:
-        print(f"❌ Error checking users: {e}")
-    
-    # Step 2: Check for case-insensitive matches
-    print(f"\n2. Checking for case-insensitive matches...")
-    try:
-        response = requests.get(f"{API_BASE}/admin/users", timeout=30)
-        if response.status_code == 200:
-            users_data = response.json()
-            users = users_data.get("users", [])
-            
-            # Search for case-insensitive matches
-            case_matches = []
-            for user in users:
-                user_email = user.get("email")
-                if user_email and user_email.lower() == target_email.lower() and user_email != target_email:
-                    case_matches.append(user)
-            
-            if case_matches:
-                print(f"✅ FOUND {len(case_matches)} case-insensitive matches:")
-                for match in case_matches:
-                    print(f"   Email: {match.get('email')} (UID: {match.get('uid')})")
-                    print(f"   Name: {match.get('name', 'N/A')}")
-                    print(f"   Role: {match.get('role', 'N/A')}")
-                    print(f"   Active: {match.get('is_active', 'N/A')}")
-            else:
-                print(f"❌ NO case-insensitive matches found")
-        else:
-            print(f"❌ Failed to get users for case check - Status: {response.status_code}")
-    except Exception as e:
-        print(f"❌ Error checking case-insensitive matches: {e}")
-    
-    # Step 3: Search for partial matches (santosh in email)
-    print(f"\n3. Searching for partial matches (santosh in email)...")
-    try:
-        response = requests.get(f"{API_BASE}/admin/users", timeout=30)
-        if response.status_code == 200:
-            users_data = response.json()
-            users = users_data.get("users", [])
-            
-            # Search for partial matches
-            partial_matches = []
-            for user in users:
-                user_email = user.get("email")
-                if user_email and "santosh" in user_email.lower():
-                    partial_matches.append(user)
-            
-            if partial_matches:
-                print(f"✅ FOUND {len(partial_matches)} partial matches:")
-                for match in partial_matches:
-                    print(f"   Email: {match.get('email')} (UID: {match.get('uid')})")
-                    print(f"   Name: {match.get('name', 'N/A')}")
-                    print(f"   Role: {match.get('role', 'N/A')}")
-                    print(f"   Active: {match.get('is_active', 'N/A')}")
-            else:
-                print(f"❌ NO partial matches found for 'santosh'")
-        else:
-            print(f"❌ Failed to get users for partial search - Status: {response.status_code}")
-    except Exception as e:
-        print(f"❌ Error searching partial matches: {e}")
-    
-    # Step 4: Test login endpoint with the exact email
-    print(f"\n4. Testing login endpoint with email: {target_email}")
-    try:
-        # Test with a common password (we don't know the actual password)
-        test_passwords = ["password", "123456", "santosh123", "Password123", "admin"]
-        
-        for password in test_passwords:
-            print(f"\n   Testing with password: {password}")
-            
-            # Test using query parameters (as per the API)
-            response = requests.post(
-                f"{API_BASE}/auth/login",
-                params={
-                    "identifier": target_email,
-                    "password": password
-                },
-                timeout=30
-            )
-            
-            print(f"   Status Code: {response.status_code}")
-            print(f"   Response: {response.text}")
-            
-            if response.status_code == 404:
-                print(f"   ❌ User not found (404) - confirms the issue")
-            elif response.status_code == 401:
-                print(f"   ✅ User found but wrong password (401) - user exists!")
-                return True
-            elif response.status_code == 200:
-                print(f"   ✅ Login successful! User exists and password is correct")
-                return True
-            else:
-                print(f"   ❓ Unexpected status: {response.status_code}")
-    except Exception as e:
-        print(f"❌ Error testing login: {e}")
-    
-    # Step 5: Test login with lowercase version
-    print(f"\n5. Testing login with lowercase email: {target_email.lower()}")
-    try:
-        response = requests.post(
-            f"{API_BASE}/auth/login",
-            params={
-                "identifier": target_email.lower(),
-                "password": "password"  # Test password
-            },
-            timeout=30
-        )
-        
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 404:
-            print(f"❌ User not found with lowercase email either")
-        elif response.status_code == 401:
-            print(f"✅ User found with lowercase email! Case sensitivity issue confirmed")
-        elif response.status_code == 200:
-            print(f"✅ Login successful with lowercase email!")
-    except Exception as e:
-        print(f"❌ Error testing lowercase login: {e}")
-    
-    # Step 6: Test with other users to verify login endpoint works
-    print(f"\n6. Testing login endpoint with other users to verify it works...")
-    try:
-        response = requests.get(f"{API_BASE}/admin/users", timeout=30)
-        if response.status_code == 200:
-            users_data = response.json()
-            users = users_data.get("users", [])
-            
-            # Test with first 3 users
-            test_count = 0
-            for user in users[:3]:
-                if test_count >= 3:
-                    break
-                    
-                user_email = user.get("email")
-                if user_email and user_email != target_email:
-                    print(f"\n   Testing login with user: {user_email}")
-                    
-                    response = requests.post(
-                        f"{API_BASE}/auth/login",
-                        params={
-                            "identifier": user_email,
-                            "password": "wrongpassword"  # Intentionally wrong
-                        },
-                        timeout=30
-                    )
-                    
-                    print(f"   Status Code: {response.status_code}")
-                    
-                    if response.status_code == 404:
-                        print(f"   ❌ User not found - login endpoint might have issues")
-                    elif response.status_code == 401:
-                        print(f"   ✅ User found (wrong password) - login endpoint works")
-                    elif response.status_code == 200:
-                        print(f"   ✅ Login successful - login endpoint works")
-                    
-                    test_count += 1
-        else:
-            print(f"❌ Failed to get users for login testing - Status: {response.status_code}")
-    except Exception as e:
-        print(f"❌ Error testing other users: {e}")
-    
-    print(f"\n" + "=" * 80)
-    print("LOGIN ISSUE INVESTIGATION COMPLETED")
-    print("=" * 80)
-    
-    return False  # Issue not resolved, just investigated
-
-def test_comprehensive_login_case_sensitivity():
-    """Comprehensive test for login case sensitivity fix"""
-    print("\n" + "=" * 80)
-    print("COMPREHENSIVE LOGIN CASE SENSITIVITY FIX TESTING")
-    print("=" * 80)
-    
-    # Test cases as specified in the review request
-    test_cases = [
-        {
-            "email": "Santosh@paras.com",
-            "description": "Mixed case - should work after fix"
-        },
-        {
-            "email": "SANTOSH@PARAS.COM", 
-            "description": "Uppercase - should work after fix"
-        },
-        {
-            "email": "santosh@paras.com",
-            "description": "Lowercase - should still work"
-        },
-        {
-            "email": "Test@paras.com",
-            "description": "Mixed case Test user - should work after fix"
-        },
-        {
-            "email": "ADMIN@PARAS.COM",
-            "description": "Uppercase Admin user - should work after fix"
-        }
-    ]
-    
-    results = []
-    
-    print("\n1. Testing case-insensitive email login functionality...")
-    
-    for i, test_case in enumerate(test_cases, 1):
-        test_email = test_case["email"]
-        description = test_case["description"]
-        
-        print(f"\n1.{i}. Testing: {test_email}")
-        print(f"     Description: {description}")
-        
-        try:
-            # Test with intentionally wrong password to check if user is found
-            response = requests.post(
-                f"{API_BASE}/auth/login",
-                params={
-                    "identifier": test_email,
-                    "password": "intentionally_wrong_password_12345"
-                },
-                timeout=30
-            )
-            
-            print(f"     Status Code: {response.status_code}")
-            
-            if response.status_code == 404:
-                print(f"     ❌ FAILED: User not found (404) - case sensitivity issue still exists")
-                results.append({
-                    "email": test_email,
-                    "status": "FAILED",
-                    "issue": "User not found - case sensitivity problem"
-                })
-            elif response.status_code == 401:
-                print(f"     ✅ PASSED: User found but wrong password (401) - case insensitive matching works")
-                results.append({
-                    "email": test_email,
-                    "status": "PASSED",
-                    "issue": None
-                })
-            elif response.status_code == 200:
-                print(f"     ✅ PASSED: Login successful (200) - case insensitive matching works")
-                results.append({
-                    "email": test_email,
-                    "status": "PASSED",
-                    "issue": None
-                })
-            else:
-                print(f"     ❓ UNEXPECTED: Status {response.status_code} - {response.text}")
-                results.append({
-                    "email": test_email,
-                    "status": "UNEXPECTED",
-                    "issue": f"Unexpected status {response.status_code}"
-                })
-                
-        except Exception as e:
-            print(f"     ❌ ERROR: {e}")
-            results.append({
-                "email": test_email,
-                "status": "ERROR",
-                "issue": str(e)
-            })
-    
-    # Test mobile and UID login to ensure they're not affected
-    print(f"\n2. Testing mobile and UID login (should not be affected)...")
-    
-    # Try to find a user with mobile number for testing
-    try:
-        response = requests.get(f"{API_BASE}/admin/users", timeout=30)
-        if response.status_code == 200:
-            users_data = response.json()
-            users = users_data.get("users", [])
-            
-            # Find a user with mobile number
-            test_user = None
-            for user in users:
-                if user.get("mobile"):
-                    test_user = user
-                    break
-            
-            if test_user:
-                mobile = test_user.get("mobile")
-                uid = test_user.get("uid")
-                
-                print(f"\n2.1. Testing mobile login: {mobile}")
-                response_mobile = requests.post(
-                    f"{API_BASE}/auth/login",
-                    params={
-                        "identifier": mobile,
-                        "password": "wrong_password"
-                    },
-                    timeout=30
-                )
-                
-                if response_mobile.status_code in [401, 200]:
-                    print(f"     ✅ Mobile login works (Status: {response_mobile.status_code})")
-                else:
-                    print(f"     ❌ Mobile login issue (Status: {response_mobile.status_code})")
-                
-                print(f"\n2.2. Testing UID login: {uid}")
-                response_uid = requests.post(
-                    f"{API_BASE}/auth/login",
-                    params={
-                        "identifier": uid,
-                        "password": "wrong_password"
-                    },
-                    timeout=30
-                )
-                
-                if response_uid.status_code in [401, 200]:
-                    print(f"     ✅ UID login works (Status: {response_uid.status_code})")
-                else:
-                    print(f"     ❌ UID login issue (Status: {response_uid.status_code})")
-            else:
-                print("     ⚠️  No users with mobile numbers found for testing")
-        else:
-            print(f"     ❌ Could not get users list (Status: {response.status_code})")
-    except Exception as e:
-        print(f"     ❌ Error testing mobile/UID login: {e}")
-    
-    # Summary
-    print(f"\n" + "=" * 80)
-    print("LOGIN CASE SENSITIVITY FIX TEST RESULTS")
-    print("=" * 80)
-    
-    passed_count = sum(1 for r in results if r["status"] == "PASSED")
-    failed_count = sum(1 for r in results if r["status"] == "FAILED")
-    error_count = sum(1 for r in results if r["status"] == "ERROR")
-    unexpected_count = sum(1 for r in results if r["status"] == "UNEXPECTED")
-    
-    print(f"Total Tests: {len(results)}")
-    print(f"✅ Passed: {passed_count}")
-    print(f"❌ Failed: {failed_count}")
-    print(f"🔥 Errors: {error_count}")
-    print(f"❓ Unexpected: {unexpected_count}")
-    
-    print(f"\nDetailed Results:")
-    for result in results:
-        status_icon = "✅" if result["status"] == "PASSED" else "❌"
-        print(f"{status_icon} {result['email']}: {result['status']}")
-        if result["issue"]:
-            print(f"   Issue: {result['issue']}")
-    
-    # Determine overall result
-    if failed_count == 0 and error_count == 0:
-        print(f"\n🎉 OVERALL RESULT: LOGIN CASE SENSITIVITY FIX IS WORKING!")
-        print("All email variations can now login successfully (case-insensitive)")
-        return True
+    if all_passed:
+        print(f"\n🎉 SUCCESS: All Admin Stockist & Financial Management endpoints are working correctly!")
+        print(f"   - Stockist CRUD operations functional")
+        print(f"   - Parent-child assignment validation working")
+        print(f"   - Security deposit entries with automatic approval")
+        print(f"   - Monthly return calculations correct (3% default)")
+        print(f"   - Renewal entries with GST calculation (18% default)")
+        print(f"   - User records updated correctly")
+        print(f"   - All audit logs and calculations verified")
     else:
-        print(f"\n💥 OVERALL RESULT: LOGIN CASE SENSITIVITY FIX NEEDS ATTENTION!")
-        print("Some email variations still fail - case sensitivity issue persists")
-        return False
-
-def test_login_api_response_format():
-    """Test LOGIN API RESPONSE FORMAT - Check what data is being returned"""
-    print("\n" + "=" * 80)
-    print("TESTING LOGIN API RESPONSE FORMAT")
-    print("=" * 80)
+        print(f"\n⚠️  ISSUES FOUND: Some endpoints need attention")
+        failed_tests = [key for key, passed in results.items() if not passed and key != "test_completed"]
+        for test in failed_tests:
+            print(f"   - {test.replace('_', ' ').title()}: Needs investigation")
     
-    print("Testing POST /api/auth/login with email 'admin@paras.com' and password 'admin123'")
-    print("Checking COMPLETE response structure and role field presence")
-    
-    try:
-        # Test login with admin credentials
-        response = requests.post(
-            f"{API_BASE}/auth/login",
-            params={
-                "identifier": "admin@paras.com",
-                "password": "admin123"
-            },
-            timeout=30
-        )
-        
-        print(f"\n1. LOGIN RESPONSE:")
-        print(f"   Status Code: {response.status_code}")
-        print(f"   Content-Type: {response.headers.get('content-type', 'N/A')}")
-        
-        if response.status_code == 200:
-            print(f"\n2. COMPLETE RESPONSE STRUCTURE:")
-            try:
-                response_data = response.json()
-                print(json.dumps(response_data, indent=2, default=str))
-                
-                print(f"\n3. ROLE FIELD CHECK:")
-                role_field = response_data.get("role")
-                if role_field is not None:
-                    print(f"   ✅ 'role' field is PRESENT: '{role_field}'")
-                    
-                    if role_field == "admin":
-                        print(f"   ✅ Role is correctly set to 'admin'")
-                    else:
-                        print(f"   ⚠️  Role is '{role_field}' (not 'admin')")
-                else:
-                    print(f"   ❌ 'role' field is MISSING from response")
-                
-                print(f"\n4. OBJECTID SERIALIZATION CHECK:")
-                # Check for any ObjectId serialization issues
-                response_str = response.text
-                if "_id" in response_str:
-                    print(f"   ⚠️  Response contains '_id' field - potential ObjectId serialization issue")
-                else:
-                    print(f"   ✅ No '_id' fields found - ObjectId properly excluded")
-                
-                # Check for any serialization errors in the response
-                if "ObjectId" in response_str:
-                    print(f"   ❌ Response contains 'ObjectId' string - serialization issue detected")
-                else:
-                    print(f"   ✅ No ObjectId serialization issues detected")
-                
-                print(f"\n5. KEY FIELDS ANALYSIS:")
-                key_fields = ["uid", "email", "name", "role", "membership_type", "kyc_status", "is_active"]
-                for field in key_fields:
-                    value = response_data.get(field)
-                    if value is not None:
-                        print(f"   ✅ {field}: {value}")
-                    else:
-                        print(f"   ❌ {field}: MISSING")
-                
-                return True
-                
-            except json.JSONDecodeError as e:
-                print(f"   ❌ JSON DECODE ERROR: {e}")
-                print(f"   Raw response: {response.text}")
-                return False
-                
-        elif response.status_code == 401:
-            print(f"\n   ❌ LOGIN FAILED: Invalid credentials (401)")
-            print(f"   Response: {response.text}")
-            
-            # Try with different password variations
-            print(f"\n   Trying alternative passwords...")
-            alt_passwords = ["Admin123", "password", "123456", "admin", "paras123"]
-            
-            for alt_pass in alt_passwords:
-                print(f"   Testing password: {alt_pass}")
-                alt_response = requests.post(
-                    f"{API_BASE}/auth/login",
-                    params={
-                        "identifier": "admin@paras.com",
-                        "password": alt_pass
-                    },
-                    timeout=30
-                )
-                
-                if alt_response.status_code == 200:
-                    print(f"   ✅ SUCCESS with password: {alt_pass}")
-                    response_data = alt_response.json()
-                    print(json.dumps(response_data, indent=2, default=str))
-                    return True
-                elif alt_response.status_code == 401:
-                    print(f"   ❌ Failed with: {alt_pass}")
-                else:
-                    print(f"   ❓ Unexpected status {alt_response.status_code} with: {alt_pass}")
-            
-            return False
-            
-        elif response.status_code == 404:
-            print(f"\n   ❌ USER NOT FOUND (404)")
-            print(f"   Response: {response.text}")
-            
-            # Try case variations
-            print(f"\n   Trying email case variations...")
-            email_variations = ["Admin@paras.com", "ADMIN@PARAS.COM", "admin@paras.com"]
-            
-            for email_var in email_variations:
-                print(f"   Testing email: {email_var}")
-                var_response = requests.post(
-                    f"{API_BASE}/auth/login",
-                    params={
-                        "identifier": email_var,
-                        "password": "admin123"
-                    },
-                    timeout=30
-                )
-                
-                if var_response.status_code == 200:
-                    print(f"   ✅ SUCCESS with email: {email_var}")
-                    response_data = var_response.json()
-                    print(json.dumps(response_data, indent=2, default=str))
-                    return True
-                elif var_response.status_code == 401:
-                    print(f"   ✅ User found but wrong password with: {email_var}")
-                elif var_response.status_code == 404:
-                    print(f"   ❌ User not found with: {email_var}")
-                else:
-                    print(f"   ❓ Unexpected status {var_response.status_code} with: {email_var}")
-            
-            return False
-            
-        else:
-            print(f"\n   ❌ UNEXPECTED STATUS: {response.status_code}")
-            print(f"   Response: {response.text}")
-            return False
-            
-    except Exception as e:
-        print(f"\n❌ ERROR testing login API: {e}")
-        return False
-
-def check_admin_user_role():
-    """Check the role of user with email 'admin@paras.com'"""
-    print("\n" + "=" * 80)
-    print("CHECKING ADMIN USER ROLE - admin@paras.com")
-    print("=" * 80)
-    
-    target_email = "admin@paras.com"
-    
-    print(f"1. Searching for user with email: {target_email}")
-    
-    try:
-        # Get all users to find the admin user
-        response = requests.get(f"{API_BASE}/admin/users", timeout=30)
-        print(f"Admin users endpoint status: {response.status_code}")
-        
-        if response.status_code == 200:
-            users_data = response.json()
-            users = users_data.get("users", [])
-            print(f"Total users found: {len(users)}")
-            
-            # Search for exact match (case-sensitive)
-            exact_match = None
-            for user in users:
-                if user.get("email") == target_email:
-                    exact_match = user
-                    break
-            
-            if exact_match:
-                print(f"\n✅ FOUND USER (exact match):")
-                print(f"   Email: {exact_match.get('email')}")
-                print(f"   UID: {exact_match.get('uid')}")
-                print(f"   Name: {exact_match.get('name', 'N/A')}")
-                print(f"   Role: {exact_match.get('role', 'N/A')}")
-                print(f"   Status: {'Active' if exact_match.get('is_active') else 'Inactive'}")
-                
-                role = exact_match.get('role', 'N/A')
-                if role == 'admin':
-                    print(f"\n✅ ROLE VERIFICATION: User has 'admin' role")
-                    print("   This should enable admin navigation links")
-                else:
-                    print(f"\n❌ ROLE ISSUE: User role is '{role}', not 'admin'")
-                    print("   This explains why admin link is not showing in navbar")
-                
-                return exact_match
-            
-            # Search for case-insensitive match
-            print(f"\n❌ No exact match found. Searching case-insensitive...")
-            case_matches = []
-            for user in users:
-                user_email = user.get("email")
-                if user_email and user_email.lower() == target_email.lower():
-                    case_matches.append(user)
-            
-            if case_matches:
-                print(f"\n✅ FOUND {len(case_matches)} case-insensitive matches:")
-                for i, match in enumerate(case_matches, 1):
-                    print(f"\n   Match {i}:")
-                    print(f"   Email: {match.get('email')}")
-                    print(f"   UID: {match.get('uid')}")
-                    print(f"   Name: {match.get('name', 'N/A')}")
-                    print(f"   Role: {match.get('role', 'N/A')}")
-                    print(f"   Status: {'Active' if match.get('is_active') else 'Inactive'}")
-                    
-                    role = match.get('role', 'N/A')
-                    if role == 'admin':
-                        print(f"   ✅ This user has 'admin' role")
-                    else:
-                        print(f"   ❌ This user has '{role}' role, not 'admin'")
-                
-                return case_matches[0]  # Return first match
-            
-            # Search for partial matches
-            print(f"\n❌ No case-insensitive matches. Searching for partial matches...")
-            partial_matches = []
-            for user in users:
-                user_email = user.get("email")
-                if user_email and "admin" in user_email.lower():
-                    partial_matches.append(user)
-            
-            if partial_matches:
-                print(f"\n✅ FOUND {len(partial_matches)} partial matches (containing 'admin'):")
-                for i, match in enumerate(partial_matches, 1):
-                    print(f"\n   Match {i}:")
-                    print(f"   Email: {match.get('email')}")
-                    print(f"   UID: {match.get('uid')}")
-                    print(f"   Name: {match.get('name', 'N/A')}")
-                    print(f"   Role: {match.get('role', 'N/A')}")
-                    print(f"   Status: {'Active' if match.get('is_active') else 'Inactive'}")
-            else:
-                print(f"\n❌ No users found with 'admin' in email")
-            
-            print(f"\n❌ CONCLUSION: User 'admin@paras.com' not found in database")
-            return None
-            
-        else:
-            print(f"❌ Failed to get users list - Status: {response.status_code}")
-            print(f"Response: {response.text}")
-            return None
-            
-    except Exception as e:
-        print(f"❌ Error checking admin user: {e}")
-        return None
-
-def test_login_with_admin_user():
-    """Test login functionality with admin@paras.com"""
-    print("\n2. Testing login functionality with admin@paras.com")
-    
-    target_email = "admin@paras.com"
-    
-    # Test different case variations
-    email_variations = [
-        "admin@paras.com",
-        "Admin@paras.com", 
-        "ADMIN@PARAS.COM",
-        "admin@PARAS.com"
-    ]
-    
-    for email in email_variations:
-        print(f"\n   Testing login with: {email}")
-        try:
-            response = requests.post(
-                f"{API_BASE}/auth/login",
-                params={
-                    "identifier": email,
-                    "password": "test_password_123"  # Test password
-                },
-                timeout=30
-            )
-            
-            print(f"   Status: {response.status_code}")
-            
-            if response.status_code == 404:
-                print(f"   ❌ User not found")
-            elif response.status_code == 401:
-                print(f"   ✅ User found (wrong password)")
-            elif response.status_code == 200:
-                print(f"   ✅ Login successful")
-                user_data = response.json()
-                print(f"   Role: {user_data.get('role', 'N/A')}")
-            else:
-                print(f"   ❓ Unexpected status: {response.status_code}")
-                
-        except Exception as e:
-            print(f"   ❌ Error: {e}")
-
-def main():
-    """Check admin user role for navbar issue debugging"""
-    print("CHECKING ADMIN USER ROLE FOR NAVBAR ISSUE")
-    print(f"Target API: {API_BASE}")
-    print("FOCUS: Check role of admin@paras.com user")
-    
-    # Test basic connectivity
-    try:
-        response = requests.get(f"{API_BASE}/admin/stats", timeout=10)
-        print(f"Backend connectivity test - Status: {response.status_code}")
-        if response.status_code != 200:
-            print("⚠️  Backend may have issues but proceeding with user check...")
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Backend connectivity FAILED: {e}")
-        print("Cannot proceed with testing - backend is not accessible")
-        return False
-    
-    # Check admin user role
-    admin_user = check_admin_user_role()
-    
-    # Test login functionality
-    test_login_with_admin_user()
-    
-    # Final summary
-    print("\n" + "=" * 80)
-    print("ADMIN USER ROLE CHECK SUMMARY")
-    print("=" * 80)
-    
-    if admin_user:
-        role = admin_user.get('role', 'N/A')
-        email = admin_user.get('email', 'N/A')
-        
-        print(f"✅ USER FOUND:")
-        print(f"   Email: {email}")
-        print(f"   Role: {role}")
-        
-        if role == 'admin':
-            print(f"\n✅ ROLE IS CORRECT: User has 'admin' role")
-            print("   Admin navigation should be visible")
-            print("   If admin link is not showing, check frontend role-based navigation logic")
-        else:
-            print(f"\n❌ ROLE ISSUE IDENTIFIED: User role is '{role}', not 'admin'")
-            print("   This explains why admin link is not showing in navbar")
-            print("   SOLUTION: Update user role to 'admin' in database")
-        
-        return True
+    print(f"\n📋 NEXT STEPS:")
+    if all_passed:
+        print(f"   1. All backend endpoints are ready for frontend integration")
+        print(f"   2. Admin dashboard can be connected to these APIs")
+        print(f"   3. Financial management workflows are operational")
     else:
-        print(f"❌ USER NOT FOUND: 'admin@paras.com' does not exist in database")
-        print("   This explains why admin link is not showing")
-        print("   SOLUTION: Create admin user or check correct email address")
-        return False
-
-def main():
-    """Main function to run password recovery and support ticket tests"""
-    print("=" * 80)
-    print("BACKEND API TESTING - PASSWORD RECOVERY + SUPPORT TICKETS")
-    print("=" * 80)
-    
-    # Run the password recovery and support ticket tests
-    results = run_password_recovery_and_support_tests()
-    
-    # Print summary
-    print("\n" + "=" * 80)
-    print("TEST RESULTS SUMMARY")
-    print("=" * 80)
-    
-    test_results = [
-        ("Password Recovery Verify", results.get("password_recovery_verify", False)),
-        ("Password Recovery Reset", results.get("password_recovery_reset", False)),
-        ("Support Ticket Creation", results.get("support_ticket_creation", False)),
-        ("Support Ticket Retrieval", results.get("support_ticket_retrieval", False)),
-        ("Support Ticket Details", results.get("support_ticket_details", False)),
-        ("Support Ticket Replies", results.get("support_ticket_replies", False)),
-        ("Admin Support Tickets", results.get("admin_support_tickets", False)),
-        ("Admin Ticket Updates", results.get("admin_ticket_updates", False))
-    ]
-    
-    passed_tests = 0
-    total_tests = len(test_results)
-    
-    for test_name, passed in test_results:
-        status = "✅ PASS" if passed else "❌ FAIL"
-        print(f"{status} - {test_name}")
-        if passed:
-            passed_tests += 1
-    
-    print(f"\nOVERALL: {passed_tests}/{total_tests} tests passed")
-    
-    success = passed_tests == total_tests
-    
-    if success:
-        print("\n🎉 ALL TESTS PASSED - PASSWORD RECOVERY + SUPPORT TICKETS WORKING!")
-    else:
-        print(f"\n⚠️  {total_tests - passed_tests} TESTS FAILED - ISSUES NEED ATTENTION")
-    
-    print("=" * 80)
-    
-    return success
+        print(f"   1. Review failed test outputs above")
+        print(f"   2. Check backend logs for detailed error information")
+        print(f"   3. Verify endpoint implementations match expected API contracts")
+        print(f"   4. Test individual endpoints manually if needed")
 
 if __name__ == "__main__":
-    main()
+    print("Starting Admin Stockist & Financial Management Backend Testing...")
+    
+    # Run comprehensive tests
+    test_results = run_comprehensive_test()
+    
+    # Print summary
+    print_test_summary(test_results)
+    
+    # Exit with appropriate code
+    all_passed = all(test_results[key] for key in ["stockist_management", "security_deposit_management", "renewal_management"])
+    sys.exit(0 if all_passed else 1)
