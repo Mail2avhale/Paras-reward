@@ -1377,6 +1377,15 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
           )}
 
+
+
+          {/* Stock Movement Tab */}
+          {activeTab === 'stock-movement' && (
+            <div className="space-y-6">
+              <StockMovementManagement />
+            </div>
+          )}
+
           {/* Other Tabs - Placeholder */}
           {['master-stockist', 'sub-stockist', 'outlet', 'rewards', 'commissions', 'orders', 'notifications'].includes(activeTab) && (
             <Card className="p-12 text-center bg-white">
