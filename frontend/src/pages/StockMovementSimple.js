@@ -72,19 +72,37 @@ const StockMovementSimple = () => {
         return;
       }
 
+      // Get current user (admin)
+      const currentUser = JSON.parse(localStorage.getItem('paras_user') || '{}');
+      
+      // Determine sender_id based on fromType
+      let sender_id;
+      if (fromType === 'company') {
+        // For company transfers, use admin's UID
+        sender_id = currentUser.uid;
+      } else {
+        sender_id = formData.from_id;
+      }
+
+      if (!sender_id) {
+        toast.error('Please select sender');
+        setLoading(false);
+        return;
+      }
+
       const payload = {
         product_id: formData.product_id,
         quantity: parseInt(formData.quantity),
-        from_type: fromType,
-        from_id: formData.from_id || 'company',
-        to_type: toType,
-        to_id: formData.to_id,
+        sender_id: sender_id,
+        receiver_id: formData.to_id,
         notes: formData.notes
       };
 
+      console.log('Sending payload:', payload);
+
       await axios.post(`${API}/stock/transfer/initiate`, payload);
       
-      toast.success('Stock transfer initiated successfully!');
+      toast.success('Stock transfer initiated successfully! Awaiting admin approval.');
       setFormData({
         product_id: '',
         quantity: '',
