@@ -55,8 +55,8 @@ const Marketplace = ({ user, onLogout }) => {
   };
 
   const addToCart = async (product) => {
-    // Fetch fresh user data before checking VIP status
     try {
+      // Fetch fresh user data before checking VIP status
       const userResponse = await axios.get(`${API}/users/${user.uid}`);
       const freshUserData = userResponse.data;
       
@@ -66,16 +66,23 @@ const Marketplace = ({ user, onLogout }) => {
         return;
       }
 
-      await axios.post(`${API}/cart/add`, {
+      // Add to cart
+      const response = await axios.post(`${API}/cart/add`, {
         user_id: user.uid,
         product_id: product.product_id,
         quantity: 1
       });
+      
       toast.success('Added to cart!');
       fetchCart();
-      fetchUserData(); // Refresh user data
+      fetchUserData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to add to cart');
+      console.error('Add to cart error:', error);
+      if (error.response?.status === 404) {
+        toast.error('Product or user not found. Please refresh the page.');
+      } else {
+        toast.error(error.response?.data?.detail || 'Failed to add to cart');
+      }
     }
   };
 
