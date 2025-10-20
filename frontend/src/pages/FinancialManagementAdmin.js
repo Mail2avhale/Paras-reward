@@ -298,14 +298,14 @@ const FinancialManagementAdmin = () => {
                           <div className="text-xs text-gray-500">{new Date(deposit.created_at).toLocaleDateString()}</div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-right">
-                          <div className="font-semibold text-green-600">{formatCurrency(deposit.monthly_return_amount)}</div>
-                          <div className="text-xs text-gray-500">({(deposit.monthly_return_rate * 100).toFixed(1)}%)</div>
+                          <div className="font-semibold text-green-600">{formatCurrency(getMonthlyReturn(deposit))}</div>
+                          <div className="text-xs text-gray-500">({((deposit.monthly_return_rate || 0.03) * 100).toFixed(1)}%)</div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-right">
-                          <div className="font-semibold text-blue-600">{formatCurrency(deposit.total_returned || 0)}</div>
+                          <div className="font-semibold text-blue-600">{formatCurrency(deposit.total_returned || deposit.total_returns_paid || 0)}</div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-right">
-                          <div className="font-semibold text-orange-600">{formatCurrency(deposit.balance_pending)}</div>
+                          <div className="font-semibold text-orange-600">{formatCurrency(getBalancePending(deposit))}</div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-center">
                           <Button
