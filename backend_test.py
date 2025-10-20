@@ -667,9 +667,10 @@ def test_checkout_endpoint_with_cart():
     except Exception as e:
         print(f"   ❌ Error getting cart: {e}")
     
-    # Step 4: Attempt checkout
+    # Step 4: Attempt checkout - Test multiple endpoints
     print(f"\n4. Attempting checkout...")
     
+    # Test the cart-based checkout endpoint
     checkout_data = {
         "user_id": user_id,
         "delivery_address": {
@@ -680,6 +681,7 @@ def test_checkout_endpoint_with_cart():
         }
     }
     
+    print(f"\n4a. Testing POST /orders/checkout (cart-based)...")
     try:
         checkout_response = requests.post(f"{API_BASE}/orders/checkout", json=checkout_data, timeout=30)
         print(f"   Checkout Status: {checkout_response.status_code}")
@@ -724,6 +726,12 @@ def test_checkout_endpoint_with_cart():
             try:
                 error_detail = checkout_response.json()
                 print(f"     - Validation details: {error_detail}")
+                
+                # Check if it's expecting product_id
+                if any("product_id" in str(detail) for detail in error_detail.get("detail", [])):
+                    print(f"     - ERROR: Endpoint expects 'product_id' field but cart-based checkout shouldn't need it")
+                    print(f"     - This suggests the wrong endpoint is being called or there's a routing conflict")
+                    
             except:
                 print(f"     - Raw error: {checkout_response.text}")
                 
@@ -733,6 +741,28 @@ def test_checkout_endpoint_with_cart():
             
     except Exception as e:
         print(f"   ❌ Error during checkout: {e}")
+    
+    # Test the legacy single product endpoint for comparison
+    print(f"\n4b. Testing POST /orders/{user_id} (legacy single product)...")
+    try:
+        legacy_data = {
+            "product_id": product_id
+        }
+        
+        legacy_response = requests.post(f"{API_BASE}/orders/{user_id}", json=legacy_data, timeout=30)
+        print(f"   Legacy Checkout Status: {legacy_response.status_code}")
+        print(f"   Legacy Checkout Response: {legacy_response.text}")
+        
+        if legacy_response.status_code == 200:
+            print("   ✅ Legacy checkout successful!")
+            return True
+        elif legacy_response.status_code == 403:
+            print("   ❌ Legacy checkout failed - VIP/KYC requirements")
+        else:
+            print(f"   ❌ Legacy checkout failed: {legacy_response.status_code}")
+            
+    except Exception as e:
+        print(f"   ❌ Error during legacy checkout: {e}")
     
     # Step 5: Summary of findings
     print(f"\n" + "📋" * 80)
