@@ -372,7 +372,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Mining Session Status Bug - Frontend Shows Mining Paused"
+    - "Products Endpoint Visibility Fix"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
