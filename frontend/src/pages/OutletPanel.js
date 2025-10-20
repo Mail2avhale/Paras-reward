@@ -255,15 +255,63 @@ const OutletPanel = ({ user, onLogout }) => {
                       <CheckCircle className="h-6 w-6 text-green-600" />
                       <h3 className="text-xl font-bold text-green-900">Order Verified</h3>
                     </div>
-                    <div className="space-y-2 mb-6">
-                      <p><span className="font-semibold">Order ID:</span> {verifiedOrder.order_id}</p>
-                      <p><span className="font-semibold">Customer:</span> {verifiedOrder.user_id || verifiedOrder.uid}</p>
-                      <p><span className="font-semibold">Items:</span> {verifiedOrder.items?.length || 1}</p>
-                      <p><span className="font-semibold">Total PRC:</span> {verifiedOrder.total_prc || verifiedOrder.prc_amount} PRC</p>
+                    
+                    {/* Order Details */}
+                    <div className="space-y-3 mb-4">
+                      <div className="bg-white p-3 rounded-lg">
+                        <p className="text-sm text-gray-600">Order ID</p>
+                        <p className="font-semibold">{verifiedOrder.order_id}</p>
+                      </div>
+                      
+                      <div className="bg-white p-3 rounded-lg">
+                        <p className="text-sm text-gray-600">Customer ID</p>
+                        <p className="font-semibold">{verifiedOrder.user_id || verifiedOrder.uid}</p>
+                      </div>
+                      
                       {verifiedOrder.delivery_address && (
-                        <p><span className="font-semibold">Address:</span> {verifiedOrder.delivery_address}</p>
+                        <div className="bg-white p-3 rounded-lg">
+                          <p className="text-sm text-gray-600">Delivery Address</p>
+                          <p className="font-semibold">{verifiedOrder.delivery_address}</p>
+                        </div>
                       )}
                     </div>
+
+                    {/* Product List */}
+                    <div className="mb-4">
+                      <h4 className="font-semibold text-gray-900 mb-2">Items to Deliver:</h4>
+                      <div className="space-y-2">
+                        {verifiedOrder.items && verifiedOrder.items.length > 0 ? (
+                          // Multi-product cart order
+                          verifiedOrder.items.map((item, idx) => (
+                            <div key={idx} className="bg-white p-3 rounded-lg border-l-4 border-green-500">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="font-semibold text-gray-900">{item.product_name}</p>
+                                  <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                                </div>
+                                <p className="text-purple-600 font-bold">{item.prc_price * item.quantity} PRC</p>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          // Legacy single product order
+                          <div className="bg-white p-3 rounded-lg border-l-4 border-green-500">
+                            <div className="flex justify-between items-start">
+                              <p className="font-semibold text-gray-900">{verifiedOrder.product_name || 'Product'}</p>
+                              <p className="text-purple-600 font-bold">{verifiedOrder.total_prc || verifiedOrder.prc_amount} PRC</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="bg-purple-50 p-3 rounded-lg mt-3">
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold text-gray-700">Total:</span>
+                          <span className="font-bold text-purple-600 text-lg">{verifiedOrder.total_prc || verifiedOrder.prc_amount} PRC</span>
+                        </div>
+                      </div>
+                    </div>
+
                     <Button 
                       onClick={deliverOrder}
                       className="w-full bg-green-600 hover:bg-green-700"
