@@ -586,11 +586,11 @@ def test_admin_kpis_endpoint():
             stats = response.json()
             print(f"Response type: {type(stats)}")
             
-            # Check required KPI sections
+            # Check required KPI sections (actual API structure)
             required_sections = [
-                "user_stats", "order_stats", "kyc_stats", "vip_payment_stats",
-                "withdrawal_stats", "product_stats", "financial_overview",
-                "stock_movement_stats", "security_deposit_stats", "renewal_stats",
+                "users", "orders", "kyc", "vip_payments",
+                "withdrawals", "products", "financial",
+                "stock_movements", "security_deposits", "renewals",
                 "recent_activity"
             ]
             
@@ -603,33 +603,33 @@ def test_admin_kpis_endpoint():
                 print(f"❌ Admin KPIs test FAILED - Missing sections: {missing_sections}")
                 return False
             
-            # Validate user_stats structure
-            user_stats = stats.get("user_stats", {})
+            # Validate users structure
+            users = stats.get("users", {})
             user_required = ["total", "vip", "free", "master_stockists", "sub_stockists", "outlets"]
             for field in user_required:
-                if field not in user_stats:
-                    print(f"❌ Admin KPIs test FAILED - Missing user_stats.{field}")
+                if field not in users:
+                    print(f"❌ Admin KPIs test FAILED - Missing users.{field}")
                     return False
             
-            # Validate order_stats structure
-            order_stats = stats.get("order_stats", {})
+            # Validate orders structure
+            orders = stats.get("orders", {})
             order_required = ["total", "pending", "delivered"]
             for field in order_required:
-                if field not in order_stats:
-                    print(f"❌ Admin KPIs test FAILED - Missing order_stats.{field}")
+                if field not in orders:
+                    print(f"❌ Admin KPIs test FAILED - Missing orders.{field}")
                     return False
             
-            # Validate financial_overview structure
-            financial = stats.get("financial_overview", {})
+            # Validate financial structure
+            financial = stats.get("financial", {})
             financial_required = ["total_revenue", "security_deposits_collected"]
             for field in financial_required:
                 if field not in financial:
-                    print(f"❌ Admin KPIs test FAILED - Missing financial_overview.{field}")
+                    print(f"❌ Admin KPIs test FAILED - Missing financial.{field}")
                     return False
             
             print(f"✅ Admin KPIs test PASSED - All required sections present")
-            print(f"   Users: {user_stats.get('total', 0)} total, {user_stats.get('vip', 0)} VIP")
-            print(f"   Orders: {order_stats.get('total', 0)} total, {order_stats.get('pending', 0)} pending")
+            print(f"   Users: {users.get('total', 0)} total, {users.get('vip', 0)} VIP")
+            print(f"   Orders: {orders.get('total', 0)} total, {orders.get('pending', 0)} pending")
             print(f"   Revenue: ₹{financial.get('total_revenue', 0)}")
             return True
             
