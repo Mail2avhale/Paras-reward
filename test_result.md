@@ -523,6 +523,7 @@ metadata:
 
 test_plan:
   current_focus:
+    - "Login Case Sensitivity Fix"
     - "Admin Dashboard KPIs APIs"
     - "Order Management and Assignment APIs"
     - "Financial Reports and Reconciliation"
