@@ -922,7 +922,8 @@ const AdminDashboard = ({ user, onLogout }) => {
     { id: 'commissions', icon: DollarSign, label: 'Commissions' },
     { id: 'orders', icon: ShoppingCart, label: 'Orders' },
     { id: 'marketplace', icon: Store, label: 'Marketplace' },
-    { id: 'payments', icon: CreditCard, label: 'Payments' },
+    { id: 'payments', icon: CreditCard, label: 'VIP Payments' },
+    { id: 'kyc', icon: FileText, label: 'KYC Verification' },
     { id: 'notifications', icon: Bell, label: 'Notifications' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
