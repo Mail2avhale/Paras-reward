@@ -348,19 +348,14 @@ const VIPMembership = ({ user, onLogout }) => {
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
-                            <Image className="h-4 w-4" />
-                            Screenshot URL (Optional)
-                          </label>
-                          <Input
-                            type="url"
-                            placeholder="https://..."
+                          <ImageUpload
                             value={formData.screenshot_url}
-                            onChange={(e) => setFormData({...formData, screenshot_url: e.target.value})}
+                            onChange={(base64Image) => setFormData({...formData, screenshot_url: base64Image})}
+                            label="Payment Screenshot"
+                            aspectRatio="video"
+                            maxSize={5}
+                            required={true}
                           />
-                          <p className="text-xs text-gray-500 mt-1">
-                            Upload screenshot to an image hosting service and paste URL
-                          </p>
                         </div>
 
                         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
