@@ -1091,6 +1091,148 @@ const AdminDashboard = ({ user, onLogout }) => {
                 </Card>
               </div>
 
+              {/* Comprehensive Financial KPIs */}
+              <div className="mb-8">
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Financial Overview</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {/* Total Security Deposits */}
+                  <Card className="p-6 bg-gradient-to-br from-indigo-50 to-indigo-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <DollarSign className="h-8 w-8 text-indigo-600" />
+                      <span className="text-xs font-semibold text-indigo-600 bg-indigo-200 px-2 py-1 rounded-full">
+                        DEPOSITS
+                      </span>
+                    </div>
+                    <div className="text-sm font-medium text-indigo-600 mb-1">Total Security Deposits</div>
+                    <div className="text-2xl font-bold text-indigo-900">
+                      ₹{((stats?.financial?.total_security_deposits || 0) / 100000).toFixed(2)}L
+                    </div>
+                    <div className="text-xs text-indigo-700 mt-2">
+                      Approved: {stats?.security_deposits?.approved || 0}
+                    </div>
+                  </Card>
+
+                  {/* Total Renewal Fees */}
+                  <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <TrendingUp className="h-8 w-8 text-purple-600" />
+                      <span className="text-xs font-semibold text-purple-600 bg-purple-200 px-2 py-1 rounded-full">
+                        RENEWALS
+                      </span>
+                    </div>
+                    <div className="text-sm font-medium text-purple-600 mb-1">Total Renewal Fees</div>
+                    <div className="text-2xl font-bold text-purple-900">
+                      ₹{((stats?.financial?.total_renewal_fees || 0) / 100000).toFixed(2)}L
+                    </div>
+                    <div className="text-xs text-purple-700 mt-2">
+                      Active: {stats?.renewals?.active || 0} | Overdue: {stats?.renewals?.overdue || 0}
+                    </div>
+                  </Card>
+
+                  {/* Total VIP Membership Fees */}
+                  <Card className="p-6 bg-gradient-to-br from-amber-50 to-amber-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <Users className="h-8 w-8 text-amber-600" />
+                      <span className="text-xs font-semibold text-amber-600 bg-amber-200 px-2 py-1 rounded-full">
+                        VIP FEES
+                      </span>
+                    </div>
+                    <div className="text-sm font-medium text-amber-600 mb-1">VIP Membership Fees</div>
+                    <div className="text-2xl font-bold text-amber-900">
+                      ₹{(stats?.financial?.total_vip_membership_fees || 0).toLocaleString()}
+                    </div>
+                    <div className="text-xs text-amber-700 mt-2">
+                      VIP Users: {stats?.users?.vip || 0}
+                    </div>
+                  </Card>
+
+                  {/* Total Withdrawals Processed */}
+                  <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <CreditCard className="h-8 w-8 text-green-600" />
+                      <span className="text-xs font-semibold text-green-600 bg-green-200 px-2 py-1 rounded-full">
+                        PROCESSED
+                      </span>
+                    </div>
+                    <div className="text-sm font-medium text-green-600 mb-1">Withdrawals Processed</div>
+                    <div className="text-2xl font-bold text-green-900">
+                      ₹{(stats?.financial?.total_withdrawal_processed || 0).toLocaleString()}
+                    </div>
+                    <div className="text-xs text-green-700 mt-2">
+                      Pending: ₹{(stats?.withdrawals?.pending_amount || 0).toLocaleString()}
+                    </div>
+                  </Card>
+
+                  {/* Total Redeem Value (PRC) */}
+                  <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <Package className="h-8 w-8 text-blue-600" />
+                      <span className="text-xs font-semibold text-blue-600 bg-blue-200 px-2 py-1 rounded-full">
+                        REDEEMS
+                      </span>
+                    </div>
+                    <div className="text-sm font-medium text-blue-600 mb-1">Total Redeem Value</div>
+                    <div className="text-2xl font-bold text-blue-900">
+                      {(stats?.financial?.total_revenue_prc || 0).toLocaleString()} PRC
+                    </div>
+                    <div className="text-xs text-blue-700 mt-2">
+                      ≈ ₹{((stats?.financial?.total_prc_value_in_inr || 0)).toLocaleString()} INR
+                    </div>
+                  </Card>
+
+                  {/* Total Revenue (INR) */}
+                  <Card className="p-6 bg-gradient-to-br from-emerald-50 to-emerald-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <BarChart3 className="h-8 w-8 text-emerald-600" />
+                      <span className="text-xs font-semibold text-emerald-600 bg-emerald-200 px-2 py-1 rounded-full">
+                        REVENUE
+                      </span>
+                    </div>
+                    <div className="text-sm font-medium text-emerald-600 mb-1">Total Revenue (Cash)</div>
+                    <div className="text-2xl font-bold text-emerald-900">
+                      ₹{((stats?.financial?.total_revenue_inr || 0) / 100000).toFixed(2)}L
+                    </div>
+                    <div className="text-xs text-emerald-700 mt-2">
+                      From {stats?.orders?.delivered || 0} delivered orders
+                    </div>
+                  </Card>
+
+                  {/* Total Lien */}
+                  <Card className="p-6 bg-gradient-to-br from-orange-50 to-orange-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <Shield className="h-8 w-8 text-orange-600" />
+                      <span className="text-xs font-semibold text-orange-600 bg-orange-200 px-2 py-1 rounded-full">
+                        LIEN
+                      </span>
+                    </div>
+                    <div className="text-sm font-medium text-orange-600 mb-1">Total Pending Lien</div>
+                    <div className="text-2xl font-bold text-orange-900">
+                      ₹{(stats?.financial?.total_lien || 0).toLocaleString()}
+                    </div>
+                    <div className="text-xs text-orange-700 mt-2">
+                      Pending maintenance fees
+                    </div>
+                  </Card>
+
+                  {/* Stock Movement Status */}
+                  <Card className="p-6 bg-gradient-to-br from-teal-50 to-teal-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <Truck className="h-8 w-8 text-teal-600" />
+                      <span className="text-xs font-semibold text-teal-600 bg-teal-200 px-2 py-1 rounded-full">
+                        STOCK
+                      </span>
+                    </div>
+                    <div className="text-sm font-medium text-teal-600 mb-1">Stock Movements</div>
+                    <div className="text-2xl font-bold text-teal-900">
+                      {(stats?.stock_movements?.pending || 0) + (stats?.stock_movements?.approved || 0) + (stats?.stock_movements?.completed || 0)}
+                    </div>
+                    <div className="text-xs text-teal-700 mt-2">
+                      Pending: {stats?.stock_movements?.pending || 0} | Completed: {stats?.stock_movements?.completed || 0}
+                    </div>
+                  </Card>
+                </div>
+              </div>
+
               {/* Chart and Fee Summary Row */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 {/* Summary Chart */}
