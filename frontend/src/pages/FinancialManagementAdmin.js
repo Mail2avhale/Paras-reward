@@ -192,8 +192,15 @@ const FinancialManagementAdmin = () => {
       return renewal.gst_amount;
     }
     // Calculate from base_amount and gst_rate
-    const baseAmount = parseFloat(renewal.base_amount || renewal.amount) || 0;
+    const baseAmount = parseFloat(renewal.base_amount) || 0;
+    const amount = parseFloat(renewal.amount) || 0;
     const gstRate = parseFloat(renewal.gst_rate) || 0.18;
+    
+    // If we have both base and total amount, derive GST from difference
+    if (baseAmount > 0 && amount > baseAmount) {
+      return amount - baseAmount;
+    }
+    // Otherwise calculate using rate
     return baseAmount * gstRate;
   };
 
@@ -202,8 +209,12 @@ const FinancialManagementAdmin = () => {
     if (renewal.total_amount !== undefined && renewal.total_amount !== null) {
       return renewal.total_amount;
     }
+    // Use 'amount' field if available (old structure)
+    if (renewal.amount !== undefined && renewal.amount !== null) {
+      return renewal.amount;
+    }
     // Calculate from base_amount + gst_amount
-    const baseAmount = parseFloat(renewal.base_amount || renewal.amount) || 0;
+    const baseAmount = parseFloat(renewal.base_amount) || 0;
     const gstAmount = getGSTAmount(renewal);
     return baseAmount + gstAmount;
   };
