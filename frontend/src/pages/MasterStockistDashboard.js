@@ -23,15 +23,16 @@ const MasterStockistDashboard = ({ user, onLogout }) => {
 
   const fetchDashboardData = async () => {
     try {
+      // Fetch wallet data
       const walletRes = await axios.get(`${API}/wallet/${user.uid}`);
       setWalletData(walletRes.data);
 
-      const depositRes = await axios.get(`${API}/security-deposit/${user.uid}`);
-      setSecurityDeposit(depositRes.data);
+      // Fetch financial info (deposit + renewal)
+      const financialRes = await axios.get(`${API}/stockist/${user.uid}/financial-info`);
+      setSecurityDeposit(financialRes.data.security_deposit);
+      setRenewalStatus(financialRes.data.renewal);
 
-      const renewalRes = await axios.get(`${API}/renewal/${user.uid}`);
-      setRenewalStatus(renewalRes.data);
-
+      // Fetch stock movements
       const movementsRes = await axios.get(`${API}/stock/movements/${user.uid}`);
       setStockMovements(movementsRes.data);
 
