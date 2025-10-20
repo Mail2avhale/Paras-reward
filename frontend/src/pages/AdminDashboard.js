@@ -1431,7 +1431,7 @@ const AdminDashboard = ({ user, onLogout }) => {
           {/* Stock Movement Tab */}
           {activeTab === 'stock-movement' && (
             <div className="space-y-6">
-              <StockMovementManagement />
+              <StockMovementSimple />
             </div>
           )}
 
