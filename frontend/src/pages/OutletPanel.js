@@ -257,9 +257,12 @@ const OutletPanel = ({ user, onLogout }) => {
                     </div>
                     <div className="space-y-2 mb-6">
                       <p><span className="font-semibold">Order ID:</span> {verifiedOrder.order_id}</p>
-                      <p><span className="font-semibold">Customer:</span> {verifiedOrder.uid}</p>
-                      <p><span className="font-semibold">Items:</span> {verifiedOrder.items?.length || 0}</p>
-                      <p><span className="font-semibold">Total PRC:</span> {verifiedOrder.total_prc_price} PRC</p>
+                      <p><span className="font-semibold">Customer:</span> {verifiedOrder.user_id || verifiedOrder.uid}</p>
+                      <p><span className="font-semibold">Items:</span> {verifiedOrder.items?.length || 1}</p>
+                      <p><span className="font-semibold">Total PRC:</span> {verifiedOrder.total_prc || verifiedOrder.prc_amount} PRC</p>
+                      {verifiedOrder.delivery_address && (
+                        <p><span className="font-semibold">Address:</span> {verifiedOrder.delivery_address}</p>
+                      )}
                     </div>
                     <Button 
                       onClick={deliverOrder}
