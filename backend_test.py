@@ -2153,21 +2153,27 @@ def main():
         return False
 
 def main():
-    """Main function to run the login API response format test"""
+    """Main function to run VIP checkout investigation"""
     print("=" * 80)
-    print("BACKEND API TESTING - LOGIN API RESPONSE FORMAT")
+    print("BACKEND API TESTING - VIP CHECKOUT ISSUES INVESTIGATION")
     print("=" * 80)
     
-    # Run the specific test requested
-    success = test_login_api_response_format()
+    # Run the VIP checkout investigation
+    result = run_vip_checkout_investigation()
+    
+    # Determine success based on results
+    success = len(result.get("issues", [])) == 0
     
     if success:
         print("\n" + "=" * 80)
-        print("✅ LOGIN API RESPONSE FORMAT TEST COMPLETED SUCCESSFULLY")
+        print("✅ VIP CHECKOUT INVESTIGATION COMPLETED - NO MAJOR ISSUES FOUND")
         print("=" * 80)
     else:
         print("\n" + "=" * 80)
-        print("❌ LOGIN API RESPONSE FORMAT TEST FAILED")
+        print("❌ VIP CHECKOUT INVESTIGATION COMPLETED - ISSUES IDENTIFIED")
+        print("Issues found:")
+        for issue in result.get("issues", []):
+            print(f"  - {issue}")
         print("=" * 80)
     
     return success
