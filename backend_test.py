@@ -1423,37 +1423,202 @@ def test_comprehensive_login_case_sensitivity():
         print("Some email variations still fail - case sensitivity issue persists")
         return False
 
+def check_admin_user_role():
+    """Check the role of user with email 'admin@paras.com'"""
+    print("\n" + "=" * 80)
+    print("CHECKING ADMIN USER ROLE - admin@paras.com")
+    print("=" * 80)
+    
+    target_email = "admin@paras.com"
+    
+    print(f"1. Searching for user with email: {target_email}")
+    
+    try:
+        # Get all users to find the admin user
+        response = requests.get(f"{API_BASE}/admin/users", timeout=30)
+        print(f"Admin users endpoint status: {response.status_code}")
+        
+        if response.status_code == 200:
+            users_data = response.json()
+            users = users_data.get("users", [])
+            print(f"Total users found: {len(users)}")
+            
+            # Search for exact match (case-sensitive)
+            exact_match = None
+            for user in users:
+                if user.get("email") == target_email:
+                    exact_match = user
+                    break
+            
+            if exact_match:
+                print(f"\n✅ FOUND USER (exact match):")
+                print(f"   Email: {exact_match.get('email')}")
+                print(f"   UID: {exact_match.get('uid')}")
+                print(f"   Name: {exact_match.get('name', 'N/A')}")
+                print(f"   Role: {exact_match.get('role', 'N/A')}")
+                print(f"   Status: {'Active' if exact_match.get('is_active') else 'Inactive'}")
+                
+                role = exact_match.get('role', 'N/A')
+                if role == 'admin':
+                    print(f"\n✅ ROLE VERIFICATION: User has 'admin' role")
+                    print("   This should enable admin navigation links")
+                else:
+                    print(f"\n❌ ROLE ISSUE: User role is '{role}', not 'admin'")
+                    print("   This explains why admin link is not showing in navbar")
+                
+                return exact_match
+            
+            # Search for case-insensitive match
+            print(f"\n❌ No exact match found. Searching case-insensitive...")
+            case_matches = []
+            for user in users:
+                user_email = user.get("email")
+                if user_email and user_email.lower() == target_email.lower():
+                    case_matches.append(user)
+            
+            if case_matches:
+                print(f"\n✅ FOUND {len(case_matches)} case-insensitive matches:")
+                for i, match in enumerate(case_matches, 1):
+                    print(f"\n   Match {i}:")
+                    print(f"   Email: {match.get('email')}")
+                    print(f"   UID: {match.get('uid')}")
+                    print(f"   Name: {match.get('name', 'N/A')}")
+                    print(f"   Role: {match.get('role', 'N/A')}")
+                    print(f"   Status: {'Active' if match.get('is_active') else 'Inactive'}")
+                    
+                    role = match.get('role', 'N/A')
+                    if role == 'admin':
+                        print(f"   ✅ This user has 'admin' role")
+                    else:
+                        print(f"   ❌ This user has '{role}' role, not 'admin'")
+                
+                return case_matches[0]  # Return first match
+            
+            # Search for partial matches
+            print(f"\n❌ No case-insensitive matches. Searching for partial matches...")
+            partial_matches = []
+            for user in users:
+                user_email = user.get("email")
+                if user_email and "admin" in user_email.lower():
+                    partial_matches.append(user)
+            
+            if partial_matches:
+                print(f"\n✅ FOUND {len(partial_matches)} partial matches (containing 'admin'):")
+                for i, match in enumerate(partial_matches, 1):
+                    print(f"\n   Match {i}:")
+                    print(f"   Email: {match.get('email')}")
+                    print(f"   UID: {match.get('uid')}")
+                    print(f"   Name: {match.get('name', 'N/A')}")
+                    print(f"   Role: {match.get('role', 'N/A')}")
+                    print(f"   Status: {'Active' if match.get('is_active') else 'Inactive'}")
+            else:
+                print(f"\n❌ No users found with 'admin' in email")
+            
+            print(f"\n❌ CONCLUSION: User 'admin@paras.com' not found in database")
+            return None
+            
+        else:
+            print(f"❌ Failed to get users list - Status: {response.status_code}")
+            print(f"Response: {response.text}")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Error checking admin user: {e}")
+        return None
+
+def test_login_with_admin_user():
+    """Test login functionality with admin@paras.com"""
+    print("\n2. Testing login functionality with admin@paras.com")
+    
+    target_email = "admin@paras.com"
+    
+    # Test different case variations
+    email_variations = [
+        "admin@paras.com",
+        "Admin@paras.com", 
+        "ADMIN@PARAS.COM",
+        "admin@PARAS.com"
+    ]
+    
+    for email in email_variations:
+        print(f"\n   Testing login with: {email}")
+        try:
+            response = requests.post(
+                f"{API_BASE}/auth/login",
+                params={
+                    "identifier": email,
+                    "password": "test_password_123"  # Test password
+                },
+                timeout=30
+            )
+            
+            print(f"   Status: {response.status_code}")
+            
+            if response.status_code == 404:
+                print(f"   ❌ User not found")
+            elif response.status_code == 401:
+                print(f"   ✅ User found (wrong password)")
+            elif response.status_code == 200:
+                print(f"   ✅ Login successful")
+                user_data = response.json()
+                print(f"   Role: {user_data.get('role', 'N/A')}")
+            else:
+                print(f"   ❓ Unexpected status: {response.status_code}")
+                
+        except Exception as e:
+            print(f"   ❌ Error: {e}")
+
 def main():
-    """Run comprehensive login case sensitivity fix testing"""
-    print("STARTING LOGIN CASE SENSITIVITY FIX VERIFICATION")
+    """Check admin user role for navbar issue debugging"""
+    print("CHECKING ADMIN USER ROLE FOR NAVBAR ISSUE")
     print(f"Target API: {API_BASE}")
-    print("FOCUS: Verify case-insensitive email login functionality")
+    print("FOCUS: Check role of admin@paras.com user")
     
     # Test basic connectivity
     try:
         response = requests.get(f"{API_BASE}/admin/stats", timeout=10)
         print(f"Backend connectivity test - Status: {response.status_code}")
         if response.status_code != 200:
-            print("⚠️  Backend may have issues but proceeding with login tests...")
+            print("⚠️  Backend may have issues but proceeding with user check...")
     except requests.exceptions.RequestException as e:
         print(f"❌ Backend connectivity FAILED: {e}")
         print("Cannot proceed with testing - backend is not accessible")
         return False
     
-    # Run comprehensive case sensitivity testing
-    success = test_comprehensive_login_case_sensitivity()
+    # Check admin user role
+    admin_user = check_admin_user_role()
+    
+    # Test login functionality
+    test_login_with_admin_user()
     
     # Final summary
     print("\n" + "=" * 80)
-    print("FINAL SUMMARY")
+    print("ADMIN USER ROLE CHECK SUMMARY")
     print("=" * 80)
     
-    if success:
-        print("✅ LOGIN CASE SENSITIVITY FIX: WORKING CORRECTLY")
-        print("📧 All email case variations (mixed, upper, lower) work properly")
-        print("🔧 Case-insensitive email matching is implemented and functional")
-        print("✅ Expected behavior confirmed:")
-        print("   - Mixed case emails find users correctly")
+    if admin_user:
+        role = admin_user.get('role', 'N/A')
+        email = admin_user.get('email', 'N/A')
+        
+        print(f"✅ USER FOUND:")
+        print(f"   Email: {email}")
+        print(f"   Role: {role}")
+        
+        if role == 'admin':
+            print(f"\n✅ ROLE IS CORRECT: User has 'admin' role")
+            print("   Admin navigation should be visible")
+            print("   If admin link is not showing, check frontend role-based navigation logic")
+        else:
+            print(f"\n❌ ROLE ISSUE IDENTIFIED: User role is '{role}', not 'admin'")
+            print("   This explains why admin link is not showing in navbar")
+            print("   SOLUTION: Update user role to 'admin' in database")
+        
+        return True
+    else:
+        print(f"❌ USER NOT FOUND: 'admin@paras.com' does not exist in database")
+        print("   This explains why admin link is not showing")
+        print("   SOLUTION: Create admin user or check correct email address")
+        return False
         print("   - Returns 401 'Invalid password' for wrong passwords (not 404 'User not found')")
         print("   - Mobile and UID login remain unaffected")
     else:
