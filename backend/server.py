@@ -2192,6 +2192,7 @@ class Product(BaseModel):
     
     # Visibility
     visible: bool = True
+    is_active: bool = True  # Added for product lifecycle management
     regions: Optional[list] = []  # List of states/regions
     vip_only: bool = False
     visible_from: Optional[datetime] = None
