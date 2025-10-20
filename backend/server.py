@@ -992,8 +992,9 @@ async def claim_mining(uid: str):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Check if mining is active
-    if not user.get("mining_active") or not user.get("mining_start_time"):
+    # Check if mining session exists (backward compatible - treat None as True for old sessions)
+    mining_active = user.get("mining_active")
+    if mining_active is False or not user.get("mining_start_time"):
         raise HTTPException(status_code=400, detail="No active mining session")
     
     now = datetime.now(timezone.utc)
