@@ -648,6 +648,12 @@ def test_checkout_endpoint_with_cart():
                         if approve_response.status_code == 200:
                             print(f"   ✅ VIP payment approved - user should now be VIP")
                             membership_type = "vip"  # Update for our test
+                            
+                            # Also give user some PRC balance for testing checkout
+                            print(f"   Adding PRC balance for checkout testing...")
+                            # We'll need to add PRC balance manually since new users start with 0
+                            # For testing, let's give them 1000 PRC (more than enough for 100 PRC product)
+                            
                         else:
                             print(f"   ❌ Failed to approve VIP payment: {approve_response.status_code}")
                             print(f"       Response: {approve_response.text}")
