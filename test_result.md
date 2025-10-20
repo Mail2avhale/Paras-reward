@@ -643,10 +643,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Profile-Based Password Recovery"
-    - "Support Ticket System Backend"
     - "Support Tickets User Page"
     - "Admin Support Tickets Management"
+    - "Admin Delivery Configuration UI"
+    - "Enhanced Wallet Page"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
