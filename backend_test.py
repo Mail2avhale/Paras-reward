@@ -1765,5 +1765,25 @@ def main():
         print("   SOLUTION: Create admin user or check correct email address")
         return False
 
+def main():
+    """Main function to run the login API response format test"""
+    print("=" * 80)
+    print("BACKEND API TESTING - LOGIN API RESPONSE FORMAT")
+    print("=" * 80)
+    
+    # Run the specific test requested
+    success = test_login_api_response_format()
+    
+    if success:
+        print("\n" + "=" * 80)
+        print("✅ LOGIN API RESPONSE FORMAT TEST COMPLETED SUCCESSFULLY")
+        print("=" * 80)
+    else:
+        print("\n" + "=" * 80)
+        print("❌ LOGIN API RESPONSE FORMAT TEST FAILED")
+        print("=" * 80)
+    
+    return success
+
 if __name__ == "__main__":
     main()
