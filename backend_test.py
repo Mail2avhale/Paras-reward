@@ -227,22 +227,27 @@ def investigate_vip_user_status():
     
     return vip_users_found
 
-def test_cart_and_checkout_flow(vip_users):
-    """Test Cart & Checkout Flow for VIP users"""
+def test_cart_and_checkout_flow(test_users):
+    """Test Cart & Checkout Flow for users"""
     print("\n" + "=" * 80)
     print("2. TESTING CART & CHECKOUT FLOW")
     print("=" * 80)
     
-    if not vip_users:
-        print("❌ No VIP users found to test cart & checkout flow")
+    if not test_users:
+        print("❌ No users found to test cart & checkout flow")
         return False
     
-    # Use first VIP user for testing
-    test_user = vip_users[0]
+    # Use first user for testing
+    test_user = test_users[0]
     uid = test_user["uid"]
     name = test_user["name"]
+    membership_type = test_user["membership_type"]
     
-    print(f"\n2.1. Testing with VIP user: {name} (UID: {uid})")
+    print(f"\n2.1. Testing with user: {name} (UID: {uid})")
+    print(f"     Membership Type: {membership_type}")
+    
+    if membership_type != "vip":
+        print(f"     ⚠️  User is not VIP - this may cause checkout to fail")
     
     # Step 1: Get available products
     print(f"\n2.2. Getting available products...")
