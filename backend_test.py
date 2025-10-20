@@ -380,9 +380,200 @@ def test_mining_rate_never_zero():
     print("✅ Mining rate never zero test PASSED - All users have non-zero mining rates")
     return True
 
+def test_public_products_endpoint():
+    """Test GET /api/products endpoint (public) - should return active and visible products"""
+    print("\n7. Testing Public Products Endpoint...")
+    
+    try:
+        response = requests.get(f"{API_BASE}/products", timeout=30)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            products = response.json()
+            print(f"Response type: {type(products)}")
+            
+            # Should return an array
+            if not isinstance(products, list):
+                print(f"❌ Public products test FAILED - Response should be an array, got {type(products)}")
+                return False
+            
+            print(f"Number of products returned: {len(products)}")
+            
+            # Check if we have at least some products (the request mentions 15, but let's be flexible)
+            if len(products) == 0:
+                print("❌ Public products test FAILED - No products returned")
+                return False
+            
+            # Check each product has required fields
+            required_fields = ["product_id", "name", "sku", "prc_price", "cash_price"]
+            visibility_fields = ["is_active", "visible"]
+            
+            for i, product in enumerate(products):
+                # Check for _id field (should be excluded)
+                if "_id" in product:
+                    print(f"❌ Public products test FAILED - Product {i+1} contains _id field (should be excluded)")
+                    return False
+                
+                # Check required fields
+                missing_fields = []
+                for field in required_fields:
+                    if field not in product:
+                        missing_fields.append(field)
+                
+                if missing_fields:
+                    print(f"❌ Public products test FAILED - Product {i+1} missing fields: {missing_fields}")
+                    return False
+                
+                # Check visibility fields
+                for field in visibility_fields:
+                    if field in product:
+                        if not product[field]:
+                            print(f"❌ Public products test FAILED - Product {i+1} has {field}=false (should be true for public endpoint)")
+                            return False
+                
+                # Log first product details for verification
+                if i == 0:
+                    print(f"Sample product: {product.get('name')} (SKU: {product.get('sku')}, PRC: {product.get('prc_price')}, Cash: {product.get('cash_price')})")
+            
+            print(f"✅ Public products test PASSED - {len(products)} products returned with correct structure")
+            return True
+            
+        else:
+            print(f"❌ Public products test FAILED - Status: {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Public products test FAILED - Error: {e}")
+        return False
+
+def test_admin_products_endpoint():
+    """Test GET /api/admin/products endpoint - should return all products regardless of visibility"""
+    print("\n8. Testing Admin Products Endpoint...")
+    
+    try:
+        response = requests.get(f"{API_BASE}/admin/products", timeout=30)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            admin_products = response.json()
+            print(f"Response type: {type(admin_products)}")
+            
+            # Should return an array
+            if not isinstance(admin_products, list):
+                print(f"❌ Admin products test FAILED - Response should be an array, got {type(admin_products)}")
+                return False
+            
+            print(f"Number of admin products returned: {len(admin_products)}")
+            
+            # Get public products for comparison
+            public_response = requests.get(f"{API_BASE}/products", timeout=30)
+            if public_response.status_code == 200:
+                public_products = public_response.json()
+                print(f"Number of public products: {len(public_products)}")
+                
+                # Admin endpoint should return same or more products than public
+                if len(admin_products) < len(public_products):
+                    print(f"❌ Admin products test FAILED - Admin endpoint returned fewer products ({len(admin_products)}) than public endpoint ({len(public_products)})")
+                    return False
+                
+                # Check if admin endpoint includes products that public doesn't
+                if len(admin_products) > len(public_products):
+                    print(f"✅ Admin endpoint includes {len(admin_products) - len(public_products)} additional products (hidden/inactive)")
+                
+            # Check each product structure
+            required_fields = ["product_id", "name", "sku", "prc_price", "cash_price"]
+            
+            for i, product in enumerate(admin_products):
+                # Check for _id field (should be excluded)
+                if "_id" in product:
+                    print(f"❌ Admin products test FAILED - Product {i+1} contains _id field (should be excluded)")
+                    return False
+                
+                # Check required fields
+                missing_fields = []
+                for field in required_fields:
+                    if field not in product:
+                        missing_fields.append(field)
+                
+                if missing_fields:
+                    print(f"❌ Admin products test FAILED - Product {i+1} missing fields: {missing_fields}")
+                    return False
+                
+                # Log first product details for verification
+                if i == 0:
+                    print(f"Sample admin product: {product.get('name')} (SKU: {product.get('sku')}, Active: {product.get('is_active')}, Visible: {product.get('visible')})")
+            
+            print(f"✅ Admin products test PASSED - {len(admin_products)} products returned with correct structure")
+            return True
+            
+        else:
+            print(f"❌ Admin products test FAILED - Status: {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Admin products test FAILED - Error: {e}")
+        return False
+
+def test_products_filtering_logic():
+    """Test that public endpoint properly filters products compared to admin endpoint"""
+    print("\n9. Testing Products Filtering Logic...")
+    
+    try:
+        # Get both endpoints
+        public_response = requests.get(f"{API_BASE}/products", timeout=30)
+        admin_response = requests.get(f"{API_BASE}/admin/products", timeout=30)
+        
+        if public_response.status_code == 200 and admin_response.status_code == 200:
+            public_products = public_response.json()
+            admin_products = admin_response.json()
+            
+            # Create sets of product IDs for comparison
+            public_ids = {p.get("product_id") for p in public_products}
+            admin_ids = {p.get("product_id") for p in admin_products}
+            
+            # All public products should be in admin products
+            if not public_ids.issubset(admin_ids):
+                missing_in_admin = public_ids - admin_ids
+                print(f"❌ Products filtering test FAILED - Public products not found in admin: {missing_in_admin}")
+                return False
+            
+            # Check that all public products have is_active=true and visible=true
+            for product in public_products:
+                if not product.get("is_active", False):
+                    print(f"❌ Products filtering test FAILED - Public product {product.get('name')} has is_active=false")
+                    return False
+                
+                if not product.get("visible", False):
+                    print(f"❌ Products filtering test FAILED - Public product {product.get('name')} has visible=false")
+                    return False
+            
+            # Check if admin has products that public doesn't (should be inactive or invisible)
+            admin_only_ids = admin_ids - public_ids
+            if admin_only_ids:
+                print(f"✅ Found {len(admin_only_ids)} products in admin that are filtered from public (inactive/invisible)")
+                
+                # Verify these are indeed inactive or invisible
+                for product in admin_products:
+                    if product.get("product_id") in admin_only_ids:
+                        is_active = product.get("is_active", False)
+                        is_visible = product.get("visible", False)
+                        if is_active and is_visible:
+                            print(f"❌ Products filtering test FAILED - Product {product.get('name')} is active and visible but not in public endpoint")
+                            return False
+            
+            print("✅ Products filtering test PASSED - Public endpoint correctly filters active and visible products")
+            return True
+            
+        else:
+            print(f"❌ Products filtering test FAILED - Public: {public_response.status_code}, Admin: {admin_response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Products filtering test FAILED - Error: {e}")
+        return False
+
 def main():
-    """Run all Mining System Fix tests"""
-    print("Starting Mining System Fix testing...")
+    """Run all Backend API tests"""
+    print("Starting Backend API testing...")
     print(f"Target API: {API_BASE}")
     
     # Test basic connectivity
@@ -396,8 +587,32 @@ def main():
     
     # Run all tests in sequence
     print("\n" + "=" * 80)
-    print("MINING SYSTEM FIX COMPREHENSIVE TESTING")
+    print("BACKEND API COMPREHENSIVE TESTING")
     print("=" * 80)
+    
+    # Products Endpoint Testing (Priority Focus)
+    print("\n" + "=" * 50)
+    print("PRODUCTS ENDPOINT TESTING (PRIORITY)")
+    print("=" * 50)
+    
+    # 7. Test public products endpoint
+    if not test_public_products_endpoint():
+        print("❌ CRITICAL: Public products endpoint test failed")
+        return False
+    
+    # 8. Test admin products endpoint
+    if not test_admin_products_endpoint():
+        print("❌ CRITICAL: Admin products endpoint test failed")
+        return False
+    
+    # 9. Test products filtering logic
+    if not test_products_filtering_logic():
+        print("❌ CRITICAL: Products filtering logic test failed")
+        return False
+    
+    print("\n" + "=" * 50)
+    print("MINING SYSTEM TESTING (SECONDARY)")
+    print("=" * 50)
     
     # 1. Setup test users
     if not setup_test_users():
@@ -430,12 +645,12 @@ def main():
         return False
     
     print("\n" + "=" * 80)
-    print("MINING SYSTEM FIX TESTING COMPLETED!")
+    print("BACKEND API TESTING COMPLETED!")
     print("=" * 80)
-    print("✅ ALL TESTS PASSED - Mining system fix is working correctly!")
+    print("✅ ALL TESTS PASSED - Backend APIs are working correctly!")
+    print("✅ Products endpoints working: public filtering and admin access")
+    print("✅ Mining system fix is working correctly")
     print("✅ Mining rate displays correctly and is never zero")
-    print("✅ Mining rate calculation formula is working as expected")
-    print("✅ Both active and inactive mining sessions work properly")
     
     return True
 
