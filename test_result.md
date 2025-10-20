@@ -538,9 +538,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Admin Dashboard KPIs APIs"
-    - "Order Management and Assignment APIs"
-    - "Financial Reports and Reconciliation"
+    - "KYC and VIP Payment Admin Endpoints"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
