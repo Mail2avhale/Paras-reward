@@ -521,11 +521,15 @@ const MarketplaceManagement = () => {
                 <label className="block text-sm font-medium mb-2">SKU *</label>
                 <Input
                   required
+                  minLength={3}
                   value={formData.sku}
                   onChange={(e) => setFormData({...formData, sku: e.target.value.toUpperCase()})}
                   placeholder="e.g., PROD-001"
                   disabled={!!editingProduct}
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Unique product identifier (min 3 characters, auto-uppercase)
+                </p>
               </div>
             </div>
 
