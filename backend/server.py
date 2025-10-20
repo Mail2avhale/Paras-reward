@@ -1992,32 +1992,54 @@ async def get_admin_stats():
     verified_kyc = await db.kyc_documents.count_documents({"status": "verified"})
     rejected_kyc = await db.kyc_documents.count_documents({"status": "rejected"})
     
-    # VIP Payments Statistics
+    # VIP Payments Statistics with Total Amount
     total_vip_requests = await db.vip_payments.count_documents({})
     pending_vip_approvals = await db.vip_payments.count_documents({"status": "pending"})
     approved_vip = await db.vip_payments.count_documents({"status": "approved"})
+    
+    # Calculate total VIP membership fees collected
+    vip_fees_pipeline = [
+        {"$match": {"status": "approved"}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]
+    vip_fees_result = await db.vip_payments.aggregate(vip_fees_pipeline).to_list(1)
+    total_vip_fees = vip_fees_result[0]["total"] if vip_fees_result else 0
     
     # Withdrawal Statistics
     pending_cashback_withdrawals = await db.cashback_withdrawals.count_documents({"status": "pending"})
     pending_profit_withdrawals = await db.profit_withdrawals.count_documents({"status": "pending"})
     total_pending_withdrawals = pending_cashback_withdrawals + pending_profit_withdrawals
     
-    # Calculate total withdrawal amounts pending
-    cashback_pipeline = [
+    # Calculate total withdrawal amounts (pending and processed)
+    cashback_pending_pipeline = [
         {"$match": {"status": "pending"}},
         {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
     ]
-    profit_pipeline = [
+    cashback_processed_pipeline = [
+        {"$match": {"status": {"$in": ["approved", "completed"]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]
+    profit_pending_pipeline = [
         {"$match": {"status": "pending"}},
         {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
     ]
+    profit_processed_pipeline = [
+        {"$match": {"status": {"$in": ["approved", "completed"]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]
     
-    cashback_result = await db.cashback_withdrawals.aggregate(cashback_pipeline).to_list(1)
-    profit_result = await db.profit_withdrawals.aggregate(profit_pipeline).to_list(1)
+    cashback_pending_result = await db.cashback_withdrawals.aggregate(cashback_pending_pipeline).to_list(1)
+    cashback_processed_result = await db.cashback_withdrawals.aggregate(cashback_processed_pipeline).to_list(1)
+    profit_pending_result = await db.profit_withdrawals.aggregate(profit_pending_pipeline).to_list(1)
+    profit_processed_result = await db.profit_withdrawals.aggregate(profit_processed_pipeline).to_list(1)
     
-    pending_cashback_amount = cashback_result[0]["total"] if cashback_result else 0
-    pending_profit_amount = profit_result[0]["total"] if profit_result else 0
+    pending_cashback_amount = cashback_pending_result[0]["total"] if cashback_pending_result else 0
+    processed_cashback_amount = cashback_processed_result[0]["total"] if cashback_processed_result else 0
+    pending_profit_amount = profit_pending_result[0]["total"] if profit_pending_result else 0
+    processed_profit_amount = profit_processed_result[0]["total"] if profit_processed_result else 0
+    
     total_pending_withdrawal_amount = pending_cashback_amount + pending_profit_amount
+    total_processed_withdrawal_amount = processed_cashback_amount + processed_profit_amount
     
     # Product Statistics
     total_products = await db.products.count_documents({})
@@ -2026,14 +2048,19 @@ async def get_admin_stats():
     # Financial Overview - Calculate total revenue from delivered orders
     revenue_pipeline = [
         {"$match": {"status": "delivered"}},
-        {"$group": {"_id": None, "total_cash": {"$sum": "$total_cash_price"}}}
+        {"$group": {"_id": None, "total_cash": {"$sum": "$total_cash_price"}, "total_prc": {"$sum": "$total_prc_price"}}}
     ]
     revenue_result = await db.orders.aggregate(revenue_pipeline).to_list(1)
-    total_revenue = revenue_result[0]["total_cash"] if revenue_result else 0
+    total_revenue_inr = revenue_result[0]["total_cash"] if revenue_result else 0
+    total_revenue_prc = revenue_result[0]["total_prc"] if revenue_result else 0
+    
+    # Calculate PRC to INR conversion (10 PRC = 1 INR)
+    total_prc_value_in_inr = total_revenue_prc / 10 if total_revenue_prc else 0
     
     # Stock Movement Statistics
-    pending_stock_movements = await db.stock_movements.count_documents({"status": "pending"})
+    pending_stock_movements = await db.stock_movements.count_documents({"status": "pending_admin"})
     approved_stock_movements = await db.stock_movements.count_documents({"status": "approved"})
+    completed_stock_movements = await db.stock_movements.count_documents({"status": "completed"})
     
     # Security Deposit Statistics
     pending_deposits = await db.security_deposits.count_documents({"status": "pending"})
@@ -2047,14 +2074,30 @@ async def get_admin_stats():
     deposit_result = await db.security_deposits.aggregate(deposit_pipeline).to_list(1)
     total_security_deposits = deposit_result[0]["total"] if deposit_result else 0
     
-    # Annual Renewal Statistics
+    # Annual Renewal Statistics with Total Fees
     pending_renewals = await db.annual_renewals.count_documents({"status": "pending"})
-    active_renewals = await db.annual_renewals.count_documents({"status": "active"})
+    active_renewals = await db.annual_renewals.count_documents({"status": "approved"})
     overdue_entities = await db.users.count_documents({"renewal_status": "overdue"})
     
+    # Calculate total renewal fees collected
+    renewal_fees_pipeline = [
+        {"$match": {"status": "approved"}},
+        {"$group": {"_id": None, "total": {"$sum": "$total_amount"}}}
+    ]
+    renewal_fees_result = await db.annual_renewals.aggregate(renewal_fees_pipeline).to_list(1)
+    total_renewal_fees = renewal_fees_result[0]["total"] if renewal_fees_result else 0
+    
+    # Calculate total lien (pending maintenance fees)
+    lien_pipeline = [
+        {"$match": {"pending_lien": {"$gt": 0}}},
+        {"$group": {"_id": None, "total": {"$sum": "$pending_lien"}}}
+    ]
+    lien_result = await db.users.aggregate(lien_pipeline).to_list(1)
+    total_lien = lien_result[0]["total"] if lien_result else 0
+    
     # Recent Activity - Get last 5 activities (orders, withdrawals, KYC)
-    recent_orders = await db.orders.find({}).sort("created_at", -1).limit(5).to_list(5)
-    recent_withdrawals = await db.cashback_withdrawals.find({}).sort("created_at", -1).limit(5).to_list(5)
+    recent_orders = await db.orders.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
+    recent_withdrawals = await db.cashback_withdrawals.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
     
     return {
         "users": {
@@ -2087,17 +2130,46 @@ async def get_admin_stats():
             "pending_profit": pending_profit_withdrawals,
             "pending_amount": total_pending_withdrawal_amount,
             "pending_cashback_amount": pending_cashback_amount,
-            "pending_profit_amount": pending_profit_amount
+            "pending_profit_amount": pending_profit_amount,
+            "processed_amount": total_processed_withdrawal_amount,
+            "processed_cashback_amount": processed_cashback_amount,
+            "processed_profit_amount": processed_profit_amount
         },
         "products": {
             "total": total_products,
             "active": active_products
         },
         "financial": {
-            "total_revenue": total_revenue,
-            "total_security_deposits": total_security_deposits
+            "total_revenue_inr": total_revenue_inr,
+            "total_revenue_prc": total_revenue_prc,
+            "total_prc_value_in_inr": total_prc_value_in_inr,
+            "total_security_deposits": total_security_deposits,
+            "total_renewal_fees": total_renewal_fees,
+            "total_vip_membership_fees": total_vip_fees,
+            "total_lien": total_lien,
+            "total_withdrawal_processed": total_processed_withdrawal_amount
         },
         "stock_movements": {
+            "pending": pending_stock_movements,
+            "approved": approved_stock_movements,
+            "completed": completed_stock_movements
+        },
+        "security_deposits": {
+            "pending": pending_deposits,
+            "approved": approved_deposits,
+            "total_amount": total_security_deposits
+        },
+        "renewals": {
+            "pending": pending_renewals,
+            "active": active_renewals,
+            "overdue": overdue_entities,
+            "total_fees": total_renewal_fees
+        },
+        "recent_activity": {
+            "orders": recent_orders,
+            "withdrawals": recent_withdrawals
+        }
+    }
             "pending": pending_stock_movements,
             "approved": approved_stock_movements
         },
