@@ -335,55 +335,55 @@ backend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Pending implementation: Stock allocation management, inventory tracking, low stock alerts for admin dashboard."
+        comment: "Pending implementation: Stock allocation management, inventory tracking, low stock alerts for admin dashboard. (Note: Basic stock movement system already implemented, need enhanced allocation features)"
 
   - task: "Order Management and Assignment APIs"
-    implemented: false
+    implemented: true
     working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Pending implementation: Enhanced order management, order assignment to outlets, order tracking, status updates."
+        comment: "IMPLEMENTED: Enhanced order management APIs: GET /api/admin/orders/all (with status filter, pagination), GET /api/admin/orders/{order_id} (detailed order info with user details and commission breakdown), POST /api/admin/orders/{order_id}/assign (assign order to outlet). Orders can now be tracked, filtered, and assigned to outlets."
 
   - task: "Financial Reports and Reconciliation"
-    implemented: false
+    implemented: true
     working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Pending implementation: Financial reports, revenue tracking, commission reports, withdrawal reports, reconciliation tools."
+        comment: "IMPLEMENTED: Financial reporting APIs: GET /api/admin/reports/revenue (revenue report with date filtering, total revenue, PRC spent, delivery charges, top 10 products), GET /api/admin/reports/commissions (commission distribution by entity type, top 10 earners with names), GET /api/admin/reports/withdrawals (withdrawal statistics by status for cashback and profit wallets). Comprehensive financial analytics available."
 
   - task: "Employee Management APIs"
-    implemented: false
+    implemented: true
     working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Pending implementation: Employee/sub-admin creation, role management, access control for sub-admins and managers."
+        comment: "IMPLEMENTED: Employee management system: POST /api/admin/employees/create (create sub-admin, manager, employee with role-specific fields like assigned_regions, permissions), GET /api/admin/employees (list all employees with optional role filter), PUT /api/admin/employees/{uid}/permissions (update employee permissions). All actions are logged in audit system."
 
   - task: "Audit Logging System"
-    implemented: false
+    implemented: true
     working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Pending implementation: Comprehensive audit logging for all admin actions, user activities, system changes."
+        comment: "IMPLEMENTED: Comprehensive audit logging system: POST /api/admin/audit/log (create audit log entry with action, entity, performer, changes, IP), GET /api/admin/audit/logs (retrieve audit logs with filters for action, entity_type, performed_by, with pagination). All employee creation and permission updates are automatically logged. Audit trail complete."
 
 frontend:
   - task: "User Registration Form"
