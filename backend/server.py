@@ -1521,6 +1521,47 @@ async def deliver_order(order_id: str, request: Request):
         "distribution": distribution_result
     }
 
+
+@api_router.delete("/orders/{order_id}")
+async def cancel_order(order_id: str):
+    """Cancel order and refund PRC (only pending/verified orders)"""
+    order = await db.orders.find_one({"order_id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Only allow cancellation for pending or verified orders
+    if order.get("status") not in ["pending", "verified"]:
+        raise HTTPException(status_code=400, detail="Cannot cancel delivered or cancelled orders")
+    
+    # Refund PRC to user
+    user_id = order.get("user_id")
+    total_prc = order.get("total_prc", 0)
+    
+    await db.users.update_one(
+        {"uid": user_id},
+        {"$inc": {"prc_balance": total_prc}}
+    )
+    
+    # Restore product stock
+    if order.get("items"):
+        for item in order["items"]:
+            await db.products.update_one(
+                {"product_id": item["product_id"]},
+                {"$inc": {"available_stock": item["quantity"]}}
+            )
+    
+    # Update order status
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {"$set": {
+            "status": "cancelled",
+            "cancelled_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Order cancelled successfully", "refunded_prc": total_prc}
+
+
 # ========== WALLET ROUTES ==========
 @api_router.get("/wallet/{uid}")
 async def get_wallet(uid: str):
