@@ -485,16 +485,16 @@ def run_vip_checkout_investigation():
     print("🔍" * 80)
     
     # Step 1: Check VIP User Status
-    vip_users = investigate_vip_user_status()
+    test_users = investigate_vip_user_status()
     
     # Step 2: Test Cart & Checkout Flow
-    checkout_result = test_cart_and_checkout_flow(vip_users)
+    checkout_result = test_cart_and_checkout_flow(test_users)
     
     # Step 3: Check Orders in Database
-    orders_exist = check_orders_in_database(vip_users)
+    orders_exist = check_orders_in_database(test_users)
     
     # Step 4: Check Cashback Wallet
-    check_cashback_wallet(vip_users)
+    check_cashback_wallet(test_users)
     
     # Final Summary
     print("\n" + "📋" * 80)
