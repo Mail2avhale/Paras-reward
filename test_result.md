@@ -581,7 +581,9 @@ test_plan:
 
 agent_communication:
   - agent: "main"
-    message: "Ready for backend testing. The check_unique_fields function exists in server.py. Backend starts without errors. Need to test actual registration API call with proper payload to identify the real issue. Please test /api/auth/register endpoint with complete user registration data including all fields: first_name, last_name, email, mobile, password, state, district, pincode, aadhaar_number, pan_number."
+    message: "STARTING COMPREHENSIVE IMPLEMENTATION - Phase 1: Password Recovery + Support Tickets + Advanced Admin. Implementing profile-based password recovery with 2-field verification (user picks any 2 from PAN/Aadhaar/Phone/Name), Support Ticket System (Option A), and Advanced Admin sections (Settings, Notifications, Orders, Commissions, Rewards). Stock Movement UI already partially complete in AdminDashboard."
+  - agent: "main"
+    message: "Ready for backend testing. The check_unique_fields function exists in server.py. Backend starts without errors. Need to test actual registration API call with complete user registration data including all fields: first_name, last_name, email, mobile, password, state, district, pincode, aadhaar_number, pan_number."
   - agent: "testing"
     message: "BACKEND TESTING COMPLETE - CRITICAL ISSUES IDENTIFIED: 1) Field mismatch: Frontend sends first_name/last_name but backend User model requires 'name' field. This causes 500 Internal Server Error. 2) User model missing essential fields (mobile, aadhaar_number, pan_number, state, district, pincode, etc.) - these are silently ignored. 3) Duplicate detection broken for mobile/aadhaar/pan because fields aren't stored. 4) Registration works when using correct 'name' field. MAIN AGENT MUST: Add missing fields to User model and fix frontend to send 'name' instead of first_name/last_name OR modify backend to combine first_name+last_name into name."
   - agent: "testing"
