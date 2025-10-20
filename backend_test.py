@@ -686,7 +686,7 @@ def test_order_management_apis():
                     response_detail = requests.get(f"{API_BASE}/admin/orders/{test_order_id}", timeout=30)
                     if response_detail.status_code == 200:
                         order_detail = response_detail.json()
-                        required_fields = ["order_id", "user_details", "items", "commission_breakdown"]
+                        required_fields = ["order", "user_details", "items", "commission_breakdown"]
                         missing_fields = [f for f in required_fields if f not in order_detail]
                         if missing_fields:
                             print(f"❌ Order detail test FAILED - Missing fields: {missing_fields}")
