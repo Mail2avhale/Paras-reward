@@ -36,121 +36,221 @@ print("=" * 80)
 
 # Admin Stockist & Financial Management Test Functions
 def test_stockist_management():
-    """Get existing users from database for testing"""
+    """Test Stockist Management Endpoints"""
     print("\n" + "=" * 80)
-    print("1. GETTING EXISTING USERS FOR TESTING")
+    print("1. TESTING STOCKIST MANAGEMENT ENDPOINTS")
     print("=" * 80)
     
-    # Try to get users from known test accounts
-    test_users = [
-        {"email": "santosh@paras.com", "password": "password"},
-        {"email": "admin@paras.com", "password": "admin123"},
-        {"email": "test@paras.com", "password": "password"}
-    ]
+    # Store created stockist UIDs for later tests
+    created_stockists = {}
     
-    found_users = []
+    # Test Case 1: Create Master Stockist
+    print(f"\n1.1. Creating Master Stockist...")
     
-    for user_info in test_users:
-        email = user_info["email"]
-        password = user_info["password"]
-        print(f"\n1.1. Checking user: {email}")
-        
-        try:
-            # Try to login to get user data
-            response = requests.post(
-                f"{API_BASE}/auth/login",
-                params={
-                    "identifier": email,
-                    "password": password
-                },
-                timeout=30
-            )
-            
-            print(f"     Login Status: {response.status_code}")
-            
-            if response.status_code == 200:
-                user_data = response.json()
-                uid = user_data.get("uid")
-                name = user_data.get("name")
-                
-                print(f"     ✅ User found: {name} (UID: {uid})")
-                print(f"     📋 Email: {user_data.get('email')}")
-                print(f"     📋 Mobile: {user_data.get('mobile')}")
-                print(f"     📋 PAN: {user_data.get('pan_number')}")
-                print(f"     📋 Aadhaar: {user_data.get('aadhaar_number')}")
-                print(f"     📋 Name: {user_data.get('name')}")
-                
-                # Add to found users list
-                found_users.append({
-                    "email": email,
-                    "uid": uid,
-                    "name": name,
-                    "user_data": user_data,
-                    "password": password
-                })
-                    
-            elif response.status_code == 401:
-                print(f"     ❌ Wrong password for {email}")
-            elif response.status_code == 404:
-                print(f"     ❌ User not found: {email}")
-            else:
-                print(f"     ❓ Unexpected status: {response.status_code}")
-                
-        except Exception as e:
-            print(f"     ❌ Error checking {email}: {e}")
-    
-    # Create a test user with complete profile data for password recovery testing
-    print(f"\n1.2. Creating test user with complete profile data...")
-    
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    test_user_data = {
-        "first_name": "Password",
-        "last_name": "TestUser",
-        "email": f"password.test.{timestamp}@example.com",
-        "mobile": f"98765{timestamp[-5:]}",
-        "password": "TestPass123!",
+    master_data = {
+        "email": "master_test@test.com",
+        "password": "test123",
+        "name": "Master Test",
+        "role": "master_stockist",
+        "mobile": "9876543210",
         "state": "Maharashtra",
-        "district": "Mumbai",
-        "pincode": "400001",
-        "aadhaar_number": f"1234{timestamp[-8:]}567",
-        "pan_number": f"TEST{timestamp[-5:]}Z"
+        "district": "Mumbai"
     }
     
     try:
-        reg_response = requests.post(f"{API_BASE}/auth/register", json=test_user_data, timeout=30)
-        if reg_response.status_code == 200:
-            new_uid = reg_response.json().get("uid")
-            print(f"     ✅ Test user created: {new_uid}")
-            print(f"     📋 Email: {test_user_data['email']}")
-            print(f"     📋 Mobile: {test_user_data['mobile']}")
-            print(f"     📋 PAN: {test_user_data['pan_number']}")
-            print(f"     📋 Aadhaar: {test_user_data['aadhaar_number']}")
-            
-            # Add the new user to our list for testing
-            found_users.append({
-                "email": test_user_data["email"],
-                "uid": new_uid,
-                "name": f"{test_user_data['first_name']} {test_user_data['last_name']}",
-                "user_data": {
-                    "uid": new_uid,
-                    "email": test_user_data["email"],
-                    "name": f"{test_user_data['first_name']} {test_user_data['last_name']}",
-                    "mobile": test_user_data["mobile"],
-                    "pan_number": test_user_data["pan_number"],
-                    "aadhaar_number": test_user_data["aadhaar_number"]
-                },
-                "password": test_user_data["password"]
-            })
+        response = requests.post(f"{API_BASE}/admin/stockists/create", json=master_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            master_uid = result.get("uid")
+            created_stockists["master"] = master_uid
+            print(f"     ✅ Master Stockist created successfully!")
+            print(f"     📋 Master UID: {master_uid}")
         else:
-            print(f"     ❌ Failed to create test user: {reg_response.status_code} - {reg_response.text}")
+            print(f"     ❌ Master Stockist creation failed: {response.status_code}")
+            return False
+            
     except Exception as e:
-        print(f"     ❌ Error creating test user: {e}")
+        print(f"     ❌ Error creating Master Stockist: {e}")
+        return False
     
-    print(f"\n📊 SUMMARY: Found {len(found_users)} users for testing")
-    for user in found_users:
-        print(f"   - {user['name']} ({user['email']})")
+    # Test Case 2: Create Sub Stockist with Master as parent
+    print(f"\n1.2. Creating Sub Stockist...")
     
-    return found_users
+    sub_data = {
+        "email": "sub_test@test.com",
+        "password": "test123",
+        "name": "Sub Test",
+        "role": "sub_stockist",
+        "parent_id": created_stockists["master"],
+        "mobile": "9876543211",
+        "state": "Maharashtra",
+        "district": "Pune"
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/admin/stockists/create", json=sub_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            sub_uid = result.get("uid")
+            created_stockists["sub"] = sub_uid
+            print(f"     ✅ Sub Stockist created successfully!")
+            print(f"     📋 Sub UID: {sub_uid}")
+        else:
+            print(f"     ❌ Sub Stockist creation failed: {response.status_code}")
+            return False
+            
+    except Exception as e:
+        print(f"     ❌ Error creating Sub Stockist: {e}")
+        return False
+    
+    # Test Case 3: Create Outlet with Sub as parent
+    print(f"\n1.3. Creating Outlet...")
+    
+    outlet_data = {
+        "email": "outlet_test@test.com",
+        "password": "test123",
+        "name": "Outlet Test",
+        "role": "outlet",
+        "parent_id": created_stockists["sub"],
+        "mobile": "9876543212",
+        "state": "Maharashtra",
+        "district": "Nashik"
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/admin/stockists/create", json=outlet_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            outlet_uid = result.get("uid")
+            created_stockists["outlet"] = outlet_uid
+            print(f"     ✅ Outlet created successfully!")
+            print(f"     📋 Outlet UID: {outlet_uid}")
+        else:
+            print(f"     ❌ Outlet creation failed: {response.status_code}")
+            return False
+            
+    except Exception as e:
+        print(f"     ❌ Error creating Outlet: {e}")
+        return False
+    
+    # Test Case 4: Get all stockists
+    print(f"\n1.4. Getting all stockists...")
+    
+    try:
+        response = requests.get(f"{API_BASE}/admin/stockists", timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            stockists = result.get("stockists", [])
+            print(f"     ✅ Retrieved {len(stockists)} stockists")
+            
+            # Verify our created stockists are in the list
+            found_master = any(s.get("uid") == created_stockists["master"] for s in stockists)
+            found_sub = any(s.get("uid") == created_stockists["sub"] for s in stockists)
+            found_outlet = any(s.get("uid") == created_stockists["outlet"] for s in stockists)
+            
+            print(f"     📋 Master found: {found_master}")
+            print(f"     📋 Sub found: {found_sub}")
+            print(f"     📋 Outlet found: {found_outlet}")
+        else:
+            print(f"     ❌ Failed to get stockists: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error getting stockists: {e}")
+    
+    # Test Case 5: Filter by role
+    print(f"\n1.5. Filtering stockists by role (master_stockist)...")
+    
+    try:
+        response = requests.get(f"{API_BASE}/admin/stockists?role=master_stockist", timeout=30)
+        print(f"     Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            stockists = result.get("stockists", [])
+            print(f"     ✅ Retrieved {len(stockists)} master stockists")
+            
+            # Verify only master stockists are returned
+            all_masters = all(s.get("role") == "master_stockist" for s in stockists)
+            print(f"     📋 All results are master stockists: {all_masters}")
+        else:
+            print(f"     ❌ Failed to filter stockists: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error filtering stockists: {e}")
+    
+    # Test Case 6: Update stockist details
+    print(f"\n1.6. Updating stockist details...")
+    
+    update_data = {
+        "name": "Master Test Updated",
+        "mobile": "9876543299",
+        "state": "Gujarat",
+        "district": "Ahmedabad"
+    }
+    
+    try:
+        response = requests.put(f"{API_BASE}/admin/stockists/{created_stockists['master']}/edit", json=update_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            print(f"     ✅ Stockist updated successfully!")
+        else:
+            print(f"     ❌ Failed to update stockist: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error updating stockist: {e}")
+    
+    # Test Case 7: Test assignment
+    print(f"\n1.7. Testing stockist assignment...")
+    
+    assign_data = {
+        "child_id": created_stockists["sub"],
+        "parent_id": created_stockists["master"]
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/admin/stockists/assign", json=assign_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            print(f"     ✅ Assignment successful!")
+        else:
+            print(f"     ❌ Assignment failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during assignment: {e}")
+    
+    # Test Case 8: Deactivate stockist (soft delete)
+    print(f"\n1.8. Deactivating outlet (soft delete)...")
+    
+    try:
+        response = requests.delete(f"{API_BASE}/admin/stockists/{created_stockists['outlet']}", timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            print(f"     ✅ Outlet deactivated successfully!")
+        else:
+            print(f"     ❌ Failed to deactivate outlet: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error deactivating outlet: {e}")
+    
+    return created_stockists
 
 def test_password_recovery_verify(test_users):
     """Test POST /api/auth/password-recovery/verify endpoint"""
