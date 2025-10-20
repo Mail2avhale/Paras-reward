@@ -995,6 +995,13 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
           )}
 
+          {/* Withdrawal Management Tab */}
+          {activeTab === 'withdrawals' && (
+            <div className="space-y-6">
+              <WithdrawalManagementAdmin />
+            </div>
+          )}
+
           {activeTab === 'dashboard' && (
             <div>
               {/* Stats Cards */}
