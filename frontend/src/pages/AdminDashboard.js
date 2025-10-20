@@ -918,6 +918,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     { id: 'sub-stockist', icon: Store, label: 'Sub Stockist' },
     { id: 'outlet', icon: ShoppingCart, label: 'Outlet' },
     { id: 'users', icon: Users, label: 'Users' },
+    { id: 'stock-movement', icon: Truck, label: 'Stock Movement' },
     { id: 'rewards', icon: Award, label: 'Rewards' },
     { id: 'commissions', icon: DollarSign, label: 'Commissions' },
     { id: 'orders', icon: ShoppingCart, label: 'Orders' },
