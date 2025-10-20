@@ -35,10 +35,13 @@ const HomeFintech = () => {
   const fetchProducts = async () => {
     try {
       const response = await axios.get(`${API}/products`);
-      // Show only first 6 products
-      setProducts(response.data.products.slice(0, 6));
+      // Show only first 6 visible products
+      const allProducts = Array.isArray(response.data) ? response.data : (response.data.products || []);
+      const visibleProducts = allProducts.filter(p => p.visible !== false && p.is_active !== false);
+      setProducts(visibleProducts.slice(0, 6));
     } catch (error) {
       console.error('Error fetching products:', error);
+      setProducts([]);
     }
   };
 
