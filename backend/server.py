@@ -4417,6 +4417,134 @@ async def assign_order_to_outlet(order_id: str, request: Request):
     else:
         raise HTTPException(status_code=404, detail="Order not found")
 
+# ========== FINANCIAL REPORTS & ANALYTICS ==========
+
+@api_router.get("/admin/reports/revenue")
+async def get_revenue_report(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """Get revenue report with date filtering (Admin)"""
+    query = {"status": "delivered"}
+    
+    if start_date:
+        query["delivered_at"] = {"$gte": start_date}
+    if end_date:
+        if "delivered_at" not in query:
+            query["delivered_at"] = {}
+        query["delivered_at"]["$lte"] = end_date
+    
+    # Total revenue
+    revenue_pipeline = [
+        {"$match": query},
+        {"$group": {
+            "_id": None,
+            "total_revenue": {"$sum": "$total_cash"},
+            "prc_spent": {"$sum": "$total_prc"},
+            "delivery_charges": {"$sum": "$delivery_charge"},
+            "total_orders": {"$sum": 1}
+        }}
+    ]
+    
+    revenue_result = await db.orders.aggregate(revenue_pipeline).to_list(1)
+    revenue_data = revenue_result[0] if revenue_result else {
+        "total_revenue": 0,
+        "prc_spent": 0,
+        "delivery_charges": 0,
+        "total_orders": 0
+    }
+    
+    # Top products by revenue
+    product_pipeline = [
+        {"$match": query},
+        {"$unwind": "$items"},
+        {"$group": {
+            "_id": "$items.product_id",
+            "product_name": {"$first": "$items.product_name"},
+            "total_quantity": {"$sum": "$items.quantity"},
+            "total_revenue": {"$sum": {"$multiply": ["$items.quantity", "$items.cash_price"]}}
+        }},
+        {"$sort": {"total_revenue": -1}},
+        {"$limit": 10}
+    ]
+    
+    top_products = await db.orders.aggregate(product_pipeline).to_list(10)
+    
+    return {
+        "total_revenue": revenue_data.get("total_revenue", 0),
+        "prc_spent": revenue_data.get("prc_spent", 0),
+        "delivery_charges": revenue_data.get("delivery_charges", 0),
+        "total_orders": revenue_data.get("total_orders", 0),
+        "top_products": top_products
+    }
+
+@api_router.get("/admin/reports/commissions")
+async def get_commission_report():
+    """Get commission distribution report (Admin)"""
+    # Total commissions by entity type
+    pipeline = [
+        {"$group": {
+            "_id": "$entity_type",
+            "total_amount": {"$sum": "$amount"},
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    commissions_by_type = await db.commissions_earned.aggregate(pipeline).to_list(10)
+    
+    # Top earners
+    top_earners_pipeline = [
+        {"$group": {
+            "_id": "$entity_id",
+            "entity_type": {"$first": "$entity_type"},
+            "total_earned": {"$sum": "$amount"}
+        }},
+        {"$sort": {"total_earned": -1}},
+        {"$limit": 10}
+    ]
+    
+    top_earners = await db.commissions_earned.aggregate(top_earners_pipeline).to_list(10)
+    
+    # Get entity names
+    for earner in top_earners:
+        user = await db.users.find_one({"uid": earner["_id"]})
+        if user:
+            earner["name"] = user.get("name")
+            earner["email"] = user.get("email")
+    
+    return {
+        "commission_distribution": commissions_by_type,
+        "top_earners": top_earners
+    }
+
+@api_router.get("/admin/reports/withdrawals")
+async def get_withdrawal_report(status: Optional[str] = None):
+    """Get withdrawal statistics report (Admin)"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    # Cashback withdrawals
+    cashback_pipeline = [
+        {"$match": query},
+        {"$group": {
+            "_id": "$status",
+            "total_amount": {"$sum": "$amount"},
+            "total_fee": {"$sum": "$fee"},
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    cashback_stats = await db.cashback_withdrawals.aggregate(cashback_pipeline).to_list(10)
+    
+    # Profit withdrawals
+    profit_stats = await db.profit_withdrawals.aggregate(cashback_pipeline).to_list(10)
+    
+    return {
+        "cashback_withdrawals": cashback_stats,
+        "profit_withdrawals": profit_stats
+    }
+
 # Include router
 app.include_router(api_router)
 
