@@ -1254,13 +1254,29 @@ async def create_product(product: ProductCreate):
     
     return new_product
 
-@api_router.get("/products", response_model=List[Product])
+@api_router.get("/products")
 async def get_products():
-    """Get all products"""
-    products = await db.products.find({"is_active": True}, {"_id": 0}).to_list(1000)
+    """Get all active products (public endpoint)"""
+    products = await db.products.find(
+        {
+            "is_active": True,
+            "visible": True
+        }, 
+        {"_id": 0}
+    ).to_list(1000)
+    
+    # Convert datetime fields to ISO format for JSON serialization
     for product in products:
-        if isinstance(product.get('created_at'), str):
-            product['created_at'] = datetime.fromisoformat(product['created_at'])
+        for field in ["created_at", "updated_at", "visible_from", "visible_till"]:
+            if product.get(field):
+                if isinstance(product[field], datetime):
+                    product[field] = product[field].isoformat()
+                elif isinstance(product[field], str):
+                    try:
+                        product[field] = datetime.fromisoformat(product[field]).isoformat()
+                    except:
+                        pass
+    
     return products
 
 @api_router.get("/products/{product_id}", response_model=Product)
