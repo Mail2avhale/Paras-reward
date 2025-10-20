@@ -1019,8 +1019,8 @@ def test_login_issue_santosh():
             # Search for case-insensitive matches
             case_matches = []
             for user in users:
-                user_email = user.get("email", "")
-                if user_email.lower() == target_email.lower() and user_email != target_email:
+                user_email = user.get("email")
+                if user_email and user_email.lower() == target_email.lower() and user_email != target_email:
                     case_matches.append(user)
             
             if case_matches:
@@ -1028,6 +1028,8 @@ def test_login_issue_santosh():
                 for match in case_matches:
                     print(f"   Email: {match.get('email')} (UID: {match.get('uid')})")
                     print(f"   Name: {match.get('name', 'N/A')}")
+                    print(f"   Role: {match.get('role', 'N/A')}")
+                    print(f"   Active: {match.get('is_active', 'N/A')}")
             else:
                 print(f"❌ NO case-insensitive matches found")
         else:
@@ -1046,8 +1048,8 @@ def test_login_issue_santosh():
             # Search for partial matches
             partial_matches = []
             for user in users:
-                user_email = user.get("email", "")
-                if "santosh" in user_email.lower():
+                user_email = user.get("email")
+                if user_email and "santosh" in user_email.lower():
                     partial_matches.append(user)
             
             if partial_matches:
@@ -1056,6 +1058,7 @@ def test_login_issue_santosh():
                     print(f"   Email: {match.get('email')} (UID: {match.get('uid')})")
                     print(f"   Name: {match.get('name', 'N/A')}")
                     print(f"   Role: {match.get('role', 'N/A')}")
+                    print(f"   Active: {match.get('is_active', 'N/A')}")
             else:
                 print(f"❌ NO partial matches found for 'santosh'")
         else:
