@@ -1002,11 +1002,11 @@ const AdminDashboard = ({ user, onLogout }) => {
                     <TrendingUp className="h-5 w-5 text-green-500" />
                   </div>
                   <div className="text-3xl font-bold text-gray-900 mb-1">
-                    {stats?.total_users?.toLocaleString() || '84,560'}
+                    {stats?.users?.total?.toLocaleString() || '0'}
                   </div>
                   <div className="flex items-center text-sm text-green-600">
                     <ArrowUpRight className="h-4 w-4 mr-1" />
-                    <span>12%</span>
+                    <span>VIP: {stats?.users?.vip || 0}</span>
                   </div>
                 </Card>
 
@@ -1016,11 +1016,11 @@ const AdminDashboard = ({ user, onLogout }) => {
                     <TrendingUp className="h-5 w-5 text-green-500" />
                   </div>
                   <div className="text-3xl font-bold text-gray-900 mb-1">
-                    {stats?.vip_users?.toLocaleString() || '12,740'}
+                    {stats?.users?.vip?.toLocaleString() || '0'}
                   </div>
                   <div className="flex items-center text-sm text-green-600">
                     <ArrowUpRight className="h-4 w-4 mr-1" />
-                    <span>9%</span>
+                    <span>Free: {stats?.users?.free || 0}</span>
                   </div>
                 </Card>
 
@@ -1030,25 +1030,24 @@ const AdminDashboard = ({ user, onLogout }) => {
                     <TrendingDown className="h-5 w-5 text-red-500" />
                   </div>
                   <div className="text-3xl font-bold text-gray-900 mb-1">
-                    {stats?.pending_kyc?.toLocaleString() || '1,023'}
+                    {stats?.kyc?.pending?.toLocaleString() || '0'}
                   </div>
-                  <div className="flex items-center text-sm text-red-600">
-                    <ArrowDownRight className="h-4 w-4 mr-1" />
-                    <span>8% Decrease</span>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <span>Verified: {stats?.kyc?.verified || 0}</span>
                   </div>
                 </Card>
 
                 <Card className="p-6 bg-white">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-gray-600 text-sm font-medium">Total Rewards</span>
+                    <span className="text-gray-600 text-sm font-medium">Total Orders</span>
                     <TrendingUp className="h-5 w-5 text-green-500" />
                   </div>
                   <div className="text-3xl font-bold text-gray-900 mb-1">
-                    ₹5.72 Cr
+                    {stats?.orders?.total?.toLocaleString() || '0'}
                   </div>
                   <div className="flex items-center text-sm text-green-600">
                     <ArrowUpRight className="h-4 w-4 mr-1" />
-                    <span>30%</span>
+                    <span>Delivered: {stats?.orders?.delivered || 0}</span>
                   </div>
                 </Card>
               </div>
