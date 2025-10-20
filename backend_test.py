@@ -34,8 +34,8 @@ print(f"Testing Admin Stockist & Financial Management at: {BACKEND_URL}")
 print(f"API Base: {API_BASE}")
 print("=" * 80)
 
-# Password Recovery + Support Tickets Test Functions
-def get_existing_users():
+# Admin Stockist & Financial Management Test Functions
+def test_stockist_management():
     """Get existing users from database for testing"""
     print("\n" + "=" * 80)
     print("1. GETTING EXISTING USERS FOR TESTING")
