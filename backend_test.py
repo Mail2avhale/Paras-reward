@@ -572,9 +572,404 @@ def test_products_filtering_logic():
         print(f"❌ Products filtering test FAILED - Error: {e}")
         return False
 
+# ========== ADMIN DASHBOARD API TESTS ==========
+
+def test_admin_kpis_endpoint():
+    """Test GET /api/admin/stats - Admin Dashboard KPIs"""
+    print("\n1. Testing Admin KPIs Endpoint (GET /api/admin/stats)...")
+    
+    try:
+        response = requests.get(f"{API_BASE}/admin/stats", timeout=30)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            stats = response.json()
+            print(f"Response type: {type(stats)}")
+            
+            # Check required KPI sections
+            required_sections = [
+                "user_stats", "order_stats", "kyc_stats", "vip_payment_stats",
+                "withdrawal_stats", "product_stats", "financial_overview",
+                "stock_movement_stats", "security_deposit_stats", "renewal_stats",
+                "recent_activity"
+            ]
+            
+            missing_sections = []
+            for section in required_sections:
+                if section not in stats:
+                    missing_sections.append(section)
+            
+            if missing_sections:
+                print(f"❌ Admin KPIs test FAILED - Missing sections: {missing_sections}")
+                return False
+            
+            # Validate user_stats structure
+            user_stats = stats.get("user_stats", {})
+            user_required = ["total", "vip", "free", "master_stockists", "sub_stockists", "outlets"]
+            for field in user_required:
+                if field not in user_stats:
+                    print(f"❌ Admin KPIs test FAILED - Missing user_stats.{field}")
+                    return False
+            
+            # Validate order_stats structure
+            order_stats = stats.get("order_stats", {})
+            order_required = ["total", "pending", "delivered"]
+            for field in order_required:
+                if field not in order_stats:
+                    print(f"❌ Admin KPIs test FAILED - Missing order_stats.{field}")
+                    return False
+            
+            # Validate financial_overview structure
+            financial = stats.get("financial_overview", {})
+            financial_required = ["total_revenue", "security_deposits_collected"]
+            for field in financial_required:
+                if field not in financial:
+                    print(f"❌ Admin KPIs test FAILED - Missing financial_overview.{field}")
+                    return False
+            
+            print(f"✅ Admin KPIs test PASSED - All required sections present")
+            print(f"   Users: {user_stats.get('total', 0)} total, {user_stats.get('vip', 0)} VIP")
+            print(f"   Orders: {order_stats.get('total', 0)} total, {order_stats.get('pending', 0)} pending")
+            print(f"   Revenue: ₹{financial.get('total_revenue', 0)}")
+            return True
+            
+        else:
+            print(f"❌ Admin KPIs test FAILED - Status: {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Admin KPIs test FAILED - Error: {e}")
+        return False
+
+def test_order_management_apis():
+    """Test Order Management APIs"""
+    print("\n2. Testing Order Management APIs...")
+    
+    # Test GET /api/admin/orders/all
+    print("\n2a. Testing GET /api/admin/orders/all...")
+    try:
+        response = requests.get(f"{API_BASE}/admin/orders/all", timeout=30)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            orders_data = response.json()
+            
+            # Should have orders array and pagination info
+            if "orders" not in orders_data:
+                print("❌ Order management test FAILED - Missing 'orders' field")
+                return False
+            
+            orders = orders_data["orders"]
+            print(f"Number of orders returned: {len(orders)}")
+            
+            # Test with status filter
+            print("\n2b. Testing GET /api/admin/orders/all?status=pending...")
+            response_filtered = requests.get(f"{API_BASE}/admin/orders/all?status=pending", timeout=30)
+            if response_filtered.status_code == 200:
+                filtered_data = response_filtered.json()
+                print(f"Filtered orders count: {len(filtered_data.get('orders', []))}")
+            
+            # Test pagination
+            print("\n2c. Testing GET /api/admin/orders/all?page=1&limit=5...")
+            response_paginated = requests.get(f"{API_BASE}/admin/orders/all?page=1&limit=5", timeout=30)
+            if response_paginated.status_code == 200:
+                paginated_data = response_paginated.json()
+                print(f"Paginated orders count: {len(paginated_data.get('orders', []))}")
+            
+            print("✅ Order listing tests PASSED")
+            
+            # Test individual order details if we have orders
+            if len(orders) > 0:
+                test_order_id = orders[0].get("order_id")
+                if test_order_id:
+                    print(f"\n2d. Testing GET /api/admin/orders/{test_order_id}...")
+                    response_detail = requests.get(f"{API_BASE}/admin/orders/{test_order_id}", timeout=30)
+                    if response_detail.status_code == 200:
+                        order_detail = response_detail.json()
+                        required_fields = ["order_id", "user_details", "items", "commission_breakdown"]
+                        missing_fields = [f for f in required_fields if f not in order_detail]
+                        if missing_fields:
+                            print(f"❌ Order detail test FAILED - Missing fields: {missing_fields}")
+                            return False
+                        print("✅ Order detail test PASSED")
+                    else:
+                        print(f"❌ Order detail test FAILED - Status: {response_detail.status_code}")
+                        return False
+                
+                # Test order assignment
+                print(f"\n2e. Testing POST /api/admin/orders/{test_order_id}/assign...")
+                assign_data = {"outlet_id": "test-outlet-123"}
+                response_assign = requests.post(f"{API_BASE}/admin/orders/{test_order_id}/assign", 
+                                              json=assign_data, timeout=30)
+                if response_assign.status_code in [200, 404]:  # 404 is OK if outlet doesn't exist
+                    print("✅ Order assignment test PASSED")
+                else:
+                    print(f"❌ Order assignment test FAILED - Status: {response_assign.status_code}")
+                    return False
+            
+            return True
+            
+        else:
+            print(f"❌ Order management test FAILED - Status: {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Order management test FAILED - Error: {e}")
+        return False
+
+def test_financial_reports_apis():
+    """Test Financial Reports APIs"""
+    print("\n3. Testing Financial Reports APIs...")
+    
+    # Test GET /api/admin/reports/revenue
+    print("\n3a. Testing GET /api/admin/reports/revenue...")
+    try:
+        response = requests.get(f"{API_BASE}/admin/reports/revenue", timeout=30)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            revenue_data = response.json()
+            
+            required_fields = ["total_revenue", "prc_spent", "delivery_charges", "top_products"]
+            missing_fields = [f for f in required_fields if f not in revenue_data]
+            if missing_fields:
+                print(f"❌ Revenue report test FAILED - Missing fields: {missing_fields}")
+                return False
+            
+            print(f"✅ Revenue report test PASSED")
+            print(f"   Total Revenue: ₹{revenue_data.get('total_revenue', 0)}")
+            print(f"   PRC Spent: {revenue_data.get('prc_spent', 0)}")
+            print(f"   Top Products: {len(revenue_data.get('top_products', []))}")
+            
+            # Test with date filter
+            print("\n3b. Testing revenue report with date filter...")
+            start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+            end_date = datetime.now().strftime('%Y-%m-%d')
+            response_filtered = requests.get(
+                f"{API_BASE}/admin/reports/revenue?start_date={start_date}&end_date={end_date}", 
+                timeout=30
+            )
+            if response_filtered.status_code == 200:
+                print("✅ Revenue report with date filter PASSED")
+            
+        else:
+            print(f"❌ Revenue report test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Revenue report test FAILED - Error: {e}")
+        return False
+    
+    # Test GET /api/admin/reports/commissions
+    print("\n3c. Testing GET /api/admin/reports/commissions...")
+    try:
+        response = requests.get(f"{API_BASE}/admin/reports/commissions", timeout=30)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            commission_data = response.json()
+            
+            required_fields = ["commission_distribution", "top_earners"]
+            missing_fields = [f for f in required_fields if f not in commission_data]
+            if missing_fields:
+                print(f"❌ Commission report test FAILED - Missing fields: {missing_fields}")
+                return False
+            
+            print(f"✅ Commission report test PASSED")
+            print(f"   Top Earners: {len(commission_data.get('top_earners', []))}")
+            
+        else:
+            print(f"❌ Commission report test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Commission report test FAILED - Error: {e}")
+        return False
+    
+    # Test GET /api/admin/reports/withdrawals
+    print("\n3d. Testing GET /api/admin/reports/withdrawals...")
+    try:
+        response = requests.get(f"{API_BASE}/admin/reports/withdrawals", timeout=30)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            withdrawal_data = response.json()
+            
+            required_fields = ["cashback_withdrawals", "profit_withdrawals"]
+            missing_fields = [f for f in required_fields if f not in withdrawal_data]
+            if missing_fields:
+                print(f"❌ Withdrawal report test FAILED - Missing fields: {missing_fields}")
+                return False
+            
+            print(f"✅ Withdrawal report test PASSED")
+            
+            # Test with status filter
+            response_filtered = requests.get(f"{API_BASE}/admin/reports/withdrawals?status=pending", timeout=30)
+            if response_filtered.status_code == 200:
+                print("✅ Withdrawal report with status filter PASSED")
+            
+        else:
+            print(f"❌ Withdrawal report test FAILED - Status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Withdrawal report test FAILED - Error: {e}")
+        return False
+    
+    return True
+
+def test_employee_management_apis():
+    """Test Employee Management APIs"""
+    print("\n4. Testing Employee Management APIs...")
+    
+    # Test POST /api/admin/employees/create
+    print("\n4a. Testing POST /api/admin/employees/create...")
+    try:
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        employee_data = {
+            "first_name": "Test",
+            "last_name": "Employee",
+            "email": f"employee.{timestamp}@example.com",
+            "mobile": f"9876{timestamp[-6:]}",
+            "password": "EmpPass123!",
+            "role": "employee",
+            "assigned_regions": ["Mumbai", "Pune"],
+            "permissions": ["view_orders", "manage_stock"]
+        }
+        
+        response = requests.post(f"{API_BASE}/admin/employees/create", json=employee_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            employee_uid = result.get("uid")
+            
+            if not employee_uid:
+                print("❌ Employee creation test FAILED - No UID returned")
+                return False
+            
+            print(f"✅ Employee creation test PASSED - UID: {employee_uid}")
+            
+            # Test GET /api/admin/employees
+            print("\n4b. Testing GET /api/admin/employees...")
+            response_list = requests.get(f"{API_BASE}/admin/employees", timeout=30)
+            if response_list.status_code == 200:
+                employees = response_list.json()
+                if "employees" in employees:
+                    print(f"✅ Employee listing test PASSED - {len(employees['employees'])} employees found")
+                else:
+                    print("❌ Employee listing test FAILED - Missing 'employees' field")
+                    return False
+            
+            # Test with role filter
+            print("\n4c. Testing GET /api/admin/employees?role=employee...")
+            response_filtered = requests.get(f"{API_BASE}/admin/employees?role=employee", timeout=30)
+            if response_filtered.status_code == 200:
+                print("✅ Employee listing with role filter PASSED")
+            
+            # Test PUT /api/admin/employees/{uid}/permissions
+            print(f"\n4d. Testing PUT /api/admin/employees/{employee_uid}/permissions...")
+            permissions_data = {
+                "permissions": ["view_orders", "manage_stock", "view_reports"]
+            }
+            response_permissions = requests.put(
+                f"{API_BASE}/admin/employees/{employee_uid}/permissions", 
+                json=permissions_data, 
+                timeout=30
+            )
+            if response_permissions.status_code == 200:
+                print("✅ Employee permissions update test PASSED")
+            else:
+                print(f"❌ Employee permissions update test FAILED - Status: {response_permissions.status_code}")
+                return False
+            
+            return True
+            
+        else:
+            print(f"❌ Employee creation test FAILED - Status: {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Employee management test FAILED - Error: {e}")
+        return False
+
+def test_audit_logging_apis():
+    """Test Audit Logging APIs"""
+    print("\n5. Testing Audit Logging APIs...")
+    
+    # Test POST /api/admin/audit/log
+    print("\n5a. Testing POST /api/admin/audit/log...")
+    try:
+        audit_data = {
+            "action": "test_action",
+            "entity_type": "user",
+            "entity_id": "test-user-123",
+            "performed_by": "test-admin",
+            "changes": {"field": "value"},
+            "ip_address": "127.0.0.1"
+        }
+        
+        response = requests.post(f"{API_BASE}/admin/audit/log", json=audit_data, timeout=30)
+        print(f"Status Code: {response.status_code}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            audit_id = result.get("audit_id")
+            
+            if not audit_id:
+                print("❌ Audit log creation test FAILED - No audit_id returned")
+                return False
+            
+            print(f"✅ Audit log creation test PASSED - ID: {audit_id}")
+            
+            # Test GET /api/admin/audit/logs
+            print("\n5b. Testing GET /api/admin/audit/logs...")
+            response_list = requests.get(f"{API_BASE}/admin/audit/logs", timeout=30)
+            if response_list.status_code == 200:
+                logs_data = response_list.json()
+                if "logs" in logs_data:
+                    logs = logs_data["logs"]
+                    print(f"✅ Audit logs listing test PASSED - {len(logs)} logs found")
+                    
+                    # Test with filters
+                    print("\n5c. Testing audit logs with action filter...")
+                    response_filtered = requests.get(f"{API_BASE}/admin/audit/logs?action=test_action", timeout=30)
+                    if response_filtered.status_code == 200:
+                        print("✅ Audit logs with action filter PASSED")
+                    
+                    print("\n5d. Testing audit logs with entity_type filter...")
+                    response_entity = requests.get(f"{API_BASE}/admin/audit/logs?entity_type=user", timeout=30)
+                    if response_entity.status_code == 200:
+                        print("✅ Audit logs with entity_type filter PASSED")
+                    
+                    print("\n5e. Testing audit logs with performed_by filter...")
+                    response_performer = requests.get(f"{API_BASE}/admin/audit/logs?performed_by=test-admin", timeout=30)
+                    if response_performer.status_code == 200:
+                        print("✅ Audit logs with performed_by filter PASSED")
+                    
+                    # Test pagination
+                    print("\n5f. Testing audit logs pagination...")
+                    response_paginated = requests.get(f"{API_BASE}/admin/audit/logs?page=1&limit=10", timeout=30)
+                    if response_paginated.status_code == 200:
+                        print("✅ Audit logs pagination PASSED")
+                    
+                else:
+                    print("❌ Audit logs listing test FAILED - Missing 'logs' field")
+                    return False
+            else:
+                print(f"❌ Audit logs listing test FAILED - Status: {response_list.status_code}")
+                return False
+            
+            return True
+            
+        else:
+            print(f"❌ Audit log creation test FAILED - Status: {response.status_code}")
+            print(f"Response: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Audit logging test FAILED - Error: {e}")
+        return False
+
 def main():
     """Run all Backend API tests"""
-    print("Starting Backend API testing...")
+    print("Starting Comprehensive Backend API testing...")
     print(f"Target API: {API_BASE}")
     
     # Test basic connectivity
