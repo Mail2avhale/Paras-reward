@@ -607,8 +607,8 @@ const FinancialManagementAdmin = () => {
                 />
                 {renewalForm.amount && renewalForm.gst_rate && (
                   <p className="text-xs text-gray-500 mt-1">
-                    GST: ₹{(parseFloat(renewalForm.amount) * parseFloat(renewalForm.gst_rate)).toLocaleString('en-IN')} | 
-                    Total: ₹{(parseFloat(renewalForm.amount) * (1 + parseFloat(renewalForm.gst_rate))).toLocaleString('en-IN')}
+                    GST: ₹{(parseFloat(renewalForm.amount || 0) * parseFloat(renewalForm.gst_rate || 0)).toLocaleString('en-IN', {maximumFractionDigits: 0})} | 
+                    Total: ₹{(parseFloat(renewalForm.amount || 0) * (1 + parseFloat(renewalForm.gst_rate || 0))).toLocaleString('en-IN', {maximumFractionDigits: 0})}
                   </p>
                 )}
               </div>
