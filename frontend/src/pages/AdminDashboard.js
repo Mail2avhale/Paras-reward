@@ -614,15 +614,13 @@ const MarketplaceManagement = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Image URL</label>
-              <Input
+              <ImageUpload
                 value={formData.image_url}
-                onChange={(e) => setFormData({...formData, image_url: e.target.value})}
-                placeholder="https://example.com/image.jpg"
+                onChange={(base64Image) => setFormData({...formData, image_url: base64Image})}
+                label="Product Image"
+                aspectRatio="square"
+                maxSize={5}
               />
-              {formData.image_url && (
-                <img src={formData.image_url} alt="Preview" className="mt-2 w-32 h-32 object-cover rounded border" />
-              )}
             </div>
 
             <div className="flex items-center gap-6">
