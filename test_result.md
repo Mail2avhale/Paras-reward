@@ -312,6 +312,79 @@ backend:
         agent: "testing"
         comment: "PRODUCTS ENDPOINT TESTING COMPLETE - ALL REQUIREMENTS VERIFIED: ✅ PUBLIC PRODUCTS ENDPOINT (GET /api/products): Returns 15 products correctly, all have is_active=true and visible=true, proper field structure with product_id, name, sku, prc_price, cash_price. ✅ NO _ID FIELD: Confirmed _id field is properly excluded from responses. ✅ ADMIN PRODUCTS ENDPOINT (GET /api/admin/products): Returns all 15 products regardless of visibility status, includes additional metadata fields. ✅ FILTERING LOGIC VERIFIED: Public endpoint correctly filters only active and visible products, admin endpoint shows all products. ✅ FIELD VALIDATION: All required fields present (product_id, name, sku, prc_price, cash_price, is_active, visible). ✅ RESPONSE FORMAT: Both endpoints return valid JSON arrays with proper datetime serialization. Products are now fully visible to users in marketplace - 15 products available with correct filtering and field structure."
 
+backend:
+  - task: "Admin Dashboard KPIs APIs"
+    implemented: false
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Pending implementation: Admin KPI endpoints for total users, active users, total revenue, pending orders, pending KYC, pending VIP approvals, pending withdrawals, etc."
+
+  - task: "Stock Management with Allocations"
+    implemented: false
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Pending implementation: Stock allocation management, inventory tracking, low stock alerts for admin dashboard."
+
+  - task: "Order Management and Assignment APIs"
+    implemented: false
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Pending implementation: Enhanced order management, order assignment to outlets, order tracking, status updates."
+
+  - task: "Financial Reports and Reconciliation"
+    implemented: false
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Pending implementation: Financial reports, revenue tracking, commission reports, withdrawal reports, reconciliation tools."
+
+  - task: "Employee Management APIs"
+    implemented: false
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Pending implementation: Employee/sub-admin creation, role management, access control for sub-admins and managers."
+
+  - task: "Audit Logging System"
+    implemented: false
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Pending implementation: Comprehensive audit logging for all admin actions, user activities, system changes."
+
 frontend:
   - task: "User Registration Form"
     implemented: true
