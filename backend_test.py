@@ -621,7 +621,7 @@ def test_admin_kpis_endpoint():
             
             # Validate financial structure
             financial = stats.get("financial", {})
-            financial_required = ["total_revenue", "security_deposits_collected"]
+            financial_required = ["total_revenue", "total_security_deposits"]
             for field in financial_required:
                 if field not in financial:
                     print(f"❌ Admin KPIs test FAILED - Missing financial.{field}")
