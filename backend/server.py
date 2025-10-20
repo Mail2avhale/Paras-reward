@@ -4744,6 +4744,289 @@ async def update_employee_permissions(uid: str, request: Request):
         return {"message": "No changes made", "uid": uid}
 
 
+# ========== PROFILE-BASED PASSWORD RECOVERY ROUTES ==========
+
+class PasswordRecoveryVerifyRequest(BaseModel):
+    email: str
+    verification_fields: Dict[str, str]  # {field_name: value}
+
+class PasswordRecoveryResetRequest(BaseModel):
+    email: str
+    verification_fields: Dict[str, str]
+    new_password: str
+
+@api_router.post("/auth/password-recovery/verify")
+async def verify_recovery_fields(request: PasswordRecoveryVerifyRequest):
+    """Verify user identity using profile fields (2-field verification)"""
+    email = request.email.lower()
+    verification_fields = request.verification_fields
+    
+    # Must provide exactly 2 fields
+    if len(verification_fields) != 2:
+        raise HTTPException(status_code=400, detail="Exactly 2 verification fields required")
+    
+    # Find user by email
+    user = await db.users.find_one({"email": {"$regex": f"^{email}$", "$options": "i"}})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify each field
+    for field_name, field_value in verification_fields.items():
+        if field_name not in ["pan_number", "aadhaar_number", "mobile", "name"]:
+            raise HTTPException(status_code=400, detail=f"Invalid verification field: {field_name}")
+        
+        user_value = user.get(field_name, "")
+        
+        # Case-insensitive comparison for string fields
+        if isinstance(user_value, str) and isinstance(field_value, str):
+            if user_value.lower() != field_value.lower():
+                raise HTTPException(status_code=401, detail="Verification failed")
+        else:
+            if str(user_value) != str(field_value):
+                raise HTTPException(status_code=401, detail="Verification failed")
+    
+    return {
+        "message": "Verification successful",
+        "email": email,
+        "name": user.get("name", ""),
+        "uid": user.get("uid", "")
+    }
+
+@api_router.post("/auth/password-recovery/reset")
+async def reset_password_with_verification(request: PasswordRecoveryResetRequest):
+    """Reset password after successful verification"""
+    email = request.email.lower()
+    verification_fields = request.verification_fields
+    new_password = request.new_password
+    
+    # Must provide exactly 2 fields
+    if len(verification_fields) != 2:
+        raise HTTPException(status_code=400, detail="Exactly 2 verification fields required")
+    
+    # Validate password
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    # Find user by email
+    user = await db.users.find_one({"email": {"$regex": f"^{email}$", "$options": "i"}})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Re-verify fields for security
+    for field_name, field_value in verification_fields.items():
+        if field_name not in ["pan_number", "aadhaar_number", "mobile", "name"]:
+            raise HTTPException(status_code=400, detail=f"Invalid verification field: {field_name}")
+        
+        user_value = user.get(field_name, "")
+        
+        if isinstance(user_value, str) and isinstance(field_value, str):
+            if user_value.lower() != field_value.lower():
+                raise HTTPException(status_code=401, detail="Verification failed")
+        else:
+            if str(user_value) != str(field_value):
+                raise HTTPException(status_code=401, detail="Verification failed")
+    
+    # Update password
+    new_hash = hash_password(new_password)
+    await db.users.update_one(
+        {"uid": user["uid"]},
+        {"$set": {
+            "password_hash": new_hash,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Password reset successful"}
+
+
+# ========== SUPPORT TICKET SYSTEM ROUTES ==========
+
+class SupportTicket(BaseModel):
+    ticket_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    user_name: str
+    user_email: str
+    category: str  # Account, Mining, Marketplace, Wallet, KYC/VIP, Orders, Technical, Other
+    subject: str
+    description: str
+    status: str = "open"  # open, in_progress, resolved, closed
+    priority: str = "medium"  # low, medium, high
+    attachments: List[str] = []
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    assigned_to: Optional[str] = None
+    resolution_notes: Optional[str] = None
+
+class SupportTicketReply(BaseModel):
+    reply_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    ticket_id: str
+    user_id: str
+    user_name: str
+    user_role: str  # admin, user
+    message: str
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class TicketCreateRequest(BaseModel):
+    user_id: str
+    category: str
+    subject: str
+    description: str
+    attachments: List[str] = []
+
+class TicketReplyRequest(BaseModel):
+    ticket_id: str
+    user_id: str
+    message: str
+
+class TicketUpdateRequest(BaseModel):
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    assigned_to: Optional[str] = None
+    resolution_notes: Optional[str] = None
+
+@api_router.post("/support/tickets/create")
+async def create_support_ticket(request: TicketCreateRequest):
+    """Create a new support ticket"""
+    # Get user details
+    user = await db.users.find_one({"uid": request.user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    ticket = SupportTicket(
+        user_id=request.user_id,
+        user_name=user.get("name", "Unknown"),
+        user_email=user.get("email", ""),
+        category=request.category,
+        subject=request.subject,
+        description=request.description,
+        attachments=request.attachments
+    )
+    
+    await db.support_tickets.insert_one(ticket.model_dump())
+    
+    return {
+        "message": "Support ticket created successfully",
+        "ticket_id": ticket.ticket_id,
+        "ticket": ticket.model_dump()
+    }
+
+@api_router.get("/support/tickets/user/{user_id}")
+async def get_user_tickets(user_id: str, status: Optional[str] = None):
+    """Get all tickets for a specific user"""
+    query = {"user_id": user_id}
+    if status:
+        query["status"] = status
+    
+    tickets = await db.support_tickets.find(query).sort("created_at", -1).to_list(length=None)
+    
+    # Remove _id field
+    for ticket in tickets:
+        ticket.pop("_id", None)
+    
+    return {"tickets": tickets, "count": len(tickets)}
+
+@api_router.get("/support/tickets/{ticket_id}")
+async def get_ticket_details(ticket_id: str):
+    """Get ticket details with all replies"""
+    ticket = await db.support_tickets.find_one({"ticket_id": ticket_id})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    ticket.pop("_id", None)
+    
+    # Get all replies for this ticket
+    replies = await db.support_ticket_replies.find({"ticket_id": ticket_id}).sort("created_at", 1).to_list(length=None)
+    for reply in replies:
+        reply.pop("_id", None)
+    
+    ticket["replies"] = replies
+    
+    return ticket
+
+@api_router.post("/support/tickets/{ticket_id}/reply")
+async def add_ticket_reply(ticket_id: str, request: TicketReplyRequest):
+    """Add a reply to a ticket"""
+    # Verify ticket exists
+    ticket = await db.support_tickets.find_one({"ticket_id": ticket_id})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    # Get user details
+    user = await db.users.find_one({"uid": request.user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    reply = SupportTicketReply(
+        ticket_id=ticket_id,
+        user_id=request.user_id,
+        user_name=user.get("name", "Unknown"),
+        user_role=user.get("role", "user"),
+        message=request.message
+    )
+    
+    await db.support_ticket_replies.insert_one(reply.model_dump())
+    
+    # Update ticket's updated_at timestamp
+    await db.support_tickets.update_one(
+        {"ticket_id": ticket_id},
+        {"$set": {"updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {
+        "message": "Reply added successfully",
+        "reply": reply.model_dump()
+    }
+
+@api_router.get("/admin/support/tickets")
+async def get_all_tickets(status: Optional[str] = None, category: Optional[str] = None, page: int = 1, limit: int = 50):
+    """Admin endpoint to get all support tickets"""
+    query = {}
+    if status:
+        query["status"] = status
+    if category:
+        query["category"] = category
+    
+    skip = (page - 1) * limit
+    tickets = await db.support_tickets.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=None)
+    total = await db.support_tickets.count_documents(query)
+    
+    for ticket in tickets:
+        ticket.pop("_id", None)
+    
+    return {
+        "tickets": tickets,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "pages": (total + limit - 1) // limit
+    }
+
+@api_router.put("/admin/support/tickets/{ticket_id}")
+async def update_ticket(ticket_id: str, request: TicketUpdateRequest):
+    """Admin endpoint to update ticket status/priority/assignment"""
+    ticket = await db.support_tickets.find_one({"ticket_id": ticket_id})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    
+    if request.status:
+        update_data["status"] = request.status
+    if request.priority:
+        update_data["priority"] = request.priority
+    if request.assigned_to is not None:
+        update_data["assigned_to"] = request.assigned_to
+    if request.resolution_notes is not None:
+        update_data["resolution_notes"] = request.resolution_notes
+    
+    await db.support_tickets.update_one(
+        {"ticket_id": ticket_id},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Ticket updated successfully", "updates": update_data}
+
+
 # Include router
 app.include_router(api_router)
 
