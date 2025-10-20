@@ -99,6 +99,53 @@ def get_existing_users():
         except Exception as e:
             print(f"     ❌ Error checking {email}: {e}")
     
+    # Create a test user with complete profile data for password recovery testing
+    print(f"\n1.2. Creating test user with complete profile data...")
+    
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    test_user_data = {
+        "first_name": "Password",
+        "last_name": "TestUser",
+        "email": f"password.test.{timestamp}@example.com",
+        "mobile": f"98765{timestamp[-5:]}",
+        "password": "TestPass123!",
+        "state": "Maharashtra",
+        "district": "Mumbai",
+        "pincode": "400001",
+        "aadhaar_number": f"1234{timestamp[-8:]}567",
+        "pan_number": f"TEST{timestamp[-5:]}Z"
+    }
+    
+    try:
+        reg_response = requests.post(f"{API_BASE}/auth/register", json=test_user_data, timeout=30)
+        if reg_response.status_code == 200:
+            new_uid = reg_response.json().get("uid")
+            print(f"     ✅ Test user created: {new_uid}")
+            print(f"     📋 Email: {test_user_data['email']}")
+            print(f"     📋 Mobile: {test_user_data['mobile']}")
+            print(f"     📋 PAN: {test_user_data['pan_number']}")
+            print(f"     📋 Aadhaar: {test_user_data['aadhaar_number']}")
+            
+            # Add the new user to our list for testing
+            found_users.append({
+                "email": test_user_data["email"],
+                "uid": new_uid,
+                "name": f"{test_user_data['first_name']} {test_user_data['last_name']}",
+                "user_data": {
+                    "uid": new_uid,
+                    "email": test_user_data["email"],
+                    "name": f"{test_user_data['first_name']} {test_user_data['last_name']}",
+                    "mobile": test_user_data["mobile"],
+                    "pan_number": test_user_data["pan_number"],
+                    "aadhaar_number": test_user_data["aadhaar_number"]
+                },
+                "password": test_user_data["password"]
+            })
+        else:
+            print(f"     ❌ Failed to create test user: {reg_response.status_code} - {reg_response.text}")
+    except Exception as e:
+        print(f"     ❌ Error creating test user: {e}")
+    
     print(f"\n📊 SUMMARY: Found {len(found_users)} users for testing")
     for user in found_users:
         print(f"   - {user['name']} ({user['email']})")
