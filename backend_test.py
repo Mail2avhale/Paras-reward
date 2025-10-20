@@ -1423,6 +1423,151 @@ def test_comprehensive_login_case_sensitivity():
         print("Some email variations still fail - case sensitivity issue persists")
         return False
 
+def test_login_api_response_format():
+    """Test LOGIN API RESPONSE FORMAT - Check what data is being returned"""
+    print("\n" + "=" * 80)
+    print("TESTING LOGIN API RESPONSE FORMAT")
+    print("=" * 80)
+    
+    print("Testing POST /api/auth/login with email 'admin@paras.com' and password 'admin123'")
+    print("Checking COMPLETE response structure and role field presence")
+    
+    try:
+        # Test login with admin credentials
+        response = requests.post(
+            f"{API_BASE}/auth/login",
+            params={
+                "identifier": "admin@paras.com",
+                "password": "admin123"
+            },
+            timeout=30
+        )
+        
+        print(f"\n1. LOGIN RESPONSE:")
+        print(f"   Status Code: {response.status_code}")
+        print(f"   Content-Type: {response.headers.get('content-type', 'N/A')}")
+        
+        if response.status_code == 200:
+            print(f"\n2. COMPLETE RESPONSE STRUCTURE:")
+            try:
+                response_data = response.json()
+                print(json.dumps(response_data, indent=2, default=str))
+                
+                print(f"\n3. ROLE FIELD CHECK:")
+                role_field = response_data.get("role")
+                if role_field is not None:
+                    print(f"   ✅ 'role' field is PRESENT: '{role_field}'")
+                    
+                    if role_field == "admin":
+                        print(f"   ✅ Role is correctly set to 'admin'")
+                    else:
+                        print(f"   ⚠️  Role is '{role_field}' (not 'admin')")
+                else:
+                    print(f"   ❌ 'role' field is MISSING from response")
+                
+                print(f"\n4. OBJECTID SERIALIZATION CHECK:")
+                # Check for any ObjectId serialization issues
+                response_str = response.text
+                if "_id" in response_str:
+                    print(f"   ⚠️  Response contains '_id' field - potential ObjectId serialization issue")
+                else:
+                    print(f"   ✅ No '_id' fields found - ObjectId properly excluded")
+                
+                # Check for any serialization errors in the response
+                if "ObjectId" in response_str:
+                    print(f"   ❌ Response contains 'ObjectId' string - serialization issue detected")
+                else:
+                    print(f"   ✅ No ObjectId serialization issues detected")
+                
+                print(f"\n5. KEY FIELDS ANALYSIS:")
+                key_fields = ["uid", "email", "name", "role", "membership_type", "kyc_status", "is_active"]
+                for field in key_fields:
+                    value = response_data.get(field)
+                    if value is not None:
+                        print(f"   ✅ {field}: {value}")
+                    else:
+                        print(f"   ❌ {field}: MISSING")
+                
+                return True
+                
+            except json.JSONDecodeError as e:
+                print(f"   ❌ JSON DECODE ERROR: {e}")
+                print(f"   Raw response: {response.text}")
+                return False
+                
+        elif response.status_code == 401:
+            print(f"\n   ❌ LOGIN FAILED: Invalid credentials (401)")
+            print(f"   Response: {response.text}")
+            
+            # Try with different password variations
+            print(f"\n   Trying alternative passwords...")
+            alt_passwords = ["Admin123", "password", "123456", "admin", "paras123"]
+            
+            for alt_pass in alt_passwords:
+                print(f"   Testing password: {alt_pass}")
+                alt_response = requests.post(
+                    f"{API_BASE}/auth/login",
+                    params={
+                        "identifier": "admin@paras.com",
+                        "password": alt_pass
+                    },
+                    timeout=30
+                )
+                
+                if alt_response.status_code == 200:
+                    print(f"   ✅ SUCCESS with password: {alt_pass}")
+                    response_data = alt_response.json()
+                    print(json.dumps(response_data, indent=2, default=str))
+                    return True
+                elif alt_response.status_code == 401:
+                    print(f"   ❌ Failed with: {alt_pass}")
+                else:
+                    print(f"   ❓ Unexpected status {alt_response.status_code} with: {alt_pass}")
+            
+            return False
+            
+        elif response.status_code == 404:
+            print(f"\n   ❌ USER NOT FOUND (404)")
+            print(f"   Response: {response.text}")
+            
+            # Try case variations
+            print(f"\n   Trying email case variations...")
+            email_variations = ["Admin@paras.com", "ADMIN@PARAS.COM", "admin@paras.com"]
+            
+            for email_var in email_variations:
+                print(f"   Testing email: {email_var}")
+                var_response = requests.post(
+                    f"{API_BASE}/auth/login",
+                    params={
+                        "identifier": email_var,
+                        "password": "admin123"
+                    },
+                    timeout=30
+                )
+                
+                if var_response.status_code == 200:
+                    print(f"   ✅ SUCCESS with email: {email_var}")
+                    response_data = var_response.json()
+                    print(json.dumps(response_data, indent=2, default=str))
+                    return True
+                elif var_response.status_code == 401:
+                    print(f"   ✅ User found but wrong password with: {email_var}")
+                elif var_response.status_code == 404:
+                    print(f"   ❌ User not found with: {email_var}")
+                else:
+                    print(f"   ❓ Unexpected status {var_response.status_code} with: {email_var}")
+            
+            return False
+            
+        else:
+            print(f"\n   ❌ UNEXPECTED STATUS: {response.status_code}")
+            print(f"   Response: {response.text}")
+            return False
+            
+    except Exception as e:
+        print(f"\n❌ ERROR testing login API: {e}")
+        return False
+
 def check_admin_user_role():
     """Check the role of user with email 'admin@paras.com'"""
     print("\n" + "=" * 80)
