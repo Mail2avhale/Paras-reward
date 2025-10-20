@@ -996,6 +996,38 @@ const AdminDashboard = ({ user, onLogout }) => {
                   </div>
                 </Card>
 
+          {/* Stockist Management Tab */}
+          {activeTab === 'stockist-management' && (
+            <div className="space-y-6">
+              <StockistManagementAdmin />
+            </div>
+          )}
+
+          {/* Financial Management Tab */}
+          {activeTab === 'financial-management' && (
+            <div className="space-y-6">
+              <FinancialManagementAdmin />
+            </div>
+          )}
+
+          {activeTab === 'dashboard' && (
+            <div>
+              {/* Dashboard Stats continuation... */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <Card className="p-6 bg-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-600 text-sm font-medium">Total Users</span>
+                    <TrendingUp className="h-5 w-5 text-green-500" />
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 mb-1">
+                    {stats?.total_users?.toLocaleString() || '84,560'}
+                  </div>
+                  <div className="flex items-center text-sm text-green-600">
+                    <ArrowUpRight className="h-4 w-4 mr-1" />
+                    <span>12%</span>
+                  </div>
+                </Card>
+
                 <Card className="p-6 bg-white">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-gray-600 text-sm font-medium">VIP Users</span>
