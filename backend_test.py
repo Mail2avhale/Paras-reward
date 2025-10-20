@@ -501,9 +501,11 @@ def run_vip_checkout_investigation():
     print("VIP CHECKOUT INVESTIGATION SUMMARY")
     print("📋" * 80)
     
-    print(f"\n1. VIP USERS FOUND: {len(vip_users)}")
-    for vip_user in vip_users:
-        print(f"   - {vip_user['name']} ({vip_user['email']}) - membership_type: '{vip_user['membership_type']}'")
+    print(f"\n1. USERS FOUND: {len(test_users)}")
+    vip_count = sum(1 for user in test_users if user.get('membership_type', '').lower() == 'vip')
+    print(f"   VIP Users: {vip_count}")
+    for test_user in test_users:
+        print(f"   - {test_user['name']} ({test_user['email']}) - membership_type: '{test_user['membership_type']}'")
     
     print(f"\n2. CHECKOUT TEST RESULT:")
     if checkout_result:
@@ -514,7 +516,7 @@ def run_vip_checkout_investigation():
             print(f"   🔍 Error: {checkout_result.get('error')}")
             print(f"   📊 Status Code: {checkout_result.get('status')}")
     else:
-        print(f"   ⚠️  Checkout test not performed (no VIP users)")
+        print(f"   ⚠️  Checkout test not performed (no users)")
     
     print(f"\n3. ORDERS IN DATABASE:")
     if orders_exist:
@@ -525,8 +527,8 @@ def run_vip_checkout_investigation():
     print(f"\n4. POTENTIAL ISSUES IDENTIFIED:")
     issues_found = []
     
-    if len(vip_users) == 0:
-        issues_found.append("No VIP users found - check membership_type values")
+    if vip_count == 0:
+        issues_found.append("No VIP users found - check membership_type values (case sensitivity: 'vip' vs 'VIP')")
     
     if checkout_result and not checkout_result.get("success"):
         issues_found.append(f"Checkout failing - {checkout_result.get('error')}")
@@ -541,7 +543,8 @@ def run_vip_checkout_investigation():
             print(f"   {i}. {issue}")
     
     return {
-        "vip_users": vip_users,
+        "test_users": test_users,
+        "vip_count": vip_count,
         "checkout_result": checkout_result,
         "orders_exist": orders_exist,
         "issues": issues_found
