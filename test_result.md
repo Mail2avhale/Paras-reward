@@ -105,6 +105,30 @@
 user_problem_statement: "Debug mining session issue - User has started mining but frontend shows 'Mining Paused'. Need to investigate why backend shows active mining but frontend displays paused status."
 
 backend:
+  - task: "Profile-Based Password Recovery"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Profile-based password recovery system with 2-field verification. POST /auth/password-recovery/verify (verifies user with any 2 fields from PAN/Aadhaar/Phone/Name), POST /auth/password-recovery/reset (resets password after verification). Case-insensitive field matching. No email required. Frontend: ForgotPasswordNew.js with 4-step wizard (email → select fields → verify → reset). Route updated in App.js."
+
+  - task: "Support Ticket System Backend"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Complete support ticket system. User endpoints: POST /support/tickets/create (create ticket with category, subject, description), GET /support/tickets/user/{user_id} (get user's tickets with status filter), GET /support/tickets/{ticket_id} (get ticket with all replies), POST /support/tickets/{ticket_id}/reply (add reply). Admin endpoints: GET /admin/support/tickets (list all with filters and pagination), PUT /admin/support/tickets/{ticket_id} (update status/priority/assignment/resolution notes). Categories: Account Issues, Mining, Marketplace, Wallet, KYC/VIP, Orders, Technical, Other. Collections: support_tickets, support_ticket_replies."
+
   - task: "User Registration Endpoint"
     implemented: true
     working: true
