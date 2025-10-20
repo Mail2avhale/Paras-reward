@@ -3,6 +3,7 @@ import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import ImageUpload from '@/components/ImageUpload';
 import { FileText, Upload, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
