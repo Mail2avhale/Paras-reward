@@ -388,8 +388,9 @@ const MarketplaceManagement = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get(`${API}/products`);
-      setProducts(response.data.products || []);
+      // Use admin endpoint to get all products (including hidden)
+      const response = await axios.get(`${API}/admin/products`);
+      setProducts(response.data || []);
     } catch (error) {
       console.error('Error fetching products:', error);
     }
