@@ -9,7 +9,7 @@ import {
   Users, Package, CreditCard, FileText, CheckCircle, XCircle, 
   Search, Shield, UserCog, Trash2, BarChart3, TrendingUp, TrendingDown,
   Home, Store, Award, ShoppingCart, Bell, Settings, DollarSign,
-  ArrowUpRight, ArrowDownRight
+  ArrowUpRight, ArrowDownRight, Truck, HeadphonesIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
 
