@@ -479,6 +479,42 @@ backend:
         comment: "SECRET CODE VERIFICATION ENDPOINT FIXED AND FULLY WORKING: ✅ ROUTING ISSUE RESOLVED: Moved /orders/verify endpoint definition BEFORE /orders/{uid} in server.py to prevent routing conflict. Backend restarted successfully. ✅ ENDPOINT WORKING CORRECTLY: POST /api/orders/verify now accepts {\"secret_code\": \"ABC123\"} payload and returns 200 OK with {\"message\": \"Order verified\", \"order\": {...}} response. ✅ STATUS UPDATE WORKING: Order status correctly updated from 'pending' to 'verified' in database after verification. ✅ DUPLICATE VERIFICATION BLOCKED: Attempting to verify same order twice correctly returns 400 'Order already processed' error. ✅ COMPREHENSIVE TESTING: Tested with multiple valid secret codes (PRC-LJ1DUT5I, PRC-JJ4OCIJB) - all work perfectly. ✅ FIELD VALIDATION CORRECT: OrderVerify model expects 'secret_code' field (string) which matches user expectations. Secret code verification endpoint is now production-ready and working as expected."
 
 frontend:
+  - task: "Profile-Based Password Recovery Page"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/ForgotPasswordNew.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Complete 4-step password recovery wizard. Step 1: Enter email. Step 2: Select 2 verification fields (PAN/Aadhaar/Phone/Name). Step 3: Enter verification values. Step 4: Set new password. Progress indicator, field validation, success messages. Route added to App.js (/forgot-password). Replaces old email-based recovery system."
+
+  - task: "Support Tickets User Page"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/SupportTickets.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Complete support ticket interface for users. Create ticket modal with category, subject, description. View all user tickets with status badges. Click to view full ticket details with conversation history. Add replies to tickets. Real-time status updates. Categories: Account Issues, Mining, Marketplace, Wallet, KYC/VIP, Orders, Technical, Other. Route added to App.js (/support) and Navbar (Support link for all users)."
+
+  - task: "Admin Support Tickets Management"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/AdminDashboard.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Complete admin support tickets management in AdminDashboard. AdminSupportTickets component added. Filter tickets by status/category. View full ticket details with user info. Update ticket status (open/in_progress/resolved/closed), priority (low/medium/high), add resolution notes. Reply to tickets as admin (replies show admin badge). Conversation history with all replies. Support Tickets menu item added to admin sidebar."
+
   - task: "User Registration Form"
     implemented: true
     working: false
