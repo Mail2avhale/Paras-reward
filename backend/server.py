@@ -1301,7 +1301,7 @@ async def create_order_alias(uid: str, order_data: OrderCreate):
     return await create_order_legacy(uid, order_data)
 
 @api_router.post("/orders/legacy/{uid}", response_model=OrderSingleProduct)
-async def create_order(uid: str, order_data: OrderCreate):
+async def create_order_legacy(uid: str, order_data: OrderCreate):
     """Create order (Redeem product) - Legacy single product endpoint"""
     # Check user eligibility
     user = await db.users.find_one({"uid": uid})
