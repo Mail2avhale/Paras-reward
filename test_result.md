@@ -391,6 +391,18 @@ backend:
         agent: "testing"
         comment: "COMPREHENSIVE TESTING COMPLETE - ALL AUDIT LOGGING FUNCTIONALITY WORKING: ✅ POST /api/admin/audit/log works correctly - successfully creates audit log entries and returns log_id. ✅ GET /api/admin/audit/logs returns proper audit log list (9 logs found including automatic employee creation logs). ✅ All filtering works: action filter, entity_type filter, performed_by filter. ✅ Pagination works correctly with page and limit parameters. All endpoints return 200 status codes and proper JSON structures. Audit logging system is fully functional and automatically tracking employee management actions."
 
+  - task: "Login Case Sensitivity Fix"
+    implemented: false
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL ISSUE IDENTIFIED: Login endpoint has case sensitivity problem causing 'User not found' errors. User 'Santosh@paras.com' exists as 'santosh@paras.com' (lowercase) but login fails with mixed case. Affects multiple users: 'Test@paras.com', 'ADMIN@PARAS.COM' all fail but work with lowercase. LOGIN ENDPOINT NEEDS FIX: Should handle case-insensitive email matching in /api/auth/login endpoint (lines 504-511 in server.py). Current MongoDB query uses exact match which requires case-sensitive email input."
+
 frontend:
   - task: "User Registration Form"
     implemented: true
