@@ -2,13 +2,26 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
-import { Package, Clock, CheckCircle, Truck, ShoppingBag } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Package, Clock, CheckCircle, Truck, ShoppingBag, Trash2, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const Orders = ({ user, onLogout }) => {
   const [orders, setOrders] = useState([]);
+  const [deleteOrderId, setDeleteOrderId] = useState(null);
 
   useEffect(() => {
     fetchOrders();
@@ -20,9 +33,25 @@ const Orders = ({ user, onLogout }) => {
       setOrders(response.data);
     } catch (error) {
       console.error('Error fetching orders:', error);
-      // Set empty array on error so UI doesn't break
       setOrders([]);
     }
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!deleteOrderId) return;
+
+    try {
+      await axios.delete(`${API}/orders/${deleteOrderId}`);
+      toast.success('Order cancelled successfully');
+      setDeleteOrderId(null);
+      fetchOrders();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to cancel order');
+    }
+  };
+
+  const canCancelOrder = (order) => {
+    return order.status === 'pending' || order.status === 'verified';
   };
 
   const getStatusIcon = (status) => {
@@ -33,6 +62,8 @@ const Orders = ({ user, onLogout }) => {
         return <CheckCircle className="h-5 w-5 text-blue-600" />;
       case 'delivered':
         return <Truck className="h-5 w-5 text-green-600" />;
+      case 'cancelled':
+        return <AlertCircle className="h-5 w-5 text-red-600" />;
       default:
         return <Package className="h-5 w-5 text-gray-600" />;
     }
@@ -86,9 +117,21 @@ const Orders = ({ user, onLogout }) => {
                         </p>
                       </div>
                     </div>
-                    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-semibold ${getStatusColor(order.status)}`}>
-                      {getStatusIcon(order.status)}
-                      <span className="capitalize">{order.status}</span>
+                    <div className="flex items-center gap-2">
+                      <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-semibold ${getStatusColor(order.status)}`}>
+                        {getStatusIcon(order.status)}
+                        <span className="capitalize">{order.status}</span>
+                      </div>
+                      {canCancelOrder(order) && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setDeleteOrderId(order.order_id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Cancel
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -97,7 +140,6 @@ const Orders = ({ user, onLogout }) => {
                     <h4 className="font-semibold text-gray-900 mb-3">Items ({order.items?.length || 1})</h4>
                     <div className="space-y-2">
                       {order.items && order.items.length > 0 ? (
-                        // Multi-product cart order
                         order.items.map((item, idx) => (
                           <div key={idx} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
                             <div className="flex items-center gap-3">
@@ -111,7 +153,6 @@ const Orders = ({ user, onLogout }) => {
                           </div>
                         ))
                       ) : (
-                        // Legacy single product order
                         <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
                           <div className="flex items-center gap-3">
                             <Package className="h-5 w-5 text-purple-400" />
@@ -144,35 +185,55 @@ const Orders = ({ user, onLogout }) => {
                   </div>
 
                   {/* Secret Code */}
-                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl border-2 border-purple-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600 mb-1">Secret Code</p>
-                        <p data-testid={`secret-code-${index}`} className="text-3xl font-bold text-purple-600 tracking-wider font-mono">
-                          {order.secret_code}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-2">
-                          👉 Show this code at the outlet to collect your products
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        {order.status === 'delivered' && order.delivered_at && (
-                          <div>
-                            <p className="text-xs text-gray-500">Delivered</p>
-                            <p className="text-sm font-semibold text-green-600">
-                              {new Date(order.delivered_at).toLocaleDateString()}
-                            </p>
-                          </div>
-                        )}
+                  {order.status !== 'cancelled' && (
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl border-2 border-purple-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600 mb-1">Secret Code</p>
+                          <p data-testid={`secret-code-${index}`} className="text-3xl font-bold text-purple-600 tracking-wider font-mono">
+                            {order.secret_code}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-2">
+                            👉 Show this code at the outlet to collect your products
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          {order.status === 'delivered' && order.delivered_at && (
+                            <div>
+                              <p className="text-xs text-gray-500">Delivered</p>
+                              <p className="text-sm font-semibold text-green-600">
+                                {new Date(order.delivered_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </Card>
             ))}
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteOrderId} onOpenChange={() => setDeleteOrderId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Order?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this order? Your PRC will be refunded. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No, Keep Order</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteOrder} className="bg-red-600 hover:bg-red-700">
+              Yes, Cancel Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
