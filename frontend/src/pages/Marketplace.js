@@ -130,7 +130,6 @@ const Marketplace = ({ user, onLogout }) => {
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <p className="text-2xl font-bold text-purple-600">{product.prc_price} PRC</p>
-                      <p className="text-sm text-gray-500">≈ ₹{(product.prc_price / 10).toFixed(2)}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-gray-500">Stock</p>
