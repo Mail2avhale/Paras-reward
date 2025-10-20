@@ -969,6 +969,75 @@ def test_audit_logging_apis():
         print(f"❌ Audit logging test FAILED - Error: {e}")
         return False
 
+def test_login_case_sensitivity_fix():
+    """Test and potentially fix login case sensitivity issue"""
+    print("\n" + "=" * 80)
+    print("TESTING LOGIN CASE SENSITIVITY FIX")
+    print("=" * 80)
+    
+    # Test cases for case sensitivity
+    test_cases = [
+        {"email": "Santosh@paras.com", "expected_stored": "santosh@paras.com"},
+        {"email": "SANTOSH@PARAS.COM", "expected_stored": "santosh@paras.com"},
+        {"email": "santosh@paras.com", "expected_stored": "santosh@paras.com"},
+        {"email": "Test@paras.com", "expected_stored": "test@paras.com"},
+        {"email": "ADMIN@PARAS.COM", "expected_stored": "admin@paras.com"}
+    ]
+    
+    print("\n1. Testing case sensitivity in login endpoint...")
+    
+    for i, test_case in enumerate(test_cases, 1):
+        test_email = test_case["email"]
+        expected_stored = test_case["expected_stored"]
+        
+        print(f"\n1.{i}. Testing login with: {test_email}")
+        print(f"     Expected stored as: {expected_stored}")
+        
+        try:
+            # Test login with the case-variant email
+            response = requests.post(
+                f"{API_BASE}/auth/login",
+                params={
+                    "identifier": test_email,
+                    "password": "wrongpassword"  # Intentionally wrong to test user existence
+                },
+                timeout=30
+            )
+            
+            print(f"     Status Code: {response.status_code}")
+            
+            if response.status_code == 404:
+                print(f"     ❌ User not found - case sensitivity issue")
+                
+                # Test with lowercase version
+                response_lower = requests.post(
+                    f"{API_BASE}/auth/login",
+                    params={
+                        "identifier": test_email.lower(),
+                        "password": "wrongpassword"
+                    },
+                    timeout=30
+                )
+                
+                if response_lower.status_code == 401:
+                    print(f"     ✅ User found with lowercase - confirms case sensitivity issue")
+                elif response_lower.status_code == 200:
+                    print(f"     ✅ User found with lowercase - login successful")
+                else:
+                    print(f"     ❓ Unexpected response with lowercase: {response_lower.status_code}")
+                    
+            elif response.status_code == 401:
+                print(f"     ✅ User found (wrong password) - no case sensitivity issue")
+            elif response.status_code == 200:
+                print(f"     ✅ User found and login successful - no case sensitivity issue")
+            else:
+                print(f"     ❓ Unexpected status: {response.status_code}")
+                
+        except Exception as e:
+            print(f"     ❌ Error testing: {e}")
+    
+    return True
+
 def test_login_issue_santosh():
     """Test login issue for user Santosh@paras.com - Debug 'User not found' error"""
     print("\n" + "=" * 80)
