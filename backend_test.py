@@ -105,6 +105,765 @@ def get_existing_users():
     
     return found_users
 
+def test_password_recovery_verify(test_users):
+    """Test POST /api/auth/password-recovery/verify endpoint"""
+    print("\n" + "=" * 80)
+    print("2. TESTING PASSWORD RECOVERY VERIFICATION")
+    print("=" * 80)
+    
+    if not test_users:
+        print("❌ No users found to test password recovery")
+        return False
+    
+    # Use first user for testing
+    test_user = test_users[0]
+    user_data = test_user["user_data"]
+    email = test_user["email"]
+    
+    print(f"\n2.1. Testing with user: {test_user['name']} ({email})")
+    
+    # Test Case 1: Valid 2-field verification (PAN + Mobile)
+    print(f"\n2.2. Test Case 1: Valid 2-field verification (PAN + Mobile)")
+    
+    pan_number = user_data.get("pan_number")
+    mobile = user_data.get("mobile")
+    name = user_data.get("name")
+    aadhaar_number = user_data.get("aadhaar_number")
+    
+    print(f"     Available fields: PAN={pan_number}, Mobile={mobile}, Name={name}, Aadhaar={aadhaar_number}")
+    
+    if pan_number and mobile:
+        verify_data = {
+            "email": email,
+            "verification_fields": {
+                "pan_number": pan_number,
+                "mobile": mobile
+            }
+        }
+        
+        try:
+            response = requests.post(f"{API_BASE}/auth/password-recovery/verify", json=verify_data, timeout=30)
+            print(f"     Status: {response.status_code}")
+            print(f"     Response: {response.text}")
+            
+            if response.status_code == 200:
+                result = response.json()
+                print(f"     ✅ Verification successful!")
+                print(f"     📋 Verified user: {result.get('name')} (UID: {result.get('uid')})")
+                return True
+            else:
+                print(f"     ❌ Verification failed: {response.status_code}")
+                
+        except Exception as e:
+            print(f"     ❌ Error during verification: {e}")
+    else:
+        print(f"     ⚠️  User missing PAN or Mobile data - trying other fields")
+    
+    # Test Case 2: Valid 2-field verification (Name + Aadhaar) - case insensitive
+    print(f"\n2.3. Test Case 2: Valid 2-field verification (Name + Aadhaar) - case insensitive")
+    
+    if name and aadhaar_number:
+        verify_data = {
+            "email": email.upper(),  # Test case insensitive email
+            "verification_fields": {
+                "name": name.lower(),  # Test case insensitive name
+                "aadhaar_number": aadhaar_number
+            }
+        }
+        
+        try:
+            response = requests.post(f"{API_BASE}/auth/password-recovery/verify", json=verify_data, timeout=30)
+            print(f"     Status: {response.status_code}")
+            print(f"     Response: {response.text}")
+            
+            if response.status_code == 200:
+                result = response.json()
+                print(f"     ✅ Case-insensitive verification successful!")
+                print(f"     📋 Verified user: {result.get('name')} (UID: {result.get('uid')})")
+                return True
+            else:
+                print(f"     ❌ Case-insensitive verification failed: {response.status_code}")
+                
+        except Exception as e:
+            print(f"     ❌ Error during case-insensitive verification: {e}")
+    
+    # Test Case 3: Invalid verification (wrong values)
+    print(f"\n2.4. Test Case 3: Invalid verification (wrong values)")
+    
+    verify_data = {
+        "email": email,
+        "verification_fields": {
+            "pan_number": "WRONG123456",
+            "mobile": "9999999999"
+        }
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/auth/password-recovery/verify", json=verify_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 401:
+            print(f"     ✅ Correctly rejected wrong values with 401")
+        else:
+            print(f"     ❌ Should have returned 401 for wrong values, got {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during wrong values test: {e}")
+    
+    # Test Case 4: Invalid field count (only 1 field)
+    print(f"\n2.5. Test Case 4: Invalid field count (only 1 field)")
+    
+    verify_data = {
+        "email": email,
+        "verification_fields": {
+            "pan_number": pan_number or "TEST123456"
+        }
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/auth/password-recovery/verify", json=verify_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 400:
+            print(f"     ✅ Correctly rejected single field with 400")
+        else:
+            print(f"     ❌ Should have returned 400 for single field, got {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during single field test: {e}")
+    
+    # Test Case 5: Non-existent user
+    print(f"\n2.6. Test Case 5: Non-existent user")
+    
+    verify_data = {
+        "email": "nonexistent@example.com",
+        "verification_fields": {
+            "pan_number": "TEST123456",
+            "mobile": "9999999999"
+        }
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/auth/password-recovery/verify", json=verify_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 404:
+            print(f"     ✅ Correctly returned 404 for non-existent user")
+        else:
+            print(f"     ❌ Should have returned 404 for non-existent user, got {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during non-existent user test: {e}")
+    
+    return False
+
+def test_password_recovery_reset(test_users):
+    """Test POST /api/auth/password-recovery/reset endpoint"""
+    print("\n" + "=" * 80)
+    print("3. TESTING PASSWORD RECOVERY RESET")
+    print("=" * 80)
+    
+    if not test_users:
+        print("❌ No users found to test password reset")
+        return False
+    
+    # Use first user for testing
+    test_user = test_users[0]
+    user_data = test_user["user_data"]
+    email = test_user["email"]
+    old_password = test_user["password"]
+    
+    print(f"\n3.1. Testing with user: {test_user['name']} ({email})")
+    
+    # Get user's verification fields
+    pan_number = user_data.get("pan_number")
+    mobile = user_data.get("mobile")
+    
+    if not (pan_number and mobile):
+        print(f"     ⚠️  User missing PAN or Mobile data - cannot test password reset")
+        return False
+    
+    # Test Case 1: Valid password reset
+    print(f"\n3.2. Test Case 1: Valid password reset")
+    
+    new_password = f"NewPass{datetime.now().strftime('%H%M%S')}!"
+    
+    reset_data = {
+        "email": email,
+        "verification_fields": {
+            "pan_number": pan_number,
+            "mobile": mobile
+        },
+        "new_password": new_password
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/auth/password-recovery/reset", json=reset_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            print(f"     ✅ Password reset successful!")
+            
+            # Test Case 2: Verify new password works by logging in
+            print(f"\n3.3. Test Case 2: Verify new password works")
+            
+            login_response = requests.post(
+                f"{API_BASE}/auth/login",
+                params={
+                    "identifier": email,
+                    "password": new_password
+                },
+                timeout=30
+            )
+            
+            print(f"     Login Status: {login_response.status_code}")
+            
+            if login_response.status_code == 200:
+                print(f"     ✅ Login with new password successful!")
+                
+                # Test Case 3: Verify old password no longer works
+                print(f"\n3.4. Test Case 3: Verify old password no longer works")
+                
+                old_login_response = requests.post(
+                    f"{API_BASE}/auth/login",
+                    params={
+                        "identifier": email,
+                        "password": old_password
+                    },
+                    timeout=30
+                )
+                
+                print(f"     Old Password Login Status: {old_login_response.status_code}")
+                
+                if old_login_response.status_code == 401:
+                    print(f"     ✅ Old password correctly rejected!")
+                    
+                    # Reset password back to original for other tests
+                    print(f"\n3.5. Resetting password back to original...")
+                    
+                    reset_back_data = {
+                        "email": email,
+                        "verification_fields": {
+                            "pan_number": pan_number,
+                            "mobile": mobile
+                        },
+                        "new_password": old_password
+                    }
+                    
+                    reset_back_response = requests.post(f"{API_BASE}/auth/password-recovery/reset", json=reset_back_data, timeout=30)
+                    if reset_back_response.status_code == 200:
+                        print(f"     ✅ Password reset back to original")
+                        return True
+                    else:
+                        print(f"     ⚠️  Could not reset password back: {reset_back_response.status_code}")
+                        return True  # Still consider test successful
+                else:
+                    print(f"     ❌ Old password should have been rejected, got {old_login_response.status_code}")
+            else:
+                print(f"     ❌ Login with new password failed: {login_response.status_code}")
+        else:
+            print(f"     ❌ Password reset failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during password reset: {e}")
+    
+    # Test Case 4: Invalid password (too short)
+    print(f"\n3.6. Test Case 4: Invalid password (too short)")
+    
+    reset_data = {
+        "email": email,
+        "verification_fields": {
+            "pan_number": pan_number,
+            "mobile": mobile
+        },
+        "new_password": "123"  # Too short
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/auth/password-recovery/reset", json=reset_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 400:
+            print(f"     ✅ Correctly rejected short password with 400")
+        else:
+            print(f"     ❌ Should have returned 400 for short password, got {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during short password test: {e}")
+    
+    return False
+
+def test_support_ticket_creation(test_users):
+    """Test POST /api/support/tickets/create endpoint"""
+    print("\n" + "=" * 80)
+    print("4. TESTING SUPPORT TICKET CREATION")
+    print("=" * 80)
+    
+    if not test_users:
+        print("❌ No users found to test support ticket creation")
+        return False
+    
+    # Use first user for testing
+    test_user = test_users[0]
+    user_id = test_user["uid"]
+    
+    print(f"\n4.1. Testing with user: {test_user['name']} (UID: {user_id})")
+    
+    # Test Case 1: Create valid support ticket
+    print(f"\n4.2. Test Case 1: Create valid support ticket")
+    
+    ticket_data = {
+        "user_id": user_id,
+        "category": "Account Issues",
+        "subject": "Test Support Ticket",
+        "description": "This is a test support ticket created during backend testing.",
+        "attachments": []
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/support/tickets/create", json=ticket_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            ticket_id = result.get("ticket_id")
+            print(f"     ✅ Support ticket created successfully!")
+            print(f"     📋 Ticket ID: {ticket_id}")
+            
+            # Store ticket ID for later tests
+            test_user["test_ticket_id"] = ticket_id
+            return True
+        else:
+            print(f"     ❌ Support ticket creation failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during support ticket creation: {e}")
+    
+    # Test Case 2: Create ticket with different category
+    print(f"\n4.3. Test Case 2: Create ticket with different category")
+    
+    ticket_data = {
+        "user_id": user_id,
+        "category": "Technical",
+        "subject": "Technical Issue Test",
+        "description": "Testing technical category support ticket.",
+        "attachments": []
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/support/tickets/create", json=ticket_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"     ✅ Technical category ticket created: {result.get('ticket_id')}")
+        else:
+            print(f"     ❌ Technical category ticket creation failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during technical ticket creation: {e}")
+    
+    # Test Case 3: Invalid user ID
+    print(f"\n4.4. Test Case 3: Invalid user ID")
+    
+    ticket_data = {
+        "user_id": "invalid-user-id",
+        "category": "Other",
+        "subject": "Invalid User Test",
+        "description": "Testing with invalid user ID.",
+        "attachments": []
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/support/tickets/create", json=ticket_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 404:
+            print(f"     ✅ Correctly rejected invalid user ID with 404")
+        else:
+            print(f"     ❌ Should have returned 404 for invalid user ID, got {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during invalid user ID test: {e}")
+    
+    return False
+
+def test_support_ticket_retrieval(test_users):
+    """Test GET /api/support/tickets/user/{user_id} endpoint"""
+    print("\n" + "=" * 80)
+    print("5. TESTING SUPPORT TICKET RETRIEVAL")
+    print("=" * 80)
+    
+    if not test_users:
+        print("❌ No users found to test support ticket retrieval")
+        return False
+    
+    # Use first user for testing
+    test_user = test_users[0]
+    user_id = test_user["uid"]
+    
+    print(f"\n5.1. Testing with user: {test_user['name']} (UID: {user_id})")
+    
+    # Test Case 1: Get all tickets for user
+    print(f"\n5.2. Test Case 1: Get all tickets for user")
+    
+    try:
+        response = requests.get(f"{API_BASE}/support/tickets/user/{user_id}", timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            tickets = result.get("tickets", [])
+            count = result.get("count", 0)
+            
+            print(f"     ✅ Retrieved {count} tickets for user")
+            
+            if count > 0:
+                # Show first ticket details
+                first_ticket = tickets[0]
+                print(f"     📋 First ticket: {first_ticket.get('subject')} (Status: {first_ticket.get('status')})")
+                
+                # Store ticket ID for later tests
+                test_user["existing_ticket_id"] = first_ticket.get("ticket_id")
+            
+            return True
+        else:
+            print(f"     ❌ Ticket retrieval failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during ticket retrieval: {e}")
+    
+    # Test Case 2: Get tickets with status filter
+    print(f"\n5.3. Test Case 2: Get tickets with status filter")
+    
+    try:
+        response = requests.get(f"{API_BASE}/support/tickets/user/{user_id}?status=open", timeout=30)
+        print(f"     Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            count = result.get("count", 0)
+            print(f"     ✅ Retrieved {count} open tickets for user")
+        else:
+            print(f"     ❌ Filtered ticket retrieval failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during filtered ticket retrieval: {e}")
+    
+    return False
+
+def test_support_ticket_details(test_users):
+    """Test GET /api/support/tickets/{ticket_id} endpoint"""
+    print("\n" + "=" * 80)
+    print("6. TESTING SUPPORT TICKET DETAILS")
+    print("=" * 80)
+    
+    if not test_users:
+        print("❌ No users found to test support ticket details")
+        return False
+    
+    # Use first user for testing
+    test_user = test_users[0]
+    ticket_id = test_user.get("test_ticket_id") or test_user.get("existing_ticket_id")
+    
+    if not ticket_id:
+        print("❌ No ticket ID available for testing")
+        return False
+    
+    print(f"\n6.1. Testing with ticket ID: {ticket_id}")
+    
+    # Test Case 1: Get ticket details
+    print(f"\n6.2. Test Case 1: Get ticket details")
+    
+    try:
+        response = requests.get(f"{API_BASE}/support/tickets/{ticket_id}", timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            ticket = response.json()
+            
+            print(f"     ✅ Retrieved ticket details successfully!")
+            print(f"     📋 Subject: {ticket.get('subject')}")
+            print(f"     📋 Status: {ticket.get('status')}")
+            print(f"     📋 Category: {ticket.get('category')}")
+            print(f"     📋 Replies: {len(ticket.get('replies', []))}")
+            
+            return True
+        else:
+            print(f"     ❌ Ticket details retrieval failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during ticket details retrieval: {e}")
+    
+    # Test Case 2: Invalid ticket ID
+    print(f"\n6.3. Test Case 2: Invalid ticket ID")
+    
+    try:
+        response = requests.get(f"{API_BASE}/support/tickets/invalid-ticket-id", timeout=30)
+        print(f"     Status: {response.status_code}")
+        
+        if response.status_code == 404:
+            print(f"     ✅ Correctly returned 404 for invalid ticket ID")
+        else:
+            print(f"     ❌ Should have returned 404 for invalid ticket ID, got {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during invalid ticket ID test: {e}")
+    
+    return False
+
+def test_support_ticket_replies(test_users):
+    """Test POST /api/support/tickets/{ticket_id}/reply endpoint"""
+    print("\n" + "=" * 80)
+    print("7. TESTING SUPPORT TICKET REPLIES")
+    print("=" * 80)
+    
+    if not test_users:
+        print("❌ No users found to test support ticket replies")
+        return False
+    
+    # Use first user for testing
+    test_user = test_users[0]
+    user_id = test_user["uid"]
+    ticket_id = test_user.get("test_ticket_id") or test_user.get("existing_ticket_id")
+    
+    if not ticket_id:
+        print("❌ No ticket ID available for testing")
+        return False
+    
+    print(f"\n7.1. Testing with user: {test_user['name']} (UID: {user_id})")
+    print(f"     Ticket ID: {ticket_id}")
+    
+    # Test Case 1: Add reply to ticket
+    print(f"\n7.2. Test Case 1: Add reply to ticket")
+    
+    reply_data = {
+        "ticket_id": ticket_id,
+        "user_id": user_id,
+        "message": "This is a test reply added during backend testing."
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/support/tickets/{ticket_id}/reply", json=reply_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"     ✅ Reply added successfully!")
+            print(f"     📋 Reply ID: {result.get('reply', {}).get('reply_id')}")
+            return True
+        else:
+            print(f"     ❌ Reply addition failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during reply addition: {e}")
+    
+    # Test Case 2: Invalid ticket ID
+    print(f"\n7.3. Test Case 2: Invalid ticket ID")
+    
+    reply_data = {
+        "ticket_id": "invalid-ticket-id",
+        "user_id": user_id,
+        "message": "Test reply for invalid ticket."
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/support/tickets/invalid-ticket-id/reply", json=reply_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        
+        if response.status_code == 404:
+            print(f"     ✅ Correctly returned 404 for invalid ticket ID")
+        else:
+            print(f"     ❌ Should have returned 404 for invalid ticket ID, got {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during invalid ticket ID test: {e}")
+    
+    return False
+
+def test_admin_support_tickets():
+    """Test GET /api/admin/support/tickets endpoint"""
+    print("\n" + "=" * 80)
+    print("8. TESTING ADMIN SUPPORT TICKETS")
+    print("=" * 80)
+    
+    # Test Case 1: Get all tickets (admin view)
+    print(f"\n8.1. Test Case 1: Get all tickets (admin view)")
+    
+    try:
+        response = requests.get(f"{API_BASE}/admin/support/tickets", timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            tickets = result.get("tickets", [])
+            total = result.get("total", 0)
+            
+            print(f"     ✅ Retrieved {total} total tickets")
+            print(f"     📋 Current page: {result.get('page', 1)}")
+            print(f"     📋 Total pages: {result.get('pages', 1)}")
+            
+            if total > 0:
+                # Show first ticket details
+                first_ticket = tickets[0]
+                print(f"     📋 First ticket: {first_ticket.get('subject')} (User: {first_ticket.get('user_name')})")
+            
+            return True
+        else:
+            print(f"     ❌ Admin tickets retrieval failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during admin tickets retrieval: {e}")
+    
+    # Test Case 2: Get tickets with status filter
+    print(f"\n8.2. Test Case 2: Get tickets with status filter")
+    
+    try:
+        response = requests.get(f"{API_BASE}/admin/support/tickets?status=open", timeout=30)
+        print(f"     Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            total = result.get("total", 0)
+            print(f"     ✅ Retrieved {total} open tickets")
+        else:
+            print(f"     ❌ Filtered admin tickets retrieval failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during filtered admin tickets retrieval: {e}")
+    
+    # Test Case 3: Get tickets with category filter
+    print(f"\n8.3. Test Case 3: Get tickets with category filter")
+    
+    try:
+        response = requests.get(f"{API_BASE}/admin/support/tickets?category=Technical", timeout=30)
+        print(f"     Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            total = result.get("total", 0)
+            print(f"     ✅ Retrieved {total} technical tickets")
+        else:
+            print(f"     ❌ Category filtered admin tickets retrieval failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during category filtered admin tickets retrieval: {e}")
+    
+    # Test Case 4: Pagination test
+    print(f"\n8.4. Test Case 4: Pagination test")
+    
+    try:
+        response = requests.get(f"{API_BASE}/admin/support/tickets?page=1&limit=5", timeout=30)
+        print(f"     Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            tickets = result.get("tickets", [])
+            print(f"     ✅ Retrieved {len(tickets)} tickets with pagination (limit=5)")
+        else:
+            print(f"     ❌ Paginated admin tickets retrieval failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during paginated admin tickets retrieval: {e}")
+    
+    return False
+
+def test_admin_ticket_updates(test_users):
+    """Test PUT /api/admin/support/tickets/{ticket_id} endpoint"""
+    print("\n" + "=" * 80)
+    print("9. TESTING ADMIN TICKET UPDATES")
+    print("=" * 80)
+    
+    if not test_users:
+        print("❌ No users found to test admin ticket updates")
+        return False
+    
+    # Use first user's ticket for testing
+    test_user = test_users[0]
+    ticket_id = test_user.get("test_ticket_id") or test_user.get("existing_ticket_id")
+    
+    if not ticket_id:
+        print("❌ No ticket ID available for testing")
+        return False
+    
+    print(f"\n9.1. Testing with ticket ID: {ticket_id}")
+    
+    # Test Case 1: Update ticket status
+    print(f"\n9.2. Test Case 1: Update ticket status")
+    
+    update_data = {
+        "status": "in_progress",
+        "priority": "high",
+        "resolution_notes": "Ticket updated during backend testing"
+    }
+    
+    try:
+        response = requests.put(f"{API_BASE}/admin/support/tickets/{ticket_id}", json=update_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"     ✅ Ticket updated successfully!")
+            print(f"     📋 Updates: {result.get('updates', {})}")
+            return True
+        else:
+            print(f"     ❌ Ticket update failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during ticket update: {e}")
+    
+    # Test Case 2: Update only priority
+    print(f"\n9.3. Test Case 2: Update only priority")
+    
+    update_data = {
+        "priority": "low"
+    }
+    
+    try:
+        response = requests.put(f"{API_BASE}/admin/support/tickets/{ticket_id}", json=update_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            print(f"     ✅ Priority updated successfully!")
+        else:
+            print(f"     ❌ Priority update failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during priority update: {e}")
+    
+    # Test Case 3: Invalid ticket ID
+    print(f"\n9.4. Test Case 3: Invalid ticket ID")
+    
+    update_data = {
+        "status": "resolved"
+    }
+    
+    try:
+        response = requests.put(f"{API_BASE}/admin/support/tickets/invalid-ticket-id", json=update_data, timeout=30)
+        print(f"     Status: {response.status_code}")
+        
+        if response.status_code == 404:
+            print(f"     ✅ Correctly returned 404 for invalid ticket ID")
+        else:
+            print(f"     ❌ Should have returned 404 for invalid ticket ID, got {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error during invalid ticket ID test: {e}")
+    
+    return False
+
 def test_cart_and_checkout_flow(test_users):
     """Test Cart & Checkout Flow for users"""
     print("\n" + "=" * 80)
