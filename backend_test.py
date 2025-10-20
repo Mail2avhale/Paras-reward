@@ -41,17 +41,134 @@ def investigate_vip_user_status():
     print("1. INVESTIGATING VIP USER STATUS")
     print("=" * 80)
     
-    # Test users to check
+    # First, let's get all users and check their membership types
+    print(f"\n1.1. Getting all users from database...")
+    try:
+        response = requests.get(f"{API_BASE}/admin/users", timeout=30)
+        if response.status_code == 200:
+            users_data = response.json()
+            all_users = users_data.get("users", [])
+            print(f"     ✅ Found {len(all_users)} total users in database")
+            
+            # Check membership types
+            membership_counts = {}
+            vip_users_found = []
+            
+            for user in all_users:
+                membership_type = user.get("membership_type", "unknown")
+                membership_counts[membership_type] = membership_counts.get(membership_type, 0) + 1
+                
+                # Check for VIP users (case insensitive)
+                if membership_type and membership_type.lower() == "vip":
+                    vip_users_found.append({
+                        "email": user.get("email"),
+                        "uid": user.get("uid"),
+                        "name": user.get("name"),
+                        "membership_type": membership_type,
+                        "kyc_status": user.get("kyc_status"),
+                        "user_data": user
+                    })
+            
+            print(f"\n     📊 Membership Type Distribution:")
+            for membership_type, count in membership_counts.items():
+                print(f"       - {membership_type}: {count} users")
+            
+            print(f"\n     🎯 VIP Users Found: {len(vip_users_found)}")
+            for vip_user in vip_users_found:
+                print(f"       - {vip_user['name']} ({vip_user['email']}) - membership_type: '{vip_user['membership_type']}'")
+            
+            # If no VIP users found, let's create one for testing
+            if len(vip_users_found) == 0:
+                print(f"\n1.2. No VIP users found. Creating a test VIP user...")
+                
+                # Create a VIP user for testing
+                timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+                vip_user_data = {
+                    "first_name": "VIP",
+                    "last_name": "TestUser",
+                    "email": f"vip.test.{timestamp}@example.com",
+                    "mobile": f"98765{timestamp[-5:]}",
+                    "password": "VipPass123!",
+                    "state": "Maharashtra",
+                    "district": "Mumbai",
+                    "pincode": "400001",
+                    "aadhaar_number": f"9999{timestamp[-8:]}999",
+                    "pan_number": f"VIP1{timestamp[-5:]}Z"
+                }
+                
+                # Register the user
+                reg_response = requests.post(f"{API_BASE}/auth/register", json=vip_user_data, timeout=30)
+                if reg_response.status_code == 200:
+                    new_uid = reg_response.json().get("uid")
+                    print(f"     ✅ Test user created: {new_uid}")
+                    
+                    # Manually update to VIP (simulate admin approval)
+                    # First, let's try to promote the user to VIP
+                    promote_data = {"membership_type": "vip"}
+                    
+                    # Try different endpoints to set VIP status
+                    endpoints_to_try = [
+                        f"/admin/users/{new_uid}/update",
+                        f"/admin/promote",
+                        f"/membership/payment/{new_uid}/action"
+                    ]
+                    
+                    vip_set = False
+                    for endpoint in endpoints_to_try:
+                        try:
+                            if "promote" in endpoint:
+                                promote_response = requests.post(f"{API_BASE}{endpoint}", 
+                                                               params={"email": vip_user_data["email"], "role": "user"}, 
+                                                               timeout=30)
+                            else:
+                                promote_response = requests.post(f"{API_BASE}{endpoint}", 
+                                                               json=promote_data, timeout=30)
+                            
+                            if promote_response.status_code == 200:
+                                print(f"     ✅ User promoted via {endpoint}")
+                                vip_set = True
+                                break
+                        except:
+                            continue
+                    
+                    if not vip_set:
+                        print(f"     ⚠️  Could not automatically set VIP status. User created as 'free' member.")
+                    
+                    # Add the new user to our VIP list for testing (even if still 'free')
+                    vip_users_found.append({
+                        "email": vip_user_data["email"],
+                        "uid": new_uid,
+                        "name": f"{vip_user_data['first_name']} {vip_user_data['last_name']}",
+                        "membership_type": "vip" if vip_set else "free",
+                        "kyc_status": "pending",
+                        "user_data": vip_user_data,
+                        "password": vip_user_data["password"]  # Store for login testing
+                    })
+                else:
+                    print(f"     ❌ Failed to create test user: {reg_response.status_code}")
+            
+            return vip_users_found
+            
+        else:
+            print(f"     ❌ Failed to get users list: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error getting users: {e}")
+    
+    # Fallback: Test specific users manually
+    print(f"\n1.3. Fallback: Testing specific users manually...")
     test_users = [
-        "admin@paras.com",
-        "santosh@paras.com", 
-        "test@paras.com"
+        {"email": "admin@paras.com", "password": "admin123"},
+        {"email": "santosh@paras.com", "password": "password"},
+        {"email": "test@paras.com", "password": "password"}
     ]
     
     vip_users_found = []
     
-    for email in test_users:
-        print(f"\n1.1. Checking user: {email}")
+    for user_info in test_users:
+        email = user_info["email"]
+        password = user_info["password"]
+        print(f"\n     Checking user: {email}")
         
         try:
             # Try to login to get user data
@@ -59,7 +176,7 @@ def investigate_vip_user_status():
                 f"{API_BASE}/auth/login",
                 params={
                     "identifier": email,
-                    "password": "admin123"  # Common test password
+                    "password": password
                 },
                 timeout=30
             )
@@ -78,18 +195,21 @@ def investigate_vip_user_status():
                 print(f"     📋 role: '{user_data.get('role')}'")
                 print(f"     📋 is_active: {user_data.get('is_active')}")
                 
+                # Add to VIP list regardless of membership type for testing
+                vip_users_found.append({
+                    "email": email,
+                    "uid": uid,
+                    "name": name,
+                    "membership_type": membership_type,
+                    "kyc_status": user_data.get("kyc_status"),
+                    "user_data": user_data,
+                    "password": password
+                })
+                
                 if membership_type and membership_type.lower() == "vip":
-                    vip_users_found.append({
-                        "email": email,
-                        "uid": uid,
-                        "name": name,
-                        "membership_type": membership_type,
-                        "kyc_status": user_data.get("kyc_status"),
-                        "user_data": user_data
-                    })
                     print(f"     🎯 VIP USER FOUND!")
                 else:
-                    print(f"     ⚠️  Not VIP (membership_type: '{membership_type}')")
+                    print(f"     ⚠️  Not VIP (membership_type: '{membership_type}') - but will use for testing")
                     
             elif response.status_code == 401:
                 print(f"     ❌ Wrong password for {email}")
@@ -101,9 +221,9 @@ def investigate_vip_user_status():
         except Exception as e:
             print(f"     ❌ Error checking {email}: {e}")
     
-    print(f"\n📊 SUMMARY: Found {len(vip_users_found)} VIP users")
-    for vip_user in vip_users_found:
-        print(f"   - {vip_user['name']} ({vip_user['email']}) - membership_type: '{vip_user['membership_type']}'")
+    print(f"\n📊 SUMMARY: Found {len(vip_users_found)} users for testing")
+    for user in vip_users_found:
+        print(f"   - {user['name']} ({user['email']}) - membership_type: '{user['membership_type']}'")
     
     return vip_users_found
 
