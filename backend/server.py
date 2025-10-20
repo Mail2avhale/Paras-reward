@@ -2271,10 +2271,16 @@ async def create_product(request: Request):
 
 @api_router.get("/admin/products")
 async def get_all_products_admin():
-    """Get all products (Admin)"""
-    products = await db.products.find().to_list(length=None)
+    """Get all products (Admin) - includes hidden and inactive"""
+    products = await db.products.find({}, {"_id": 0}).to_list(1000)
+    # Convert datetime fields to ISO format
     for product in products:
-        product["_id"] = str(product["_id"])
+        for field in ["created_at", "updated_at", "visible_from", "visible_till"]:
+            if product.get(field) and isinstance(product[field], str):
+                try:
+                    product[field] = datetime.fromisoformat(product[field]).isoformat()
+                except:
+                    pass
     return products
 
 @api_router.put("/admin/products/{product_id}")
