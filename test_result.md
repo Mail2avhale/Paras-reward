@@ -679,10 +679,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Support Tickets User Page"
-    - "Admin Support Tickets Management"
-    - "Admin Delivery Configuration UI"
-    - "Enhanced Wallet Page"
+    - "Admin Stockist Management APIs"
+    - "Security Deposit Manual Entry APIs"
+    - "Annual Renewal Manual Entry APIs"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
