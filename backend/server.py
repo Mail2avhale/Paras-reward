@@ -3302,6 +3302,315 @@ async def complete_profit_withdrawal(withdrawal_id: str, request: Request):
     
     return {"message": "Withdrawal completed", "withdrawal_id": withdrawal_id, "utr_number": utr_number}
 
+# ========== STOCK REQUEST SYSTEM ==========
+
+class StockRequest(BaseModel):
+    product_id: str
+    quantity: int
+    notes: Optional[str] = ""
+
+@api_router.post("/stock/request/create")
+async def create_stock_request(request_data: StockRequest, request: Request):
+    """Create a stock request - requester requests from their immediate parent in hierarchy"""
+    user = await get_current_user_from_request(request)
+    
+    if request_data.quantity <= 0:
+        raise HTTPException(status_code=400, detail="Quantity must be greater than 0")
+    
+    requester_id = user.get("uid")
+    requester_role = user.get("role")
+    requester_name = user.get("name", "Unknown")
+    
+    # Determine parent based on role hierarchy
+    parent_role_map = {
+        "outlet": "sub_stockist",
+        "sub_stockist": "master_stockist",
+        "master_stockist": "admin"
+    }
+    
+    if requester_role not in parent_role_map:
+        raise HTTPException(status_code=403, detail=f"Role {requester_role} cannot create stock requests")
+    
+    parent_role = parent_role_map[requester_role]
+    
+    # Find parent entity (for outlet/sub, find their assigned parent)
+    parent = None
+    if requester_role == "outlet":
+        # Find assigned sub stockist
+        parent_id = user.get("assigned_sub_stockist")
+        if parent_id:
+            parent = await db.users.find_one({"uid": parent_id})
+    elif requester_role == "sub_stockist":
+        # Find assigned master stockist
+        parent_id = user.get("assigned_master_stockist")
+        if parent_id:
+            parent = await db.users.find_one({"uid": parent_id})
+    elif requester_role == "master_stockist":
+        # Request to company (admin)
+        parent = await db.users.find_one({"role": "admin"})
+    
+    if not parent:
+        raise HTTPException(status_code=404, detail=f"Parent {parent_role} not found or not assigned")
+    
+    parent_id = parent.get("uid")
+    parent_name = parent.get("name", "Unknown")
+    
+    # Get product details
+    product = await db.products.find_one({"product_id": request_data.product_id})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Check if parent has sufficient stock
+    parent_stock = await db.stock_inventory.find_one({
+        "user_id": parent_id,
+        "product_id": request_data.product_id
+    })
+    
+    available_stock = parent_stock.get("quantity", 0) if parent_stock else 0
+    
+    # Create stock request
+    stock_request = {
+        "request_id": str(uuid.uuid4()),
+        "requester_id": requester_id,
+        "requester_name": requester_name,
+        "requester_role": requester_role,
+        "parent_id": parent_id,
+        "parent_name": parent_name,
+        "parent_role": parent_role,
+        "product_id": request_data.product_id,
+        "product_name": product.get("name"),
+        "quantity": request_data.quantity,
+        "notes": request_data.notes,
+        "status": "pending",
+        "available_stock": available_stock,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.stock_requests.insert_one(stock_request)
+    
+    return {
+        "message": "Stock request created successfully",
+        "request_id": stock_request["request_id"],
+        "status": "pending",
+        "available_stock": available_stock
+    }
+
+@api_router.get("/stock/request/my-requests")
+async def get_my_stock_requests(request: Request, status: Optional[str] = None):
+    """Get all stock requests created by the current user"""
+    user = await get_current_user_from_request(request)
+    requester_id = user.get("uid")
+    
+    query = {"requester_id": requester_id}
+    if status:
+        query["status"] = status
+    
+    requests = await db.stock_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(None)
+    return {"requests": requests}
+
+@api_router.get("/stock/request/pending-for-me")
+async def get_pending_stock_requests_for_me(request: Request):
+    """Get all pending stock requests where current user is the parent (approver)"""
+    user = await get_current_user_from_request(request)
+    parent_id = user.get("uid")
+    
+    requests = await db.stock_requests.find({
+        "parent_id": parent_id,
+        "status": "pending"
+    }, {"_id": 0}).sort("created_at", -1).to_list(None)
+    
+    return {"requests": requests}
+
+@api_router.get("/admin/stock/requests")
+async def get_all_stock_requests(status: Optional[str] = None):
+    """Admin: Get all stock requests"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    requests = await db.stock_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(None)
+    return {"requests": requests}
+
+@api_router.post("/stock/request/{request_id}/approve")
+async def approve_stock_request(request_id: str, request: Request):
+    """Approve a stock request and initiate stock transfer"""
+    user = await get_current_user_from_request(request)
+    approver_id = user.get("uid")
+    approver_name = user.get("name", "Unknown")
+    
+    # Get the request
+    stock_request = await db.stock_requests.find_one({"request_id": request_id})
+    if not stock_request:
+        raise HTTPException(status_code=404, detail="Stock request not found")
+    
+    # Verify approver is the parent
+    if stock_request["parent_id"] != approver_id:
+        raise HTTPException(status_code=403, detail="You are not authorized to approve this request")
+    
+    if stock_request["status"] != "pending":
+        raise HTTPException(status_code=400, detail=f"Request is already {stock_request['status']}")
+    
+    # Check stock availability
+    parent_stock = await db.stock_inventory.find_one({
+        "user_id": approver_id,
+        "product_id": stock_request["product_id"]
+    })
+    
+    available_qty = parent_stock.get("quantity", 0) if parent_stock else 0
+    requested_qty = stock_request["quantity"]
+    
+    if available_qty < requested_qty:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Insufficient stock. Available: {available_qty}, Requested: {requested_qty}"
+        )
+    
+    # Update request status
+    await db.stock_requests.update_one(
+        {"request_id": request_id},
+        {
+            "$set": {
+                "status": "approved",
+                "approved_at": datetime.now(timezone.utc).isoformat(),
+                "approved_by": approver_id,
+                "approver_name": approver_name,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+    
+    # Create stock movement (auto-approved since parent approved the request)
+    batch_number = generate_batch_number()
+    qr_code = generate_qr_code()
+    
+    movement = {
+        "movement_id": str(uuid.uuid4()),
+        "request_id": request_id,
+        "sender_id": approver_id,
+        "sender_name": approver_name,
+        "sender_role": stock_request["parent_role"],
+        "receiver_id": stock_request["requester_id"],
+        "receiver_name": stock_request["requester_name"],
+        "receiver_role": stock_request["requester_role"],
+        "product_id": stock_request["product_id"],
+        "product_name": stock_request["product_name"],
+        "quantity": requested_qty,
+        "batch_number": batch_number,
+        "qr_code": qr_code,
+        "status": "completed",  # Auto-complete since request was approved
+        "notes": f"Auto-generated from stock request: {stock_request.get('notes', '')}",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "approved_at": datetime.now(timezone.utc).isoformat(),
+        "completed_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.stock_movements.insert_one(movement)
+    
+    # Update stock inventory - Deduct from parent
+    if parent_stock:
+        await db.stock_inventory.update_one(
+            {"user_id": approver_id, "product_id": stock_request["product_id"]},
+            {"$inc": {"quantity": -requested_qty}, "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    
+    # Update stock inventory - Add to requester
+    requester_stock = await db.stock_inventory.find_one({
+        "user_id": stock_request["requester_id"],
+        "product_id": stock_request["product_id"]
+    })
+    
+    if requester_stock:
+        await db.stock_inventory.update_one(
+            {"user_id": stock_request["requester_id"], "product_id": stock_request["product_id"]},
+            {"$inc": {"quantity": requested_qty}, "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    else:
+        await db.stock_inventory.insert_one({
+            "inventory_id": str(uuid.uuid4()),
+            "user_id": stock_request["requester_id"],
+            "product_id": stock_request["product_id"],
+            "product_name": stock_request["product_name"],
+            "quantity": requested_qty,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    # Get updated balances
+    updated_parent_stock = await db.stock_inventory.find_one({
+        "user_id": approver_id,
+        "product_id": stock_request["product_id"]
+    })
+    updated_requester_stock = await db.stock_inventory.find_one({
+        "user_id": stock_request["requester_id"],
+        "product_id": stock_request["product_id"]
+    })
+    
+    parent_balance = updated_parent_stock.get("quantity", 0) if updated_parent_stock else 0
+    requester_balance = updated_requester_stock.get("quantity", 0) if updated_requester_stock else 0
+    
+    return {
+        "message": "Stock request approved and stock transferred",
+        "movement_id": movement["movement_id"],
+        "parent_balance": parent_balance,
+        "requester_balance": requester_balance
+    }
+
+@api_router.post("/stock/request/{request_id}/reject")
+async def reject_stock_request(request_id: str, request: Request):
+    """Reject a stock request"""
+    data = await request.json()
+    rejection_reason = data.get("rejection_reason", "")
+    
+    user = await get_current_user_from_request(request)
+    approver_id = user.get("uid")
+    approver_name = user.get("name", "Unknown")
+    
+    # Get the request
+    stock_request = await db.stock_requests.find_one({"request_id": request_id})
+    if not stock_request:
+        raise HTTPException(status_code=404, detail="Stock request not found")
+    
+    # Verify approver is the parent
+    if stock_request["parent_id"] != approver_id:
+        raise HTTPException(status_code=403, detail="You are not authorized to reject this request")
+    
+    if stock_request["status"] != "pending":
+        raise HTTPException(status_code=400, detail=f"Request is already {stock_request['status']}")
+    
+    # Update request status
+    await db.stock_requests.update_one(
+        {"request_id": request_id},
+        {
+            "$set": {
+                "status": "rejected",
+                "rejected_at": datetime.now(timezone.utc).isoformat(),
+                "rejected_by": approver_id,
+                "rejector_name": approver_name,
+                "rejection_reason": rejection_reason,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+    
+    return {"message": "Stock request rejected", "status": "rejected"}
+
+@api_router.get("/stock/inventory/my-stock")
+async def get_my_stock_inventory(request: Request):
+    """Get current user's stock inventory"""
+    user = await get_current_user_from_request(request)
+    user_id = user.get("uid")
+    
+    inventory = await db.stock_inventory.find({"user_id": user_id}, {"_id": 0}).to_list(None)
+    
+    return {"inventory": inventory}
+
+@api_router.get("/admin/stock/inventory/{user_id}")
+async def get_user_stock_inventory(user_id: str):
+    """Admin: Get stock inventory for any user"""
+    inventory = await db.stock_inventory.find({"user_id": user_id}, {"_id": 0}).to_list(None)
+    return {"inventory": inventory}
+
 # ========== STOCK MOVEMENT SYSTEM ==========
 def generate_batch_number():
     """Generate unique batch number: BATCH-YYYYMMDD-XXXXX"""
