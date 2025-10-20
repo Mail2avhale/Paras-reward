@@ -1469,20 +1469,6 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
           )}
 
-          {/* Commissions Management */}
-          {activeTab === 'commissions' && (
-            <div className="space-y-6">
-              <CommissionsManagement />
-            </div>
-          )}
-
-          {/* Rewards Management */}
-          {activeTab === 'rewards' && (
-            <div className="space-y-6">
-              <RewardsManagement />
-            </div>
-          )}
-
           {/* Notifications */}
           {activeTab === 'notifications' && (
             <div className="space-y-6">
