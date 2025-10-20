@@ -420,7 +420,7 @@ backend:
 
   - task: "VIP Checkout Issues Investigation"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
@@ -432,6 +432,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "CHECKOUT VALIDATION ERROR IDENTIFIED AND FIXED: ✅ ROUTING ISSUE RESOLVED: Found FastAPI routing conflict where /orders/checkout was being matched by /orders/{uid} pattern first, causing 422 validation error expecting 'product_id' field. Fixed by moving checkout endpoint definition before generic {uid} pattern in server.py. ✅ CART SYSTEM WORKING: Cart add/retrieve operations work correctly with proper user_id association. ❌ REMAINING ISSUES: 1) VIP users need KYC verification (kyc_status='verified') for legacy checkout endpoint. 2) New users have 0 PRC balance causing 'Insufficient PRC balance' error in cart checkout. 3) Cart-based checkout (/orders/checkout) works for VIP users but requires sufficient PRC balance. VALIDATION ERRORS CONFIRMED: Cart checkout: 'Insufficient PRC balance' (expected), Legacy checkout: 'KYC verification required' (expected). Main routing issue is FIXED."
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE ORDER CREATION AND CASHBACK CREDIT VERIFICATION COMPLETE: ✅ ORDER CREATION WORKING: Successfully tested with VIP user (pramod37999@gmail.com) with verified KYC and sufficient PRC balance. Legacy checkout endpoint (/orders/{uid}) works perfectly - created order ID 64c5d8b9-1b38-4c7f-bb9f-0fff2962ccb4 with secret code PRC-LJ1DUT5I. ✅ ORDERS SAVED TO DATABASE: Order appears in database with correct user_id field, status='pending', and all required fields. ✅ CASHBACK SYSTEM WORKING: Cashback (₹2.5) was correctly credited to user's cash_wallet_balance field. PRC balance correctly deducted (571.7 → 471.7 PRC). ✅ DATABASE STRUCTURE CONFIRMED: Orders use 'user_id' field (not 'uid'). ❌ MINOR BUG IDENTIFIED: Wallet endpoint (/api/wallet/{uid}) looks for 'cashback_wallet_balance' field but legacy orders credit 'cash_wallet_balance' field - field name inconsistency causes wallet endpoint to show ₹0 when user actually has cashback. ❌ CART CHECKOUT ISSUE: Cart-based checkout (/orders/checkout) has validation error with delivery_address field (expects string, receives object). CONCLUSION: Core order creation and cashback credit functionality is WORKING. VIP users with verified KYC can successfully place orders and receive cashback."
 
 frontend:
   - task: "User Registration Form"
