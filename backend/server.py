@@ -2841,16 +2841,16 @@ async def update_delivery_config(request: Request):
 
 @api_router.post("/orders/{order_id}/distribute-delivery-charge")
 async def distribute_delivery_charge(order_id: str):
-    """Distribute delivery charge to entities (Idempotent)"""
+    """Distribute commission based on order PRC value (10% of total PRC converted to ₹)"""
     # Find order
     order = await db.orders.find_one({"order_id": order_id})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
     # Check if already distributed
-    if order.get("delivery_charge_distributed"):
+    if order.get("commission_distributed"):
         return {
-            "message": "Delivery charge already distributed",
+            "message": "Commission already distributed",
             "order_id": order_id,
             "already_distributed": True
         }
@@ -2859,29 +2859,28 @@ async def distribute_delivery_charge(order_id: str):
     if order.get("status") != "delivered":
         raise HTTPException(status_code=400, detail="Order must be delivered before distribution")
     
-    # Get delivery charge
-    delivery_charge = order.get("delivery_charge", 0)
-    if delivery_charge <= 0:
-        return {"message": "No delivery charge to distribute"}
+    # Calculate commission: 10% of order PRC value, converted to ₹ (10 PRC = ₹1)
+    total_prc = order.get("total_prc", 0)
+    if total_prc <= 0:
+        return {"message": "No PRC value to distribute commission"}
     
-    # Get distribution configuration
+    # Commission = 10% of PRC value in ₹
+    total_commission = (total_prc * 0.10) / 10  # 10 PRC = ₹1
+    
+    # Get distribution split (default: Master 10%, Sub 20%, Outlet 60%, Company 10%)
     config = await db.system_config.find_one({"config_type": "delivery"})
     if not config:
-        # Use default split
         split = {"master": 10, "sub": 20, "outlet": 60, "company": 10}
     else:
-        split = config.get("distribution_split", {})
+        split = config.get("distribution_split", {"master": 10, "sub": 20, "outlet": 60, "company": 10})
     
-    # Get order chain (outlet -> sub -> master)
-    outlet_id = order.get("assigned_outlet")
-    
-    # For now, use placeholder IDs (in production, fetch actual entities)
-    # TODO: Implement proper entity chain lookup
+    # Get outlet_id from delivery
+    outlet_id = order.get("outlet_id") or order.get("assigned_outlet")
     
     # Calculate distribution amounts
     distributions = {}
     for entity, percentage in split.items():
-        amount = (delivery_charge * percentage) / 100
+        amount = (total_commission * percentage) / 100
         distributions[entity] = amount
     
     # Create commission entries and credit wallets
@@ -2895,30 +2894,45 @@ async def distribute_delivery_charge(order_id: str):
                 "commission_id": str(uuid.uuid4()),
                 "order_id": order_id,
                 "entity_type": entity,
-                "entity_id": outlet_id if entity == "outlet" else f"{entity}_placeholder",
-                "amount": amount,
-                "type": "delivery_charge",
+                "entity_id": outlet_id if entity == "outlet" else f"{entity}_system",
+                "amount": round(amount, 2),
+                "type": "order_commission",
                 "status": "credited",
                 "created_at": now
             }
             commission_records.append(commission_record)
             
-            # Credit profit wallet automatically (if not company and wallet not frozen)
-            if entity != "company":
-                if entity == "outlet" and outlet_id:
-                    # Check if outlet's profit wallet is frozen (overdue renewal)
-                    outlet_user = await db.users.find_one({"uid": outlet_id})
-                    if outlet_user and not outlet_user.get("profit_wallet_frozen", False):
-                        # Credit outlet's profit wallet
-                        await db.users.update_one(
-                            {"uid": outlet_id, "role": "outlet"},
-                            {"$inc": {"profit_wallet_balance": amount}}
-                        )
-                elif entity == "master":
-                    # In production: Get order's master stockist and credit (check frozen status)
-                    # For now, using placeholder - will be enhanced later
-                    pass
-                elif entity == "sub":
+            # Credit profit wallet (if entity is outlet and has valid ID)
+            if entity == "outlet" and outlet_id:
+                outlet_user = await db.users.find_one({"uid": outlet_id, "role": "outlet"})
+                if outlet_user and not outlet_user.get("profit_wallet_frozen", False):
+                    # Credit outlet's profit wallet
+                    await db.users.update_one(
+                        {"uid": outlet_id},
+                        {"$inc": {"profit_wallet_balance": round(amount, 2)}}
+                    )
+    
+    # Save commission records
+    if commission_records:
+        await db.commissions_earned.insert_many(commission_records)
+    
+    # Mark order as commission distributed
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {"$set": {
+            "commission_distributed": True,
+            "commission_amount": round(total_commission, 2),
+            "commission_distributed_at": now
+        }}
+    )
+    
+    return {
+        "message": "Commission distributed successfully",
+        "order_id": order_id,
+        "total_commission": round(total_commission, 2),
+        "distributions": {k: round(v, 2) for k, v in distributions.items()},
+        "commission_records": len(commission_records)
+    }
                     # In production: Get order's sub stockist and credit (check frozen status)
                     # For now, using placeholder - will be enhanced later
                     pass
