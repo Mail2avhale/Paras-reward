@@ -587,6 +587,21 @@ async def forgot_password(email: str):
 
 # ========== USER PROFILE ROUTES ==========
 
+
+@api_router.get("/users/{uid}")
+async def get_user(uid: str):
+    """Get user data by UID"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Remove sensitive data
+    user.pop("password_hash", None)
+    user.pop("reset_token", None)
+    user["_id"] = str(user["_id"])
+    
+    return user
+
 @api_router.put("/user/{uid}/profile")
 async def update_profile(uid: str, request: Request):
     """Update user profile"""
