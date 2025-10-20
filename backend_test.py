@@ -34,8 +34,8 @@ print(f"Testing Password Recovery + Support Tickets at: {BACKEND_URL}")
 print(f"API Base: {API_BASE}")
 print("=" * 80)
 
-# VIP Checkout Investigation Functions
-def investigate_vip_user_status():
+# Password Recovery + Support Tickets Test Functions
+def get_existing_users():
     """Check VIP User Status - membership_type field value"""
     print("\n" + "=" * 80)
     print("1. INVESTIGATING VIP USER STATUS")
