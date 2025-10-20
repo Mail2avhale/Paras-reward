@@ -216,54 +216,63 @@ const FinancialManagementAdmin = () => {
               <p className="text-gray-600">Create security deposit entries for stockists</p>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {deposits.map((deposit) => (
-                <Card key={deposit.deposit_id} className="p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{deposit.user_name}</h3>
-                      <p className="text-sm text-gray-600">{deposit.user_role?.replace('_', ' ')}</p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openEditDeposit(deposit)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Amount Taken:</span>
-                      <span className="font-semibold text-gray-900">{formatCurrency(deposit.amount)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Monthly Return:</span>
-                      <span className="font-semibold text-green-600">
-                        {formatCurrency(deposit.monthly_return_amount)} ({(deposit.monthly_return_rate * 100).toFixed(1)}%)
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Total Returned:</span>
-                      <span className="font-semibold text-blue-600">{formatCurrency(deposit.total_returned || 0)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Balance Pending:</span>
-                      <span className="font-semibold text-orange-600">{formatCurrency(deposit.balance_pending)}</span>
-                    </div>
-                    <div className="pt-2 border-t">
-                      <p className="text-xs text-gray-500">
-                        Created: {new Date(deposit.created_at).toLocaleDateString()}
-                      </p>
-                      {deposit.notes && (
-                        <p className="text-xs text-gray-600 mt-1">{deposit.notes}</p>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount Taken</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Return</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Returned</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Balance Pending</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {deposits.map((deposit) => (
+                      <tr key={deposit.deposit_id} className="hover:bg-gray-50">
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="font-medium text-gray-900">{deposit.user_name}</div>
+                          {deposit.notes && (
+                            <div className="text-xs text-gray-500 truncate max-w-xs">{deposit.notes}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-700">
+                            {deposit.user_role?.replace('_', ' ').toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-right">
+                          <div className="font-semibold text-gray-900">{formatCurrency(deposit.amount)}</div>
+                          <div className="text-xs text-gray-500">{new Date(deposit.created_at).toLocaleDateString()}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-right">
+                          <div className="font-semibold text-green-600">{formatCurrency(deposit.monthly_return_amount)}</div>
+                          <div className="text-xs text-gray-500">({(deposit.monthly_return_rate * 100).toFixed(1)}%)</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-right">
+                          <div className="font-semibold text-blue-600">{formatCurrency(deposit.total_returned || 0)}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-right">
+                          <div className="font-semibold text-orange-600">{formatCurrency(deposit.balance_pending)}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-center">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditDeposit(deposit)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           )}
         </div>
       )}
