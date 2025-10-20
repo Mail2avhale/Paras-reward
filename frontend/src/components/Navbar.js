@@ -10,6 +10,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 const Navbar = ({ user, onLogout }) => {
+  // Define role-based visibility
+  const isRegularUser = !user.role || user.role === 'user';
+  const isAdmin = user.role === 'admin';
+  const isStockist = ['master_stockist', 'sub_stockist'].includes(user.role);
+  const isOutlet = user.role === 'outlet';
+  
   return (
     <nav className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
       <div className="container mx-auto px-4">
@@ -24,24 +30,31 @@ const Navbar = ({ user, onLogout }) => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6">
+            {/* Dashboard - Show for everyone */}
             <Link to="/dashboard" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
               Dashboard
             </Link>
-            <Link to="/mining" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
-              Mining
-            </Link>
-            <Link to="/game" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
-              Game
-            </Link>
-            <Link to="/referrals" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
-              Referrals
-            </Link>
-            <Link to="/marketplace" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
-              Marketplace
-            </Link>
-            <Link to="/leaderboard" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
-              Leaderboard
-            </Link>
+            
+            {/* Regular User Features - Only for users */}
+            {isRegularUser && (
+              <>
+                <Link to="/mining" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
+                  Mining
+                </Link>
+                <Link to="/game" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
+                  Game
+                </Link>
+                <Link to="/referrals" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
+                  Referrals
+                </Link>
+                <Link to="/marketplace" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
+                  Marketplace
+                </Link>
+                <Link to="/leaderboard" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
+                  Leaderboard
+                </Link>
+              </>
+            )}
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
