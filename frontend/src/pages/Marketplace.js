@@ -133,12 +133,9 @@ const Marketplace = ({ user, onLogout }) => {
         delivery_address: deliveryAddress
       });
 
+      // Show success message with secret code
       toast.success(
-        <div>
-          <p className="font-semibold">Order placed successfully!</p>
-          <p className="text-sm">Secret Code: <span className="font-bold">{response.data.secret_code}</span></p>
-          <p className="text-xs">Show this code at the outlet</p>
-        </div>,
+        `Order placed successfully! Secret Code: ${response.data.secret_code}. Show this code at the outlet for delivery.`,
         { duration: 8000 }
       );
 
