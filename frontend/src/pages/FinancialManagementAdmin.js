@@ -529,11 +529,11 @@ const FinancialManagementAdmin = () => {
                   type="number"
                   step="0.01"
                   required
-                  value={(parseFloat(renewalForm.gst_rate) * 100).toFixed(2)}
-                  onChange={(e) => setRenewalForm({...renewalForm, gst_rate: (parseFloat(e.target.value) / 100).toString()})}
+                  value={renewalForm.gst_rate ? (parseFloat(renewalForm.gst_rate) * 100).toFixed(2) : '18'}
+                  onChange={(e) => setRenewalForm({...renewalForm, gst_rate: (parseFloat(e.target.value || 0) / 100).toString()})}
                   placeholder="18"
                 />
-                {renewalForm.amount && (
+                {renewalForm.amount && renewalForm.gst_rate && (
                   <p className="text-xs text-gray-500 mt-1">
                     GST: ₹{(parseFloat(renewalForm.amount) * parseFloat(renewalForm.gst_rate)).toLocaleString('en-IN')} | 
                     Total: ₹{(parseFloat(renewalForm.amount) * (1 + parseFloat(renewalForm.gst_rate))).toLocaleString('en-IN')}
