@@ -11,6 +11,7 @@ import AdvancedUserManagement from '@/pages/AdvancedUserManagement';
 import AdvancedOrderManagement from '@/pages/AdvancedOrderManagement';
 import StockMovementSimple from '@/pages/StockMovementSimple';
 import WithdrawalManagementAdmin from '@/pages/WithdrawalManagementAdmin';
+import StockMovementApproval from '@/pages/StockMovementApproval';
 import { 
   Users, Package, CreditCard, FileText, CheckCircle, XCircle, 
   Search, Shield, UserCog, Trash2, BarChart3, TrendingUp, TrendingDown,
