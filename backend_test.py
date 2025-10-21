@@ -329,7 +329,7 @@ def test_core_features():
         print(f"     ❌ Error getting products: {e}")
     
     # Test Case 3: Wallet API
-    print(f"\n4.3. Testing GET /api/wallet/{uid} endpoint...")
+    print(f"\n4.3. Testing GET /api/wallet/{{uid}} endpoint...")
     
     try:
         response = requests.get(f"{API_BASE}/wallet/{admin_uid}", timeout=30)
