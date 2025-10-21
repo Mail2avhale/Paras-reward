@@ -406,6 +406,7 @@ async def simple_register(request: Request):
     email = data.get("email")
     password = data.get("password")
     role = data.get("role", "user")  # user, master_stockist, sub_stockist, outlet
+    referral_code = data.get("referral_code", "").strip()  # Optional referral code
     
     if not email or not password:
         raise HTTPException(status_code=400, detail="Email and password are required")
@@ -418,6 +419,13 @@ async def simple_register(request: Request):
     existing = await db.users.find_one({"email": email})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Validate referral code if provided
+    referrer = None
+    if referral_code:
+        referrer = await db.users.find_one({"referral_code": referral_code})
+        if not referrer:
+            raise HTTPException(status_code=400, detail="Invalid referral code")
     
     # Create minimal user
     user_data = {
@@ -437,7 +445,9 @@ async def simple_register(request: Request):
         "is_active": True,
         "is_banned": False,
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat()
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "referred_by": referrer["uid"] if referrer else None,
+        "referral_count": 0
     }
     
     # Generate referral code
@@ -445,10 +455,21 @@ async def simple_register(request: Request):
     
     await db.users.insert_one(user_data)
     
+    # If referred, update referrer's count
+    if referrer:
+        await db.users.update_one(
+            {"uid": referrer["uid"]},
+            {
+                "$inc": {"referral_count": 1},
+                "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
+            }
+        )
+    
     return {
         "message": "Registration successful! Please complete your profile.",
         "uid": user_data["uid"],
-        "profile_complete": False
+        "profile_complete": False,
+        "referred_by": referrer["name"] if referrer else None
     }
 
 @api_router.post("/auth/register")
