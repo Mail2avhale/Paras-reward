@@ -1,107 +1,107 @@
 <analysis>
-The AI engineer systematically evolved the PARAS REWARD application from its initial MVP state, addressing a wide array of user requests, bug fixes, and feature expansions. The trajectory details a progression through several key phases: implementing a role-based navigation system; developing comprehensive Admin KPIs; debugging and resolving backend routing and login issues; building frontend dashboards for various user roles; fixing product redemption and order display issues; implementing a multi-product cart; and integrating commission distribution.
+The AI engineer commenced with debugging NaN errors in the Financial Management Admin dashboard, caused by old data lacking calculated fields, which was resolved by implementing frontend calculations. Following this, the engineer addressed a user request to refine the Admin Dashboard by removing redundant Rewards and Commissions tabs and global stats cards, while simultaneously building a functional Withdrawal Management system.
 
-More recently, the focus shifted to enhancing core functionalities. The engineer initiated and completed a comprehensive stock movement system, introduced a profile-based password recovery flow with SendGrid integration, and built advanced admin sections for stockist, financial, user, and order management. Significant effort was dedicated to debugging UI rendering issues, API routing conflicts (especially with parameterized routes), and data display inconsistencies (e.g., NaN errors), always prioritizing user feedback and ensuring features were production-ready. The system also underwent deployment readiness checks. The current task revolves around fixing display issues within the Financial Management section.
+Subsequently, a comprehensive Stock Movement Approval System and detailed financial KPIs were integrated into the Admin Dashboard. This involved backend API enhancements and new frontend components. The Stock Request System with CRUD operations was then implemented and integrated into Admin, Master, Sub, and Outlet panels. A bug causing Failed to fetch data in this system due to missing UID in API calls was identified and fixed by modifying both backend endpoints and frontend calls. Delivery charge distribution was fixed to correctly credit all hierarchy levels (Outlet, Sub, Master Stockist) after being found to only credit the outlet initially, with verification by a testing agent. Google AdSense was then integrated across several frontend pages, with specific user-provided configurations. Finally, quick access navigation menus for user features were added to all stockist panels. The current work halted at a deployment health check revealing a hardcoded database name issue.
 </analysis>
 
 <product_requirements>
-The PARAS REWARD app is a crypto-mining platform where users earn non-transferable PRC (10 PRC = ₹1 INR) via daily mining, a tap game (100 PRC/day limit), and referrals (capped at 200). VIP members (₹1000/year, admin-approved) gain unlimited PRC validity and full redeem/withdrawal access, unlike free users (24-hour coin validity, no redemption). Redemption for products uses a multi-item cart, single secret code per order, atomic PRC deduction, and 25% cashback. KYC (Aadhaar, PAN uploads) is mandatory for withdrawals.
+The PARAS REWARD application is a crypto-mining platform where users earn non-transferable PRC (10 PRC = ₹1 INR) through daily mining, a tap game, and referrals. VIP members (₹1000/year, admin-approved) gain unlimited PRC validity and full redeem/withdrawal access, while free users have 24-hour coin validity with no redemption. Product redemption uses a multi-item cart, single secret code per order, atomic PRC deduction, and 25% cashback. KYC is mandatory for withdrawals.
 
-Implemented features include a Cashback Wallet (INR, ₹99 monthly fee, min ₹10 withdrawal, ₹5 fee), Profit Wallets (for Master/Sub/Outlet delivery shares/deposit returns), and a Stock Movement system (Company → Master → Sub → Outlet → Customer with traceability). A Security Deposit feature (refundable deposits with 3% monthly return, annual renewal fees) is in place.
-
-Extensive dashboards with Role-Based Access Control (RBAC) are required: Admin (KPIs, user/KYC/VIP/product/order/finance management, settings, reports, audit logs), Master Stockist, Sub Stockist, and Outlet panels. Registration is minimal (email/password), with full profile updates and profile picture upload on a dedicated page. The Home page should be FinanceTech-styled, displaying marketplace products. Recent additions include: SendGrid integration for profile-based password recovery (2-field verification), a user-facing Support Ticket system with admin management, enhanced Admin Stockist and Financial Management (deposits, renewals) with real-time data, and advanced Admin User/Order Management.
+Implemented features include a Cashback Wallet (INR, ₹99 monthly fee, min ₹10 withdrawal, ₹5 fee), Profit Wallets (for Master/Sub/Outlet delivery shares/deposit returns), and a Stock Movement system (Company → Master → Sub → Outlet → Customer with traceability). A Security Deposit feature (refundable deposits with 3% monthly return, annual renewal fees) is in place. Role-Based Access Control (RBAC) dashboards are crucial, with recent additions like SendGrid for profile-based password recovery, a user-facing Support Ticket system, enhanced Admin Stockist and Financial Management, and advanced Admin User/Order Management.
 </product_requirements>
 
 <key_technical_concepts>
 - **FastAPI:** Python web framework for backend APIs.
 - **React.js:** JavaScript library for frontend UI.
-- **MongoDB:** NoSQL database for flexible data storage (using UUIDs, not ObjectIDs).
+- **MongoDB:** NoSQL database for flexible data storage (using UUIDs).
 - **Pydantic:** Data validation and settings management.
 - **JWT (JSON Web Tokens):** User authentication.
-- **bcrypt:** Password hashing.
 - **Supervisor:** Process control system.
 - **Shadcn UI:** Reusable UI components.
 - **Role-Based Access Control (RBAC):** Restricts features based on user roles.
 - **UUID:** Unique identifiers.
 - **SendGrid:** Email service for password recovery.
+- **Google AdSense:** Web monetization.
 </key_technical_concepts>
 
 <code_architecture>
-The application follows a standard full-stack architecture with a FastAPI backend and a React.js frontend, interacting with a MongoDB database.
+The application uses a FastAPI backend, a React.js frontend, and MongoDB.
 
 
-- ****: Core backend application.
-    - Summary: Manages all API endpoints.
-    - Changes: Extensive modifications for Admin KPIs, commission distribution, order processing, stock movement APIs, VIP/KYC verification, login case-insensitivity fix, and routing conflict resolutions. New endpoints for profile-based password recovery (, ), Support Tickets (), Admin Stockist Management (), Admin Financial Management (, ), Advanced User Management (), and Advanced Order Management (). Routing for  was reordered to appear before  to resolve 404 errors. Stock transfer initiation endpoint updated.
-- ****: Defines Pydantic models.
-    - Summary: Data validation for backend.
+- ****: Core backend.
+    - Summary: Manages API endpoints.
+    - Changes: Extensive modifications for Admin KPIs, commission distribution, stock movement APIs. New endpoints for password recovery, Support Tickets, Admin Stockist/Financial/User/Order Management. Reordered routing for . Stock transfer initiation updated. New endpoints for Stock Request system (create, approve, reject, edit, delete, inventory for requests) and enhanced  for financial KPIs. Fixed indentation errors and duplicate code in . Updated delivery charge distribution logic to credit Sub/Master Stockists. Modified user registration to accept , and added referral stats endpoint. Stock request endpoints were updated to use UID from the path.
+- ****: Pydantic models.
+    - Summary: Data validation.
     - Changes:  models modified for . New models for , , , and related update/request models.
-- ****: Manages application routing.
-    - Summary: Updated to include newer pages and their routes.
-    - Changes: Routes added for , ,  (later replaced ), and updated to use new admin management pages.
+- ****: Application routing.
+    - Summary: Updated to include newer pages and routes.
+    - Changes: Routes added for password recovery, support, and .
 - ****: Global navigation.
     - Summary: Provides role-based navigation.
-    - Changes: Implemented role-based access control. A Support link was added to the user's navigation.
-- ****: Admin management interface.
+    - Changes: Role-based access control implemented, Support link added.
+- ****: Admin interface.
     - Summary: Central hub for admin operations.
-    - Changes: Refactored UI, added sections for Stock Movement, KYC, VIP payments. Integrated new tabs for Support Tickets, Stockist Management, Financial Management, Advanced User Management, and Advanced Order Management. Fixed issues with displaying real-time stats and replaced Under Development placeholders for stockist-related tabs.
-- ****: Interface for outlets.
+    - Changes: Refactored UI, added sections for Stock Movement, KYC, VIP payments. Integrated tabs for Support Tickets, Stockist/Financial/User/Order Management. Fixed real-time stats display. Removed Rewards and Commissions tabs and global stats cards. Integrated  and . Added comprehensive financial KPIs. Integrated  as a tab.
+- ****: Outlet interface.
     - Summary: Manages order verification and delivery.
-    - Changes: Updated to use the  API to display security deposit and renewal information correctly.
+    - Changes: Uses  API. Integrated  as a tab. Added a comprehensive navigation bar for user features.
 - ****: User product browsing.
     - Summary: Allows users to view and redeem products.
-    - Changes: Refactored for multi-product cart system.
+    - Changes: Refactored for multi-product cart. Integrated Google AdSense ads.
 - ****: User's order history.
-    - Summary: Displays user's placed orders.
-    - Changes: Fixed API endpoint call and updated for multi-product cart orders.
+    - Summary: Displays user orders.
+    - Changes: Fixed API endpoint call for multi-product cart orders.
 - ****: Master Stockist dashboard.
-    - Summary: Dashboard for Master Stockist operations.
-    - Changes: Updated to use the new  API to correctly display security deposit and renewal information.
+    - Summary: For Master Stockist operations.
+    - Changes: Uses  API. Integrated  as a tab. Added a comprehensive navigation bar for user features.
 - ****: Sub Stockist dashboard.
-    - Summary: Dashboard for Sub Stockist operations.
-    - Changes: Updated to use the new  API to correctly display security deposit and renewal information.
-- ** (New file)**: New page for profile-based password recovery.
-    - Summary: Implements a 4-step wizard (Email → Select 2 Fields → Verify → Reset Password).
-    - Changes: Created to replace the old email-based recovery.
-- ** (New file)**: User-facing page for creating and managing support tickets.
-    - Summary: Allows users to interact with support.
-    - Changes: Created, and then fixed to use  for authentication.
-- ** (New file)**: Admin page for managing Master, Sub, and Outlet stockists.
-    - Summary: Provides CRUD operations and assignment functionalities.
-    - Changes: Created and integrated into AdminDashboard.
-- ** (New file)**: Admin page for managing security deposits and renewal fees.
-    - Summary: Allows admin to create, edit, view financial entries.
-    - Changes: Created and integrated. Updated to display data in table view. Patched NaN display errors for financial calculations.
-- ** (New file)**: Admin page for comprehensive user management.
-    - Summary: Enables viewing, editing, deleting users, managing roles, PRC/cashback balances.
-    - Changes: Created and integrated into AdminDashboard.
-- ** (New file)**: Admin page for comprehensive order management.
-    - Summary: Allows viewing pending/completed orders and full control over order lifecycle.
-    - Changes: Created and integrated into AdminDashboard.
-- ** (New file)**: Simplified UI for stock movement.
-    - Summary: Streamlined interface for selecting product, quantity, sender, and receiver for stock transfers.
-    - Changes: Created and integrated into AdminDashboard. Fixed API request payload for  and .
+    - Summary: For Sub Stockist operations.
+    - Changes: Uses  API. Integrated  as a tab. Added a comprehensive navigation bar for user features.
+- ****: Admin page for financial entries.
+    - Summary: Manages security deposits and renewal fees.
+    - Changes: Created and integrated. Updated to display data in table. Patched NaN errors for financial calculations by implementing client-side calculation for older data.
+- ** (New file)**: Admin page for managing user withdrawal requests.
+    - Summary: Allows admin to view and manage cashback and profit wallet withdrawals.
+    - Changes: Created and integrated into .
+- ** (New file)**: Admin page for approving stock transfers.
+    - Summary: Centralized system for viewing, approving, and rejecting stock movements.
+    - Changes: Created and integrated into  replacing the simplified stock movement view.
+- ** (New file)**: User/Stockist facing page for creating, viewing, editing, deleting, approving/rejecting stock requests.
+    - Summary: Implements the hierarchical stock request flow.
+    - Changes: Created with CRUD functionality and integrated into Admin, Master, Sub, and Outlet panels. Updated to correctly pass UID parameters to backend APIs.
+- ****: User's referral management page.
+    - Summary: Displays referral code and stats.
+    - Changes: Updated to display a shareable referral link with a copy button and show referral statistics. Integrated Google AdSense ads.
+- ****: User registration page.
+    - Summary: Simplified registration.
+    - Changes: Updated to handle  from URL parameters and allow input in the form.
+- ****: User mining page.
+    - Summary: User interface for crypto mining.
+    - Changes: Integrated Google AdSense ads.
+- ****: Main HTML file.
+    - Summary: Entry point for frontend.
+    - Changes: Added Google AdSense script and Auto Ads configuration.
+- ** (New file)**: Component for displaying Google AdSense ads.
+    - Summary: Encapsulates AdSense ad unit logic and visibility control.
+    - Changes: Created to be reusable across pages.
 - ****: Documents testing.
     - Summary: Logs progress, issues, and test results.
-    - Changes: Continuously updated to reflect all fixes and feature implementations, including detailed descriptions of bug resolutions like routing conflicts and UI display issues.
+    - Changes: Continuously updated, especially with details on NaN fix verification and delivery charge distribution testing.
 </code_architecture>
 
 <pending_tasks>
-- Complete implementation of stock movement features for Master Stockist and Sub Stockist panels (Admin UI is simplified, but user-role specific UI/logic for initiating transfers might be needed).
+- Complete implementation of stock movement features for Master Stockist and Sub Stockist panels (Admin UI is simplified, but user-role specific UI/logic for initiating transfers might be needed). (Partially addressed by StockRequestSystem)
 - Implement order update/delete functionality for regular users.
 - Build detailed advanced admin sections for Notifications, Settings, Commissions, and Rewards (currently placeholders or initial implementations).
 </pending_tasks>
 
 <current_work>
-Immediately before this summary request, the AI engineer was addressing a user-reported issue concerning the Financial Management section within the Admin Dashboard. Specifically, deposit amounts, monthly return rates, balance pending, GST, and total amounts were incorrectly displaying NaN (Not a Number). The user also clarified that Security deposit means company take REFUNDABLE deposit from stockist and outlet and give refund monthly 3%.
+Immediately before this summary request, the AI engineer had just completed integrating new navigation menus into the Master Stockist, Sub Stockist, and Outlet panels, providing quick access to user features like Mining, Game, Referral, Marketplace, Leaderboard, VIP Membership, KYC Verification, and My Orders, while maintaining their role-specific management tabs. This work was verified with screenshots.
 
-The AI engineer has acknowledged both the NaN display error in the  component and the need to correctly represent the refundable nature of security deposits with monthly returns. The previous actions included:
-- Identifying and fixing  issues in the deposit form, edit deposit modal, and renewal form within  by ensuring proper handling of  results.
-- Checking the  function to ensure default values are set correctly.
-
-The current state is that the display of financial data (deposit amount, monthly return, balance, GST, total amount) in the  component is still showing NaN values, indicating that the previous fix was incomplete or that there are underlying data issues. The core problem is incorrect data parsing or calculation logic for displaying these numerical values in the frontend.
+The very last explicit user request was to Call Deployer Agent and Run Health Check to Check for Readiness for Deployment. The AI engineer acted on this, calling the deployment agent. The deployment agent reported an issue: hardcoded database name issue. The current state is that the AI engineer has acknowledged this issue and stated the next step is to fix it.
 </current_work>
 
 <optional_next_step>
-Investigate and fix the NaN display errors in  by reviewing data sources and calculations.
+Fix the hardcoded database name issue identified by the deployment agent for production readiness.
 </optional_next_step>
