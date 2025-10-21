@@ -174,6 +174,11 @@ const Referrals = ({ user, onLogout }) => {
           </Card>
         </div>
 
+        {/* Google AdSense - Banner Ad (Hidden for Admin) */}
+        {!isAdmin && (
+          <BannerAd adSlot="2345678901" />
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Your Referral Code & Link */}
           <Card data-testid="referral-code-card" className="bg-gradient-to-br from-purple-600 to-pink-600 text-white p-8 rounded-3xl shadow-2xl">
