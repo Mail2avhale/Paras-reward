@@ -247,7 +247,7 @@ def test_core_features():
     test_results = {"mining_status": False, "products": False, "wallet": False}
     
     # Test Case 1: Mining Status API
-    print(f"\n4.1. Testing GET /api/mining/status/{uid} endpoint...")
+    print(f"\n4.1. Testing GET /api/mining/status/{{uid}} endpoint...")
     
     # Use admin user UID (known to exist)
     admin_uid = "ac9548c3-968a-4bbf-bad7-4e5aed1b660c"
