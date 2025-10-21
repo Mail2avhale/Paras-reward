@@ -157,6 +157,63 @@ const StockRequestSystem = () => {
     }
   };
 
+  const handleEdit = async () => {
+    if (!editRequest.quantity || parseInt(editRequest.quantity) <= 0) {
+      toast.error('Please enter valid quantity');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const response = await axios.put(`${API}/stock/request/${selectedRequest.request_id}/edit`, {
+        quantity: parseInt(editRequest.quantity),
+        notes: editRequest.notes
+      });
+      
+      toast.success(`Request updated! Available stock: ${response.data.available_stock}`);
+      setShowEditModal(false);
+      setSelectedRequest(null);
+      setEditRequest({ quantity: '', notes: '' });
+      fetchData();
+    } catch (error) {
+      console.error('Error editing request:', error);
+      toast.error(error.response?.data?.detail || 'Failed to edit request');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setLoading(true);
+    try {
+      await axios.delete(`${API}/stock/request/${selectedRequest.request_id}/delete`);
+      
+      toast.success('Stock request deleted successfully');
+      setShowDeleteModal(false);
+      setSelectedRequest(null);
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting request:', error);
+      toast.error(error.response?.data?.detail || 'Failed to delete request');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openEditModal = (req) => {
+    setSelectedRequest(req);
+    setEditRequest({
+      quantity: req.quantity.toString(),
+      notes: req.notes || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const openDeleteModal = (req) => {
+    setSelectedRequest(req);
+    setShowDeleteModal(true);
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleString('en-IN', {
