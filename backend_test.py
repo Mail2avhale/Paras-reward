@@ -961,6 +961,15 @@ def run_comprehensive_test():
         else:
             print("\n❌ RENEWAL MANAGEMENT TESTS FAILED")
         
+        # Test 4: Delivery Charge Distribution
+        print("\n🔧 PHASE 4: DELIVERY CHARGE DISTRIBUTION TESTING")
+        delivery_test_result = test_delivery_charge_distribution()
+        if delivery_test_result:
+            results["delivery_charge_distribution"] = True
+            print("\n✅ DELIVERY CHARGE DISTRIBUTION TESTS PASSED")
+        else:
+            print("\n❌ DELIVERY CHARGE DISTRIBUTION TESTS FAILED")
+        
         results["test_completed"] = True
         
     except Exception as e:
