@@ -1169,6 +1169,47 @@ async def get_referrals(uid: str):
     
     return {"referrals": referrals, "total": len(referrals)}
 
+@api_router.get("/referral/stats/{uid}")
+async def get_referral_stats(uid: str):
+    """Get referral statistics for a user"""
+    # Total referrals
+    total_referrals = await db.users.count_documents({"referred_by": uid})
+    
+    # Active referrals (logged in within last 24 hours)
+    yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
+    yesterday_iso = yesterday.isoformat()
+    
+    # Get all referrals to check activity
+    all_referrals = await db.users.find(
+        {"referred_by": uid}, 
+        {"_id": 0, "uid": 1, "last_login": 1, "membership_type": 1, "is_active": 1}
+    ).to_list(None)
+    
+    active_count = 0
+    vip_count = 0
+    
+    for ref in all_referrals:
+        # Check if VIP
+        if ref.get("membership_type") == "vip":
+            vip_count += 1
+        
+        # Check if active (logged in recently and account is active)
+        if ref.get("is_active", True):
+            last_login = ref.get("last_login")
+            if last_login:
+                try:
+                    last_login_dt = datetime.fromisoformat(last_login) if isinstance(last_login, str) else last_login
+                    if last_login_dt >= yesterday:
+                        active_count += 1
+                except:
+                    pass
+    
+    return {
+        "total_referrals": total_referrals,
+        "active_referrals": active_count,
+        "vip_referrals": vip_count
+    }
+
 # ========== VIP MEMBERSHIP ROUTES ==========
 @api_router.post("/membership/payment/{uid}", response_model=VIPPayment)
 async def submit_vip_payment(uid: str, payment: VIPPaymentCreate):
