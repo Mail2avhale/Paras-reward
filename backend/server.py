@@ -3698,11 +3698,18 @@ async def edit_stock_request(request_id: str, request: Request):
     data = await request.json()
     new_quantity = data.get("quantity")
     new_notes = data.get("notes", "")
+    user_uid = data.get("user_uid")
+    
+    if not user_uid:
+        raise HTTPException(status_code=401, detail="User UID is required")
     
     if not new_quantity or new_quantity <= 0:
         raise HTTPException(status_code=400, detail="Valid quantity is required")
     
-    user = await get_current_user_from_request(request)
+    user = await db.users.find_one({"uid": user_uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
     user_id = user.get("uid")
     
     # Get the request
