@@ -13,6 +13,9 @@ const API = `${BACKEND_URL}/api`;
 const Mining = ({ user, onLogout }) => {
   const [miningStatus, setMiningStatus] = useState(null);
   const [loading, setLoading] = useState(false);
+  
+  // Check if user is admin
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     fetchMiningStatus();
