@@ -3673,6 +3673,84 @@ async def get_user_stock_inventory(user_id: str):
     inventory = await db.stock_inventory.find({"user_id": user_id}, {"_id": 0}).to_list(None)
     return {"inventory": inventory}
 
+@api_router.put("/stock/request/{request_id}/edit")
+async def edit_stock_request(request_id: str, request: Request):
+    """Edit a pending stock request (only requester can edit)"""
+    data = await request.json()
+    new_quantity = data.get("quantity")
+    new_notes = data.get("notes", "")
+    
+    if not new_quantity or new_quantity <= 0:
+        raise HTTPException(status_code=400, detail="Valid quantity is required")
+    
+    user = await get_current_user_from_request(request)
+    user_id = user.get("uid")
+    
+    # Get the request
+    stock_request = await db.stock_requests.find_one({"request_id": request_id})
+    if not stock_request:
+        raise HTTPException(status_code=404, detail="Stock request not found")
+    
+    # Verify user is the requester
+    if stock_request["requester_id"] != user_id:
+        raise HTTPException(status_code=403, detail="You can only edit your own requests")
+    
+    # Can only edit pending requests
+    if stock_request["status"] != "pending":
+        raise HTTPException(status_code=400, detail=f"Cannot edit {stock_request['status']} requests")
+    
+    # Check parent's available stock for new quantity
+    parent_stock = await db.stock_inventory.find_one({
+        "user_id": stock_request["parent_id"],
+        "product_id": stock_request["product_id"]
+    })
+    
+    available_stock = parent_stock.get("quantity", 0) if parent_stock else 0
+    
+    # Update request
+    await db.stock_requests.update_one(
+        {"request_id": request_id},
+        {
+            "$set": {
+                "quantity": new_quantity,
+                "notes": new_notes,
+                "available_stock": available_stock,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+    
+    return {
+        "message": "Stock request updated successfully",
+        "request_id": request_id,
+        "new_quantity": new_quantity,
+        "available_stock": available_stock
+    }
+
+@api_router.delete("/stock/request/{request_id}/delete")
+async def delete_stock_request(request_id: str, request: Request):
+    """Delete a pending stock request (only requester can delete)"""
+    user = await get_current_user_from_request(request)
+    user_id = user.get("uid")
+    
+    # Get the request
+    stock_request = await db.stock_requests.find_one({"request_id": request_id})
+    if not stock_request:
+        raise HTTPException(status_code=404, detail="Stock request not found")
+    
+    # Verify user is the requester
+    if stock_request["requester_id"] != user_id:
+        raise HTTPException(status_code=403, detail="You can only delete your own requests")
+    
+    # Can only delete pending requests
+    if stock_request["status"] != "pending":
+        raise HTTPException(status_code=400, detail=f"Cannot delete {stock_request['status']} requests")
+    
+    # Delete the request
+    await db.stock_requests.delete_one({"request_id": request_id})
+    
+    return {"message": "Stock request deleted successfully", "request_id": request_id}
+
 # ========== STOCK MOVEMENT SYSTEM ==========
 def generate_batch_number():
     """Generate unique batch number: BATCH-YYYYMMDD-XXXXX"""
