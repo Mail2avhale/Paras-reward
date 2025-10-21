@@ -3042,7 +3042,8 @@ async def distribute_delivery_charge(order_id: str):
         raise HTTPException(status_code=400, detail="Order must be delivered before distribution")
     
     # Calculate commission: 10% of order PRC value, converted to ₹ (10 PRC = ₹1)
-    total_prc = order.get("total_prc", 0)
+    # Support both legacy (prc_amount) and new (total_prc) order formats
+    total_prc = order.get("total_prc", 0) or order.get("prc_amount", 0)
     if total_prc <= 0:
         return {"message": "No PRC value to distribute commission"}
     
