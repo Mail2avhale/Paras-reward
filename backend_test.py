@@ -183,201 +183,60 @@ def test_user_management():
     return test_results
 
 def test_admin_dashboard_kpis():
-    """Test Renewal Manual Entry Endpoints"""
+    """Test Admin Dashboard KPIs API"""
     print("\n" + "=" * 80)
-    print("3. TESTING RENEWAL MANAGEMENT ENDPOINTS")
+    print("3. TESTING ADMIN DASHBOARD KPIs API")
     print("=" * 80)
     
-    if not created_stockists:
-        print("❌ No stockists available for renewal testing")
-        return False
+    test_results = {"admin_stats": False}
     
-    created_renewals = {}
-    
-    # Test Case 1: Create renewal for master (amount: 50000, gst_rate: 0.18)
-    print(f"\n3.1. Creating renewal for Master Stockist...")
-    
-    master_renewal_data = {
-        "user_id": created_stockists["master"],
-        "amount": 50000,
-        "gst_rate": 0.18,
-        "status": "approved"
-    }
+    # Test Case 1: Get Admin Dashboard Statistics
+    print(f"\n3.1. Testing GET /api/admin/stats endpoint...")
     
     try:
-        response = requests.post(f"{API_BASE}/admin/renewal/manual-entry", json=master_renewal_data, timeout=30)
+        response = requests.get(f"{API_BASE}/admin/stats", timeout=30)
         print(f"     Status: {response.status_code}")
         print(f"     Response: {response.text}")
         
         if response.status_code == 200:
-            result = response.json()
-            renewal_id = result.get("renewal_id")
-            created_renewals["master"] = renewal_id
+            stats_data = response.json()
+            print(f"     ✅ Admin stats retrieved successfully!")
             
-            # Calculate expected GST
-            base_amount = master_renewal_data["amount"]
-            gst_amount = base_amount * master_renewal_data["gst_rate"]
-            total_amount = base_amount + gst_amount
+            # Verify expected KPI categories
+            expected_categories = [
+                "user_statistics", "order_statistics", "kyc_statistics", 
+                "vip_payment_statistics", "withdrawal_statistics", 
+                "product_statistics", "financial_overview"
+            ]
             
-            print(f"     ✅ Master renewal created successfully!")
-            print(f"     📋 Renewal ID: {renewal_id}")
-            print(f"     📋 Base Amount: ₹{base_amount}")
-            print(f"     📋 GST Amount: ₹{gst_amount}")
-            print(f"     📋 Total Amount: ₹{total_amount}")
-        else:
-            print(f"     ❌ Master renewal creation failed: {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error creating master renewal: {e}")
-    
-    # Test Case 2: Create renewal for sub (amount: 30000, gst_rate: 0.18)
-    print(f"\n3.2. Creating renewal for Sub Stockist...")
-    
-    sub_renewal_data = {
-        "user_id": created_stockists["sub"],
-        "amount": 30000,
-        "gst_rate": 0.18,
-        "status": "approved"
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/admin/renewal/manual-entry", json=sub_renewal_data, timeout=30)
-        print(f"     Status: {response.status_code}")
-        print(f"     Response: {response.text}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            renewal_id = result.get("renewal_id")
-            created_renewals["sub"] = renewal_id
-            
-            # Calculate expected GST
-            base_amount = sub_renewal_data["amount"]
-            gst_amount = base_amount * sub_renewal_data["gst_rate"]
-            total_amount = base_amount + gst_amount
-            
-            print(f"     ✅ Sub renewal created successfully!")
-            print(f"     📋 Renewal ID: {renewal_id}")
-            print(f"     📋 Base Amount: ₹{base_amount}")
-            print(f"     📋 GST Amount: ₹{gst_amount}")
-            print(f"     📋 Total Amount: ₹{total_amount}")
-        else:
-            print(f"     ❌ Sub renewal creation failed: {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error creating sub renewal: {e}")
-    
-    # Test Case 3: Verify renewal created with correct GST calculation
-    print(f"\n3.3. Verifying renewals in database...")
-    
-    try:
-        response = requests.get(f"{API_BASE}/admin/renewals", timeout=30)
-        print(f"     Status: {response.status_code}")
-        print(f"     Response: {response.text}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            renewals = result.get("renewals", [])
-            print(f"     ✅ Retrieved {len(renewals)} renewals")
-            
-            # Verify our created renewals are in the list
-            for renewal in renewals:
-                renewal_id = renewal.get("renewal_id")
-                user_id = renewal.get("user_id")
-                base_amount = renewal.get("base_amount")
-                gst_amount = renewal.get("gst_amount")
-                total_amount = renewal.get("total_amount")
-                
-                if renewal_id in created_renewals.values():
-                    print(f"     📋 Found renewal: {renewal_id}")
-                    print(f"       User ID: {user_id}")
-                    print(f"       Base Amount: ₹{base_amount}")
-                    print(f"       GST Amount: ₹{gst_amount}")
-                    print(f"       Total Amount: ₹{total_amount}")
+            found_categories = []
+            for category in expected_categories:
+                if category in stats_data:
+                    found_categories.append(category)
+                    print(f"     📋 {category.replace('_', ' ').title()}: ✅")
                     
-                    # Verify GST calculation
-                    expected_gst = base_amount * 0.18
-                    expected_total = base_amount + expected_gst
-                    gst_correct = abs(gst_amount - expected_gst) < 0.01
-                    total_correct = abs(total_amount - expected_total) < 0.01
-                    
-                    print(f"       GST Calculation Correct: {gst_correct}")
-                    print(f"       Total Calculation Correct: {total_correct}")
-        else:
-            print(f"     ❌ Failed to get renewals: {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error getting renewals: {e}")
-    
-    # Test Case 4: Update renewal amount and verify GST recalculated
-    print(f"\n3.4. Updating renewal amount...")
-    
-    if created_renewals.get("master"):
-        update_data = {
-            "amount": 55000,
-            "gst_rate": 0.18
-        }
-        
-        try:
-            response = requests.put(f"{API_BASE}/admin/renewal/{created_renewals['master']}/edit", json=update_data, timeout=30)
-            print(f"     Status: {response.status_code}")
-            print(f"     Response: {response.text}")
-            
-            if response.status_code == 200:
-                result = response.json()
-                new_base = result.get("base_amount")
-                new_gst = result.get("gst_amount")
-                new_total = result.get("total_amount")
-                
-                print(f"     ✅ Renewal updated successfully!")
-                print(f"     📋 New Base Amount: ₹{new_base}")
-                print(f"     📋 New GST Amount: ₹{new_gst}")
-                print(f"     📋 New Total Amount: ₹{new_total}")
-                
-                # Verify GST recalculation
-                expected_gst = update_data["amount"] * 0.18
-                expected_total = update_data["amount"] + expected_gst
-                gst_correct = abs(new_gst - expected_gst) < 0.01
-                total_correct = abs(new_total - expected_total) < 0.01
-                
-                print(f"     📋 GST Recalculated Correctly: {gst_correct}")
-                print(f"     📋 Total Recalculated Correctly: {total_correct}")
-            else:
-                print(f"     ❌ Failed to update renewal: {response.status_code}")
-                
-        except Exception as e:
-            print(f"     ❌ Error updating renewal: {e}")
-    
-    # Test Case 5: Verify user renewal_status updated to "active"
-    print(f"\n3.5. Verifying user renewal status updated...")
-    
-    for role, user_id in created_stockists.items():
-        if role in ["master", "sub"]:
-            try:
-                # Check user record via login (to get full user data)
-                login_response = requests.post(
-                    f"{API_BASE}/auth/login",
-                    params={
-                        "identifier": f"{role}_test@test.com",
-                        "password": "test123"
-                    },
-                    timeout=30
-                )
-                
-                if login_response.status_code == 200:
-                    user_data = login_response.json()
-                    renewal_status = user_data.get("renewal_status", "unknown")
-                    renewal_due_date = user_data.get("renewal_due_date")
-                    
-                    print(f"     📋 {role.title()} Stockist:")
-                    print(f"       Renewal Status: {renewal_status}")
-                    print(f"       Renewal Due Date: {renewal_due_date}")
+                    # Print some key metrics
+                    category_data = stats_data[category]
+                    if isinstance(category_data, dict):
+                        for key, value in list(category_data.items())[:3]:  # Show first 3 items
+                            print(f"       - {key}: {value}")
                 else:
-                    print(f"     ❌ Failed to get {role} user data: {login_response.status_code}")
-                    
-            except Exception as e:
-                print(f"     ❌ Error checking {role} user record: {e}")
+                    print(f"     📋 {category.replace('_', ' ').title()}: ❌ Missing")
+            
+            # Check if response has valid JSON structure
+            if isinstance(stats_data, dict) and len(stats_data) > 0:
+                print(f"     ✅ Valid JSON structure with {len(stats_data)} categories")
+                test_results["admin_stats"] = True
+            else:
+                print(f"     ❌ Invalid or empty response structure")
+                
+        else:
+            print(f"     ❌ Failed to get admin stats: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error getting admin stats: {e}")
     
-    return created_renewals
+    return test_results
 
 def test_delivery_charge_distribution():
     """Test Delivery Charge Distribution System Comprehensively"""
