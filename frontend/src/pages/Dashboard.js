@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Coins, Zap, Users, Gift, Trophy, Wallet } from 'lucide-react';
+import { ResponsiveAd, BannerAd, InFeedAd } from '@/components/AdSenseAd';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -12,6 +13,9 @@ const API = `${BACKEND_URL}/api`;
 const Dashboard = ({ user, onLogout }) => {
   const [userData, setUserData] = useState(null);
   const [stats, setStats] = useState(null);
+  
+  // Check if user is admin to hide ads
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     fetchUserData();
