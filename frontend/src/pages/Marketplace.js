@@ -8,6 +8,7 @@ import { ShoppingCart, Package, Plus, Minus, Trash2, CheckCircle } from 'lucide-
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { InFeedAd, ResponsiveAd } from '@/components/AdSenseAd';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -20,6 +21,9 @@ const Marketplace = ({ user, onLogout }) => {
   const [userData, setUserData] = useState(null);
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Check if user is admin
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     fetchProducts();
