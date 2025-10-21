@@ -924,6 +924,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     { id: 'stockist-management', icon: UserCog, label: 'Stockist Management' },
     { id: 'financial-management', icon: DollarSign, label: 'Financial Management' },
     { id: 'withdrawals', icon: CreditCard, label: 'Withdrawal Requests' },
+    { id: 'stock-requests', icon: Package, label: 'Stock Requests' },
     { id: 'master-stockist', icon: Package, label: 'Master Stockist' },
     { id: 'sub-stockist', icon: Store, label: 'Sub Stockist' },
     { id: 'outlet', icon: ShoppingCart, label: 'Outlet' },
