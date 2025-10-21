@@ -133,7 +133,7 @@ def test_user_management():
     test_results = {"get_user": False}
     
     # Test Case 1: Get User Details by UID
-    print(f"\n2.1. Testing GET /api/user/{uid} endpoint...")
+    print(f"\n2.1. Testing GET /api/user/{{uid}} endpoint...")
     
     # Use admin user UID (known to exist)
     admin_uid = "ac9548c3-968a-4bbf-bad7-4e5aed1b660c"  # From test_result.md
