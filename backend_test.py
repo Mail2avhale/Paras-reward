@@ -182,7 +182,7 @@ def test_user_management():
     
     return test_results
 
-def test_renewal_management(created_stockists):
+def test_admin_dashboard_kpis():
     """Test Renewal Manual Entry Endpoints"""
     print("\n" + "=" * 80)
     print("3. TESTING RENEWAL MANAGEMENT ENDPOINTS")
