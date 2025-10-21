@@ -93,7 +93,8 @@ const StockRequestSystem = () => {
       const response = await axios.post(`${API}/stock/request/create`, {
         product_id: newRequest.product_id,
         quantity: parseInt(newRequest.quantity),
-        notes: newRequest.notes
+        notes: newRequest.notes,
+        user_uid: user.uid
       });
       
       toast.success(`Stock request created! Available stock: ${response.data.available_stock}`);
