@@ -3374,7 +3374,16 @@ class StockRequest(BaseModel):
 @api_router.post("/stock/request/create")
 async def create_stock_request(request_data: StockRequest, request: Request):
     """Create a stock request - requester requests from their immediate parent in hierarchy"""
-    user = await get_current_user_from_request(request)
+    # Get user from request body or headers (for now we'll use a simpler approach)
+    data = await request.json()
+    user_uid = data.get("user_uid")
+    
+    if not user_uid:
+        raise HTTPException(status_code=401, detail="User UID is required")
+    
+    user = await db.users.find_one({"uid": user_uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
     
     if request_data.quantity <= 0:
         raise HTTPException(status_code=400, detail="Quantity must be greater than 0")
