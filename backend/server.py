@@ -3676,14 +3676,10 @@ async def reject_stock_request(request_id: str, request: Request):
     
     return {"message": "Stock request rejected", "status": "rejected"}
 
-@api_router.get("/stock/inventory/my-stock")
-async def get_my_stock_inventory(request: Request):
-    """Get current user's stock inventory"""
-    user = await get_current_user_from_request(request)
-    user_id = user.get("uid")
-    
-    inventory = await db.stock_inventory.find({"user_id": user_id}, {"_id": 0}).to_list(None)
-    
+@api_router.get("/stock/inventory/my-stock/{uid}")
+async def get_my_stock_inventory(uid: str):
+    """Get user's stock inventory"""
+    inventory = await db.stock_inventory.find({"user_id": uid}, {"_id": 0}).to_list(None)
     return {"inventory": inventory}
 
 @api_router.get("/admin/stock/inventory/{user_id}")
