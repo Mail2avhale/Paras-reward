@@ -226,8 +226,9 @@ const OutletPanel = ({ user, onLogout }) => {
 
         <Card className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl">
           <Tabs defaultValue="orders" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsList className="grid w-full grid-cols-4 mb-6">
               <TabsTrigger value="orders">Deliver Orders</TabsTrigger>
+              <TabsTrigger value="stock-requests">Stock Requests</TabsTrigger>
               <TabsTrigger value="stock">Stock</TabsTrigger>
               <TabsTrigger value="earnings">Earnings</TabsTrigger>
             </TabsList>
