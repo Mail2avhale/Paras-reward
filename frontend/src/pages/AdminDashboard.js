@@ -436,6 +436,7 @@ const MarketplaceManagement = () => {
         sku: formData.sku,
         description: formData.description || '',
         prc_price: parseFloat(formData.prc_price) || 0,
+        cash_price: parseFloat(formData.cash_price) || 0,
         type: formData.type,
         category: formData.category || '',
         image_url: formData.image_url || '',
