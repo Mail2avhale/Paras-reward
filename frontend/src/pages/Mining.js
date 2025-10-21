@@ -162,6 +162,17 @@ const Mining = ({ user, onLogout }) => {
           </Card>
         </div>
 
+        {/* Ad Space */}
+        {!isAdmin && (
+          <div className="mb-8">
+            <ResponsiveAd 
+              adSlot="1234567890"
+              adFormat="auto"
+              fullWidthResponsive={true}
+            />
+          </div>
+        )}
+
         {/* Main Mining Control */}
         <Card className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl mb-8">
           <div className="text-center">
