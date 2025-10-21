@@ -238,7 +238,7 @@ def test_admin_dashboard_kpis():
     
     return test_results
 
-def test_delivery_charge_distribution():
+def test_core_features():
     """Test Delivery Charge Distribution System Comprehensively"""
     print("\n" + "=" * 80)
     print("4. TESTING DELIVERY CHARGE DISTRIBUTION SYSTEM")
