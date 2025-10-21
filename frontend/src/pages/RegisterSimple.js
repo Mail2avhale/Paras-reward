@@ -219,6 +219,29 @@ const RegisterSimple = () => {
             )}
           </div>
 
+          {/* Referral Code (Optional) */}
+          <div>
+            <Label htmlFor="referral_code">Referral Code (Optional)</Label>
+            <div className="relative">
+              <Gift className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-purple-400" />
+              <Input
+                id="referral_code"
+                type="text"
+                placeholder="Enter referral code"
+                value={formData.referral_code}
+                onChange={(e) => handleChange('referral_code', e.target.value.toUpperCase())}
+                className="pl-10"
+                readOnly={!!refCode}
+              />
+            </div>
+            {formData.referral_code && (
+              <div className="flex items-center gap-1 mt-1 text-green-600 text-sm">
+                <CheckCircle className="h-4 w-4" />
+                <span>Referral code will be applied</span>
+              </div>
+            )}
+          </div>
+
           {/* Submit Button */}
           <Button
             type="submit"
