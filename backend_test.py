@@ -125,163 +125,62 @@ def test_authentication_apis():
     return test_results
 
 def test_user_management():
-    """Test Security Deposit Manual Entry Endpoints"""
+    """Test User Management APIs"""
     print("\n" + "=" * 80)
-    print("2. TESTING SECURITY DEPOSIT MANAGEMENT ENDPOINTS")
+    print("2. TESTING USER MANAGEMENT APIS")
     print("=" * 80)
     
-    if not created_stockists:
-        print("❌ No stockists available for security deposit testing")
-        return False
+    test_results = {"get_user": False}
     
-    created_deposits = {}
+    # Test Case 1: Get User Details by UID
+    print(f"\n2.1. Testing GET /api/user/{uid} endpoint...")
     
-    # Test Case 1: Create deposit for master (amount: 500000, monthly_return_rate: 0.03)
-    print(f"\n2.1. Creating security deposit for Master Stockist...")
-    
-    master_deposit_data = {
-        "user_id": created_stockists["master"],
-        "amount": 500000,
-        "monthly_return_rate": 0.03,
-        "status": "approved"
-    }
+    # Use admin user UID (known to exist)
+    admin_uid = "ac9548c3-968a-4bbf-bad7-4e5aed1b660c"  # From test_result.md
     
     try:
-        response = requests.post(f"{API_BASE}/admin/security-deposit/manual-entry", json=master_deposit_data, timeout=30)
+        response = requests.get(f"{API_BASE}/users/{admin_uid}", timeout=30)
         print(f"     Status: {response.status_code}")
         print(f"     Response: {response.text}")
         
         if response.status_code == 200:
-            result = response.json()
-            deposit_id = result.get("deposit_id")
-            created_deposits["master"] = deposit_id
-            print(f"     ✅ Master deposit created successfully!")
-            print(f"     📋 Deposit ID: {deposit_id}")
-            print(f"     📋 Amount: ₹{master_deposit_data['amount']}")
-            print(f"     📋 Monthly Return Rate: {master_deposit_data['monthly_return_rate']*100}%")
-        else:
-            print(f"     ❌ Master deposit creation failed: {response.status_code}")
+            user_data = response.json()
+            print(f"     ✅ User details retrieved successfully!")
+            print(f"     📋 User Name: {user_data.get('name', 'N/A')}")
+            print(f"     📋 User Email: {user_data.get('email', 'N/A')}")
+            print(f"     📋 User Role: {user_data.get('role', 'N/A')}")
+            print(f"     📋 User Status: {'Active' if user_data.get('is_active') else 'Inactive'}")
             
-    except Exception as e:
-        print(f"     ❌ Error creating master deposit: {e}")
-    
-    # Test Case 2: Create deposit for sub (amount: 300000, monthly_return_rate: 0.03)
-    print(f"\n2.2. Creating security deposit for Sub Stockist...")
-    
-    sub_deposit_data = {
-        "user_id": created_stockists["sub"],
-        "amount": 300000,
-        "monthly_return_rate": 0.03,
-        "status": "approved"
-    }
-    
-    try:
-        response = requests.post(f"{API_BASE}/admin/security-deposit/manual-entry", json=sub_deposit_data, timeout=30)
-        print(f"     Status: {response.status_code}")
-        print(f"     Response: {response.text}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            deposit_id = result.get("deposit_id")
-            created_deposits["sub"] = deposit_id
-            print(f"     ✅ Sub deposit created successfully!")
-            print(f"     📋 Deposit ID: {deposit_id}")
-            print(f"     📋 Amount: ₹{sub_deposit_data['amount']}")
-            print(f"     📋 Monthly Return Rate: {sub_deposit_data['monthly_return_rate']*100}%")
-        else:
-            print(f"     ❌ Sub deposit creation failed: {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error creating sub deposit: {e}")
-    
-    # Test Case 3: Verify deposit entry created in database
-    print(f"\n2.3. Verifying deposits in database...")
-    
-    try:
-        response = requests.get(f"{API_BASE}/admin/security-deposits", timeout=30)
-        print(f"     Status: {response.status_code}")
-        print(f"     Response: {response.text}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            deposits = result.get("deposits", [])
-            print(f"     ✅ Retrieved {len(deposits)} deposits")
-            
-            # Verify our created deposits are in the list
-            for deposit in deposits:
-                deposit_id = deposit.get("deposit_id")
-                user_id = deposit.get("user_id")
-                amount = deposit.get("amount")
-                monthly_return = deposit.get("monthly_return_amount")
-                balance_pending = deposit.get("balance_pending")
-                
-                if deposit_id in created_deposits.values():
-                    print(f"     📋 Found deposit: {deposit_id}")
-                    print(f"       User ID: {user_id}")
-                    print(f"       Amount: ₹{amount}")
-                    print(f"       Monthly Return: ₹{monthly_return}")
-                    print(f"       Balance Pending: ₹{balance_pending}")
-        else:
-            print(f"     ❌ Failed to get deposits: {response.status_code}")
-            
-    except Exception as e:
-        print(f"     ❌ Error getting deposits: {e}")
-    
-    # Test Case 4: Update deposit amount
-    print(f"\n2.4. Updating deposit amount...")
-    
-    if created_deposits.get("master"):
-        update_data = {
-            "amount": 550000,
-            "monthly_return_rate": 0.03,
-            "balance_pending": 550000
-        }
-        
-        try:
-            response = requests.put(f"{API_BASE}/admin/security-deposit/{created_deposits['master']}/edit", json=update_data, timeout=30)
-            print(f"     Status: {response.status_code}")
-            print(f"     Response: {response.text}")
-            
-            if response.status_code == 200:
-                print(f"     ✅ Deposit updated successfully!")
-                print(f"     📋 New Amount: ₹{update_data['amount']}")
+            # Verify sensitive data is not exposed
+            if "password_hash" not in user_data and "reset_token" not in user_data:
+                print(f"     ✅ Sensitive data properly excluded from response")
             else:
-                print(f"     ❌ Failed to update deposit: {response.status_code}")
-                
-        except Exception as e:
-            print(f"     ❌ Error updating deposit: {e}")
+                print(f"     ⚠️  Warning: Sensitive data found in response")
+            
+            test_results["get_user"] = True
+        else:
+            print(f"     ❌ Failed to get user details: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error getting user details: {e}")
     
-    # Test Case 5: Verify user record updated (security_deposit_paid=true)
-    print(f"\n2.5. Verifying user records updated...")
+    # Test Case 2: Test with invalid UID
+    print(f"\n2.2. Testing with invalid UID...")
     
-    for role, user_id in created_stockists.items():
-        if role in ["master", "sub"]:
-            try:
-                # Check user record via login (to get full user data)
-                login_response = requests.post(
-                    f"{API_BASE}/auth/login",
-                    params={
-                        "identifier": f"{role}_test@test.com",
-                        "password": "test123"
-                    },
-                    timeout=30
-                )
-                
-                if login_response.status_code == 200:
-                    user_data = login_response.json()
-                    security_deposit_paid = user_data.get("security_deposit_paid", False)
-                    security_deposit_amount = user_data.get("security_deposit_amount", 0)
-                    
-                    print(f"     📋 {role.title()} Stockist:")
-                    print(f"       Security Deposit Paid: {security_deposit_paid}")
-                    print(f"       Security Deposit Amount: ₹{security_deposit_amount}")
-                else:
-                    print(f"     ❌ Failed to get {role} user data: {login_response.status_code}")
-                    
-            except Exception as e:
-                print(f"     ❌ Error checking {role} user record: {e}")
+    try:
+        invalid_uid = "invalid-uid-12345"
+        response = requests.get(f"{API_BASE}/users/{invalid_uid}", timeout=30)
+        print(f"     Status: {response.status_code}")
+        
+        if response.status_code == 404:
+            print(f"     ✅ Properly returns 404 for invalid UID")
+        else:
+            print(f"     ⚠️  Unexpected status code for invalid UID: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error testing invalid UID: {e}")
     
-    return created_deposits
+    return test_results
 
 def test_renewal_management(created_stockists):
     """Test Renewal Manual Entry Endpoints"""
