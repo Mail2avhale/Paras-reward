@@ -239,9 +239,9 @@ def test_admin_dashboard_kpis():
     return test_results
 
 def test_core_features():
-    """Test Delivery Charge Distribution System Comprehensively"""
+    """Test Core Features - Mining Status, Products, Wallet"""
     print("\n" + "=" * 80)
-    print("4. TESTING DELIVERY CHARGE DISTRIBUTION SYSTEM")
+    print("4. TESTING CORE FEATURES")
     print("=" * 80)
     
     # Step 1: Find an outlet user with parent relationships
