@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Coins, Play, Clock, Zap, TrendingUp, Users, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { ResponsiveAd } from '@/components/AdSenseAd';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
