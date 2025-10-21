@@ -143,6 +143,11 @@ const Dashboard = ({ user, onLogout }) => {
             </Button>
           </Link>
         </div>
+
+        {/* Google AdSense - Responsive Ad (Hidden for Admin) */}
+        {!isAdmin && (
+          <ResponsiveAd adSlot="1234567894" />
+        )}
       </div>
     </div>
   );
