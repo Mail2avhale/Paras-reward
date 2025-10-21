@@ -347,6 +347,10 @@ const OutletPanel = ({ user, onLogout }) => {
               </div>
             </TabsContent>
 
+            <TabsContent value="stock-requests">
+              <StockRequestSystem />
+            </TabsContent>
+
             <TabsContent value="stock">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Stock Received</h2>
               {stockMovements.received?.length > 0 ? (
