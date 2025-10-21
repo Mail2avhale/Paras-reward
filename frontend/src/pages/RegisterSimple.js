@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle, CheckCircle, Gift } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -14,14 +14,27 @@ const API = `${BACKEND_URL}/api`;
 
 const RegisterSimple = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const refCode = searchParams.get('ref') || '';
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'user'
+    role: 'user',
+    referral_code: refCode
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (refCode) {
+      setFormData(prev => ({ ...prev, referral_code: refCode }));
+      toast.success(`Referral code ${refCode} applied!`, {
+        icon: <Gift className="h-5 w-5" />
+      });
+    }
+  }, [refCode]);
 
   const validateForm = () => {
     const newErrors = {};
