@@ -171,12 +171,13 @@ const Referrals = ({ user, onLogout }) => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Your Referral Code */}
+          {/* Your Referral Code & Link */}
           <Card data-testid="referral-code-card" className="bg-gradient-to-br from-purple-600 to-pink-600 text-white p-8 rounded-3xl shadow-2xl">
-            <h2 className="text-2xl font-bold mb-4 flex items-center">
+            <h2 className="text-2xl font-bold mb-6 flex items-center">
               <Users className="h-7 w-7 mr-2" />
               Your Referral Code
             </h2>
+            
             <div className="bg-white/20 backdrop-blur-sm p-6 rounded-2xl mb-4">
               {loading ? (
                 <div className="text-center py-4">
@@ -200,16 +201,17 @@ const Referrals = ({ user, onLogout }) => {
                 <p className="text-2xl text-center text-white/70">No code available</p>
               )}
             </div>
+            
             <Button
               data-testid="copy-code-btn"
               onClick={copyReferralCode}
               disabled={!referralCode || loading}
-              className="w-full bg-white text-purple-600 hover:bg-gray-100 py-6 rounded-xl text-lg font-semibold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-white text-purple-600 hover:bg-gray-100 py-6 rounded-xl text-lg font-semibold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed mb-4"
             >
-              {copied ? (
+              {copiedCode ? (
                 <>
                   <Check className="mr-2 h-5 w-5" />
-                  Copied!
+                  Code Copied!
                 </>
               ) : (
                 <>
@@ -218,6 +220,47 @@ const Referrals = ({ user, onLogout }) => {
                 </>
               )}
             </Button>
+
+            {/* Referral Link Section */}
+            <div className="mt-6 space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Link2 className="h-5 w-5" />
+                <h3 className="text-lg font-semibold">Your Referral Link</h3>
+              </div>
+              
+              <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl">
+                <p className="text-sm font-mono break-all">{referralLink}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  onClick={copyReferralLink}
+                  disabled={!referralCode || loading}
+                  className="w-full bg-white/30 hover:bg-white/40 text-white py-4 rounded-xl font-semibold transition-all disabled:opacity-50"
+                >
+                  {copiedLink ? (
+                    <>
+                      <Check className="mr-2 h-4 w-4" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy Link
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  onClick={shareReferralLink}
+                  disabled={!referralCode || loading}
+                  className="w-full bg-white/30 hover:bg-white/40 text-white py-4 rounded-xl font-semibold transition-all disabled:opacity-50"
+                >
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Share
+                </Button>
+              </div>
+            </div>
 
             <div className="mt-6 p-4 bg-white/10 rounded-xl">
               <p className="text-sm opacity-90">
