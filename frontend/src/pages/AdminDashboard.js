@@ -631,6 +631,19 @@ const MarketplaceManagement = () => {
                 />
                 <p className="text-xs text-gray-500 mt-1">≈ ₹{(formData.prc_price / 10).toFixed(2)} (10 PRC = ₹1)</p>
               </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Cash Price *</label>
+                <Input
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={formData.cash_price}
+                  onChange={(e) => setFormData({...formData, cash_price: parseFloat(e.target.value) || 0})}
+                  placeholder="Delivery/transaction fee in ₹"
+                />
+                <p className="text-xs text-gray-500 mt-1">Delivery/handling charge in Rupees</p>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
