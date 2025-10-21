@@ -791,6 +791,105 @@ const StockRequestSystem = () => {
           </Card>
         </div>
       )}
+
+      {/* Edit Modal */}
+      {showEditModal && selectedRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Edit Stock Request</h2>
+
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600">Product: <span className="font-semibold text-gray-900">{selectedRequest.product_name}</span></p>
+                <p className="text-sm text-gray-600">Parent: <span className="font-semibold text-gray-900">{selectedRequest.parent_name}</span></p>
+                <p className="text-sm text-gray-600">Available Stock: <span className="font-semibold text-green-600">{selectedRequest.available_stock}</span></p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Quantity *</label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={editRequest.quantity}
+                  onChange={(e) => setEditRequest({...editRequest, quantity: e.target.value})}
+                  placeholder="Enter quantity"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                <textarea
+                  className="w-full border rounded p-3"
+                  rows="3"
+                  value={editRequest.notes}
+                  onChange={(e) => setEditRequest({...editRequest, notes: e.target.value})}
+                  placeholder="Add any additional notes..."
+                />
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <Button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditRequest({ quantity: '', notes: '' });
+                  }}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleEdit}
+                  disabled={loading}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  {loading ? 'Updating...' : 'Update Request'}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && selectedRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Delete Stock Request</h2>
+
+            <div className="space-y-4">
+              <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                <p className="text-sm font-medium text-red-800 mb-2">Are you sure you want to delete this request?</p>
+                <p className="text-sm text-gray-600">Product: <span className="font-semibold text-gray-900">{selectedRequest.product_name}</span></p>
+                <p className="text-sm text-gray-600">Quantity: <span className="font-semibold text-gray-900">{selectedRequest.quantity}</span></p>
+                <p className="text-sm text-gray-600">Parent: <span className="font-semibold text-gray-900">{selectedRequest.parent_name}</span></p>
+              </div>
+
+              <p className="text-sm text-gray-600">This action cannot be undone.</p>
+
+              <div className="flex gap-3 mt-6">
+                <Button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setSelectedRequest(null);
+                  }}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDelete}
+                  disabled={loading}
+                  className="flex-1 bg-red-600 hover:bg-red-700"
+                >
+                  {loading ? 'Deleting...' : 'Delete Request'}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
