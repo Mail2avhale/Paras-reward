@@ -68,7 +68,7 @@ const StockRequestSystem = () => {
       setPendingForMe(pendingRes.data.requests || []);
       
       // Fetch my inventory
-      const inventoryRes = await axios.get(`${API}/stock/inventory/my-stock`);
+      const inventoryRes = await axios.get(`${API}/stock/inventory/my-stock/${user.uid}`);
       setMyInventory(inventoryRes.data.inventory || []);
       
       // Fetch products for request creation
