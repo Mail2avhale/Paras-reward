@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Users, Copy, Check, UserPlus, Link2, Share2, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
+import { ResponsiveAd, BannerAd } from '@/components/AdSenseAd';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -23,6 +24,9 @@ const Referrals = ({ user, onLogout }) => {
     active_referrals: 0,
     vip_referrals: 0
   });
+  
+  // Check if user is admin
+  const isAdmin = user?.role === 'admin';
 
   // Generate referral link
   const referralLink = `${window.location.origin}/register?ref=${referralCode}`;
