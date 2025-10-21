@@ -371,6 +371,11 @@ const Referrals = ({ user, onLogout }) => {
             )}
           </div>
         </Card>
+
+        {/* Google AdSense - Responsive Ad (Hidden for Admin) */}
+        {!isAdmin && (
+          <ResponsiveAd adSlot="3456789012" />
+        )}
       </div>
     </div>
   );
