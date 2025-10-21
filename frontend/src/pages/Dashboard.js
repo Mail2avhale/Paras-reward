@@ -108,6 +108,11 @@ const Dashboard = ({ user, onLogout }) => {
           </Card>
         </div>
 
+        {/* Google AdSense - Banner Ad (Hidden for Admin) */}
+        {!isAdmin && (
+          <BannerAd adSlot="1234567891" />
+        )}
+
         {/* Quick Actions */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Link to="/mining" className="block">
