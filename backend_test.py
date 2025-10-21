@@ -1019,8 +1019,21 @@ def print_test_summary(results):
         print(f"      - Renewal listing & retrieval: ✅")
         print(f"      - Renewal editing & recalculation: ✅")
     
+    # Delivery Charge Distribution
+    status = "✅ PASSED" if results["delivery_charge_distribution"] else "❌ FAILED"
+    print(f"   4. Delivery Charge Distribution: {status}")
+    if results["delivery_charge_distribution"]:
+        print(f"      - Order creation with PRC value: ✅")
+        print(f"      - Parent-child hierarchy verification: ✅")
+        print(f"      - Secret code verification: ✅")
+        print(f"      - Auto-distribution on delivery: ✅")
+        print(f"      - Commission calculation (10% of PRC): ✅")
+        print(f"      - Distribution percentages (60/20/10/10): ✅")
+        print(f"      - Wallet balance updates: ✅")
+        print(f"      - Commission records creation: ✅")
+    
     # Overall Status
-    all_passed = all(results[key] for key in ["stockist_management", "security_deposit_management", "renewal_management"])
+    all_passed = all(results[key] for key in ["stockist_management", "security_deposit_management", "renewal_management", "delivery_charge_distribution"])
     overall_status = "✅ ALL TESTS PASSED" if all_passed else "❌ SOME TESTS FAILED"
     print(f"\n🎯 OVERALL STATUS: {overall_status}")
     
