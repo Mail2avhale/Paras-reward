@@ -3467,27 +3467,21 @@ async def create_stock_request(request_data: StockRequest, request: Request):
         "available_stock": available_stock
     }
 
-@api_router.get("/stock/request/my-requests")
-async def get_my_stock_requests(request: Request, status: Optional[str] = None):
-    """Get all stock requests created by the current user"""
-    user = await get_current_user_from_request(request)
-    requester_id = user.get("uid")
-    
-    query = {"requester_id": requester_id}
+@api_router.get("/stock/request/my-requests/{uid}")
+async def get_my_stock_requests(uid: str, status: Optional[str] = None):
+    """Get all stock requests created by the user"""
+    query = {"requester_id": uid}
     if status:
         query["status"] = status
     
     requests = await db.stock_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(None)
     return {"requests": requests}
 
-@api_router.get("/stock/request/pending-for-me")
-async def get_pending_stock_requests_for_me(request: Request):
-    """Get all pending stock requests where current user is the parent (approver)"""
-    user = await get_current_user_from_request(request)
-    parent_id = user.get("uid")
-    
+@api_router.get("/stock/request/pending-for-me/{uid}")
+async def get_pending_stock_requests_for_me(uid: str):
+    """Get all pending stock requests where user is the parent (approver)"""
     requests = await db.stock_requests.find({
-        "parent_id": parent_id,
+        "parent_id": uid,
         "status": "pending"
     }, {"_id": 0}).sort("created_at", -1).to_list(None)
     
