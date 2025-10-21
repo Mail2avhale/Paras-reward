@@ -14,8 +14,9 @@ load_dotenv()
 async def main():
     # Connect to MongoDB
     mongo_url = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
+    db_name = os.environ.get("DB_NAME", "paras_reward")
     client = AsyncIOMotorClient(mongo_url)
-    db = client.paras_reward
+    db = client[db_name]
     
     print("=" * 60)
     print("PARAS REWARD - Admin Role Assignment Tool")
