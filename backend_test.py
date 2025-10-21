@@ -34,8 +34,8 @@ print(f"Testing Backend APIs for Deployment Readiness at: {BACKEND_URL}")
 print(f"API Base: {API_BASE}")
 print("=" * 80)
 
-# Admin Stockist & Financial Management Test Functions
-def test_stockist_management():
+# Deployment Readiness Test Functions
+def test_authentication_apis():
     """Test Stockist Management Endpoints"""
     print("\n" + "=" * 80)
     print("1. TESTING STOCKIST MANAGEMENT ENDPOINTS")
