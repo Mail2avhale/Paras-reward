@@ -523,6 +523,18 @@ backend:
         agent: "testing"
         comment: "COMPREHENSIVE TESTING COMPLETE - ALL RENEWAL MANAGEMENT FUNCTIONALITY WORKING: ✅ MANUAL RENEWAL ENTRY: POST /api/admin/renewal/manual-entry successfully creates renewals for Master (₹50,000 + 18% GST = ₹59,000) and Sub (₹30,000 + 18% GST = ₹35,400). ✅ GST CALCULATIONS: Automatic GST calculation working perfectly - Master: ₹9,000 GST, Sub: ₹5,400 GST with correct total amounts. ✅ DATABASE VERIFICATION: GET /api/admin/renewals returns 8 renewals correctly with proper GST breakdown (base_amount, gst_amount, total_amount). ✅ CALCULATION ACCURACY: All GST calculations verified as mathematically correct (18% rate applied properly). ✅ AUTOMATIC APPROVAL: Renewals created with automatic approval and 1-year validity period. ✅ RENEWAL PERIODS: Valid until dates set correctly (2026-10-20 for both test renewals). Minor: Renewal update endpoint response format needs improvement but core functionality works. All renewal management endpoints are production-ready with accurate GST calculations."
 
+  - task: "Deployment Readiness - Database Name Hardcoding Fix"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/make_admin.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "DEPLOYMENT ISSUE FIXED: Identified and fixed hardcoded database name 'paras_reward' in make_admin.py line 18. Updated to use DB_NAME environment variable: db_name = os.environ.get('DB_NAME', 'paras_reward') and db = client[db_name]. Verified no other hardcoded database names, ports, or URLs in application code. All database connections now use environment variables (MONGO_URL and DB_NAME). Ready for deployment health check validation."
+
 frontend:
   - task: "Profile-Based Password Recovery Page"
     implemented: true
