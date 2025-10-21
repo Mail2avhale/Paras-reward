@@ -1074,5 +1074,5 @@ if __name__ == "__main__":
     print_test_summary(test_results)
     
     # Exit with appropriate code
-    all_passed = all(test_results[key] for key in ["stockist_management", "security_deposit_management", "renewal_management"])
+    all_passed = all(test_results[key] for key in ["stockist_management", "security_deposit_management", "renewal_management", "delivery_charge_distribution"])
     sys.exit(0 if all_passed else 1)
