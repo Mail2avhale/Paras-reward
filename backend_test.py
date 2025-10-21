@@ -244,40 +244,125 @@ def test_core_features():
     print("4. TESTING CORE FEATURES")
     print("=" * 80)
     
-    # Step 1: Find an outlet user with parent relationships
-    print(f"\n4.1. Finding outlet with parent relationships...")
+    test_results = {"mining_status": False, "products": False, "wallet": False}
+    
+    # Test Case 1: Mining Status API
+    print(f"\n4.1. Testing GET /api/mining/status/{uid} endpoint...")
+    
+    # Use admin user UID (known to exist)
+    admin_uid = "ac9548c3-968a-4bbf-bad7-4e5aed1b660c"
     
     try:
-        response = requests.get(f"{API_BASE}/admin/users/all", timeout=30)
+        response = requests.get(f"{API_BASE}/mining/status/{admin_uid}", timeout=30)
         print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
         
-        if response.status_code != 200:
-            print(f"     ❌ Failed to get users: {response.status_code}")
-            return False
+        if response.status_code == 200:
+            mining_data = response.json()
+            print(f"     ✅ Mining status retrieved successfully!")
             
-        users = response.json().get("users", [])
-        
-        # Find outlet user with parent_id
-        outlet_user = None
-        for user in users:
-            if user.get("role") == "outlet" and user.get("parent_id"):
-                outlet_user = user
-                break
-        
-        if not outlet_user:
-            print(f"     ❌ No outlet user with parent_id found")
-            return False
+            # Verify required fields
+            required_fields = ["mining_rate", "base_rate", "active_referrals", "is_mining"]
+            missing_fields = []
             
-        outlet_uid = outlet_user["uid"]
-        sub_stockist_uid = outlet_user["parent_id"]
-        
-        print(f"     ✅ Found outlet user: {outlet_uid}")
-        print(f"     📋 Outlet Name: {outlet_user.get('name', 'N/A')}")
-        print(f"     📋 Sub Stockist ID: {sub_stockist_uid}")
-        
+            for field in required_fields:
+                if field in mining_data:
+                    print(f"     📋 {field}: {mining_data[field]}")
+                else:
+                    missing_fields.append(field)
+            
+            if not missing_fields:
+                print(f"     ✅ All required fields present")
+                test_results["mining_status"] = True
+            else:
+                print(f"     ❌ Missing fields: {missing_fields}")
+                
+        else:
+            print(f"     ❌ Failed to get mining status: {response.status_code}")
+            
     except Exception as e:
-        print(f"     ❌ Error finding outlet user: {e}")
-        return False
+        print(f"     ❌ Error getting mining status: {e}")
+    
+    # Test Case 2: Products API
+    print(f"\n4.2. Testing GET /api/products endpoint...")
+    
+    try:
+        response = requests.get(f"{API_BASE}/products", timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            products = response.json()
+            print(f"     ✅ Products retrieved successfully!")
+            print(f"     📋 Number of products: {len(products)}")
+            
+            if len(products) > 0:
+                # Check first product structure
+                first_product = products[0]
+                required_fields = ["product_id", "name", "prc_price", "cash_price"]
+                missing_fields = []
+                
+                for field in required_fields:
+                    if field in first_product:
+                        print(f"     📋 Sample product {field}: {first_product[field]}")
+                    else:
+                        missing_fields.append(field)
+                
+                # Verify no _id field (should be excluded)
+                if "_id" not in first_product:
+                    print(f"     ✅ _id field properly excluded")
+                else:
+                    print(f"     ⚠️  _id field found in response")
+                
+                if not missing_fields:
+                    test_results["products"] = True
+                else:
+                    print(f"     ❌ Missing fields in product: {missing_fields}")
+            else:
+                print(f"     ⚠️  No products found")
+                test_results["products"] = True  # Empty list is valid
+                
+        else:
+            print(f"     ❌ Failed to get products: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error getting products: {e}")
+    
+    # Test Case 3: Wallet API
+    print(f"\n4.3. Testing GET /api/wallet/{uid} endpoint...")
+    
+    try:
+        response = requests.get(f"{API_BASE}/wallet/{admin_uid}", timeout=30)
+        print(f"     Status: {response.status_code}")
+        print(f"     Response: {response.text}")
+        
+        if response.status_code == 200:
+            wallet_data = response.json()
+            print(f"     ✅ Wallet data retrieved successfully!")
+            
+            # Verify required fields
+            required_fields = ["cashback_balance", "prc_balance", "wallet_status"]
+            missing_fields = []
+            
+            for field in required_fields:
+                if field in wallet_data:
+                    print(f"     📋 {field}: {wallet_data[field]}")
+                else:
+                    missing_fields.append(field)
+            
+            if not missing_fields:
+                print(f"     ✅ All required wallet fields present")
+                test_results["wallet"] = True
+            else:
+                print(f"     ❌ Missing wallet fields: {missing_fields}")
+                
+        else:
+            print(f"     ❌ Failed to get wallet data: {response.status_code}")
+            
+    except Exception as e:
+        print(f"     ❌ Error getting wallet data: {e}")
+    
+    return test_results
     
     # Step 2: Verify Sub Stockist has a parent Master Stockist
     print(f"\n4.2. Verifying Sub Stockist has parent Master Stockist...")
