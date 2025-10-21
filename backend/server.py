@@ -3069,7 +3069,7 @@ async def distribute_delivery_charge(order_id: str):
         raise HTTPException(status_code=404, detail="Outlet not found")
     
     # Find Sub Stockist (parent of outlet)
-    sub_stockist_id = outlet_user.get("assigned_sub_stockist")
+    sub_stockist_id = outlet_user.get("parent_id") or outlet_user.get("assigned_sub_stockist")
     sub_stockist_user = None
     if sub_stockist_id:
         sub_stockist_user = await db.users.find_one({"uid": sub_stockist_id, "role": "sub_stockist"})
@@ -3078,7 +3078,7 @@ async def distribute_delivery_charge(order_id: str):
     master_stockist_id = None
     master_stockist_user = None
     if sub_stockist_user:
-        master_stockist_id = sub_stockist_user.get("assigned_master_stockist")
+        master_stockist_id = sub_stockist_user.get("parent_id") or sub_stockist_user.get("assigned_master_stockist")
         if master_stockist_id:
             master_stockist_user = await db.users.find_one({"uid": master_stockist_id, "role": "master_stockist"})
     
