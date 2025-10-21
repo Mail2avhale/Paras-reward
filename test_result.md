@@ -538,7 +538,21 @@ backend:
         agent: "testing"
         comment: "COMPREHENSIVE DEPLOYMENT READINESS TESTING COMPLETE - ALL CRITICAL APIS WORKING: ✅ AUTHENTICATION APIS: User registration with complete fields working, case-insensitive email login (admin@paras.com, ADMIN@PARAS.COM, Admin@Paras.com all work), password validation functional. ✅ USER MANAGEMENT: GET /api/user/{uid} endpoint working, sensitive data properly excluded, invalid UID handling correct (404 errors). ✅ ADMIN DASHBOARD KPIs: GET /api/admin/stats endpoint working with comprehensive metrics (users: 42 total, orders: 10 total, kyc: 16 total, withdrawals, products, financial data). ✅ CORE FEATURES: Mining status API working (mining_rate, base_rate, active_referrals, is_mining fields present), Products API working (15 products visible, _id field excluded), Wallet API working (cashback_balance, prc_balance, wallet_status fields present). ✅ STOCKIST APIS: Financial info endpoint working with role-based access control. ✅ ORDER MANAGEMENT: Admin orders listing working (10 orders found with proper structure). ✅ WITHDRAWAL MANAGEMENT: Cashback withdrawals API working (4 withdrawals found), Profit withdrawals API working (empty array as expected). ✅ DATABASE CONNECTION: MongoDB connection successful using environment variables (MONGO_URL, DB_NAME), no hardcoded database names found, all API endpoints responding without connection errors. APPLICATION IS DEPLOYMENT READY - all critical backend APIs verified and working correctly."
 
-frontend:
+  - task: "Product Creation Cash Price Field Fix"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/AdminDashboard.js"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "FIXED: Added Cash Price field to product creation form in Admin Dashboard. Added cash_price to formData state initialization (line 383), productData object sent to backend (line 440), resetForm() function (line 493), and handleEdit() function (line 511). Form now includes both 'PRC Price' and 'Cash Price' input fields with proper validation and placeholder text."
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE TESTING COMPLETE - CASH PRICE FIELD FIX VERIFICATION SUCCESSFUL: ✅ LOGIN & NAVIGATION: Successfully logged in as admin (admin@paras.com) and accessed Admin Dashboard (/admin). ✅ MARKETPLACE ACCESS: Found and accessed Marketplace Management section successfully. ✅ ADD PRODUCT FORM: Successfully opened 'Add New Product' form modal. ✅ BOTH PRICE FIELDS PRESENT: Confirmed both 'PRC Price *' and 'Cash Price *' fields are visible and functional in the form. ✅ FIELD VALIDATION: Cash Price field accepts numeric input with placeholder 'Delivery/transaction fee in ₹' and shows helper text 'Delivery/handling charge in Rupees'. ✅ FORM SUBMISSION: Successfully filled and submitted form with test data (Product Name: 'Test Product Cash Price', SKU: 'TEST-CP-001', PRC Price: 100, Cash Price: 50, etc.). ✅ NO CRITICAL ERROR: Confirmed NO 'cash_price is required' error occurs - the fix is working correctly. ✅ SUCCESSFUL CREATION: Form modal closed after submission indicating successful product creation. The Cash Price field bug has been completely resolved and product creation now works without errors."
+
   - task: "Profile-Based Password Recovery Page"
     implemented: true
     working: true
