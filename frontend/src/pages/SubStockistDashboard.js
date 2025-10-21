@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Package, DollarSign, Truck, AlertCircle, CheckCircle, Store } from 'lucide-react';
+import { 
+  Package, DollarSign, Truck, AlertCircle, CheckCircle, Users,
+  Zap, Gamepad2, Store, Trophy, Crown, FileCheck, ShoppingBag
+} from 'lucide-react';
 import { toast } from 'sonner';
 import StockRequestSystem from '@/pages/StockRequestSystem';
 
