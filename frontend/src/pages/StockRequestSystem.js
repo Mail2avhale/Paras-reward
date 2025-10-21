@@ -60,11 +60,11 @@ const StockRequestSystem = () => {
     setLoading(true);
     try {
       // Fetch my requests
-      const myRequestsRes = await axios.get(`${API}/stock/request/my-requests`);
+      const myRequestsRes = await axios.get(`${API}/stock/request/my-requests/${user.uid}`);
       setMyRequests(myRequestsRes.data.requests || []);
       
       // Fetch pending requests for me to approve
-      const pendingRes = await axios.get(`${API}/stock/request/pending-for-me`);
+      const pendingRes = await axios.get(`${API}/stock/request/pending-for-me/${user.uid}`);
       setPendingForMe(pendingRes.data.requests || []);
       
       // Fetch my inventory
