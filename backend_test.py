@@ -124,7 +124,7 @@ def test_authentication_apis():
     
     return test_results
 
-def test_security_deposit_management(created_stockists):
+def test_user_management():
     """Test Security Deposit Manual Entry Endpoints"""
     print("\n" + "=" * 80)
     print("2. TESTING SECURITY DEPOSIT MANAGEMENT ENDPOINTS")
