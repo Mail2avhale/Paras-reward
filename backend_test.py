@@ -653,7 +653,7 @@ def print_test_summary(results):
     status = "✅ PASSED" if results["user_management"] else "❌ FAILED"
     print(f"   2. User Management: {status}")
     if results["user_management"]:
-        print(f"      - GET /api/user/{uid} endpoint: ✅")
+        print(f"      - GET /api/user/{{uid}} endpoint: ✅")
         print(f"      - Sensitive data exclusion: ✅")
         print(f"      - Invalid UID handling: ✅")
     
