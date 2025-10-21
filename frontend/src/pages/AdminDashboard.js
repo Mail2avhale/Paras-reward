@@ -508,6 +508,7 @@ const MarketplaceManagement = () => {
       sku: product.sku,
       description: product.description || '',
       prc_price: product.prc_price,
+      cash_price: product.cash_price || 0,
       type: product.type || 'physical',
       category: product.category || '',
       image_url: product.image_url || '',
