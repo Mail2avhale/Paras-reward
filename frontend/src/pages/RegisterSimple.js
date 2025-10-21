@@ -76,10 +76,17 @@ const RegisterSimple = () => {
       const response = await axios.post(`${API}/auth/register/simple`, {
         email: formData.email,
         password: formData.password,
-        role: formData.role
+        role: formData.role,
+        referral_code: formData.referral_code || ''
       });
 
-      toast.success('Registration successful! Please login to continue.');
+      if (formData.referral_code && response.data.referred_by) {
+        toast.success(`Registration successful! Referred by ${response.data.referred_by}`, {
+          icon: <Gift className="h-5 w-5" />
+        });
+      } else {
+        toast.success('Registration successful! Please login to continue.');
+      }
       
       // Navigate to login
       navigate('/login');
