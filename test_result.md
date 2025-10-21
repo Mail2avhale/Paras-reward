@@ -711,14 +711,16 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Deployment Readiness - Database Name Hardcoding Fix"
+    - "Product Creation Cash Price Field Fix"
   stuck_tasks: []
-  test_all: true
-  test_priority: "high_first"
+  test_all: false
+  test_priority: "critical_first"
 
 agent_communication:
   - agent: "main"
     message: "STARTING COMPREHENSIVE IMPLEMENTATION - Phase 1 & 2 COMPLETE: Password Recovery + Support Tickets. ✅ Implemented profile-based password recovery with 2-field verification (any 2 from PAN/Aadhaar/Phone/Name). ✅ Complete support ticket system (user creation, admin management, replies, status updates). ✅ Frontend pages: ForgotPasswordNew.js (4-step wizard), SupportTickets.js (user page). ✅ Admin Support Tickets tab in AdminDashboard. ✅ Routes and navigation updated. Backend restarted successfully. Ready for comprehensive testing of new features."
+  - agent: "testing"
+    message: "CASH PRICE FIELD FIX VERIFICATION COMPLETE - CRITICAL BUG SUCCESSFULLY RESOLVED: ✅ COMPREHENSIVE TESTING PERFORMED: Successfully tested complete product creation flow in Admin Dashboard including login, navigation to Marketplace section, opening Add Product form, and form submission. ✅ BOTH PRICE FIELDS CONFIRMED: Verified both 'PRC Price *' and 'Cash Price *' fields are present and functional in the product creation form. ✅ NO CRITICAL ERROR: Confirmed the 'cash_price is required' error no longer occurs - the fix implemented by main agent is working correctly. ✅ SUCCESSFUL PRODUCT CREATION: Form submission works properly with test data (Product Name: 'Test Product Cash Price', SKU: 'TEST-CP-001', PRC Price: 100, Cash Price: 50, Product Type: Physical, Stock: 10). ✅ FORM VALIDATION WORKING: All required fields properly validated and form modal closes after successful submission. The Cash Price field bug has been completely resolved and product management functionality is now working as expected."
   - agent: "testing"
     message: "PASSWORD RECOVERY + SUPPORT TICKETS TESTING COMPLETE - ALL FUNCTIONALITY WORKING PERFECTLY: ✅ PASSWORD RECOVERY SYSTEM: Both endpoints working flawlessly - POST /api/auth/password-recovery/verify (2-field verification with PAN+Mobile, Name+Aadhaar), POST /api/auth/password-recovery/reset (end-to-end password reset with database update). Case-insensitive matching, proper validation (400/401/404 errors), security re-verification. ✅ SUPPORT TICKET SYSTEM: Complete CRUD operations working - ticket creation, user retrieval with filtering, ticket details with replies, reply addition, admin management with pagination/filtering, status updates. All 8 endpoints tested successfully. ✅ DATABASE INTEGRATION: Both systems properly create and manage collections (support_tickets, support_ticket_replies). ✅ VALIDATION & ERROR HANDLING: All endpoints handle invalid inputs correctly with appropriate HTTP status codes. ✅ CREATED TEST USER: Generated user with complete profile data (PAN: TEST23936Z, Mobile: 9876523936) to verify password recovery functionality. Both new features are production-ready and working end-to-end."
   - agent: "main"
