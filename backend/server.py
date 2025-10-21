@@ -3635,8 +3635,15 @@ async def reject_stock_request(request_id: str, request: Request):
     """Reject a stock request"""
     data = await request.json()
     rejection_reason = data.get("rejection_reason", "")
+    approver_uid = data.get("approver_uid")
     
-    user = await get_current_user_from_request(request)
+    if not approver_uid:
+        raise HTTPException(status_code=401, detail="Approver UID is required")
+    
+    user = await db.users.find_one({"uid": approver_uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
     approver_id = user.get("uid")
     approver_name = user.get("name", "Unknown")
     
