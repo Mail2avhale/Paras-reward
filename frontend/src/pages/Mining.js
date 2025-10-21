@@ -295,6 +295,17 @@ const Mining = ({ user, onLogout }) => {
             </p>
           </div>
         </Card>
+
+        {/* Bottom Ad */}
+        {!isAdmin && (
+          <div className="mt-8">
+            <ResponsiveAd 
+              adSlot="0987654321"
+              adFormat="auto"
+              fullWidthResponsive={true}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
