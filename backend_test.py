@@ -373,7 +373,7 @@ def test_stockist_apis():
     test_results = {"stockist_financial_info": False}
     
     # Test Case 1: Get Stockist Financial Info
-    print(f"\n5.1. Testing GET /api/stockist/{uid}/financial-info endpoint...")
+    print(f"\n5.1. Testing GET /api/stockist/{{uid}}/financial-info endpoint...")
     
     # Find a stockist user from existing users
     try:
