@@ -3756,7 +3756,16 @@ async def edit_stock_request(request_id: str, request: Request):
 @api_router.delete("/stock/request/{request_id}/delete")
 async def delete_stock_request(request_id: str, request: Request):
     """Delete a pending stock request (only requester can delete)"""
-    user = await get_current_user_from_request(request)
+    data = await request.json()
+    user_uid = data.get("user_uid")
+    
+    if not user_uid:
+        raise HTTPException(status_code=401, detail="User UID is required")
+    
+    user = await db.users.find_one({"uid": user_uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
     user_id = user.get("uid")
     
     # Get the request
