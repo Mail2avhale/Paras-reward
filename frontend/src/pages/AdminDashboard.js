@@ -1005,6 +1005,13 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
           )}
 
+          {/* Stock Requests Tab */}
+          {activeTab === 'stock-requests' && (
+            <div className="space-y-6">
+              <StockRequestSystem />
+            </div>
+          )}
+
           {activeTab === 'dashboard' && (
             <div>
               {/* Stats Cards */}
