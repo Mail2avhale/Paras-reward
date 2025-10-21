@@ -112,7 +112,9 @@ const StockRequestSystem = () => {
   const handleApprove = async () => {
     setLoading(true);
     try {
-      const response = await axios.post(`${API}/stock/request/${selectedRequest.request_id}/approve`);
+      const response = await axios.post(`${API}/stock/request/${selectedRequest.request_id}/approve`, {
+        approver_uid: user.uid
+      });
       
       toast.success(
         <div>
@@ -142,7 +144,8 @@ const StockRequestSystem = () => {
     setLoading(true);
     try {
       await axios.post(`${API}/stock/request/${selectedRequest.request_id}/reject`, {
-        rejection_reason: rejectionReason
+        rejection_reason: rejectionReason,
+        approver_uid: user.uid
       });
       
       toast.success('Stock request rejected');
@@ -168,7 +171,8 @@ const StockRequestSystem = () => {
     try {
       const response = await axios.put(`${API}/stock/request/${selectedRequest.request_id}/edit`, {
         quantity: parseInt(editRequest.quantity),
-        notes: editRequest.notes
+        notes: editRequest.notes,
+        user_uid: user.uid
       });
       
       toast.success(`Request updated! Available stock: ${response.data.available_stock}`);
@@ -187,7 +191,9 @@ const StockRequestSystem = () => {
   const handleDelete = async () => {
     setLoading(true);
     try {
-      await axios.delete(`${API}/stock/request/${selectedRequest.request_id}/delete`);
+      await axios.delete(`${API}/stock/request/${selectedRequest.request_id}/delete`, {
+        data: { user_uid: user.uid }
+      });
       
       toast.success('Stock request deleted successfully');
       setShowDeleteModal(false);
