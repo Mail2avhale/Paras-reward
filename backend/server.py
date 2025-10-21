@@ -3500,7 +3500,16 @@ async def get_all_stock_requests(status: Optional[str] = None):
 @api_router.post("/stock/request/{request_id}/approve")
 async def approve_stock_request(request_id: str, request: Request):
     """Approve a stock request and initiate stock transfer"""
-    user = await get_current_user_from_request(request)
+    data = await request.json()
+    approver_uid = data.get("approver_uid")
+    
+    if not approver_uid:
+        raise HTTPException(status_code=401, detail="Approver UID is required")
+    
+    user = await db.users.find_one({"uid": approver_uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
     approver_id = user.get("uid")
     approver_name = user.get("name", "Unknown")
     
