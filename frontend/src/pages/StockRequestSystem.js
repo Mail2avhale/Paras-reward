@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { 
   Package, Plus, Clock, CheckCircle, XCircle, 
-  Eye, TrendingUp, RefreshCw, Search, Filter
+  Eye, TrendingUp, RefreshCw, Search, Filter, Edit, Trash2
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
