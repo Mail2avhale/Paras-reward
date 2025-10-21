@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend API Testing Script - Admin Stockist & Financial Management Testing
-Tests new admin stockist management and financial management endpoints
+Backend API Testing Script - Deployment Readiness Testing
+Tests critical backend APIs for deployment readiness after database name hardcoding fix
 """
 
 import requests
@@ -30,7 +30,7 @@ if not BACKEND_URL:
 
 API_BASE = f"{BACKEND_URL}/api"
 
-print(f"Testing Admin Stockist & Financial Management at: {BACKEND_URL}")
+print(f"Testing Backend APIs for Deployment Readiness at: {BACKEND_URL}")
 print(f"API Base: {API_BASE}")
 print("=" * 80)
 
