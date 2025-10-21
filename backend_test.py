@@ -750,7 +750,7 @@ def print_test_summary(results):
         print(f"   4. ❌ Fix critical issues before deployment")
 
 if __name__ == "__main__":
-    print("Starting Admin Stockist & Financial Management Backend Testing...")
+    print("Starting Backend Deployment Readiness Testing...")
     
     # Run comprehensive tests
     test_results = run_comprehensive_test()
@@ -759,5 +759,6 @@ if __name__ == "__main__":
     print_test_summary(test_results)
     
     # Exit with appropriate code
-    all_passed = all(test_results[key] for key in ["stockist_management", "security_deposit_management", "renewal_management", "delivery_charge_distribution"])
-    sys.exit(0 if all_passed else 1)
+    critical_tests = ["authentication", "user_management", "admin_dashboard_kpis", "core_features"]
+    all_critical_passed = all(test_results[key] for key in critical_tests)
+    sys.exit(0 if all_critical_passed else 1)
