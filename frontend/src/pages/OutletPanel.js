@@ -128,6 +128,61 @@ const OutletPanel = ({ user, onLogout }) => {
           <p className="text-gray-600">Manage orders and track earnings</p>
         </div>
 
+        {/* Quick Access Menu */}
+        <Card className="mb-8 p-6 bg-white/80 backdrop-blur-sm shadow-lg">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Access</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+            <Link to="/mining">
+              <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center gap-2 hover:bg-purple-50">
+                <Zap className="h-6 w-6 text-purple-600" />
+                <span className="text-xs font-medium">Mining</span>
+              </Button>
+            </Link>
+            <Link to="/tap-game">
+              <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center gap-2 hover:bg-purple-50">
+                <Gamepad2 className="h-6 w-6 text-purple-600" />
+                <span className="text-xs font-medium">Game</span>
+              </Button>
+            </Link>
+            <Link to="/referrals">
+              <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center gap-2 hover:bg-purple-50">
+                <Users className="h-6 w-6 text-purple-600" />
+                <span className="text-xs font-medium">Referral</span>
+              </Button>
+            </Link>
+            <Link to="/marketplace">
+              <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center gap-2 hover:bg-purple-50">
+                <Store className="h-6 w-6 text-purple-600" />
+                <span className="text-xs font-medium">Marketplace</span>
+              </Button>
+            </Link>
+            <Link to="/leaderboard">
+              <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center gap-2 hover:bg-purple-50">
+                <Trophy className="h-6 w-6 text-purple-600" />
+                <span className="text-xs font-medium">Leaderboard</span>
+              </Button>
+            </Link>
+            <Link to="/vip">
+              <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center gap-2 hover:bg-purple-50">
+                <Crown className="h-6 w-6 text-amber-600" />
+                <span className="text-xs font-medium">VIP</span>
+              </Button>
+            </Link>
+            <Link to="/kyc">
+              <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center gap-2 hover:bg-purple-50">
+                <FileCheck className="h-6 w-6 text-blue-600" />
+                <span className="text-xs font-medium">KYC</span>
+              </Button>
+            </Link>
+            <Link to="/orders">
+              <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center gap-2 hover:bg-purple-50">
+                <ShoppingBag className="h-6 w-6 text-green-600" />
+                <span className="text-xs font-medium">My Orders</span>
+              </Button>
+            </Link>
+          </div>
+        </Card>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-2xl shadow-xl">
             <DollarSign className="h-8 w-8 opacity-80 mb-2" />
