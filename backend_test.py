@@ -544,56 +544,85 @@ def test_withdrawal_management():
     return test_results
 
 def run_comprehensive_test():
-    """Run comprehensive test of all Admin Stockist & Financial Management endpoints"""
+    """Run comprehensive test of all critical backend APIs for deployment readiness"""
     print("\n" + "🔍" * 80)
-    print("ADMIN STOCKIST & FINANCIAL MANAGEMENT COMPREHENSIVE TESTING")
+    print("BACKEND DEPLOYMENT READINESS COMPREHENSIVE TESTING")
     print("🔍" * 80)
     
     results = {
-        "stockist_management": False,
-        "security_deposit_management": False,
-        "renewal_management": False,
-        "delivery_charge_distribution": False,
+        "authentication": False,
+        "user_management": False,
+        "admin_dashboard_kpis": False,
+        "core_features": False,
+        "stockist_apis": False,
+        "order_management": False,
+        "withdrawal_management": False,
         "test_completed": False
     }
     
     try:
-        # Test 1: Stockist Management
-        print("\n🔧 PHASE 1: STOCKIST MANAGEMENT TESTING")
-        created_stockists = test_stockist_management()
-        if created_stockists:
-            results["stockist_management"] = True
-            print("\n✅ STOCKIST MANAGEMENT TESTS PASSED")
+        # Test 1: Authentication APIs
+        print("\n🔧 PHASE 1: AUTHENTICATION TESTING")
+        auth_results = test_authentication_apis()
+        if auth_results["login"] and auth_results["register"]:
+            results["authentication"] = True
+            print("\n✅ AUTHENTICATION TESTS PASSED")
         else:
-            print("\n❌ STOCKIST MANAGEMENT TESTS FAILED")
-            return results
+            print("\n❌ AUTHENTICATION TESTS FAILED")
         
-        # Test 2: Security Deposit Management
-        print("\n🔧 PHASE 2: SECURITY DEPOSIT MANAGEMENT TESTING")
-        created_deposits = test_security_deposit_management(created_stockists)
-        if created_deposits:
-            results["security_deposit_management"] = True
-            print("\n✅ SECURITY DEPOSIT MANAGEMENT TESTS PASSED")
+        # Test 2: User Management
+        print("\n🔧 PHASE 2: USER MANAGEMENT TESTING")
+        user_results = test_user_management()
+        if user_results["get_user"]:
+            results["user_management"] = True
+            print("\n✅ USER MANAGEMENT TESTS PASSED")
         else:
-            print("\n❌ SECURITY DEPOSIT MANAGEMENT TESTS FAILED")
+            print("\n❌ USER MANAGEMENT TESTS FAILED")
         
-        # Test 3: Renewal Management
-        print("\n🔧 PHASE 3: RENEWAL MANAGEMENT TESTING")
-        created_renewals = test_renewal_management(created_stockists)
-        if created_renewals:
-            results["renewal_management"] = True
-            print("\n✅ RENEWAL MANAGEMENT TESTS PASSED")
+        # Test 3: Admin Dashboard KPIs
+        print("\n🔧 PHASE 3: ADMIN DASHBOARD KPIs TESTING")
+        kpi_results = test_admin_dashboard_kpis()
+        if kpi_results["admin_stats"]:
+            results["admin_dashboard_kpis"] = True
+            print("\n✅ ADMIN DASHBOARD KPIs TESTS PASSED")
         else:
-            print("\n❌ RENEWAL MANAGEMENT TESTS FAILED")
+            print("\n❌ ADMIN DASHBOARD KPIs TESTS FAILED")
         
-        # Test 4: Delivery Charge Distribution
-        print("\n🔧 PHASE 4: DELIVERY CHARGE DISTRIBUTION TESTING")
-        delivery_test_result = test_delivery_charge_distribution()
-        if delivery_test_result:
-            results["delivery_charge_distribution"] = True
-            print("\n✅ DELIVERY CHARGE DISTRIBUTION TESTS PASSED")
+        # Test 4: Core Features
+        print("\n🔧 PHASE 4: CORE FEATURES TESTING")
+        core_results = test_core_features()
+        if core_results["mining_status"] and core_results["products"] and core_results["wallet"]:
+            results["core_features"] = True
+            print("\n✅ CORE FEATURES TESTS PASSED")
         else:
-            print("\n❌ DELIVERY CHARGE DISTRIBUTION TESTS FAILED")
+            print("\n❌ CORE FEATURES TESTS FAILED")
+        
+        # Test 5: Stockist APIs
+        print("\n🔧 PHASE 5: STOCKIST APIS TESTING")
+        stockist_results = test_stockist_apis()
+        if stockist_results["stockist_financial_info"]:
+            results["stockist_apis"] = True
+            print("\n✅ STOCKIST APIS TESTS PASSED")
+        else:
+            print("\n❌ STOCKIST APIS TESTS FAILED")
+        
+        # Test 6: Order Management
+        print("\n🔧 PHASE 6: ORDER MANAGEMENT TESTING")
+        order_results = test_order_management()
+        if order_results["admin_orders"]:
+            results["order_management"] = True
+            print("\n✅ ORDER MANAGEMENT TESTS PASSED")
+        else:
+            print("\n❌ ORDER MANAGEMENT TESTS FAILED")
+        
+        # Test 7: Withdrawal Management
+        print("\n🔧 PHASE 7: WITHDRAWAL MANAGEMENT TESTING")
+        withdrawal_results = test_withdrawal_management()
+        if withdrawal_results["cashback_withdrawals"] and withdrawal_results["profit_withdrawals"]:
+            results["withdrawal_management"] = True
+            print("\n✅ WITHDRAWAL MANAGEMENT TESTS PASSED")
+        else:
+            print("\n❌ WITHDRAWAL MANAGEMENT TESTS FAILED")
         
         results["test_completed"] = True
         
