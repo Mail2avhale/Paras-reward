@@ -3059,6 +3059,28 @@ async def distribute_delivery_charge(order_id: str):
     # Get outlet_id from delivery
     outlet_id = order.get("outlet_id") or order.get("assigned_outlet")
     
+    if not outlet_id:
+        raise HTTPException(status_code=400, detail="No outlet assigned to this order")
+    
+    # Get outlet user to find parent hierarchy
+    outlet_user = await db.users.find_one({"uid": outlet_id, "role": "outlet"})
+    if not outlet_user:
+        raise HTTPException(status_code=404, detail="Outlet not found")
+    
+    # Find Sub Stockist (parent of outlet)
+    sub_stockist_id = outlet_user.get("assigned_sub_stockist")
+    sub_stockist_user = None
+    if sub_stockist_id:
+        sub_stockist_user = await db.users.find_one({"uid": sub_stockist_id, "role": "sub_stockist"})
+    
+    # Find Master Stockist (parent of sub stockist)
+    master_stockist_id = None
+    master_stockist_user = None
+    if sub_stockist_user:
+        master_stockist_id = sub_stockist_user.get("assigned_master_stockist")
+        if master_stockist_id:
+            master_stockist_user = await db.users.find_one({"uid": master_stockist_id, "role": "master_stockist"})
+    
     # Calculate distribution amounts
     distributions = {}
     for entity, percentage in split.items():
@@ -3068,31 +3090,92 @@ async def distribute_delivery_charge(order_id: str):
     # Create commission entries and credit wallets
     commission_records = []
     now = datetime.now(timezone.utc).isoformat()
+    credited_entities = []
     
-    for entity, amount in distributions.items():
-        if amount > 0:
-            # Create commission record
-            commission_record = {
-                "commission_id": str(uuid.uuid4()),
-                "order_id": order_id,
-                "entity_type": entity,
-                "entity_id": outlet_id if entity == "outlet" else f"{entity}_system",
-                "amount": round(amount, 2),
-                "type": "order_commission",
-                "status": "credited",
-                "created_at": now
-            }
-            commission_records.append(commission_record)
-            
-            # Credit profit wallet (if entity is outlet and has valid ID)
-            if entity == "outlet" and outlet_id:
-                outlet_user = await db.users.find_one({"uid": outlet_id, "role": "outlet"})
-                if outlet_user and not outlet_user.get("profit_wallet_frozen", False):
-                    # Credit outlet's profit wallet
-                    await db.users.update_one(
-                        {"uid": outlet_id},
-                        {"$inc": {"profit_wallet_balance": round(amount, 2)}}
-                    )
+    # Credit Outlet
+    if distributions.get("outlet", 0) > 0 and outlet_user:
+        amount = distributions["outlet"]
+        if not outlet_user.get("profit_wallet_frozen", False):
+            await db.users.update_one(
+                {"uid": outlet_id},
+                {"$inc": {"profit_wallet_balance": round(amount, 2)}}
+            )
+            credited_entities.append(f"Outlet ({outlet_user.get('name', 'Unknown')}): ₹{round(amount, 2)}")
+        
+        commission_record = {
+            "commission_id": str(uuid.uuid4()),
+            "order_id": order_id,
+            "entity_type": "outlet",
+            "entity_id": outlet_id,
+            "entity_name": outlet_user.get("name", "Unknown"),
+            "amount": round(amount, 2),
+            "type": "order_commission",
+            "status": "credited" if not outlet_user.get("profit_wallet_frozen", False) else "frozen",
+            "created_at": now
+        }
+        commission_records.append(commission_record)
+    
+    # Credit Sub Stockist
+    if distributions.get("sub", 0) > 0 and sub_stockist_user:
+        amount = distributions["sub"]
+        if not sub_stockist_user.get("profit_wallet_frozen", False):
+            await db.users.update_one(
+                {"uid": sub_stockist_id},
+                {"$inc": {"profit_wallet_balance": round(amount, 2)}}
+            )
+            credited_entities.append(f"Sub Stockist ({sub_stockist_user.get('name', 'Unknown')}): ₹{round(amount, 2)}")
+        
+        commission_record = {
+            "commission_id": str(uuid.uuid4()),
+            "order_id": order_id,
+            "entity_type": "sub_stockist",
+            "entity_id": sub_stockist_id,
+            "entity_name": sub_stockist_user.get("name", "Unknown"),
+            "amount": round(amount, 2),
+            "type": "order_commission",
+            "status": "credited" if not sub_stockist_user.get("profit_wallet_frozen", False) else "frozen",
+            "created_at": now
+        }
+        commission_records.append(commission_record)
+    
+    # Credit Master Stockist
+    if distributions.get("master", 0) > 0 and master_stockist_user:
+        amount = distributions["master"]
+        if not master_stockist_user.get("profit_wallet_frozen", False):
+            await db.users.update_one(
+                {"uid": master_stockist_id},
+                {"$inc": {"profit_wallet_balance": round(amount, 2)}}
+            )
+            credited_entities.append(f"Master Stockist ({master_stockist_user.get('name', 'Unknown')}): ₹{round(amount, 2)}")
+        
+        commission_record = {
+            "commission_id": str(uuid.uuid4()),
+            "order_id": order_id,
+            "entity_type": "master_stockist",
+            "entity_id": master_stockist_id,
+            "entity_name": master_stockist_user.get("name", "Unknown"),
+            "amount": round(amount, 2),
+            "type": "order_commission",
+            "status": "credited" if not master_stockist_user.get("profit_wallet_frozen", False) else "frozen",
+            "created_at": now
+        }
+        commission_records.append(commission_record)
+    
+    # Company share (stays with system)
+    if distributions.get("company", 0) > 0:
+        amount = distributions["company"]
+        commission_record = {
+            "commission_id": str(uuid.uuid4()),
+            "order_id": order_id,
+            "entity_type": "company",
+            "entity_id": "company_system",
+            "entity_name": "PARAS REWARD Company",
+            "amount": round(amount, 2),
+            "type": "order_commission",
+            "status": "credited",
+            "created_at": now
+        }
+        commission_records.append(commission_record)
     
     # Save commission records
     if commission_records:
@@ -3104,15 +3187,22 @@ async def distribute_delivery_charge(order_id: str):
         {"$set": {
             "commission_distributed": True,
             "commission_amount": round(total_commission, 2),
-            "commission_distributed_at": now
+            "commission_distributed_at": now,
+            "credited_entities": credited_entities
         }}
     )
     
     return {
-        "message": "Commission distributed successfully",
+        "message": "Commission distributed successfully across hierarchy",
         "order_id": order_id,
         "total_commission": round(total_commission, 2),
         "distributions": {k: round(v, 2) for k, v in distributions.items()},
+        "credited_to": credited_entities,
+        "hierarchy": {
+            "outlet": outlet_user.get("name") if outlet_user else "Not Found",
+            "sub_stockist": sub_stockist_user.get("name") if sub_stockist_user else "Not Assigned",
+            "master_stockist": master_stockist_user.get("name") if master_stockist_user else "Not Assigned"
+        },
         "commission_records": len(commission_records)
     }
 
