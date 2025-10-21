@@ -192,39 +192,48 @@ const Marketplace = ({ user, onLogout }) => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product, index) => (
-              <Card key={product.product_id} className="bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow overflow-hidden">
-                <div className="aspect-square bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
-                  {product.image_url ? (
-                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <Package className="h-24 w-24 text-purple-300" />
-                  )}
-                </div>
-                <div className="p-4">
-                  <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{product.description}</p>
-                  
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <p className="text-2xl font-bold text-purple-600">{product.prc_price} PRC</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-500">Stock</p>
-                      <p className="font-semibold text-gray-900">{product.stock_quantity}</p>
-                    </div>
+              <>
+                <Card key={product.product_id} className="bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow overflow-hidden">
+                  <div className="aspect-square bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
+                    {product.image_url ? (
+                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <Package className="h-24 w-24 text-purple-300" />
+                    )}
                   </div>
+                  <div className="p-4">
+                    <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">{product.description}</p>
+                    
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="text-2xl font-bold text-purple-600">{product.prc_price} PRC</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-gray-500">Stock</p>
+                        <p className="font-semibold text-gray-900">{product.stock_quantity}</p>
+                      </div>
+                    </div>
 
-                  <Button
-                    data-testid={`add-to-cart-${index}-btn`}
-                    onClick={() => addToCart(product)}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
-                    disabled={product.stock_quantity === 0}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    {product.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
-                  </Button>
-                </div>
-              </Card>
+                    <Button
+                      data-testid={`add-to-cart-${index}-btn`}
+                      onClick={() => addToCart(product)}
+                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                      disabled={product.stock_quantity === 0}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      {product.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                    </Button>
+                  </div>
+                </Card>
+                
+                {/* Insert In-Feed Ad after every 4th product (Hidden for Admin) */}
+                {!isAdmin && (index + 1) % 4 === 0 && (
+                  <div className="col-span-1 md:col-span-2 lg:col-span-3 xl:col-span-4">
+                    <InFeedAd adSlot="1234567893" />
+                  </div>
+                )}
+              </>
             ))}
           </div>
         )}
