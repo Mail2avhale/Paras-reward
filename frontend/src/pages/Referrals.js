@@ -4,7 +4,7 @@ import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Users, Copy, Check, UserPlus } from 'lucide-react';
+import { Users, Copy, Check, UserPlus, Link2, Share2, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -13,15 +13,25 @@ const API = `${BACKEND_URL}/api`;
 const Referrals = ({ user, onLogout }) => {
   const [referralCode, setReferralCode] = useState(user?.referral_code || '');
   const [referrals, setReferrals] = useState([]);
-  const [copied, setCopied] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [applyCode, setApplyCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [stats, setStats] = useState({
+    total_referrals: 0,
+    active_referrals: 0,
+    vip_referrals: 0
+  });
+
+  // Generate referral link
+  const referralLink = `${window.location.origin}/register?ref=${referralCode}`;
 
   useEffect(() => {
     if (user?.uid) {
       fetchReferralCode();
       fetchReferrals();
+      fetchReferralStats();
     } else {
       setError('User information not available. Please try logging out and logging back in.');
       setLoading(false);
@@ -60,18 +70,59 @@ const Referrals = ({ user, onLogout }) => {
         return;
       }
       const response = await axios.get(`${API}/referral/list/${user.uid}`);
-      setReferrals(response.data.referrals);
+      setReferrals(response.data.referrals || []);
     } catch (error) {
       console.error('Error fetching referrals:', error);
       toast.error('Failed to load referrals');
     }
   };
 
+  const fetchReferralStats = async () => {
+    try {
+      if (!user?.uid) return;
+      const response = await axios.get(`${API}/referral/stats/${user.uid}`);
+      setStats(response.data || {
+        total_referrals: 0,
+        active_referrals: 0,
+        vip_referrals: 0
+      });
+    } catch (error) {
+      console.error('Error fetching referral stats:', error);
+    }
+  };
+
   const copyReferralCode = () => {
     navigator.clipboard.writeText(referralCode);
-    setCopied(true);
+    setCopiedCode(true);
     toast.success('Referral code copied!');
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const copyReferralLink = () => {
+    navigator.clipboard.writeText(referralLink);
+    setCopiedLink(true);
+    toast.success('Referral link copied to clipboard!');
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const shareReferralLink = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Join PARAS REWARD',
+          text: `Join PARAS REWARD using my referral code: ${referralCode}`,
+          url: referralLink
+        });
+        toast.success('Shared successfully!');
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error('Error sharing:', error);
+          toast.error('Failed to share');
+        }
+      }
+    } else {
+      copyReferralLink();
+    }
   };
 
   const applyReferralCode = async () => {
@@ -84,6 +135,7 @@ const Referrals = ({ user, onLogout }) => {
       await axios.post(`${API}/referral/apply/${user.uid}?referral_code=${applyCode}`);
       toast.success('Referral code applied successfully!');
       setApplyCode('');
+      fetchReferralStats();
     } catch (error) {
       console.error('Error applying referral:', error);
       toast.error(error.response?.data?.detail || 'Failed to apply referral code');
@@ -96,6 +148,27 @@ const Referrals = ({ user, onLogout }) => {
       
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-8">Referral Program</h1>
+
+        {/* Referral Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100">
+            <Users className="h-8 w-8 text-purple-600 mb-2" />
+            <div className="text-sm font-medium text-purple-600 mb-1">Total Referrals</div>
+            <div className="text-3xl font-bold text-purple-900">{stats.total_referrals}</div>
+          </Card>
+
+          <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100">
+            <TrendingUp className="h-8 w-8 text-green-600 mb-2" />
+            <div className="text-sm font-medium text-green-600 mb-1">Active Users</div>
+            <div className="text-3xl font-bold text-green-900">{stats.active_referrals}</div>
+          </Card>
+
+          <Card className="p-6 bg-gradient-to-br from-amber-50 to-amber-100">
+            <UserPlus className="h-8 w-8 text-amber-600 mb-2" />
+            <div className="text-sm font-medium text-amber-600 mb-1">VIP Members</div>
+            <div className="text-3xl font-bold text-amber-900">{stats.vip_referrals}</div>
+          </Card>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Your Referral Code */}
