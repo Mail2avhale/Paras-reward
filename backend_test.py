@@ -1046,6 +1046,7 @@ def print_test_summary(results):
         print(f"   - Renewal entries with GST calculation (18% default)")
         print(f"   - User records updated correctly")
         print(f"   - All audit logs and calculations verified")
+        print(f"   - Delivery charge distribution system operational")
     else:
         print(f"\n⚠️  ISSUES FOUND: Some endpoints need attention")
         failed_tests = [key for key, passed in results.items() if not passed and key != "test_completed"]
