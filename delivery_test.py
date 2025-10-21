@@ -286,7 +286,8 @@ def test_delivery_charge_distribution():
         for entity_type, entity_uid in entities.items():
             response = requests.get(f"{API_BASE}/commissions/entity/{entity_uid}", timeout=30)
             if response.status_code == 200:
-                commissions = response.json()
+                commission_data = response.json()
+                commissions = commission_data.get("commissions", [])
                 # Find commission record for this order
                 order_commission = None
                 for comm in commissions:
