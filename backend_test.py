@@ -928,6 +928,7 @@ def run_comprehensive_test():
         "stockist_management": False,
         "security_deposit_management": False,
         "renewal_management": False,
+        "delivery_charge_distribution": False,
         "test_completed": False
     }
     
