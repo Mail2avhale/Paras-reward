@@ -13,6 +13,7 @@ const API = `${BACKEND_URL}/api`;
 const Dashboard = ({ user, onLogout }) => {
   const [userData, setUserData] = useState(null);
   const [stats, setStats] = useState(null);
+  const [qrCode, setQrCode] = useState(null);
   
   // Check if user is admin to hide ads
   const isAdmin = user?.role === 'admin';
@@ -20,6 +21,7 @@ const Dashboard = ({ user, onLogout }) => {
   useEffect(() => {
     fetchUserData();
     fetchMiningStatus();
+    fetchQRCode();
   }, []);
 
   const fetchUserData = async () => {
@@ -37,6 +39,17 @@ const Dashboard = ({ user, onLogout }) => {
       setStats(response.data);
     } catch (error) {
       console.error('Error fetching mining status:', error);
+    }
+  };
+
+  const fetchQRCode = async () => {
+    try {
+      const response = await axios.get(`${API}/payment/config`);
+      if (response.data.qr_code_url) {
+        setQrCode(response.data.qr_code_url);
+      }
+    } catch (error) {
+      console.error('Error fetching QR code:', error);
     }
   };
 
