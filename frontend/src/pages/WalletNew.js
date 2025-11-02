@@ -81,8 +81,8 @@ const WalletNew = ({ user, onLogout }) => {
       return;
     }
 
-    if (cashbackPaymentMode === 'bank' && (!cashbackBankAccount || !cashbackIfsc)) {
-      toast.error('Please enter bank account details');
+    if (cashbackPaymentMode === 'bank' && (!cashbackBankAccount || !cashbackIfsc || !cashbackAccountHolderName)) {
+      toast.error('Please enter complete bank account details');
       return;
     }
 
