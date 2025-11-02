@@ -31,7 +31,7 @@ const AboutUs = () => {
         <div className="text-center max-w-4xl mx-auto mb-16">
           <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 mb-6">About PARAS REWARD</h1>
           <p className="text-xl text-gray-600">
-            India's first mining-based in-app reward platform designed to empower users through daily mining, referrals, and interactive games.
+            India's first reward-based engagement platform designed to empower users through daily activities, referrals, and interactive games.
           </p>
         </div>
 
