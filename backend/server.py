@@ -1438,16 +1438,68 @@ async def checkout(request: Request):
     
     order_dict = order.model_dump()
     order_dict["created_at"] = order_dict["created_at"].isoformat()
+    order_dict["pending_delivery_lien"] = pending_delivery_lien
     
     # Update user balances (use cashback_balance as primary field)
+    update_fields = {
+        "prc_balance": new_prc_balance,
+        "cashback_balance": new_cashback_balance,
+        "cash_wallet_balance": new_cashback_balance  # Keep both for compatibility
+    }
+    
+    # Add lien if delivery charge couldn't be deducted
+    if pending_delivery_lien > 0:
+        current_lien = user.get("wallet_maintenance_due", 0)
+        update_fields["wallet_maintenance_due"] = current_lien + pending_delivery_lien
+    
     await db.users.update_one(
         {"uid": user_id},
-        {"$set": {
-            "prc_balance": new_prc_balance,
-            "cashback_balance": new_cashback_balance,
-            "cash_wallet_balance": new_cashback_balance  # Keep both for compatibility
-        }}
+        {"$set": update_fields}
     )
+    
+    # Create wallet transaction records
+    transactions = []
+    
+    # PRC deduction transaction
+    transactions.append({
+        "transaction_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "type": "debit",
+        "wallet_type": "prc",
+        "amount": total_prc,
+        "description": f"Order #{order.order_id[:8]} - Product purchase",
+        "balance_after": new_prc_balance,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    # Cashback credit transaction
+    transactions.append({
+        "transaction_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "type": "credit",
+        "wallet_type": "cashback",
+        "amount": cashback_amount,
+        "description": f"Order #{order.order_id[:8]} - 25% cashback",
+        "balance_after": new_cashback_balance if pending_delivery_lien == 0 else current_cashback + cashback_amount,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    # Delivery charge deduction transaction (if deducted)
+    if pending_delivery_lien == 0 and delivery_charge > 0:
+        transactions.append({
+            "transaction_id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "type": "debit",
+            "wallet_type": "cashback",
+            "amount": delivery_charge,
+            "description": f"Order #{order.order_id[:8]} - Delivery charge",
+            "balance_after": new_cashback_balance,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    # Insert transactions
+    if transactions:
+        await db.wallet_transactions.insert_many(transactions)
     
     # Update product stock
     for item in cart["items"]:
