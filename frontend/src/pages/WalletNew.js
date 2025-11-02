@@ -97,6 +97,7 @@ const WalletNew = ({ user, onLogout }) => {
         payment_mode: cashbackPaymentMode,
         upi_id: isUpiMode ? cashbackUpiId : null,
         bank_account: cashbackPaymentMode === 'bank' ? cashbackBankAccount : null,
+        bank_name: cashbackPaymentMode === 'bank' ? cashbackBankName : null,
         account_holder_name: cashbackPaymentMode === 'bank' ? cashbackAccountHolderName : null,
         ifsc_code: cashbackPaymentMode === 'bank' ? cashbackIfsc : null
       });
