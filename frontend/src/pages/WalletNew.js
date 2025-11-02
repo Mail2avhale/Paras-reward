@@ -130,7 +130,7 @@ const WalletNew = ({ user, onLogout }) => {
         user_id: user.uid,
         amount: parseFloat(profitAmount),
         payment_mode: profitPaymentMode,
-        upi_id: profitPaymentMode === 'upi' ? profitUpiId : null,
+        upi_id: isUpiMode ? profitUpiId : null,
         bank_account: profitPaymentMode === 'bank' ? profitBankAccount : null,
         ifsc_code: profitPaymentMode === 'bank' ? profitIfsc : null
       });
