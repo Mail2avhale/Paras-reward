@@ -176,6 +176,125 @@ const PaymentConfigSettings = () => {
 };
 
 // Delivery Configuration Component
+// Contact Details Configuration Component
+const ContactDetailsSettings = () => {
+  const [contactDetails, setContactDetails] = useState({
+    address: '',
+    phone: '',
+    email: '',
+    website: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
+
+  useEffect(() => {
+    fetchContactDetails();
+  }, []);
+
+  const fetchContactDetails = async () => {
+    try {
+      const response = await axios.get(`${API}/contact-details`);
+      setContactDetails(response.data);
+    } catch (error) {
+      console.error('Error fetching contact details:', error);
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      await axios.post(`${API}/admin/contact-details`, contactDetails);
+      toast.success('Contact details updated successfully!');
+    } catch (error) {
+      console.error('Error saving contact details:', error);
+      toast.error(error.response?.data?.detail || 'Failed to update contact details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (fetching) {
+    return <div className="text-center py-12">Loading...</div>;
+  }
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Contact Details Management</h2>
+        <p className="text-gray-600 mb-6">Update public contact information displayed on Contact Us page</p>
+
+        <Card className="p-6 bg-white">
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Office Address *
+              </label>
+              <textarea
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                rows="3"
+                value={contactDetails.address}
+                onChange={(e) => setContactDetails({...contactDetails, address: e.target.value})}
+                placeholder="Company Name\nAddress Line 1\nCity, State, Pincode"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone Number *
+                </label>
+                <Input
+                  type="text"
+                  value={contactDetails.phone}
+                  onChange={(e) => setContactDetails({...contactDetails, phone: e.target.value})}
+                  placeholder="+91-XXXXXXXXXX"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address *
+                </label>
+                <Input
+                  type="email"
+                  value={contactDetails.email}
+                  onChange={(e) => setContactDetails({...contactDetails, email: e.target.value})}
+                  placeholder="support@parasreward.com"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Website *
+              </label>
+              <Input
+                type="text"
+                value={contactDetails.website}
+                onChange={(e) => setContactDetails({...contactDetails, website: e.target.value})}
+                placeholder="www.parasreward.com"
+              />
+            </div>
+
+            <div className="flex justify-end pt-4">
+              <Button
+                onClick={handleSave}
+                disabled={loading}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                {loading ? 'Saving...' : 'Save Contact Details'}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+
 const DeliveryConfigSettings = () => {
   const [config, setConfig] = useState({
     delivery_charge_rate: 0.10,
