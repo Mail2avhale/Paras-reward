@@ -1100,6 +1100,11 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # Check if user is VIP - only VIP users can earn PRC
+    membership_type = user.get("membership_type", "free")
+    if membership_type != "vip":
+        raise HTTPException(status_code=403, detail="VIP membership required to earn PRC. Free users cannot accumulate PRC.")
+    
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     current_taps = user.get("taps_today", 0) if user.get("last_tap_date") == today else 0
     
@@ -1119,6 +1124,18 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
             "$set": {"taps_today": current_taps + taps_to_add, "last_tap_date": today}
         }
     )
+    
+    # Create wallet transaction record
+    await db.wallet_transactions.insert_one({
+        "transaction_id": str(uuid.uuid4()),
+        "user_id": uid,
+        "type": "credit",
+        "wallet_type": "prc",
+        "amount": taps_to_add,
+        "description": f"Tap game rewards ({taps_to_add} taps)",
+        "balance_after": user.get("prc_balance", 0) + taps_to_add,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
     
     return {"taps_added": taps_to_add, "remaining_taps": remaining_taps - taps_to_add, "prc_earned": taps_to_add}
 
