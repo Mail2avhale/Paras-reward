@@ -9,6 +9,8 @@ import HomeFintech from "@/pages/HomeFintech";
 import Home from "@/pages/Home";
 import HowItWorks from "@/pages/HowItWorks";
 import FAQ from "@/pages/FAQ";
+import Blog from "@/pages/Blog";
+import BlogArticle from "@/pages/BlogArticle";
 import Login from "@/pages/Login";
 import LoginNew from "@/pages/LoginNew";
 import RegisterSimple from "@/pages/RegisterSimple";
