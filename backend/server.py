@@ -2059,6 +2059,26 @@ async def get_user_withdrawals(uid: str):
         "profit_withdrawals": profit_withdrawals
     }
 
+
+@api_router.get("/wallet/transactions/{uid}")
+async def get_wallet_transactions(uid: str, wallet_type: str = None, limit: int = 100):
+    """Get user's wallet transaction history"""
+    query = {"user_id": uid}
+    
+    # Filter by wallet type if specified
+    if wallet_type:
+        query["wallet_type"] = wallet_type
+    
+    transactions = await db.wallet_transactions.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    return {
+        "transactions": transactions,
+        "count": len(transactions)
+    }
+
 # ========== LEADERBOARD ROUTES ==========
 @api_router.get("/leaderboard", response_model=List[LeaderboardEntry])
 async def get_leaderboard():
