@@ -2016,6 +2016,19 @@ async def request_profit_withdrawal(request: Request):
         {"$inc": {"profit_wallet_balance": -total_required}}
     )
     
+    # Create wallet transaction record
+    await db.wallet_transactions.insert_one({
+        "transaction_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "type": "debit",
+        "wallet_type": "profit",
+        "amount": total_required,
+        "description": f"Withdrawal request (₹{amount} + ₹5 fee)",
+        "reference_id": withdrawal["withdrawal_id"],
+        "balance_after": profit_balance - total_required,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
     # Insert withdrawal request
     await db.profit_withdrawals.insert_one(withdrawal)
     
