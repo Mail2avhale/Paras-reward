@@ -6,6 +6,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 
 import HomeFintech from "@/pages/HomeFintech";
+import Home from "@/pages/Home";
+import HowItWorks from "@/pages/HowItWorks";
+import FAQ from "@/pages/FAQ";
 import Login from "@/pages/Login";
 import LoginNew from "@/pages/LoginNew";
 import RegisterSimple from "@/pages/RegisterSimple";
