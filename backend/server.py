@@ -1934,6 +1934,19 @@ async def request_cashback_withdrawal(request: Request):
         {"$inc": {"cashback_wallet_balance": -total_required}}
     )
     
+    # Create wallet transaction record
+    await db.wallet_transactions.insert_one({
+        "transaction_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "type": "debit",
+        "wallet_type": "cashback",
+        "amount": total_required,
+        "description": f"Withdrawal request (₹{amount} + ₹5 fee)",
+        "reference_id": withdrawal["withdrawal_id"],
+        "balance_after": cashback_balance - total_required,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
     # Insert withdrawal request
     await db.cashback_withdrawals.insert_one(withdrawal)
     
