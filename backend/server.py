@@ -3528,6 +3528,23 @@ async def reject_profit_withdrawal(withdrawal_id: str, request: Request):
         {"$inc": {"profit_wallet_balance": total_refund}}
     )
     
+    # Get updated balance for transaction record
+    user = await db.users.find_one({"uid": withdrawal["user_id"]})
+    updated_balance = user.get("profit_wallet_balance", 0)
+    
+    # Create wallet transaction record for refund
+    await db.wallet_transactions.insert_one({
+        "transaction_id": str(uuid.uuid4()),
+        "user_id": withdrawal["user_id"],
+        "type": "credit",
+        "wallet_type": "profit",
+        "amount": total_refund,
+        "description": f"Withdrawal refund - Request rejected",
+        "reference_id": withdrawal_id,
+        "balance_after": updated_balance,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
     await db.profit_withdrawals.update_one(
         {"withdrawal_id": withdrawal_id},
         {"$set": {
