@@ -1393,8 +1393,14 @@ async def checkout(request: Request):
     if not cart or len(cart.get("items", [])) == 0:
         raise HTTPException(status_code=400, detail="Cart is empty")
     
-    # Calculate totals (no cash_price, only PRC)
+    # Calculate totals
     total_prc = sum(item["prc_price"] * item["quantity"] for item in cart["items"])
+    total_cash = sum(item.get("cash_price", 0) * item["quantity"] for item in cart["items"])
+    
+    # Get delivery charge configuration (10% of cash total as default)
+    config = await db.system_config.find_one({"config_type": "delivery"})
+    delivery_rate = config.get("delivery_charge_rate", 0.10) if config else 0.10
+    delivery_charge = round(total_cash * delivery_rate, 2)
     
     # Calculate cashback (25% of PRC value converted to ₹, 10 PRC = ₹1)
     cashback_amount = (total_prc * 0.25) / 10
@@ -1408,15 +1414,24 @@ async def checkout(request: Request):
     
     # Get current cashback balance (try both field names for backward compatibility)
     current_cashback = user.get("cashback_balance", user.get("cash_wallet_balance", 0))
-    new_cashback_balance = current_cashback + cashback_amount
+    
+    # Check if user has enough balance for delivery charge, otherwise create lien
+    if current_cashback >= delivery_charge:
+        # Deduct delivery charge immediately
+        new_cashback_balance = current_cashback + cashback_amount - delivery_charge
+        pending_delivery_lien = 0
+    else:
+        # Create lien for delivery charge
+        new_cashback_balance = current_cashback + cashback_amount
+        pending_delivery_lien = delivery_charge
     
     # Create order
     order = Order(
         user_id=user_id,
         items=cart["items"],
         total_prc=total_prc,
-        total_cash=0,  # No cash payment required
-        delivery_charge=0,  # No delivery charge
+        total_cash=total_cash,
+        delivery_charge=delivery_charge,
         cashback_amount=cashback_amount,
         delivery_address=delivery_address or "N/A"
     )
