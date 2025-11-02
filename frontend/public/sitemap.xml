@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  
+  <!-- Home -->
+  <url>
+    <loc>https://parasreward.com/</loc>
+    <lastmod>2024-11-02</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  
+  <!-- About -->
+  <url>
+    <loc>https://parasreward.com/about</loc>
+    <lastmod>2024-11-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- How It Works -->
+  <url>
+    <loc>https://parasreward.com/how-it-works</loc>
+    <lastmod>2024-11-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- Rewards System (Mining) -->
+  <url>
+    <loc>https://parasreward.com/mining</loc>
+    <lastmod>2024-11-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Referral System -->
+  <url>
+    <loc>https://parasreward.com/referrals</loc>
+    <lastmod>2024-11-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- VIP Membership -->
+  <url>
+    <loc>https://parasreward.com/vip</loc>
+    <lastmod>2024-11-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- FAQ -->
+  <url>
+    <loc>https://parasreward.com/faq</loc>
+    <lastmod>2024-11-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Contact Us -->
+  <url>
+    <loc>https://parasreward.com/contact</loc>
+    <lastmod>2024-11-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Legal - Privacy Policy -->
+  <url>
+    <loc>https://parasreward.com/privacy</loc>
+    <lastmod>2024-11-02</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- Legal - Terms & Conditions -->
+  <url>
+    <loc>https://parasreward.com/terms</loc>
+    <lastmod>2024-11-02</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- Marketplace -->
+  <url>
+    <loc>https://parasreward.com/marketplace</loc>
+    <lastmod>2024-11-02</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Leaderboard -->
+  <url>
+    <loc>https://parasreward.com/leaderboard</loc>
+    <lastmod>2024-11-02</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Register -->
+  <url>
+    <loc>https://parasreward.com/register</loc>
+    <lastmod>2024-11-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- Login -->
+  <url>
+    <loc>https://parasreward.com/login</loc>
+    <lastmod>2024-11-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+</urlset>
