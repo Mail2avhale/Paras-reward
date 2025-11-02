@@ -77,7 +77,8 @@ const Mining = ({ user, onLogout }) => {
       <Navbar user={user} onLogout={onLogout} />
       
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-8">Mining Center</h1>
+        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">Rewards Center</h1>
+        <p className="text-lg text-gray-600 mb-8">Earn PRC reward points through daily engagement activities (non-cryptocurrency reward system)</p>
 
         {/* Session Status Banner */}
         {miningStatus && (
