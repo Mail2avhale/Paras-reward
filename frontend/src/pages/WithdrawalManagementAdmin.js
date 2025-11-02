@@ -431,32 +431,38 @@ const WithdrawalManagementAdmin = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-600">Payment Mode</label>
-                    <p className="text-base text-gray-900">{selectedWithdrawal.payment_mode || 'N/A'}</p>
+                    <p className="text-base text-gray-900 capitalize">{selectedWithdrawal.payment_mode || 'N/A'}</p>
                   </div>
                   {selectedWithdrawal.upi_id && (
                     <div>
-                      <label className="text-sm font-medium text-gray-600">UPI ID</label>
+                      <label className="text-sm font-medium text-gray-600">UPI ID / Mobile</label>
                       <p className="text-base text-gray-900">{selectedWithdrawal.upi_id}</p>
                     </div>
                   )}
-                  {selectedWithdrawal.account_number && (
+                  {(selectedWithdrawal.bank_account || selectedWithdrawal.account_number) && (
                     <>
                       <div>
                         <label className="text-sm font-medium text-gray-600">Account Number</label>
-                        <p className="text-base text-gray-900">{selectedWithdrawal.account_number}</p>
+                        <p className="text-base text-gray-900">{selectedWithdrawal.bank_account || selectedWithdrawal.account_number}</p>
                       </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">IFSC Code</label>
-                        <p className="text-base text-gray-900">{selectedWithdrawal.ifsc_code || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Bank Name</label>
-                        <p className="text-base text-gray-900">{selectedWithdrawal.bank_name || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Account Holder</label>
-                        <p className="text-base text-gray-900">{selectedWithdrawal.account_holder || 'N/A'}</p>
-                      </div>
+                      {selectedWithdrawal.account_holder_name && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Account Holder Name</label>
+                          <p className="text-base text-gray-900">{selectedWithdrawal.account_holder_name}</p>
+                        </div>
+                      )}
+                      {(selectedWithdrawal.ifsc_code || selectedWithdrawal.ifsc) && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">IFSC Code</label>
+                          <p className="text-base text-gray-900">{selectedWithdrawal.ifsc_code || selectedWithdrawal.ifsc || 'N/A'}</p>
+                        </div>
+                      )}
+                      {selectedWithdrawal.bank_name && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Bank Name</label>
+                          <p className="text-base text-gray-900">{selectedWithdrawal.bank_name || 'N/A'}</p>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
