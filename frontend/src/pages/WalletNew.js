@@ -28,14 +28,14 @@ const WalletNew = ({ user, onLogout }) => {
   
   // Cashback withdrawal form
   const [cashbackAmount, setCashbackAmount] = useState('');
-  const [cashbackPaymentMode, setCashbackPaymentMode] = useState('upi');
+  const [cashbackPaymentMode, setCashbackPaymentMode] = useState('phonepe');
   const [cashbackUpiId, setCashbackUpiId] = useState('');
   const [cashbackBankAccount, setCashbackBankAccount] = useState('');
   const [cashbackIfsc, setCashbackIfsc] = useState('');
   
   // Profit withdrawal form
   const [profitAmount, setProfitAmount] = useState('');
-  const [profitPaymentMode, setProfitPaymentMode] = useState('upi');
+  const [profitPaymentMode, setProfitPaymentMode] = useState('phonepe');
   const [profitUpiId, setProfitUpiId] = useState('');
   const [profitBankAccount, setProfitBankAccount] = useState('');
   const [profitIfsc, setProfitIfsc] = useState('');
