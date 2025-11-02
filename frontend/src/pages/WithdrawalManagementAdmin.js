@@ -461,7 +461,10 @@ const WithdrawalManagementAdmin = () => {
                       {selectedWithdrawal.bank_name && (
                         <div>
                           <label className="text-sm font-medium text-gray-600">Bank Name</label>
-                          <p className="text-base text-gray-900">{selectedWithdrawal.bank_name || 'N/A'}</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{getBankLogo(selectedWithdrawal.bank_name)}</span>
+                            <p className="text-base text-gray-900">{selectedWithdrawal.bank_name || 'N/A'}</p>
+                          </div>
                         </div>
                       )}
                     </>
