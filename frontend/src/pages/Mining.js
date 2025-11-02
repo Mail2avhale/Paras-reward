@@ -99,7 +99,7 @@ const Mining = ({ user, onLogout }) => {
                   <p className="text-white/90">
                     {miningStatus.session_active 
                       ? `${formatTime(miningStatus.remaining_hours)} remaining in this session`
-                      : 'Start a 24-hour mining session to earn PRC coins'
+                      : 'Start a 24-hour reward session to earn PRC points'
                     }
                   </p>
                 </div>
