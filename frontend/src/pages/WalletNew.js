@@ -458,7 +458,7 @@ const WalletNew = ({ user, onLogout }) => {
                           </div>
                           <div className="text-sm text-gray-600 space-y-1">
                             <p>Net Amount: ₹{withdrawal.net_amount.toFixed(2)} (Fee: ₹{withdrawal.fee.toFixed(2)})</p>
-                            <p>Payment: {withdrawal.payment_mode.toUpperCase()} - {withdrawal.upi_id || withdrawal.bank_account}</p>
+                            <p>Payment: {getPaymentMethodName(withdrawal.payment_mode)} - {withdrawal.upi_id || withdrawal.bank_account}</p>
                             <p>Requested: {new Date(withdrawal.created_at).toLocaleString()}</p>
                             {withdrawal.utr_number && (
                               <p className="text-green-600 font-medium">UTR: {withdrawal.utr_number}</p>
