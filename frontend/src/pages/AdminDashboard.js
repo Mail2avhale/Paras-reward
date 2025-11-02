@@ -1588,6 +1588,12 @@ const AdminDashboard = ({ user, onLogout }) => {
                   </table>
                 </div>
               </Card>
+              )}
+
+              {/* Advanced Management View */}
+              {userManagementView === 'advanced' && (
+                <AdvancedUserManagement />
+              )}
             </div>
           )}
 
