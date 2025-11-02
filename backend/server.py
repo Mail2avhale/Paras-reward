@@ -6480,6 +6480,28 @@ async def adjust_user_balance(uid: str, request: BalanceAdjustRequest):
         }}
     )
     
+    # Create wallet transaction record
+    wallet_type_map = {
+        "prc_balance": "prc",
+        "cashback_wallet_balance": "cashback",
+        "profit_wallet_balance": "profit"
+    }
+    
+    transaction_type = "credit" if request.operation == "add" or (request.operation == "set" and new_balance > current_balance) else "debit"
+    actual_amount = abs(new_balance - current_balance)
+    
+    await db.wallet_transactions.insert_one({
+        "transaction_id": str(uuid.uuid4()),
+        "user_id": uid,
+        "type": transaction_type,
+        "wallet_type": wallet_type_map.get(request.balance_type, "unknown"),
+        "amount": actual_amount,
+        "description": f"Admin adjustment: {request.operation} - {request.notes or 'Manual adjustment'}",
+        "reference_id": "admin_adjustment",
+        "balance_after": new_balance,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
     # Log action
     await db.audit_logs.insert_one({
         "log_id": str(uuid.uuid4()),
