@@ -73,8 +73,8 @@ const AboutUs = () => {
               <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-2xl mb-4">
                 <TrendingUp className="h-8 w-8" />
               </div>
-              <h3 className="text-xl font-bold mb-2">Daily Mining</h3>
-              <p className="opacity-90">Earn PRC coins every day through our innovative mining system</p>
+              <h3 className="text-xl font-bold mb-2">Daily Rewards</h3>
+              <p className="opacity-90">Earn PRC reward points every day through our innovative engagement system</p>
             </div>
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-2xl mb-4">
