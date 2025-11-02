@@ -186,6 +186,23 @@ const Dashboard = ({ user, onLogout }) => {
           </Link>
         </div>
 
+        {/* Payment QR Code Section */}
+        {qrCode && (
+          <Card className="p-6 bg-white/90 backdrop-blur-sm shadow-xl mt-8">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Payment QR Code</h3>
+            <div className="flex flex-col items-center">
+              <img 
+                src={qrCode} 
+                alt="Payment QR Code" 
+                className="w-64 h-64 object-contain border-2 border-purple-200 rounded-xl shadow-lg"
+              />
+              <p className="text-sm text-gray-600 mt-4 text-center">
+                Scan this QR code for UPI payments
+              </p>
+            </div>
+          </Card>
+        )}
+
         {/* Google AdSense - Responsive Ad (Hidden for Admin) */}
         {!isAdmin && (
           <ResponsiveAd adSlot="1234567894" />
