@@ -150,26 +150,32 @@ const WalletNew = ({ user, onLogout }) => {
   };
 
   const getStatusBadge = (status) => {
-    const styles = {
-      pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      approved: 'bg-blue-100 text-blue-800 border-blue-200',
-      completed: 'bg-green-100 text-green-800 border-green-200',
-      rejected: 'bg-red-100 text-red-800 border-red-200'
+    const statusConfig = {
+      pending: { icon: Clock, color: 'text-yellow-600 bg-yellow-50', text: 'Pending' },
+      approved: { icon: CheckCircle2, color: 'text-green-600 bg-green-50', text: 'Completed' },
+      rejected: { icon: XCircle, color: 'text-red-600 bg-red-50', text: 'Rejected' }
     };
     
-    const icons = {
-      pending: <Clock className="h-4 w-4" />,
-      approved: <Info className="h-4 w-4" />,
-      completed: <CheckCircle2 className="h-4 w-4" />,
-      rejected: <XCircle className="h-4 w-4" />
-    };
-
+    const config = statusConfig[status] || statusConfig.pending;
+    const Icon = config.icon;
+    
     return (
-      <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium border ${styles[status] || styles.pending}`}>
-        {icons[status] || icons.pending}
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </div>
+      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${config.color}`}>
+        <Icon className="h-3 w-3" />
+        {config.text}
+      </span>
     );
+  };
+
+  const getPaymentMethodName = (mode) => {
+    const methodNames = {
+      'phonepe': 'PhonePe',
+      'googlepay': 'Google Pay',
+      'paytm': 'Paytm',
+      'upi': 'UPI',
+      'bank': 'Bank Transfer'
+    };
+    return methodNames[mode] || mode.toUpperCase();
   };
 
   const isStockistOrOutlet = ['master_stockist', 'sub_stockist', 'outlet'].includes(user?.role);
