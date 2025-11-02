@@ -143,6 +143,7 @@ const WalletNew = ({ user, onLogout }) => {
         payment_mode: profitPaymentMode,
         upi_id: isUpiMode ? profitUpiId : null,
         bank_account: profitPaymentMode === 'bank' ? profitBankAccount : null,
+        bank_name: profitPaymentMode === 'bank' ? profitBankName : null,
         account_holder_name: profitPaymentMode === 'bank' ? profitAccountHolderName : null,
         ifsc_code: profitPaymentMode === 'bank' ? profitIfsc : null
       });
