@@ -173,7 +173,7 @@ const Home = () => {
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">VIP Membership</h3>
               <p className="text-gray-600 mb-4">
-                Unlock unlimited coin validity and exclusive benefits for just ₹1000/year
+                Unlock unlimited reward points validity and exclusive benefits for just ₹1000/year
               </p>
               <Link to="/vip" className="text-purple-600 font-semibold flex items-center gap-1 hover:gap-2 transition-all">
                 Go VIP <ChevronRight className="h-4 w-4" />
