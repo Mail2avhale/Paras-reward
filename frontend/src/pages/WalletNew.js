@@ -112,8 +112,10 @@ const WalletNew = ({ user, onLogout }) => {
       return;
     }
 
-    if (profitPaymentMode === 'upi' && !profitUpiId) {
-      toast.error('Please enter UPI ID');
+    const isUpiMode = ['phonepe', 'googlepay', 'paytm', 'upi'].includes(profitPaymentMode);
+
+    if (isUpiMode && !profitUpiId) {
+      toast.error('Please enter UPI ID or Mobile Number');
       return;
     }
 
