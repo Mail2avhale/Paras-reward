@@ -474,6 +474,26 @@ const WalletNew = ({ user, onLogout }) => {
                         />
                       </div>
                       <div>
+                        <label className="block text-sm font-medium mb-2">Bank Name *</label>
+                        <Select value={profitBankName} onValueChange={setProfitBankName}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your bank" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[300px]">
+                            {indianBanks.map((bank) => (
+                              <SelectItem key={bank.id} value={bank.name}>
+                                <div className="flex items-center gap-2">
+                                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs ${bank.color} text-white`}>
+                                    {bank.logo}
+                                  </span>
+                                  <span>{bank.name}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
                         <label className="block text-sm font-medium mb-2">IFSC Code</label>
                         <Input
                           placeholder="Enter IFSC code"
