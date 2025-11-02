@@ -101,6 +101,7 @@ const WalletNew = ({ user, onLogout }) => {
       setCashbackAmount('');
       setCashbackUpiId('');
       setCashbackBankAccount('');
+      setCashbackAccountHolderName('');
       setCashbackIfsc('');
       fetchWalletData();
       fetchWithdrawals();
