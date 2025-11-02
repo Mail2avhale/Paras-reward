@@ -69,8 +69,10 @@ const WalletNew = ({ user, onLogout }) => {
       return;
     }
 
-    if (cashbackPaymentMode === 'upi' && !cashbackUpiId) {
-      toast.error('Please enter UPI ID');
+    const isUpiMode = ['phonepe', 'googlepay', 'paytm', 'upi'].includes(cashbackPaymentMode);
+    
+    if (isUpiMode && !cashbackUpiId) {
+      toast.error('Please enter UPI ID or Mobile Number');
       return;
     }
 
