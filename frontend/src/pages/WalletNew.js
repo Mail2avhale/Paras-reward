@@ -145,6 +145,7 @@ const WalletNew = ({ user, onLogout }) => {
       setProfitAmount('');
       setProfitUpiId('');
       setProfitBankAccount('');
+      setProfitAccountHolderName('');
       setProfitIfsc('');
       fetchWalletData();
       fetchWithdrawals();
