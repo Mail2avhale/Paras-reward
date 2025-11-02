@@ -1790,13 +1790,6 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
           )}
 
-          {/* Users Management */}
-          {activeTab === 'users' && (
-            <div className="space-y-6">
-              <AdvancedUserManagement />
-            </div>
-          )}
-
           {/* Notifications */}
           {activeTab === 'notifications' && (
             <div className="space-y-6">
