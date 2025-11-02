@@ -14,7 +14,10 @@ import {
   CheckCircle2, 
   XCircle, 
   Info,
-  TrendingUp
+  TrendingUp,
+  Smartphone,
+  CreditCard,
+  Building2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
