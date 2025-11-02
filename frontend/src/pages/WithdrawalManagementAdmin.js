@@ -310,6 +310,12 @@ const WithdrawalManagementAdmin = () => {
                       {withdrawal.account_number && (
                         <div className="text-xs text-gray-500">A/c: {withdrawal.account_number}</div>
                       )}
+                      {withdrawal.bank_name && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <span className="text-sm">{getBankLogo(withdrawal.bank_name)}</span>
+                          <span className="text-xs text-gray-600">{withdrawal.bank_name}</span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{formatDate(withdrawal.created_at || withdrawal.requested_at)}</div>
