@@ -138,7 +138,6 @@ const Navbar = ({ user, onLogout }) => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
             </>
             ) : (
               /* Not logged in - Show public links */
