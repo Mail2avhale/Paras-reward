@@ -290,11 +290,11 @@ const WalletNew = ({ user, onLogout }) => {
                   </Select>
                 </div>
 
-                {cashbackPaymentMode === 'upi' && (
+                {['phonepe', 'googlepay', 'paytm', 'upi'].includes(cashbackPaymentMode) && (
                   <div>
-                    <label className="block text-sm font-medium mb-2">UPI ID</label>
+                    <label className="block text-sm font-medium mb-2">UPI ID or Mobile Number</label>
                     <Input
-                      placeholder="your-upi@paytm"
+                      placeholder="your-upi@paytm or mobile number"
                       value={cashbackUpiId}
                       onChange={(e) => setCashbackUpiId(e.target.value)}
                     />
