@@ -35,6 +35,7 @@ const WalletNew = ({ user, onLogout }) => {
   const [cashbackPaymentMode, setCashbackPaymentMode] = useState('phonepe');
   const [cashbackUpiId, setCashbackUpiId] = useState('');
   const [cashbackBankAccount, setCashbackBankAccount] = useState('');
+  const [cashbackBankName, setCashbackBankName] = useState('');
   const [cashbackAccountHolderName, setCashbackAccountHolderName] = useState('');
   const [cashbackIfsc, setCashbackIfsc] = useState('');
   
@@ -43,6 +44,7 @@ const WalletNew = ({ user, onLogout }) => {
   const [profitPaymentMode, setProfitPaymentMode] = useState('phonepe');
   const [profitUpiId, setProfitUpiId] = useState('');
   const [profitBankAccount, setProfitBankAccount] = useState('');
+  const [profitBankName, setProfitBankName] = useState('');
   const [profitAccountHolderName, setProfitAccountHolderName] = useState('');
   const [profitIfsc, setProfitIfsc] = useState('');
 
