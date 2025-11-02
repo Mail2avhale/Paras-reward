@@ -420,6 +420,14 @@ const WalletNew = ({ user, onLogout }) => {
                         />
                       </div>
                       <div>
+                        <label className="block text-sm font-medium mb-2">Account Holder Name</label>
+                        <Input
+                          placeholder="Enter account holder name"
+                          value={profitAccountHolderName}
+                          onChange={(e) => setProfitAccountHolderName(e.target.value)}
+                        />
+                      </div>
+                      <div>
                         <label className="block text-sm font-medium mb-2">IFSC Code</label>
                         <Input
                           placeholder="Enter IFSC code"
