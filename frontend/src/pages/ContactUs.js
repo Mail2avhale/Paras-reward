@@ -68,9 +68,8 @@ const ContactUs = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-1">Office Address</h3>
-                  <p className="text-gray-600">
-                    PARAS REWARD<br />
-                    Maharashtra, India
+                  <p className="text-gray-600 whitespace-pre-line">
+                    {contactDetails.address}
                   </p>
                 </div>
               </div>
@@ -81,7 +80,7 @@ const ContactUs = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-1">Phone / WhatsApp</h3>
-                  <p className="text-gray-600">+91-XXXXXXXXXX</p>
+                  <p className="text-gray-600">{contactDetails.phone}</p>
                 </div>
               </div>
 
@@ -91,7 +90,7 @@ const ContactUs = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-1">Email</h3>
-                  <p className="text-gray-600">support@parasreward.com</p>
+                  <p className="text-gray-600">{contactDetails.email}</p>
                 </div>
               </div>
 
@@ -101,7 +100,7 @@ const ContactUs = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-1">Website</h3>
-                  <p className="text-gray-600">www.parasreward.com</p>
+                  <p className="text-gray-600">{contactDetails.website}</p>
                 </div>
               </div>
             </div>
