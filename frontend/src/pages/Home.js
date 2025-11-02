@@ -42,20 +42,20 @@ const Home = () => {
         <div className="text-center max-w-5xl mx-auto">
           <div className="inline-flex items-center gap-2 mb-6 px-6 py-3 bg-white/90 backdrop-blur-sm rounded-full shadow-xl">
             <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-            <span className="text-purple-600 font-semibold">India's #1 Reward Mining Platform</span>
+            <span className="text-purple-600 font-semibold">India's #1 Reward Points Platform</span>
             <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
           </div>
           
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-            Mine Daily, Earn More
+            Earn Reward Points Daily
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 animate-gradient">
               Redeem Real Products
             </span>
           </h1>
           
           <p className="text-lg sm:text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
-            Join thousands of users earning PARAS Reward Coins (PRC) through daily mining, 
-            playing games, and referring friends. Convert your efforts into real products!
+            Join thousands of users earning PARAS Reward Coins (PRC) through daily activities, 
+            playing games, and referring friends. Redeem your reward points for real products!
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
@@ -64,7 +64,7 @@ const Home = () => {
                 size="lg" 
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-10 py-7 text-lg rounded-2xl shadow-2xl hover:shadow-purple-300/50 transition-all duration-300 hover:scale-105"
               >
-                Start Mining Free
+                Start Earning Free
                 <Zap className="ml-2 h-5 w-5" />
               </Button>
             </Link>
