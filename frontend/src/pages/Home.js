@@ -159,7 +159,7 @@ const Home = () => {
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Marketplace</h3>
               <p className="text-gray-600 mb-4">
-                Redeem your PRC coins for real products from 5000+ items
+                Redeem your PRC reward points for real products from 5000+ items
               </p>
               <Link to="/marketplace" className="text-purple-600 font-semibold flex items-center gap-1 hover:gap-2 transition-all">
                 Browse Products <ChevronRight className="h-4 w-4" />
