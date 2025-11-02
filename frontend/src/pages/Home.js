@@ -115,9 +115,9 @@ const Home = () => {
               <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mb-4">
                 <Coins className="h-7 w-7 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Daily Mining</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Daily Rewards</h3>
               <p className="text-gray-600 mb-4">
-                Mine PRC coins every 24 hours with dynamic rewards based on your activity
+                Earn PRC reward points every 24 hours with dynamic rewards based on your activity
               </p>
               <Link to="/mining" className="text-purple-600 font-semibold flex items-center gap-1 hover:gap-2 transition-all">
                 Learn More <ChevronRight className="h-4 w-4" />
