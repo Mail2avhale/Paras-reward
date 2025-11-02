@@ -260,9 +260,9 @@ const Home = () => {
                   <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold">
                     2
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">Start Mining</h3>
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">Earn Rewards</h3>
                   <p className="text-gray-600">
-                    Mine daily, play games, and refer friends to earn PRC coins
+                    Complete daily activities, play games, and refer friends to earn PRC reward points
                   </p>
                 </div>
                 <div className="hidden md:block absolute top-1/2 right-0 transform translate-x-1/2 -translate-y-1/2">
