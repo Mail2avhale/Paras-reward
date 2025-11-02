@@ -1028,6 +1028,11 @@ async def claim_mining(uid: str):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # Check if user is VIP - only VIP users can earn PRC
+    membership_type = user.get("membership_type", "free")
+    if membership_type != "vip":
+        raise HTTPException(status_code=403, detail="VIP membership required to earn PRC. Free users cannot accumulate PRC.")
+    
     # Check if mining session exists (backward compatible - treat None as True for old sessions)
     mining_active = user.get("mining_active")
     if mining_active is False or not user.get("mining_start_time"):
@@ -1053,12 +1058,9 @@ async def claim_mining(uid: str):
     rate_per_minute, _, _ = await calculate_mining_rate(uid)
     mined_amount = elapsed_minutes * rate_per_minute
     
-    # Update user balance
+    # Update user balance (only for VIP users)
     new_balance = user.get("prc_balance", 0) + mined_amount
     new_total_mined = user.get("total_mined", 0) + mined_amount
-    
-    # Check if user is VIP for coin validity
-    membership_type = user.get("membership_type", "free")
     
     await db.users.update_one(
         {"uid": uid},
@@ -1070,12 +1072,24 @@ async def claim_mining(uid: str):
         }}
     )
     
+    # Create wallet transaction record
+    await db.wallet_transactions.insert_one({
+        "transaction_id": str(uuid.uuid4()),
+        "user_id": uid,
+        "type": "credit",
+        "wallet_type": "prc",
+        "amount": mined_amount,
+        "description": "Mining rewards claimed",
+        "balance_after": new_balance,
+        "created_at": now.isoformat()
+    })
+    
     return {
         "message": "Coins claimed successfully",
         "amount": round(mined_amount, 2),
         "new_balance": round(new_balance, 2),
         "membership_type": membership_type,
-        "note": "Free users: coins valid for 24 hours only" if membership_type == "free" else "VIP: unlimited validity"
+        "note": "VIP: unlimited PRC validity"
     }
 
 # ========== TAP GAME ROUTES ==========
