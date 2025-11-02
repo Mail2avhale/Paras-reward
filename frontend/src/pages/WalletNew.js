@@ -561,6 +561,14 @@ const WalletNew = ({ user, onLogout }) => {
                               {withdrawal.account_holder_name && (
                                 <p>Account Holder: {withdrawal.account_holder_name}</p>
                               )}
+                              {withdrawal.bank_name && (
+                                <p className="flex items-center gap-2">
+                                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded text-sm ${getBankColor(withdrawal.bank_name)}`}>
+                                    {getBankLogo(withdrawal.bank_name)}
+                                  </span>
+                                  <span>Bank: {getBankByName(withdrawal.bank_name)?.name || withdrawal.bank_name}</span>
+                                </p>
+                              )}
                               <p>Requested: {new Date(withdrawal.created_at).toLocaleString()}</p>
                               {withdrawal.utr_number && (
                                 <p className="text-green-600 font-medium">UTR: {withdrawal.utr_number}</p>
