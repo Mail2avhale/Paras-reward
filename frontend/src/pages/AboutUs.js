@@ -47,7 +47,7 @@ const AboutUs = () => {
               </li>
               <li className="flex items-start">
                 <span className="inline-block w-2 h-2 bg-purple-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                <span>To connect users with real-world benefits through digital mining</span>
+                <span>To connect users with real-world benefits through digital rewards</span>
               </li>
               <li className="flex items-start">
                 <span className="inline-block w-2 h-2 bg-purple-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
