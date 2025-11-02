@@ -494,7 +494,13 @@ const WalletNew = ({ user, onLogout }) => {
                           </div>
                           <div className="text-sm text-gray-600 space-y-1">
                             <p>Net Amount: ₹{withdrawal.net_amount.toFixed(2)} (Fee: ₹{withdrawal.fee.toFixed(2)})</p>
-                            <p>Payment: {getPaymentMethodName(withdrawal.payment_mode)} - {withdrawal.upi_id || withdrawal.bank_account}</p>
+                            <p className="flex items-center gap-2">
+                              {getPaymentMethodIcon(withdrawal.payment_mode)}
+                              <span>Payment: {getPaymentMethodName(withdrawal.payment_mode)} - {withdrawal.upi_id || withdrawal.bank_account}</span>
+                            </p>
+                            {withdrawal.account_holder_name && (
+                              <p>Account Holder: {withdrawal.account_holder_name}</p>
+                            )}
                             <p>Requested: {new Date(withdrawal.created_at).toLocaleString()}</p>
                             {withdrawal.utr_number && (
                               <p className="text-green-600 font-medium">UTR: {withdrawal.utr_number}</p>
