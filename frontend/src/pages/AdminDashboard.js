@@ -1683,6 +1683,7 @@ const AdminDashboard = ({ user, onLogout }) => {
           {/* Settings Tab - Payment & Delivery Configuration */}
           {activeTab === 'settings' && (
             <div className="space-y-8">
+              <ContactDetailsSettings />
               <PaymentConfigSettings />
               <DeliveryConfigSettings />
             </div>
