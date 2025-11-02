@@ -87,7 +87,7 @@ const WalletNew = ({ user, onLogout }) => {
         user_id: user.uid,
         amount: parseFloat(cashbackAmount),
         payment_mode: cashbackPaymentMode,
-        upi_id: cashbackPaymentMode === 'upi' ? cashbackUpiId : null,
+        upi_id: isUpiMode ? cashbackUpiId : null,
         bank_account: cashbackPaymentMode === 'bank' ? cashbackBankAccount : null,
         ifsc_code: cashbackPaymentMode === 'bank' ? cashbackIfsc : null
       });
