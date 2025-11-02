@@ -3176,6 +3176,64 @@ async def update_delivery_config(request: Request):
     
     return {"message": "Delivery configuration updated successfully"}
 
+
+@api_router.get("/contact-details")
+async def get_contact_details():
+    """Get public contact details"""
+    config = await db.system_config.find_one({"config_type": "contact"})
+    
+    if not config:
+        # Return default contact details
+        return {
+            "address": "PARAS REWARD\nMaharashtra, India",
+            "phone": "+91-XXXXXXXXXX",
+            "email": "support@parasreward.com",
+            "website": "www.parasreward.com"
+        }
+    
+    return {
+        "address": config.get("address", "PARAS REWARD\nMaharashtra, India"),
+        "phone": config.get("phone", "+91-XXXXXXXXXX"),
+        "email": config.get("email", "support@parasreward.com"),
+        "website": config.get("website", "www.parasreward.com")
+    }
+
+@api_router.post("/admin/contact-details")
+async def update_contact_details(request: Request):
+    """Update contact details (Admin only)"""
+    data = await request.json()
+    
+    address = data.get("address")
+    phone = data.get("phone")
+    email = data.get("email")
+    website = data.get("website")
+    
+    # Validate required fields
+    if not all([address, phone, email, website]):
+        raise HTTPException(status_code=400, detail="All contact fields are required")
+    
+    config_data = {
+        "config_type": "contact",
+        "address": address,
+        "phone": phone,
+        "email": email,
+        "website": website,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Update or insert
+    existing = await db.system_config.find_one({"config_type": "contact"})
+    
+    if existing:
+        await db.system_config.update_one(
+            {"config_type": "contact"},
+            {"$set": config_data}
+        )
+    else:
+        await db.system_config.insert_one(config_data)
+    
+    return {"message": "Contact details updated successfully"}
+
 @api_router.post("/orders/{order_id}/distribute-delivery-charge")
 async def distribute_delivery_charge(order_id: str):
     """Distribute commission based on order PRC value (10% of total PRC converted to ₹)"""
