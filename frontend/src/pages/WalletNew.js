@@ -125,8 +125,8 @@ const WalletNew = ({ user, onLogout }) => {
       return;
     }
 
-    if (profitPaymentMode === 'bank' && (!profitBankAccount || !profitIfsc)) {
-      toast.error('Please enter bank account details');
+    if (profitPaymentMode === 'bank' && (!profitBankAccount || !profitIfsc || !profitAccountHolderName)) {
+      toast.error('Please enter complete bank account details');
       return;
     }
 
