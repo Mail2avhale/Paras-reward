@@ -545,6 +545,14 @@ async def login(
     if user.get("is_banned"):
         raise HTTPException(status_code=403, detail=f"Account suspended: {user.get('suspension_reason', 'Contact support')}")
     
+    # Enforce PRC = 0 for free users (only VIP can have PRC)
+    if user.get("membership_type") != "vip" and user.get("prc_balance", 0) > 0:
+        await db.users.update_one(
+            {"uid": user["uid"]},
+            {"$set": {"prc_balance": 0}}
+        )
+        user["prc_balance"] = 0
+    
     # Update last login and device info
     update_data = {
         "last_login": datetime.now(timezone.utc).isoformat(),
