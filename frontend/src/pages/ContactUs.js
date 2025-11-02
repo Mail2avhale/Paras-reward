@@ -1,9 +1,33 @@
 import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import axios from 'axios';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, MapPin, Phone, Mail, MessageSquare } from 'lucide-react';
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
+
 const ContactUs = () => {
+  const [contactDetails, setContactDetails] = useState({
+    address: "PARAS REWARD\nMaharashtra, India",
+    phone: "+91-XXXXXXXXXX",
+    email: "support@parasreward.com",
+    website: "www.parasreward.com"
+  });
+
+  useEffect(() => {
+    fetchContactDetails();
+  }, []);
+
+  const fetchContactDetails = async () => {
+    try {
+      const response = await axios.get(`${API}/contact-details`);
+      setContactDetails(response.data);
+    } catch (error) {
+      console.error('Error fetching contact details:', error);
+    }
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Header */}
