@@ -10,18 +10,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 const Navbar = ({ user, onLogout }) => {
-  // Define role-based visibility
-  const isRegularUser = !user.role || user.role === 'user';
-  const isAdmin = user.role === 'admin';
-  const isStockist = ['master_stockist', 'sub_stockist'].includes(user.role);
-  const isOutlet = user.role === 'outlet';
+  // Define role-based visibility (handle when user is null)
+  const isRegularUser = !user || !user.role || user.role === 'user';
+  const isAdmin = user?.role === 'admin';
+  const isStockist = user?.role && ['master_stockist', 'sub_stockist'].includes(user.role);
+  const isOutlet = user?.role === 'outlet';
   
   return (
     <nav className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/dashboard" className="flex items-center gap-2">
+          <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2">
             <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-xl">P</span>
             </div>
@@ -30,10 +30,12 @@ const Navbar = ({ user, onLogout }) => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6">
-            {/* Dashboard - Show for everyone */}
-            <Link to="/dashboard" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
-              Dashboard
-            </Link>
+            {user ? (
+              <>
+                {/* Dashboard - Show for everyone */}
+                <Link to="/dashboard" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
+                  Dashboard
+                </Link>
             
             {/* Regular User Features - Only for users */}
             {isRegularUser && (
