@@ -114,7 +114,8 @@ const Dashboard = ({ user, onLogout }) => {
         )}
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <h3 className="text-2xl font-bold text-gray-900 mb-4">Quick Access</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4 mb-8">
           <Link to="/mining" className="block">
             <Button data-testid="mining-btn" className="w-full h-32 bg-white/80 backdrop-blur-sm hover:bg-white border-2 border-purple-200 hover:border-purple-400 text-gray-900 rounded-2xl shadow-lg hover:shadow-xl transition-all flex flex-col items-center justify-center gap-3">
               <Zap className="h-8 w-8 text-purple-600" />
@@ -129,6 +130,13 @@ const Dashboard = ({ user, onLogout }) => {
             </Button>
           </Link>
 
+          <Link to="/referrals" className="block">
+            <Button className="w-full h-32 bg-white/80 backdrop-blur-sm hover:bg-white border-2 border-green-200 hover:border-green-400 text-gray-900 rounded-2xl shadow-lg hover:shadow-xl transition-all flex flex-col items-center justify-center gap-3">
+              <Users className="h-8 w-8 text-green-600" />
+              <span className="font-semibold">Referrals</span>
+            </Button>
+          </Link>
+
           <Link to="/marketplace" className="block">
             <Button data-testid="marketplace-btn" className="w-full h-32 bg-white/80 backdrop-blur-sm hover:bg-white border-2 border-pink-200 hover:border-pink-400 text-gray-900 rounded-2xl shadow-lg hover:shadow-xl transition-all flex flex-col items-center justify-center gap-3">
               <Gift className="h-8 w-8 text-pink-600" />
@@ -140,6 +148,27 @@ const Dashboard = ({ user, onLogout }) => {
             <Button data-testid="leaderboard-btn" className="w-full h-32 bg-white/80 backdrop-blur-sm hover:bg-white border-2 border-orange-200 hover:border-orange-400 text-gray-900 rounded-2xl shadow-lg hover:shadow-xl transition-all flex flex-col items-center justify-center gap-3">
               <Trophy className="h-8 w-8 text-orange-600" />
               <span className="font-semibold">Leaderboard</span>
+            </Button>
+          </Link>
+
+          <Link to="/vip" className="block">
+            <Button className="w-full h-32 bg-white/80 backdrop-blur-sm hover:bg-white border-2 border-yellow-200 hover:border-yellow-400 text-gray-900 rounded-2xl shadow-lg hover:shadow-xl transition-all flex flex-col items-center justify-center gap-3">
+              <Crown className="h-8 w-8 text-yellow-600" />
+              <span className="font-semibold">VIP Membership</span>
+            </Button>
+          </Link>
+
+          <Link to="/kyc" className="block">
+            <Button className="w-full h-32 bg-white/80 backdrop-blur-sm hover:bg-white border-2 border-indigo-200 hover:border-indigo-400 text-gray-900 rounded-2xl shadow-lg hover:shadow-xl transition-all flex flex-col items-center justify-center gap-3">
+              <ShieldCheck className="h-8 w-8 text-indigo-600" />
+              <span className="font-semibold">KYC Verification</span>
+            </Button>
+          </Link>
+
+          <Link to="/orders" className="block">
+            <Button className="w-full h-32 bg-white/80 backdrop-blur-sm hover:bg-white border-2 border-teal-200 hover:border-teal-400 text-gray-900 rounded-2xl shadow-lg hover:shadow-xl transition-all flex flex-col items-center justify-center gap-3">
+              <Package className="h-8 w-8 text-teal-600" />
+              <span className="font-semibold">My Orders</span>
             </Button>
           </Link>
         </div>
