@@ -1519,6 +1519,9 @@ async def checkout(request: Request):
         "order_id": order.order_id,
         "secret_code": order.secret_code,
         "total_prc": total_prc,
+        "delivery_charge": delivery_charge,
+        "delivery_charge_status": "deducted" if pending_delivery_lien == 0 else "pending_lien",
+        "pending_lien": pending_delivery_lien,
         "cashback_earned": cashback_amount,
         "new_prc_balance": new_prc_balance,
         "new_cashback_balance": new_cashback_balance
