@@ -142,7 +142,7 @@ const Mining = ({ user, onLogout }) => {
 
           <Card className="p-6 bg-white">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm font-medium">Session Mined</span>
+              <span className="text-gray-600 text-sm font-medium">Session Earned</span>
               <Zap className="h-5 w-5 text-yellow-600" />
             </div>
             <div className="text-3xl font-bold text-gray-900">
