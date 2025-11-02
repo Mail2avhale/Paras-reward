@@ -139,10 +139,40 @@ const Navbar = ({ user, onLogout }) => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+            </>
+            ) : (
+              /* Not logged in - Show public links */
+              <>
+                <Link to="/about" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
+                  About
+                </Link>
+                <Link to="/how-it-works" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
+                  How It Works
+                </Link>
+                <Link to="/faq" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
+                  FAQ
+                </Link>
+                <Link to="/contact" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
+                  Contact
+                </Link>
+                <Link to="/login">
+                  <Button variant="ghost" className="text-purple-600 hover:text-purple-700">
+                    Login
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white">
+                    Get Started
+                  </Button>
+                </Link>
+              </>
+            )}
+          </div>
 
           {/* Mobile Navigation */}
           <div className="md:hidden">
-            <DropdownMenu>
+            {user ? (
+              <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">
                   <Menu className="h-6 w-6" />
