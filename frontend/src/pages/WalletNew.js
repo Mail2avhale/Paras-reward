@@ -281,7 +281,10 @@ const WalletNew = ({ user, onLogout }) => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="upi">UPI</SelectItem>
+                      <SelectItem value="phonepe">PhonePe</SelectItem>
+                      <SelectItem value="googlepay">Google Pay</SelectItem>
+                      <SelectItem value="paytm">Paytm</SelectItem>
+                      <SelectItem value="upi">Other UPI</SelectItem>
                       <SelectItem value="bank">Bank Transfer</SelectItem>
                     </SelectContent>
                   </Select>
