@@ -291,6 +291,9 @@ const Home = ({ user, onLogout }) => {
           </Link>
         </div>
       </div>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };
