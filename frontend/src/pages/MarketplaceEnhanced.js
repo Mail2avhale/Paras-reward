@@ -175,7 +175,8 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
       fetchCart();
     } catch (error) {
       console.error('Error removing from cart:', error);
-      toast.error('Failed to remove item');
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to remove item';
+      toast.error(errorMessage);
     }
   };
 
