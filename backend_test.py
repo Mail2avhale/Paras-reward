@@ -675,6 +675,7 @@ def test_profit_wallet_management():
     print(f"\n2.2. Testing Admin Deduct - Sufficient Balance (₹200)")
     try:
         deduct_data = {
+            "admin_uid": admin_uid,
             "user_id": stockist_uid,
             "amount": 200,
             "description": "Test deduction from profit wallet"
