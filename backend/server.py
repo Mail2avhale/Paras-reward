@@ -2128,16 +2128,19 @@ async def request_cashback_withdrawal(request: Request):
 
 @api_router.post("/wallet/profit/withdraw")
 async def request_profit_withdrawal(request: Request):
-    """Request profit wallet withdrawal (for stockists/outlets)"""
+    """Request profit wallet withdrawal (for stockists/outlets) with enhanced fee logic"""
     data = await request.json()
     user_id = data.get("user_id")
     amount = data.get("amount", 0)
     payment_mode = data.get("payment_mode", "upi")
     upi_id = data.get("upi_id")
+    phone_number = data.get("phone_number")
+    account_holder_name = data.get("account_holder_name")
+    bank_name = data.get("bank_name")
     bank_account = data.get("bank_account")
     ifsc_code = data.get("ifsc_code")
     
-    # Validate
+    # Validate minimum withdrawal
     if amount < 50:
         raise HTTPException(status_code=400, detail="Minimum withdrawal amount is ₹50")
     
@@ -2149,12 +2152,19 @@ async def request_profit_withdrawal(request: Request):
     if user.get("role") not in ["master_stockist", "sub_stockist", "outlet"]:
         raise HTTPException(status_code=403, detail="Only stockists and outlets can withdraw from profit wallet")
     
-    # Check balance (amount + fee)
-    profit_balance = user.get("profit_wallet_balance", 0)
-    total_required = amount + 5  # ₹5 fee
+    # Check withdrawal eligibility (includes balance and lien checks)
+    eligibility = await check_withdrawal_eligibility(user_id, amount, "profit")
     
-    if profit_balance < total_required:
-        raise HTTPException(status_code=400, detail=f"Insufficient balance. Required: ₹{total_required} (including ₹5 fee)")
+    if not eligibility["eligible"]:
+        raise HTTPException(
+            status_code=400, 
+            detail=eligibility["reason"]
+        )
+    
+    # NEW LOGIC: Fee deducted from withdrawal amount
+    withdrawal_fee = 5.0
+    amount_to_receive = amount - withdrawal_fee  # User receives less
+    wallet_debit = amount  # Wallet debited only requested amount
     
     # Create withdrawal request
     withdrawal = {
@@ -2163,11 +2173,14 @@ async def request_profit_withdrawal(request: Request):
         "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
         "entity_type": user.get("role"),
         "wallet_type": "profit",
-        "amount": amount,
-        "fee": 5.0,
-        "net_amount": amount - 5,
+        "amount_requested": amount,
+        "fee": withdrawal_fee,
+        "amount_to_receive": amount_to_receive,
         "payment_mode": payment_mode,
         "upi_id": upi_id,
+        "phone_number": phone_number,
+        "account_holder_name": account_holder_name,
+        "bank_name": bank_name,
         "bank_account": bank_account,
         "ifsc_code": ifsc_code,
         "status": "pending",
@@ -2177,24 +2190,24 @@ async def request_profit_withdrawal(request: Request):
         "processed_at": None
     }
     
-    # Deduct from balance immediately (hold)
-    await db.users.update_one(
-        {"uid": user_id},
-        {"$inc": {"profit_wallet_balance": -total_required}}
+    # Log transaction (debit wallet)
+    transaction_id = await log_transaction(
+        user_id=user_id,
+        wallet_type="profit",
+        transaction_type="withdrawal",
+        amount=wallet_debit,
+        description=f"Withdrawal request - ₹{amount} (Fee: ₹{withdrawal_fee}, You receive: ₹{amount_to_receive})",
+        metadata={
+            "withdrawal_id": withdrawal["withdrawal_id"],
+            "payment_mode": payment_mode,
+            "amount_requested": amount,
+            "fee": withdrawal_fee,
+            "amount_to_receive": amount_to_receive,
+            "lien_amount": eligibility["lien_amount"]
+        },
+        related_id=withdrawal["withdrawal_id"],
+        related_type="withdrawal"
     )
-    
-    # Create wallet transaction record
-    await db.wallet_transactions.insert_one({
-        "transaction_id": str(uuid.uuid4()),
-        "user_id": user_id,
-        "type": "debit",
-        "wallet_type": "profit",
-        "amount": total_required,
-        "description": f"Withdrawal request (₹{amount} + ₹5 fee)",
-        "reference_id": withdrawal["withdrawal_id"],
-        "balance_after": profit_balance - total_required,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    })
     
     # Insert withdrawal request
     await db.profit_withdrawals.insert_one(withdrawal)
@@ -2202,9 +2215,12 @@ async def request_profit_withdrawal(request: Request):
     return {
         "message": "Withdrawal request submitted successfully",
         "withdrawal_id": withdrawal["withdrawal_id"],
-        "amount": amount,
-        "fee": 5.0,
-        "net_amount": amount - 5,
+        "amount_requested": amount,
+        "withdrawal_fee": withdrawal_fee,
+        "amount_to_receive": amount_to_receive,
+        "wallet_debited": wallet_debit,
+        "lien_amount": eligibility["lien_amount"],
+        "transaction_id": transaction_id,
         "status": "pending"
     }
 
