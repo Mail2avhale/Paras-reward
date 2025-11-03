@@ -984,6 +984,115 @@ const StockRequestSystem = () => {
           </Card>
         </div>
       )}
+
+      {/* Add Stock Modal (Admin Only) */}
+      {showAddStockModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {newStockData.action === 'add' ? 'Add Stock' : 'Update Stock Quantity'}
+              </h2>
+              <button 
+                onClick={() => {
+                  setShowAddStockModal(false);
+                  setNewStockData({ product_id: '', quantity: '', action: 'add' });
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Note:</strong> {newStockData.action === 'add' 
+                  ? 'This will ADD the quantity to your existing stock.' 
+                  : 'This will SET the stock to the exact quantity you enter.'}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Product *
+                </label>
+                <select
+                  value={newStockData.product_id}
+                  onChange={(e) => setNewStockData({...newStockData, product_id: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  disabled={newStockData.action === 'set'}
+                >
+                  <option value="">Select Product</option>
+                  {products.map((product) => (
+                    <option key={product.product_id} value={product.product_id}>
+                      {product.name} - {product.product_id}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Action *
+                </label>
+                <select
+                  value={newStockData.action}
+                  onChange={(e) => setNewStockData({...newStockData, action: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="add">Add Quantity (Increase Stock)</option>
+                  <option value="set">Set Quantity (Replace Stock)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Quantity *
+                </label>
+                <Input
+                  type="number"
+                  value={newStockData.quantity}
+                  onChange={(e) => setNewStockData({...newStockData, quantity: e.target.value})}
+                  placeholder={newStockData.action === 'add' ? "Enter quantity to add" : "Enter new total quantity"}
+                  min="1"
+                  className="w-full"
+                />
+                {newStockData.action === 'add' && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    This quantity will be ADDED to existing stock
+                  </p>
+                )}
+                {newStockData.action === 'set' && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Stock will be SET to exactly this quantity
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <Button
+                  onClick={() => {
+                    setShowAddStockModal(false);
+                    setNewStockData({ product_id: '', quantity: '', action: 'add' });
+                  }}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddStock}
+                  disabled={loading}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  {loading ? 'Processing...' : (newStockData.action === 'add' ? 'Add Stock' : 'Update Stock')}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
