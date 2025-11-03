@@ -766,7 +766,7 @@ async def update_profile(uid: str, request: Request):
     # Fields that can be updated
     updatable_fields = [
         "first_name", "middle_name", "last_name", "mobile",
-        "state", "district", "taluka", "village", "pincode",
+        "state", "district", "taluka", "tahsil", "village", "pincode",
         "aadhaar_number", "pan_number", "upi_id"
     ]
     
