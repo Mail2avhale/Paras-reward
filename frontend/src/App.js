@@ -100,7 +100,7 @@ function App() {
           <Route path="/privacy" element={<PrivacyPolicy />} />
           
           {/* Protected Routes */}
-          <Route path="/dashboard" element={user ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+          <Route path="/dashboard" element={user ? <DashboardNew user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/support" element={user ? <SupportTickets user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/mining" element={user ? <Mining user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
           <Route path="/game" element={user ? <TapGame user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
