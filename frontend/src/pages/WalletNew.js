@@ -578,11 +578,11 @@ const WalletNew = ({ user, onLogout }) => {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <span className="text-lg font-bold">₹{withdrawal.amount?.toFixed(2) || '0.00'}</span>
+                            <span className="text-lg font-bold">₹{withdrawal.amount_requested?.toFixed(2) || '0.00'}</span>
                             {getStatusBadge(withdrawal.status)}
                           </div>
                           <div className="text-sm text-gray-600 space-y-1">
-                            <p>Net Amount: ₹{withdrawal.net_amount?.toFixed(2) || '0.00'} (Fee: ₹{withdrawal.fee?.toFixed(2) || '0.00'})</p>
+                            <p>Net Amount: ₹{withdrawal.amount_to_receive?.toFixed(2) || '0.00'} (Fee: ₹{withdrawal.fee?.toFixed(2) || '0.00'})</p>
                             <p className="flex items-center gap-2">
                               {getPaymentMethodIcon(withdrawal.payment_mode)}
                               <span>Payment: {getPaymentMethodName(withdrawal.payment_mode)} - {withdrawal.upi_id || withdrawal.bank_account}</span>
