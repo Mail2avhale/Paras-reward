@@ -823,7 +823,8 @@ def test_profit_wallet_management():
     # Test 3.1: Apply Monthly Fee to All VIP Users
     print(f"\n4.1. Testing Apply Monthly Fee to All VIP Users")
     try:
-        response = requests.post(f"{API_BASE}/admin/apply-monthly-fees", json={}, timeout=30)
+        monthly_fee_data = {"admin_uid": admin_uid}
+        response = requests.post(f"{API_BASE}/admin/apply-monthly-fees", json=monthly_fee_data, timeout=30)
         print(f"Status: {response.status_code}")
         print(f"Response: {response.text}")
         
