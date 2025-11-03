@@ -1644,8 +1644,17 @@ def print_test_summary(results):
         print(f"      - Monthly fee application: ✅")
         print(f"      - Transaction logging: ✅")
     
+    # Cart Order Placement Flow
+    status = "✅ PASSED" if results["cart_order_placement"] else "❌ FAILED"
+    print(f"   9. Cart Order Placement Flow: {status}")
+    if results["cart_order_placement"]:
+        print(f"      - Cart operations with cash_price: ✅")
+        print(f"      - Checkout with delivery charge calculation: ✅")
+        print(f"      - Order creation and balance updates: ✅")
+        print(f"      - Validation tests (empty cart, non-VIP, insufficient balance): ✅")
+    
     # Overall Status
-    critical_tests = ["authentication", "user_management", "admin_dashboard_kpis", "core_features", "profit_wallet_management"]
+    critical_tests = ["authentication", "user_management", "admin_dashboard_kpis", "core_features", "profit_wallet_management", "cart_order_placement"]
     all_critical_passed = all(results[key] for key in critical_tests)
     all_passed = all(results[key] for key in results.keys() if key != "test_completed")
     
