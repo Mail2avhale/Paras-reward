@@ -572,8 +572,14 @@ const WithdrawalManagementAdmin = () => {
             <div className="space-y-4">
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-sm text-gray-600">User: <span className="font-semibold text-gray-900">{selectedWithdrawal.user_name}</span></p>
-                <p className="text-sm text-gray-600">Amount: <span className="font-semibold text-gray-900">{formatCurrency(selectedWithdrawal.amount)}</span></p>
-                <p className="text-sm text-gray-600">Net Amount: <span className="font-semibold text-green-600">{formatCurrency((selectedWithdrawal.amount || 0) - (selectedWithdrawal.withdrawal_fee || 0))}</span></p>
+                <p className="text-sm text-gray-600">Amount Requested: <span className="font-semibold text-gray-900">{formatCurrency(selectedWithdrawal.amount_requested || selectedWithdrawal.amount || 0)}</span></p>
+                <p className="text-sm text-gray-600">Processing Fee: <span className="font-semibold text-orange-600">{formatCurrency(selectedWithdrawal.fee || selectedWithdrawal.withdrawal_fee || 5)}</span></p>
+                <p className="text-sm text-gray-600">Net Payable: <span className="font-semibold text-green-600">
+                  {formatCurrency(
+                    selectedWithdrawal.amount_to_receive || 
+                    ((selectedWithdrawal.amount_requested || selectedWithdrawal.amount || 0) - (selectedWithdrawal.fee || selectedWithdrawal.withdrawal_fee || 5))
+                  )}
+                </span></p>
               </div>
 
               {actionType === 'reject' && (
