@@ -448,6 +448,61 @@ const ProfileEnhanced = ({ user, onLogout }) => {
   const handlePasswordChange = async (e) => {
     e.preventDefault();
 
+    if (passwordData.new_password !== passwordData.confirm_password) {
+      toast.error('New passwords do not match');
+      return;
+    }
+
+    if (passwordData.new_password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await axios.post(`${API}/user/change-password`, {
+        uid: user.uid,
+        current_password: passwordData.current_password,
+        new_password: passwordData.new_password
+      });
+      toast.success('Password changed successfully!');
+      setPasswordData({ current_password: '', new_password: '', confirm_password: '' });
+    } catch (error) {
+      console.error('Error changing password:', error);
+      toast.error(error.response?.data?.detail || 'Failed to change password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate profile completion percentage
+  const calculateProfileCompletion = () => {
+    const fields = {
+      // Personal Info (40%)
+      name: profileData.name ? 10 : 0,
+      mobile: profileData.mobile ? 10 : 0,
+      aadhaar_number: profileData.aadhaar_number ? 10 : 0,
+      pan_number: profileData.pan_number ? 10 : 0,
+      
+      // Contact & Address (30%)
+      address_line1: profileData.address_line1 ? 10 : 0,
+      state: profileData.state ? 10 : 0,
+      pincode: profileData.pincode ? 10 : 0,
+      
+      // Banking/Payment (20%)
+      payment_method: (profileData.upi_id || profileData.bank_account_number) ? 20 : 0,
+      
+      // KYC (10%)
+      kyc_verified: kycStatus === 'verified' ? 10 : 0
+    };
+    
+    return Object.values(fields).reduce((sum, val) => sum + val, 0);
+  };
+
+  const completionPercentage = calculateProfileCompletion();
+
+  return (
+
     // Validation
     if (!passwordData.current_password || !passwordData.new_password || !passwordData.confirm_password) {
       toast.error('All fields are required');
