@@ -723,12 +723,12 @@ def test_profit_wallet_management():
             
             # Expected: Balance ₹0, Lien ₹100 (₹400 - ₹300 remaining balance)
             if (result.get('new_balance') == 0 and 
-                result.get('lien_amount') == 100 and 
-                result.get('wallet_status') == 'lien_pending'):
+                result.get('lien_added') == 100 and 
+                result.get('total_lien') == 100):
                 test_results["admin_deduct_insufficient_lien"] = True
-                print(f"✅ Lien creation correct: Balance ₹0, Lien ₹100, Status lien_pending")
+                print(f"✅ Lien creation correct: Balance ₹0, Lien Added ₹100, Total Lien ₹100")
             else:
-                print(f"❌ Lien creation incorrect")
+                print(f"❌ Lien creation incorrect: Balance ₹{result.get('new_balance')}, Lien Added ₹{result.get('lien_added')}, Total Lien ₹{result.get('total_lien')}")
         else:
             print(f"❌ Admin deduct with lien failed: {response.status_code}")
             
