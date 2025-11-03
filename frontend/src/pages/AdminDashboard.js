@@ -1524,6 +1524,23 @@ const AdminDashboard = ({ user, onLogout }) => {
                 </div>
               </div>
 
+              {/* Filter and paginate users */}
+              {(() => {
+                // Filter users based on search and role
+                const filteredUsers = users.filter(u => {
+                  const matchesSearch = !searchQuery || 
+                    u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    u.mobile?.includes(searchQuery);
+                  const matchesRole = !roleFilter || u.role === roleFilter;
+                  return matchesSearch && matchesRole;
+                });
+
+                // Paginate filtered users
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
+
+                return (
               <Card className="bg-white">
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -1538,14 +1555,14 @@ const AdminDashboard = ({ user, onLogout }) => {
                       </tr>
                     </thead>
                     <tbody>
-                      {users.length === 0 ? (
+                      {paginatedUsers.length === 0 ? (
                         <tr>
                           <td colSpan="6" className="text-center py-12 text-gray-500">
                             No users found
                           </td>
                         </tr>
                       ) : (
-                        users.map((u) => (
+                        paginatedUsers.map((u) => (
                           <tr key={u.uid} className="border-b hover:bg-gray-50">
                             <td className="py-4 px-6">
                               <div className="font-medium text-gray-900">{u.name || 'N/A'}</div>
