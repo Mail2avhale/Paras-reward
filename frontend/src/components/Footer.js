@@ -10,10 +10,11 @@ const Footer = () => {
           {/* About */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-xl">P</span>
-              </div>
-              <span className="text-xl font-bold">PARAS REWARD</span>
+              <img 
+                src="/paras-logo.jpg" 
+                alt="PARAS REWARD" 
+                className="h-12 w-auto object-contain"
+              />
             </div>
             <p className="text-gray-300 mb-4">
               India's #1 reward points platform. Earn PRC through daily activities and redeem for real products.
