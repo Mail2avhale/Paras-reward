@@ -598,11 +598,39 @@ const StockRequestSystem = () => {
       {/* My Inventory Tab */}
       {activeTab === 'my-inventory' && (
         <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">
+              {userRole === 'admin' ? 'Company Stock Inventory' : 'My Stock Inventory'}
+            </h3>
+            {userRole === 'admin' && (
+              <Button 
+                onClick={() => setShowAddStockModal(true)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Stock
+              </Button>
+            )}
+          </div>
+
           {myInventory.length === 0 ? (
             <Card className="p-12 text-center">
               <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-gray-900 mb-2">No Stock Available</h3>
-              <p className="text-gray-600">Your inventory is empty. Request stock from your parent entity.</p>
+              <p className="text-gray-600 mb-4">
+                {userRole === 'admin' 
+                  ? 'Your company inventory is empty. Add stock to start fulfilling requests.' 
+                  : 'Your inventory is empty. Request stock from your parent entity.'}
+              </p>
+              {userRole === 'admin' && (
+                <Button 
+                  onClick={() => setShowAddStockModal(true)}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Stock
+                </Button>
+              )}
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -620,6 +648,24 @@ const StockRequestSystem = () => {
                   <div className="text-xs text-gray-400">
                     Updated: {formatDate(item.updated_at)}
                   </div>
+                  {userRole === 'admin' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full mt-4"
+                      onClick={() => {
+                        setNewStockData({
+                          product_id: item.product_id,
+                          quantity: item.quantity.toString(),
+                          action: 'set'
+                        });
+                        setShowAddStockModal(true);
+                      }}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Update Quantity
+                    </Button>
+                  )}
                 </Card>
               ))}
             </div>
