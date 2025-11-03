@@ -24,6 +24,14 @@ const ProfileEnhanced = ({ user, onLogout }) => {
   const [availableTahsils, setAvailableTahsils] = useState([]);
   const [availablePins, setAvailablePins] = useState([]);
   
+  // Validation errors state
+  const [validationErrors, setValidationErrors] = useState({
+    mobile: '',
+    aadhaar_number: '',
+    pan_number: '',
+    upi_id: ''
+  });
+  
   const [profileData, setProfileData] = useState({
     first_name: '',
     middle_name: '',
@@ -48,6 +56,43 @@ const ProfileEnhanced = ({ user, onLogout }) => {
     new_password: '',
     confirm_password: ''
   });
+
+  // Validation patterns
+  const validationPatterns = {
+    mobile: /^[6-9]\d{9}$/,
+    aadhaar: /^\d{12}$/,
+    pan: /^[A-Z]{5}\d{4}[A-Z]{1}$/,
+    upi: /^[\w.-]+@[\w.-]+$/
+  };
+
+  // Validation functions
+  const validateMobile = (value) => {
+    if (!value) return '';
+    if (!/^\d+$/.test(value)) return 'Mobile number must contain only digits';
+    if (value.length !== 10) return 'Mobile number must be exactly 10 digits';
+    if (!/^[6-9]/.test(value)) return 'Mobile number must start with 6, 7, 8, or 9';
+    return '';
+  };
+
+  const validateAadhaar = (value) => {
+    if (!value) return '';
+    if (!/^\d+$/.test(value)) return 'Aadhaar must contain only digits';
+    if (value.length !== 12) return 'Aadhaar must be exactly 12 digits';
+    return '';
+  };
+
+  const validatePAN = (value) => {
+    if (!value) return '';
+    if (value.length !== 10) return 'PAN must be exactly 10 characters';
+    if (!/^[A-Z]{5}\d{4}[A-Z]{1}$/.test(value)) return 'Invalid PAN format (e.g., ABCDE1234F)';
+    return '';
+  };
+
+  const validateUPI = (value) => {
+    if (!value) return '';
+    if (!/^[\w.-]+@[\w.-]+$/.test(value)) return 'Invalid UPI format (e.g., name@bank)';
+    return '';
+  };
 
   useEffect(() => {
     if (user) {
