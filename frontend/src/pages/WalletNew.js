@@ -371,53 +371,60 @@ const WalletNew = ({ user, onLogout }) => {
                   <div>
                     <label className="block text-sm font-medium mb-2">UPI ID or Mobile Number</label>
                     <Input
-                      placeholder="your-upi@paytm or mobile number"
+                      placeholder="No payment details found. Update in Profile"
                       value={cashbackUpiId}
-                      onChange={(e) => setCashbackUpiId(e.target.value)}
+                      readOnly
+                      className="bg-gray-50"
                     />
+                    <p className="text-xs text-blue-600 mt-1">
+                      ℹ️ Payment details are locked. Update in your <a href="/profile" className="underline">Profile → Banking & Payment</a>
+                    </p>
                   </div>
                 )}
 
                 {cashbackPaymentMode === 'bank' && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Bank Account Number</label>
-                      <Input
-                        placeholder="Enter account number"
-                        value={cashbackBankAccount}
-                        onChange={(e) => setCashbackBankAccount(e.target.value)}
-                      />
-                    </div>
-                    <div>
                       <label className="block text-sm font-medium mb-2">Account Holder Name</label>
                       <Input
-                        placeholder="Enter account holder name"
+                        placeholder="No bank details found. Update in Profile"
                         value={cashbackAccountHolderName}
-                        onChange={(e) => setCashbackAccountHolderName(e.target.value)}
+                        readOnly
+                        className="bg-gray-50"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Bank Name *</label>
-                      <Select value={cashbackBankName} onValueChange={setCashbackBankName}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your bank" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[300px]">
-                          {indianBanks.map((bank) => (
-                            <SelectItem key={bank.id} value={bank.name}>
-                              <div className="flex items-center gap-2">
-                                <span className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs ${bank.color} text-white`}>
-                                  {bank.logo}
-                                </span>
-                                <span>{bank.name}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <label className="block text-sm font-medium mb-2">Bank Account Number</label>
+                      <Input
+                        placeholder="No bank details found. Update in Profile"
+                        value={cashbackBankAccount}
+                        readOnly
+                        className="bg-gray-50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Bank Name</label>
+                      <Input
+                        placeholder="No bank details found. Update in Profile"
+                        value={cashbackBankName}
+                        readOnly
+                        className="bg-gray-50"
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2">IFSC Code</label>
+                      <Input
+                        placeholder="No bank details found. Update in Profile"
+                        value={cashbackIfsc}
+                        readOnly
+                        className="bg-gray-50"
+                      />
+                    </div>
+                    <p className="text-xs text-blue-600">
+                      ℹ️ Bank details are locked. Update in your <a href="/profile" className="underline">Profile → Banking & Payment</a>
+                    </p>
+                  </>
+                )}
                       <Input
                         placeholder="Enter IFSC code"
                         value={cashbackIfsc}
