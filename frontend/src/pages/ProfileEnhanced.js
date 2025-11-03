@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User, Lock, MapPin, CreditCard, Save, Camera, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
+import { getStates, getDistricts, getTahsils, getPinCodes } from '@/data/locationData';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -17,6 +18,11 @@ const ProfileEnhanced = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(false);
   const [profilePicture, setProfilePicture] = useState(user?.profile_picture || null);
   const fileInputRef = useRef(null);
+  
+  // Location cascade state
+  const [availableDistricts, setAvailableDistricts] = useState([]);
+  const [availableTahsils, setAvailableTahsils] = useState([]);
+  const [availablePins, setAvailablePins] = useState([]);
   
   const [profileData, setProfileData] = useState({
     first_name: '',
@@ -30,6 +36,7 @@ const ProfileEnhanced = ({ user, onLogout }) => {
     city: '',
     state: '',
     district: '',
+    tahsil: '',
     pincode: '',
     aadhaar_number: '',
     pan_number: '',
