@@ -2245,21 +2245,129 @@ async def get_user_withdrawals(uid: str):
 
 @api_router.get("/wallet/transactions/{uid}")
 async def get_wallet_transactions(uid: str, wallet_type: str = None, limit: int = 100):
-    """Get user's wallet transaction history"""
+    """Get user's comprehensive wallet transaction history"""
     query = {"user_id": uid}
     
     # Filter by wallet type if specified
     if wallet_type:
         query["wallet_type"] = wallet_type
     
-    transactions = await db.wallet_transactions.find(
+    # Get from new transactions collection
+    transactions = await db.transactions.find(
         query,
         {"_id": 0}
     ).sort("created_at", -1).limit(limit).to_list(limit)
     
+    # Calculate totals
+    total_credit = sum(t["amount"] for t in transactions if t["type"] in ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share"])
+    total_debit = sum(t["amount"] for t in transactions if t["type"] in ["order", "withdrawal", "admin_debit", "delivery_charge"])
+    
     return {
         "transactions": transactions,
-        "count": len(transactions)
+        "count": len(transactions),
+        "total_credit": total_credit,
+        "total_debit": total_debit
+    }
+
+@api_router.get("/transactions/user/{uid}/detailed")
+async def get_detailed_transaction_history(
+    uid: str, 
+    wallet_type: str = None,
+    transaction_type: str = None,
+    start_date: str = None,
+    end_date: str = None,
+    limit: int = 100,
+    skip: int = 0
+):
+    """Get detailed transaction history with advanced filtering"""
+    query = {"user_id": uid}
+    
+    # Filters
+    if wallet_type:
+        query["wallet_type"] = wallet_type
+    if transaction_type:
+        query["type"] = transaction_type
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+    if end_date:
+        query.setdefault("created_at", {})["$lte"] = end_date
+    
+    # Get transactions
+    transactions = await db.transactions.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Get total count
+    total_count = await db.transactions.count_documents(query)
+    
+    # Calculate summary
+    all_transactions = await db.transactions.find(query).to_list(None)
+    summary = {
+        "total_transactions": total_count,
+        "total_credit": sum(t["amount"] for t in all_transactions if t["type"] in ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share"]),
+        "total_debit": sum(t["amount"] for t in all_transactions if t["type"] in ["order", "withdrawal", "admin_debit", "delivery_charge"]),
+        "transactions_by_type": {}
+    }
+    
+    # Count by type
+    for t in all_transactions:
+        t_type = t["type"]
+        summary["transactions_by_type"][t_type] = summary["transactions_by_type"].get(t_type, 0) + 1
+    
+    return {
+        "transactions": transactions,
+        "summary": summary,
+        "pagination": {
+            "total": total_count,
+            "limit": limit,
+            "skip": skip,
+            "has_more": (skip + limit) < total_count
+        }
+    }
+
+@api_router.get("/admin/transactions/all")
+async def get_all_transactions_admin(
+    wallet_type: str = None,
+    transaction_type: str = None,
+    start_date: str = None,
+    limit: int = 100,
+    skip: int = 0
+):
+    """Admin: Get all transactions across all users"""
+    query = {}
+    
+    if wallet_type:
+        query["wallet_type"] = wallet_type
+    if transaction_type:
+        query["type"] = transaction_type
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+    
+    # Get transactions
+    transactions = await db.transactions.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Get total count
+    total_count = await db.transactions.count_documents(query)
+    
+    # Get user details for each transaction
+    for t in transactions:
+        user = await db.users.find_one({"uid": t["user_id"]}, {"_id": 0, "first_name": 1, "last_name": 1, "email": 1})
+        if user:
+            t["user_name"] = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
+            t["user_email"] = user.get("email", "")
+    
+    return {
+        "transactions": transactions,
+        "total": total_count,
+        "pagination": {
+            "limit": limit,
+            "skip": skip,
+            "has_more": (skip + limit) < total_count
+        }
     }
 
 # ========== LEADERBOARD ROUTES ==========
