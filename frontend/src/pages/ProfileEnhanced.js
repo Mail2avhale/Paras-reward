@@ -847,13 +847,15 @@ const ProfileEnhanced = ({ user, onLogout }) => {
                     </div>
                   </>
                 )}
-                      <SelectContent>
-                        {availablePins.map(pin => (
-                          <SelectItem key={pin} value={pin}>{pin}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+
+                <div>
+                  <Label>City *</Label>
+                  <Input
+                    value={profileData.city}
+                    onChange={(e) => setProfileData({...profileData, city: e.target.value})}
+                    placeholder="City"
+                    required
+                  />
                 </div>
 
                 <Button type="submit" disabled={loading} className="w-full md:w-auto bg-purple-600 hover:bg-purple-700">
