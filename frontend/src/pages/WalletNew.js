@@ -265,7 +265,7 @@ const WalletNew = ({ user, onLogout }) => {
               <div className="mt-4 p-3 bg-red-500/20 border border-red-300/30 rounded-lg">
                 <div className="flex items-center gap-2 text-sm">
                   <AlertCircle className="h-4 w-4" />
-                  <span>Pending Maintenance Lien: ₹{walletData.pending_lien.toFixed(2)}</span>
+                  <span>Pending Maintenance Lien: ₹{walletData.pending_lien?.toFixed(2) || '0.00'}</span>
                 </div>
               </div>
             )}
