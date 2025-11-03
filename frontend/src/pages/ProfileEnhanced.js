@@ -521,19 +521,27 @@ const ProfileEnhanced = ({ user, onLogout }) => {
                     <Label>Aadhaar Number</Label>
                     <Input
                       value={profileData.aadhaar_number}
-                      onChange={(e) => setProfileData({...profileData, aadhaar_number: e.target.value})}
+                      onChange={(e) => handleAadhaarChange(e.target.value)}
                       placeholder="12-digit Aadhaar"
                       maxLength={12}
+                      className={validationErrors.aadhaar_number ? 'border-red-500' : ''}
                     />
+                    {validationErrors.aadhaar_number && (
+                      <p className="text-red-500 text-sm mt-1">{validationErrors.aadhaar_number}</p>
+                    )}
                   </div>
                   <div>
                     <Label>PAN Number</Label>
                     <Input
                       value={profileData.pan_number}
-                      onChange={(e) => setProfileData({...profileData, pan_number: e.target.value.toUpperCase()})}
-                      placeholder="10-digit PAN"
+                      onChange={(e) => handlePANChange(e.target.value)}
+                      placeholder="10-character PAN (e.g., ABCDE1234F)"
                       maxLength={10}
+                      className={validationErrors.pan_number ? 'border-red-500' : ''}
                     />
+                    {validationErrors.pan_number && (
+                      <p className="text-red-500 text-sm mt-1">{validationErrors.pan_number}</p>
+                    )}
                   </div>
                 </div>
 
