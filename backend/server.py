@@ -3691,6 +3691,71 @@ async def add_to_cart(request: Request):
     
     return {"message": "Item added to cart", "cart": cart}
 
+@api_router.post("/cart/update")
+async def update_cart_quantity(request: Request):
+    """Update item quantity in cart"""
+    data = await request.json()
+    user_id = data.get("user_id")
+    product_id = data.get("product_id")
+    quantity = data.get("quantity", 1)
+    
+    # Get cart
+    cart = await db.carts.find_one({"user_id": user_id})
+    if not cart:
+        raise HTTPException(status_code=404, detail="Cart not found")
+    
+    # Find item in cart
+    item_found = False
+    for item in cart.get("items", []):
+        if item["product_id"] == product_id:
+            # Get product to check stock
+            product = await db.products.find_one({"product_id": product_id})
+            if product and product.get("available_stock", 0) < quantity:
+                raise HTTPException(status_code=400, detail="Insufficient stock")
+            
+            item["quantity"] = quantity
+            item_found = True
+            break
+    
+    if not item_found:
+        raise HTTPException(status_code=404, detail="Item not found in cart")
+    
+    # Update cart
+    await db.carts.update_one(
+        {"user_id": user_id},
+        {"$set": {"items": cart["items"], "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": "Cart updated successfully"}
+
+@api_router.post("/cart/remove")
+async def remove_from_cart_post(request: Request):
+    """Remove item from cart (POST method)"""
+    data = await request.json()
+    user_id = data.get("user_id")
+    product_id = data.get("product_id")
+    
+    # Get cart
+    cart = await db.carts.find_one({"user_id": user_id})
+    if not cart:
+        raise HTTPException(status_code=404, detail="Cart not found")
+    
+    # Remove item
+    original_length = len(cart.get("items", []))
+    cart["items"] = [item for item in cart.get("items", []) if item["product_id"] != product_id]
+    
+    if len(cart["items"]) == original_length:
+        raise HTTPException(status_code=404, detail="Item not found in cart")
+    
+    # Update cart
+    await db.carts.update_one(
+        {"user_id": user_id},
+        {"$set": {"items": cart["items"], "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": "Item removed from cart"}
+
+
 @api_router.get("/cart/{user_id}")
 async def get_cart(user_id: str):
     """Get user's cart"""
