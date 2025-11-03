@@ -634,8 +634,8 @@ def print_banking_wallet_summary(results):
     status = "✅ WORKING" if results["transaction_history"] else "❌ FAILED"
     print(f"   4. Transaction History Endpoints: {status}")
     if results["transaction_history"]:
-        print(f"      - GET /api/wallet/transactions/{uid} - Basic history")
-        print(f"      - GET /api/transactions/user/{uid}/detailed - With filters")
+        print(f"      - GET /api/wallet/transactions/{{uid}} - Basic history")
+        print(f"      - GET /api/transactions/user/{{uid}}/detailed - With filters")
         print(f"      - GET /api/admin/transactions/all - Admin view")
     
     # Withdrawal Rejection
