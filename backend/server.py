@@ -3032,7 +3032,8 @@ async def get_admin_stats():
         },
         "recent_activity": {
             "orders": recent_orders,
-            "withdrawals": recent_withdrawals
+            "withdrawals": recent_withdrawals,
+            "vip_payments": recent_vip_payments
         }
     }
 
