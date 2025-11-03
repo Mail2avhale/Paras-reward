@@ -97,7 +97,8 @@ const Marketplace = ({ user, onLogout }) => {
       toast.success('Removed from cart');
       fetchCart();
     } catch (error) {
-      toast.error('Failed to remove item');
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to remove item';
+      toast.error(errorMessage);
     }
   };
 
