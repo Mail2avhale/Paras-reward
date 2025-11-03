@@ -739,6 +739,7 @@ def test_profit_wallet_management():
     print(f"\n2.4. Testing Admin Adjust Balance (Set to ₹1000)")
     try:
         adjust_data = {
+            "admin_uid": admin_uid,
             "user_id": stockist_uid,
             "amount": 1000,
             "description": "Test balance adjustment"
