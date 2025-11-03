@@ -92,6 +92,57 @@ const ProfileEnhanced = ({ user, onLogout }) => {
     }
   }, [user]);
 
+
+  // Cascading dropdown handlers
+  const handleStateChange = (newState) => {
+    setProfileData({
+      ...profileData,
+      state: newState,
+      district: '',
+      tahsil: '',
+      pincode: ''
+    });
+    
+    // Update available districts
+    const districts = getDistricts(newState);
+    setAvailableDistricts(districts);
+    setAvailableTahsils([]);
+    setAvailablePins([]);
+  };
+
+  const handleDistrictChange = (newDistrict) => {
+    setProfileData({
+      ...profileData,
+      district: newDistrict,
+      tahsil: '',
+      pincode: ''
+    });
+    
+    // Update available tahsils
+    const tahsils = getTahsils(profileData.state, newDistrict);
+    setAvailableTahsils(tahsils);
+    setAvailablePins([]);
+  };
+
+  const handleTahsilChange = (newTahsil) => {
+    setProfileData({
+      ...profileData,
+      tahsil: newTahsil,
+      pincode: ''
+    });
+    
+    // Update available PIN codes
+    const pins = getPinCodes(profileData.state, profileData.district, newTahsil);
+    setAvailablePins(pins);
+  };
+
+  const handlePinChange = (newPin) => {
+    setProfileData({
+      ...profileData,
+      pincode: newPin
+    });
+  };
+
   const handleProfilePictureChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
