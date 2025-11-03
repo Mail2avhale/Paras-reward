@@ -642,7 +642,7 @@ def print_banking_wallet_summary(results):
     status = "✅ WORKING" if results["withdrawal_rejection"] else "❌ FAILED"
     print(f"   5. Withdrawal Rejection System: {status}")
     if results["withdrawal_rejection"]:
-        print(f"      - POST /api/admin/withdrawals/cashback/{id}/reject")
+        print(f"      - POST /api/admin/withdrawals/cashback/{{id}}/reject")
         print(f"      - Refund logic: Only requested amount refunded")
         print(f"      - Transaction logging for refunds working")
     
