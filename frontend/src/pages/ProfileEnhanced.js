@@ -782,23 +782,174 @@ const ProfileEnhanced = ({ user, onLogout }) => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label>UPI ID</Label>
-                    <Input
-                      value={profileData.upi_id}
-                      onChange={(e) => handleUPIChange(e.target.value)}
-                      placeholder="yourname@bank"
-                      className={validationErrors.upi_id ? 'border-red-500' : ''}
-                    />
-                    {validationErrors.upi_id && (
-                      <p className="text-red-500 text-sm mt-1">{validationErrors.upi_id}</p>
-                    )}
-                  </div>
                 </div>
 
                 <Button type="submit" disabled={loading} className="w-full md:w-auto bg-purple-600 hover:bg-purple-700">
                   <Save className="mr-2 h-4 w-4" />
                   {loading ? 'Saving...' : 'Save Contact Info'}
+                </Button>
+              </form>
+            </Card>
+          </TabsContent>
+
+          {/* Banking & Payment */}
+          <TabsContent value="banking">
+            <Card className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <CreditCard className="h-6 w-6 text-purple-600" />
+                <h3 className="text-2xl font-bold">Banking & Payment Details</h3>
+              </div>
+
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> These details will be used for withdrawal requests. Provide either UPI details OR Bank account details (at least one method required). Once saved, these details will be auto-filled in withdrawal forms and cannot be edited there.
+                </p>
+              </div>
+
+              <form onSubmit={handleCompleteProfile} className="space-y-6">
+                {/* UPI & Digital Wallets Section */}
+                <div className="border-b pb-6">
+                  <h4 className="text-lg font-semibold mb-4 text-gray-700">UPI & Digital Wallets</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>UPI ID</Label>
+                      <Input
+                        value={profileData.upi_id}
+                        onChange={(e) => handleUPIChange(e.target.value)}
+                        placeholder="yourname@bank"
+                        className={validationErrors.upi_id ? 'border-red-500' : ''}
+                      />
+                      {validationErrors.upi_id && (
+                        <p className="text-red-500 text-sm mt-1">{validationErrors.upi_id}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label>PhonePe Number</Label>
+                      <Input
+                        value={profileData.phonepe_number}
+                        onChange={(e) => handlePhonePeChange(e.target.value)}
+                        placeholder="10-digit mobile number"
+                        maxLength={10}
+                        className={validationErrors.phonepe_number ? 'border-red-500' : ''}
+                      />
+                      {validationErrors.phonepe_number && (
+                        <p className="text-red-500 text-sm mt-1">{validationErrors.phonepe_number}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label>GPay Number</Label>
+                      <Input
+                        value={profileData.gpay_number}
+                        onChange={(e) => handleGPayChange(e.target.value)}
+                        placeholder="10-digit mobile number"
+                        maxLength={10}
+                        className={validationErrors.gpay_number ? 'border-red-500' : ''}
+                      />
+                      {validationErrors.gpay_number && (
+                        <p className="text-red-500 text-sm mt-1">{validationErrors.gpay_number}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label>Paytm Number</Label>
+                      <Input
+                        value={profileData.paytm_number}
+                        onChange={(e) => handlePaytmChange(e.target.value)}
+                        placeholder="10-digit mobile number"
+                        maxLength={10}
+                        className={validationErrors.paytm_number ? 'border-red-500' : ''}
+                      />
+                      {validationErrors.paytm_number && (
+                        <p className="text-red-500 text-sm mt-1">{validationErrors.paytm_number}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bank Account Section */}
+                <div className="pt-2">
+                  <h4 className="text-lg font-semibold mb-4 text-gray-700">Bank Account Details</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Account Holder Name</Label>
+                      <Input
+                        value={profileData.bank_account_holder_name}
+                        onChange={(e) => setProfileData({...profileData, bank_account_holder_name: e.target.value})}
+                        placeholder="As per bank records"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Bank Name</Label>
+                      <Input
+                        value={profileData.bank_name}
+                        onChange={(e) => setProfileData({...profileData, bank_name: e.target.value})}
+                        placeholder="e.g., State Bank of India"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Account Number</Label>
+                      <Input
+                        value={profileData.bank_account_number}
+                        onChange={(e) => handleBankAccountChange(e.target.value)}
+                        placeholder="9-18 digit account number"
+                        maxLength={18}
+                        className={validationErrors.bank_account_number ? 'border-red-500' : ''}
+                      />
+                      {validationErrors.bank_account_number && (
+                        <p className="text-red-500 text-sm mt-1">{validationErrors.bank_account_number}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label>IFSC Code</Label>
+                      <Input
+                        value={profileData.bank_ifsc}
+                        onChange={(e) => handleIFSCChange(e.target.value)}
+                        placeholder="e.g., SBIN0001234"
+                        maxLength={11}
+                        className={validationErrors.bank_ifsc ? 'border-red-500' : ''}
+                      />
+                      {validationErrors.bank_ifsc && (
+                        <p className="text-red-500 text-sm mt-1">{validationErrors.bank_ifsc}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label>Branch Name</Label>
+                      <Input
+                        value={profileData.bank_branch}
+                        onChange={(e) => setProfileData({...profileData, bank_branch: e.target.value})}
+                        placeholder="Branch name/location"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Account Type</Label>
+                      <Select
+                        value={profileData.bank_account_type}
+                        onValueChange={(value) => setProfileData({...profileData, bank_account_type: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select account type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="savings">Savings</SelectItem>
+                          <SelectItem value="current">Current</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                <Button type="submit" disabled={loading} className="w-full md:w-auto bg-purple-600 hover:bg-purple-700">
+                  <Save className="mr-2 h-4 w-4" />
+                  {loading ? 'Saving...' : 'Save Banking Details'}
                 </Button>
               </form>
             </Card>
