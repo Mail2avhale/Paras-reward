@@ -3667,12 +3667,13 @@ async def add_to_cart(request: Request):
         # Update quantity
         existing_item["quantity"] += quantity
     else:
-        # Add new item (no cash_price field)
+        # Add new item with cash_price for delivery charge calculation
         cart["items"].append({
             "product_id": product_id,
             "product_name": product["name"],
             "quantity": quantity,
             "prc_price": product["prc_price"],
+            "cash_price": product.get("cash_price", 0),
             "image_url": product.get("image_url")
         })
     
