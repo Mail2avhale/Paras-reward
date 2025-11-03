@@ -18,6 +18,7 @@ import ForgotPassword from "@/pages/ForgotPassword";
 import ForgotPasswordNew from "@/pages/ForgotPasswordNew";
 import SupportTickets from "@/pages/SupportTickets";
 import Dashboard from "@/pages/Dashboard";
+import DashboardNew from "@/pages/DashboardNew";
 import Mining from "@/pages/Mining";
 import TapGame from "@/pages/TapGame";
 import Referrals from "@/pages/Referrals";
