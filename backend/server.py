@@ -3780,7 +3780,7 @@ async def approve_cashback_withdrawal(withdrawal_id: str, request: Request):
 
 @api_router.post("/admin/withdrawals/cashback/{withdrawal_id}/reject")
 async def reject_cashback_withdrawal(withdrawal_id: str, request: Request):
-    """Reject cashback withdrawal request and refund to wallet"""
+    """Reject cashback withdrawal request and refund to wallet using new transaction system"""
     data = await request.json()
     admin_notes = data.get("admin_notes", "Rejected by admin")
     
@@ -3791,29 +3791,24 @@ async def reject_cashback_withdrawal(withdrawal_id: str, request: Request):
     if withdrawal["status"] != "pending":
         raise HTTPException(status_code=400, detail=f"Withdrawal is already {withdrawal['status']}")
     
-    # Refund amount + fee back to user's cashback wallet
-    total_refund = withdrawal["amount"] + withdrawal["fee"]
-    await db.users.update_one(
-        {"uid": withdrawal["user_id"]},
-        {"$inc": {"cashback_wallet_balance": total_refund}}
+    # NEW LOGIC: Refund only the requested amount (since only that was debited)
+    refund_amount = withdrawal.get("amount_requested", withdrawal.get("amount", 0))
+    
+    # Log refund transaction
+    await log_transaction(
+        user_id=withdrawal["user_id"],
+        wallet_type="cashback",
+        transaction_type="withdrawal_rejected",
+        amount=refund_amount,
+        description=f"Withdrawal refund - Request rejected by admin. Reason: {admin_notes}",
+        metadata={
+            "withdrawal_id": withdrawal_id,
+            "original_amount": refund_amount,
+            "admin_notes": admin_notes
+        },
+        related_id=withdrawal_id,
+        related_type="withdrawal_rejection"
     )
-    
-    # Get updated balance for transaction record
-    user = await db.users.find_one({"uid": withdrawal["user_id"]})
-    updated_balance = user.get("cashback_wallet_balance", 0)
-    
-    # Create wallet transaction record for refund
-    await db.wallet_transactions.insert_one({
-        "transaction_id": str(uuid.uuid4()),
-        "user_id": withdrawal["user_id"],
-        "type": "credit",
-        "wallet_type": "cashback",
-        "amount": total_refund,
-        "description": f"Withdrawal refund - Request rejected",
-        "reference_id": withdrawal_id,
-        "balance_after": updated_balance,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    })
     
     await db.cashback_withdrawals.update_one(
         {"withdrawal_id": withdrawal_id},
@@ -3824,7 +3819,11 @@ async def reject_cashback_withdrawal(withdrawal_id: str, request: Request):
         }}
     )
     
-    return {"message": "Withdrawal rejected and refunded", "withdrawal_id": withdrawal_id, "refunded_amount": total_refund}
+    return {
+        "message": "Withdrawal rejected and refunded",
+        "withdrawal_id": withdrawal_id,
+        "refunded_amount": refund_amount
+    }
 
 @api_router.post("/admin/withdrawals/cashback/{withdrawal_id}/complete")
 async def complete_cashback_withdrawal(withdrawal_id: str, request: Request):
