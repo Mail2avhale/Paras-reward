@@ -394,37 +394,42 @@ const WalletNew = ({ user, onLogout }) => {
 
           {/* Cashback Withdrawal */}
           <TabsContent value="cashback-withdraw">
-            <Card className="bg-slate-800/50 border-2 border-amber-500/20 backdrop-blur-sm p-8 rounded-xl">
-              <h3 className="text-3xl font-serif font-bold text-amber-300 mb-6 border-b border-amber-500/20 pb-4">
-                Withdraw from Cashback Account
-              </h3>
+            <Card className="bg-white/80 backdrop-blur-sm border-2 border-gray-200 p-8 rounded-3xl shadow-xl">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="bg-gradient-to-br from-blue-500 to-purple-500 p-3 rounded-2xl">
+                  <ArrowDownToLine className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  Withdraw Cashback
+                </h3>
+              </div>
               
-              <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-5 mb-6">
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-2xl p-5 mb-6">
                 <div className="flex items-start gap-3">
-                  <div className="bg-amber-500/20 p-2 rounded-lg">
-                    <Info className="h-5 w-5 text-amber-400" />
+                  <div className="bg-blue-500 p-2 rounded-lg">
+                    <Info className="h-5 w-5 text-white" />
                   </div>
-                  <div className="text-sm text-amber-200/90">
-                    <p className="font-semibold mb-2 text-amber-300">Withdrawal Guidelines:</p>
-                    <ul className="space-y-1.5 text-xs text-amber-200/70">
+                  <div className="text-sm text-gray-700">
+                    <p className="font-semibold mb-2 text-blue-900">Withdrawal Guidelines:</p>
+                    <ul className="space-y-1.5 text-xs text-gray-600">
                       <li className="flex items-center gap-2">
-                        <span className="w-1 h-1 bg-amber-400 rounded-full"></span>
+                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
                         Minimum withdrawal: ₹10
                       </li>
                       <li className="flex items-center gap-2">
-                        <span className="w-1 h-1 bg-amber-400 rounded-full"></span>
+                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
                         Withdrawal fee: ₹5 per transaction
                       </li>
                       <li className="flex items-center gap-2">
-                        <span className="w-1 h-1 bg-amber-400 rounded-full"></span>
+                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
                         KYC verification required
                       </li>
                       <li className="flex items-center gap-2">
-                        <span className="w-1 h-1 bg-amber-400 rounded-full"></span>
+                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
                         Processing time: 1-3 business days
                       </li>
                       <li className="flex items-center gap-2">
-                        <span className="w-1 h-1 bg-amber-400 rounded-full"></span>
+                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
                         Cannot withdraw if pending maintenance lien exists
                       </li>
                     </ul>
@@ -434,16 +439,16 @@ const WalletNew = ({ user, onLogout }) => {
 
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-semibold mb-3 text-amber-300">Amount (₹)</label>
+                  <label className="block text-sm font-semibold mb-3 text-gray-700">Amount (₹)</label>
                   <Input
                     type="number"
                     placeholder="Minimum ₹10"
                     value={cashbackAmount}
                     onChange={(e) => setCashbackAmount(e.target.value)}
-                    className="bg-slate-900/50 border-amber-500/30 text-amber-100 placeholder:text-amber-200/30 focus:border-amber-500 focus:ring-amber-500/50"
+                    className="border-2 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-xl text-lg"
                   />
-                  <p className="text-xs text-amber-400/70 mt-2 font-light">
-                    You'll receive: ₹{cashbackAmount ? (parseFloat(cashbackAmount) - 5).toFixed(2) : '0.00'} (after ₹5 fee)
+                  <p className="text-xs text-gray-500 mt-2">
+                    You'll receive: <span className="font-semibold text-blue-600">₹{cashbackAmount ? (parseFloat(cashbackAmount) - 5).toFixed(2) : '0.00'}</span> (after ₹5 fee)
                   </p>
                 </div>
 
