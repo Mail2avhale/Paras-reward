@@ -441,7 +441,6 @@ const WalletNew = ({ user, onLogout }) => {
                   <p className="text-xs text-amber-400/70 mt-2 font-light">
                     You'll receive: ₹{cashbackAmount ? (parseFloat(cashbackAmount) - 5).toFixed(2) : '0.00'} (after ₹5 fee)
                   </p>
-                  </p>
                 </div>
 
                 <div>
