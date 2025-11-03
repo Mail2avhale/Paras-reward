@@ -173,7 +173,7 @@ const Orders = ({ user, onLogout }) => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Cashback Earned</p>
-                        <p className="font-bold text-green-600 text-lg">+₹{((order.cashback_amount || 0) / 10).toFixed(2)}</p>
+                        <p className="font-bold text-green-600 text-lg">+₹{(order.cashback_amount || 0).toFixed(2)}</p>
                       </div>
                       {order.delivery_address && (
                         <div className="col-span-2">
