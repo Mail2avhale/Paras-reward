@@ -331,6 +331,46 @@ const ProfileEnhanced = ({ user, onLogout }) => {
     setValidationErrors({...validationErrors, upi_id: validateUPI(value)});
   };
 
+  const handlePhonePeChange = (value) => {
+    const filtered = value.replace(/\D/g, '');
+    if (filtered.length <= 10) {
+      setProfileData({...profileData, phonepe_number: filtered});
+      setValidationErrors({...validationErrors, phonepe_number: validatePaymentNumber(filtered)});
+    }
+  };
+
+  const handleGPayChange = (value) => {
+    const filtered = value.replace(/\D/g, '');
+    if (filtered.length <= 10) {
+      setProfileData({...profileData, gpay_number: filtered});
+      setValidationErrors({...validationErrors, gpay_number: validatePaymentNumber(filtered)});
+    }
+  };
+
+  const handlePaytmChange = (value) => {
+    const filtered = value.replace(/\D/g, '');
+    if (filtered.length <= 10) {
+      setProfileData({...profileData, paytm_number: filtered});
+      setValidationErrors({...validationErrors, paytm_number: validatePaymentNumber(filtered)});
+    }
+  };
+
+  const handleBankAccountChange = (value) => {
+    const filtered = value.replace(/\D/g, '');
+    if (filtered.length <= 18) {
+      setProfileData({...profileData, bank_account_number: filtered});
+      setValidationErrors({...validationErrors, bank_account_number: validateBankAccount(filtered)});
+    }
+  };
+
+  const handleIFSCChange = (value) => {
+    const filtered = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (filtered.length <= 11) {
+      setProfileData({...profileData, bank_ifsc: filtered});
+      setValidationErrors({...validationErrors, bank_ifsc: validateIFSC(filtered)});
+    }
+  };
+
   const handleCompleteProfile = async (e) => {
     e.preventDefault();
     
