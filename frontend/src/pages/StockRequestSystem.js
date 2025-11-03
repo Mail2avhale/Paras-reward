@@ -221,6 +221,33 @@ const StockRequestSystem = () => {
     }
   };
 
+  const handleAddStock = async () => {
+    if (!newStockData.product_id || !newStockData.quantity || parseInt(newStockData.quantity) <= 0) {
+      toast.error('Please select a product and enter valid quantity');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const endpoint = newStockData.action === 'add' ? '/admin/stock/add' : '/admin/stock/update';
+      const response = await axios.post(`${API}${endpoint}`, {
+        admin_uid: user.uid,
+        product_id: newStockData.product_id,
+        quantity: parseInt(newStockData.quantity)
+      });
+      
+      toast.success(response.data.message);
+      setShowAddStockModal(false);
+      setNewStockData({ product_id: '', quantity: '', action: 'add' });
+      fetchData();
+    } catch (error) {
+      console.error('Error adding stock:', error);
+      toast.error(error.response?.data?.detail || 'Failed to add stock');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const openEditModal = (req) => {
     setSelectedRequest(req);
     setEditRequest({
