@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://crypto-mining-10.preview.emergentagent.com/setup
+   https://parasadmin.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
