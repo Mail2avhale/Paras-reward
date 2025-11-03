@@ -1551,6 +1551,19 @@ def run_comprehensive_test():
         else:
             print("\n❌ PROFIT WALLET MANAGEMENT TESTS FAILED")
         
+        # Test 9: Cart Order Placement Flow
+        print("\n🔧 PHASE 9: CART ORDER PLACEMENT FLOW TESTING")
+        cart_results = test_cart_order_placement_flow()
+        critical_cart_tests = [
+            "cart_add_with_cash_price", "cart_retrieve_with_cash_price", 
+            "checkout_success", "delivery_charge_calculated", "cart_cleared_after_checkout"
+        ]
+        if all(cart_results.get(test, False) for test in critical_cart_tests):
+            results["cart_order_placement"] = True
+            print("\n✅ CART ORDER PLACEMENT TESTS PASSED")
+        else:
+            print("\n❌ CART ORDER PLACEMENT TESTS FAILED")
+        
         results["test_completed"] = True
         
     except Exception as e:
