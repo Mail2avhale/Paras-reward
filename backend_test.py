@@ -962,6 +962,499 @@ def test_profit_wallet_management():
     
     return test_results
 
+def test_cart_order_placement_flow():
+    """Test complete cart order placement flow after backend fixes"""
+    print("\n" + "🛒" * 80)
+    print("TESTING COMPLETE CART ORDER PLACEMENT FLOW")
+    print("🛒" * 80)
+    
+    test_results = {
+        "vip_user_setup": False,
+        "cart_add_with_cash_price": False,
+        "cart_retrieve_with_cash_price": False,
+        "cart_update_quantity": False,
+        "cart_remove_item": False,
+        "cart_add_back": False,
+        "checkout_success": False,
+        "checkout_validation_empty_cart": False,
+        "checkout_validation_non_vip": False,
+        "checkout_validation_insufficient_prc": False,
+        "order_created_in_db": False,
+        "prc_balance_deducted": False,
+        "cashback_credited": False,
+        "delivery_charge_calculated": False,
+        "cart_cleared_after_checkout": False
+    }
+    
+    # Create test users
+    timestamp = int(time.time())
+    
+    # VIP user with sufficient PRC balance
+    vip_user_data = {
+        "first_name": "VIP",
+        "last_name": "CartUser",
+        "email": f"vip_cart_{timestamp}@test.com",
+        "mobile": f"9876543{timestamp % 1000:03d}",
+        "password": "secure123456",
+        "state": "Maharashtra",
+        "district": "Mumbai",
+        "pincode": "400001",
+        "aadhaar_number": f"1111{timestamp % 100000000:08d}",
+        "pan_number": f"VIPCART{timestamp % 10000:04d}F",
+        "membership_type": "vip",
+        "kyc_status": "verified",
+        "prc_balance": 1000.0,  # Sufficient balance
+        "cashback_balance": 50.0  # Some cashback balance
+    }
+    
+    # Free user for validation tests
+    free_user_data = {
+        "first_name": "Free",
+        "last_name": "CartUser",
+        "email": f"free_cart_{timestamp}@test.com",
+        "mobile": f"9876544{timestamp % 1000:03d}",
+        "password": "secure123456",
+        "state": "Maharashtra",
+        "district": "Mumbai",
+        "pincode": "400001",
+        "aadhaar_number": f"2222{timestamp % 100000000:08d}",
+        "pan_number": f"FREECART{timestamp % 10000:04d}F",
+        "membership_type": "free"
+    }
+    
+    vip_uid = None
+    free_uid = None
+    test_product_id = None
+    
+    print(f"\n1. SETTING UP TEST USERS AND PRODUCTS")
+    print("=" * 60)
+    
+    try:
+        # Create VIP user
+        response = requests.post(f"{API_BASE}/auth/register", json=vip_user_data, timeout=30)
+        if response.status_code == 200:
+            result = response.json()
+            vip_uid = result.get("uid")
+            print(f"✅ VIP user created: {vip_uid}")
+            
+            # Update VIP user with PRC balance and cashback (simulate admin credit)
+            admin_uid = "ac9548c3-968a-4bbf-bad7-4e5aed1b660c"  # Known admin UID
+            
+            # Credit PRC balance
+            prc_credit_data = {
+                "admin_uid": admin_uid,
+                "user_id": vip_uid,
+                "amount": 1000,
+                "description": "Test setup - PRC balance"
+            }
+            requests.post(f"{API_BASE}/admin/profit-wallet/credit", json=prc_credit_data, timeout=30)
+            
+            # Credit cashback balance
+            cashback_credit_data = {"amount": 50}
+            requests.post(f"{API_BASE}/wallet/credit-cashback/{vip_uid}", json=cashback_credit_data, timeout=30)
+            
+            test_results["vip_user_setup"] = True
+        else:
+            print(f"❌ VIP user creation failed: {response.status_code}")
+            
+        # Create Free user
+        response = requests.post(f"{API_BASE}/auth/register", json=free_user_data, timeout=30)
+        if response.status_code == 200:
+            result = response.json()
+            free_uid = result.get("uid")
+            print(f"✅ Free user created: {free_uid}")
+        else:
+            print(f"❌ Free user creation failed: {response.status_code}")
+            
+        # Get available products
+        response = requests.get(f"{API_BASE}/products", timeout=30)
+        if response.status_code == 200:
+            products = response.json()
+            if len(products) > 0:
+                test_product = products[0]
+                test_product_id = test_product["product_id"]
+                print(f"✅ Test product selected: {test_product['name']} (ID: {test_product_id})")
+                print(f"   PRC Price: {test_product.get('prc_price')}")
+                print(f"   Cash Price: {test_product.get('cash_price', 'N/A')}")
+            else:
+                print(f"❌ No products available for testing")
+                return test_results
+        else:
+            print(f"❌ Failed to get products: {response.status_code}")
+            return test_results
+            
+    except Exception as e:
+        print(f"❌ Error setting up test users: {e}")
+        return test_results
+    
+    if not vip_uid or not free_uid or not test_product_id:
+        print("❌ Cannot continue without test users and products")
+        return test_results
+    
+    # Test 1: Add product to cart (verify cash_price is included)
+    print(f"\n2. TESTING CART ADD WITH CASH_PRICE")
+    print("=" * 60)
+    
+    try:
+        cart_add_data = {
+            "user_id": vip_uid,
+            "product_id": test_product_id,
+            "quantity": 2
+        }
+        
+        response = requests.post(f"{API_BASE}/cart/add", json=cart_add_data, timeout=30)
+        print(f"Cart Add Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            cart = result.get("cart", {})
+            items = cart.get("items", [])
+            
+            if len(items) > 0:
+                item = items[0]
+                if "cash_price" in item:
+                    print(f"✅ Product added to cart with cash_price: ₹{item['cash_price']}")
+                    print(f"   Product: {item['product_name']}")
+                    print(f"   Quantity: {item['quantity']}")
+                    print(f"   PRC Price: {item['prc_price']}")
+                    test_results["cart_add_with_cash_price"] = True
+                else:
+                    print(f"❌ cash_price field missing from cart item")
+            else:
+                print(f"❌ No items found in cart after add")
+        else:
+            print(f"❌ Cart add failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing cart add: {e}")
+    
+    # Test 2: Retrieve cart (verify items have cash_price)
+    print(f"\n3. TESTING CART RETRIEVE WITH CASH_PRICE")
+    print("=" * 60)
+    
+    try:
+        response = requests.get(f"{API_BASE}/cart/{vip_uid}", timeout=30)
+        print(f"Cart Retrieve Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            cart = response.json()
+            items = cart.get("items", [])
+            
+            if len(items) > 0:
+                item = items[0]
+                if "cash_price" in item and item["cash_price"] is not None:
+                    print(f"✅ Cart retrieved with cash_price: ₹{item['cash_price']}")
+                    print(f"   Items in cart: {len(items)}")
+                    test_results["cart_retrieve_with_cash_price"] = True
+                else:
+                    print(f"❌ cash_price field missing or null in retrieved cart")
+            else:
+                print(f"❌ No items found in retrieved cart")
+        else:
+            print(f"❌ Cart retrieve failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing cart retrieve: {e}")
+    
+    # Test 3: Update quantity
+    print(f"\n4. TESTING CART UPDATE QUANTITY")
+    print("=" * 60)
+    
+    try:
+        cart_update_data = {
+            "user_id": vip_uid,
+            "product_id": test_product_id,
+            "quantity": 3
+        }
+        
+        response = requests.post(f"{API_BASE}/cart/update", json=cart_update_data, timeout=30)
+        print(f"Cart Update Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            print(f"✅ Cart quantity updated successfully")
+            
+            # Verify update
+            verify_response = requests.get(f"{API_BASE}/cart/{vip_uid}", timeout=30)
+            if verify_response.status_code == 200:
+                cart = verify_response.json()
+                items = cart.get("items", [])
+                if len(items) > 0 and items[0]["quantity"] == 3:
+                    print(f"✅ Quantity verified: {items[0]['quantity']}")
+                    test_results["cart_update_quantity"] = True
+                else:
+                    print(f"❌ Quantity not updated correctly")
+        else:
+            print(f"❌ Cart update failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing cart update: {e}")
+    
+    # Test 4: Remove item
+    print(f"\n5. TESTING CART REMOVE ITEM")
+    print("=" * 60)
+    
+    try:
+        cart_remove_data = {
+            "user_id": vip_uid,
+            "product_id": test_product_id
+        }
+        
+        response = requests.post(f"{API_BASE}/cart/remove", json=cart_remove_data, timeout=30)
+        print(f"Cart Remove Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            print(f"✅ Item removed from cart successfully")
+            
+            # Verify removal
+            verify_response = requests.get(f"{API_BASE}/cart/{vip_uid}", timeout=30)
+            if verify_response.status_code == 200:
+                cart = verify_response.json()
+                items = cart.get("items", [])
+                if len(items) == 0:
+                    print(f"✅ Cart is now empty")
+                    test_results["cart_remove_item"] = True
+                else:
+                    print(f"❌ Item not removed correctly, {len(items)} items remain")
+        else:
+            print(f"❌ Cart remove failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing cart remove: {e}")
+    
+    # Test 5: Add back to cart for checkout test
+    print(f"\n6. TESTING CART ADD BACK FOR CHECKOUT")
+    print("=" * 60)
+    
+    try:
+        cart_add_data = {
+            "user_id": vip_uid,
+            "product_id": test_product_id,
+            "quantity": 1
+        }
+        
+        response = requests.post(f"{API_BASE}/cart/add", json=cart_add_data, timeout=30)
+        print(f"Cart Add Back Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            print(f"✅ Product added back to cart for checkout test")
+            test_results["cart_add_back"] = True
+        else:
+            print(f"❌ Cart add back failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing cart add back: {e}")
+    
+    # Test 6: Checkout with VIP user (success case)
+    print(f"\n7. TESTING SUCCESSFUL CHECKOUT")
+    print("=" * 60)
+    
+    try:
+        checkout_data = {
+            "user_id": vip_uid,
+            "delivery_address": "123 Test Street, Test City, Test State, 123456"
+        }
+        
+        # Get user balance before checkout
+        user_response = requests.get(f"{API_BASE}/users/{vip_uid}", timeout=30)
+        initial_prc_balance = 0
+        initial_cashback_balance = 0
+        if user_response.status_code == 200:
+            user_data = user_response.json()
+            initial_prc_balance = user_data.get("prc_balance", 0)
+            initial_cashback_balance = user_data.get("cashback_balance", 0)
+            print(f"   Initial PRC Balance: {initial_prc_balance}")
+            print(f"   Initial Cashback Balance: {initial_cashback_balance}")
+        
+        response = requests.post(f"{API_BASE}/orders/checkout", json=checkout_data, timeout=30)
+        print(f"Checkout Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            order_id = result.get("order_id")
+            secret_code = result.get("secret_code")
+            delivery_charge = result.get("delivery_charge")
+            
+            print(f"✅ Checkout successful!")
+            print(f"   Order ID: {order_id}")
+            print(f"   Secret Code: {secret_code}")
+            print(f"   Delivery Charge: ₹{delivery_charge}")
+            print(f"   Total PRC: {result.get('total_prc')}")
+            print(f"   Cashback Earned: ₹{result.get('cashback_earned')}")
+            
+            if order_id and secret_code and delivery_charge > 0:
+                test_results["checkout_success"] = True
+                
+                # Verify delivery charge calculation
+                if delivery_charge > 0:
+                    print(f"✅ Delivery charge calculated correctly: ₹{delivery_charge}")
+                    test_results["delivery_charge_calculated"] = True
+                
+                # Check if order exists in database
+                order_response = requests.get(f"{API_BASE}/orders/{order_id}", timeout=30)
+                if order_response.status_code == 200:
+                    print(f"✅ Order created in database")
+                    test_results["order_created_in_db"] = True
+                
+                # Verify PRC balance deduction
+                user_response = requests.get(f"{API_BASE}/users/{vip_uid}", timeout=30)
+                if user_response.status_code == 200:
+                    user_data = user_response.json()
+                    new_prc_balance = user_data.get("prc_balance", 0)
+                    new_cashback_balance = user_data.get("cashback_balance", 0)
+                    
+                    if new_prc_balance < initial_prc_balance:
+                        print(f"✅ PRC balance deducted: {initial_prc_balance} → {new_prc_balance}")
+                        test_results["prc_balance_deducted"] = True
+                    
+                    if new_cashback_balance > initial_cashback_balance:
+                        print(f"✅ Cashback credited: {initial_cashback_balance} → {new_cashback_balance}")
+                        test_results["cashback_credited"] = True
+                
+                # Verify cart is cleared
+                cart_response = requests.get(f"{API_BASE}/cart/{vip_uid}", timeout=30)
+                if cart_response.status_code == 200:
+                    cart = cart_response.json()
+                    items = cart.get("items", [])
+                    if len(items) == 0:
+                        print(f"✅ Cart cleared after checkout")
+                        test_results["cart_cleared_after_checkout"] = True
+                    else:
+                        print(f"❌ Cart not cleared: {len(items)} items remain")
+            else:
+                print(f"❌ Missing required checkout response fields")
+        else:
+            print(f"❌ Checkout failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing checkout: {e}")
+    
+    # Test 7: Validation - Empty cart checkout
+    print(f"\n8. TESTING EMPTY CART CHECKOUT VALIDATION")
+    print("=" * 60)
+    
+    try:
+        checkout_data = {
+            "user_id": vip_uid,
+            "delivery_address": "123 Test Street, Test City, Test State, 123456"
+        }
+        
+        response = requests.post(f"{API_BASE}/orders/checkout", json=checkout_data, timeout=30)
+        print(f"Empty Cart Checkout Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 400:
+            result = response.json()
+            if "Cart is empty" in result.get("detail", ""):
+                print(f"✅ Empty cart checkout properly blocked")
+                test_results["checkout_validation_empty_cart"] = True
+            else:
+                print(f"❌ Unexpected error message: {result.get('detail')}")
+        else:
+            print(f"❌ Empty cart checkout should return 400, got {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing empty cart validation: {e}")
+    
+    # Test 8: Validation - Non-VIP user checkout
+    print(f"\n9. TESTING NON-VIP USER CHECKOUT VALIDATION")
+    print("=" * 60)
+    
+    try:
+        # Add item to free user's cart first
+        cart_add_data = {
+            "user_id": free_uid,
+            "product_id": test_product_id,
+            "quantity": 1
+        }
+        requests.post(f"{API_BASE}/cart/add", json=cart_add_data, timeout=30)
+        
+        checkout_data = {
+            "user_id": free_uid,
+            "delivery_address": "123 Test Street, Test City, Test State, 123456"
+        }
+        
+        response = requests.post(f"{API_BASE}/orders/checkout", json=checkout_data, timeout=30)
+        print(f"Non-VIP Checkout Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 403:
+            result = response.json()
+            if "VIP membership required" in result.get("detail", ""):
+                print(f"✅ Non-VIP checkout properly blocked")
+                test_results["checkout_validation_non_vip"] = True
+            else:
+                print(f"❌ Unexpected error message: {result.get('detail')}")
+        else:
+            print(f"❌ Non-VIP checkout should return 403, got {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing non-VIP validation: {e}")
+    
+    # Test 9: Validation - Insufficient PRC balance
+    print(f"\n10. TESTING INSUFFICIENT PRC BALANCE VALIDATION")
+    print("=" * 60)
+    
+    try:
+        # Create another VIP user with low PRC balance
+        low_balance_user_data = {
+            "first_name": "LowBalance",
+            "last_name": "VIPUser",
+            "email": f"low_balance_{timestamp}@test.com",
+            "mobile": f"9876545{timestamp % 1000:03d}",
+            "password": "secure123456",
+            "state": "Maharashtra",
+            "district": "Mumbai",
+            "pincode": "400001",
+            "aadhaar_number": f"3333{timestamp % 100000000:08d}",
+            "pan_number": f"LOWBAL{timestamp % 10000:04d}F",
+            "membership_type": "vip",
+            "prc_balance": 1.0  # Very low balance
+        }
+        
+        response = requests.post(f"{API_BASE}/auth/register", json=low_balance_user_data, timeout=30)
+        if response.status_code == 200:
+            low_balance_uid = response.json().get("uid")
+            
+            # Add item to cart
+            cart_add_data = {
+                "user_id": low_balance_uid,
+                "product_id": test_product_id,
+                "quantity": 1
+            }
+            requests.post(f"{API_BASE}/cart/add", json=cart_add_data, timeout=30)
+            
+            # Try checkout
+            checkout_data = {
+                "user_id": low_balance_uid,
+                "delivery_address": "123 Test Street, Test City, Test State, 123456"
+            }
+            
+            response = requests.post(f"{API_BASE}/orders/checkout", json=checkout_data, timeout=30)
+            print(f"Insufficient Balance Checkout Status: {response.status_code}")
+            print(f"Response: {response.text}")
+            
+            if response.status_code == 400:
+                result = response.json()
+                if "Insufficient PRC balance" in result.get("detail", ""):
+                    print(f"✅ Insufficient PRC balance properly blocked")
+                    test_results["checkout_validation_insufficient_prc"] = True
+                else:
+                    print(f"❌ Unexpected error message: {result.get('detail')}")
+            else:
+                print(f"❌ Insufficient balance checkout should return 400, got {response.status_code}")
+        else:
+            print(f"❌ Failed to create low balance user for testing")
+            
+    except Exception as e:
+        print(f"❌ Error testing insufficient balance validation: {e}")
+    
+    return test_results
+
 def run_comprehensive_test():
     """Run comprehensive test of all critical backend APIs for deployment readiness"""
     print("\n" + "🔍" * 80)
