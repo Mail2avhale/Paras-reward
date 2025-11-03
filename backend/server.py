@@ -1981,6 +1981,351 @@ async def check_and_apply_maintenance(uid: str):
     
     return {"maintenance_applied": False, "message": "Maintenance not yet due"}
 
+@api_router.post("/admin/profit-wallet/credit")
+async def admin_credit_profit_wallet(request: Request):
+    """Admin: Credit amount to user's profit wallet"""
+    data = await request.json()
+    admin_uid = data.get("admin_uid")
+    user_id = data.get("user_id")
+    amount = data.get("amount", 0)
+    description = data.get("description", "Admin credit to profit wallet")
+    
+    if not admin_uid or not user_id or amount <= 0:
+        raise HTTPException(status_code=400, detail="Admin UID, user ID, and positive amount required")
+    
+    # Verify admin
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin or admin.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can credit profit wallet")
+    
+    # Get user
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get current balance
+    current_balance = user.get("profit_wallet_balance", 0)
+    new_balance = current_balance + amount
+    
+    # Update balance
+    await db.users.update_one(
+        {"uid": user_id},
+        {"$set": {"profit_wallet_balance": new_balance}}
+    )
+    
+    # Create transaction log
+    transaction = {
+        "transaction_id": f"TXN-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}",
+        "user_id": user_id,
+        "wallet_type": "profit",
+        "type": "admin_credit",
+        "amount": amount,
+        "balance_before": current_balance,
+        "balance_after": new_balance,
+        "description": description,
+        "status": "completed",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "metadata": {
+            "credited_by": admin_uid,
+            "admin_name": admin.get("name", "Admin")
+        }
+    }
+    await db.transactions.insert_one(transaction)
+    
+    return {
+        "message": "Profit wallet credited successfully",
+        "user_id": user_id,
+        "amount": amount,
+        "previous_balance": current_balance,
+        "new_balance": new_balance
+    }
+
+@api_router.post("/admin/profit-wallet/deduct")
+async def admin_deduct_profit_wallet(request: Request):
+    """Admin: Deduct amount from user's profit wallet (with lien if insufficient)"""
+    data = await request.json()
+    admin_uid = data.get("admin_uid")
+    user_id = data.get("user_id")
+    amount = data.get("amount", 0)
+    description = data.get("description", "Admin deduction from profit wallet")
+    
+    if not admin_uid or not user_id or amount <= 0:
+        raise HTTPException(status_code=400, detail="Admin UID, user ID, and positive amount required")
+    
+    # Verify admin
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin or admin.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can deduct from profit wallet")
+    
+    # Get user
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get current balance
+    current_balance = user.get("profit_wallet_balance", 0)
+    current_lien = user.get("profit_wallet_lien", 0)
+    
+    # Check if sufficient balance
+    if current_balance >= amount:
+        # Full deduction from balance
+        new_balance = current_balance - amount
+        new_lien = current_lien
+        lien_added = 0
+        message = f"₹{amount} deducted from profit wallet"
+    else:
+        # Partial deduction, remaining as lien
+        deducted_from_balance = current_balance
+        lien_amount = amount - current_balance
+        new_balance = 0
+        new_lien = current_lien + lien_amount
+        lien_added = lien_amount
+        message = f"₹{deducted_from_balance} deducted, ₹{lien_amount} marked as lien"
+    
+    # Update balance and lien
+    await db.users.update_one(
+        {"uid": user_id},
+        {"$set": {
+            "profit_wallet_balance": new_balance,
+            "profit_wallet_lien": new_lien,
+            "profit_wallet_status": "lien_pending" if new_lien > 0 else "active"
+        }}
+    )
+    
+    # Create transaction log
+    transaction = {
+        "transaction_id": f"TXN-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}",
+        "user_id": user_id,
+        "wallet_type": "profit",
+        "type": "admin_debit",
+        "amount": -amount,
+        "balance_before": current_balance,
+        "balance_after": new_balance,
+        "description": description,
+        "status": "completed",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "metadata": {
+            "deducted_by": admin_uid,
+            "admin_name": admin.get("name", "Admin"),
+            "lien_added": lien_added,
+            "total_lien": new_lien
+        }
+    }
+    await db.transactions.insert_one(transaction)
+    
+    return {
+        "message": message,
+        "user_id": user_id,
+        "amount_deducted": amount,
+        "previous_balance": current_balance,
+        "new_balance": new_balance,
+        "lien_added": lien_added,
+        "total_lien": new_lien
+    }
+
+@api_router.post("/admin/profit-wallet/adjust")
+async def admin_adjust_profit_wallet(request: Request):
+    """Admin: Set profit wallet to specific amount (adjustment)"""
+    data = await request.json()
+    admin_uid = data.get("admin_uid")
+    user_id = data.get("user_id")
+    new_amount = data.get("amount")
+    description = data.get("description", "Admin balance adjustment")
+    
+    if not admin_uid or not user_id or new_amount is None or new_amount < 0:
+        raise HTTPException(status_code=400, detail="Admin UID, user ID, and non-negative amount required")
+    
+    # Verify admin
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin or admin.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can adjust profit wallet")
+    
+    # Get user
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get current balance
+    current_balance = user.get("profit_wallet_balance", 0)
+    difference = new_amount - current_balance
+    
+    # Update balance
+    await db.users.update_one(
+        {"uid": user_id},
+        {"$set": {"profit_wallet_balance": new_amount}}
+    )
+    
+    # Create transaction log
+    transaction = {
+        "transaction_id": f"TXN-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}",
+        "user_id": user_id,
+        "wallet_type": "profit",
+        "type": "admin_adjustment",
+        "amount": difference,
+        "balance_before": current_balance,
+        "balance_after": new_amount,
+        "description": description,
+        "status": "completed",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "metadata": {
+            "adjusted_by": admin_uid,
+            "admin_name": admin.get("name", "Admin")
+        }
+    }
+    await db.transactions.insert_one(transaction)
+    
+    return {
+        "message": "Profit wallet adjusted successfully",
+        "user_id": user_id,
+        "previous_balance": current_balance,
+        "new_balance": new_amount,
+        "adjustment": difference
+    }
+
+@api_router.post("/admin/apply-monthly-fees")
+async def apply_monthly_fees_to_all_users(request: Request):
+    """Admin: Apply monthly maintenance fee to all VIP users' cashback AND profit wallets"""
+    data = await request.json()
+    admin_uid = data.get("admin_uid")
+    
+    if not admin_uid:
+        raise HTTPException(status_code=400, detail="Admin UID required")
+    
+    # Verify admin
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin or admin.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can apply monthly fees")
+    
+    # Get all VIP users
+    vip_users = await db.users.find({"membership_type": "vip"}).to_list(None)
+    
+    cashback_fee_applied = 0
+    profit_fee_applied = 0
+    total_users_processed = 0
+    errors = []
+    
+    now = datetime.now(timezone.utc)
+    
+    for user in vip_users:
+        try:
+            uid = user["uid"]
+            total_users_processed += 1
+            
+            # Check if 30 days passed since last maintenance
+            last_maintenance = user.get("last_wallet_maintenance")
+            vip_activation = user.get("vip_activation_date")
+            
+            if last_maintenance:
+                if isinstance(last_maintenance, str):
+                    last_maintenance = datetime.fromisoformat(last_maintenance)
+                next_due = last_maintenance + timedelta(days=30)
+            elif vip_activation:
+                if isinstance(vip_activation, str):
+                    vip_activation = datetime.fromisoformat(vip_activation)
+                next_due = vip_activation + timedelta(days=30)
+            else:
+                continue  # Skip if no dates set
+            
+            if now < next_due:
+                continue  # Not yet due
+            
+            # Apply ₹99 fee to CASHBACK wallet
+            cashback_balance = user.get("cashback_wallet_balance", 0)
+            cashback_lien = user.get("wallet_maintenance_due", 0)
+            
+            if cashback_balance >= 99:
+                # Deduct from balance
+                new_cashback_balance = cashback_balance - 99
+                new_cashback_lien = cashback_lien
+            else:
+                # Mark as lien
+                deducted = cashback_balance
+                lien_to_add = 99 - deducted
+                new_cashback_balance = 0
+                new_cashback_lien = cashback_lien + lien_to_add
+            
+            # Apply ₹99 fee to PROFIT wallet
+            profit_balance = user.get("profit_wallet_balance", 0)
+            profit_lien = user.get("profit_wallet_lien", 0)
+            
+            if profit_balance >= 99:
+                # Deduct from balance
+                new_profit_balance = profit_balance - 99
+                new_profit_lien = profit_lien
+            else:
+                # Mark as lien
+                deducted = profit_balance
+                lien_to_add = 99 - deducted
+                new_profit_balance = 0
+                new_profit_lien = profit_lien + lien_to_add
+            
+            # Update user
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {
+                    "cashback_wallet_balance": new_cashback_balance,
+                    "wallet_maintenance_due": new_cashback_lien,
+                    "wallet_status": "lien_pending" if new_cashback_lien > 0 else "active",
+                    "profit_wallet_balance": new_profit_balance,
+                    "profit_wallet_lien": new_profit_lien,
+                    "profit_wallet_status": "lien_pending" if new_profit_lien > 0 else "active",
+                    "last_wallet_maintenance": now.isoformat()
+                }}
+            )
+            
+            # Create transaction logs
+            # Cashback wallet transaction
+            cashback_txn = {
+                "transaction_id": f"TXN-{now.strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}",
+                "user_id": uid,
+                "wallet_type": "cashback",
+                "type": "monthly_maintenance",
+                "amount": -99,
+                "balance_before": cashback_balance,
+                "balance_after": new_cashback_balance,
+                "description": "Monthly maintenance fee (₹99) for cashback wallet",
+                "status": "completed",
+                "created_at": now.isoformat(),
+                "metadata": {
+                    "fee_type": "monthly_maintenance",
+                    "lien_added": new_cashback_lien - cashback_lien
+                }
+            }
+            await db.transactions.insert_one(cashback_txn)
+            cashback_fee_applied += 1
+            
+            # Profit wallet transaction
+            profit_txn = {
+                "transaction_id": f"TXN-{now.strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}",
+                "user_id": uid,
+                "wallet_type": "profit",
+                "type": "monthly_maintenance",
+                "amount": -99,
+                "balance_before": profit_balance,
+                "balance_after": new_profit_balance,
+                "description": "Monthly maintenance fee (₹99) for profit wallet",
+                "status": "completed",
+                "created_at": now.isoformat(),
+                "metadata": {
+                    "fee_type": "monthly_maintenance",
+                    "lien_added": new_profit_lien - profit_lien
+                }
+            }
+            await db.transactions.insert_one(profit_txn)
+            profit_fee_applied += 1
+            
+        except Exception as e:
+            errors.append(f"User {user.get('uid')}: {str(e)}")
+            continue
+    
+    return {
+        "message": "Monthly fees applied",
+        "total_users_processed": total_users_processed,
+        "cashback_fees_applied": cashback_fee_applied,
+        "profit_fees_applied": profit_fee_applied,
+        "errors": errors if errors else None
+    }
+
 @api_router.post("/wallet/credit-cashback/{uid}")
 async def credit_cashback(uid: str, request: Request):
     """Credit cashback to wallet (clears lien first)"""
