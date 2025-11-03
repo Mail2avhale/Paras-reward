@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://mining-platform-6.preview.emergentagent.com/setup
+   https://mining-rewards-6.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
