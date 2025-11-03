@@ -149,7 +149,9 @@ const Marketplace = ({ user, onLogout }) => {
       fetchUserData();
       navigate('/orders');
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Checkout failed');
+      // Ensure error message is a string
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Checkout failed';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
