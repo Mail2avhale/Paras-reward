@@ -752,7 +752,7 @@ def test_profit_wallet_management():
             result = response.json()
             print(f"✅ Admin adjust successful")
             print(f"📋 New Balance: ₹{result.get('new_balance')}")
-            print(f"📋 Adjustment: +₹{result.get('adjustment_amount')}")
+            print(f"📋 Adjustment: +₹{result.get('adjustment')}")
             
             if result.get('new_balance') == 1000:
                 test_results["admin_adjust_balance"] = True
