@@ -566,43 +566,6 @@ const ProfileEnhanced = ({ user, onLogout }) => {
   };
 
   return (
-        pan_front_base64: ''
-      });
-    } catch (error) {
-      console.error('Error submitting KYC:', error);
-      toast.error(error.response?.data?.detail || 'Failed to submit KYC');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getKycStatusIcon = (status) => {
-    switch (status) {
-      case 'verified':
-        return <CheckCircle className="h-8 w-8 text-green-600" />;
-      case 'pending':
-        return <Clock className="h-8 w-8 text-yellow-600" />;
-      case 'rejected':
-        return <XCircle className="h-8 w-8 text-red-600" />;
-      default:
-        return <FileText className="h-8 w-8 text-gray-400" />;
-    }
-  };
-
-  const getKycStatusColor = (status) => {
-    switch (status) {
-      case 'verified':
-        return 'bg-green-50 text-green-700 border-green-300';
-      case 'pending':
-        return 'bg-yellow-50 text-yellow-700 border-yellow-300';
-      case 'rejected':
-        return 'bg-red-50 text-red-700 border-red-300';
-      default:
-        return 'bg-gray-50 text-gray-700 border-gray-300';
-    }
-  };
-
-  return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       <Navbar user={user} onLogout={onLogout} />
       
