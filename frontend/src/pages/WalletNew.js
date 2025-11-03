@@ -425,14 +425,6 @@ const WalletNew = ({ user, onLogout }) => {
                     </p>
                   </>
                 )}
-                      <Input
-                        placeholder="Enter IFSC code"
-                        value={cashbackIfsc}
-                        onChange={(e) => setCashbackIfsc(e.target.value)}
-                      />
-                    </div>
-                  </>
-                )}
 
                 <Button
                   onClick={handleCashbackWithdraw}
