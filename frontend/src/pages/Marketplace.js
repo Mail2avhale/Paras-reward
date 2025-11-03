@@ -82,10 +82,11 @@ const Marketplace = ({ user, onLogout }) => {
       fetchUserData();
     } catch (error) {
       console.error('Add to cart error:', error);
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to add to cart';
       if (error.response?.status === 404) {
         toast.error('Product or user not found. Please refresh the page.');
       } else {
-        toast.error(error.response?.data?.detail || 'Failed to add to cart');
+        toast.error(errorMessage);
       }
     }
   };
