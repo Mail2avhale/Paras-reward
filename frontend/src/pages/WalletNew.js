@@ -202,17 +202,29 @@ const WalletNew = ({ user, onLogout }) => {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      pending: { icon: Clock, color: 'text-yellow-600 bg-yellow-50', text: 'Pending' },
-      approved: { icon: CheckCircle2, color: 'text-green-600 bg-green-50', text: 'Completed' },
-      rejected: { icon: XCircle, color: 'text-red-600 bg-red-50', text: 'Rejected' }
+      pending: { 
+        icon: Clock, 
+        color: 'text-amber-300 bg-amber-900/30 border border-amber-500/30', 
+        text: 'Pending' 
+      },
+      approved: { 
+        icon: CheckCircle2, 
+        color: 'text-emerald-300 bg-emerald-900/30 border border-emerald-500/30', 
+        text: 'Completed' 
+      },
+      rejected: { 
+        icon: XCircle, 
+        color: 'text-red-300 bg-red-900/30 border border-red-500/30', 
+        text: 'Rejected' 
+      }
     };
     
     const config = statusConfig[status] || statusConfig.pending;
     const Icon = config.icon;
     
     return (
-      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${config.color}`}>
-        <Icon className="h-3 w-3" />
+      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-sm ${config.color}`}>
+        <Icon className="h-3.5 w-3.5" />
         {config.text}
       </span>
     );
