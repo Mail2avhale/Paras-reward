@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
@@ -11,12 +11,20 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const Dashboard = ({ user, onLogout }) => {
+  const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
   const [stats, setStats] = useState(null);
   const [qrCode, setQrCode] = useState(null);
   
   // Check if user is admin to hide ads
   const isAdmin = user?.role === 'admin';
+
+  // Redirect based on role
+  useEffect(() => {
+    if (user?.role === 'manager') {
+      navigate('/manager');
+    }
+  }, [user, navigate]);
 
   useEffect(() => {
     fetchUserData();
