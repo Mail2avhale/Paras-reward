@@ -1660,9 +1660,9 @@ async def checkout(request: Request):
             "created_at": datetime.now(timezone.utc).isoformat()
         })
     
-    # Insert transactions
+    # Insert transactions to the correct collection (transactions, not wallet_transactions)
     if transactions:
-        await db.wallet_transactions.insert_many(transactions)
+        await db.transactions.insert_many(transactions)
     
     # Update product stock
     for item in cart["items"]:
