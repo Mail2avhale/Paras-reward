@@ -1,7 +1,32 @@
 import { Link } from 'react-router-dom';
 import { Mail, MapPin, Phone } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+
+const API = process.env.REACT_APP_BACKEND_URL || '';
 
 const Footer = () => {
+  const [contactDetails, setContactDetails] = useState({
+    address: 'PARAS REWARD\nMaharashtra, India',
+    phone: '+91-XXXXXXXXXX',
+    email: 'support@parasreward.com',
+    website: 'www.parasreward.com'
+  });
+
+  useEffect(() => {
+    fetchContactDetails();
+  }, []);
+
+  const fetchContactDetails = async () => {
+    try {
+      const response = await axios.get(`${API}/api/contact-details`);
+      setContactDetails(response.data);
+    } catch (error) {
+      console.error('Error fetching contact details:', error);
+      // Keep default values on error
+    }
+  };
+
   return (
     <footer className="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
       <div className="container mx-auto px-4 py-12">
