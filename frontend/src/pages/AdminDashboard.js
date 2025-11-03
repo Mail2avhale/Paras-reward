@@ -1553,6 +1553,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                                 className="px-3 py-1 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                               >
                                 <option value="user">User</option>
+                                <option value="manager">Manager</option>
                                 <option value="admin">Admin</option>
                                 <option value="outlet">Outlet</option>
                                 <option value="master_stockist">Master Stockist</option>
