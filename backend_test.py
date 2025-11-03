@@ -808,6 +808,7 @@ def test_profit_wallet_management():
         
         # Credit profit wallet (if user is stockist role)
         profit_credit_data = {
+            "admin_uid": admin_uid,
             "user_id": vip_uid,
             "amount": 500,
             "description": "Setup for monthly fee testing"
