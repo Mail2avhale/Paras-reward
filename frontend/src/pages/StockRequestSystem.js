@@ -316,7 +316,7 @@ const StockRequestSystem = () => {
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
-            My Requests ({myRequests.length})
+            {userRole === 'admin' ? 'All Requests' : 'My Requests'} ({myRequests.length})
           </button>
           <button
             onClick={() => setActiveTab('approve-requests')}
@@ -326,7 +326,7 @@ const StockRequestSystem = () => {
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
-            Requests to Approve ({pendingForMe.length})
+            {userRole === 'admin' ? 'Pending Requests' : 'Requests to Approve'} ({pendingForMe.length})
           </button>
           <button
             onClick={() => setActiveTab('my-inventory')}
