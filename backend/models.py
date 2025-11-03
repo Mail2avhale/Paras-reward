@@ -112,6 +112,7 @@ class UserProfileUpdate(BaseModel):
     state: Optional[str] = None
     district: Optional[str] = None
     taluka: Optional[str] = None
+    tahsil: Optional[str] = None  # Same as taluka, different regions use different terms
     village: Optional[str] = None
     pincode: Optional[str] = None
     full_address: Optional[str] = None
