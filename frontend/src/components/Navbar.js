@@ -212,16 +212,11 @@ const Navbar = ({ user, onLogout }) => {
                   <Link to="/profile" className="cursor-pointer">My Profile</Link>
                 </DropdownMenuItem>
                 
-                {/* VIP & KYC - Only for regular users */}
+                {/* VIP - Only for regular users */}
                 {isRegularUser && (
-                  <>
-                    <DropdownMenuItem asChild>
-                      <Link to="/vip" className="cursor-pointer">VIP Membership</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/kyc" className="cursor-pointer">KYC Verification</Link>
-                    </DropdownMenuItem>
-                  </>
+                  <DropdownMenuItem asChild>
+                    <Link to="/vip" className="cursor-pointer">VIP Membership</Link>
+                  </DropdownMenuItem>
                 )}
                 
                 {/* Wallet - Show for all */}
