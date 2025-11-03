@@ -1116,8 +1116,17 @@ def print_test_summary(results):
         print(f"      - Cashback withdrawals API: ✅")
         print(f"      - Profit withdrawals API: ✅")
     
+    # Profit Wallet Management
+    status = "✅ PASSED" if results["profit_wallet_management"] else "❌ FAILED"
+    print(f"   8. Profit Wallet Management & Monthly Fees: {status}")
+    if results["profit_wallet_management"]:
+        print(f"      - Admin profit wallet credit/debit: ✅")
+        print(f"      - Lien creation and tracking: ✅")
+        print(f"      - Monthly fee application: ✅")
+        print(f"      - Transaction logging: ✅")
+    
     # Overall Status
-    critical_tests = ["authentication", "user_management", "admin_dashboard_kpis", "core_features"]
+    critical_tests = ["authentication", "user_management", "admin_dashboard_kpis", "core_features", "profit_wallet_management"]
     all_critical_passed = all(results[key] for key in critical_tests)
     all_passed = all(results[key] for key in results.keys() if key != "test_completed")
     
