@@ -265,12 +265,21 @@ const WalletNew = ({ user, onLogout }) => {
 
         {/* Tabs for Withdrawal and History */}
         <Tabs defaultValue="cashback-withdraw" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
+            <TabsTrigger value="transactions">
+              <FileText className="w-4 h-4 mr-2" />
+              Transactions
+            </TabsTrigger>
             <TabsTrigger value="cashback-withdraw">Cashback Withdraw</TabsTrigger>
             {isStockistOrOutlet && <TabsTrigger value="profit-withdraw">Profit Withdraw</TabsTrigger>}
             <TabsTrigger value="cashback-history">Cashback History</TabsTrigger>
             {isStockistOrOutlet && <TabsTrigger value="profit-history">Profit History</TabsTrigger>}
           </TabsList>
+
+          {/* Transaction History Tab */}
+          <TabsContent value="transactions" className="mt-6">
+            <BankingWallet user={user} />
+          </TabsContent>
 
           {/* Cashback Withdrawal */}
           <TabsContent value="cashback-withdraw">
