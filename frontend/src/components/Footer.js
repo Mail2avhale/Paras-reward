@@ -100,9 +100,21 @@ const Footer = () => {
             <div className="space-y-2 text-gray-300 text-sm">
               <div className="flex items-start gap-2">
                 <Mail className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <a href="mailto:support@parasreward.com" className="hover:text-white transition-colors">
-                  support@parasreward.com
+                <a href={`mailto:${contactDetails.email}`} className="hover:text-white transition-colors">
+                  {contactDetails.email}
                 </a>
+              </div>
+              <div className="flex items-start gap-2">
+                <Phone className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <a href={`tel:${contactDetails.phone}`} className="hover:text-white transition-colors">
+                  {contactDetails.phone}
+                </a>
+              </div>
+              <div className="flex items-start gap-2">
+                <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span className="whitespace-pre-line">
+                  {contactDetails.address}
+                </span>
               </div>
             </div>
           </div>
