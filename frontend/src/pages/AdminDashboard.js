@@ -938,6 +938,7 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [userManagementView, setUserManagementView] = useState('basic');
+  const [settingsView, setSettingsView] = useState('contact');
 
   useEffect(() => {
     fetchStats();
