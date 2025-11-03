@@ -3919,7 +3919,11 @@ async def reject_profit_withdrawal(withdrawal_id: str, request: Request):
         }}
     )
     
-    return {"message": "Withdrawal rejected and refunded", "withdrawal_id": withdrawal_id, "refunded_amount": total_refund}
+    return {
+        "message": "Withdrawal rejected and refunded",
+        "withdrawal_id": withdrawal_id,
+        "refunded_amount": refund_amount
+    }
 
 @api_router.post("/admin/withdrawals/profit/{withdrawal_id}/complete")
 async def complete_profit_withdrawal(withdrawal_id: str, request: Request):
