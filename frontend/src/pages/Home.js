@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { InstallAppButton } from '@/components/PWAInstallPrompt';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Coins, Zap, Users, Gift, Star, TrendingUp, Shield, ArrowRight, CheckCircle2, Play, Sparkles, Target, Crown } from 'lucide-react';
