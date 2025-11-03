@@ -99,10 +99,8 @@ const BankingWallet = ({ user, walletBalance = 0 }) => {
   };
 
   const getCurrentBalance = () => {
-    if (activeWallet === 'cashback') {
-      return user?.cashback_balance || 0;
-    }
-    return user?.profit_balance || 0;
+    // Use the passed walletBalance prop which is fresh from the API
+    return walletBalance;
   };
 
   const filteredTransactions = transactions.filter(t => {
