@@ -113,6 +113,13 @@ const Navbar = ({ user, onLogout }) => {
                   </DropdownMenuItem>
                 )}
                 
+                {/* Manager Panel */}
+                {isManager && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/manager" className="cursor-pointer font-semibold text-indigo-600">Manager Panel</Link>
+                  </DropdownMenuItem>
+                )}
+                
                 {/* Stockist Panels */}
                 {user.role === 'master_stockist' && (
                   <DropdownMenuItem asChild>
@@ -244,6 +251,13 @@ const Navbar = ({ user, onLogout }) => {
                 {isAdmin && (
                   <DropdownMenuItem asChild>
                     <Link to="/admin" className="cursor-pointer font-semibold text-purple-600">Admin Panel</Link>
+                  </DropdownMenuItem>
+                )}
+                
+                {/* Manager Panel */}
+                {isManager && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/manager" className="cursor-pointer font-semibold text-indigo-600">Manager Panel</Link>
                   </DropdownMenuItem>
                 )}
                 
