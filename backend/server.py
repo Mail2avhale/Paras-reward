@@ -5886,10 +5886,10 @@ async def adjust_user_wallet(uid: str, request: Request):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Determine field to update
+    # Determine field to update (correct field names)
     field_map = {
-        "cashback": "cashback_wallet_balance",
-        "profit": "profit_wallet_balance",
+        "cashback": "cashback_balance",
+        "profit": "profit_balance",
         "prc": "prc_balance"
     }
     
@@ -5897,13 +5897,34 @@ async def adjust_user_wallet(uid: str, request: Request):
     if not field:
         raise HTTPException(status_code=400, detail="Invalid wallet type")
     
+    # Get current balance
+    current_balance = user.get(field, 0)
+    new_balance = current_balance + adjustment_amount
+    
     # Update wallet
     await db.users.update_one(
         {"uid": uid},
         {"$inc": {field: adjustment_amount}}
     )
     
-    # Log adjustment
+    # Log to wallet_transactions (so it shows in transaction history)
+    if wallet_type in ["cashback", "profit"]:
+        transaction_id = str(uuid.uuid4())
+        await db.wallet_transactions.insert_one({
+            "transaction_id": transaction_id,
+            "user_id": uid,
+            "wallet_type": wallet_type,
+            "transaction_type": "credit" if adjustment_amount > 0 else "debit",
+            "amount": abs(adjustment_amount),
+            "balance_before": current_balance,
+            "balance_after": new_balance,
+            "description": reason,
+            "created_by": "admin",
+            "admin_id": admin_uid,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    # Also log adjustment for admin audit
     await db.wallet_adjustments.insert_one({
         "adjustment_id": str(uuid.uuid4()),
         "user_id": uid,
@@ -5917,7 +5938,8 @@ async def adjust_user_wallet(uid: str, request: Request):
     return {
         "message": "Wallet adjusted successfully",
         "wallet_type": wallet_type,
-        "adjustment": adjustment_amount
+        "adjustment": adjustment_amount,
+        "new_balance": new_balance
     }
 
 @api_router.get("/admin/audit-logs")
