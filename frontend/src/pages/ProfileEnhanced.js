@@ -499,44 +499,86 @@ const ProfileEnhanced = ({ user, onLogout }) => {
                     />
                   </div>
                   <div>
-                    <Label>District</Label>
-                    <Input
-                      value={profileData.district}
-                      onChange={(e) => setProfileData({...profileData, district: e.target.value})}
-                      placeholder="District"
-                    />
+                    <Label>State *</Label>
+                    <Select 
+                      value={profileData.state} 
+                      onValueChange={handleStateChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select State" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getStates().map(state => (
+                          <SelectItem key={state} value={state}>{state}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label>State *</Label>
-                    <Input
-                      value={profileData.state}
-                      onChange={(e) => setProfileData({...profileData, state: e.target.value})}
-                      placeholder="State"
-                      required
-                    />
+                    <Label>District *</Label>
+                    <Select 
+                      value={profileData.district} 
+                      onValueChange={handleDistrictChange}
+                      disabled={!profileData.state}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={profileData.state ? "Select District" : "Select State First"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableDistricts.map(district => (
+                          <SelectItem key={district} value={district}>{district}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
-                    <Label>PIN Code *</Label>
-                    <Input
-                      value={profileData.pincode}
-                      onChange={(e) => setProfileData({...profileData, pincode: e.target.value})}
-                      placeholder="6-digit PIN"
-                      maxLength={6}
-                      required
-                    />
+                    <Label>Tahsil *</Label>
+                    <Select 
+                      value={profileData.tahsil} 
+                      onValueChange={handleTahsilChange}
+                      disabled={!profileData.district}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={profileData.district ? "Select Tahsil" : "Select District First"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableTahsils.map(tahsil => (
+                          <SelectItem key={tahsil} value={tahsil}>{tahsil}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
-                <div>
-                  <Label>UPI ID</Label>
-                  <Input
-                    value={profileData.upi_id}
-                    onChange={(e) => setProfileData({...profileData, upi_id: e.target.value})}
-                    placeholder="yourname@upi"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>PIN Code *</Label>
+                    <Select 
+                      value={profileData.pincode} 
+                      onValueChange={handlePinChange}
+                      disabled={!profileData.tahsil}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={profileData.tahsil ? "Select PIN Code" : "Select Tahsil First"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availablePins.map(pin => (
+                          <SelectItem key={pin} value={pin}>{pin}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>UPI ID</Label>
+                    <Input
+                      value={profileData.upi_id}
+                      onChange={(e) => setProfileData({...profileData, upi_id: e.target.value})}
+                      placeholder="yourname@upi"
+                    />
+                  </div>
                 </div>
 
                 <Button type="submit" disabled={loading} className="w-full md:w-auto bg-purple-600 hover:bg-purple-700">
