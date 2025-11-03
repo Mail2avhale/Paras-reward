@@ -243,13 +243,13 @@ const WalletNew = ({ user, onLogout }) => {
 
   const getPaymentMethodIcon = (mode) => {
     const icons = {
-      'phonepe': <Smartphone className="h-4 w-4 text-purple-600" />,
-      'googlepay': <Smartphone className="h-4 w-4 text-blue-600" />,
-      'paytm': <Smartphone className="h-4 w-4 text-indigo-600" />,
-      'upi': <CreditCard className="h-4 w-4 text-green-600" />,
-      'bank': <Building2 className="h-4 w-4 text-gray-600" />
+      'phonepe': <Smartphone className="h-4 w-4 text-purple-400" />,
+      'googlepay': <Smartphone className="h-4 w-4 text-blue-400" />,
+      'paytm': <Smartphone className="h-4 w-4 text-indigo-400" />,
+      'upi': <CreditCard className="h-4 w-4 text-emerald-400" />,
+      'bank': <Building2 className="h-4 w-4 text-amber-400" />
     };
-    return icons[mode] || <CreditCard className="h-4 w-4 text-gray-600" />;
+    return icons[mode] || <CreditCard className="h-4 w-4 text-amber-400" />;
   };
 
   const isStockistOrOutlet = ['master_stockist', 'sub_stockist', 'outlet'].includes(user?.role);
