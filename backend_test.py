@@ -705,6 +705,7 @@ def test_profit_wallet_management():
     print(f"\n2.3. Testing Admin Deduct - Insufficient Balance Creates Lien (₹400)")
     try:
         deduct_data = {
+            "admin_uid": admin_uid,
             "user_id": stockist_uid,
             "amount": 400,
             "description": "Test deduction creating lien"
