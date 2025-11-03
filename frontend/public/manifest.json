@@ -1,0 +1,55 @@
+{
+  "name": "PARAS REWARD - Earn Daily Rewards",
+  "short_name": "PARAS REWARD",
+  "description": "India's #1 Reward Points Platform. Earn PRC through daily activities and redeem for real products.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1e1b4b",
+  "theme_color": "#9333ea",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/paras-logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/paras-logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/paras-logo.jpg",
+      "sizes": "540x720",
+      "type": "image/jpeg"
+    }
+  ],
+  "categories": ["entertainment", "lifestyle", "shopping"],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/paras-logo.jpg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mining",
+      "short_name": "Mining",
+      "description": "Start earning rewards",
+      "url": "/mining",
+      "icons": [{ "src": "/paras-logo.jpg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Marketplace",
+      "short_name": "Shop",
+      "description": "Redeem rewards",
+      "url": "/marketplace",
+      "icons": [{ "src": "/paras-logo.jpg", "sizes": "192x192" }]
+    }
+  ]
+}
