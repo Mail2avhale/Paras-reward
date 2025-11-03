@@ -149,7 +149,18 @@ const ProfileEnhanced = ({ user, onLogout }) => {
         pincode: user.pincode || '',
         aadhaar_number: user.aadhaar_number || '',
         pan_number: user.pan_number || '',
-        upi_id: user.upi_id || ''
+        
+        // Banking & Payment Details
+        bank_account_holder_name: user.bank_account_holder_name || '',
+        bank_account_number: user.bank_account_number || '',
+        bank_ifsc: user.bank_ifsc || '',
+        bank_name: user.bank_name || '',
+        bank_branch: user.bank_branch || '',
+        bank_account_type: user.bank_account_type || '',
+        upi_id: user.upi_id || '',
+        phonepe_number: user.phonepe_number || '',
+        gpay_number: user.gpay_number || '',
+        paytm_number: user.paytm_number || ''
       };
       
       setProfileData(userData);
