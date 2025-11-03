@@ -316,6 +316,129 @@ async def calculate_profile_completion(user: Dict) -> float:
     completed = sum(1 for field in required_fields if user.get(field))
     return (completed / len(required_fields)) * 100
 
+
+
+# ========== TRANSACTION HELPERS ==========
+async def log_transaction(
+    user_id: str,
+    wallet_type: str,
+    transaction_type: str,
+    amount: float,
+    description: str,
+    metadata: Dict = {},
+    related_id: Optional[str] = None,
+    related_type: Optional[str] = None
+) -> str:
+    """Log a transaction and update user balance"""
+    
+    # Get current user
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Determine balance field
+    balance_field = f"{wallet_type}_balance"
+    balance_before = user.get(balance_field, 0.0)
+    
+    # Calculate new balance
+    if transaction_type in ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share"]:
+        # Credit transactions
+        balance_after = balance_before + amount
+    elif transaction_type in ["order", "withdrawal", "admin_debit", "delivery_charge"]:
+        # Debit transactions
+        balance_after = balance_before - amount
+    else:
+        balance_after = balance_before
+    
+    # Create transaction record
+    transaction = {
+        "transaction_id": f"TXN-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}",
+        "user_id": user_id,
+        "wallet_type": wallet_type,
+        "type": transaction_type,
+        "amount": amount,
+        "balance_before": balance_before,
+        "balance_after": balance_after,
+        "status": "completed",
+        "description": description,
+        "metadata": metadata,
+        "related_id": related_id,
+        "related_type": related_type,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Insert transaction
+    await db.transactions.insert_one(transaction)
+    
+    # Update user balance
+    await db.users.update_one(
+        {"uid": user_id},
+        {"$set": {balance_field: balance_after}}
+    )
+    
+    return transaction["transaction_id"]
+
+async def get_user_lien_amount(user_id: str) -> float:
+    """Calculate total lien (pending fees) for a user"""
+    
+    # Get user
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        return 0.0
+    
+    role = user.get("role", "user")
+    
+    # Only stockists have lien
+    if role not in ["master_stockist", "sub_stockist", "outlet"]:
+        return 0.0
+    
+    # Get pending renewal fees
+    pending_renewals = await db.renewal_fees.find({
+        "user_id": user_id,
+        "status": "pending"
+    }).to_list(None)
+    
+    total_lien = sum(r.get("amount", 0.0) for r in pending_renewals)
+    
+    return total_lien
+
+async def check_withdrawal_eligibility(user_id: str, amount: float, wallet_type: str) -> Dict:
+    """
+    Check if user can withdraw the requested amount
+    Returns: {eligible: bool, reason: str, lien_amount: float}
+    """
+    
+    # Get user
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        return {"eligible": False, "reason": "User not found", "lien_amount": 0.0}
+    
+    # Check KYC
+    if user.get("kyc_status") != "verified":
+        return {"eligible": False, "reason": "KYC not verified", "lien_amount": 0.0}
+    
+    # Check wallet balance
+    balance_field = f"{wallet_type}_balance"
+    current_balance = user.get(balance_field, 0.0)
+    
+    if current_balance < amount:
+        return {"eligible": False, "reason": f"Insufficient balance. Current: ₹{current_balance:.2f}", "lien_amount": 0.0}
+    
+    # Check lien
+    lien_amount = await get_user_lien_amount(user_id)
+    
+    # For stockists, check if balance after withdrawal > lien
+    if lien_amount > 0:
+        balance_after_withdrawal = current_balance - amount
+        if balance_after_withdrawal < lien_amount:
+            return {
+                "eligible": False, 
+                "reason": f"Outstanding fees: ₹{lien_amount:.2f}. Balance after withdrawal must be ≥ lien amount.",
+                "lien_amount": lien_amount
+            }
+    
+    return {"eligible": True, "reason": "Eligible for withdrawal", "lien_amount": lien_amount}
+
 async def check_unique_fields(field_name: str, value: str, exclude_uid: Optional[str] = None):
     """Check if field value is unique"""
     if not value:
