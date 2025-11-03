@@ -160,7 +160,8 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
       fetchCart();
     } catch (error) {
       console.error('Error updating cart:', error);
-      toast.error('Failed to update quantity');
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to update quantity';
+      toast.error(errorMessage);
     }
   };
 
