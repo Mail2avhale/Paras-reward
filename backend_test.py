@@ -1470,6 +1470,7 @@ def run_comprehensive_test():
         "order_management": False,
         "withdrawal_management": False,
         "profit_wallet_management": False,
+        "cart_order_placement": False,
         "test_completed": False
     }
     
