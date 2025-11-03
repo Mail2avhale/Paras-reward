@@ -204,17 +204,17 @@ const WalletNew = ({ user, onLogout }) => {
     const statusConfig = {
       pending: { 
         icon: Clock, 
-        color: 'text-amber-300 bg-amber-900/30 border border-amber-500/30', 
+        color: 'text-yellow-700 bg-gradient-to-r from-yellow-100 to-yellow-200 border-2 border-yellow-300', 
         text: 'Pending' 
       },
       approved: { 
         icon: CheckCircle2, 
-        color: 'text-emerald-300 bg-emerald-900/30 border border-emerald-500/30', 
+        color: 'text-green-700 bg-gradient-to-r from-green-100 to-emerald-200 border-2 border-green-300', 
         text: 'Completed' 
       },
       rejected: { 
         icon: XCircle, 
-        color: 'text-red-300 bg-red-900/30 border border-red-500/30', 
+        color: 'text-red-700 bg-gradient-to-r from-red-100 to-red-200 border-2 border-red-300', 
         text: 'Rejected' 
       }
     };
@@ -223,8 +223,8 @@ const WalletNew = ({ user, onLogout }) => {
     const Icon = config.icon;
     
     return (
-      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-sm ${config.color}`}>
-        <Icon className="h-3.5 w-3.5" />
+      <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold shadow-sm ${config.color}`}>
+        <Icon className="h-4 w-4" />
         {config.text}
       </span>
     );
