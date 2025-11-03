@@ -2122,7 +2122,7 @@ async def request_cashback_withdrawal(request: Request):
         "amount_to_receive": amount_to_receive,
         "wallet_debited": wallet_debit,
         "lien_amount": eligibility["lien_amount"],
-        "transaction_id": transaction_id
+        "transaction_id": transaction_id,
         "status": "pending"
     }
 
