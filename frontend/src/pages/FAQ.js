@@ -1,92 +1,112 @@
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import Footer from '../components/Footer';
+import AdSenseAd from '../components/AdSenseAd';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const FAQ = () => {
   const [openIndex, setOpenIndex] = useState(null);
 
   const faqs = [
     {
-      question: "What is PARAS REWARD?",
-      answer: "PARAS REWARD is India's first reward-based engagement platform where users earn PRC (Paras Reward Coins) through daily activities, games, and referrals. You can redeem PRC for real products or cash withdrawals."
+      question: "What is Paras Reward?",
+      answer: "PARAS REWARD is India's first mining-based rewards platform where users earn PRC (Paras Reward Coins) through daily activities like mining, tap games, and referrals. These coins can be redeemed for real products or cash withdrawals."
     },
     {
       question: "How do I earn PRC coins?",
-      answer: "You can earn PRC through multiple ways: 1) Start daily reward sessions (24-hour cycles), 2) Play the tap game (up to 100 PRC/day), 3) Refer friends (get 10% bonus on their earning rate), 4) Complete daily tasks and challenges."
+      answer: "You can earn PRC coins through multiple ways: Daily mining (click mine button every hour), Tap game (play daily to earn bonus coins), Referrals (invite friends and earn when they join), and Daily login rewards."
     },
     {
       question: "Is there any joining fee?",
-      answer: "No! PARAS REWARD is 100% free to join. You can start earning immediately without any investment. However, VIP membership (₹1000/year) is optional and unlocks additional benefits like unlimited PRC validity and instant withdrawals."
+      answer: "No! Joining PARAS REWARD is completely free. You can start earning PRC coins immediately after registration without any investment."
     },
     {
-      question: "How to increase my earning rate?",
-      answer: "Your earning rate increases based on: 1) Number of active referrals (up to 200), 2) Daily activity and engagement, 3) VIP membership status, 4) Completing daily tasks. Each active referral gives you 10% bonus on their earning rate."
+      question: "How to increase mining speed?",
+      answer: "You can increase your mining rate by: Referring more friends to join the platform, Becoming a VIP member for enhanced benefits, Completing daily tasks and maintaining consistent activity."
     },
     {
       question: "How to redeem PRC to cash?",
-      answer: "Only VIP members can redeem PRC to cash. Process: 1) Upgrade to VIP (₹1000/year), 2) Go to Wallet section, 3) Request withdrawal (minimum ₹10), 4) Enter UPI details, 5) Receive payment in 48-72 hours. A 10% charity fee and ₹5 processing fee apply."
+      answer: "Only VIP members can redeem PRC for cash. Go to Wallet section, select withdrawal amount, provide your UPI details, and submit the request. Withdrawals are processed within 48-72 hours."
     },
     {
-      question: "What is the conversion rate for PRC?",
-      answer: "10 PRC = ₹1 INR. For example, if you earn 1000 PRC, it equals ₹100. You also get 25% cashback on every product redemption."
+      question: "What is the PRC to INR conversion rate?",
+      answer: "10 PRC = ₹1 INR. This conversion rate is fixed and applies to all transactions and redemptions on the platform."
     },
     {
-      question: "Do PRC coins expire?",
-      answer: "For FREE users: PRC earning is restricted (VIP membership required). For VIP members: PRC never expires - unlimited validity."
+      question: "What is VIP membership and how much does it cost?",
+      answer: "VIP membership costs ₹1,000 per year and unlocks unlimited PRC validity, full redemption access, priority support, exclusive marketplace access, and higher mining rates."
     },
     {
-      question: "How does the referral system work?",
-      answer: "Share your unique referral link with friends. When they join and start earning, you get 10% bonus on their earning rate. You can refer up to 200 users. The more active referrals you have, the higher your earnings."
+      question: "Do free users' PRC coins expire?",
+      answer: "Yes, free users have a 24-hour PRC validity period. Coins earned through mining and tap games will expire after 24 hours. VIP members have unlimited coin validity."
     },
     {
-      question: "What is VIP Membership?",
-      answer: "VIP Membership costs ₹1000/year and includes: Unlimited PRC validity, Instant UPI withdrawals, Higher earning rates, Priority support, Exclusive product access, No withdrawal limits, and access to redeem features."
+      question: "Can free users redeem products?",
+      answer: "No, only VIP members can redeem products and withdraw cash. Free users can earn and accumulate PRC but must upgrade to VIP to access redemption features."
     },
     {
-      question: "How long does withdrawal take?",
-      answer: "Cashback wallet withdrawals are processed within 48-72 hours via UPI. Make sure your UPI ID is correct and your account is KYC verified for smooth processing."
+      question: "What is KYC and why is it required?",
+      answer: "KYC (Know Your Customer) verification is mandatory for all withdrawal requests. It ensures security and compliance. You need to upload valid government ID proof (Aadhar, PAN, or Driver's License) for verification."
     },
     {
-      question: "Is PARAS REWARD safe and legit?",
-      answer: "Yes! PARAS REWARD is a registered platform with 10,000+ active users and ₹50L+ rewards distributed. We use bank-grade security, encrypted transactions, and comply with Indian data protection laws."
+      question: "How long does KYC verification take?",
+      answer: "KYC verification typically takes 24-48 hours. You'll receive a notification once your documents are verified. After approval, you can proceed with withdrawals."
     },
     {
-      question: "What products can I redeem?",
-      answer: "Our marketplace has 5000+ products including electronics, home appliances, fashion items, groceries, and more. New products are added regularly based on user demand."
-    },
-    {
-      question: "Can I have multiple accounts?",
-      answer: "No. Creating multiple accounts is strictly prohibited and will result in permanent ban of all associated accounts. One account per person is allowed."
-    },
-    {
-      question: "How do I contact customer support?",
-      answer: "You can reach us via: 1) Email: support@parasreward.com, 2) In-app support ticket system, 3) Contact Us page on website. VIP members get priority support with faster response times."
-    },
-    {
-      question: "What is KYC verification?",
-      answer: "KYC (Know Your Customer) verification is mandatory for withdrawals. Upload your Aadhaar card for identity verification. This ensures security and prevents fraud. The process takes 24-48 hours for approval."
-    },
-    {
-      question: "Can I cancel a withdrawal request?",
-      answer: "Yes, you can cancel pending withdrawal requests before they are processed by admin. Once processed and marked as 'completed', cancellation is not possible."
-    },
-    {
-      question: "What happens if my withdrawal is rejected?",
-      answer: "If your withdrawal request is rejected, the full amount (including fees) is immediately refunded to your wallet. Common rejection reasons include incorrect UPI details or incomplete KYC."
-    },
-    {
-      question: "How does the cashback system work?",
-      answer: "When you redeem products using PRC, you get 25% cashback in your Cashback Wallet. For example, redeeming 1000 PRC (₹100 worth) gives you ₹25 cashback. VIP members can withdraw this cashback via UPI."
+      question: "What payment methods are supported for withdrawal?",
+      answer: "We support multiple UPI payment methods including PhonePe, Google Pay, Paytm, and direct bank transfer. Select your preferred method during withdrawal."
     },
     {
       question: "What is the minimum withdrawal amount?",
-      answer: "The minimum withdrawal amount from Cashback Wallet is ₹10. There's also a ₹5 processing fee per withdrawal. For Profit Wallet (for stockists), minimum is also ₹10."
+      answer: "The minimum withdrawal amount from the Cashback Wallet is ₹10. A withdrawal fee of ₹5 applies to each transaction."
+    },
+    {
+      question: "What is the Cashback Wallet?",
+      answer: "The Cashback Wallet stores your redemption cashback (25% of product value) in INR. It has a monthly maintenance fee of ₹99 and allows withdrawals of minimum ₹10 with a ₹5 processing fee."
+    },
+    {
+      question: "How does the referral system work?",
+      answer: "Share your unique referral code or link with friends. When they register using your code and become active users, you earn bonus PRC coins and increased mining rates."
+    },
+    {
+      question: "Can I create multiple accounts?",
+      answer: "No, creating multiple or fake accounts is strictly prohibited and violates our Terms & Conditions. Accounts found violating this rule will be permanently banned."
+    },
+    {
+      question: "What is the Tap Game?",
+      answer: "The Tap Game is a daily interactive feature where you tap the screen to earn bonus PRC coins. Play once per day to maximize your earnings."
+    },
+    {
+      question: "How does product redemption work?",
+      answer: "Browse the Marketplace, add products to cart, proceed to checkout. Your PRC balance will be deducted, a delivery charge applies, and you'll receive 25% cashback in your Cashback Wallet."
+    },
+    {
+      question: "What happens if I miss daily mining?",
+      answer: "If you miss a mining session, you simply won't earn coins for that period. There's no penalty, but consistent daily activity helps maximize your earnings."
+    },
+    {
+      question: "Is PARAS REWARD a cryptocurrency platform?",
+      answer: "No, PARAS REWARD is a reward points platform, not a cryptocurrency platform. PRC coins are digital reward points redeemable for products and cash within our ecosystem."
+    },
+    {
+      question: "How secure is my personal information?",
+      answer: "We use industry-standard encryption and security measures to protect your data. Your information is never sold to third parties. Read our Privacy Policy for complete details."
+    },
+    {
+      question: "Can I cancel a withdrawal request?",
+      answer: "Once a withdrawal request is submitted, it cannot be cancelled as the amount is immediately deducted from your wallet. If the request is rejected by admin, the amount will be re-credited."
+    },
+    {
+      question: "What if I forget my password?",
+      answer: "Click on 'Forgot Password' on the login page, enter your registered email, and you'll receive a password reset link via email."
+    },
+    {
+      question: "How can I contact customer support?",
+      answer: "You can reach our support team via email at support@parasreward.com or use the in-app Support Tickets system for faster assistance."
     },
     {
       question: "Are there any hidden charges?",
-      answer: "No hidden charges! All fees are transparent: ₹1000/year for VIP membership (optional), ₹5 withdrawal processing fee, 10% charity deduction on redemptions. Free users can use the platform without any charges."
+      answer: "No hidden charges! All fees are clearly mentioned: VIP membership (₹1,000/year), Cashback Wallet maintenance (₹99/month), Withdrawal fee (₹5 per transaction), and Delivery charges on product orders."
     }
   ];
 
@@ -95,93 +115,71 @@ const FAQ = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-xl">P</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">PARAS REWARD</span>
-            </Link>
-            <Link to="/">
-              <Button variant="ghost" className="flex items-center gap-2 hover:bg-purple-50">
-                <ArrowLeft className="h-4 w-4" />
-                Back to Home
-              </Button>
-            </Link>
-          </div>
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <Link to="/" className="inline-flex items-center text-purple-600 hover:text-purple-700 mb-4">
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Home
+          </Link>
+          <h1 className="text-4xl font-bold text-gray-900">Frequently Asked Questions</h1>
+          <p className="text-gray-600 mt-2">Find answers to common questions about PARAS REWARD</p>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-12">
-        <div className="max-w-4xl mx-auto">
-          
-          {/* Hero */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-600 to-pink-600 rounded-3xl mb-6 shadow-2xl">
-              <HelpCircle className="h-10 w-10 text-white" />
-            </div>
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h1>
-            <p className="text-xl text-gray-600">
-              Find answers to common questions about PARAS REWARD
-            </p>
-          </div>
+      {/* Content */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <AdSenseAd slot="4234567890" format="auto" />
 
-          {/* FAQ List */}
-          <div className="space-y-4">
-            {faqs.map((faq, index) => (
-              <Card 
-                key={index} 
-                className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden"
+        <div className="bg-white rounded-lg shadow-lg mt-8">
+          {faqs.map((faq, index) => (
+            <div key={index} className="border-b border-gray-200 last:border-b-0">
+              <button
+                onClick={() => toggleFAQ(index)}
+                className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
               >
-                <button
-                  onClick={() => toggleFAQ(index)}
-                  className="w-full p-6 text-left flex items-center justify-between gap-4 hover:bg-purple-50 transition-colors"
-                >
-                  <div className="flex items-start gap-4 flex-1">
-                    <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                      <span className="text-purple-600 font-bold">{index + 1}</span>
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900">
-                      {faq.question}
-                    </h3>
-                  </div>
-                  {openIndex === index ? (
-                    <ChevronUp className="h-5 w-5 text-purple-600 flex-shrink-0" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5 text-gray-400 flex-shrink-0" />
-                  )}
-                </button>
-                
-                {openIndex === index && (
-                  <div className="px-6 pb-6 pl-18">
-                    <p className="text-gray-700 leading-relaxed whitespace-pre-line">
-                      {faq.answer}
-                    </p>
-                  </div>
+                <span className="text-lg font-semibold text-gray-900 pr-4">{faq.question}</span>
+                {openIndex === index ? (
+                  <ChevronUp className="w-5 h-5 text-purple-600 flex-shrink-0" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" />
                 )}
-              </Card>
-            ))}
-          </div>
-
-          {/* Contact CTA */}
-          <Card className="mt-12 p-8 bg-gradient-to-br from-purple-600 to-pink-600 text-white text-center">
-            <h3 className="text-2xl font-bold mb-3">Still Have Questions?</h3>
-            <p className="text-purple-100 mb-6">
-              Our support team is here to help you 24/7
-            </p>
-            <Link to="/contact">
-              <Button className="bg-white text-purple-600 hover:bg-gray-100 px-8 py-6 text-lg rounded-xl">
-                Contact Support
-              </Button>
-            </Link>
-          </Card>
-
+              </button>
+              {openIndex === index && (
+                <div className="px-6 pb-5">
+                  <p className="text-gray-700 leading-relaxed">{faq.answer}</p>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
+
+        <div className="mt-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg shadow-lg p-8 text-white text-center">
+          <h3 className="text-2xl font-bold mb-4">Still Have Questions?</h3>
+          <p className="text-lg mb-6">Our support team is here to help you!</p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a 
+              href="mailto:support@parasreward.com" 
+              className="inline-block bg-white text-purple-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+            >
+              📧 Email Support
+            </a>
+            <Link 
+              to="/contact" 
+              className="inline-block bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-800 transition-colors"
+            >
+              📞 Contact Us
+            </Link>
+          </div>
+        </div>
+
+        <AdSenseAd slot="4234567891" format="rectangle" />
       </div>
+
+      <Footer />
     </div>
   );
 };
