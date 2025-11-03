@@ -675,6 +675,45 @@ const ProfileEnhanced = ({ user, onLogout }) => {
           </div>
         </Card>
 
+        {/* Profile Completion Status Bar */}
+        <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-purple-200">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-bold text-gray-900">Profile Completion</h3>
+            <span className="text-2xl font-bold text-purple-600">{completionPercentage}%</span>
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="w-full bg-gray-200 rounded-full h-3 mb-3 overflow-hidden">
+            <div 
+              className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${completionPercentage}%` }}
+            ></div>
+          </div>
+          
+          {/* Completion Status Message */}
+          {completionPercentage < 100 ? (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600 mb-2">Complete your profile to unlock all features:</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                {!profileData.name && <div className="flex items-center gap-2 text-gray-600">• Add your full name</div>}
+                {!profileData.mobile && <div className="flex items-center gap-2 text-gray-600">• Add mobile number</div>}
+                {!profileData.aadhaar_number && <div className="flex items-center gap-2 text-gray-600">• Add Aadhaar number</div>}
+                {!profileData.pan_number && <div className="flex items-center gap-2 text-gray-600">• Add PAN number</div>}
+                {!profileData.address_line1 && <div className="flex items-center gap-2 text-gray-600">• Add complete address</div>}
+                {!profileData.state && <div className="flex items-center gap-2 text-gray-600">• Select your state</div>}
+                {!profileData.pincode && <div className="flex items-center gap-2 text-gray-600">• Add PIN code</div>}
+                {!(profileData.upi_id || profileData.bank_account_number) && <div className="flex items-center gap-2 text-gray-600">• Add payment method (UPI or Bank)</div>}
+                {kycStatus !== 'verified' && <div className="flex items-center gap-2 text-gray-600">• Complete KYC verification</div>}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-green-600 font-semibold flex items-center gap-2">
+              <CheckCircle className="h-4 w-4" />
+              Your profile is 100% complete!
+            </p>
+          )}
+        </Card>
+
         {/* Profile Tabs */}
         <Tabs defaultValue="personal" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 lg:w-auto">
