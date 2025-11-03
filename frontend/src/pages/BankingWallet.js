@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const BankingWallet = ({ user }) => {
+const BankingWallet = ({ user, walletBalance = 0 }) => {
   const [activeWallet, setActiveWallet] = useState('cashback');
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
