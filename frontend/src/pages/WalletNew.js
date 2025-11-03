@@ -53,7 +53,28 @@ const WalletNew = ({ user, onLogout }) => {
   useEffect(() => {
     fetchWalletData();
     fetchWithdrawals();
-  }, []);
+    
+    // Auto-load banking details from user profile
+    if (user) {
+      // Load UPI details - prioritize in order
+      const userUpiId = user.upi_id || user.phonepe_number || user.gpay_number || user.paytm_number || '';
+      setCashbackUpiId(userUpiId);
+      setProfitUpiId(userUpiId);
+      
+      // Load Bank details
+      if (user.bank_account_holder_name) setCashbackAccountHolderName(user.bank_account_holder_name);
+      if (user.bank_account_holder_name) setProfitAccountHolderName(user.bank_account_holder_name);
+      
+      if (user.bank_account_number) setCashbackBankAccount(user.bank_account_number);
+      if (user.bank_account_number) setProfitBankAccount(user.bank_account_number);
+      
+      if (user.bank_name) setCashbackBankName(user.bank_name);
+      if (user.bank_name) setProfitBankName(user.bank_name);
+      
+      if (user.bank_ifsc) setCashbackIfsc(user.bank_ifsc);
+      if (user.bank_ifsc) setProfitIfsc(user.bank_ifsc);
+    }
+  }, [user]);
 
   const fetchWalletData = async () => {
     try {
