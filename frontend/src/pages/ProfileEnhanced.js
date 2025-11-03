@@ -51,7 +51,7 @@ const ProfileEnhanced = ({ user, onLogout }) => {
 
   useEffect(() => {
     if (user) {
-      setProfileData({
+      const userData = {
         first_name: user.first_name || '',
         middle_name: user.middle_name || '',
         last_name: user.last_name || '',
@@ -63,11 +63,31 @@ const ProfileEnhanced = ({ user, onLogout }) => {
         city: user.city || '',
         state: user.state || '',
         district: user.district || '',
+        tahsil: user.tahsil || '',
         pincode: user.pincode || '',
         aadhaar_number: user.aadhaar_number || '',
         pan_number: user.pan_number || '',
         upi_id: user.upi_id || ''
-      });
+      };
+      
+      setProfileData(userData);
+      
+      // Initialize cascading dropdowns if user has location data
+      if (userData.state) {
+        const districts = getDistricts(userData.state);
+        setAvailableDistricts(districts);
+        
+        if (userData.district) {
+          const tahsils = getTahsils(userData.state, userData.district);
+          setAvailableTahsils(tahsils);
+          
+          if (userData.tahsil) {
+            const pins = getPinCodes(userData.state, userData.district, userData.tahsil);
+            setAvailablePins(pins);
+          }
+        }
+      }
+      
       setProfilePicture(user.profile_picture || null);
     }
   }, [user]);
