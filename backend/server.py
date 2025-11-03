@@ -1560,10 +1560,12 @@ async def checkout(request: Request):
     total_prc = sum(item["prc_price"] * item["quantity"] for item in cart["items"])
     total_cash = sum(item.get("cash_price", 0) * item["quantity"] for item in cart["items"])
     
-    # Get delivery charge configuration (10% of cash total as default)
+    # Get delivery charge configuration (10% of PRC value in cash as default)
+    # PRC to cash conversion: 10 PRC = ₹1, so total_prc/10 = cash equivalent
     config = await db.system_config.find_one({"config_type": "delivery"})
     delivery_rate = config.get("delivery_charge_rate", 0.10) if config else 0.10
-    delivery_charge = round(total_cash * delivery_rate, 2)
+    prc_cash_value = total_prc / 10  # Convert PRC to ₹
+    delivery_charge = round(prc_cash_value * delivery_rate, 2)
     
     # Calculate cashback (25% of PRC value converted to ₹, 10 PRC = ₹1)
     cashback_amount = (total_prc * 0.25) / 10
