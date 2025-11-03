@@ -1330,7 +1330,7 @@ def test_admin_cashback_wallet_credit_debit():
                 print(f"   - Balance After: ₹{latest_transaction.get('balance_after')}")
                 print(f"   - Description: {latest_transaction.get('description')}")
                 print(f"   - Status: {latest_transaction.get('status')}")
-                print(f"   - Timestamp: {latest_transaction.get('timestamp')}")
+                print(f"   - Timestamp: {latest_transaction.get('created_at')}")
                 
                 # Check required fields
                 required_fields = ["transaction_id", "type", "amount", "balance_after", "description", "status", "created_at"]
