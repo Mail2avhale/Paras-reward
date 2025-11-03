@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Debug mining session issue - User has started mining but frontend shows 'Mining Paused'. Need to investigate why backend shows active mining but frontend displays paused status."
+user_problem_statement: "Fix React error when user places order from cart. Error occurs during cart checkout causing frontend crash - error object being rendered directly instead of error message."
 
 backend:
   - task: "Profile-Based Password Recovery"
