@@ -2024,23 +2024,75 @@ def print_cashback_test_summary(results):
         print(f"   4. ❌ Verify API endpoint implementations")
 
 if __name__ == "__main__":
-    print("Starting Admin Cashback Wallet Credit/Debit Feature Testing...")
+    print("Starting Comprehensive Profit Wallet Management & Monthly Fees Testing...")
     
-    # Run cashback wallet tests
-    cashback_results = test_admin_cashback_wallet_credit_debit()
+    # Run profit wallet management tests
+    profit_results = test_profit_wallet_management()
     
-    # Print test summary
-    print_cashback_test_summary(cashback_results)
+    # Print detailed results for each test suite
+    print("\n" + "📊" * 80)
+    print("PROFIT WALLET MANAGEMENT & MONTHLY FEES TEST SUMMARY")
+    print("📊" * 80)
     
-    # Determine exit code based on critical functionality
-    critical_tests = ["user_creation", "credit_no_lien", "transaction_logging", "real_time_balance"]
-    critical_passed = all(cashback_results[key] for key in critical_tests)
+    print(f"\n🔍 TEST SUITE RESULTS:")
+    
+    # Test Suite 1: Admin Profit Wallet Operations
+    print(f"\n   1. Admin Profit Wallet Operations:")
+    print(f"      - Admin Credit Profit Wallet: {'✅ PASSED' if profit_results['admin_credit_profit_wallet'] else '❌ FAILED'}")
+    print(f"      - Admin Deduct (Sufficient Balance): {'✅ PASSED' if profit_results['admin_deduct_sufficient_balance'] else '❌ FAILED'}")
+    print(f"      - Admin Deduct (Insufficient - Lien): {'✅ PASSED' if profit_results['admin_deduct_insufficient_lien'] else '❌ FAILED'}")
+    print(f"      - Admin Adjust Balance: {'✅ PASSED' if profit_results['admin_adjust_balance'] else '❌ FAILED'}")
+    
+    # Test Suite 2: Delivery Charge Distribution
+    print(f"\n   2. Delivery Charge Distribution:")
+    print(f"      - Distribution Endpoint Exists: {'✅ PASSED' if profit_results['delivery_charge_distribution'] else '❌ FAILED'}")
+    
+    # Test Suite 3: Monthly Maintenance Fees
+    print(f"\n   3. Monthly Maintenance Fees:")
+    print(f"      - Apply Monthly Fees to All VIP Users: {'✅ PASSED' if profit_results['monthly_fee_all_vip_users'] else '❌ FAILED'}")
+    
+    # Test Suite 4: Integration Tests
+    print(f"\n   4. Integration Tests:")
+    print(f"      - Lien Clearance on Credit: {'✅ PASSED' if profit_results['lien_clearance_on_credit'] else '❌ FAILED'}")
+    print(f"      - Transaction History: {'✅ PASSED' if profit_results['transaction_history'] else '❌ FAILED'}")
+    
+    # Determine overall status
+    critical_tests = [
+        "admin_credit_profit_wallet", "admin_deduct_sufficient_balance", 
+        "admin_deduct_insufficient_lien", "admin_adjust_balance",
+        "monthly_fee_all_vip_users"
+    ]
+    critical_passed = all(profit_results[key] for key in critical_tests)
+    all_passed = all(profit_results.values())
+    
+    print(f"\n🎯 OVERALL STATUS:")
+    if all_passed:
+        print(f"   ✅ ALL TESTS PASSED - PROFIT WALLET SYSTEM FULLY FUNCTIONAL")
+        print(f"   📋 Admin can credit/deduct/adjust profit wallet")
+        print(f"   📋 Insufficient balance creates lien correctly")
+        print(f"   📋 Lien status properly set")
+        print(f"   📋 Monthly fees apply to both wallets")
+        print(f"   📋 Transaction logs created for all operations")
+        print(f"   📋 Delivery charge distribution endpoint available")
+        print(f"   📋 No balance goes negative")
+        print(f"   📋 All metadata captured")
+    elif critical_passed:
+        print(f"   ⚠️  CRITICAL TESTS PASSED - MINOR ISSUES IN NON-CRITICAL FEATURES")
+        print(f"   📋 Core profit wallet operations working")
+        print(f"   📋 Lien creation and tracking working")
+        print(f"   📋 Monthly fee application working")
+        print(f"   📋 Some integration features may need attention")
+    else:
+        print(f"   ❌ CRITICAL TESTS FAILED - PROFIT WALLET SYSTEM ISSUES")
+        failed_critical = [test for test in critical_tests if not profit_results[test]]
+        for test in failed_critical:
+            print(f"   - {test.replace('_', ' ').title()}: CRITICAL FAILURE")
     
     print(f"\n{'='*80}")
     if critical_passed:
-        print("✅ CASHBACK WALLET TESTING COMPLETED - CORE FUNCTIONALITY WORKING")
+        print("✅ PROFIT WALLET TESTING COMPLETED - CORE FUNCTIONALITY WORKING")
     else:
-        print("❌ CASHBACK WALLET TESTING COMPLETED - CRITICAL ISSUES FOUND")
+        print("❌ PROFIT WALLET TESTING COMPLETED - CRITICAL ISSUES FOUND")
     print(f"{'='*80}")
     
     sys.exit(0 if critical_passed else 1)
