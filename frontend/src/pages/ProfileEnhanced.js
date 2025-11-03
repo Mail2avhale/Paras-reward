@@ -704,15 +704,6 @@ const ProfileEnhanced = ({ user, onLogout }) => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label>City *</Label>
-                    <Input
-                      value={profileData.city}
-                      onChange={(e) => setProfileData({...profileData, city: e.target.value})}
-                      placeholder="City"
-                      required
-                    />
-                  </div>
-                  <div>
                     <Label>State *</Label>
                     <Select 
                       value={profileData.state} 
@@ -730,54 +721,132 @@ const ProfileEnhanced = ({ user, onLogout }) => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>District *</Label>
-                    <Select 
-                      value={profileData.district} 
-                      onValueChange={handleDistrictChange}
-                      disabled={!profileData.state}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={profileData.state ? "Select District" : "Select State First"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableDistricts.map(district => (
-                          <SelectItem key={district} value={district}>{district}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Tahsil *</Label>
-                    <Select 
-                      value={profileData.tahsil} 
-                      onValueChange={handleTahsilChange}
-                      disabled={!profileData.district}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={profileData.district ? "Select Tahsil" : "Select District First"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableTahsils.map(tahsil => (
-                          <SelectItem key={tahsil} value={tahsil}>{tahsil}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                {/* Location Input Mode Toggle */}
+                <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="customLocation"
+                    checked={useCustomLocation}
+                    onChange={(e) => setUseCustomLocation(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded"
+                  />
+                  <label htmlFor="customLocation" className="text-sm text-blue-800 cursor-pointer">
+                    📍 My district/tahsil not found in list - Let me enter manually
+                  </label>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>PIN Code *</Label>
-                    <Select 
-                      value={profileData.pincode} 
-                      onValueChange={handlePinChange}
-                      disabled={!profileData.tahsil}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={profileData.tahsil ? "Select PIN Code" : "Select Tahsil First"} />
-                      </SelectTrigger>
+                {!useCustomLocation ? (
+                  // Dropdown Mode (Cascade Selectors)
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>District *</Label>
+                        <Select 
+                          value={profileData.district} 
+                          onValueChange={handleDistrictChange}
+                          disabled={!profileData.state}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={profileData.state ? "Select District" : "Select State First"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableDistricts.map(district => (
+                              <SelectItem key={district} value={district}>{district}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Tahsil *</Label>
+                        <Select 
+                          value={profileData.tahsil} 
+                          onValueChange={handleTahsilChange}
+                          disabled={!profileData.district}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={profileData.district ? "Select Tahsil" : "Select District First"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableTahsils.map(tahsil => (
+                              <SelectItem key={tahsil} value={tahsil}>{tahsil}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>PIN Code *</Label>
+                        <Select 
+                          value={profileData.pincode} 
+                          onValueChange={handlePinChange}
+                          disabled={!profileData.tahsil}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={profileData.tahsil ? "Select PIN Code" : "Select Tahsil First"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availablePins.map(pin => (
+                              <SelectItem key={pin} value={pin}>{pin}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  // Custom Input Mode (Manual Entry)
+                  <>
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg mb-4">
+                      <p className="text-sm text-green-800">
+                        ✅ Custom location mode enabled. Please enter your district, tahsil, and PIN code manually.
+                      </p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>District * (Custom)</Label>
+                        <Input
+                          value={profileData.district}
+                          onChange={(e) => setProfileData({...profileData, district: e.target.value})}
+                          placeholder="Enter your district name"
+                          required
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Type your district name exactly as it appears in government documents</p>
+                      </div>
+                      <div>
+                        <Label>Tahsil * (Custom)</Label>
+                        <Input
+                          value={profileData.tahsil}
+                          onChange={(e) => setProfileData({...profileData, tahsil: e.target.value})}
+                          placeholder="Enter your tahsil/taluka name"
+                          required
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Enter your tahsil or taluka name</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>PIN Code * (Custom)</Label>
+                        <Input
+                          value={profileData.pincode}
+                          onChange={(e) => {
+                            const filtered = e.target.value.replace(/\D/g, '');
+                            if (filtered.length <= 6) {
+                              setProfileData({...profileData, pincode: filtered});
+                            }
+                          }}
+                          placeholder="Enter 6-digit PIN code"
+                          maxLength={6}
+                          required
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Enter your 6-digit postal PIN code</p>
+                      </div>
+                    </div>
+                  </>
+                )}
                       <SelectContent>
                         {availablePins.map(pin => (
                           <SelectItem key={pin} value={pin}>{pin}</SelectItem>
