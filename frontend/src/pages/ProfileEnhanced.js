@@ -502,52 +502,8 @@ const ProfileEnhanced = ({ user, onLogout }) => {
   const completionPercentage = calculateProfileCompletion();
 
   return (
-
-    // Validation
-    if (!passwordData.current_password || !passwordData.new_password || !passwordData.confirm_password) {
-      toast.error('All fields are required');
-      return;
-    }
-
-    if (passwordData.new_password !== passwordData.confirm_password) {
-      toast.error('New passwords do not match');
-      return;
-    }
-
-    if (passwordData.new_password.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      await axios.post(`${API}/user/${user.uid}/change-password`, {
-        current_password: passwordData.current_password,
-        new_password: passwordData.new_password
-      });
-
-      toast.success('Password changed successfully!');
-      setPasswordData({
-        current_password: '',
-        new_password: '',
-        confirm_password: ''
-      });
-    } catch (error) {
-      console.error('Error changing password:', error);
-      toast.error(error.response?.data?.detail || 'Failed to change password');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // KYC handlers
-  const handleKycFileUpload = (field, e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setKycData({ ...kycData, [field]: reader.result });
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+      <Navbar user={user} onLogout={onLogout} />
         toast.success('Document uploaded');
       };
       reader.readAsDataURL(file);
