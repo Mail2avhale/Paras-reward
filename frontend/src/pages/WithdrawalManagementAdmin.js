@@ -424,17 +424,24 @@ const WithdrawalManagementAdmin = () => {
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Amount Details</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Amount</label>
-                    <p className="text-xl font-bold text-gray-900">{formatCurrency(selectedWithdrawal.amount)}</p>
+                    <label className="text-sm font-medium text-gray-600">Amount Requested</label>
+                    <p className="text-xl font-bold text-gray-900">
+                      {formatCurrency(selectedWithdrawal.amount_requested || selectedWithdrawal.amount || 0)}
+                    </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Fee</label>
-                    <p className="text-xl font-bold text-orange-600">{formatCurrency(selectedWithdrawal.withdrawal_fee || 0)}</p>
+                    <label className="text-sm font-medium text-gray-600">Processing Fee</label>
+                    <p className="text-xl font-bold text-orange-600">
+                      {formatCurrency(selectedWithdrawal.fee || selectedWithdrawal.withdrawal_fee || 5)}
+                    </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Net Amount</label>
+                    <label className="text-sm font-medium text-gray-600">Net Payable to User</label>
                     <p className="text-xl font-bold text-green-600">
-                      {formatCurrency((selectedWithdrawal.amount || 0) - (selectedWithdrawal.withdrawal_fee || 0))}
+                      {formatCurrency(
+                        selectedWithdrawal.amount_to_receive || 
+                        ((selectedWithdrawal.amount_requested || selectedWithdrawal.amount || 0) - (selectedWithdrawal.fee || selectedWithdrawal.withdrawal_fee || 5))
+                      )}
                     </p>
                   </div>
                 </div>
