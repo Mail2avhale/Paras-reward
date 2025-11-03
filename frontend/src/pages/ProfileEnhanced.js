@@ -566,11 +566,15 @@ const ProfileEnhanced = ({ user, onLogout }) => {
                   <Label>Mobile Number *</Label>
                   <Input
                     value={profileData.mobile}
-                    onChange={(e) => setProfileData({...profileData, mobile: e.target.value})}
-                    placeholder="10-digit mobile"
+                    onChange={(e) => handleMobileChange(e.target.value)}
+                    placeholder="10-digit mobile number"
                     maxLength={10}
                     required
+                    className={validationErrors.mobile ? 'border-red-500' : ''}
                   />
+                  {validationErrors.mobile && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.mobile}</p>
+                  )}
                 </div>
 
                 <div>
