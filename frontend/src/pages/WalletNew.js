@@ -664,35 +664,41 @@ const WalletNew = ({ user, onLogout }) => {
 
           {/* Cashback Withdrawal History */}
           <TabsContent value="cashback-history">
-            <Card className="bg-slate-800/50 border-2 border-amber-500/20 backdrop-blur-sm p-8 rounded-xl">
-              <h3 className="text-3xl font-serif font-bold text-amber-300 mb-6 border-b border-amber-500/20 pb-4">
-                Cashback Withdrawal History
-              </h3>
+            <Card className="bg-white/80 backdrop-blur-sm border-2 border-gray-200 p-8 rounded-3xl shadow-xl">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="bg-gradient-to-br from-blue-500 to-purple-500 p-3 rounded-2xl">
+                  <FileText className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  Withdrawal History
+                </h3>
+              </div>
               
               {withdrawals.cashback_withdrawals.length === 0 ? (
-                <div className="text-center py-16 text-amber-200/40">
-                  <div className="bg-amber-900/20 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center border-2 border-amber-500/20">
-                    <WalletIcon className="h-12 w-12" />
+                <div className="text-center py-16">
+                  <div className="bg-gradient-to-br from-blue-100 to-purple-100 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center border-4 border-white shadow-lg">
+                    <WalletIcon className="h-12 w-12 text-blue-600" />
                   </div>
-                  <p className="font-light text-lg">No withdrawal history yet</p>
+                  <p className="text-gray-500 text-lg">No withdrawal history yet</p>
+                  <p className="text-gray-400 text-sm mt-2">Your withdrawals will appear here</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {withdrawals.cashback_withdrawals.map((withdrawal) => (
-                    <Card key={withdrawal.withdrawal_id} className="bg-slate-900/50 border border-amber-500/20 p-6 rounded-lg hover:border-amber-500/40 transition-all">
+                    <Card key={withdrawal.withdrawal_id} className="bg-gradient-to-r from-white to-gray-50 border-2 border-gray-200 p-6 rounded-2xl hover:border-blue-300 hover:shadow-lg transition-all duration-300">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-3">
-                            <span className="text-2xl font-serif font-bold text-amber-300">
+                            <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                               ₹{withdrawal.amount_requested?.toFixed(2) || '0.00'}
                             </span>
                             {getStatusBadge(withdrawal.status)}
                           </div>
-                          <div className="text-sm text-amber-200/70 space-y-1.5 font-light">
+                          <div className="text-sm text-gray-600 space-y-2">
                             <p className="flex items-center gap-2">
-                              <span className="text-amber-400/80">Net Amount:</span> 
-                              <span className="font-semibold text-amber-300">₹{withdrawal.amount_to_receive?.toFixed(2) || '0.00'}</span>
-                              <span className="text-amber-400/60">• Fee: ₹{withdrawal.fee?.toFixed(2) || '0.00'}</span>
+                              <span className="text-gray-500">Net Amount:</span> 
+                              <span className="font-semibold text-gray-900">₹{withdrawal.amount_to_receive?.toFixed(2) || '0.00'}</span>
+                              <span className="text-gray-400">• Fee: ₹{withdrawal.fee?.toFixed(2) || '0.00'}</span>
                             </p>
                             <p className="flex items-center gap-2">
                               {getPaymentMethodIcon(withdrawal.payment_mode)}
