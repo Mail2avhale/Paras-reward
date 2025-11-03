@@ -729,6 +729,133 @@ const ProfileEnhanced = ({ user, onLogout }) => {
                 </Button>
               </form>
             </Card>
+
+            {/* KYC Document Upload Section */}
+            <Card className="p-6 mt-6">
+              <div className="flex items-center gap-3 mb-6">
+                <FileText className="h-6 w-6 text-purple-600" />
+                <h3 className="text-2xl font-bold">KYC Document Verification</h3>
+              </div>
+
+              {/* KYC Status Display */}
+              <Card className={`p-4 mb-6 border-2 ${getKycStatusColor(kycStatus)}`}>
+                <div className="flex items-center gap-3">
+                  <div>{getKycStatusIcon(kycStatus)}</div>
+                  <div>
+                    <h4 className="font-bold capitalize text-base">
+                      {kycStatus === 'not_submitted' ? 'Not Submitted' : kycStatus}
+                    </h4>
+                    <p className="text-sm">
+                      {kycStatus === 'verified' && 'Your KYC is verified. You can proceed with withdrawals.'}
+                      {kycStatus === 'pending' && 'Your KYC is under review. We will notify you once verified.'}
+                      {kycStatus === 'rejected' && 'Your KYC was rejected. Please resubmit with correct documents.'}
+                      {kycStatus === 'not_submitted' && 'Please submit your KYC documents for verification.'}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Document Upload Form */}
+              {kycStatus !== 'verified' && (
+                <form onSubmit={submitKYC} className="space-y-6">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <p className="text-sm text-blue-900">
+                      <strong>Required:</strong> Upload clear photos of your Aadhaar card (front & back) and PAN card.
+                    </p>
+                  </div>
+
+                  {/* Aadhaar Front */}
+                  <div>
+                    <Label className="text-base font-semibold mb-3 block">Aadhaar Card - Front *</Label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-purple-500 transition-colors">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleKycFileUpload('aadhaar_front_base64', e)}
+                        className="hidden"
+                        id="aadhaar-front"
+                      />
+                      <label htmlFor="aadhaar-front" className="cursor-pointer">
+                        {kycData.aadhaar_front_base64 ? (
+                          <div>
+                            <img src={kycData.aadhaar_front_base64} alt="Aadhaar Front" className="max-h-40 mx-auto mb-2 rounded" />
+                            <p className="text-sm text-green-600 font-medium">✓ Uploaded</p>
+                          </div>
+                        ) : (
+                          <div>
+                            <Upload className="h-10 w-10 mx-auto mb-2 text-gray-400" />
+                            <p className="text-sm text-gray-600">Click to upload</p>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Aadhaar Back */}
+                  <div>
+                    <Label className="text-base font-semibold mb-3 block">Aadhaar Card - Back *</Label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-purple-500 transition-colors">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleKycFileUpload('aadhaar_back_base64', e)}
+                        className="hidden"
+                        id="aadhaar-back"
+                      />
+                      <label htmlFor="aadhaar-back" className="cursor-pointer">
+                        {kycData.aadhaar_back_base64 ? (
+                          <div>
+                            <img src={kycData.aadhaar_back_base64} alt="Aadhaar Back" className="max-h-40 mx-auto mb-2 rounded" />
+                            <p className="text-sm text-green-600 font-medium">✓ Uploaded</p>
+                          </div>
+                        ) : (
+                          <div>
+                            <Upload className="h-10 w-10 mx-auto mb-2 text-gray-400" />
+                            <p className="text-sm text-gray-600">Click to upload</p>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* PAN Card */}
+                  <div>
+                    <Label className="text-base font-semibold mb-3 block">PAN Card - Front *</Label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-purple-500 transition-colors">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleKycFileUpload('pan_front_base64', e)}
+                        className="hidden"
+                        id="pan-front"
+                      />
+                      <label htmlFor="pan-front" className="cursor-pointer">
+                        {kycData.pan_front_base64 ? (
+                          <div>
+                            <img src={kycData.pan_front_base64} alt="PAN Front" className="max-h-40 mx-auto mb-2 rounded" />
+                            <p className="text-sm text-green-600 font-medium">✓ Uploaded</p>
+                          </div>
+                        ) : (
+                          <div>
+                            <Upload className="h-10 w-10 mx-auto mb-2 text-gray-400" />
+                            <p className="text-sm text-gray-600">Click to upload</p>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    disabled={loading || kycStatus === 'pending'}
+                    className="w-full md:w-auto bg-purple-600 hover:bg-purple-700"
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    {loading ? 'Submitting...' : 'Submit KYC Documents'}
+                  </Button>
+                </form>
+              )}
+            </Card>
           </TabsContent>
 
           {/* Contact & Address */}
