@@ -880,6 +880,7 @@ async def complete_profile(uid: str, request: Request):
         "city": data.get("city"),
         "state": data.get("state"),
         "district": data.get("district"),
+        "tahsil": data.get("tahsil"),
         "pincode": data.get("pincode"),
         "aadhaar_number": data.get("aadhaar_number"),
         "pan_number": data.get("pan_number"),
