@@ -2930,6 +2930,33 @@ async def get_admin_stats():
     lien_result = await db.users.aggregate(lien_pipeline).to_list(1)
     total_lien = lien_result[0]["total"] if lien_result else 0
     
+    # Calculate wallet maintenance fees collected
+    wallet_fees_pipeline = [
+        {"$match": {"transaction_type": "fee", "description": {"$regex": "maintenance fee", "$options": "i"}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]
+    wallet_fees_result = await db.wallet_transactions.aggregate(wallet_fees_pipeline).to_list(1)
+    total_wallet_fees = abs(wallet_fees_result[0]["total"]) if wallet_fees_result else 0
+    
+    # Calculate marketplace/delivery charges collected
+    marketplace_charges_pipeline = [
+        {"$match": {"status": "delivered"}},
+        {"$group": {"_id": None, "total": {"$sum": "$delivery_charge"}}}
+    ]
+    marketplace_charges_result = await db.orders.aggregate(marketplace_charges_pipeline).to_list(1)
+    total_marketplace_charges = marketplace_charges_result[0]["total"] if marketplace_charges_result else 0
+    
+    # Get recent VIP payments (last 5)
+    recent_vip_payments = await db.vip_payments.find(
+        {"status": "approved"},
+        {"_id": 0, "user_id": 1, "amount": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(5).to_list(5)
+    
+    # Enrich with user names
+    for payment in recent_vip_payments:
+        user = await db.users.find_one({"uid": payment["user_id"]}, {"name": 1})
+        payment["user_name"] = user.get("name", "Unknown") if user else "Unknown"
+    
     # Recent Activity - Get last 5 activities (orders, withdrawals, KYC)
     recent_orders = await db.orders.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
     recent_withdrawals = await db.cashback_withdrawals.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
