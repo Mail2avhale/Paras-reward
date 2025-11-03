@@ -1429,33 +1429,39 @@ const AdminDashboard = ({ user, onLogout }) => {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between py-3 border-b border-gray-100">
                       <span className="text-gray-600">Membership Fees</span>
-                      <span className="font-bold text-gray-900">₹2,00,000</span>
+                      <span className="font-bold text-gray-900">
+                        ₹{stats?.financial?.total_vip_membership_fees?.toLocaleString('en-IN') || '0'}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                      <span className="text-gray-600">Wallet Fees</span>
-                      <span className="font-bold text-gray-900">₹1,50,000</span>
+                      <span className="text-gray-600">Wallet Maintenance Fees</span>
+                      <span className="font-bold text-gray-900">
+                        ₹{stats?.financial?.total_wallet_fees?.toLocaleString('en-IN') || '0'}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between py-3">
-                      <span className="text-gray-600">Marketplace Charges</span>
-                      <span className="font-bold text-gray-900">₹50,000</span>
+                      <span className="text-gray-600">Delivery Charges</span>
+                      <span className="font-bold text-gray-900">
+                        ₹{stats?.financial?.total_marketplace_charges?.toLocaleString('en-IN') || '0'}
+                      </span>
                     </div>
                   </div>
 
                   <div className="mt-8">
                     <h4 className="text-lg font-bold text-gray-900 mb-4">Recently Paid VIP</h4>
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between py-2">
-                        <span className="text-gray-700">Shiv Prasad</span>
-                        <span className="font-semibold text-gray-900">₹2,400</span>
-                      </div>
-                      <div className="flex items-center justify-between py-2">
-                        <span className="text-gray-700">Kajal Sharma</span>
-                        <span className="font-semibold text-gray-900">₹8,250</span>
-                      </div>
-                      <div className="flex items-center justify-between py-2">
-                        <span className="text-gray-700">Rohit Shetty</span>
-                        <span className="font-semibold text-gray-900">₹5,100</span>
-                      </div>
+                      {stats?.recent_activity?.vip_payments && stats.recent_activity.vip_payments.length > 0 ? (
+                        stats.recent_activity.vip_payments.map((payment, index) => (
+                          <div key={index} className="flex items-center justify-between py-2">
+                            <span className="text-gray-700">{payment.user_name}</span>
+                            <span className="font-semibold text-gray-900">
+                              ₹{payment.amount?.toLocaleString('en-IN') || '0'}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-gray-500 text-sm text-center py-4">No recent VIP payments</p>
+                      )}
                     </div>
                   </div>
                 </Card>
