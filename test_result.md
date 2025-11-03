@@ -680,7 +680,10 @@ backend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Created comprehensive WalletNew.js component: Displays cashback_balance, profit_balance (for stockists/outlets), pending_lien status, maintenance_due indicator, days_until_maintenance. Separate tabs for cashback withdrawal (min ₹10, fee ₹5), profit withdrawal (min ₹50, fee ₹5, role-gated), cashback history, profit history. Payment modes: UPI or Bank Transfer. Withdrawal history shows status badges (pending/approved/completed/rejected), UTR numbers, admin notes. Updated App.js to use WalletNew component."
+        comment: "Created comprehensive WalletNew.js component: Displays cashback_balance, profit_balance (for stockist"
+      - working: "NA"
+        agent: "testing"
+        comment: "TESTING TOFIXED() ERROR FIX: Examining WalletNew.js for cashback wallet withdrawal feature. Fixed TypeError where .toFixed() was being called on undefined values in withdrawal history. Added optional chaining (?.toFixed(2) || '0.00') and fallback values to prevent crashes. Testing scenario: 1) Login with VIP user admin@paras.com, 2) Navigate to Wallet page, 3) Verify NO React error occurs, 4) Check withdrawal history tabs for proper formatting, 5) Test withdrawal request form. Success criteria: No TypeError about toFixed, wallet balances display correctly, withdrawal history shows proper ₹X.XX format, no NaN or undefined values."s/outlets), pending_lien status, maintenance_due indicator, days_until_maintenance. Separate tabs for cashback withdrawal (min ₹10, fee ₹5), profit withdrawal (min ₹50, fee ₹5, role-gated), cashback history, profit history. Payment modes: UPI or Bank Transfer. Withdrawal history shows status badges (pending/approved/completed/rejected), UTR numbers, admin notes. Updated App.js to use WalletNew component."
 
   - task: "Role-Based Navigation - Mobile Menu"
     implemented: true
