@@ -4279,6 +4279,151 @@ async def get_user_stock_inventory(user_id: str):
     inventory = await db.stock_inventory.find({"user_id": user_id}, {"_id": 0}).to_list(None)
     return {"inventory": inventory}
 
+@api_router.post("/admin/stock/add")
+async def admin_add_stock(request: Request):
+    """Admin: Add stock to company inventory"""
+    data = await request.json()
+    admin_uid = data.get("admin_uid")
+    product_id = data.get("product_id")
+    quantity = data.get("quantity")
+    
+    if not admin_uid or not product_id or not quantity:
+        raise HTTPException(status_code=400, detail="Admin UID, product ID, and quantity are required")
+    
+    if quantity <= 0:
+        raise HTTPException(status_code=400, detail="Quantity must be greater than 0")
+    
+    # Verify admin role
+    admin_user = await db.users.find_one({"uid": admin_uid})
+    if not admin_user or admin_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can add stock")
+    
+    # Verify product exists
+    product = await db.products.find_one({"product_id": product_id})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Check if admin already has this product in inventory
+    existing_stock = await db.stock_inventory.find_one({
+        "user_id": admin_uid,
+        "product_id": product_id
+    })
+    
+    if existing_stock:
+        # Update existing stock
+        new_quantity = existing_stock["quantity"] + quantity
+        await db.stock_inventory.update_one(
+            {"inventory_id": existing_stock["inventory_id"]},
+            {
+                "$set": {
+                    "quantity": new_quantity,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        return {
+            "message": "Stock updated successfully",
+            "inventory_id": existing_stock["inventory_id"],
+            "previous_quantity": existing_stock["quantity"],
+            "added_quantity": quantity,
+            "new_quantity": new_quantity,
+            "product_name": product["name"]
+        }
+    else:
+        # Create new inventory entry
+        inventory_id = str(uuid.uuid4())
+        inventory_entry = {
+            "inventory_id": inventory_id,
+            "user_id": admin_uid,
+            "user_name": admin_user.get("name", "Admin"),
+            "user_role": "admin",
+            "product_id": product_id,
+            "product_name": product["name"],
+            "quantity": quantity,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.stock_inventory.insert_one(inventory_entry)
+        
+        return {
+            "message": "Stock added successfully",
+            "inventory_id": inventory_id,
+            "quantity": quantity,
+            "product_name": product["name"]
+        }
+
+@api_router.post("/admin/stock/update")
+async def admin_update_stock(request: Request):
+    """Admin: Update stock quantity directly (set to specific amount)"""
+    data = await request.json()
+    admin_uid = data.get("admin_uid")
+    product_id = data.get("product_id")
+    quantity = data.get("quantity")
+    
+    if not admin_uid or not product_id or quantity is None:
+        raise HTTPException(status_code=400, detail="Admin UID, product ID, and quantity are required")
+    
+    if quantity < 0:
+        raise HTTPException(status_code=400, detail="Quantity cannot be negative")
+    
+    # Verify admin role
+    admin_user = await db.users.find_one({"uid": admin_uid})
+    if not admin_user or admin_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can update stock")
+    
+    # Verify product exists
+    product = await db.products.find_one({"product_id": product_id})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Check if admin has this product in inventory
+    existing_stock = await db.stock_inventory.find_one({
+        "user_id": admin_uid,
+        "product_id": product_id
+    })
+    
+    if existing_stock:
+        # Update to new quantity
+        previous_quantity = existing_stock["quantity"]
+        await db.stock_inventory.update_one(
+            {"inventory_id": existing_stock["inventory_id"]},
+            {
+                "$set": {
+                    "quantity": quantity,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        return {
+            "message": "Stock updated successfully",
+            "inventory_id": existing_stock["inventory_id"],
+            "previous_quantity": previous_quantity,
+            "new_quantity": quantity,
+            "product_name": product["name"]
+        }
+    else:
+        # Create new inventory entry
+        inventory_id = str(uuid.uuid4())
+        inventory_entry = {
+            "inventory_id": inventory_id,
+            "user_id": admin_uid,
+            "user_name": admin_user.get("name", "Admin"),
+            "user_role": "admin",
+            "product_id": product_id,
+            "product_name": product["name"],
+            "quantity": quantity,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.stock_inventory.insert_one(inventory_entry)
+        
+        return {
+            "message": "Stock created successfully",
+            "inventory_id": inventory_id,
+            "quantity": quantity,
+            "product_name": product["name"]
+        }
+
 @api_router.put("/stock/request/{request_id}/edit")
 async def edit_stock_request(request_id: str, request: Request):
     """Edit a pending stock request (only requester can edit)"""
