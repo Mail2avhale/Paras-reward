@@ -276,10 +276,10 @@ const BankingWallet = ({ user }) => {
                       <div className={`text-lg font-bold ${
                         isCredit(transaction.type) ? 'text-green-600' : 'text-red-600'
                       }`}>
-                        {isCredit(transaction.type) ? '+' : '-'}₹{transaction.amount.toFixed(2)}
+                        {isCredit(transaction.type) ? '+' : '-'}₹{(transaction.amount || 0).toFixed(2)}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
-                        Balance: ₹{transaction.balance_after.toFixed(2)}
+                        Balance: ₹{(transaction.balance_after || 0).toFixed(2)}
                       </div>
                     </div>
                   </div>
