@@ -4070,11 +4070,25 @@ async def get_my_stock_requests(uid: str, status: Optional[str] = None):
 
 @api_router.get("/stock/request/pending-for-me/{uid}")
 async def get_pending_stock_requests_for_me(uid: str):
-    """Get all pending stock requests where user is the parent (approver)"""
+    """Get all pending stock requests where user is the parent (approver) with available stock"""
     requests = await db.stock_requests.find({
         "parent_id": uid,
         "status": "pending"
     }, {"_id": 0}).sort("created_at", -1).to_list(None)
+    
+    # Enrich each request with available stock
+    for req in requests:
+        product_id = req.get("product_id")
+        
+        if product_id:
+            # Get parent's stock for this product
+            parent_stock = await db.stock_inventory.find_one({
+                "user_id": uid,
+                "product_id": product_id
+            })
+            req["available_stock"] = parent_stock["quantity"] if parent_stock else 0
+        else:
+            req["available_stock"] = 0
     
     return {"requests": requests}
 
