@@ -634,6 +634,9 @@ def test_profit_wallet_management():
         print("❌ Cannot continue without test users")
         return test_results
     
+    # Get admin user UID (use known admin from previous tests)
+    admin_uid = "ac9548c3-968a-4bbf-bad7-4e5aed1b660c"  # Known admin UID from test_result.md
+    
     # Test Suite 1: Admin Profit Wallet Operations
     print(f"\n2. TEST SUITE 1: ADMIN PROFIT WALLET OPERATIONS")
     print("=" * 60)
@@ -642,6 +645,7 @@ def test_profit_wallet_management():
     print(f"\n2.1. Testing Admin Credit Profit Wallet (₹500)")
     try:
         credit_data = {
+            "admin_uid": admin_uid,
             "user_id": stockist_uid,
             "amount": 500,
             "description": "Test credit to profit wallet"
