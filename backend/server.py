@@ -3009,6 +3009,8 @@ async def get_admin_stats():
             "total_security_deposits": total_security_deposits,
             "total_renewal_fees": total_renewal_fees,
             "total_vip_membership_fees": total_vip_fees,
+            "total_wallet_fees": total_wallet_fees,
+            "total_marketplace_charges": total_marketplace_charges,
             "total_lien": total_lien,
             "total_withdrawal_processed": total_processed_withdrawal_amount
         },
