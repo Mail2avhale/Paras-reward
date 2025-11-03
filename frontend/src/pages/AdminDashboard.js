@@ -1613,7 +1613,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 </div>
                 
                 {/* Pagination */}
-                {users.length > 0 && (
+                {filteredUsers.length > 0 && (
                   <div className="p-4 border-t border-gray-200 flex items-center justify-between">
                     <div className="text-sm text-gray-600">
                       Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredUsers.length)} of {filteredUsers.length} users
@@ -1652,6 +1652,8 @@ const AdminDashboard = ({ user, onLogout }) => {
                   </div>
                 )}
               </Card>
+                );
+              })()}
             </div>
           )}
 
