@@ -23,6 +23,7 @@ import Mining from "@/pages/Mining";
 import TapGame from "@/pages/TapGame";
 import Referrals from "@/pages/Referrals";
 import Marketplace from "@/pages/Marketplace";
+import MarketplaceEnhanced from "@/pages/MarketplaceEnhanced";
 import Orders from "@/pages/Orders";
 import VIPMembership from "@/pages/VIPMembership";
 import KYCVerification from "@/pages/KYCVerification";
