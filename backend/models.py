@@ -363,3 +363,73 @@ class SystemSettings(BaseModel):
     # Updated
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_by: Optional[str] = None
+
+
+# ========== TRANSACTION MODELS ==========
+class Transaction(BaseModel):
+    """Comprehensive transaction model for wallet operations"""
+    model_config = ConfigDict(extra="ignore")
+    transaction_id: str = Field(default_factory=lambda: f"TXN-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}")
+    user_id: str
+    
+    # Wallet info
+    wallet_type: str  # cashback, profit
+    
+    # Transaction details
+    type: str  # mining, tap_game, referral, order, cashback, withdrawal, withdrawal_rejected, admin_adjustment, delivery_charge, profit_share
+    amount: float
+    
+    # Balance tracking
+    balance_before: float
+    balance_after: float
+    
+    # Status
+    status: str = "completed"  # completed, pending, failed, reversed
+    
+    # Description and metadata
+    description: str
+    metadata: Dict = {}  # Additional info like order_id, product_name, etc.
+    
+    # Related entities
+    related_id: Optional[str] = None  # order_id, withdrawal_id, etc.
+    related_type: Optional[str] = None  # order, withdrawal, etc.
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class TransactionCreate(BaseModel):
+    """Model for creating a transaction"""
+    user_id: str
+    wallet_type: str
+    type: str
+    amount: float
+    description: str
+    metadata: Dict = {}
+    related_id: Optional[str] = None
+    related_type: Optional[str] = None
+
+class WithdrawalRequest(BaseModel):
+    """Enhanced withdrawal request model"""
+    amount: float
+    wallet_type: str  # cashback, profit
+    payment_method: str  # phonepe, googlepay, paytm, bank
+    
+    # Payment details
+    upi_id: Optional[str] = None
+    phone_number: Optional[str] = None
+    
+    # Bank details
+    account_holder_name: Optional[str] = None
+    bank_name: Optional[str] = None
+    account_number: Optional[str] = None
+    ifsc_code: Optional[str] = None
+
+class WithdrawalResponse(BaseModel):
+    """Response model for withdrawal request"""
+    withdrawal_id: str
+    amount_requested: float
+    withdrawal_fee: float
+    amount_to_receive: float
+    wallet_debited: float
+    lien_amount: float
+    message: str
