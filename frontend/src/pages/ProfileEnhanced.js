@@ -24,6 +24,9 @@ const ProfileEnhanced = ({ user, onLogout }) => {
   const [availableTahsils, setAvailableTahsils] = useState([]);
   const [availablePins, setAvailablePins] = useState([]);
   
+  // Custom location input state
+  const [useCustomLocation, setUseCustomLocation] = useState(false);
+  
   // Validation errors state
   const [validationErrors, setValidationErrors] = useState({
     mobile: '',
