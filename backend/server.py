@@ -2193,7 +2193,8 @@ async def get_admin_stats():
     vip_users = await db.users.count_documents({"membership_type": "vip"})
     free_users = await db.users.count_documents({"membership_type": {"$ne": "vip"}})
     
-    # Stockist Statistics
+    # Staff & Stockist Statistics
+    managers = await db.users.count_documents({"role": "manager"})
     master_stockists = await db.users.count_documents({"role": "master_stockist"})
     sub_stockists = await db.users.count_documents({"role": "sub_stockist"})
     outlets = await db.users.count_documents({"role": "outlet"})
