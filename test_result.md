@@ -720,6 +720,12 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "FIXED: Identified and resolved two critical issues: 1) MarketplaceEnhanced.js was calling wrong API endpoint '/orders/place' instead of '/orders/checkout' causing 404 errors. 2) Error handling wasn't ensuring error messages were always strings, potentially causing React to render error objects directly. FIXES APPLIED: Updated MarketplaceEnhanced.js handleCheckout to use correct '/orders/checkout' endpoint, added proper error message extraction (error?.response?.data?.detail || error?.message || fallback), improved error handling for all cart operations (add, update, remove, checkout), added secret code display in success toast. Applied same error handling improvements to Marketplace.js for robustness. All error handlers now guarantee string messages preventing React rendering errors."
+      - working: "NA"
+        agent: "testing"
+        comment: "Backend testing found additional issues: Missing POST endpoints for /cart/update and /cart/remove (frontend uses POST but backend only had DELETE). Checkout validation error due to test data format. Missing cash_price in cart items affecting delivery charge calculation."
+      - working: "NA"
+        agent: "main"
+        comment: "ADDITIONAL FIXES APPLIED: 1) Added POST /api/cart/update endpoint to update item quantities with stock validation. 2) Added POST /api/cart/remove endpoint to remove items (POST method for frontend compatibility). 3) Fixed cart/add to include cash_price field in cart items for proper delivery charge calculation. Backend restarted successfully. Complete cart management flow now implemented with all CRUD operations."
 
   - task: "Master Stockist Dashboard"
     implemented: false
