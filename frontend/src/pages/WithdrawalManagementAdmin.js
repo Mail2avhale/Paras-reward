@@ -292,14 +292,21 @@ const WithdrawalManagementAdmin = () => {
                       )}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-right">
-                      <div className="font-semibold text-gray-900">{formatCurrency(withdrawal.amount)}</div>
+                      <div className="font-semibold text-gray-900">
+                        {formatCurrency(withdrawal.amount_requested || withdrawal.amount || 0)}
+                      </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-right">
-                      <div className="text-sm text-gray-600">{formatCurrency(withdrawal.withdrawal_fee || 0)}</div>
+                      <div className="text-sm text-gray-600">
+                        {formatCurrency(withdrawal.fee || withdrawal.withdrawal_fee || 5)}
+                      </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-right">
                       <div className="font-bold text-green-600">
-                        {formatCurrency((withdrawal.amount || 0) - (withdrawal.withdrawal_fee || 0))}
+                        {formatCurrency(
+                          withdrawal.amount_to_receive || 
+                          ((withdrawal.amount_requested || withdrawal.amount || 0) - (withdrawal.fee || withdrawal.withdrawal_fee || 5))
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
