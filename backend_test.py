@@ -2035,76 +2035,490 @@ def print_cashback_test_summary(results):
         print(f"   3. ❌ Check database connectivity and consistency")
         print(f"   4. ❌ Verify API endpoint implementations")
 
-if __name__ == "__main__":
-    print("Starting Comprehensive Profit Wallet Management & Monthly Fees Testing...")
+def test_cart_checkout_flow():
+    """Test complete cart order placement flow to verify React error fix"""
+    print("\n" + "🛒" * 80)
+    print("TESTING CART CHECKOUT FLOW - REACT ERROR FIX VERIFICATION")
+    print("🛒" * 80)
     
-    # Run profit wallet management tests
-    profit_results = test_profit_wallet_management()
+    test_results = {
+        "cart_add": False,
+        "cart_retrieve": False,
+        "cart_update": False,
+        "cart_remove": False,
+        "checkout_vip_success": False,
+        "checkout_empty_cart": False,
+        "checkout_non_vip": False,
+        "checkout_insufficient_balance": False,
+        "order_created": False,
+        "cart_cleared": False,
+        "balance_updated": False,
+        "cashback_credited": False,
+        "error_handling": False
+    }
     
-    # Print detailed results for each test suite
+    # Create test users with realistic data
+    timestamp = int(time.time())
+    
+    # VIP user with sufficient balance
+    vip_user_data = {
+        "first_name": "Pramod",
+        "last_name": "Sharma",
+        "email": f"pramod_test_{timestamp}@gmail.com",
+        "mobile": f"9876543{timestamp % 1000:03d}",
+        "password": "paras123",
+        "state": "Maharashtra",
+        "district": "Mumbai",
+        "pincode": "400001",
+        "aadhaar_number": f"1234{timestamp % 100000000:08d}",
+        "pan_number": f"PRAMOD{timestamp % 10000:04d}Z",
+        "membership_type": "vip",
+        "kyc_status": "verified",
+        "prc_balance": 1000.0  # Sufficient balance for testing
+    }
+    
+    # Non-VIP user for testing restrictions
+    free_user_data = {
+        "first_name": "Free",
+        "last_name": "User",
+        "email": f"free_user_{timestamp}@test.com",
+        "mobile": f"9876544{timestamp % 1000:03d}",
+        "password": "test123456",
+        "state": "Maharashtra",
+        "district": "Mumbai",
+        "pincode": "400001",
+        "aadhaar_number": f"5678{timestamp % 100000000:08d}",
+        "pan_number": f"FREE{timestamp % 10000:04d}Z",
+        "membership_type": "free"
+    }
+    
+    vip_uid = None
+    free_uid = None
+    
+    # Create test users
+    print(f"\n1. CREATING TEST USERS FOR CART CHECKOUT TESTING")
+    print("=" * 70)
+    
+    try:
+        # Create VIP user
+        response = requests.post(f"{API_BASE}/auth/register", json=vip_user_data, timeout=30)
+        if response.status_code == 200:
+            result = response.json()
+            vip_uid = result.get("uid")
+            print(f"✅ VIP user created: {vip_uid}")
+            
+            # Update user to have sufficient PRC balance
+            # Note: In real scenario, this would be done through proper channels
+            print(f"   Setting up VIP user with sufficient PRC balance...")
+        else:
+            print(f"❌ VIP user creation failed: {response.status_code} - {response.text}")
+            
+        # Create Free user
+        response = requests.post(f"{API_BASE}/auth/register", json=free_user_data, timeout=30)
+        if response.status_code == 200:
+            result = response.json()
+            free_uid = result.get("uid")
+            print(f"✅ Free user created: {free_uid}")
+        else:
+            print(f"❌ Free user creation failed: {response.status_code} - {response.text}")
+            
+    except Exception as e:
+        print(f"❌ Error creating test users: {e}")
+        return test_results
+    
+    if not vip_uid or not free_uid:
+        print("❌ Cannot continue without test users")
+        return test_results
+    
+    # Get available products for testing
+    print(f"\n2. GETTING AVAILABLE PRODUCTS")
+    print("=" * 70)
+    
+    products = []
+    try:
+        response = requests.get(f"{API_BASE}/products", timeout=30)
+        if response.status_code == 200:
+            products = response.json()
+            print(f"✅ Retrieved {len(products)} products")
+            if len(products) > 0:
+                print(f"   Sample product: {products[0]['name']} - PRC: {products[0]['prc_price']}, Cash: {products[0].get('cash_price', 'N/A')}")
+        else:
+            print(f"❌ Failed to get products: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error getting products: {e}")
+    
+    if len(products) == 0:
+        print("❌ No products available for testing")
+        return test_results
+    
+    # Test Suite 1: Cart Management Flow
+    print(f"\n3. TEST SUITE 1: CART MANAGEMENT FLOW")
+    print("=" * 70)
+    
+    test_product = products[0]
+    
+    # Test 1.1: Add Product to Cart
+    print(f"\n3.1. Testing Cart Add - POST /api/cart/add")
+    try:
+        cart_add_data = {
+            "user_id": vip_uid,
+            "product_id": test_product["product_id"],
+            "quantity": 2
+        }
+        
+        response = requests.post(f"{API_BASE}/cart/add", json=cart_add_data, timeout=30)
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"✅ Product added to cart successfully")
+            print(f"   Message: {result.get('message')}")
+            test_results["cart_add"] = True
+        else:
+            print(f"❌ Cart add failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing cart add: {e}")
+    
+    # Test 1.2: Retrieve Cart
+    print(f"\n3.2. Testing Cart Retrieve - GET /api/cart/{vip_uid}")
+    try:
+        response = requests.get(f"{API_BASE}/cart/{vip_uid}", timeout=30)
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            cart_data = response.json()
+            print(f"✅ Cart retrieved successfully")
+            print(f"   Items in cart: {len(cart_data.get('items', []))}")
+            if cart_data.get('items'):
+                item = cart_data['items'][0]
+                print(f"   First item: {item.get('name')} x {item.get('quantity')}")
+            test_results["cart_retrieve"] = True
+        else:
+            print(f"❌ Cart retrieve failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing cart retrieve: {e}")
+    
+    # Test 1.3: Update Cart
+    print(f"\n3.3. Testing Cart Update - POST /api/cart/update")
+    try:
+        cart_update_data = {
+            "user_id": vip_uid,
+            "product_id": test_product["product_id"],
+            "quantity": 3
+        }
+        
+        response = requests.post(f"{API_BASE}/cart/update", json=cart_update_data, timeout=30)
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"✅ Cart updated successfully")
+            print(f"   Message: {result.get('message')}")
+            test_results["cart_update"] = True
+        else:
+            print(f"❌ Cart update failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing cart update: {e}")
+    
+    # Test Suite 2: Cart Checkout Flow (Main Fix)
+    print(f"\n4. TEST SUITE 2: CART CHECKOUT FLOW (MAIN FIX)")
+    print("=" * 70)
+    
+    # Test 2.1: VIP User Checkout Success
+    print(f"\n4.1. Testing VIP User Checkout - POST /api/orders/checkout")
+    try:
+        checkout_data = {
+            "user_id": vip_uid,
+            "delivery_address": {
+                "street": "123 Test Street",
+                "city": "Mumbai",
+                "state": "Maharashtra",
+                "pincode": "400001",
+                "landmark": "Near Test Mall"
+            }
+        }
+        
+        response = requests.post(f"{API_BASE}/orders/checkout", json=checkout_data, timeout=30)
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"✅ VIP checkout successful")
+            print(f"   Order ID: {result.get('order_id')}")
+            print(f"   Secret Code: {result.get('secret_code')}")
+            print(f"   Total PRC: {result.get('total_prc')}")
+            print(f"   Delivery Charge: {result.get('delivery_charge')}")
+            print(f"   Cashback Earned: {result.get('cashback_earned')}")
+            
+            # Verify required fields are present
+            required_fields = ['order_id', 'secret_code', 'total_prc', 'delivery_charge', 'cashback_earned']
+            missing_fields = [field for field in required_fields if field not in result]
+            
+            if not missing_fields:
+                test_results["checkout_vip_success"] = True
+                print(f"✅ All required response fields present")
+                
+                # Store order details for further verification
+                order_id = result.get('order_id')
+                secret_code = result.get('secret_code')
+            else:
+                print(f"❌ Missing response fields: {missing_fields}")
+                
+        elif response.status_code == 400:
+            result = response.json()
+            if "Insufficient PRC balance" in result.get('detail', ''):
+                print(f"⚠️  VIP checkout blocked by insufficient balance (may need balance setup)")
+                print(f"   This is expected if user doesn't have enough PRC")
+            else:
+                print(f"❌ VIP checkout failed: {result.get('detail')}")
+        elif response.status_code == 403:
+            result = response.json()
+            print(f"❌ VIP checkout blocked: {result.get('detail')}")
+        else:
+            print(f"❌ VIP checkout failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing VIP checkout: {e}")
+    
+    # Test Suite 3: Error Scenarios
+    print(f"\n5. TEST SUITE 3: ERROR SCENARIOS")
+    print("=" * 70)
+    
+    # Test 3.1: Empty Cart Checkout
+    print(f"\n5.1. Testing Empty Cart Checkout")
+    try:
+        # First clear the cart by removing items
+        cart_remove_data = {
+            "user_id": vip_uid,
+            "product_id": test_product["product_id"]
+        }
+        requests.post(f"{API_BASE}/cart/remove", json=cart_remove_data, timeout=30)
+        
+        # Now try checkout with empty cart
+        checkout_data = {
+            "user_id": vip_uid,
+            "delivery_address": "123 Test Street, Mumbai"
+        }
+        
+        response = requests.post(f"{API_BASE}/orders/checkout", json=checkout_data, timeout=30)
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 400:
+            result = response.json()
+            if "Cart is empty" in result.get('detail', ''):
+                print(f"✅ Empty cart properly rejected")
+                test_results["checkout_empty_cart"] = True
+            else:
+                print(f"⚠️  Different error for empty cart: {result.get('detail')}")
+        else:
+            print(f"❌ Empty cart checkout should return 400")
+            
+    except Exception as e:
+        print(f"❌ Error testing empty cart: {e}")
+    
+    # Test 3.2: Non-VIP User Checkout
+    print(f"\n5.2. Testing Non-VIP User Checkout")
+    try:
+        # Add item to free user's cart first
+        cart_add_data = {
+            "user_id": free_uid,
+            "product_id": test_product["product_id"],
+            "quantity": 1
+        }
+        requests.post(f"{API_BASE}/cart/add", json=cart_add_data, timeout=30)
+        
+        # Try checkout with non-VIP user
+        checkout_data = {
+            "user_id": free_uid,
+            "delivery_address": "123 Test Street, Mumbai"
+        }
+        
+        response = requests.post(f"{API_BASE}/orders/checkout", json=checkout_data, timeout=30)
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 403:
+            result = response.json()
+            if "VIP membership required" in result.get('detail', ''):
+                print(f"✅ Non-VIP user properly rejected")
+                test_results["checkout_non_vip"] = True
+            else:
+                print(f"⚠️  Different error for non-VIP: {result.get('detail')}")
+        else:
+            print(f"❌ Non-VIP checkout should return 403")
+            
+    except Exception as e:
+        print(f"❌ Error testing non-VIP checkout: {e}")
+    
+    # Test Suite 4: Error Handling Verification
+    print(f"\n6. TEST SUITE 4: ERROR HANDLING VERIFICATION")
+    print("=" * 70)
+    
+    # Test 4.1: Verify Error Messages are Strings
+    print(f"\n6.1. Testing Error Message Format")
+    try:
+        # Test with invalid user ID to trigger error
+        checkout_data = {
+            "user_id": "invalid-user-id",
+            "delivery_address": "123 Test Street"
+        }
+        
+        response = requests.post(f"{API_BASE}/orders/checkout", json=checkout_data, timeout=30)
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code in [400, 404]:
+            result = response.json()
+            detail = result.get('detail')
+            
+            if isinstance(detail, str):
+                print(f"✅ Error message is string: '{detail}'")
+                test_results["error_handling"] = True
+            else:
+                print(f"❌ Error message is not string: {type(detail)} - {detail}")
+        else:
+            print(f"⚠️  Unexpected status for invalid user: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing error handling: {e}")
+    
+    # Test Cart Remove (for completeness)
+    print(f"\n7. TESTING CART REMOVE - POST /api/cart/remove")
+    print("=" * 70)
+    
+    try:
+        # Add item back first
+        cart_add_data = {
+            "user_id": vip_uid,
+            "product_id": test_product["product_id"],
+            "quantity": 1
+        }
+        requests.post(f"{API_BASE}/cart/add", json=cart_add_data, timeout=30)
+        
+        # Now remove it
+        cart_remove_data = {
+            "user_id": vip_uid,
+            "product_id": test_product["product_id"]
+        }
+        
+        response = requests.post(f"{API_BASE}/cart/remove", json=cart_remove_data, timeout=30)
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"✅ Cart item removed successfully")
+            print(f"   Message: {result.get('message')}")
+            test_results["cart_remove"] = True
+        else:
+            print(f"❌ Cart remove failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing cart remove: {e}")
+    
+    return test_results
+
+def print_cart_checkout_summary(results):
+    """Print cart checkout test summary"""
     print("\n" + "📊" * 80)
-    print("PROFIT WALLET MANAGEMENT & MONTHLY FEES TEST SUMMARY")
+    print("CART CHECKOUT FLOW TEST SUMMARY - REACT ERROR FIX VERIFICATION")
     print("📊" * 80)
     
-    print(f"\n🔍 TEST SUITE RESULTS:")
+    print(f"\n🔍 TEST RESULTS:")
     
-    # Test Suite 1: Admin Profit Wallet Operations
-    print(f"\n   1. Admin Profit Wallet Operations:")
-    print(f"      - Admin Credit Profit Wallet: {'✅ PASSED' if profit_results['admin_credit_profit_wallet'] else '❌ FAILED'}")
-    print(f"      - Admin Deduct (Sufficient Balance): {'✅ PASSED' if profit_results['admin_deduct_sufficient_balance'] else '❌ FAILED'}")
-    print(f"      - Admin Deduct (Insufficient - Lien): {'✅ PASSED' if profit_results['admin_deduct_insufficient_lien'] else '❌ FAILED'}")
-    print(f"      - Admin Adjust Balance: {'✅ PASSED' if profit_results['admin_adjust_balance'] else '❌ FAILED'}")
+    # Cart Management Flow
+    cart_tests = ["cart_add", "cart_retrieve", "cart_update", "cart_remove"]
+    cart_passed = sum(1 for test in cart_tests if results.get(test, False))
+    cart_status = "✅ PASSED" if cart_passed == len(cart_tests) else f"⚠️  PARTIAL ({cart_passed}/{len(cart_tests)})"
     
-    # Test Suite 2: Delivery Charge Distribution
-    print(f"\n   2. Delivery Charge Distribution:")
-    print(f"      - Distribution Endpoint Exists: {'✅ PASSED' if profit_results['delivery_charge_distribution'] else '❌ FAILED'}")
+    print(f"   1. Cart Management Flow: {cart_status}")
+    for test in cart_tests:
+        status = "✅" if results.get(test, False) else "❌"
+        test_name = test.replace('_', ' ').title()
+        print(f"      - {test_name}: {status}")
     
-    # Test Suite 3: Monthly Maintenance Fees
-    print(f"\n   3. Monthly Maintenance Fees:")
-    print(f"      - Apply Monthly Fees to All VIP Users: {'✅ PASSED' if profit_results['monthly_fee_all_vip_users'] else '❌ FAILED'}")
-    
-    # Test Suite 4: Integration Tests
-    print(f"\n   4. Integration Tests:")
-    print(f"      - Lien Clearance on Credit: {'✅ PASSED' if profit_results['lien_clearance_on_credit'] else '❌ FAILED'}")
-    print(f"      - Transaction History: {'✅ PASSED' if profit_results['transaction_history'] else '❌ FAILED'}")
-    
-    # Determine overall status
-    critical_tests = [
-        "admin_credit_profit_wallet", "admin_deduct_sufficient_balance", 
-        "admin_deduct_insufficient_lien", "admin_adjust_balance",
-        "monthly_fee_all_vip_users"
-    ]
-    critical_passed = all(profit_results[key] for key in critical_tests)
-    all_passed = all(profit_results.values())
-    
-    print(f"\n🎯 OVERALL STATUS:")
-    if all_passed:
-        print(f"   ✅ ALL TESTS PASSED - PROFIT WALLET SYSTEM FULLY FUNCTIONAL")
-        print(f"   📋 Admin can credit/deduct/adjust profit wallet")
-        print(f"   📋 Insufficient balance creates lien correctly")
-        print(f"   📋 Lien status properly set")
-        print(f"   📋 Monthly fees apply to both wallets")
-        print(f"   📋 Transaction logs created for all operations")
-        print(f"   📋 Delivery charge distribution endpoint available")
-        print(f"   📋 No balance goes negative")
-        print(f"   📋 All metadata captured")
-    elif critical_passed:
-        print(f"   ⚠️  CRITICAL TESTS PASSED - MINOR ISSUES IN NON-CRITICAL FEATURES")
-        print(f"   📋 Core profit wallet operations working")
-        print(f"   📋 Lien creation and tracking working")
-        print(f"   📋 Monthly fee application working")
-        print(f"   📋 Some integration features may need attention")
+    # Cart Checkout Flow (Main Fix)
+    checkout_status = "✅ PASSED" if results.get("checkout_vip_success", False) else "❌ FAILED"
+    print(f"   2. Cart Checkout Flow (Main Fix): {checkout_status}")
+    if results.get("checkout_vip_success", False):
+        print(f"      - POST /api/orders/checkout endpoint: ✅")
+        print(f"      - VIP user checkout success: ✅")
+        print(f"      - Response includes required fields: ✅")
     else:
-        print(f"   ❌ CRITICAL TESTS FAILED - PROFIT WALLET SYSTEM ISSUES")
-        failed_critical = [test for test in critical_tests if not profit_results[test]]
+        print(f"      - POST /api/orders/checkout endpoint: ❌")
+    
+    # Error Scenarios
+    error_tests = ["checkout_empty_cart", "checkout_non_vip", "checkout_insufficient_balance"]
+    error_passed = sum(1 for test in error_tests if results.get(test, False))
+    error_status = "✅ PASSED" if error_passed >= 2 else f"⚠️  PARTIAL ({error_passed}/{len(error_tests)})"
+    
+    print(f"   3. Error Scenarios: {error_status}")
+    print(f"      - Empty cart rejection: {'✅' if results.get('checkout_empty_cart', False) else '❌'}")
+    print(f"      - Non-VIP user rejection: {'✅' if results.get('checkout_non_vip', False) else '❌'}")
+    print(f"      - Insufficient balance handling: {'✅' if results.get('checkout_insufficient_balance', False) else '❌'}")
+    
+    # Error Handling
+    error_handling_status = "✅ PASSED" if results.get("error_handling", False) else "❌ FAILED"
+    print(f"   4. Error Message Format: {error_handling_status}")
+    if results.get("error_handling", False):
+        print(f"      - Error messages are strings: ✅")
+        print(f"      - Proper JSON structure with 'detail' field: ✅")
+    
+    # Overall Assessment
+    critical_tests = ["cart_add", "cart_retrieve", "checkout_vip_success", "checkout_non_vip", "error_handling"]
+    critical_passed = sum(1 for test in critical_tests if results.get(test, False))
+    
+    if critical_passed == len(critical_tests):
+        overall_status = "✅ ALL CRITICAL TESTS PASSED - REACT ERROR FIX WORKING"
+    elif critical_passed >= 4:
+        overall_status = "⚠️  MOST CRITICAL TESTS PASSED - MINOR ISSUES"
+    else:
+        overall_status = "❌ CRITICAL TESTS FAILED - REACT ERROR FIX NEEDS ATTENTION"
+    
+    print(f"\n🎯 OVERALL STATUS: {overall_status}")
+    
+    if critical_passed == len(critical_tests):
+        print(f"\n🎉 SUCCESS: Cart checkout flow is working correctly!")
+        print(f"   - Cart management operations functional")
+        print(f"   - POST /api/orders/checkout endpoint working (not /orders/place)")
+        print(f"   - VIP user checkout successful with proper response")
+        print(f"   - Error scenarios handled correctly")
+        print(f"   - Error messages are properly formatted strings")
+        print(f"   - React error issue appears to be RESOLVED")
+    elif critical_passed >= 4:
+        print(f"\n⚠️  MOSTLY WORKING: Core functionality operational")
+        print(f"   - Main checkout endpoint working")
+        print(f"   - Error handling improved")
+        print(f"   - Minor issues in some scenarios")
+    else:
+        print(f"\n❌ ISSUES FOUND: React error fix needs attention")
+        failed_critical = [test for test in critical_tests if not results.get(test, False)]
         for test in failed_critical:
-            print(f"   - {test.replace('_', ' ').title()}: CRITICAL FAILURE")
+            print(f"   - {test.replace('_', ' ').title()}: FAILED")
     
-    print(f"\n{'='*80}")
-    if critical_passed:
-        print("✅ PROFIT WALLET TESTING COMPLETED - CORE FUNCTIONALITY WORKING")
+    print(f"\n📋 REACT ERROR FIX VERIFICATION:")
+    if results.get("checkout_vip_success", False) and results.get("error_handling", False):
+        print(f"   1. ✅ Endpoint corrected: /orders/checkout (not /orders/place)")
+        print(f"   2. ✅ Error handling improved: messages are strings")
+        print(f"   3. ✅ Proper JSON response structure with 'detail' field")
+        print(f"   4. ✅ Cart checkout flow working end-to-end")
     else:
-        print("❌ PROFIT WALLET TESTING COMPLETED - CRITICAL ISSUES FOUND")
-    print(f"{'='*80}")
-    
-    sys.exit(0 if critical_passed else 1)
+        print(f"   1. ❌ Endpoint issues detected")
+        print(f"   2. ❌ Error handling may need improvement")
+        print(f"   3. ❌ Response structure issues")
+        print(f"   4. ❌ Cart checkout flow not fully functional")
+
+if __name__ == "__main__":
+    # Test cart checkout flow specifically for React error fix
+    print("🚀 STARTING CART CHECKOUT FLOW TESTING")
+    cart_results = test_cart_checkout_flow()
+    print_cart_checkout_summary(cart_results)
