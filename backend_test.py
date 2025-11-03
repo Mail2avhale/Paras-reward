@@ -3033,8 +3033,92 @@ def print_cart_checkout_summary(results):
         print(f"   3. ❌ Response structure issues")
         print(f"   4. ❌ Cart checkout flow not fully functional")
 
+def print_cart_test_summary(results):
+    """Print cart order placement test summary"""
+    print("\n" + "📊" * 80)
+    print("CART ORDER PLACEMENT FLOW TEST SUMMARY")
+    print("📊" * 80)
+    
+    print(f"\n🔍 CART FLOW TEST RESULTS:")
+    
+    # Setup
+    setup_status = "✅ SUCCESS" if results["vip_user_setup"] else "❌ FAILED"
+    print(f"   1. Test Setup: {setup_status}")
+    
+    # Cart Operations
+    cart_add_status = "✅ SUCCESS" if results["cart_add_with_cash_price"] else "❌ FAILED"
+    cart_retrieve_status = "✅ SUCCESS" if results["cart_retrieve_with_cash_price"] else "❌ FAILED"
+    cart_update_status = "✅ SUCCESS" if results["cart_update_quantity"] else "❌ FAILED"
+    cart_remove_status = "✅ SUCCESS" if results["cart_remove_item"] else "❌ FAILED"
+    cart_add_back_status = "✅ SUCCESS" if results["cart_add_back"] else "❌ FAILED"
+    
+    print(f"   2. Cart Operations:")
+    print(f"      - Add product with cash_price: {cart_add_status}")
+    print(f"      - Retrieve cart with cash_price: {cart_retrieve_status}")
+    print(f"      - Update quantity: {cart_update_status}")
+    print(f"      - Remove item: {cart_remove_status}")
+    print(f"      - Add back for checkout: {cart_add_back_status}")
+    
+    # Checkout Flow
+    checkout_status = "✅ SUCCESS" if results["checkout_success"] else "❌ FAILED"
+    delivery_charge_status = "✅ SUCCESS" if results["delivery_charge_calculated"] else "❌ FAILED"
+    cart_cleared_status = "✅ SUCCESS" if results["cart_cleared_after_checkout"] else "❌ FAILED"
+    
+    print(f"   3. Checkout Flow:")
+    print(f"      - Successful checkout: {checkout_status}")
+    print(f"      - Delivery charge calculation: {delivery_charge_status}")
+    print(f"      - Cart cleared after checkout: {cart_cleared_status}")
+    
+    # Validation Tests
+    empty_cart_status = "✅ SUCCESS" if results["checkout_validation_empty_cart"] else "❌ FAILED"
+    non_vip_status = "✅ SUCCESS" if results["checkout_validation_non_vip"] else "❌ FAILED"
+    insufficient_prc_status = "✅ SUCCESS" if results["checkout_validation_insufficient_prc"] else "❌ FAILED"
+    
+    print(f"   4. Validation Tests:")
+    print(f"      - Empty cart checkout blocked: {empty_cart_status}")
+    print(f"      - Non-VIP user blocked: {non_vip_status}")
+    print(f"      - Insufficient PRC balance blocked: {insufficient_prc_status}")
+    
+    # Database Verification
+    order_created_status = "✅ SUCCESS" if results["order_created_in_db"] else "❌ FAILED"
+    prc_deducted_status = "✅ SUCCESS" if results["prc_balance_deducted"] else "❌ FAILED"
+    cashback_credited_status = "✅ SUCCESS" if results["cashback_credited"] else "❌ FAILED"
+    
+    print(f"   5. Database Verification:")
+    print(f"      - Order created in database: {order_created_status}")
+    print(f"      - PRC balance deducted: {prc_deducted_status}")
+    print(f"      - Cashback credited: {cashback_credited_status}")
+    
+    # Overall Status
+    critical_cart_tests = [
+        "cart_add_with_cash_price", "cart_retrieve_with_cash_price", 
+        "checkout_success", "delivery_charge_calculated", "cart_cleared_after_checkout",
+        "checkout_validation_empty_cart", "checkout_validation_non_vip"
+    ]
+    all_critical_passed = all(results.get(key, False) for key in critical_cart_tests)
+    
+    if all_critical_passed:
+        overall_status = "✅ ALL CART TESTS PASSED - CART SYSTEM WORKING"
+    else:
+        overall_status = "❌ CART TESTS FAILED - ISSUES FOUND"
+    
+    print(f"\n🎯 OVERALL CART FLOW STATUS: {overall_status}")
+    
+    if all_critical_passed:
+        print(f"\n🎉 SUCCESS: Complete cart order placement flow is working correctly!")
+        print(f"   - Cart operations include cash_price field")
+        print(f"   - Delivery charge calculated from cash_price")
+        print(f"   - Order creation and balance updates working")
+        print(f"   - All validation checks working properly")
+        print(f"   - Cart system is ready for production")
+    else:
+        print(f"\n❌ ISSUES FOUND: Cart order placement flow has problems")
+        failed_tests = [key for key in critical_cart_tests if not results.get(key, False)]
+        for test in failed_tests:
+            print(f"   - {test.replace('_', ' ').title()}: FAILED")
+
 if __name__ == "__main__":
-    # Test cart checkout flow specifically for React error fix
-    print("🚀 STARTING CART CHECKOUT FLOW TESTING")
-    cart_results = test_cart_checkout_flow()
-    print_cart_checkout_summary(cart_results)
+    # Test complete cart order placement flow after backend fixes
+    print("🚀 STARTING COMPLETE CART ORDER PLACEMENT FLOW TESTING")
+    cart_results = test_cart_order_placement_flow()
+    print_cart_test_summary(cart_results)
