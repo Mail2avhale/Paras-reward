@@ -4109,8 +4109,9 @@ async def approve_stock_request(request_id: str, request: Request):
     if not stock_request:
         raise HTTPException(status_code=404, detail="Stock request not found")
     
-    # Verify approver is the parent
-    if stock_request["parent_id"] != approver_id:
+    # Verify approver is the parent OR is admin
+    approver_role = user.get("role")
+    if approver_role != "admin" and stock_request["parent_id"] != approver_id:
         raise HTTPException(status_code=403, detail="You are not authorized to approve this request")
     
     if stock_request["status"] != "pending":
