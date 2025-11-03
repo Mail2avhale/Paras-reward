@@ -29,6 +29,7 @@ import WalletNew from "@/pages/WalletNew";
 import Leaderboard from "@/pages/Leaderboard";
 import ProfileEnhanced from "@/pages/ProfileEnhanced";
 import AdminDashboard from "@/pages/AdminDashboard";
+import ManagerDashboard from "@/pages/ManagerDashboard";
 import MasterStockistDashboard from "@/pages/MasterStockistDashboard";
 import SubStockistDashboard from "@/pages/SubStockistDashboard";
 import OutletPanel from "@/pages/OutletPanel";
