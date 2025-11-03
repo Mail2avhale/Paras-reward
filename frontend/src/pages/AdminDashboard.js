@@ -1149,7 +1149,7 @@ const AdminDashboard = ({ user, onLogout }) => {
           {activeTab === 'dashboard' && (
             <div>
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <Card className="p-6 bg-white">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-gray-600 text-sm font-medium">Total Users</span>
