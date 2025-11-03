@@ -1723,10 +1723,61 @@ const AdminDashboard = ({ user, onLogout }) => {
 
           {/* Settings Tab - Payment & Delivery Configuration */}
           {activeTab === 'settings' && (
-            <div className="space-y-8">
-              <ContactDetailsSettings />
-              <PaymentConfigSettings />
-              <DeliveryConfigSettings />
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">System Settings</h2>
+              
+              {/* Settings Sub-Tabs */}
+              <div className="mb-6">
+                <div className="border-b border-gray-200">
+                  <nav className="-mb-px flex space-x-8">
+                    <button
+                      onClick={() => setSettingsView('contact')}
+                      className={`${
+                        settingsView === 'contact'
+                          ? 'border-indigo-500 text-indigo-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                    >
+                      Contact Details
+                    </button>
+                    <button
+                      onClick={() => setSettingsView('payment')}
+                      className={`${
+                        settingsView === 'payment'
+                          ? 'border-indigo-500 text-indigo-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                    >
+                      Payment Configuration
+                    </button>
+                    <button
+                      onClick={() => setSettingsView('delivery')}
+                      className={`${
+                        settingsView === 'delivery'
+                          ? 'border-indigo-500 text-indigo-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                    >
+                      Delivery Configuration
+                    </button>
+                  </nav>
+                </div>
+              </div>
+
+              {/* Contact Details View */}
+              {settingsView === 'contact' && (
+                <ContactDetailsSettings />
+              )}
+
+              {/* Payment Configuration View */}
+              {settingsView === 'payment' && (
+                <PaymentConfigSettings />
+              )}
+
+              {/* Delivery Configuration View */}
+              {settingsView === 'delivery' && (
+                <DeliveryConfigSettings />
+              )}
             </div>
           )}
 
