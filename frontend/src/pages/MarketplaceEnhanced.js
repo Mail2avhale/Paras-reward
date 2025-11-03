@@ -190,12 +190,17 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
 
     setLoading(true);
     try {
-      await axios.post(`${API}/orders/place`, {
+      const response = await axios.post(`${API}/orders/checkout`, {
         user_id: user.uid,
         delivery_address: deliveryAddress
       });
       
-      toast.success('Order placed successfully!');
+      // Show success message with secret code
+      toast.success(
+        `Order placed successfully! Secret Code: ${response.data.secret_code}. Show this code at the outlet for delivery.`,
+        { duration: 8000 }
+      );
+      
       setShowCart(false);
       setDeliveryAddress('');
       fetchCart();
@@ -203,7 +208,9 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
       navigate('/orders');
     } catch (error) {
       console.error('Error placing order:', error);
-      toast.error(error.response?.data?.detail || 'Failed to place order');
+      // Ensure error message is a string
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to place order';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
