@@ -331,17 +331,44 @@ const WalletNew = ({ user, onLogout }) => {
           )}
         </div>
 
-        {/* Tabs for Withdrawal and History */}
+        {/* Tabs for Withdrawal and History - Premium Style */}
         <Tabs defaultValue="cashback-withdraw" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
-            <TabsTrigger value="transactions">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 bg-slate-800/50 border border-amber-500/20 p-1 rounded-lg backdrop-blur-sm">
+            <TabsTrigger 
+              value="transactions"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-600 data-[state=active]:to-amber-500 data-[state=active]:text-white text-amber-200/60 font-medium transition-all"
+            >
               <FileText className="w-4 h-4 mr-2" />
               Transactions
             </TabsTrigger>
-            <TabsTrigger value="cashback-withdraw">Cashback Withdraw</TabsTrigger>
-            {isStockistOrOutlet && <TabsTrigger value="profit-withdraw">Profit Withdraw</TabsTrigger>}
-            <TabsTrigger value="cashback-history">Cashback History</TabsTrigger>
-            {isStockistOrOutlet && <TabsTrigger value="profit-history">Profit History</TabsTrigger>}
+            <TabsTrigger 
+              value="cashback-withdraw"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-600 data-[state=active]:to-amber-500 data-[state=active]:text-white text-amber-200/60 font-medium transition-all"
+            >
+              Cashback Withdraw
+            </TabsTrigger>
+            {isStockistOrOutlet && (
+              <TabsTrigger 
+                value="profit-withdraw"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-600 data-[state=active]:to-amber-500 data-[state=active]:text-white text-amber-200/60 font-medium transition-all"
+              >
+                Profit Withdraw
+              </TabsTrigger>
+            )}
+            <TabsTrigger 
+              value="cashback-history"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-600 data-[state=active]:to-amber-500 data-[state=active]:text-white text-amber-200/60 font-medium transition-all"
+            >
+              Cashback History
+            </TabsTrigger>
+            {isStockistOrOutlet && (
+              <TabsTrigger 
+                value="profit-history"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-600 data-[state=active]:to-amber-500 data-[state=active]:text-white text-amber-200/60 font-medium transition-all"
+              >
+                Profit History
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Transaction History Tab */}
