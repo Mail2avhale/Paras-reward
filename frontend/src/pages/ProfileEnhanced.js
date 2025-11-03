@@ -504,15 +504,8 @@ const ProfileEnhanced = ({ user, onLogout }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       <Navbar user={user} onLogout={onLogout} />
-        toast.success('Document uploaded');
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const submitKYC = async (e) => {
-    e.preventDefault();
-    if (!kycData.aadhaar_front_base64 || !kycData.aadhaar_back_base64 || !kycData.pan_front_base64) {
+      
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
       toast.error('Please upload all required documents');
       return;
     }
