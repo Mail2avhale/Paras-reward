@@ -939,6 +939,10 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [roleFilter, setRoleFilter] = useState('');
   const [userManagementView, setUserManagementView] = useState('basic');
   const [settingsView, setSettingsView] = useState('contact');
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20); // Show 20 items per page
 
   useEffect(() => {
     fetchStats();
