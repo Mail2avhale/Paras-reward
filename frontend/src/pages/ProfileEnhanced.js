@@ -29,7 +29,12 @@ const ProfileEnhanced = ({ user, onLogout }) => {
     mobile: '',
     aadhaar_number: '',
     pan_number: '',
-    upi_id: ''
+    upi_id: '',
+    phonepe_number: '',
+    gpay_number: '',
+    paytm_number: '',
+    bank_account_number: '',
+    bank_ifsc: ''
   });
   
   const [profileData, setProfileData] = useState({
@@ -48,7 +53,18 @@ const ProfileEnhanced = ({ user, onLogout }) => {
     pincode: '',
     aadhaar_number: '',
     pan_number: '',
-    upi_id: ''
+    
+    // Banking & Payment Details
+    bank_account_holder_name: '',
+    bank_account_number: '',
+    bank_ifsc: '',
+    bank_name: '',
+    bank_branch: '',
+    bank_account_type: '',
+    upi_id: '',
+    phonepe_number: '',
+    gpay_number: '',
+    paytm_number: ''
   });
 
   const [passwordData, setPasswordData] = useState({
