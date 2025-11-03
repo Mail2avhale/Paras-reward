@@ -656,26 +656,36 @@ const WalletNew = ({ user, onLogout }) => {
 
           {/* Cashback Withdrawal History */}
           <TabsContent value="cashback-history">
-            <Card className="p-6">
-              <h3 className="text-2xl font-bold mb-4">Cashback Withdrawal History</h3>
+            <Card className="bg-slate-800/50 border-2 border-amber-500/20 backdrop-blur-sm p-8 rounded-xl">
+              <h3 className="text-3xl font-serif font-bold text-amber-300 mb-6 border-b border-amber-500/20 pb-4">
+                Cashback Withdrawal History
+              </h3>
               
               {withdrawals.cashback_withdrawals.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <WalletIcon className="h-16 w-16 mx-auto mb-4 opacity-30" />
-                  <p>No withdrawal history yet</p>
+                <div className="text-center py-16 text-amber-200/40">
+                  <div className="bg-amber-900/20 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center border-2 border-amber-500/20">
+                    <WalletIcon className="h-12 w-12" />
+                  </div>
+                  <p className="font-light text-lg">No withdrawal history yet</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {withdrawals.cashback_withdrawals.map((withdrawal) => (
-                    <Card key={withdrawal.withdrawal_id} className="p-4 border">
+                    <Card key={withdrawal.withdrawal_id} className="bg-slate-900/50 border border-amber-500/20 p-6 rounded-lg hover:border-amber-500/40 transition-all">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="text-lg font-bold">₹{withdrawal.amount_requested?.toFixed(2) || '0.00'}</span>
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="text-2xl font-serif font-bold text-amber-300">
+                              ₹{withdrawal.amount_requested?.toFixed(2) || '0.00'}
+                            </span>
                             {getStatusBadge(withdrawal.status)}
                           </div>
-                          <div className="text-sm text-gray-600 space-y-1">
-                            <p>Net Amount: ₹{withdrawal.amount_to_receive?.toFixed(2) || '0.00'} (Fee: ₹{withdrawal.fee?.toFixed(2) || '0.00'})</p>
+                          <div className="text-sm text-amber-200/70 space-y-1.5 font-light">
+                            <p className="flex items-center gap-2">
+                              <span className="text-amber-400/80">Net Amount:</span> 
+                              <span className="font-semibold text-amber-300">₹{withdrawal.amount_to_receive?.toFixed(2) || '0.00'}</span>
+                              <span className="text-amber-400/60">• Fee: ₹{withdrawal.fee?.toFixed(2) || '0.00'}</span>
+                            </p>
                             <p className="flex items-center gap-2">
                               {getPaymentMethodIcon(withdrawal.payment_mode)}
                               <span>Payment: {getPaymentMethodName(withdrawal.payment_mode)} - {withdrawal.upi_id || withdrawal.bank_account}</span>
