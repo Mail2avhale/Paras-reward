@@ -389,7 +389,7 @@ const WalletNew = ({ user, onLogout }) => {
 
           {/* Transaction History Tab */}
           <TabsContent value="transactions" className="mt-6">
-            <BankingWallet user={user} />
+            <BankingWallet user={user} walletBalance={walletData?.cashback_balance || 0} />
           </TabsContent>
 
           {/* Cashback Withdrawal */}
