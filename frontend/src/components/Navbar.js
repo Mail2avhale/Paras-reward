@@ -23,10 +23,11 @@ const Navbar = ({ user, onLogout }) => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-xl">P</span>
-            </div>
-            <span className="text-xl font-bold text-gray-900">PARAS REWARD</span>
+            <img 
+              src="/paras-logo.jpg" 
+              alt="PARAS REWARD" 
+              className="h-12 w-auto object-contain"
+            />
           </Link>
 
           {/* Desktop Navigation */}
