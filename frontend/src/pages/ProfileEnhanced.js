@@ -379,7 +379,12 @@ const ProfileEnhanced = ({ user, onLogout }) => {
       mobile: validateMobile(profileData.mobile),
       aadhaar_number: validateAadhaar(profileData.aadhaar_number),
       pan_number: validatePAN(profileData.pan_number),
-      upi_id: validateUPI(profileData.upi_id)
+      upi_id: validateUPI(profileData.upi_id),
+      phonepe_number: validatePaymentNumber(profileData.phonepe_number),
+      gpay_number: validatePaymentNumber(profileData.gpay_number),
+      paytm_number: validatePaymentNumber(profileData.paytm_number),
+      bank_account_number: validateBankAccount(profileData.bank_account_number),
+      bank_ifsc: validateIFSC(profileData.bank_ifsc)
     };
     
     setValidationErrors(errors);
@@ -388,6 +393,15 @@ const ProfileEnhanced = ({ user, onLogout }) => {
     const hasErrors = Object.values(errors).some(error => error !== '');
     if (hasErrors) {
       toast.error('Please fix all validation errors before submitting');
+      return;
+    }
+
+    // Check if at least one payment method is provided
+    const hasUPIDetails = profileData.upi_id || profileData.phonepe_number || profileData.gpay_number || profileData.paytm_number;
+    const hasBankDetails = profileData.bank_account_number && profileData.bank_ifsc && profileData.bank_name;
+    
+    if (!hasUPIDetails && !hasBankDetails) {
+      toast.error('Please provide either UPI details OR Bank details for withdrawals');
       return;
     }
 
