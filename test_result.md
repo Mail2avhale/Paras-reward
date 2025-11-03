@@ -738,10 +738,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Product Creation Cash Price Field Fix"
+    - "Admin Cashback Wallet Credit/Debit Feature with Transaction Logging"
   stuck_tasks: []
   test_all: false
-  test_priority: "critical_first"
+  test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
