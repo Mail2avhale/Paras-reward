@@ -261,8 +261,59 @@ const ProfileEnhanced = ({ user, onLogout }) => {
     }
   };
 
+  // Field change handlers with validation
+  const handleMobileChange = (value) => {
+    // Allow only digits
+    const filtered = value.replace(/\D/g, '');
+    if (filtered.length <= 10) {
+      setProfileData({...profileData, mobile: filtered});
+      setValidationErrors({...validationErrors, mobile: validateMobile(filtered)});
+    }
+  };
+
+  const handleAadhaarChange = (value) => {
+    // Allow only digits
+    const filtered = value.replace(/\D/g, '');
+    if (filtered.length <= 12) {
+      setProfileData({...profileData, aadhaar_number: filtered});
+      setValidationErrors({...validationErrors, aadhaar_number: validateAadhaar(filtered)});
+    }
+  };
+
+  const handlePANChange = (value) => {
+    // Convert to uppercase and allow only alphanumeric
+    const filtered = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (filtered.length <= 10) {
+      setProfileData({...profileData, pan_number: filtered});
+      setValidationErrors({...validationErrors, pan_number: validatePAN(filtered)});
+    }
+  };
+
+  const handleUPIChange = (value) => {
+    setProfileData({...profileData, upi_id: value});
+    setValidationErrors({...validationErrors, upi_id: validateUPI(value)});
+  };
+
   const handleCompleteProfile = async (e) => {
     e.preventDefault();
+    
+    // Validate all fields before submission
+    const errors = {
+      mobile: validateMobile(profileData.mobile),
+      aadhaar_number: validateAadhaar(profileData.aadhaar_number),
+      pan_number: validatePAN(profileData.pan_number),
+      upi_id: validateUPI(profileData.upi_id)
+    };
+    
+    setValidationErrors(errors);
+    
+    // Check if there are any validation errors
+    const hasErrors = Object.values(errors).some(error => error !== '');
+    if (hasErrors) {
+      toast.error('Please fix all validation errors before submitting');
+      return;
+    }
+
     setLoading(true);
 
     try {
