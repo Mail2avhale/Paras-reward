@@ -706,6 +706,21 @@ backend:
         agent: "main"
         comment: "Pending: Complete admin dashboard with KPI widgets, enhanced user management, stock management, order management, financial reports, employee management, audit logs."
 
+  - task: "Cart Order Placement Error Fix"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/MarketplaceEnhanced.js"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported React error when placing order from cart. Error object being rendered directly causing frontend crash."
+      - working: "NA"
+        agent: "main"
+        comment: "FIXED: Identified and resolved two critical issues: 1) MarketplaceEnhanced.js was calling wrong API endpoint '/orders/place' instead of '/orders/checkout' causing 404 errors. 2) Error handling wasn't ensuring error messages were always strings, potentially causing React to render error objects directly. FIXES APPLIED: Updated MarketplaceEnhanced.js handleCheckout to use correct '/orders/checkout' endpoint, added proper error message extraction (error?.response?.data?.detail || error?.message || fallback), improved error handling for all cart operations (add, update, remove, checkout), added secret code display in success toast. Applied same error handling improvements to Marketplace.js for robustness. All error handlers now guarantee string messages preventing React rendering errors."
+
   - task: "Master Stockist Dashboard"
     implemented: false
     working: "NA"
