@@ -110,6 +110,27 @@ const ProfileEnhanced = ({ user, onLogout }) => {
     return '';
   };
 
+  const validatePaymentNumber = (value) => {
+    if (!value) return '';
+    if (!/^\d+$/.test(value)) return 'Must contain only digits';
+    if (value.length !== 10) return 'Must be exactly 10 digits';
+    if (!/^[6-9]/.test(value)) return 'Must start with 6, 7, 8, or 9';
+    return '';
+  };
+
+  const validateBankAccount = (value) => {
+    if (!value) return '';
+    if (!/^\d+$/.test(value)) return 'Account number must contain only digits';
+    if (value.length < 9 || value.length > 18) return 'Account number must be 9-18 digits';
+    return '';
+  };
+
+  const validateIFSC = (value) => {
+    if (!value) return '';
+    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(value)) return 'Invalid IFSC format (e.g., SBIN0001234)';
+    return '';
+  };
+
   useEffect(() => {
     if (user) {
       const userData = {
