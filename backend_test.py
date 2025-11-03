@@ -879,6 +879,7 @@ def test_profit_wallet_management():
             
             # Credit ₹100 first
             credit_data = {
+                "admin_uid": admin_uid,
                 "user_id": lien_uid,
                 "amount": 100,
                 "description": "Initial balance for lien test"
@@ -887,6 +888,7 @@ def test_profit_wallet_management():
             
             # Deduct ₹300 to create ₹200 lien
             deduct_data = {
+                "admin_uid": admin_uid,
                 "user_id": lien_uid,
                 "amount": 300,
                 "description": "Create lien for testing"
@@ -895,6 +897,7 @@ def test_profit_wallet_management():
             
             # Now credit ₹300 to test lien clearance
             credit_data = {
+                "admin_uid": admin_uid,
                 "user_id": lien_uid,
                 "amount": 300,
                 "description": "Test lien clearance"
