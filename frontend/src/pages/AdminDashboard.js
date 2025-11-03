@@ -1510,6 +1510,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                   >
                     <option value="">All Roles</option>
                     <option value="user">User</option>
+                    <option value="manager">Manager</option>
                     <option value="admin">Admin</option>
                     <option value="outlet">Outlet</option>
                     <option value="master_stockist">Master Stockist</option>
