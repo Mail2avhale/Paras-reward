@@ -156,7 +156,14 @@ const WalletNew = ({ user, onLogout }) => {
         account_holder_name: profitPaymentMode === 'bank' ? profitAccountHolderName : null,
         ifsc_code: profitPaymentMode === 'bank' ? profitIfsc : null
       });
-      toast.success(response.data.message);
+      
+      // Show enhanced success message with new fee breakdown
+      const data = response.data;
+      toast.success(
+        `Withdrawal request submitted! ₹${data.wallet_debited} debited. You'll receive ₹${data.amount_to_receive} (₹${data.withdrawal_fee} processing fee)`,
+        { duration: 5000 }
+      );
+      
       setProfitAmount('');
       setProfitUpiId('');
       setProfitBankAccount('');
