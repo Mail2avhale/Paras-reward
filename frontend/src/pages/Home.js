@@ -48,7 +48,7 @@ const Home = ({ user, onLogout }) => {
             </p>
             
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
               <Link to="/register">
                 <Button 
                   size="lg" 
@@ -58,6 +58,10 @@ const Home = ({ user, onLogout }) => {
                   Start Earning Free
                 </Button>
               </Link>
+              
+              {/* Install App Button */}
+              <InstallAppButton />
+              
               <Link to="/about">
                 <Button 
                   size="lg" 
