@@ -135,7 +135,8 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
       fetchCart();
     } catch (error) {
       console.error('Error adding to cart:', error);
-      toast.error(error.response?.data?.detail || 'Failed to add to cart');
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to add to cart';
+      toast.error(errorMessage);
     }
   };
 
