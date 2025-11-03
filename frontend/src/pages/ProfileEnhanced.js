@@ -547,9 +547,10 @@ const ProfileEnhanced = ({ user, onLogout }) => {
 
         {/* Profile Tabs */}
         <Tabs defaultValue="personal" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto">
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto">
             <TabsTrigger value="personal">Personal Info</TabsTrigger>
             <TabsTrigger value="contact">Contact & Address</TabsTrigger>
+            <TabsTrigger value="banking">Banking & Payment</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
 
