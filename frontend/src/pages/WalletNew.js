@@ -378,36 +378,57 @@ const WalletNew = ({ user, onLogout }) => {
 
           {/* Cashback Withdrawal */}
           <TabsContent value="cashback-withdraw">
-            <Card className="p-6">
-              <h3 className="text-2xl font-bold mb-4">Withdraw from Cashback Wallet</h3>
+            <Card className="bg-slate-800/50 border-2 border-amber-500/20 backdrop-blur-sm p-8 rounded-xl">
+              <h3 className="text-3xl font-serif font-bold text-amber-300 mb-6 border-b border-amber-500/20 pb-4">
+                Withdraw from Cashback Account
+              </h3>
               
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-5 mb-6">
                 <div className="flex items-start gap-3">
-                  <Info className="h-5 w-5 text-blue-600 mt-0.5" />
-                  <div className="text-sm text-blue-900">
-                    <p className="font-semibold mb-1">Withdrawal Guidelines:</p>
-                    <ul className="space-y-1 text-xs">
-                      <li>• Minimum withdrawal: ₹10</li>
-                      <li>• Withdrawal fee: ₹5 per transaction</li>
-                      <li>• KYC verification required</li>
-                      <li>• Processing time: 1-3 business days</li>
-                      <li>• Cannot withdraw if pending maintenance lien exists</li>
+                  <div className="bg-amber-500/20 p-2 rounded-lg">
+                    <Info className="h-5 w-5 text-amber-400" />
+                  </div>
+                  <div className="text-sm text-amber-200/90">
+                    <p className="font-semibold mb-2 text-amber-300">Withdrawal Guidelines:</p>
+                    <ul className="space-y-1.5 text-xs text-amber-200/70">
+                      <li className="flex items-center gap-2">
+                        <span className="w-1 h-1 bg-amber-400 rounded-full"></span>
+                        Minimum withdrawal: ₹10
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1 h-1 bg-amber-400 rounded-full"></span>
+                        Withdrawal fee: ₹5 per transaction
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1 h-1 bg-amber-400 rounded-full"></span>
+                        KYC verification required
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1 h-1 bg-amber-400 rounded-full"></span>
+                        Processing time: 1-3 business days
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="w-1 h-1 bg-amber-400 rounded-full"></span>
+                        Cannot withdraw if pending maintenance lien exists
+                      </li>
                     </ul>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Amount (₹)</label>
+                  <label className="block text-sm font-semibold mb-3 text-amber-300">Amount (₹)</label>
                   <Input
                     type="number"
                     placeholder="Minimum ₹10"
                     value={cashbackAmount}
                     onChange={(e) => setCashbackAmount(e.target.value)}
+                    className="bg-slate-900/50 border-amber-500/30 text-amber-100 placeholder:text-amber-200/30 focus:border-amber-500 focus:ring-amber-500/50"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-amber-400/70 mt-2 font-light">
                     You'll receive: ₹{cashbackAmount ? (parseFloat(cashbackAmount) - 5).toFixed(2) : '0.00'} (after ₹5 fee)
+                  </p>
                   </p>
                 </div>
 
