@@ -347,40 +347,40 @@ const WalletNew = ({ user, onLogout }) => {
           )}
         </div>
 
-        {/* Tabs for Withdrawal and History - Premium Style */}
+        {/* Tabs for Withdrawal and History - Gradient Style */}
         <Tabs defaultValue="cashback-withdraw" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 bg-slate-800/50 border border-amber-500/20 p-1 rounded-lg backdrop-blur-sm">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 bg-white/80 backdrop-blur-sm border border-gray-200 p-1.5 rounded-2xl shadow-lg">
             <TabsTrigger 
               value="transactions"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-600 data-[state=active]:to-amber-500 data-[state=active]:text-white text-amber-200/60 font-medium transition-all"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 font-medium transition-all rounded-xl"
             >
               <FileText className="w-4 h-4 mr-2" />
               Transactions
             </TabsTrigger>
             <TabsTrigger 
               value="cashback-withdraw"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-600 data-[state=active]:to-amber-500 data-[state=active]:text-white text-amber-200/60 font-medium transition-all"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 font-medium transition-all rounded-xl"
             >
               Cashback Withdraw
             </TabsTrigger>
             {isStockistOrOutlet && (
               <TabsTrigger 
                 value="profit-withdraw"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-600 data-[state=active]:to-amber-500 data-[state=active]:text-white text-amber-200/60 font-medium transition-all"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 font-medium transition-all rounded-xl"
               >
                 Profit Withdraw
               </TabsTrigger>
             )}
             <TabsTrigger 
               value="cashback-history"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-600 data-[state=active]:to-amber-500 data-[state=active]:text-white text-amber-200/60 font-medium transition-all"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 font-medium transition-all rounded-xl"
             >
               Cashback History
             </TabsTrigger>
             {isStockistOrOutlet && (
               <TabsTrigger 
                 value="profit-history"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-600 data-[state=active]:to-amber-500 data-[state=active]:text-white text-amber-200/60 font-medium transition-all"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 font-medium transition-all rounded-xl"
               >
                 Profit History
               </TabsTrigger>
