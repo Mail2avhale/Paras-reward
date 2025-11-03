@@ -683,9 +683,13 @@ const ProfileEnhanced = ({ user, onLogout }) => {
                     <Label>UPI ID</Label>
                     <Input
                       value={profileData.upi_id}
-                      onChange={(e) => setProfileData({...profileData, upi_id: e.target.value})}
-                      placeholder="yourname@upi"
+                      onChange={(e) => handleUPIChange(e.target.value)}
+                      placeholder="yourname@bank"
+                      className={validationErrors.upi_id ? 'border-red-500' : ''}
                     />
+                    {validationErrors.upi_id && (
+                      <p className="text-red-500 text-sm mt-1">{validationErrors.upi_id}</p>
+                    )}
                   </div>
                 </div>
 
