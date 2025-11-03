@@ -25,7 +25,7 @@ const PrivacyPolicy = () => {
         <div className="bg-white rounded-lg shadow-lg p-8 space-y-8">
           <section>
             <p className="text-gray-700 leading-relaxed mb-4">
-              At <strong>PARAS REWARD</strong>, accessible from <a href="https://parasreward.com" className="text-purple-600 hover:underline">https://parasreward.com</a>, your privacy is important to us. This Privacy Policy document contains types of information that is collected and recorded by PARAS REWARD and how we use it.
+              At <strong>PARAS REWARD</strong>, accessible from <a href={window.location.origin} className="text-purple-600 hover:underline">{window.location.host}</a>, your privacy is important to us. This Privacy Policy document contains types of information that is collected and recorded by PARAS REWARD and how we use it.
             </p>
           </section>
 
