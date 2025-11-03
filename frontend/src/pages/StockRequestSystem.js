@@ -24,8 +24,15 @@ const StockRequestSystem = () => {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAddStockModal, setShowAddStockModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
+  
+  const [newStockData, setNewStockData] = useState({
+    product_id: '',
+    quantity: '',
+    action: 'add' // 'add' or 'set'
+  });
   
   const [newRequest, setNewRequest] = useState({
     product_id: '',
