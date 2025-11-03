@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
+import BankingWallet from '@/pages/BankingWallet';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +18,8 @@ import {
   TrendingUp,
   Smartphone,
   CreditCard,
-  Building2
+  Building2,
+  FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { indianBanks, getBankByName, getBankLogo, getBankColor } from '@/data/banksData';
