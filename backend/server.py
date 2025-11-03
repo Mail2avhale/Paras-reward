@@ -3891,29 +3891,24 @@ async def reject_profit_withdrawal(withdrawal_id: str, request: Request):
     if withdrawal["status"] != "pending":
         raise HTTPException(status_code=400, detail=f"Withdrawal is already {withdrawal['status']}")
     
-    # Refund amount + fee back to user's profit wallet
-    total_refund = withdrawal["amount"] + withdrawal["fee"]
-    await db.users.update_one(
-        {"uid": withdrawal["user_id"]},
-        {"$inc": {"profit_wallet_balance": total_refund}}
+    # NEW LOGIC: Refund only the requested amount (since only that was debited)
+    refund_amount = withdrawal.get("amount_requested", withdrawal.get("amount", 0))
+    
+    # Log refund transaction
+    await log_transaction(
+        user_id=withdrawal["user_id"],
+        wallet_type="profit",
+        transaction_type="withdrawal_rejected",
+        amount=refund_amount,
+        description=f"Withdrawal refund - Request rejected by admin. Reason: {admin_notes}",
+        metadata={
+            "withdrawal_id": withdrawal_id,
+            "original_amount": refund_amount,
+            "admin_notes": admin_notes
+        },
+        related_id=withdrawal_id,
+        related_type="withdrawal_rejection"
     )
-    
-    # Get updated balance for transaction record
-    user = await db.users.find_one({"uid": withdrawal["user_id"]})
-    updated_balance = user.get("profit_wallet_balance", 0)
-    
-    # Create wallet transaction record for refund
-    await db.wallet_transactions.insert_one({
-        "transaction_id": str(uuid.uuid4()),
-        "user_id": withdrawal["user_id"],
-        "type": "credit",
-        "wallet_type": "profit",
-        "amount": total_refund,
-        "description": f"Withdrawal refund - Request rejected",
-        "reference_id": withdrawal_id,
-        "balance_after": updated_balance,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    })
     
     await db.profit_withdrawals.update_one(
         {"withdrawal_id": withdrawal_id},
