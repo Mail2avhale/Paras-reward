@@ -1333,7 +1333,7 @@ def test_admin_cashback_wallet_credit_debit():
                 print(f"   - Timestamp: {latest_transaction.get('timestamp')}")
                 
                 # Check required fields
-                required_fields = ["transaction_id", "type", "amount", "balance_after", "description", "status", "timestamp"]
+                required_fields = ["transaction_id", "type", "amount", "balance_after", "description", "status", "created_at"]
                 missing_fields = [field for field in required_fields if not latest_transaction.get(field)]
                 
                 if not missing_fields:
