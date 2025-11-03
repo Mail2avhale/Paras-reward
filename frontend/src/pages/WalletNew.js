@@ -255,45 +255,47 @@ const WalletNew = ({ user, onLogout }) => {
   const isStockistOrOutlet = ['master_stockist', 'sub_stockist', 'outlet'].includes(user?.role);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <Navbar user={user} onLogout={onLogout} />
       
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Premium Header */}
-        <div className="mb-8 border-b border-amber-500/20 pb-6">
-          <h1 className="text-4xl sm:text-5xl font-serif font-bold bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent mb-2">
-            Premium Wallet
+        {/* Elegant Gradient Header */}
+        <div className="mb-8">
+          <h1 className="text-5xl sm:text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+            My Wallet
           </h1>
-          <p className="text-amber-200/60 text-sm font-light tracking-wide">Manage your finances with elegance</p>
+          <p className="text-gray-600 text-sm">Manage your finances seamlessly</p>
         </div>
 
-        {/* Wallet Balances - Premium Cards */}
+        {/* Wallet Balances - Gradient Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Cashback Wallet - Elegant Navy & Gold */}
-          <Card className="relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-amber-500/30 p-8 rounded-xl shadow-2xl">
-            {/* Decorative corner accent */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-amber-500/10 to-transparent rounded-bl-full"></div>
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-amber-500/10 to-transparent rounded-tr-full"></div>
+          {/* Cashback Wallet - Blue to Purple Gradient */}
+          <Card className="relative overflow-hidden bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 text-white p-8 rounded-3xl shadow-xl border-0 hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
+            {/* Decorative gradient orbs */}
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-400/20 rounded-full blur-3xl"></div>
             
             <div className="relative z-10">
               <div className="flex items-start justify-between mb-6">
                 <div>
-                  <p className="text-xs font-semibold text-amber-400/80 tracking-widest uppercase mb-2">Cashback Account</p>
-                  <h2 className="text-5xl font-serif font-bold text-amber-300">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="bg-white/20 backdrop-blur-sm p-2 rounded-xl">
+                      <WalletIcon className="h-6 w-6" />
+                    </div>
+                    <p className="text-sm font-medium opacity-90">Cashback Wallet</p>
+                  </div>
+                  <h2 className="text-5xl font-bold tracking-tight">
                     ₹{walletData?.cashback_balance?.toFixed(2) || '0.00'}
                   </h2>
                 </div>
-                <div className="bg-amber-500/20 p-3 rounded-lg border border-amber-500/30">
-                  <WalletIcon className="h-8 w-8 text-amber-400" />
-                </div>
               </div>
               
-              {/* Divider */}
-              <div className="h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent mb-4"></div>
+              {/* Glass separator */}
+              <div className="h-px bg-white/20 mb-4"></div>
               
               {walletData?.pending_lien > 0 && (
-                <div className="mb-3 p-3 bg-red-900/30 border border-red-500/40 rounded-lg backdrop-blur-sm">
-                  <div className="flex items-center gap-2 text-sm text-red-300">
+                <div className="mb-3 p-3 bg-red-500/20 backdrop-blur-sm border border-red-300/30 rounded-xl">
+                  <div className="flex items-center gap-2 text-sm">
                     <AlertCircle className="h-4 w-4" />
                     <span>Maintenance Lien: ₹{walletData.pending_lien?.toFixed(2) || '0.00'}</span>
                   </div>
@@ -301,43 +303,45 @@ const WalletNew = ({ user, onLogout }) => {
               )}
               
               {walletData?.maintenance_due && (
-                <div className="mb-2 p-2 bg-amber-900/30 border border-amber-500/30 rounded text-xs text-amber-300">
+                <div className="mb-2 p-2 bg-yellow-400/20 backdrop-blur-sm border border-yellow-300/30 rounded-lg text-xs">
                   Maintenance fee (₹99) due now
                 </div>
               )}
               
               {walletData?.days_until_maintenance !== null && walletData?.days_until_maintenance > 0 && (
-                <div className="text-xs text-amber-400/60 font-light">
+                <div className="text-xs opacity-80">
                   Next maintenance in {walletData.days_until_maintenance} days
                 </div>
               )}
             </div>
           </Card>
 
-          {/* Profit Wallet - Elegant Burgundy & Gold */}
+          {/* Profit Wallet - Purple to Pink Gradient */}
           {isStockistOrOutlet && (
-            <Card className="relative overflow-hidden bg-gradient-to-br from-red-950 to-red-900 border-2 border-amber-500/30 p-8 rounded-xl shadow-2xl">
-              {/* Decorative corner accent */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-amber-500/10 to-transparent rounded-bl-full"></div>
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-amber-500/10 to-transparent rounded-tr-full"></div>
+            <Card className="relative overflow-hidden bg-gradient-to-br from-purple-500 via-pink-500 to-rose-500 text-white p-8 rounded-3xl shadow-xl border-0 hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
+              {/* Decorative gradient orbs */}
+              <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+              <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-rose-400/20 rounded-full blur-3xl"></div>
               
               <div className="relative z-10">
                 <div className="flex items-start justify-between mb-6">
                   <div>
-                    <p className="text-xs font-semibold text-amber-400/80 tracking-widest uppercase mb-2">Profit Account</p>
-                    <h2 className="text-5xl font-serif font-bold text-amber-300">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="bg-white/20 backdrop-blur-sm p-2 rounded-xl">
+                        <TrendingUp className="h-6 w-6" />
+                      </div>
+                      <p className="text-sm font-medium opacity-90">Profit Wallet</p>
+                    </div>
+                    <h2 className="text-5xl font-bold tracking-tight">
                       ₹{walletData?.profit_balance?.toFixed(2) || '0.00'}
                     </h2>
                   </div>
-                  <div className="bg-amber-500/20 p-3 rounded-lg border border-amber-500/30">
-                    <TrendingUp className="h-8 w-8 text-amber-400" />
-                  </div>
                 </div>
                 
-                {/* Divider */}
-                <div className="h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent mb-4"></div>
+                {/* Glass separator */}
+                <div className="h-px bg-white/20 mb-4"></div>
                 
-                <p className="text-sm text-amber-400/60 font-light">Earnings from delivery charges & commissions</p>
+                <p className="text-sm opacity-80">Earnings from delivery charges & commissions</p>
               </div>
             </Card>
           )}
