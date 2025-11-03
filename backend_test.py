@@ -831,12 +831,12 @@ def test_profit_wallet_management():
         if response.status_code == 200:
             result = response.json()
             print(f"✅ Monthly fees applied successfully")
-            print(f"📋 Users Processed: {result.get('users_processed')}")
+            print(f"📋 Users Processed: {result.get('total_users_processed')}")
             print(f"📋 Cashback Fees: {result.get('cashback_fees_applied')}")
             print(f"📋 Profit Fees: {result.get('profit_fees_applied')}")
-            print(f"📋 Liens Created: {result.get('liens_created')}")
+            print(f"📋 Errors: {result.get('errors')}")
             
-            if result.get('users_processed', 0) > 0:
+            if result.get('total_users_processed', 0) > 0:
                 test_results["monthly_fee_all_vip_users"] = True
                 print(f"✅ Monthly fees processed for VIP users")
             else:
