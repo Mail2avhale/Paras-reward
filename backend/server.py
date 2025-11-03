@@ -2030,20 +2030,22 @@ async def credit_cashback(uid: str, request: Request):
     
     # Create transaction log entry
     transaction = {
-        "transaction_id": str(uuid.uuid4()),
+        "transaction_id": f"TXN-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}",
         "user_id": uid,
+        "wallet_type": "cashback",
         "type": "admin_credit",
         "amount": amount,
+        "balance_before": current_balance,
         "balance_after": new_balance,
         "description": f"Admin credited ₹{amount} to cashback wallet",
         "status": "completed",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "metadata": {
             "lien_cleared": pending_lien - new_lien if pending_lien > 0 else 0,
             "credited_by": "admin"
         }
     }
-    await db.wallet_transactions.insert_one(transaction)
+    await db.transactions.insert_one(transaction)
     
     return {
         "message": message,
