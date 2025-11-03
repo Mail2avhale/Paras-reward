@@ -2322,6 +2322,7 @@ async def get_admin_stats():
             "total": total_users,
             "vip": vip_users,
             "free": free_users,
+            "managers": managers,
             "master_stockists": master_stockists,
             "sub_stockists": sub_stockists,
             "outlets": outlets
