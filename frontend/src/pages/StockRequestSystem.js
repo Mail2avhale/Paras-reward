@@ -59,13 +59,20 @@ const StockRequestSystem = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch my requests
-      const myRequestsRes = await axios.get(`${API}/stock/request/my-requests/${user.uid}`);
-      setMyRequests(myRequestsRes.data.requests || []);
-      
-      // Fetch pending requests for me to approve
-      const pendingRes = await axios.get(`${API}/stock/request/pending-for-me/${user.uid}`);
-      setPendingForMe(pendingRes.data.requests || []);
+      // Admin sees all requests
+      if (userRole === 'admin') {
+        const allRequestsRes = await axios.get(`${API}/admin/stock/requests`);
+        setMyRequests(allRequestsRes.data.requests || []);
+        setPendingForMe(allRequestsRes.data.requests?.filter(r => r.status === 'pending') || []);
+      } else {
+        // Fetch my requests
+        const myRequestsRes = await axios.get(`${API}/stock/request/my-requests/${user.uid}`);
+        setMyRequests(myRequestsRes.data.requests || []);
+        
+        // Fetch pending requests for me to approve
+        const pendingRes = await axios.get(`${API}/stock/request/pending-for-me/${user.uid}`);
+        setPendingForMe(pendingRes.data.requests || []);
+      }
       
       // Fetch my inventory
       const inventoryRes = await axios.get(`${API}/stock/inventory/my-stock/${user.uid}`);
