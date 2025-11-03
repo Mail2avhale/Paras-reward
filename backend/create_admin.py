@@ -49,8 +49,8 @@ async def create_admin():
             "is_vip": True,
             "vip_expiry": None,  # Never expires
             "prc_balance": 10000,  # Starting PRC
-            "cashback_wallet": 1000.0,  # Starting INR
-            "profit_wallet": 0.0,
+            "cashback_balance": 1000.0,  # Starting INR (correct field name)
+            "profit_balance": 0.0,  # Profit wallet
             "pending_lien": 0.0,
             "last_fee_date": datetime.now(timezone.utc).isoformat(),
             "referral_code": f"ADMIN{admin_uid[:8].upper()}",
