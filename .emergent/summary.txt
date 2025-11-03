@@ -1,42 +1,34 @@
 <analysis>
-The AI engineer's trajectory began with addressing NaN errors in the Financial Management Admin dashboard by implementing frontend calculations. Key structural improvements followed, including the removal of redundant admin tabs and the integration of a Withdrawal Management system, a Stock Movement Approval System, and comprehensive financial KPIs. A Stock Request System with CRUD operations was implemented across various user panels, with a critical bug fix for missing UIDs. Delivery charge distribution logic was refined, and Google AdSense was integrated throughout the frontend. Quick access menus were added to stockist dashboards.
-
-A significant hurdle was a hardcoded database name identified during a deployment health check, which the engineer successfully resolved by externalizing the DB name to environment variables. Subsequent tasks involved fixing a product creation bug where  was missing from the frontend form, and then tackling a series of user-reported critical issues: implementing PRC expiry logic for free users (setting their PRC balance to zero), adding wallet transaction history, deducting delivery charges from user wallets, and enhancing the user dashboard with quick access menus.
-
-Further development focused on comprehensive content updates, including renaming the app to PARAS REWARD, updating various legal pages (Privacy Policy, Terms & Conditions, About Us) for AdSense compliance, and restructuring the website with a unique homepage, new How It Works and FAQ pages, a blog section with 8 articles, and a complete sitemap. Frontend navigation was refined, including fixing a critical Navbar rendering issue for non-logged-in users. The wallet system was enhanced to support multiple UPI withdrawal options (PhonePe, Google Pay, Paytm) with account holder name and bank name fields, including bank logos, and the Admin Withdrawal Management display was improved. Most recently, the QR code upload functionality was migrated to direct image upload, the QR code display was integrated into the user dashboard, and the Admin User Management section was redesigned into a tabbed interface. The trajectory concludes with a JSX syntax error in  preventing the preview from loading, currently being debugged.
+The AI engineer's work began by fixing NaN errors and restructuring the Admin dashboard for better financial and stock management. Core features like a Withdrawal Management system, Stock Movement Approval, and a Stock Request System were implemented. Frontend improvements included AdSense integration and quick access menus. A critical database hardcoding issue was resolved, and product creation bugs were addressed. Subsequent tasks focused on user-centric features: PRC expiry for free users, wallet transaction history, delivery charge deduction, and enhanced wallet functionality with multiple UPI options. Content updates involved rebranding to PARAS REWARD, updating legal pages, creating new static pages (How It Works, FAQ, Blog), and a sitemap for SEO. Frontend navigation was refined, including a Navbar fix. The AI also implemented a Manager role with specific access controls for KYC, VIP payments, and stock movements, along with Admin settings tab refactoring. Most recently, the engineer implemented a banking-style wallet with enhanced withdrawal logic and detailed transaction history. A cascading location selector (State -> District -> Tahsil -> PIN) was added to the user profile, followed by a fix for limited location data. The current task involves debugging a Not loading preview issue due to a syntax error in  and implementing input field validations as per user request.
 </analysis>
 
 <product_requirements>
-The PARAS REWARD application is a crypto-mining platform where users earn non-transferable PRC (10 PRC = ₹1 INR) through daily mining, a tap game, and referrals. VIP members (₹1000/year, admin-approved) gain unlimited PRC validity and full redeem/withdrawal access, while free users have 24-hour coin validity with no redemption. Product redemption uses a multi-item cart, single secret code per order, atomic PRC deduction, and 25% cashback. KYC is mandatory for withdrawals.
-
-Implemented features include a Cashback Wallet (INR, ₹99 monthly fee, min ₹10 withdrawal, ₹5 fee), Profit Wallets (for Master/Sub/Outlet delivery shares/deposit returns), and a Stock Movement system (Company → Master → Sub → Outlet → Customer with traceability). A Security Deposit feature (refundable deposits with 3% monthly return, annual renewal fees) is in place. Role-Based Access Control (RBAC) dashboards are crucial, with recent additions like SendGrid for profile-based password recovery, a user-facing Support Ticket system, enhanced Admin Stockist and Financial Management, and advanced Admin User/Order Management. Key updates include explicit PRC expiry for free users (0 balance), immediate wallet deduction on withdrawal requests (with re-credit on rejection), wallet transaction history, delivery charge deduction from user wallets, and dynamic contact details for admin editing. The application now supports multiple UPI withdrawal options with bank names and logos, QR code display on the user dashboard, and a tabbed Admin User Management interface.
+The PARAS REWARD app is a crypto-mining platform where users earn PRC (10 PRC = ₹1 INR) via mining, tap games, and referrals. VIP members (₹1000/year) get unlimited PRC validity and full redemption/withdrawal, while free users have 24-hour validity with no redemption. Products are redeemed using a multi-item cart, single secret code, atomic PRC deduction, and 25% cashback, with KYC mandatory for withdrawals. Features include Cashback Wallet (INR, ₹99/month, min ₹10 withdrawal, ₹5 fee), Profit Wallets (for stockist delivery shares/deposits), and a Stock Movement system (Company → Master → Sub → Outlet → Customer traceability). A Security Deposit feature (refundable, 3% monthly return, annual renewal) is implemented. Role-Based Access Control (RBAC) dashboards are crucial, with SendGrid for password recovery, a Support Ticket system, enhanced Admin Stockist/Financial/User/Order Management. Recent updates include explicit PRC expiry for free users, immediate wallet deduction on withdrawal requests, wallet transaction history, delivery charge deduction from user wallets, dynamic contact details, multiple UPI withdrawal options with bank details, QR code display, and a tabbed Admin User Management.
 </product_requirements>
 
 <key_technical_concepts>
 - **FastAPI:** Python web framework for backend APIs.
 - **React.js:** JavaScript library for frontend UI.
-- **MongoDB:** NoSQL database for flexible data storage (using UUIDs).
+- **MongoDB:** NoSQL database for flexible data storage using UUIDs.
 - **Pydantic:** Data validation and settings management.
 - **JWT (JSON Web Tokens):** User authentication.
 - **Supervisor:** Process control system.
 - **Shadcn UI:** Reusable UI components.
-- **Role-Based Access Control (RBAC):** Restricts features based on user roles.
-- **UUID:** Unique identifiers for MongoDB documents.
-- **SendGrid:** Email service for password recovery.
-- **Google AdSense:** Web monetization, with compliance considerations.
-- **Environment Variables:** Used for sensitive configurations like database names and URLs.
+- **Role-Based Access Control (RBAC):** Restricts features based on user roles (Admin, Master Stockist, Sub Stockist, Outlet, Manager, User).
+- **Google AdSense:** Web monetization.
+- **Environment Variables:** For configuration management.
 </key_technical_concepts>
 
 <code_architecture>
 The application uses a FastAPI backend, a React.js frontend, and MongoDB.
 
 
-- ****: Core backend.
-    - Summary: Manages API endpoints.
-    - Changes: Extensive modifications for Admin KPIs, commission distribution, stock movement APIs. New endpoints for password recovery, Support Tickets, Admin Stockist/Financial/User/Order Management. Reordered routing for . Stock transfer initiation updated. New endpoints for Stock Request system (create, approve, reject, edit, delete, inventory for requests) and enhanced  for financial KPIs. Fixed indentation errors and duplicate code in . Updated delivery charge distribution logic to credit Sub/Master Stockists. Modified user registration to accept , and added referral stats endpoint. Stock request endpoints were updated to use UID from the path. Added logic to calculate and deduct delivery charges from user wallets during checkout. Added transaction record creation for cashback and profit withdrawals/rejections. Implemented endpoint for wallet transaction history. Modified mining/tap game to set PRC earned to 0 for free users. Added logic to enforce 0 PRC for free users during login. Added wallet transaction logging to admin balance adjustment. New endpoints for  management.
-- ****: Pydantic models.
-    - Summary: Data validation.
-    - Changes:  models modified for . New models for , , , and related update/request models.
+- ****: Core backend API endpoints.
+    - Summary: Handles all API logic, authentication, data retrieval, and business operations.
+    - Changes: Updated for Admin KPIs, commission distribution, stock movement APIs, password recovery, Support Tickets, Admin Stockist/Financial/User/Order Management. Modified referral logic, delivery charge deduction, wallet transaction history, and PRC expiry for free users. Added manager role verification to KYC, VIP payment, and stock movement endpoints. Added manager count to . Implemented new transaction logging and updated withdrawal/rejection logic. Fixed a missing comma linting error.
+- ****: Pydantic models for data validation.
+    - Summary: Defines the structure and validation rules for database entities and API request/response bodies.
+    - Changes:  models modified for . New models for , , . Added  model. Added  field to  model.
 - **============================================================
 PARAS REWARD - Admin Role Assignment Tool
 ============================================================
@@ -338,137 +330,64 @@ PARAS REWARD - Admin Role Assignment Tool
    Current Role: user
 
 ============================================================
-Enter user number to make ADMIN (or 'q' to quit): **: Script for creating an admin user.
-    - Summary: Utility script to set up an admin.
-    - Changes: Fixed hardcoded database name  to use .
-- ****: Environment variables for backend.
-    - Summary: Stores backend configuration.
-    - Changes: Added .
-- ** (New file)**: Document for tracking detailed backend fixes.
-    - Summary: Created to document systematic backend changes.
-- ****: Application routing.
-    - Summary: Updated to include newer pages and routes.
-    - Changes: Routes added for password recovery, support, , , , , and .
-- ****: Global navigation.
-    - Summary: Provides role-based navigation.
-    - Changes: Role-based access control implemented, Support link added. Fixed rendering for non-logged-in users by adding null checks for the  object and a separate non-logged-in navigation section. Fixed JSX syntax error.
-- ** (New file)**: Global footer component.
-    - Summary: Contains sitemap navigation links.
-    - Changes: Created and integrated into public-facing pages like .
-- ****: Reusable image upload component.
-    - Summary: Handles client-side image upload and preview.
-    - Changes: Used in  for QR code upload.
+Enter user number to make ADMIN (or 'q' to quit): **: Utility script.
+    - Summary: Used to create an initial admin user.
+    - Changes: Fixed hardcoded database name to use environment variables.
+- ** (New file)**: Script to create manager users.
+    - Summary: Helps admins easily set up new manager accounts.
+    - Changes: Created for manager role implementation.
+- ****: Defines application routing.
+    - Summary: Manages the navigation flow across different pages of the application.
+    - Changes: Added routes for password recovery, support, , , , , , and the new .
+- ****: Global navigation component.
+    - Summary: Provides role-based navigation links and user authentication status.
+    - Changes: Implemented role-based access for Support and Admin Panel, adding a Manager Panel link. Fixed rendering for non-logged-in users and mobile navigation.
 - ****: Admin interface.
-    - Summary: Central hub for admin operations.
-    - Changes: Refactored UI, added sections for Stock Movement, KYC, VIP payments. Integrated tabs for Support Tickets, Stockist/Financial/User/Order Management. Fixed real-time stats display. Removed Rewards and Commissions tabs and global stats cards. Integrated  and . Added comprehensive financial KPIs. Integrated  as a tab. Fixed product creation bug by adding  input field, state, and update logic. Integrated  component within a new Settings tab. Removed Master, Sub, Outlet Stockist menu items. Replaced QR code URL input with  component. Redesigned User Management into a tabbed interface. Contains a current JSX syntax error.
-- ****: Outlet interface.
-    - Summary: Manages order verification and delivery.
-    - Changes: Uses  API. Integrated  as a tab. Added a comprehensive navigation bar for user features.
-- ****: User product browsing.
-    - Summary: Allows users to view and redeem products.
-    - Changes: Refactored for multi-product cart. Integrated Google AdSense ads.
-- ****: User's order history.
-    - Summary: Displays user orders.
-    - Changes: Fixed API endpoint call for multi-product cart orders.
-- ****: Master Stockist dashboard.
-    - Summary: For Master Stockist operations.
-    - Changes: Uses  API. Integrated  as a tab. Added a comprehensive navigation bar for user features.
-- ****: Sub Stockist dashboard.
-    - Summary: For Sub Stockist operations.
-    - Changes: Uses  API. Integrated  as a tab. Added a comprehensive navigation bar for user features.
-- ****: Admin page for financial entries.
-    - Summary: Manages security deposits and renewal fees.
-    - Changes: Created and integrated. Updated to display data in table. Patched NaN errors for financial calculations by implementing client-side calculation for older data.
-- ** (New file)**: Admin page for managing user withdrawal requests.
-    - Summary: Allows admin to view and manage cashback and profit wallet withdrawals.
-    - Changes: Created and integrated into . Updated to correctly display withdrawal details including bank name and logo.
-- ** (New file)**: Admin page for approving stock transfers.
-    - Summary: Centralized system for viewing, approving, and rejecting stock movements.
-    - Changes: Created and integrated into  replacing the simplified stock movement view.
-- ** (New file)**: User/Stockist facing page for creating, viewing, editing, deleting, approving/rejecting stock requests.
-    - Summary: Implements the hierarchical stock request flow.
-    - Changes: Created with CRUD functionality and integrated into Admin, Master, Sub, and Outlet panels. Updated to correctly pass UID parameters to backend APIs.
-- ****: User's referral management page.
-    - Summary: Displays referral code and stats.
-    - Changes: Updated to display a shareable referral link with a copy button and show referral statistics. Integrated Google AdSense ads.
-- ****: User registration page.
-    - Summary: Simplified registration.
-    - Changes: Updated to handle  from URL parameters and allow input in the form.
-- ****: User mining page.
-    - Summary: User interface for crypto mining.
-    - Changes: Integrated Google AdSense ads. Updated text to clarify it's a reward system, not crypto mining, and added a disclaimer.
-- ** (Backed up as )**: Old Home page.
-    - Summary: Original homepage.
-    - Changes: Backed up to replace with .
-- ** (New file, renamed to )**: New Home page with unique look and SEO content.
-    - Summary: Implements a redesigned homepage with SEO-optimized content and clear branding.
-    - Changes: Created with extensive content provided by the user, rebranded to PARAS REWARD, and updated for AdSense compliance.
-- ****: Information about the platform.
-    - Summary: Provides details about the company.
-    - Changes: Updated content to clarify it's a reward platform and not crypto mining, with new SEO-optimized text.
-- ****: Contact information page.
-    - Summary: Displays contact details for support.
-    - Changes: Updated to fetch dynamic contact details from the backend API.
-- ****: Privacy policy document.
-    - Summary: Outlines data collection and usage policies.
-    - Changes: Completely replaced content with user-provided, AdSense-compliant text.
-- ****: Terms and conditions document.
-    - Summary: Details user agreement and platform rules.
-    - Changes: Completely replaced content with user-provided, AdSense-compliant text.
-- ****: User dashboard.
-    - Summary: Central hub for user features.
-    - Changes: Added quick access buttons for Referrals, VIP, KYC, Orders, and Wallet. Added functionality to fetch and display the QR code after Quick Access.
-- ****: Enhanced user wallet interface.
+    - Summary: Centralized hub for all administrative operations.
+    - Changes: Refactored UI, added tabs for various management sections. Removed redundant elements. Integrated  and . Added financial KPIs and . Fixed product creation bug. Redesigned User Management into a tabbed interface. Fixed multiple JSX syntax errors. Added manager role to dropdowns. Refactored Settings tab with sub-tabs. Removed duplicate settings sections.
+- ****: User profile management page.
+    - Summary: Allows users to view and update their profile information.
+    - Changes: Implemented cascading dropdowns for State, District, Tahsil, and PIN code. Added handler functions and integrated .
+- ****: User's enhanced wallet interface.
     - Summary: Manages cashback and profit withdrawals, and displays transaction history.
-    - Changes: Added multiple withdrawal options (PhonePe, Google Pay, Paytm) with specific input fields. Added Account Holder Name and Bank Name fields for bank withdrawals, including bank name state variables, validation, and bank logos. Updated withdrawal and rejection logic to add transaction records. Added helper functions for displaying payment methods and icons.
-- ** (New file)**: Explains platform mechanics.
-    - Summary: New page detailing how the PARAS REWARD system functions.
+    - Changes: Added multiple UPI withdrawal options with bank details. Added a Transaction History tab and integrated the  component. Updated withdrawal forms to show fee information.
+- ****: Admin withdrawal management.
+    - Summary: Allows admin to view and manage user withdrawal requests.
+    - Changes: Updated to correctly display , , and , handling both old and new field names for compatibility in table and modal views.
+- ** (New file)**: Manager dashboard.
+    - Summary: Provides a dedicated interface for users with the manager role for their specific responsibilities.
     - Changes: Created.
-- ** (New file)**: Frequently asked questions.
-    - Summary: New page with common questions and answers.
-    - Changes: Created.
-- ** (New file)**: Blog listing page.
-    - Summary: Displays a list of blog articles.
-    - Changes: Created.
-- ** (New file)**: Individual blog article page.
-    - Summary: Renders a single blog post dynamically.
-    - Changes: Created.
-- ** (New file)**: Stores blog article content.
-    - Summary: JavaScript file containing data for all blog posts.
-    - Changes: Created with 8 articles provided by the user.
-- ** (New file)**: Stores bank names and logos.
-    - Summary: JavaScript file containing a list of bank details.
-    - Changes: Created to support bank selection with logos.
-- ****: Main HTML file.
-    - Summary: Entry point for frontend.
-    - Changes: Added Google AdSense script and Auto Ads configuration.
-- ** (New file)**: XML sitemap for SEO.
-    - Summary: Lists all public URLs for search engines.
-    - Changes: Created and updated to include new pages and blog articles.
-- ** (New file)**: Robots exclusion standard file.
-    - Summary: Directs search engine crawlers.
-    - Changes: Created.
-- ****: Documents testing.
-    - Summary: Logs progress, issues, and test results.
-    - Changes: Continuously updated, especially with details on NaN fix verification, delivery charge distribution testing, deployment fix, cash price fix, wallet and PRC logic fixes, and content/navigation updates.
+- ** (New file)**: Component for banking-style wallet view.
+    - Summary: Displays detailed transaction history in a banking-style format.
+    - Changes: Created and integrated into .
+- ** (New file)**: Location data.
+    - Summary: Stores Indian State, District, Tahsil, and PIN code information.
+    - Changes: Created with initial limited data, then updated to include comprehensive data. Currently has a syntax error.
 </code_architecture>
 
 <pending_tasks>
-- Fix the JSX syntax error in  to enable the preview.
 - Optimize product list display in user panels.
 - Complete implementation of profit wallet credit logging during delivery charge distribution.
 - Implement order update/delete functionality for regular users.
-- Build detailed advanced admin sections for Notifications, Settings, Commissions, and Rewards (currently placeholders or initial implementations).
+- Build detailed advanced admin sections for Notifications, Commissions, and Rewards.
+- Populate  with complete article content.
+- Create advance marketplace for admin and user experience.
+- Fix syntax error in .
+- Implement proper validation and formatting for mobile number, email id, UPI id, Aadhaar card, and PAN card fields.
 </pending_tasks>
 
 <current_work>
-Immediately before this summary request, the AI engineer was addressing a user report of Not loading preview accompanied by a screenshot. This issue arose after the AI engineer had just completed a series of significant updates:
-1.  **QR Code Integration:** Replaced the QR Code URL upload in Admin Settings () with a direct image upload using the  component. The fetched QR code is now also displayed in the user dashboard () after the Quick Access section.
-2.  **Admin User Management Redesign:** Consolidated the two existing User Management sections in the Admin Dashboard () into a single, tabbed interface, separating Basic User Management and Advanced User Management for improved clarity and design. This involved substantial refactoring of the  file, including state management for the new tab view.
+Immediately before this summary request, the AI engineer was working on enhancing the user profile section. A new feature was implemented to add a cascading location selector (State → District → Tahsil → PIN code) in . This involved creating  to store comprehensive Indian location data and integrating it with the frontend component. The backend ( and ) was also updated to accept and store the new  field.
 
-The current problem is that the frontend preview is not loading due to a compilation error. The AI engineer has identified a JSX syntax issue in , which is likely a consequence of the recent refactoring for the User Management section. The user has explicitly asked, Not loading preview and Where is all updations. The AI engineer's last action was to attempt to fix this JSX syntax error.
+After this implementation, the user reported a Not loading preview issue, indicating a frontend error. The AI engineer identified that the  file, which was recently updated with comprehensive data, contained a syntax error (a missing semicolon).
+
+The very last user request was: Properly implemente fields like mobile number should 10 digit only not entered text. Like this update all fields mobile number, email id, upi id, aadhar card, pan card, to proper formatting. The AI engineer acknowledged this, stating it would implement validation for these fields *after* fixing the  syntax error.
+
+Therefore, the current work is to:
+1.  Debug and fix the syntax error in  that is preventing the frontend preview from loading.
+2.  Implement proper validation and formatting for user input fields like mobile number, email ID, UPI ID, Aadhaar card, and PAN card in the  component.
 </current_work>
 
 <optional_next_step>
-Fix the identified JSX syntax error in .
+Fix the syntax error in , then implement real-time validation for user profile input fields.
 </optional_next_step>
