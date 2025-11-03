@@ -34,10 +34,18 @@ class User(BaseModel):
     pan_front: Optional[str] = None
     
     # Bank Details
+    bank_account_holder_name: Optional[str] = None
     bank_account_number: Optional[str] = None
     bank_ifsc: Optional[str] = None
     bank_name: Optional[str] = None
+    bank_branch: Optional[str] = None
+    bank_account_type: Optional[str] = None  # savings, current
+    
+    # UPI & Payment Details
     upi_id: Optional[str] = None
+    phonepe_number: Optional[str] = None
+    gpay_number: Optional[str] = None
+    paytm_number: Optional[str] = None
     
     # System Fields
     role: str = "user"  # user, admin, sub_admin, manager, employee, master_stockist, sub_stockist, outlet
