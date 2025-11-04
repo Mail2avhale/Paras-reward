@@ -353,11 +353,16 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
         </div>
 
         {/* Products Grid/List */}
-        <div className={viewMode === 'grid' 
-          ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" 
-          : "space-y-4"
-        }>
-          {filteredProducts.map((product, idx) => (
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <ProductCardSkeleton count={8} />
+          </div>
+        ) : (
+          <div className={viewMode === 'grid' 
+            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" 
+            : "space-y-4"
+          }>
+            {filteredProducts.map((product, idx) => (
             <Card 
               key={product.product_id}
               className={`bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300 overflow-hidden group ${
