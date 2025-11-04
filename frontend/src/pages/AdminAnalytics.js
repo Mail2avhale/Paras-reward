@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, Users, ShoppingCart, DollarSign, Download, Calendar } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import { StatsSkeleton, ChartSkeleton } from '@/components/skeletons';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 const COLORS = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444'];
