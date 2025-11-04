@@ -272,9 +272,7 @@ const WithdrawalManagementAdmin = () => {
 
       {/* Withdrawals Table */}
       {loading ? (
-        <Card className="p-12 text-center">
-          <div className="text-gray-600">Loading withdrawal requests...</div>
-        </Card>
+        <TableSkeleton rows={10} columns={8} />
       ) : filteredWithdrawals.length === 0 ? (
         <Card className="p-12 text-center">
           <Wallet className="h-16 w-16 text-gray-400 mx-auto mb-4" />
