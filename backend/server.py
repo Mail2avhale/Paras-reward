@@ -3648,16 +3648,52 @@ async def create_product(request: Request):
     return {"message": "Product created successfully", "product_id": product.product_id}
 
 @api_router.get("/admin/products")
-async def get_all_products_admin(page: int = 1, limit: int = 20, search: Optional[str] = None):
-    """Get all products with pagination (Admin) - includes hidden and inactive"""
+async def get_all_products_admin(
+    page: int = 1, 
+    limit: int = 20, 
+    search: Optional[str] = None,
+    category: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    stock_status: Optional[str] = None,
+    status: Optional[str] = None,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = "asc"
+):
+    """Get all products with advanced filtering and pagination (Admin)"""
     query = {}
     
-    # Search by name or SKU
+    # Search by name, SKU, or description
     if search:
         query["$or"] = [
             {"name": {"$regex": search, "$options": "i"}},
-            {"sku": {"$regex": search, "$options": "i"}}
+            {"sku": {"$regex": search, "$options": "i"}},
+            {"description": {"$regex": search, "$options": "i"}}
         ]
+    
+    # Filter by category
+    if category:
+        query["category"] = category
+    
+    # Filter by price range (cash_price)
+    if min_price is not None or max_price is not None:
+        query["cash_price"] = {}
+        if min_price is not None:
+            query["cash_price"]["$gte"] = min_price
+        if max_price is not None:
+            query["cash_price"]["$lte"] = max_price
+    
+    # Filter by stock status
+    if stock_status == "in_stock":
+        query["stock"] = {"$gt": 0}
+    elif stock_status == "out_of_stock":
+        query["stock"] = 0
+    elif stock_status == "low_stock":
+        query["stock"] = {"$gt": 0, "$lte": 10}
+    
+    # Filter by active/inactive status
+    if status:
+        query["status"] = status
     
     # Get total count
     total = await db.products.count_documents(query)
@@ -3666,8 +3702,19 @@ async def get_all_products_admin(page: int = 1, limit: int = 20, search: Optiona
     # Calculate skip
     skip = (page - 1) * limit
     
-    # Get products
-    products = await db.products.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(length=limit)
+    # Determine sort field and order
+    sort_field = "created_at"
+    if sort_by == "name":
+        sort_field = "name"
+    elif sort_by == "price":
+        sort_field = "cash_price"
+    elif sort_by == "stock":
+        sort_field = "stock"
+    
+    sort_direction = 1 if sort_order == "asc" else -1
+    
+    # Get products with sorting
+    products = await db.products.find(query, {"_id": 0}).sort(sort_field, sort_direction).skip(skip).limit(limit).to_list(length=limit)
     
     # Convert datetime fields to ISO format
     for product in products:
@@ -3677,6 +3724,7 @@ async def get_all_products_admin(page: int = 1, limit: int = 20, search: Optiona
                     product[field] = datetime.fromisoformat(product[field]).isoformat()
                 except:
                     pass
+    
     
     return {
         "total": total,
