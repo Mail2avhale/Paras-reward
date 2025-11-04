@@ -7236,8 +7236,8 @@ async def add_ticket_reply(ticket_id: str, request: TicketReplyRequest):
     }
 
 @api_router.get("/admin/support/tickets")
-async def get_all_tickets(status: Optional[str] = None, category: Optional[str] = None, page: int = 1, limit: int = 50):
-    """Admin endpoint to get all support tickets"""
+async def get_all_tickets(status: Optional[str] = None, category: Optional[str] = None, page: int = 1, limit: int = 20):
+    """Admin endpoint to get all support tickets with pagination"""
     query = {}
     if status:
         query["status"] = status
@@ -7245,8 +7245,10 @@ async def get_all_tickets(status: Optional[str] = None, category: Optional[str] 
         query["category"] = category
     
     skip = (page - 1) * limit
-    tickets = await db.support_tickets.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=None)
     total = await db.support_tickets.count_documents(query)
+    total_pages = (total + limit - 1) // limit
+    
+    tickets = await db.support_tickets.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
     
     for ticket in tickets:
         ticket.pop("_id", None)
@@ -7256,7 +7258,7 @@ async def get_all_tickets(status: Optional[str] = None, category: Optional[str] 
         "total": total,
         "page": page,
         "limit": limit,
-        "pages": (total + limit - 1) // limit
+        "total_pages": total_pages
     }
 
 @api_router.put("/admin/support/tickets/{ticket_id}")
