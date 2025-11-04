@@ -74,8 +74,39 @@ function AdminAnalytics({ user, onLogout }) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar user={user} onLogout={onLogout} />
-        <div className="flex items-center justify-center h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        
+        <div className="container mx-auto px-4 py-8">
+          {/* Header Skeleton */}
+          <div className="mb-8 animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-64 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-96"></div>
+          </div>
+
+          {/* Filters Skeleton */}
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-8 animate-pulse">
+            <div className="flex gap-4">
+              <div className="h-10 bg-gray-200 rounded w-32"></div>
+              <div className="h-10 bg-gray-200 rounded w-40"></div>
+              <div className="h-10 bg-gray-200 rounded w-32"></div>
+            </div>
+          </div>
+
+          {/* Stats Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <StatsSkeleton count={4} />
+          </div>
+
+          {/* Charts Skeleton */}
+          <div className="mb-8">
+            <ChartSkeleton height={400} />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <ChartSkeleton height={300} />
+            <ChartSkeleton height={300} />
+          </div>
+
+          <ChartSkeleton height={500} />
         </div>
       </div>
     );
