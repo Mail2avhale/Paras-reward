@@ -6277,15 +6277,18 @@ async def update_mining_formula(request: Request):
 @api_router.get("/admin/orders/all")
 async def get_all_orders_admin(
     status: Optional[str] = None,
-    skip: int = 0,
-    limit: int = 50
+    page: int = 1,
+    limit: int = 20
 ):
-    """Get all orders with optional status filter (Admin)"""
+    """Get all orders with optional status filter and pagination (Admin)"""
     query = {}
     if status:
         query["status"] = status
     
     total = await db.orders.count_documents(query)
+    total_pages = (total + limit - 1) // limit
+    skip = (page - 1) * limit
+    
     orders = await db.orders.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
     
     # Remove MongoDB _id and format dates
@@ -6299,8 +6302,9 @@ async def get_all_orders_admin(
     
     return {
         "total": total,
-        "skip": skip,
+        "page": page,
         "limit": limit,
+        "total_pages": total_pages,
         "orders": orders
     }
 
