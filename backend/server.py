@@ -4385,6 +4385,16 @@ async def complete_cashback_withdrawal(withdrawal_id: str, request: Request):
         }}
     )
     
+    # Create notification for withdrawal completion
+    await create_notification(
+        user_id=withdrawal["user_id"],
+        title="Withdrawal Completed! 🎉",
+        message=f"Your withdrawal of ₹{withdrawal.get('amount_to_receive', 0)} has been completed. UTR: {utr_number}",
+        notification_type="withdrawal",
+        related_id=withdrawal_id,
+        icon="🎉"
+    )
+    
     return {"message": "Withdrawal completed", "withdrawal_id": withdrawal_id, "utr_number": utr_number}
 
 @api_router.post("/admin/withdrawals/profit/{withdrawal_id}/approve")
