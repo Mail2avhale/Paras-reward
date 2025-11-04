@@ -33,6 +33,7 @@ import WalletNew from "@/pages/WalletNew";
 import Leaderboard from "@/pages/Leaderboard";
 import ProfileEnhanced from "@/pages/ProfileEnhanced";
 import ReferralDashboard from "@/pages/ReferralDashboard";
+import GamificationDashboard from "@/pages/GamificationDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminAnalytics from "@/pages/AdminAnalytics";
 import ManagerDashboard from "@/pages/ManagerDashboard";
