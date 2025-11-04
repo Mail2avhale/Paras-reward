@@ -405,6 +405,15 @@ const WithdrawalManagementAdmin = () => {
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
         </Card>
       )}
 
