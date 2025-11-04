@@ -6448,6 +6448,287 @@ async def get_withdrawal_report(status: Optional[str] = None):
     if status:
         query["status"] = status
     
+
+# ========== ANALYTICS ENDPOINTS ==========
+
+@api_router.get("/admin/analytics/revenue-trends")
+async def get_revenue_trends(period: str = "daily", days: int = 30):
+    """Get revenue trends over time with daily/weekly/monthly aggregation"""
+    from datetime import timedelta
+    
+    # Calculate date range
+    end_date = datetime.now(timezone.utc)
+    start_date = end_date - timedelta(days=days)
+    
+    # Determine grouping format
+    if period == "daily":
+        date_format = "%Y-%m-%d"
+    elif period == "weekly":
+        date_format = "%Y-W%U"
+    elif period == "monthly":
+        date_format = "%Y-%m"
+    else:
+        date_format = "%Y-%m-%d"
+    
+    # Revenue pipeline
+    pipeline = [
+        {"$match": {
+            "status": "delivered",
+            "created_at": {"$gte": start_date.isoformat(), "$lte": end_date.isoformat()}
+        }},
+        {"$addFields": {
+            "date_parsed": {"$dateFromString": {"dateString": "$created_at"}}
+        }},
+        {"$group": {
+            "_id": {"$dateToString": {"format": date_format, "date": "$date_parsed"}},
+            "revenue": {"$sum": "$total_cash"},
+            "prc_value": {"$sum": "$total_prc"},
+            "orders": {"$sum": 1},
+            "delivery_charges": {"$sum": "$delivery_charge"}
+        }},
+        {"$sort": {"_id": 1}}
+    ]
+    
+    trends = await db.orders.aggregate(pipeline).to_list(length=None)
+    
+    return {
+        "period": period,
+        "days": days,
+        "data": [
+            {
+                "date": item["_id"],
+                "revenue": round(item["revenue"], 2),
+                "prc_value": round(item["prc_value"], 2),
+                "orders": item["orders"],
+                "delivery_charges": round(item["delivery_charges"], 2)
+            }
+            for item in trends
+        ]
+    }
+
+@api_router.get("/admin/analytics/user-growth")
+async def get_user_growth(days: int = 30):
+    """Get user registration trends"""
+    from datetime import timedelta
+    
+    end_date = datetime.now(timezone.utc)
+    start_date = end_date - timedelta(days=days)
+    
+    pipeline = [
+        {"$match": {
+            "created_at": {"$gte": start_date.isoformat(), "$lte": end_date.isoformat()}
+        }},
+        {"$addFields": {
+            "date_parsed": {"$dateFromString": {"dateString": "$created_at"}}
+        }},
+        {"$group": {
+            "_id": {
+                "date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$date_parsed"}},
+                "membership_type": "$membership_type"
+            },
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"_id.date": 1}}
+    ]
+    
+    growth_data = await db.users.aggregate(pipeline).to_list(length=None)
+    
+    # Transform data
+    date_map = {}
+    for item in growth_data:
+        date = item["_id"]["date"]
+        membership = item["_id"]["membership_type"] or "free"
+        
+        if date not in date_map:
+            date_map[date] = {"date": date, "free": 0, "vip": 0, "total": 0}
+        
+        date_map[date][membership] = item["count"]
+        date_map[date]["total"] += item["count"]
+    
+    return {
+        "days": days,
+        "data": list(date_map.values())
+    }
+
+@api_router.get("/admin/analytics/product-performance")
+async def get_product_performance(limit: int = 10):
+    """Get top performing products by orders and revenue"""
+    
+    # Top products by quantity
+    quantity_pipeline = [
+        {"$match": {"status": {"$in": ["pending", "verified", "delivered"]}}},
+        {"$unwind": "$items"},
+        {"$group": {
+            "_id": "$items.product_id",
+            "product_name": {"$first": "$items.product_name"},
+            "total_quantity": {"$sum": "$items.quantity"},
+            "total_revenue": {"$sum": {"$multiply": ["$items.quantity", "$items.cash_price"]}},
+            "orders": {"$sum": 1}
+        }},
+        {"$sort": {"total_quantity": -1}},
+        {"$limit": limit}
+    ]
+    
+    top_products = await db.orders.aggregate(quantity_pipeline).to_list(limit)
+    
+    return {
+        "top_products": [
+            {
+                "product_id": p["_id"],
+                "name": p["product_name"],
+                "quantity_sold": p["total_quantity"],
+                "revenue": round(p["total_revenue"], 2),
+                "orders": p["orders"]
+            }
+            for p in top_products
+        ]
+    }
+
+@api_router.get("/admin/analytics/withdrawal-patterns")
+async def get_withdrawal_patterns(days: int = 30):
+    """Get withdrawal request patterns over time"""
+    from datetime import timedelta
+    
+    end_date = datetime.now(timezone.utc)
+    start_date = end_date - timedelta(days=days)
+    
+    # Cashback withdrawals
+    cashback_pipeline = [
+        {"$match": {
+            "created_at": {"$gte": start_date.isoformat(), "$lte": end_date.isoformat()}
+        }},
+        {"$addFields": {
+            "date_parsed": {"$dateFromString": {"dateString": "$created_at"}}
+        }},
+        {"$group": {
+            "_id": {
+                "date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$date_parsed"}},
+                "status": "$status"
+            },
+            "count": {"$sum": 1},
+            "total_amount": {"$sum": "$amount_requested"}
+        }},
+        {"$sort": {"_id.date": 1}}
+    ]
+    
+    cashback_data = await db.cashback_withdrawals.aggregate(cashback_pipeline).to_list(length=None)
+    
+    # Transform data
+    date_map = {}
+    for item in cashback_data:
+        date = item["_id"]["date"]
+        status = item["_id"]["status"]
+        
+        if date not in date_map:
+            date_map[date] = {
+                "date": date,
+                "pending": 0,
+                "approved": 0,
+                "completed": 0,
+                "rejected": 0,
+                "total_amount": 0
+            }
+        
+        date_map[date][status] = item["count"]
+        date_map[date]["total_amount"] += item["total_amount"]
+    
+    return {
+        "days": days,
+        "data": list(date_map.values())
+    }
+
+@api_router.get("/admin/analytics/overview")
+async def get_analytics_overview():
+    """Get comprehensive analytics overview"""
+    from datetime import timedelta
+    
+    now = datetime.now(timezone.utc)
+    thirty_days_ago = now - timedelta(days=30)
+    seven_days_ago = now - timedelta(days=7)
+    
+    # Total users
+    total_users = await db.users.count_documents({})
+    vip_users = await db.users.count_documents({"membership_type": "vip"})
+    free_users = total_users - vip_users
+    
+    # New users (last 30 days)
+    new_users_30d = await db.users.count_documents({
+        "created_at": {"$gte": thirty_days_ago.isoformat()}
+    })
+    
+    # Revenue stats
+    revenue_pipeline = [
+        {"$match": {"status": "delivered"}},
+        {"$group": {
+            "_id": None,
+            "total_revenue": {"$sum": "$total_cash"},
+            "total_orders": {"$sum": 1}
+        }}
+    ]
+    revenue_result = await db.orders.aggregate(revenue_pipeline).to_list(1)
+    revenue_data = revenue_result[0] if revenue_result else {"total_revenue": 0, "total_orders": 0}
+    
+    # Recent revenue (last 30 days)
+    recent_revenue_pipeline = [
+        {"$match": {
+            "status": "delivered",
+            "created_at": {"$gte": thirty_days_ago.isoformat()}
+        }},
+        {"$group": {
+            "_id": None,
+            "revenue_30d": {"$sum": "$total_cash"},
+            "orders_30d": {"$sum": 1}
+        }}
+    ]
+    recent_revenue_result = await db.orders.aggregate(recent_revenue_pipeline).to_list(1)
+    recent_revenue_data = recent_revenue_result[0] if recent_revenue_result else {"revenue_30d": 0, "orders_30d": 0}
+    
+    # Pending withdrawals
+    pending_cashback = await db.cashback_withdrawals.count_documents({"status": "pending"})
+    pending_profit = await db.profit_withdrawals.count_documents({"status": "pending"})
+    
+    # Total withdrawal amount pending
+    cashback_amount_pipeline = [
+        {"$match": {"status": "pending"}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount_requested"}}}
+    ]
+    cashback_amount_result = await db.cashback_withdrawals.aggregate(cashback_amount_pipeline).to_list(1)
+    pending_cashback_amount = cashback_amount_result[0]["total"] if cashback_amount_result else 0
+    
+    profit_amount_result = await db.profit_withdrawals.aggregate(cashback_amount_pipeline).to_list(1)
+    pending_profit_amount = profit_amount_result[0]["total"] if profit_amount_result else 0
+    
+    return {
+        "users": {
+            "total": total_users,
+            "vip": vip_users,
+            "free": free_users,
+            "new_30d": new_users_30d
+        },
+        "revenue": {
+            "total": round(revenue_data["total_revenue"], 2),
+            "last_30d": round(recent_revenue_data["revenue_30d"], 2)
+        },
+        "orders": {
+            "total": revenue_data["total_orders"],
+            "last_30d": recent_revenue_data["orders_30d"]
+        },
+        "withdrawals": {
+            "pending_count": pending_cashback + pending_profit,
+            "pending_amount": round(pending_cashback_amount + pending_profit_amount, 2),
+            "cashback_pending": pending_cashback,
+            "profit_pending": pending_profit
+        }
+    }
+
+
+@api_router.get("/admin/reports/withdrawals")
+async def get_withdrawal_report_old(status: Optional[str] = None):
+    """Get withdrawal statistics report (Admin)"""
+    query = {}
+    if status:
+        query["status"] = status
+    
     # Cashback withdrawals
     cashback_pipeline = [
         {"$match": query},
