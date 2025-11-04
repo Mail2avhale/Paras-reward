@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
-import { Clock, Zap, ShoppingCart, Tag, Fire } from 'lucide-react';
+import { Clock, Zap, ShoppingCart, Tag, Flame, Package } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
