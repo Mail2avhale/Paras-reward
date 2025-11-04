@@ -226,13 +226,15 @@ function ReferralDashboard({ user, onLogout }) {
                     type="text"
                     value={referralLink}
                     readOnly
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                    onClick={(e) => e.target.select()}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer"
                   />
                   <Button onClick={copyToClipboard} className="flex items-center gap-2">
                     {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     {copied ? 'Copied!' : 'Copy'}
                   </Button>
                 </div>
+                <p className="text-xs text-gray-500 mt-1">Click the link to select and copy manually</p>
               </div>
 
               {/* Social Sharing */}
