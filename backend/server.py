@@ -8647,6 +8647,140 @@ async def get_stockist_profit(stockist_id: str):
     }
 
 
+# ========== REFERRAL PROGRAM ==========
+
+@api_router.get("/referrals/{user_id}/tree")
+async def get_referral_tree(user_id: str):
+    """Get referral tree structure for visualization"""
+    
+    async def build_tree(uid, level=1, max_level=5):
+        if level > max_level:
+            return None
+        
+        # Get user info
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            return None
+        
+        # Get direct referrals
+        referrals = await db.users.find({"referred_by": uid}).to_list(length=None)
+        
+        node = {
+            "id": uid,
+            "name": user.get("name", "Unknown"),
+            "email": user.get("email", ""),
+            "level": level,
+            "total_referrals": len(referrals),
+            "prc_balance": user.get("prc_balance", 0),
+            "membership_type": user.get("membership_type", "free"),
+            "children": []
+        }
+        
+        # Recursively build children (limit depth to avoid huge trees)
+        for referral in referrals[:10]:  # Limit to 10 per level for performance
+            child_tree = await build_tree(referral["uid"], level + 1, max_level)
+            if child_tree:
+                node["children"].append(child_tree)
+        
+        return node
+    
+    tree = await build_tree(user_id)
+    return {"tree": tree}
+
+@api_router.get("/referrals/{user_id}/stats")
+async def get_referral_stats(user_id: str):
+    """Get comprehensive referral statistics"""
+    
+    # Get direct referrals
+    direct_referrals = await db.users.find({"referred_by": user_id}).to_list(length=None)
+    
+    # Count active referrals (users with orders)
+    active_count = 0
+    total_orders_from_referrals = 0
+    
+    for referral in direct_referrals:
+        orders = await db.orders.count_documents({"user_id": referral["uid"]})
+        if orders > 0:
+            active_count += 1
+            total_orders_from_referrals += orders
+    
+    # Get referral earnings from transactions
+    referral_earnings = await db.transactions.aggregate([
+        {"$match": {"user_id": user_id, "type": "referral"}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]).to_list(1)
+    
+    total_earned = referral_earnings[0]["total"] if referral_earnings else 0
+    
+    # Calculate conversion rate
+    conversion_rate = (active_count / len(direct_referrals) * 100) if direct_referrals else 0
+    
+    # Get recent referrals (last 10)
+    recent_referrals = sorted(direct_referrals, key=lambda x: x.get("created_at", ""), reverse=True)[:10]
+    
+    return {
+        "total_referrals": len(direct_referrals),
+        "active_referrals": active_count,
+        "conversion_rate": round(conversion_rate, 2),
+        "total_earned": round(total_earned, 2),
+        "total_orders_from_referrals": total_orders_from_referrals,
+        "recent_referrals": [
+            {
+                "uid": r["uid"],
+                "name": r.get("name", "Unknown"),
+                "email": r.get("email", ""),
+                "joined_at": r.get("created_at", ""),
+                "membership_type": r.get("membership_type", "free")
+            }
+            for r in recent_referrals
+        ]
+    }
+
+@api_router.get("/referrals/{user_id}/earnings")
+async def get_referral_earnings(user_id: str):
+    """Get detailed referral earnings breakdown"""
+    
+    # Get all referral transactions
+    transactions = await db.transactions.find({
+        "user_id": user_id,
+        "type": "referral"
+    }).sort("created_at", -1).to_list(length=100)
+    
+    # Calculate by month
+    from collections import defaultdict
+    monthly_earnings = defaultdict(float)
+    
+    for txn in transactions:
+        if txn.get("created_at"):
+            try:
+                month = txn["created_at"][:7]  # YYYY-MM
+                monthly_earnings[month] += txn.get("amount", 0)
+            except:
+                pass
+    
+    # Total earnings
+    total = sum(txn.get("amount", 0) for txn in transactions)
+    
+    # Pending earnings (from users who haven't made orders yet)
+    direct_referrals = await db.users.find({"referred_by": user_id}).to_list(length=None)
+    potential_earnings = len([r for r in direct_referrals if await db.orders.count_documents({"user_id": r["uid"]}) == 0]) * 10  # Assume 10 PRC potential per referral
+    
+    return {
+        "total_earned": round(total, 2),
+        "transaction_count": len(transactions),
+        "monthly_breakdown": dict(sorted(monthly_earnings.items())),
+        "potential_earnings": potential_earnings,
+        "recent_transactions": [
+            {
+                "amount": t.get("amount", 0),
+                "description": t.get("description", ""),
+                "created_at": t.get("created_at", "")
+            }
+            for t in transactions[:20]
+        ]
+    }
+
+
 # ========== NOTIFICATION SYSTEM ==========
 async def create_notification(
     user_id: str,
