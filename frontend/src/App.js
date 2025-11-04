@@ -46,7 +46,22 @@ import PrivacyPolicy from "@/pages/PrivacyPolicy";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-function App() {
+function AppContent({ user, handleLogin, handleLogout }) {
+  const { toasts, removeToast } = useNotification();
+
+  return (
+    <>
+      <div className="App">
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Home user={user} onLogout={handleLogout} />} />
+            <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/faq" element={<FAQ />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogArticle />} />
+            <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginNew onLogin={handleLogin} />} />
+            <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <RegisterSimple />} />
+            <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" /> : <ForgotPasswordNew />} />
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
