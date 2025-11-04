@@ -1092,6 +1092,22 @@ const AdminDashboard = ({ user, onLogout }) => {
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
+            
+            // If item has a link, render as Link/navigate button
+            if (item.link) {
+              return (
+                <a
+                  key={item.id}
+                  href={item.link}
+                  className="w-full flex items-center gap-3 px-4 py-3 mb-1 rounded-lg transition-all text-gray-700 hover:bg-gray-100"
+                >
+                  <Icon className="h-5 w-5" />
+                  <span className="font-medium">{item.label}</span>
+                </a>
+              );
+            }
+            
+            // Otherwise render as tab button
             return (
               <button
                 key={item.id}
