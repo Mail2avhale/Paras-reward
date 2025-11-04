@@ -239,15 +239,20 @@ function ReferralDashboard({ user, onLogout }) {
                     type="text"
                     value={referralLink}
                     readOnly
-                    onClick={(e) => e.target.select()}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer"
+                    onClick={(e) => {
+                      e.target.select();
+                      toast.info('Link selected! Press and hold to copy', { duration: 2000 });
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 cursor-pointer select-all"
                   />
                   <Button onClick={copyToClipboard} className="flex items-center gap-2">
                     {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     {copied ? 'Copied!' : 'Copy'}
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Click the link to select and copy manually</p>
+                <p className="text-xs text-gray-500 mt-2 bg-blue-50 p-2 rounded border border-blue-200">
+                  💡 <strong>Tip:</strong> Click the link above, then tap "Copy" from your device menu
+                </p>
               </div>
 
               {/* Social Sharing */}
