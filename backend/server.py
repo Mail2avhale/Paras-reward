@@ -1740,6 +1740,16 @@ async def verify_order(verify_data: OrderVerify):
         {"$set": {"status": "verified"}}
     )
     
+    # Create notification for order verification
+    await create_notification(
+        user_id=order.get("user_id"),
+        title="Order Verified! ✅",
+        message=f"Your order #{order.get('order_id', 'N/A')[:8]} has been verified and is being processed.",
+        notification_type="order",
+        related_id=order.get("order_id"),
+        icon="✅"
+    )
+    
     # Remove MongoDB _id for JSON serialization
     order["_id"] = str(order["_id"])
     
