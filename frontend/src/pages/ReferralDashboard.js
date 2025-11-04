@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Tree from 'react-d3-tree';
-import QRCode from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 import Navbar from '@/components/Navbar';
 import { 
   Users, TrendingUp, Award, Share2, Copy, Check, 
