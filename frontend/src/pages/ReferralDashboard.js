@@ -253,7 +253,7 @@ function ReferralDashboard({ user, onLogout }) {
                   QR Code
                 </label>
                 <div className="inline-block p-4 bg-white rounded-lg border-2 border-gray-200">
-                  <QRCode id="qr-code" value={referralLink} size={200} />
+                  <QRCodeCanvas id="qr-code" value={referralLink} size={200} />
                 </div>
                 <Button onClick={downloadQR} variant="outline" className="mt-4 w-full">
                   <Download className="w-4 h-4 mr-2" />
