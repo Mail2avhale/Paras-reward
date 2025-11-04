@@ -61,6 +61,9 @@ const Navbar = ({ user, onLogout }) => {
               </>
             )}
             
+            {/* Notification Bell */}
+            {user && <NotificationBell userId={user.uid} />}
+            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center gap-2">
