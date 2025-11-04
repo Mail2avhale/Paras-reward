@@ -4342,6 +4342,16 @@ async def reject_cashback_withdrawal(withdrawal_id: str, request: Request):
         }}
     )
     
+    # Create notification for withdrawal rejection
+    await create_notification(
+        user_id=withdrawal["user_id"],
+        title="Withdrawal Rejected ❌",
+        message=f"Your withdrawal of ₹{refund_amount} was rejected. Amount refunded to wallet. Reason: {admin_notes}",
+        notification_type="withdrawal",
+        related_id=withdrawal_id,
+        icon="❌"
+    )
+    
     return {
         "message": "Withdrawal rejected and refunded",
         "withdrawal_id": withdrawal_id,
