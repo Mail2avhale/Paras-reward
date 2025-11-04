@@ -8099,6 +8099,91 @@ async def get_stockist_profit(stockist_id: str):
     }
 
 
+# ========== NOTIFICATION SYSTEM ==========
+async def create_notification(
+    user_id: str,
+    title: str,
+    message: str,
+    notification_type: str,
+    related_id: Optional[str] = None,
+    icon: Optional[str] = None
+):
+    """Helper function to create notifications"""
+    notification = {
+        "notification_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "title": title,
+        "message": message,
+        "type": notification_type,
+        "related_id": related_id,
+        "icon": icon or "🔔",
+        "is_read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.notifications.insert_one(notification)
+    return notification
+
+@api_router.get("/notifications/{user_id}")
+async def get_user_notifications(user_id: str, limit: int = 50, unread_only: bool = False):
+    """Get user notifications with optional filtering"""
+    query = {"user_id": user_id}
+    if unread_only:
+        query["is_read"] = False
+    
+    notifications = await db.notifications.find(query).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    # Remove MongoDB _id
+    for notif in notifications:
+        notif.pop("_id", None)
+    
+    return {
+        "notifications": notifications,
+        "count": len(notifications)
+    }
+
+@api_router.get("/notifications/{user_id}/count")
+async def get_unread_count(user_id: str):
+    """Get count of unread notifications"""
+    count = await db.notifications.count_documents({"user_id": user_id, "is_read": False})
+    return {"unread_count": count}
+
+@api_router.post("/notifications/{notification_id}/mark-read")
+async def mark_notification_read(notification_id: str):
+    """Mark a single notification as read"""
+    result = await db.notifications.update_one(
+        {"notification_id": notification_id},
+        {"$set": {"is_read": True}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    return {"message": "Notification marked as read"}
+
+@api_router.post("/notifications/{user_id}/mark-all-read")
+async def mark_all_notifications_read(user_id: str):
+    """Mark all user notifications as read"""
+    result = await db.notifications.update_many(
+        {"user_id": user_id, "is_read": False},
+        {"$set": {"is_read": True}}
+    )
+    
+    return {
+        "message": "All notifications marked as read",
+        "count": result.modified_count
+    }
+
+@api_router.delete("/notifications/{notification_id}")
+async def delete_notification(notification_id: str):
+    """Delete a notification"""
+    result = await db.notifications.delete_one({"notification_id": notification_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    return {"message": "Notification deleted"}
+
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
