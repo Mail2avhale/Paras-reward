@@ -1236,6 +1236,16 @@ async def claim_mining(uid: str):
         "created_at": now.isoformat()
     })
     
+    # Create notification for mining claim
+    await create_notification(
+        user_id=uid,
+        title="Mining Rewards Claimed! ⛏️",
+        message=f"You've claimed {round(mined_amount, 2)} PRC from mining. New balance: {round(new_balance, 2)} PRC",
+        notification_type="mining",
+        related_id=None,
+        icon="⛏️"
+    )
+    
     return {
         "message": "Coins claimed successfully",
         "amount": round(mined_amount, 2),
