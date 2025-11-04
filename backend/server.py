@@ -9228,6 +9228,155 @@ async def get_top_earners(limit: int = 100):
     return {"leaderboard": leaderboard}
 
 
+# ========== FLASH SALES ==========
+
+@api_router.post("/admin/flash-sales")
+async def create_flash_sale(sale_data: dict):
+    """Create a new flash sale (Admin)"""
+    flash_sale = {
+        "sale_id": str(uuid.uuid4()),
+        "product_id": sale_data["product_id"],
+        "discount_percentage": sale_data["discount_percentage"],
+        "discounted_prc_price": sale_data.get("discounted_prc_price"),
+        "start_time": sale_data["start_time"],
+        "end_time": sale_data["end_time"],
+        "stock_limit": sale_data.get("stock_limit"),
+        "sold_count": 0,
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.flash_sales.insert_one(flash_sale)
+    flash_sale.pop("_id", None)
+    
+    return {"message": "Flash sale created", "sale": flash_sale}
+
+@api_router.get("/flash-sales/active")
+async def get_active_flash_sales():
+    """Get all active flash sales"""
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Find active sales within time range
+    flash_sales = await db.flash_sales.find({
+        "is_active": True,
+        "start_time": {"$lte": now},
+        "end_time": {"$gte": now}
+    }).to_list(100)
+    
+    # Enrich with product details
+    enriched_sales = []
+    for sale in flash_sales:
+        product = await db.products.find_one({"product_id": sale["product_id"]})
+        if product:
+            # Calculate if still in stock
+            remaining_stock = None
+            if sale.get("stock_limit"):
+                remaining_stock = sale["stock_limit"] - sale.get("sold_count", 0)
+                if remaining_stock <= 0:
+                    continue  # Skip out of stock
+            
+            enriched_sales.append({
+                "sale_id": sale["sale_id"],
+                "product_id": sale["product_id"],
+                "product_name": product.get("name"),
+                "product_image": product.get("image_url"),
+                "original_prc_price": product.get("prc_price"),
+                "discounted_prc_price": sale.get("discounted_prc_price"),
+                "discount_percentage": sale.get("discount_percentage"),
+                "start_time": sale["start_time"],
+                "end_time": sale["end_time"],
+                "remaining_stock": remaining_stock,
+                "sold_count": sale.get("sold_count", 0)
+            })
+    
+    return {"flash_sales": enriched_sales}
+
+@api_router.get("/admin/flash-sales")
+async def get_all_flash_sales(status: str = "all"):
+    """Get all flash sales (Admin)"""
+    query = {}
+    
+    if status == "active":
+        now = datetime.now(timezone.utc).isoformat()
+        query = {
+            "is_active": True,
+            "start_time": {"$lte": now},
+            "end_time": {"$gte": now}
+        }
+    elif status == "expired":
+        now = datetime.now(timezone.utc).isoformat()
+        query = {"end_time": {"$lt": now}}
+    elif status == "upcoming":
+        now = datetime.now(timezone.utc).isoformat()
+        query = {"start_time": {"$gt": now}}
+    
+    flash_sales = await db.flash_sales.find(query).sort("created_at", -1).to_list(100)
+    
+    # Enrich with product details
+    for sale in flash_sales:
+        product = await db.products.find_one({"product_id": sale["product_id"]})
+        if product:
+            sale["product_name"] = product.get("name")
+            sale["product_image"] = product.get("image_url")
+        sale.pop("_id", None)
+    
+    return {"flash_sales": flash_sales}
+
+@api_router.put("/admin/flash-sales/{sale_id}")
+async def update_flash_sale(sale_id: str, update_data: dict):
+    """Update a flash sale (Admin)"""
+    result = await db.flash_sales.update_one(
+        {"sale_id": sale_id},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Flash sale not found")
+    
+    return {"message": "Flash sale updated"}
+
+@api_router.delete("/admin/flash-sales/{sale_id}")
+async def delete_flash_sale(sale_id: str):
+    """Delete a flash sale (Admin)"""
+    result = await db.flash_sales.delete_one({"sale_id": sale_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Flash sale not found")
+    
+    return {"message": "Flash sale deleted"}
+
+@api_router.post("/flash-sales/{sale_id}/purchase")
+async def purchase_flash_sale(sale_id: str, user_id: str, quantity: int = 1):
+    """Purchase item from flash sale"""
+    # Get flash sale
+    sale = await db.flash_sales.find_one({"sale_id": sale_id})
+    if not sale:
+        raise HTTPException(status_code=404, detail="Flash sale not found")
+    
+    # Check if still active
+    now = datetime.now(timezone.utc).isoformat()
+    if now < sale["start_time"] or now > sale["end_time"]:
+        raise HTTPException(status_code=400, detail="Flash sale is not active")
+    
+    # Check stock limit
+    if sale.get("stock_limit"):
+        remaining = sale["stock_limit"] - sale.get("sold_count", 0)
+        if remaining < quantity:
+            raise HTTPException(status_code=400, detail="Not enough stock available")
+    
+    # Increment sold count
+    await db.flash_sales.update_one(
+        {"sale_id": sale_id},
+        {"$inc": {"sold_count": quantity}}
+    )
+    
+    return {
+        "message": "Purchase recorded",
+        "sale_id": sale_id,
+        "quantity": quantity
+    }
+
+
 @api_router.get("/notifications/{user_id}")
 async def get_user_notifications(user_id: str, limit: int = 50, unread_only: bool = False):
     """Get user notifications with optional filtering"""
