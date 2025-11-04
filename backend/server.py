@@ -6356,18 +6356,65 @@ async def update_mining_formula(request: Request):
 async def get_all_orders_admin(
     status: Optional[str] = None,
     page: int = 1,
-    limit: int = 20
+    limit: int = 20,
+    search: Optional[str] = None,
+    user_id: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    min_amount: Optional[float] = None,
+    max_amount: Optional[float] = None,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = "desc"
 ):
-    """Get all orders with optional status filter and pagination (Admin)"""
+    """Get all orders with advanced filtering and pagination (Admin)"""
     query = {}
+    
+    # Filter by status
     if status:
         query["status"] = status
+    
+    # Search by order_id or secret_code
+    if search:
+        query["$or"] = [
+            {"order_id": {"$regex": search, "$options": "i"}},
+            {"secret_code": {"$regex": search, "$options": "i"}},
+            {"user_name": {"$regex": search, "$options": "i"}}
+        ]
+    
+    # Filter by user_id
+    if user_id:
+        query["user_id"] = user_id
+    
+    # Filter by date range
+    if start_date or end_date:
+        query["created_at"] = {}
+        if start_date:
+            query["created_at"]["$gte"] = start_date
+        if end_date:
+            query["created_at"]["$lte"] = end_date
+    
+    # Filter by amount range (total_cash)
+    if min_amount is not None or max_amount is not None:
+        query["total_cash"] = {}
+        if min_amount is not None:
+            query["total_cash"]["$gte"] = min_amount
+        if max_amount is not None:
+            query["total_cash"]["$lte"] = max_amount
     
     total = await db.orders.count_documents(query)
     total_pages = (total + limit - 1) // limit
     skip = (page - 1) * limit
     
-    orders = await db.orders.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+    # Determine sort field
+    sort_field = "created_at"
+    if sort_by == "amount":
+        sort_field = "total_cash"
+    elif sort_by == "prc":
+        sort_field = "total_prc"
+    
+    sort_direction = -1 if sort_order == "desc" else 1
+    
+    orders = await db.orders.find(query).sort(sort_field, sort_direction).skip(skip).limit(limit).to_list(length=limit)
     
     # Remove MongoDB _id and format dates
     for order in orders:
