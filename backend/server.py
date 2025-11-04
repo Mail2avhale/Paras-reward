@@ -2521,6 +2521,16 @@ async def request_cashback_withdrawal(request: Request):
     # Insert withdrawal request
     await db.cashback_withdrawals.insert_one(withdrawal)
     
+    # Create notification for withdrawal request
+    await create_notification(
+        user_id=user_id,
+        title="Withdrawal Requested 💰",
+        message=f"Your withdrawal request of ₹{amount} has been submitted. You'll receive ₹{amount_to_receive} after ₹{withdrawal_fee} fee.",
+        notification_type="withdrawal",
+        related_id=withdrawal["withdrawal_id"],
+        icon="💰"
+    )
+    
     return {
         "message": "Withdrawal request submitted successfully",
         "withdrawal_id": withdrawal["withdrawal_id"],
