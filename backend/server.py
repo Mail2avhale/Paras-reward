@@ -4288,24 +4288,46 @@ async def verify_secret_code(request: Request):
 
 # ========== ADMIN WITHDRAWAL MANAGEMENT ==========
 @api_router.get("/admin/withdrawals/cashback")
-async def get_cashback_withdrawals(status: str = None):
-    """Get all cashback withdrawal requests (optionally filtered by status)"""
+async def get_cashback_withdrawals(status: str = None, page: int = 1, limit: int = 20):
+    """Get all cashback withdrawal requests with pagination (optionally filtered by status)"""
     query = {}
     if status:
         query["status"] = status
     
-    withdrawals = await db.cashback_withdrawals.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
-    return {"withdrawals": withdrawals, "count": len(withdrawals)}
+    total = await db.cashback_withdrawals.count_documents(query)
+    total_pages = (total + limit - 1) // limit
+    skip = (page - 1) * limit
+    
+    withdrawals = await db.cashback_withdrawals.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+    
+    return {
+        "withdrawals": withdrawals,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": total_pages
+    }
 
 @api_router.get("/admin/withdrawals/profit")
-async def get_profit_withdrawals(status: str = None):
-    """Get all profit withdrawal requests (optionally filtered by status)"""
+async def get_profit_withdrawals(status: str = None, page: int = 1, limit: int = 20):
+    """Get all profit withdrawal requests with pagination (optionally filtered by status)"""
     query = {}
     if status:
         query["status"] = status
     
-    withdrawals = await db.profit_withdrawals.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
-    return {"withdrawals": withdrawals, "count": len(withdrawals)}
+    total = await db.profit_withdrawals.count_documents(query)
+    total_pages = (total + limit - 1) // limit
+    skip = (page - 1) * limit
+    
+    withdrawals = await db.profit_withdrawals.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+    
+    return {
+        "withdrawals": withdrawals,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": total_pages
+    }
 
 @api_router.post("/admin/withdrawals/cashback/{withdrawal_id}/approve")
 async def approve_cashback_withdrawal(withdrawal_id: str, request: Request):
