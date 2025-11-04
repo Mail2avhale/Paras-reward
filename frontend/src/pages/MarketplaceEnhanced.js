@@ -455,7 +455,8 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
               </div>
             </Card>
           ))}
-        </div>
+          </div>
+        )}
 
         {filteredProducts.length === 0 && (
           <Card className="bg-white/10 backdrop-blur-xl border border-white/20 p-12 text-center">
