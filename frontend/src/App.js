@@ -53,6 +53,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
 
   return (
     <>
+      <OfflineIndicator />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Home user={user} onLogout={handleLogout} />} />
