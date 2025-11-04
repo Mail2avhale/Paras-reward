@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { NotificationProvider, useNotification } from "@/context/NotificationContext";
 import ToastContainer from "@/components/ToastContainer";
+import OfflineIndicator from "@/components/OfflineIndicator";
 
 import HomeFintech from "@/pages/HomeFintech";
 import Home from "@/pages/Home";
