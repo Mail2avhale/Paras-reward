@@ -4,6 +4,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import axios from "axios";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
+import { NotificationProvider } from "@/context/NotificationContext";
+import ToastContainer from "@/components/ToastContainer";
 
 import HomeFintech from "@/pages/HomeFintech";
 import Home from "@/pages/Home";
