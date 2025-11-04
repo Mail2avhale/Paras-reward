@@ -124,7 +124,12 @@ function App() {
         </Routes>
       </BrowserRouter>
       <Toaster position="top-center" richColors />
+      <ToastContainer 
+        toasts={[]} 
+        removeToast={() => {}} 
+      />
     </div>
+    </NotificationProvider>
   );
 }
 
