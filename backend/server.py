@@ -3640,9 +3640,27 @@ async def create_product(request: Request):
     return {"message": "Product created successfully", "product_id": product.product_id}
 
 @api_router.get("/admin/products")
-async def get_all_products_admin():
-    """Get all products (Admin) - includes hidden and inactive"""
-    products = await db.products.find({}, {"_id": 0}).to_list(1000)
+async def get_all_products_admin(page: int = 1, limit: int = 20, search: Optional[str] = None):
+    """Get all products with pagination (Admin) - includes hidden and inactive"""
+    query = {}
+    
+    # Search by name or SKU
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"sku": {"$regex": search, "$options": "i"}}
+        ]
+    
+    # Get total count
+    total = await db.products.count_documents(query)
+    total_pages = (total + limit - 1) // limit
+    
+    # Calculate skip
+    skip = (page - 1) * limit
+    
+    # Get products
+    products = await db.products.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(length=limit)
+    
     # Convert datetime fields to ISO format
     for product in products:
         for field in ["created_at", "updated_at", "visible_from", "visible_till"]:
@@ -3651,7 +3669,14 @@ async def get_all_products_admin():
                     product[field] = datetime.fromisoformat(product[field]).isoformat()
                 except:
                     pass
-    return products
+    
+    return {
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": total_pages,
+        "products": products
+    }
 
 @api_router.put("/admin/products/{product_id}")
 async def update_product(product_id: str, request: Request):
