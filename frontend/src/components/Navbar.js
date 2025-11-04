@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import NotificationBell from './NotificationBell';
 
 const Navbar = ({ user, onLogout }) => {
   // Define role-based visibility (handle when user is null)
