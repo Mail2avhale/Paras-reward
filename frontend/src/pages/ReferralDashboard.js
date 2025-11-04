@@ -49,10 +49,28 @@ function ReferralDashboard({ user, onLogout }) {
   };
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(referralLink);
-    setCopied(true);
-    toast.success('Referral link copied!');
-    setTimeout(() => setCopied(false), 2000);
+    // Fallback method for copying text when Clipboard API is blocked
+    const textArea = document.createElement('textarea');
+    textArea.value = referralLink;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+      document.execCommand('copy');
+      textArea.remove();
+      setCopied(true);
+      toast.success('Referral link copied!');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      textArea.remove();
+      // Show the link in a prompt as last resort
+      toast.error('Please copy the link manually');
+    }
   };
 
   const shareWhatsApp = () => {
