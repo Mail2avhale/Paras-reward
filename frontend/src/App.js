@@ -34,6 +34,7 @@ import Leaderboard from "@/pages/Leaderboard";
 import ProfileEnhanced from "@/pages/ProfileEnhanced";
 import ReferralDashboard from "@/pages/ReferralDashboard";
 import GamificationDashboard from "@/pages/GamificationDashboard";
+import FlashSalesPage from "@/pages/FlashSalesPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminAnalytics from "@/pages/AdminAnalytics";
 import ManagerDashboard from "@/pages/ManagerDashboard";
