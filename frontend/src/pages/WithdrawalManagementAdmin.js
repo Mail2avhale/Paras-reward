@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { getBankByName, getBankLogo, getBankColor } from '@/data/banksData';
 import Pagination from '@/components/Pagination';
+import { TableSkeleton } from '@/components/skeletons';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
