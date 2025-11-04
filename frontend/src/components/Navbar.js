@@ -177,7 +177,8 @@ const Navbar = ({ user, onLogout }) => {
           </div>
 
           {/* Mobile Navigation */}
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center gap-2">
+            {user && <NotificationBell userId={user.uid} />}
             {user ? (
               <DropdownMenu>
               <DropdownMenuTrigger asChild>
