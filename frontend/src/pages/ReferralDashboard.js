@@ -60,16 +60,29 @@ function ReferralDashboard({ user, onLogout }) {
     textArea.select();
     
     try {
-      document.execCommand('copy');
+      const successful = document.execCommand('copy');
       textArea.remove();
-      setCopied(true);
-      toast.success('Referral link copied!');
-      setTimeout(() => setCopied(false), 2000);
+      
+      if (successful) {
+        setCopied(true);
+        toast.success('Referral link copied!');
+        setTimeout(() => setCopied(false), 2000);
+      } else {
+        throw new Error('Copy command failed');
+      }
     } catch (err) {
       console.error('Failed to copy:', err);
       textArea.remove();
-      // Show the link in a prompt as last resort
-      toast.error('Please copy the link manually');
+      
+      // Provide alternative - select the input field
+      const inputField = document.querySelector('input[type="text"][readonly]');
+      if (inputField) {
+        inputField.focus();
+        inputField.select();
+        toast.info('Link selected - Press Ctrl+C (or Cmd+C) to copy', { duration: 4000 });
+      } else {
+        toast.error('Please click the link field to select and copy manually', { duration: 4000 });
+      }
     }
   };
 
