@@ -2671,27 +2671,35 @@ async def get_user_withdrawals(uid: str):
 
 
 @api_router.get("/wallet/transactions/{uid}")
-async def get_wallet_transactions(uid: str, wallet_type: str = None, limit: int = 100):
-    """Get user's comprehensive wallet transaction history"""
+async def get_wallet_transactions(uid: str, wallet_type: str = None, page: int = 1, limit: int = 20):
+    """Get user's comprehensive wallet transaction history with pagination"""
     query = {"user_id": uid}
     
     # Filter by wallet type if specified
     if wallet_type:
         query["wallet_type"] = wallet_type
     
+    # Get total count
+    total = await db.transactions.count_documents(query)
+    total_pages = (total + limit - 1) // limit
+    skip = (page - 1) * limit
+    
     # Get from new transactions collection
     transactions = await db.transactions.find(
         query,
         {"_id": 0}
-    ).sort("created_at", -1).limit(limit).to_list(limit)
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
-    # Calculate totals
+    # Calculate totals for current page
     total_credit = sum(t["amount"] for t in transactions if t["type"] in ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share"])
     total_debit = sum(t["amount"] for t in transactions if t["type"] in ["order", "withdrawal", "admin_debit", "delivery_charge"])
     
     return {
         "transactions": transactions,
-        "count": len(transactions),
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": total_pages,
         "total_credit": total_credit,
         "total_debit": total_debit
     }
