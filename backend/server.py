@@ -1699,6 +1699,16 @@ async def checkout(request: Request):
     # Clear cart
     await db.carts.delete_one({"user_id": user_id})
     
+    # Create notification for order placement
+    await create_notification(
+        user_id=user_id,
+        title="Order Placed Successfully! 🎉",
+        message=f"Your order #{order.order_id[:8]} has been placed. Secret code: {order.secret_code}. Cashback earned: ₹{cashback_amount:.2f}",
+        notification_type="order",
+        related_id=order.order_id,
+        icon="🛒"
+    )
+    
     return {
         "message": "Order placed successfully",
         "order_id": order.order_id,
