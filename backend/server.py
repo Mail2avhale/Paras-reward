@@ -3178,32 +3178,68 @@ async def get_all_users(
     role: Optional[str] = None,
     search: Optional[str] = None,
     page: int = 1,
-    limit: int = 20
+    limit: int = 20,
+    membership_type: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    kyc_status: Optional[str] = None,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = "asc"
 ):
-    """Get all users with optional filtering and pagination (Admin only)"""
+    """Get all users with advanced filtering and pagination (Admin only)"""
     query = {}
     
     # Filter by role
     if role:
         query["role"] = role
     
+    # Filter by membership type
+    if membership_type:
+        query["membership_type"] = membership_type
+    
+    # Filter by KYC status
+    if kyc_status == "verified":
+        query["kyc_verified"] = True
+    elif kyc_status == "pending":
+        query["kyc_verified"] = False
+    
     # Search by name, email, or mobile
     if search:
         query["$or"] = [
             {"name": {"$regex": search, "$options": "i"}},
             {"email": {"$regex": search, "$options": "i"}},
-            {"mobile": {"$regex": search, "$options": "i"}}
+            {"mobile": {"$regex": search, "$options": "i"}},
+            {"uid": {"$regex": search, "$options": "i"}}
         ]
+    
+    # Filter by registration date range
+    if start_date or end_date:
+        query["created_at"] = {}
+        if start_date:
+            query["created_at"]["$gte"] = start_date
+        if end_date:
+            query["created_at"]["$lte"] = end_date
     
     # Get total count
     total = await db.users.count_documents(query)
-    total_pages = (total + limit - 1) // limit  # Ceiling division
+    total_pages = (total + limit - 1) // limit
     
     # Calculate skip
     skip = (page - 1) * limit
     
-    # Get users
-    users = await db.users.find(query).skip(skip).limit(limit).to_list(length=limit)
+    # Determine sort field
+    sort_field = "created_at"
+    if sort_by == "name":
+        sort_field = "name"
+    elif sort_by == "balance":
+        sort_field = "cashback_balance"
+    elif sort_by == "prc":
+        sort_field = "prc_balance"
+    
+    sort_direction = 1 if sort_order == "asc" else -1
+    
+    # Get users with sorting
+    users = await db.users.find(query).sort(sort_field, sort_direction).skip(skip).limit(limit).to_list(length=limit)
     
     # Remove sensitive data
     for user in users:
