@@ -3169,10 +3169,10 @@ async def create_first_admin(request: Request):
 async def get_all_users(
     role: Optional[str] = None,
     search: Optional[str] = None,
-    skip: int = 0,
-    limit: int = 50
+    page: int = 1,
+    limit: int = 20
 ):
-    """Get all users with optional filtering (Admin only)"""
+    """Get all users with optional filtering and pagination (Admin only)"""
     query = {}
     
     # Filter by role
@@ -3189,6 +3189,10 @@ async def get_all_users(
     
     # Get total count
     total = await db.users.count_documents(query)
+    total_pages = (total + limit - 1) // limit  # Ceiling division
+    
+    # Calculate skip
+    skip = (page - 1) * limit
     
     # Get users
     users = await db.users.find(query).skip(skip).limit(limit).to_list(length=limit)
@@ -3201,8 +3205,9 @@ async def get_all_users(
     
     return {
         "total": total,
-        "skip": skip,
+        "page": page,
         "limit": limit,
+        "total_pages": total_pages,
         "users": users
     }
 
