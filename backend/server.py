@@ -298,6 +298,26 @@ class WalletWithdrawal(BaseModel):
     bank_account: Optional[str] = None
     ifsc_code: Optional[str] = None
 
+class Notification(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    notification_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    title: str
+    message: str
+    type: str  # order, withdrawal, mining, referral, system
+    related_id: Optional[str] = None
+    icon: Optional[str] = None
+    is_read: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class NotificationCreate(BaseModel):
+    user_id: str
+    title: str
+    message: str
+    type: str
+    related_id: Optional[str] = None
+    icon: Optional[str] = None
+
 # ========== HELPER FUNCTIONS ==========
 async def get_base_rate():
     """Calculate base rate based on total users"""
