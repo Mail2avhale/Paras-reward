@@ -4289,6 +4289,16 @@ async def approve_cashback_withdrawal(withdrawal_id: str, request: Request):
         }}
     )
     
+    # Create notification for withdrawal approval
+    await create_notification(
+        user_id=withdrawal["user_id"],
+        title="Withdrawal Approved! ✅",
+        message=f"Your withdrawal of ₹{withdrawal.get('amount_requested', 0)} has been approved and is being processed.",
+        notification_type="withdrawal",
+        related_id=withdrawal_id,
+        icon="✅"
+    )
+    
     return {"message": "Withdrawal approved", "withdrawal_id": withdrawal_id}
 
 @api_router.post("/admin/withdrawals/cashback/{withdrawal_id}/reject")
