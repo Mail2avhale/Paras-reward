@@ -8805,6 +8805,429 @@ async def create_notification(
     await db.notifications.insert_one(notification)
     return notification
 
+
+# ========== GAMIFICATION SYSTEM ==========
+
+# Achievement definitions
+ACHIEVEMENTS = {
+    "first_order": {
+        "id": "first_order",
+        "name": "First Step",
+        "description": "Place your first order",
+        "icon": "🛒",
+        "reward_prc": 50,
+        "condition": lambda user_data: user_data["total_orders"] >= 1
+    },
+    "prc_100": {
+        "id": "prc_100",
+        "name": "Miner Apprentice",
+        "description": "Mine 100 PRC",
+        "icon": "⛏️",
+        "reward_prc": 20,
+        "condition": lambda user_data: user_data["total_mined"] >= 100
+    },
+    "prc_500": {
+        "id": "prc_500",
+        "name": "Miner Expert",
+        "description": "Mine 500 PRC",
+        "icon": "💎",
+        "reward_prc": 100,
+        "condition": lambda user_data: user_data["total_mined"] >= 500
+    },
+    "prc_1000": {
+        "id": "prc_1000",
+        "name": "Mining Master",
+        "description": "Mine 1000 PRC",
+        "icon": "👑",
+        "reward_prc": 200,
+        "condition": lambda user_data: user_data["total_mined"] >= 1000
+    },
+    "referrals_10": {
+        "id": "referrals_10",
+        "name": "Social Butterfly",
+        "description": "Refer 10 friends",
+        "icon": "🦋",
+        "reward_prc": 100,
+        "condition": lambda user_data: user_data["total_referrals"] >= 10
+    },
+    "referrals_50": {
+        "id": "referrals_50",
+        "name": "Influencer",
+        "description": "Refer 50 friends",
+        "icon": "📢",
+        "reward_prc": 500,
+        "condition": lambda user_data: user_data["total_referrals"] >= 50
+    },
+    "referrals_100": {
+        "id": "referrals_100",
+        "name": "Network Legend",
+        "description": "Refer 100 friends",
+        "icon": "🌟",
+        "reward_prc": 1000,
+        "condition": lambda user_data: user_data["total_referrals"] >= 100
+    },
+    "vip_member": {
+        "id": "vip_member",
+        "name": "VIP Elite",
+        "description": "Become a VIP member",
+        "icon": "💎",
+        "reward_prc": 50,
+        "condition": lambda user_data: user_data["is_vip"]
+    },
+    "kyc_verified": {
+        "id": "kyc_verified",
+        "name": "Verified User",
+        "description": "Complete KYC verification",
+        "icon": "✅",
+        "reward_prc": 30,
+        "condition": lambda user_data: user_data["kyc_verified"]
+    },
+    "streak_7": {
+        "id": "streak_7",
+        "name": "Consistent",
+        "description": "7-day login streak",
+        "icon": "🔥",
+        "reward_prc": 50,
+        "condition": lambda user_data: user_data["current_streak"] >= 7
+    },
+    "streak_30": {
+        "id": "streak_30",
+        "name": "Dedicated",
+        "description": "30-day login streak",
+        "icon": "💪",
+        "reward_prc": 200,
+        "condition": lambda user_data: user_data["current_streak"] >= 30
+    }
+}
+
+async def check_and_award_achievements(user_id: str):
+    """Check and award new achievements to user"""
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        return []
+    
+    # Get user's existing achievements
+    user_achievements = await db.user_achievements.find({"user_id": user_id}).to_list(None)
+    unlocked_ids = [a["achievement_id"] for a in user_achievements]
+    
+    # Gather user data for condition checks
+    total_orders = await db.orders.count_documents({"user_id": user_id})
+    total_referrals = await db.users.count_documents({"referred_by": user_id})
+    
+    # Calculate total mined (from transactions)
+    mining_txns = await db.transactions.aggregate([
+        {"$match": {"user_id": user_id, "type": {"$in": ["mining", "tap_game"]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]).to_list(1)
+    total_mined = mining_txns[0]["total"] if mining_txns else 0
+    
+    # Get current streak
+    streak_data = await db.user_streaks.find_one({"user_id": user_id})
+    current_streak = streak_data.get("current_streak", 0) if streak_data else 0
+    
+    user_data = {
+        "total_orders": total_orders,
+        "total_mined": total_mined,
+        "total_referrals": total_referrals,
+        "is_vip": user.get("membership_type") == "vip",
+        "kyc_verified": user.get("kyc_verified", False),
+        "current_streak": current_streak
+    }
+    
+    # Check each achievement
+    newly_unlocked = []
+    for achievement_id, achievement in ACHIEVEMENTS.items():
+        if achievement_id not in unlocked_ids:
+            if achievement["condition"](user_data):
+                # Award achievement
+                achievement_record = {
+                    "user_id": user_id,
+                    "achievement_id": achievement_id,
+                    "unlocked_at": datetime.now(timezone.utc).isoformat()
+                }
+                await db.user_achievements.insert_one(achievement_record)
+                
+                # Award PRC reward
+                reward_prc = achievement["reward_prc"]
+                await db.users.update_one(
+                    {"uid": user_id},
+                    {"$inc": {"prc_balance": reward_prc}}
+                )
+                
+                # Create transaction
+                await db.transactions.insert_one({
+                    "transaction_id": str(uuid.uuid4()),
+                    "user_id": user_id,
+                    "type": "achievement",
+                    "wallet_type": "prc",
+                    "amount": reward_prc,
+                    "description": f"Achievement unlocked: {achievement['name']}",
+                    "balance_after": user.get("prc_balance", 0) + reward_prc,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                })
+                
+                # Create notification
+                await create_notification(
+                    user_id=user_id,
+                    title=f"Achievement Unlocked! {achievement['icon']}",
+                    message=f"You've earned '{achievement['name']}' and received {reward_prc} PRC!",
+                    notification_type="achievement",
+                    related_id=achievement_id,
+                    icon=achievement['icon']
+                )
+                
+                newly_unlocked.append(achievement)
+    
+    return newly_unlocked
+
+@api_router.get("/achievements/{user_id}")
+async def get_user_achievements(user_id: str):
+    """Get user's unlocked achievements and progress"""
+    user_achievements = await db.user_achievements.find({"user_id": user_id}).to_list(None)
+    unlocked_ids = [a["achievement_id"] for a in user_achievements]
+    
+    # Build response with all achievements
+    achievements_list = []
+    for achievement_id, achievement in ACHIEVEMENTS.items():
+        is_unlocked = achievement_id in unlocked_ids
+        unlocked_at = None
+        
+        if is_unlocked:
+            record = next((a for a in user_achievements if a["achievement_id"] == achievement_id), None)
+            unlocked_at = record.get("unlocked_at") if record else None
+        
+        achievements_list.append({
+            "id": achievement["id"],
+            "name": achievement["name"],
+            "description": achievement["description"],
+            "icon": achievement["icon"],
+            "reward_prc": achievement["reward_prc"],
+            "unlocked": is_unlocked,
+            "unlocked_at": unlocked_at
+        })
+    
+    return {
+        "achievements": achievements_list,
+        "total_unlocked": len(unlocked_ids),
+        "total_available": len(ACHIEVEMENTS)
+    }
+
+@api_router.post("/achievements/{user_id}/check")
+async def check_achievements(user_id: str):
+    """Manually trigger achievement check"""
+    newly_unlocked = await check_and_award_achievements(user_id)
+    return {
+        "newly_unlocked": newly_unlocked,
+        "count": len(newly_unlocked)
+    }
+
+# Daily Login Streaks
+@api_router.post("/streaks/{user_id}/checkin")
+async def daily_checkin(user_id: str):
+    """Record daily login and update streak"""
+    today = datetime.now(timezone.utc).date().isoformat()
+    
+    streak_data = await db.user_streaks.find_one({"user_id": user_id})
+    
+    if not streak_data:
+        # First time login
+        streak_data = {
+            "user_id": user_id,
+            "current_streak": 1,
+            "longest_streak": 1,
+            "last_checkin": today,
+            "total_checkins": 1,
+            "checkin_dates": [today]
+        }
+        await db.user_streaks.insert_one(streak_data)
+        
+        # Award 5 PRC for first login
+        await db.users.update_one({"uid": user_id}, {"$inc": {"prc_balance": 5}})
+        
+        return {
+            "current_streak": 1,
+            "reward_prc": 5,
+            "message": "Welcome! First login bonus!"
+        }
+    
+    last_checkin = streak_data.get("last_checkin")
+    
+    # Check if already checked in today
+    if last_checkin == today:
+        return {
+            "current_streak": streak_data["current_streak"],
+            "reward_prc": 0,
+            "message": "Already checked in today!",
+            "already_checked_in": True
+        }
+    
+    # Check if consecutive day
+    from datetime import timedelta
+    yesterday = (datetime.now(timezone.utc).date() - timedelta(days=1)).isoformat()
+    
+    if last_checkin == yesterday:
+        # Consecutive day
+        new_streak = streak_data["current_streak"] + 1
+    else:
+        # Streak broken
+        new_streak = 1
+    
+    # Calculate reward (increases with streak)
+    base_reward = 5
+    streak_bonus = min(new_streak - 1, 10)  # Max 10 bonus
+    reward_prc = base_reward + streak_bonus
+    
+    # Update streak
+    await db.user_streaks.update_one(
+        {"user_id": user_id},
+        {
+            "$set": {
+                "current_streak": new_streak,
+                "longest_streak": max(new_streak, streak_data.get("longest_streak", 0)),
+                "last_checkin": today
+            },
+            "$inc": {"total_checkins": 1},
+            "$push": {"checkin_dates": today}
+        }
+    )
+    
+    # Award PRC
+    await db.users.update_one({"uid": user_id}, {"$inc": {"prc_balance": reward_prc}})
+    
+    # Create transaction
+    await db.transactions.insert_one({
+        "transaction_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "type": "daily_streak",
+        "wallet_type": "prc",
+        "amount": reward_prc,
+        "description": f"Daily login streak: Day {new_streak}",
+        "balance_after": 0,  # Will be updated
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    # Check for streak achievements
+    await check_and_award_achievements(user_id)
+    
+    return {
+        "current_streak": new_streak,
+        "reward_prc": reward_prc,
+        "message": f"Day {new_streak} streak! Keep it up!",
+        "milestone_reached": new_streak in [7, 30, 100]
+    }
+
+@api_router.get("/streaks/{user_id}")
+async def get_user_streak(user_id: str):
+    """Get user's streak information"""
+    streak_data = await db.user_streaks.find_one({"user_id": user_id})
+    
+    if not streak_data:
+        return {
+            "current_streak": 0,
+            "longest_streak": 0,
+            "total_checkins": 0,
+            "last_checkin": None,
+            "checkin_dates": []
+        }
+    
+    streak_data.pop("_id", None)
+    return streak_data
+
+# Leaderboard
+@api_router.get("/leaderboard/miners")
+async def get_top_miners(period: str = "all_time", limit: int = 100):
+    """Get top miners leaderboard"""
+    
+    # Calculate time filter
+    time_filter = {}
+    if period == "weekly":
+        from datetime import timedelta
+        week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+        time_filter = {"created_at": {"$gte": week_ago}}
+    elif period == "monthly":
+        from datetime import timedelta
+        month_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+        time_filter = {"created_at": {"$gte": month_ago}}
+    
+    # Aggregate mining totals
+    pipeline = [
+        {"$match": {**{"type": {"$in": ["mining", "tap_game"]}}, **time_filter}},
+        {"$group": {
+            "_id": "$user_id",
+            "total_mined": {"$sum": "$amount"}
+        }},
+        {"$sort": {"total_mined": -1}},
+        {"$limit": limit}
+    ]
+    
+    results = await db.transactions.aggregate(pipeline).to_list(limit)
+    
+    # Get user details
+    leaderboard = []
+    for idx, result in enumerate(results, 1):
+        user = await db.users.find_one({"uid": result["_id"]})
+        if user:
+            leaderboard.append({
+                "rank": idx,
+                "user_id": result["_id"],
+                "name": user.get("name", "Unknown"),
+                "total_mined": round(result["total_mined"], 2),
+                "membership_type": user.get("membership_type", "free")
+            })
+    
+    return {"leaderboard": leaderboard, "period": period}
+
+@api_router.get("/leaderboard/referrers")
+async def get_top_referrers(limit: int = 100):
+    """Get top referrers leaderboard"""
+    
+    # Aggregate referral counts
+    pipeline = [
+        {"$match": {"referred_by": {"$exists": True, "$ne": None}}},
+        {"$group": {
+            "_id": "$referred_by",
+            "total_referrals": {"$sum": 1}
+        }},
+        {"$sort": {"total_referrals": -1}},
+        {"$limit": limit}
+    ]
+    
+    results = await db.users.aggregate(pipeline).to_list(limit)
+    
+    # Get user details
+    leaderboard = []
+    for idx, result in enumerate(results, 1):
+        user = await db.users.find_one({"uid": result["_id"]})
+        if user:
+            leaderboard.append({
+                "rank": idx,
+                "user_id": result["_id"],
+                "name": user.get("name", "Unknown"),
+                "total_referrals": result["total_referrals"],
+                "membership_type": user.get("membership_type", "free")
+            })
+    
+    return {"leaderboard": leaderboard}
+
+@api_router.get("/leaderboard/earners")
+async def get_top_earners(limit: int = 100):
+    """Get top earners leaderboard by cashback balance"""
+    
+    users = await db.users.find({}).sort("cashback_balance", -1).limit(limit).to_list(limit)
+    
+    leaderboard = []
+    for idx, user in enumerate(users, 1):
+        leaderboard.append({
+            "rank": idx,
+            "user_id": user["uid"],
+            "name": user.get("name", "Unknown"),
+            "cashback_balance": round(user.get("cashback_balance", 0), 2),
+            "membership_type": user.get("membership_type", "free")
+        })
+    
+    return {"leaderboard": leaderboard}
+
+
 @api_router.get("/notifications/{user_id}")
 async def get_user_notifications(user_id: str, limit: int = 50, unread_only: bool = False):
     """Get user notifications with optional filtering"""
