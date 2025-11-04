@@ -9,6 +9,7 @@ import {
   Eye, Filter, Search, Download 
 } from 'lucide-react';
 import { getBankByName, getBankLogo, getBankColor } from '@/data/banksData';
+import Pagination from '@/components/Pagination';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -29,22 +30,40 @@ const WithdrawalManagementAdmin = () => {
     rejection_reason: '',
     utr_number: ''
   });
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const itemsPerPage = 20;
 
   useEffect(() => {
     fetchWithdrawals();
-  }, [activeTab, filterStatus]);
+  }, [activeTab, filterStatus, currentPage]);
 
   const fetchWithdrawals = async () => {
     setLoading(true);
     try {
       if (activeTab === 'cashback') {
-        const params = filterStatus !== 'all' ? { status: filterStatus } : {};
+        const params = { 
+          page: currentPage, 
+          limit: itemsPerPage,
+          ...(filterStatus !== 'all' && { status: filterStatus })
+        };
         const response = await axios.get(`${API}/admin/withdrawals/cashback`, { params });
         setCashbackWithdrawals(response.data.withdrawals || []);
+        setTotalPages(response.data.total_pages || 1);
+        setTotalItems(response.data.total || 0);
       } else {
-        const params = filterStatus !== 'all' ? { status: filterStatus } : {};
+        const params = { 
+          page: currentPage, 
+          limit: itemsPerPage,
+          ...(filterStatus !== 'all' && { status: filterStatus })
+        };
         const response = await axios.get(`${API}/admin/withdrawals/profit`, { params });
         setProfitWithdrawals(response.data.withdrawals || []);
+        setTotalPages(response.data.total_pages || 1);
+        setTotalItems(response.data.total || 0);
       }
     } catch (error) {
       console.error('Error fetching withdrawals:', error);
