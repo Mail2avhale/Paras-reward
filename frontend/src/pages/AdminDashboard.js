@@ -930,6 +930,7 @@ const MarketplaceManagement = () => {
 const AdminDashboard = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stats, setStats] = useState(null);
   const [vipPayments, setVipPayments] = useState([]);
   const [kycDocuments, setKycDocuments] = useState([]);
