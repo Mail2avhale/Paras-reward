@@ -768,6 +768,15 @@ async def login(
         }
     )
     
+    # Log activity
+    await log_activity(
+        user_id=user["uid"],
+        action_type="login",
+        description=f"User logged in from {ip_address or 'unknown IP'}",
+        metadata={"device_id": device_id, "identifier": identifier},
+        ip_address=ip_address
+    )
+    
     # Convert datetime strings
     for field in ["created_at", "updated_at", "last_login", "membership_expiry"]:
         if user.get(field) and isinstance(user[field], str):
