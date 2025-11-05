@@ -13,6 +13,7 @@ import StockMovementSimple from '@/pages/StockMovementSimple';
 import WithdrawalManagementAdmin from '@/pages/WithdrawalManagementAdmin';
 import StockMovementApproval from '@/pages/StockMovementApproval';
 import StockRequestSystem from '@/pages/StockRequestSystem';
+import AdminActivityLogs from '@/pages/AdminActivityLogs';
 import { 
   Users, Package, CreditCard, FileText, CheckCircle, XCircle, 
   Search, Shield, UserCog, Trash2, BarChart3, TrendingUp, TrendingDown,
