@@ -410,6 +410,48 @@ async def log_transaction(
     
     return transaction["transaction_id"]
 
+async def log_activity(
+    user_id: str,
+    action_type: str,
+    description: str,
+    metadata: Dict = {},
+    ip_address: Optional[str] = None
+):
+    """
+    Log user activity
+    
+    Action types:
+    - Authentication: login, logout, password_reset
+    - Financial: order_placed, withdrawal_requested, withdrawal_approved, withdrawal_rejected
+    - Mining: mining_started, mining_claimed
+    - Wallet: cashback_credited, profit_wallet_credit, wallet_debit
+    - Admin: user_role_changed, kyc_approved, kyc_rejected, product_created
+    - Profile: profile_updated, kyc_submitted
+    """
+    try:
+        # Get user details
+        user = await db.users.find_one({"uid": user_id})
+        user_name = user.get("name", "Unknown") if user else "Unknown"
+        user_email = user.get("email", "Unknown") if user else "Unknown"
+        
+        activity_log = {
+            "log_id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "user_name": user_name,
+            "user_email": user_email,
+            "action_type": action_type,
+            "description": description,
+            "metadata": metadata,
+            "ip_address": ip_address,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.activity_logs.insert_one(activity_log)
+        return activity_log["log_id"]
+    except Exception as e:
+        print(f"Error logging activity: {str(e)}")
+        return None
+
 async def get_user_lien_amount(user_id: str) -> float:
     """Calculate total lien (pending fees) for a user"""
     
