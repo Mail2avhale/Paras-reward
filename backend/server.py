@@ -9492,6 +9492,127 @@ async def delete_notification(notification_id: str):
     return {"message": "Notification deleted"}
 
 
+# ========== ACTIVITY LOGS ROUTES ==========
+
+@api_router.get("/activity-logs")
+async def get_all_activity_logs(
+    user_id: Optional[str] = None,
+    action_type: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    page: int = 1,
+    limit: int = 50
+):
+    """
+    Get all activity logs (Admin only)
+    Supports filtering by user_id, action_type, and date range
+    """
+    query = {}
+    
+    if user_id:
+        query["user_id"] = user_id
+    
+    if action_type:
+        query["action_type"] = action_type
+    
+    # Date range filter
+    if start_date or end_date:
+        query["created_at"] = {}
+        if start_date:
+            query["created_at"]["$gte"] = start_date
+        if end_date:
+            query["created_at"]["$lte"] = end_date
+    
+    # Get total count
+    total = await db.activity_logs.count_documents(query)
+    
+    # Get paginated logs
+    skip = (page - 1) * limit
+    logs = await db.activity_logs.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+    
+    # Remove _id field
+    for log in logs:
+        log.pop("_id", None)
+    
+    return {
+        "logs": logs,
+        "total": total,
+        "page": page,
+        "total_pages": (total + limit - 1) // limit
+    }
+
+@api_router.get("/activity-logs/user/{uid}")
+async def get_user_activity_logs(
+    uid: str,
+    action_type: Optional[str] = None,
+    page: int = 1,
+    limit: int = 50
+):
+    """
+    Get activity logs for a specific user
+    Users can only see their own logs
+    """
+    query = {"user_id": uid}
+    
+    if action_type:
+        query["action_type"] = action_type
+    
+    # Get total count
+    total = await db.activity_logs.count_documents(query)
+    
+    # Get paginated logs
+    skip = (page - 1) * limit
+    logs = await db.activity_logs.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+    
+    # Remove _id field
+    for log in logs:
+        log.pop("_id", None)
+    
+    return {
+        "logs": logs,
+        "total": total,
+        "page": page,
+        "total_pages": (total + limit - 1) // limit
+    }
+
+@api_router.get("/activity-logs/stats")
+async def get_activity_stats():
+    """Get activity statistics (Admin only)"""
+    try:
+        # Get total logs
+        total_logs = await db.activity_logs.count_documents({})
+        
+        # Get logs by action type
+        pipeline = [
+            {"$group": {"_id": "$action_type", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}}
+        ]
+        action_stats = await db.activity_logs.aggregate(pipeline).to_list(length=None)
+        
+        # Get recent activity count (last 24 hours)
+        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+        recent_count = await db.activity_logs.count_documents({
+            "created_at": {"$gte": yesterday}
+        })
+        
+        # Get most active users (top 10)
+        user_pipeline = [
+            {"$group": {"_id": "$user_id", "user_name": {"$first": "$user_name"}, "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 10}
+        ]
+        active_users = await db.activity_logs.aggregate(user_pipeline).to_list(length=10)
+        
+        return {
+            "total_logs": total_logs,
+            "recent_logs_24h": recent_count,
+            "action_type_stats": action_stats,
+            "most_active_users": active_users
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
