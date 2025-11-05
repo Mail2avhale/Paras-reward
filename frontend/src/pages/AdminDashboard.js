@@ -1083,13 +1083,32 @@ const AdminDashboard = ({ user, onLogout }) => {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
+      {/* Mobile Backdrop Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="w-64 bg-white border-r border-gray-200 fixed h-full">
-        <div className="p-6">
+      <div className={`
+        w-64 bg-white border-r border-gray-200 fixed h-full z-50 transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0
+      `}>
+        <div className="p-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">paras<br/>rewards</h1>
+          {/* Close button for mobile */}
+          <button 
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+          >
+            <X className="h-6 w-6 text-gray-600" />
+          </button>
         </div>
         
-        <nav className="px-3">
+        <nav className="px-3 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 100px)' }}>
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -1101,6 +1120,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                   key={item.id}
                   href={item.link}
                   className="w-full flex items-center gap-3 px-4 py-3 mb-1 rounded-lg transition-all text-gray-700 hover:bg-gray-100"
+                  onClick={() => setSidebarOpen(false)}
                 >
                   <Icon className="h-5 w-5" />
                   <span className="font-medium">{item.label}</span>
@@ -1112,7 +1132,10 @@ const AdminDashboard = ({ user, onLogout }) => {
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  setSidebarOpen(false);
+                }}
                 className={`w-full flex items-center gap-3 px-4 py-3 mb-1 rounded-lg transition-all ${
                   isActive 
                     ? 'bg-indigo-600 text-white' 
@@ -1128,7 +1151,7 @@ const AdminDashboard = ({ user, onLogout }) => {
       </div>
 
       {/* Main Content */}
-      <div className="ml-64 flex-1">
+      <div className="flex-1 lg:ml-64">
         {/* Header */}
         <div className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between">
           <h2 className="text-3xl font-bold text-gray-900 capitalize">{activeTab.replace('-', ' ')}</h2>
