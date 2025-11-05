@@ -1182,6 +1182,13 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
           )}
 
+          {/* Activity Logs Tab */}
+          {activeTab === 'activity-logs' && (
+            <div className="space-y-6">
+              <AdminActivityLogs />
+            </div>
+          )}
+
           {/* Financial Management Tab */}
           {activeTab === 'financial-management' && (
             <div className="space-y-6">
