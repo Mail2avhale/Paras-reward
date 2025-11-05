@@ -1153,10 +1153,19 @@ const AdminDashboard = ({ user, onLogout }) => {
       {/* Main Content */}
       <div className="flex-1 lg:ml-64">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between">
-          <h2 className="text-3xl font-bold text-gray-900 capitalize">{activeTab.replace('-', ' ')}</h2>
+        <div className="bg-white border-b border-gray-200 px-4 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={onLogout}>
+            {/* Hamburger Menu Button for Mobile */}
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+            >
+              <Menu className="h-6 w-6 text-gray-600" />
+            </button>
+            <h2 className="text-xl lg:text-3xl font-bold text-gray-900 capitalize">{activeTab.replace('-', ' ')}</h2>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button variant="outline" onClick={onLogout} className="text-sm lg:text-base">
               Logout
             </Button>
           </div>
