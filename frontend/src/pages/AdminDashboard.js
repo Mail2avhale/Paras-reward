@@ -18,7 +18,7 @@ import {
   Users, Package, CreditCard, FileText, CheckCircle, XCircle, 
   Search, Shield, UserCog, Trash2, BarChart3, TrendingUp, TrendingDown,
   Home, Store, Award, ShoppingCart, Bell, Settings, DollarSign,
-  ArrowUpRight, ArrowDownRight, Truck, HeadphonesIcon, Menu, X
+  ArrowUpRight, ArrowDownRight, Truck, HeadphonesIcon, Menu, X, Activity
 } from 'lucide-react';
 import { toast } from 'sonner';
 
