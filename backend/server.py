@@ -318,6 +318,18 @@ class NotificationCreate(BaseModel):
     related_id: Optional[str] = None
     icon: Optional[str] = None
 
+class ActivityLog(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    log_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    user_name: Optional[str] = None
+    user_email: Optional[str] = None
+    action_type: str  # login, order_placed, withdrawal_requested, mining_started, etc.
+    description: str
+    metadata: Optional[Dict] = {}
+    ip_address: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 # ========== HELPER FUNCTIONS ==========
 async def get_base_rate():
     """Calculate base rate based on total users"""
