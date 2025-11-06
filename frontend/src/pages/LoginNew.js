@@ -195,10 +195,43 @@ const LoginNew = ({ onLogin }) => {
             </Link>
           </div>
 
+          {/* Biometric Login Button */}
+          {showBiometricOption && loginData.identifier && (
+            <Button
+              type="button"
+              onClick={handleBiometricLogin}
+              disabled={biometricLoading || loading}
+              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-6 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+            >
+              {biometricLoading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Authenticating...
+                </div>
+              ) : (
+                <>
+                  <Fingerprint className="h-6 w-6" />
+                  Sign In with Biometric
+                </>
+              )}
+            </Button>
+          )}
+
+          {showBiometricOption && loginData.identifier && (
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">or use password</span>
+              </div>
+            </div>
+          )}
+
           <Button
             data-testid="login-submit-btn"
             type="submit"
-            disabled={loading}
+            disabled={loading || biometricLoading}
             className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-6 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
           >
             {loading ? (
@@ -207,7 +240,7 @@ const LoginNew = ({ onLogin }) => {
                 Signing in...
               </div>
             ) : (
-              'Sign In'
+              'Sign In with Password'
             )}
           </Button>
         </form>
