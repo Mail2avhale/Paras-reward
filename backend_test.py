@@ -4590,12 +4590,12 @@ def run_admin_marketplace_fix_test():
     return results
 
 if __name__ == "__main__":
-    # Run the focused test for profit wallet transaction logging verification
-    print("🚀 Starting Profit Wallet Transaction Logging Verification Tests...")
+    # Run the focused test for complete profit wallet transaction logging flow
+    print("🚀 Starting Complete Profit Wallet Transaction Logging Flow Tests...")
     print("=" * 80)
     
-    # Test the profit wallet transaction logging system
-    transaction_results = test_profit_wallet_transaction_logging()
+    # Test the complete profit wallet transaction logging system
+    transaction_results = test_complete_profit_wallet_transaction_logging_flow()
     
     # Print comprehensive results
     print("\n" + "📊" * 80)
