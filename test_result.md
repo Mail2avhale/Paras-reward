@@ -1296,6 +1296,22 @@ frontend:
         agent: "main"
         comment: "ENHANCED FIX IMPLEMENTED: Despite correct pagination handling (response.data?.products), Array.isArray guards, and modal-opening prevention, error persists. Root cause: Race condition during React state updates where products can temporarily become undefined. Applied comprehensive multi-layer defense: 1) Added productsLoaded state flag to track successful product fetch completion. 2) Enhanced fetchData() to validate array before setting products and set productsLoaded flag. 3) Updated all 3 'Add Stock' button handlers to check productsLoaded flag and disable buttons until products loaded. 4) Added disabled state and loading text to buttons. 5) Added safety warning in modal if products not loaded with reload option. 6) Updated all dropdown selects to check productsLoaded flag. 7) Enhanced Create Request modal dropdown with productsLoaded check. This creates bulletproof protection: buttons cannot be clicked until products loaded, modal shows warning if opened prematurely, dropdowns disabled until products ready, all map operations guarded by productsLoaded && Array.isArray checks. Ready for comprehensive testing."
 
+frontend:
+  - task: "Remove Basic Management Tab from User Management"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/AdminDashboard.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "user"
+        comment: "User requested removal of 'Basic Management' tab under User Management as all functions are available in 'Advanced Management' tab. Wanted cleaner UI with only Advanced Management."
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Removed 'Basic Management' tab completely from Admin Dashboard User Management section. Changes: 1) Removed tab navigation buttons (Basic Management and Advanced Management tabs). 2) Removed entire Basic Management view code (approximately 190 lines). 3) Made Advanced Management the default and only view. 4) Simplified UI - User Management now directly shows AdvancedUserManagement component without tab switching. 5) Default userManagementView state already set to 'advanced'. Result: Cleaner UI with direct access to all user management functions through Advanced Management, eliminating redundancy. File linted successfully with no errors."
+
   - task: "Product List Optimization with Pagination and Infinite Scroll"
     implemented: true
     working: true
