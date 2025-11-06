@@ -1313,15 +1313,18 @@ frontend:
 
   - task: "Automatic Outlet Assignment During Checkout"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/backend/server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "critical"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "IMPLEMENTED: Automatic outlet assignment logic in checkout endpoint. System now finds nearest outlet based on user location hierarchy: 1) Same district (case-insensitive match), 2) Same state (if no district match), 3) Any active outlet (fallback). During order creation, outlet_id and assigned_outlet fields are set automatically. Updated admin assignment endpoint (POST /admin/orders/{order_id}/assign) to use consistent field names across the system (outlet_id, assigned_outlet, assigned_outlet_id for backward compatibility). This resolves the critical issue preventing delivery charge distribution and profit wallet transaction logging. Ready for end-to-end testing."
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL BUG IDENTIFIED - OUTLET ASSIGNMENT LOGIC BROKEN: ❌ REGEX CASE-INSENSITIVE MATCHING FAILURE: The outlet assignment logic in checkout endpoint (server.py lines 2085-2098) has a critical bug. User location is converted to lowercase ('mumbai', 'maharashtra') but MongoDB regex case-insensitive matching is failing to find outlets with proper case values ('Mumbai', 'Maharashtra'). ❌ VERIFIED ISSUE: Database contains 6 outlets with correct location data, exact string matching works perfectly, but the regex pattern '^{user_district}$' with '$options': 'i' is not working. ❌ IMPACT: All orders created with outlet_id=None and assigned_outlet=None, causing delivery to fail with 'No outlet assigned to this order' error. ❌ SIMPLE FIX NEEDED: Either remove .lower().strip() from lines 2085-2086 to use exact case matching, or fix the regex pattern. Current implementation prevents entire profit wallet transaction logging flow from working. This is blocking the main feature completely."
 
 agent_communication:
     -agent: "main"
