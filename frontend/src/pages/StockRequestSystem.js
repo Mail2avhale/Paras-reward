@@ -1024,7 +1024,7 @@ const StockRequestSystem = () => {
                   disabled={newStockData.action === 'set'}
                 >
                   <option value="">Select Product</option>
-                  {products.map((product) => (
+                  {Array.isArray(products) && products.map((product) => (
                     <option key={product.product_id} value={product.product_id}>
                       {product.name} - {product.product_id}
                     </option>
