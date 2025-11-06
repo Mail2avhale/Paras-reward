@@ -5,7 +5,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
   FileText, CreditCard, Truck, HeadphonesIcon,
-  CheckCircle, XCircle, TrendingUp, Package, Users
+  CheckCircle, XCircle, TrendingUp, Package, Users,
+  Wallet, ShoppingBag, Network
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -20,6 +21,10 @@ const ManagerDashboard = ({ user, onLogout }) => {
   const [kycDocuments, setKycDocuments] = useState([]);
   const [stockMovements, setStockMovements] = useState([]);
   const [supportTickets, setSupportTickets] = useState([]);
+  const [cashbackWithdrawals, setCashbackWithdrawals] = useState([]);
+  const [profitWithdrawals, setProfitWithdrawals] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [stockists, setStockists] = useState([]);
 
   useEffect(() => {
     fetchManagerStats();
