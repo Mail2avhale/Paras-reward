@@ -7909,6 +7909,12 @@ async def create_stockist(request: StockistCreateRequest):
         "renewal_status": "pending"
     }
     
+    # Add role-specific parent assignment fields
+    if request.role == "outlet":
+        user_data["assigned_sub_stockist"] = request.parent_id
+    elif request.role == "sub_stockist":
+        user_data["assigned_master_stockist"] = request.parent_id
+    
     await db.users.insert_one(user_data)
     
     # Log action
