@@ -4785,6 +4785,31 @@ async def verify_secret_code(request: Request):
         }}
     )
     
+    # Deduct stock from outlet's inventory
+    for item in order.get("items", []):
+        product_id = item.get("product_id")
+        quantity = item.get("quantity", 0)
+        
+        if product_id and quantity > 0:
+            # Check if outlet has stock
+            outlet_stock = await db.stock_inventory.find_one({
+                "user_id": outlet_id,
+                "product_id": product_id
+            })
+            
+            if outlet_stock and outlet_stock.get("quantity", 0) >= quantity:
+                # Deduct stock
+                await db.stock_inventory.update_one(
+                    {"user_id": outlet_id, "product_id": product_id},
+                    {
+                        "$inc": {"quantity": -quantity},
+                        "$set": {"updated_at": now.isoformat()}
+                    }
+                )
+            else:
+                # Log warning if insufficient stock (shouldn't happen but handle gracefully)
+                print(f"Warning: Outlet {outlet_id} has insufficient stock for product {product_id}")
+    
     # Trigger delivery charge distribution
     distribution_result = await distribute_delivery_charge(order["order_id"])
     
