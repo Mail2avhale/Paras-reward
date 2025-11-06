@@ -820,47 +820,113 @@ def test_complete_profit_wallet_transaction_logging_flow():
         print("❌ Cannot continue without test order")
         return test_results
     
+    # PHASE 2: ORDER DELIVERY
+    print(f"\n🚚 PHASE 2: ORDER DELIVERY")
+    print("=" * 60)
+    
     try:
-        # Step 2: Mark order as delivered (this should trigger distribution)
+        # Step 2.1: Verify the created order
+        print(f"\n2.1. Verifying the created order...")
+        
+        order_response = requests.get(f"{API_BASE}/admin/orders/{order_id}", timeout=30)
+        if order_response.status_code == 200:
+            order_data = order_response.json()
+            print(f"✅ Order verified: Status = {order_data.get('status')}")
+            print(f"   📋 Order ID: {order_data.get('order_id')}")
+            print(f"   📋 User ID: {order_data.get('user_id')}")
+            print(f"   📋 Outlet ID: {order_data.get('outlet_id')}")
+        else:
+            print(f"❌ Failed to verify order: {order_response.status_code}")
+        
+        # Step 2.2: Mark order as delivered (should NOT get "No outlet assigned" error)
         print(f"\n2.2. Marking order as delivered...")
         
         # Send empty JSON object as the endpoint expects JSON
         delivery_data = {}
         response = requests.post(f"{API_BASE}/orders/{order_id}/deliver", json=delivery_data, timeout=30)
-        print(f"Deliver Status: {response.status_code}")
-        print(f"Response: {response.text}")
+        print(f"   Deliver Status: {response.status_code}")
+        print(f"   Response: {response.text}")
         
         if response.status_code == 200:
             result = response.json()
-            print(f"✅ Order marked as delivered")
-            print(f"   Commission Distributed: {result.get('commission_distributed', {})}")
-            test_results["end_to_end_distribution_flow"] = True
+            print(f"✅ Order marked as delivered successfully")
+            print(f"   📋 Message: {result.get('message')}")
+            
+            # Check if we got "No outlet assigned" error
+            message = result.get('message', '').lower()
+            if 'no outlet assigned' not in message:
+                test_results["order_delivery_without_outlet_error"] = True
+                test_results["delivery_success_confirmation"] = True
+                print(f"✅ Delivery succeeded without 'No outlet assigned' error")
+            else:
+                print(f"❌ Got 'No outlet assigned' error")
         else:
             print(f"❌ Order delivery failed: {response.status_code}")
             
-        # Step 3: Trigger delivery charge distribution explicitly
-        print(f"\n2.3. Triggering delivery charge distribution...")
+    except Exception as e:
+        print(f"❌ Error in Phase 2: {e}")
+    
+    # PHASE 3: DELIVERY CHARGE DISTRIBUTION
+    print(f"\n💰 PHASE 3: DELIVERY CHARGE DISTRIBUTION")
+    print("=" * 60)
+    
+    try:
+        # Step 3.1: Trigger delivery charge distribution
+        print(f"\n3.1. Triggering delivery charge distribution...")
         
         # Send empty JSON object as the endpoint expects JSON
         distribution_data = {}
         response = requests.post(f"{API_BASE}/orders/{order_id}/distribute-delivery-charge", json=distribution_data, timeout=30)
-        print(f"Distribution Status: {response.status_code}")
-        print(f"Response: {response.text}")
+        print(f"   Distribution Status: {response.status_code}")
+        print(f"   Response: {response.text}")
         
         if response.status_code == 200:
             result = response.json()
-            print(f"✅ Delivery charge distribution successful")
-            print(f"   Message: {result.get('message')}")
-            print(f"   Total Commission: ₹{result.get('total_commission', 0)}")
-            print(f"   Distributions: {result.get('distributions', {})}")
+            print(f"✅ Delivery charge distribution triggered successfully")
+            print(f"   📋 Message: {result.get('message')}")
+            print(f"   📋 Total Commission: ₹{result.get('total_commission', 0)}")
             
-            if not test_results["end_to_end_distribution_flow"]:
-                test_results["end_to_end_distribution_flow"] = True
+            test_results["delivery_charge_distribution_trigger"] = True
+            
+            # Step 3.2: Verify commission distribution succeeds
+            distributions = result.get('distributions', {})
+            if distributions:
+                test_results["commission_distribution_success"] = True
+                print(f"✅ Commission distribution successful")
+                print(f"   📋 Distributions: {distributions}")
+            
+            # Step 3.3: Check profit_wallet_balance updated for entities
+            print(f"\n3.3. Checking profit wallet balance updates...")
+            
+            entities = [
+                ("Outlet", outlet_uid),
+                ("Sub Stockist", sub_uid), 
+                ("Master Stockist", master_uid)
+            ]
+            
+            balance_updates_found = False
+            
+            for entity_name, entity_uid in entities:
+                user_response = requests.get(f"{API_BASE}/users/{entity_uid}", timeout=30)
+                if user_response.status_code == 200:
+                    user_data = user_response.json()
+                    profit_balance = user_data.get("profit_wallet_balance", 0)
+                    print(f"   📋 {entity_name} profit wallet balance: ₹{profit_balance}")
+                    
+                    if profit_balance > 0:
+                        balance_updates_found = True
+                        
+            if balance_updates_found:
+                test_results["profit_wallet_balance_updates"] = True
+                print(f"✅ Profit wallet balances updated for entities")
+            else:
+                print(f"⚠️  No profit wallet balance updates detected")
+                
         else:
             print(f"❌ Distribution failed: {response.status_code}")
             
     except Exception as e:
-        print(f"❌ Error in distribution flow: {e}")
+        print(f"❌ Error in Phase 3: {e}")
     
     # Test 2: Transaction Logging Verification
     print(f"\n3. TRANSACTION LOGGING VERIFICATION")
