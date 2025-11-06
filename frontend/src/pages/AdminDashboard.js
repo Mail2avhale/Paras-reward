@@ -1537,9 +1537,6 @@ const AdminDashboard = ({ user, onLogout }) => {
               
               {/* Advanced Management - Direct View (Basic Management removed as all functions available here) */}
               <AdvancedUserManagement />
-              </div>
-
-              {/* Filter and paginate users */}
               {(() => {
                 // Filter users based on search and role
                 const filteredUsers = users.filter(u => {
