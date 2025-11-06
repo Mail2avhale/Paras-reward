@@ -176,8 +176,11 @@ const StockistHierarchy = ({ user, userRole }) => {
                       <p className="font-bold truncate">{child.name}</p>
                       <p className="text-xs opacity-80">{getRoleName(child.role)}</p>
                       <p className="text-xs opacity-70 truncate">{child.email}</p>
-                      {child.district && (
-                        <p className="text-xs opacity-70 truncate">{child.district}</p>
+                      {child.mobile && (
+                        <p className="text-xs opacity-70 truncate">📱 {child.mobile}</p>
+                      )}
+                      {child.district && child.state && (
+                        <p className="text-xs opacity-70 truncate">📍 {child.district}, {child.state}</p>
                       )}
                     </div>
                   </div>
