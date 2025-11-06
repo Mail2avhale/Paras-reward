@@ -928,8 +928,8 @@ def test_complete_profit_wallet_transaction_logging_flow():
     except Exception as e:
         print(f"❌ Error in Phase 3: {e}")
     
-    # Test 2: Transaction Logging Verification
-    print(f"\n3. TRANSACTION LOGGING VERIFICATION")
+    # PHASE 4: TRANSACTION LOGGING VERIFICATION (MAIN FOCUS)
+    print(f"\n🔍 PHASE 4: TRANSACTION LOGGING VERIFICATION (MAIN FOCUS)")
     print("=" * 60)
     
     try:
