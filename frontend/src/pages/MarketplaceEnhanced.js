@@ -606,6 +606,7 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
               Showing {filteredProducts.length} of {totalProducts} products
             </div>
           )}
+          </>
         )}
 
         {filteredProducts.length === 0 && !loading && (
