@@ -608,7 +608,14 @@ const StockRequestSystem = () => {
             </h3>
             {userRole === 'admin' && (
               <Button 
-                onClick={() => setShowAddStockModal(true)}
+                onClick={() => {
+                  if (!Array.isArray(products) || products.length === 0) {
+                    toast.error('Loading products... Please try again in a moment');
+                    fetchData();
+                    return;
+                  }
+                  setShowAddStockModal(true);
+                }}
                 className="bg-green-600 hover:bg-green-700"
               >
                 <Plus className="h-4 w-4 mr-2" />
