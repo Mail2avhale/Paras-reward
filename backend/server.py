@@ -2079,6 +2079,30 @@ async def checkout(request: Request):
         new_cashback_balance = current_cashback + cashback_amount
         pending_delivery_lien = delivery_charge
     
+    # Find nearest outlet based on user location (state/district)
+    # Try to find outlet in same district, then state, then any active outlet
+    nearest_outlet = None
+    user_district = user.get("district", "").lower().strip()
+    user_state = user.get("state", "").lower().strip()
+    
+    if user_district:
+        nearest_outlet = await db.users.find_one({
+            "role": "outlet",
+            "district": {"$regex": f"^{user_district}$", "$options": "i"}
+        })
+    
+    if not nearest_outlet and user_state:
+        nearest_outlet = await db.users.find_one({
+            "role": "outlet",
+            "state": {"$regex": f"^{user_state}$", "$options": "i"}
+        })
+    
+    if not nearest_outlet:
+        # Fall back to any active outlet
+        nearest_outlet = await db.users.find_one({"role": "outlet"})
+    
+    outlet_id = nearest_outlet.get("uid") if nearest_outlet else None
+    
     # Create order
     order = Order(
         user_id=user_id,
@@ -2093,6 +2117,8 @@ async def checkout(request: Request):
     order_dict = order.model_dump()
     order_dict["created_at"] = order_dict["created_at"].isoformat()
     order_dict["pending_delivery_lien"] = pending_delivery_lien
+    order_dict["outlet_id"] = outlet_id
+    order_dict["assigned_outlet"] = outlet_id  # For backward compatibility
     
     # Update user balances (use cashback_balance as primary field)
     update_fields = {
