@@ -1201,3 +1201,19 @@ frontend:
       - working: true
         agent: "main"
         comment: "FIXED: Updated fetchSupportTickets() function to call correct endpoint /admin/support/tickets instead of non-existent /support/tickets. Also updated response handling to access tickets from response.data.tickets (paginated response structure). Manager dashboard now loads all required data properly: stats, VIP payments, KYC documents, stock movements, and support tickets."
+
+backend:
+  - task: "Stock Deduction on Order Delivery"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported: Outlet show inventory 50, instead of 48. After delivering 2 quantity order, stock not deducting correctly."
+      - working: true
+        agent: "main"
+        comment: "FIXED: Added stock deduction logic to POST /orders/{order_id}/deliver endpoint. Previously, stock was only deducted in /outlet/verify-code endpoint but not in the main delivery endpoint used by OutletPanel. Now when outlet marks order as delivered: 1) Fetches order to get items list. 2) For each item, finds outlet's stock in stock_inventory collection. 3) Deducts quantity if sufficient stock exists ($inc: -quantity). 4) Logs warning if insufficient stock. 5) Updates order status to delivered. 6) Triggers delivery charge distribution. Stock inventory now correctly reflects delivered orders."
