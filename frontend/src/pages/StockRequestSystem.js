@@ -1049,7 +1049,7 @@ const StockRequestSystem = () => {
                   <option value="">
                     {!Array.isArray(products) || products.length === 0 ? 'Loading products...' : 'Select Product'}
                   </option>
-                  {Array.isArray(products) && products.map((product) => (
+                  {!loading && products && Array.isArray(products) && products.length > 0 && products.map((product) => (
                     <option key={product.product_id} value={product.product_id}>
                       {product.name} - {product.product_id}
                     </option>
