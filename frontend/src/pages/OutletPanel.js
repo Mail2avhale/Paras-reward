@@ -285,13 +285,18 @@ const OutletPanel = ({ user, onLogout }) => {
         </Card>
 
         <Card className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl">
-          <Tabs defaultValue="orders" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-6">
+          <Tabs defaultValue="inventory" className="w-full">
+            <TabsList className="grid w-full grid-cols-5 mb-6">
+              <TabsTrigger value="inventory">My Inventory</TabsTrigger>
               <TabsTrigger value="orders">Deliver Orders</TabsTrigger>
               <TabsTrigger value="stock-requests">Stock Requests</TabsTrigger>
               <TabsTrigger value="stock">Stock</TabsTrigger>
               <TabsTrigger value="earnings">Earnings</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="inventory">
+              <StockInventoryDisplay userId={user.uid} title="Outlet Inventory" />
+            </TabsContent>
 
             <TabsContent value="orders">
               <div className="max-w-2xl mx-auto">
