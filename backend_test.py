@@ -617,7 +617,7 @@ def test_complete_profit_wallet_transaction_logging_flow():
     # Sub Stockist
     sub_user_data = {
         "first_name": "Sub",
-        "last_name": "Stockist",
+        "last_name": "TxnTest",
         "email": f"sub_txn_{timestamp}@test.com",
         "mobile": f"9876541{timestamp % 1000:03d}",
         "password": "secure123456",
