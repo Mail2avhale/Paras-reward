@@ -4699,10 +4699,29 @@ async def distribute_delivery_charge(order_id: str):
     if distributions.get("outlet", 0) > 0 and outlet_user:
         amount = distributions["outlet"]
         if not outlet_user.get("profit_wallet_frozen", False):
+            # Update balance
             await db.users.update_one(
                 {"uid": outlet_id},
                 {"$inc": {"profit_wallet_balance": round(amount, 2)}}
             )
+            
+            # Log transaction
+            await log_transaction(
+                user_id=outlet_id,
+                wallet_type="profit_wallet",
+                transaction_type="profit_share",
+                amount=round(amount, 2),
+                description=f"Delivery charge commission from order {order_id}",
+                metadata={
+                    "order_id": order_id,
+                    "entity_type": "outlet",
+                    "commission_percentage": split.get("outlet", 0),
+                    "total_commission": round(total_commission, 2)
+                },
+                related_id=order_id,
+                related_type="order"
+            )
+            
             credited_entities.append(f"Outlet ({outlet_user.get('name', 'Unknown')}): ₹{round(amount, 2)}")
         
         commission_record = {
