@@ -1094,11 +1094,14 @@ async def biometric_login(
         )
         
         # Verify authentication
+        webauthn_origin = os.environ.get('WEBAUTHN_ORIGIN', 'http://localhost:3000')
+        webauthn_rp_id = os.environ.get('WEBAUTHN_RP_ID', 'localhost')
+        
         verification = verify_authentication_response(
             credential=credential,
             expected_challenge=bytes.fromhex(challenge_doc["challenge"]),
-            expected_origin="https://emergentagent.com",  # Replace with your domain
-            expected_rp_id="emergentagent.com",
+            expected_origin=webauthn_origin,
+            expected_rp_id=webauthn_rp_id,
             credential_public_key=bytes.fromhex(stored_credential["credential_public_key"]),
             credential_current_sign_count=stored_credential["counter"]
         )
