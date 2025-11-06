@@ -251,13 +251,18 @@ const MasterStockistDashboard = ({ user, onLogout }) => {
         </Card>
 
         <Card className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl">
-          <Tabs defaultValue="stock" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-6">
+          <Tabs defaultValue="inventory" className="w-full">
+            <TabsList className="grid w-full grid-cols-5 mb-6">
+              <TabsTrigger value="inventory">My Inventory</TabsTrigger>
               <TabsTrigger value="stock-requests">Stock Requests</TabsTrigger>
               <TabsTrigger value="stock">Stock Movements</TabsTrigger>
               <TabsTrigger value="allocations">Sub Stockists</TabsTrigger>
               <TabsTrigger value="earnings">Earnings</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="inventory">
+              <StockInventoryDisplay userId={user.uid} title="Master Stockist Inventory" />
+            </TabsContent>
 
             <TabsContent value="stock-requests">
               <StockRequestSystem />
