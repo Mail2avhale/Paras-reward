@@ -1079,3 +1079,64 @@ backend:
       - working: "info"
         agent: "main"
         comment: "CLARIFIED: User reported admin inventory showing empty (No Stock Available). Investigation revealed: Admin actually HAS 0 stock items in database. This is EXPECTED behavior - admin must add stock via 'Add Stock' button in My Inventory tab. Empty inventory is not a bug, it's the initial state. Admin needs to manually add products to company inventory using the 'Add Stock' modal. Backend endpoint /stock/inventory/my-stock/{uid} is working correctly - it accurately shows 0 items because admin hasn't added any stock yet."
+
+backend:
+  - task: "Stock Deduction on Order Delivery"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported: When outlet delivers order, product stock not deducted. Stock remains same after delivery."
+      - working: true
+        agent: "main"
+        comment: "FIXED: Added stock deduction logic in order delivery endpoint. When order marked as delivered (line 4787): 1) Loops through all items in order. 2) For each product, checks outlet's stock inventory. 3) Deducts quantity from outlet's inventory using $inc: -quantity. 4) Updates updated_at timestamp. 5) Logs warning if insufficient stock (graceful handling). Stock now properly deducted when outlet delivers orders to customers."
+
+backend:
+  - task: "Aggregated Stock Availability Endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "IMPLEMENTED: Created GET /api/stock/inventory/all-stock endpoint for marketplace. Aggregates stock across all users by product_id using MongoDB aggregation pipeline. Returns total available quantity per product. Used by marketplace to show real-time stock availability to customers. Pipeline: $group by product_id → $sum quantities → $project clean output. Returns inventory array with product_id, quantity, product_name."
+
+frontend:
+  - task: "Stock Inventory Display in Stockist Dashboards"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/StockInventoryDisplay.js, /app/frontend/src/pages/MasterStockistDashboard.js, /app/frontend/src/pages/SubStockistDashboard.js, /app/frontend/src/pages/OutletPanel.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported: Need product-wise stock available display in Master, Sub, and Outlet dashboards. Currently no inventory view."
+      - working: true
+        agent: "main"
+        comment: "IMPLEMENTED: Created reusable StockInventoryDisplay component showing: 1) Stats cards (Total Products, Total Quantity, Low Stock Items). 2) Detailed inventory table with product name, quantity, status (Good/Medium/Low/Out of Stock), last updated. 3) Color-coded stock levels (green >50, blue 10-50, yellow <10, red 0). 4) Empty state with 'Request stock' prompt. 5) Loading skeleton. Added 'My Inventory' tab (first tab) to Master Stockist, Sub Stockist, and Outlet dashboards. Each shows their respective stock inventory with product-wise breakdown."
+
+frontend:
+  - task: "Marketplace Stock Availability Display"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/MarketplaceEnhanced.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported: In user's marketplace dashboard, product stock not showing. Cannot see availability."
+      - working: true
+        agent: "main"
+        comment: "IMPLEMENTED: Enhanced fetchProducts() to fetch and merge stock data. Process: 1) Fetch products from /api/products. 2) Fetch aggregated stock from /api/stock/inventory/all-stock. 3) Create stockMap by product_id. 4) Merge stock_quantity into each product. 5) Set stock_quantity to 0 if stock fetch fails. Marketplace now shows: Stock badges (Low Stock for <=10, Out of Stock for 0), Color-coded availability (green >10, yellow 1-10, red 0), Disable 'Add to Cart' for out-of-stock items, Stock count in product details modal. Users can see real-time stock availability before ordering."
