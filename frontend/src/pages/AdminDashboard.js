@@ -858,10 +858,10 @@ const MarketplaceManagement = () => {
 
       {/* Products List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {products.length === 0 ? (
+        {!Array.isArray(products) || products.length === 0 ? (
           <Card className="col-span-full p-12 text-center bg-white">
             <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No products yet. Add your first product!</p>
+            <p className="text-gray-500">{loading ? 'Loading products...' : 'No products yet. Add your first product!'}</p>
           </Card>
         ) : (
           products.map((product) => (
