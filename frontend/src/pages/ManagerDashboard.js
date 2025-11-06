@@ -67,8 +67,8 @@ const ManagerDashboard = ({ user, onLogout }) => {
 
   const fetchSupportTickets = async () => {
     try {
-      const response = await axios.get(`${API}/support/tickets`);
-      setSupportTickets(response.data || []);
+      const response = await axios.get(`${API}/admin/support/tickets`);
+      setSupportTickets(response.data?.tickets || []);
     } catch (error) {
       console.error('Error fetching support tickets:', error);
     }
