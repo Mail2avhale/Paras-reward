@@ -3704,7 +3704,7 @@ async def update_user_role(uid: str, request: Request):
     new_role = data.get("role")
     
     # Validate role
-    valid_roles = ["user", "admin", "master_stockist", "sub_stockist", "outlet"]
+    valid_roles = ["user", "admin", "manager", "sub_admin", "employee", "master_stockist", "sub_stockist", "outlet"]
     if new_role not in valid_roles:
         raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {', '.join(valid_roles)}")
     
