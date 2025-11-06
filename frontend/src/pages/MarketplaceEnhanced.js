@@ -392,7 +392,7 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
           )}
 
           <p className="text-sm text-gray-300">
-            Showing {filteredProducts.length} of {products.length} products
+            Showing {Array.isArray(filteredProducts) ? filteredProducts.length : 0} of {Array.isArray(products) ? products.length : 0} products
           </p>
         </div>
 
