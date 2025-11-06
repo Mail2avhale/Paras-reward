@@ -2088,7 +2088,6 @@ async def checkout(request: Request):
     
     if user_district:
         # Escape special regex characters and use case-insensitive matching
-        import re
         escaped_district = re.escape(user_district)
         nearest_outlet = await db.users.find_one({
             "role": "outlet",
@@ -2097,7 +2096,6 @@ async def checkout(request: Request):
     
     if not nearest_outlet and user_state:
         # Escape special regex characters and use case-insensitive matching
-        import re
         escaped_state = re.escape(user_state)
         nearest_outlet = await db.users.find_one({
             "role": "outlet",
