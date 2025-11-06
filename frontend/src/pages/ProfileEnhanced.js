@@ -301,6 +301,42 @@ const ProfileEnhanced = ({ user, onLogout }) => {
     }
   };
 
+  const handleCameraCapture = async (base64Image) => {
+    setLoading(true);
+    try {
+      // Convert base64 to blob
+      const response = await fetch(base64Image);
+      const blob = await response.blob();
+      const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+      
+      const formData = new FormData();
+      formData.append('file', file);
+
+      await axios.post(
+        `${API}/user/${user.uid}/upload-profile-picture`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+
+      toast.success('Profile picture uploaded successfully!');
+      setProfilePicture(base64Image);
+      
+      // Update localStorage
+      const updatedUser = { ...user, profile_picture: base64Image };
+      localStorage.setItem('paras_user', JSON.stringify(updatedUser));
+      
+    } catch (error) {
+      console.error('Error uploading profile picture:', error);
+      toast.error(error.response?.data?.detail || 'Failed to upload profile picture');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDeleteProfilePicture = async () => {
     setLoading(true);
 
