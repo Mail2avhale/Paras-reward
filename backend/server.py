@@ -330,6 +330,18 @@ class ActivityLog(BaseModel):
     ip_address: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+class BiometricCredential(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    credential_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    device_name: str  # e.g., "iPhone 13", "Chrome on Windows"
+    credential_public_key: str  # Base64 encoded public key
+    credential_raw_id: str  # Base64 encoded credential ID from WebAuthn
+    counter: int = 0  # Signature counter for security
+    transports: Optional[List[str]] = []  # e.g., ["internal", "usb", "nfc", "ble"]
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_used_at: Optional[datetime] = None
+
 # ========== HELPER FUNCTIONS ==========
 async def get_base_rate():
     """Calculate base rate based on total users"""
