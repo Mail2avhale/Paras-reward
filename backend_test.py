@@ -667,23 +667,15 @@ def test_profit_wallet_transaction_logging():
         else:
             print(f"❌ Outlet creation failed: {response.status_code}")
             
-        # Create VIP Customer
+        # Create VIP Customer with PRC balance
+        customer_user_data["prc_balance"] = 1000.0  # Add PRC balance directly
         response = requests.post(f"{API_BASE}/auth/register", json=customer_user_data, timeout=30)
         if response.status_code == 200:
             customer_uid = response.json().get("uid")
             print(f"✅ VIP Customer created: {customer_uid}")
-            
-            # Give customer PRC balance for order
-            admin_uid = "ac9548c3-968a-4bbf-bad7-4e5aed1b660c"
-            prc_credit_data = {
-                "admin_uid": admin_uid,
-                "user_id": customer_uid,
-                "amount": 1000,
-                "description": "Test setup - PRC balance for order"
-            }
-            requests.post(f"{API_BASE}/admin/profit-wallet/credit", json=prc_credit_data, timeout=30)
         else:
             print(f"❌ VIP Customer creation failed: {response.status_code}")
+            print(f"   Response: {response.text}")
             
     except Exception as e:
         print(f"❌ Error creating test users: {e}")
