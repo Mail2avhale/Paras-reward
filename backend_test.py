@@ -4597,48 +4597,5 @@ if __name__ == "__main__":
     # Test the complete profit wallet transaction logging system
     transaction_results = test_complete_profit_wallet_transaction_logging_flow()
     
-    # Print comprehensive results
-    print("\n" + "📊" * 80)
-    print("PROFIT WALLET TRANSACTION LOGGING TEST RESULTS")
-    print("📊" * 80)
-    
-    print(f"\n🔄 END-TO-END FLOW:")
-    print(f"   Order Creation & Delivery: {'✅ PASS' if transaction_results.get('end_to_end_distribution_flow') else '❌ FAIL'}")
-    
-    print(f"\n📝 TRANSACTION LOGGING:")
-    print(f"   Transaction Records Created: {'✅ PASS' if transaction_results.get('transaction_logging_verification') else '❌ FAIL'}")
-    print(f"   Transaction History Integration: {'✅ PASS' if transaction_results.get('transaction_history_integration') else '❌ FAIL'}")
-    
-    print(f"\n💰 BALANCE TRACKING:")
-    print(f"   Balance Before/After Accuracy: {'✅ PASS' if transaction_results.get('balance_tracking_accuracy') else '❌ FAIL'}")
-    
-    print(f"\n🔍 AUDIT TRAIL:")
-    print(f"   Transaction ID Format: {'✅ PASS' if transaction_results.get('audit_trail_verification') else '❌ FAIL'}")
-    print(f"   Complete Metadata: {'✅ PASS' if transaction_results.get('audit_trail_verification') else '❌ FAIL'}")
-    
-    print(f"\n🚫 DUPLICATE PREVENTION:")
-    print(f"   No Duplicate Transactions: {'✅ PASS' if transaction_results.get('no_duplicate_transactions') else '❌ FAIL'}")
-    
-    # Calculate overall success
-    total_tests = len(transaction_results)
-    passed_tests = sum(1 for result in transaction_results.values() if result)
-    success_rate = (passed_tests / total_tests) * 100 if total_tests > 0 else 0
-    
-    print(f"\n🏆 OVERALL RESULT:")
-    print(f"   Tests Passed: {passed_tests}/{total_tests} ({success_rate:.1f}%)")
-    
-    if success_rate >= 80:
-        print("✅ PROFIT WALLET TRANSACTION LOGGING SYSTEM VERIFIED SUCCESSFULLY")
-        print("   ✓ Each profit wallet credit creates a transaction log entry")
-        print("   ✓ Transaction history endpoints return profit wallet transactions")
-        print("   ✓ Balance tracking is accurate with before/after values")
-        print("   ✓ Complete audit trail with all required metadata")
-        print("   ✓ No duplicate transactions created")
-    else:
-        print("❌ PROFIT WALLET TRANSACTION LOGGING SYSTEM VERIFICATION FAILED")
-        print("   Some critical functionality is not working as expected.")
-        print("   Please review the failed tests above for specific issues.")
-    
-    print("\n" + "=" * 80)
-    print("Test execution completed.")
-    print("=" * 80)
+    # Results are already printed in the function
+    print("\n🏁 Test execution completed. See detailed results above.")
