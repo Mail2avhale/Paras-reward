@@ -648,7 +648,7 @@ const StockRequestSystem = () => {
               {userRole === 'admin' && (
                 <Button 
                   onClick={() => {
-                    if (!Array.isArray(products) || products.length === 0) {
+                    if (!productsLoaded || !Array.isArray(products) || products.length === 0) {
                       toast.error('Loading products... Please try again in a moment');
                       fetchData();
                       return;
@@ -656,9 +656,10 @@ const StockRequestSystem = () => {
                     setShowAddStockModal(true);
                   }}
                   className="bg-green-600 hover:bg-green-700"
+                  disabled={!productsLoaded}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Stock
+                  {productsLoaded ? 'Add Stock' : 'Loading...'}
                 </Button>
               )}
             </Card>
