@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Camera } from 'lucide-react';
+import CameraCapture from './CameraCapture';
 
 /**
  * ImageUpload Component
