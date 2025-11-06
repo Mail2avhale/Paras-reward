@@ -17,7 +17,9 @@ const Leaderboard = ({ user, onLogout }) => {
   const fetchLeaderboard = async () => {
     try {
       const response = await axios.get(`${API}/leaderboard`);
-      setLeaderboard(response.data);
+      // Limit to top 10 earners only
+      const top10 = response.data.slice(0, 10);
+      setLeaderboard(top10);
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
     }
