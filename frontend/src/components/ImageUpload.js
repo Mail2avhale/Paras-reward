@@ -113,25 +113,56 @@ const ImageUpload = ({
           </Button>
         </div>
       ) : (
-        <div 
-          className={`w-full ${getAspectRatioClass()} max-w-sm border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors cursor-pointer`}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <div className="h-full flex flex-col items-center justify-center p-6 text-gray-400">
-            {uploading ? (
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                <p className="text-sm">Uploading...</p>
-              </div>
-            ) : (
-              <>
-                <Upload className="h-12 w-12 mb-2" />
-                <p className="text-sm font-medium">Click to upload</p>
-                <p className="text-xs mt-1">Max size: {maxSize}MB</p>
-              </>
-            )}
+        <>
+          <div className={`w-full ${getAspectRatioClass()} max-w-sm border-2 border-dashed border-gray-300 rounded-lg overflow-hidden`}>
+            <div className="h-full flex flex-col items-center justify-center p-6 text-gray-400 bg-gray-50">
+              {uploading ? (
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                  <p className="text-sm">Processing...</p>
+                </div>
+              ) : (
+                <>
+                  <ImageIcon className="h-12 w-12 mb-4 text-gray-300" />
+                  <p className="text-sm font-medium text-gray-600 mb-4">Choose how to upload</p>
+                  
+                  <div className="flex gap-3 w-full max-w-xs">
+                    {enableCamera && (
+                      <Button
+                        type="button"
+                        onClick={() => setShowCamera(true)}
+                        className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                      >
+                        <Camera className="h-4 w-4 mr-2" />
+                        Camera
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      variant="outline"
+                      className={enableCamera ? 'flex-1' : 'w-full'}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload
+                    </Button>
+                  </div>
+                  
+                  <p className="text-xs mt-4 text-gray-500">Max size: {maxSize}MB</p>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        </>
+      )}
+
+      {/* Camera Capture Modal */}
+      {showCamera && (
+        <CameraCapture
+          onCapture={handleCameraCapture}
+          onClose={() => setShowCamera(false)}
+          label={label}
+        />
       )}
 
       <input
