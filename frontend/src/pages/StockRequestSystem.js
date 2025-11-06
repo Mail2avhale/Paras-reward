@@ -464,7 +464,7 @@ const StockRequestSystem = () => {
                               <Eye className="h-4 w-4" />
                             </Button>
                             
-                            {req.status === 'pending' && (
+                            {req.status === 'pending' && req.requester_id === user.uid && (
                               <>
                                 <Button
                                   size="sm"
