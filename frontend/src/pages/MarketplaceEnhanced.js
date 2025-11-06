@@ -62,13 +62,16 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
     }
   }, [products, searchTerm, selectedCategory, sortBy]);
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (pageNum = 1, append = false) => {
     try {
-      const response = await axios.get(`${API}/products`);
-      // Ensure products is always an array
-      let productData = Array.isArray(response.data) ? response.data : [];
+      if (append) {
+        setLoadingMore(true);
+      }
       
-      // Fetch stock availability for each product
+      const response = await axios.get(`${API}/products?page=${pageNum}&limit=20`);
+      const { products: productData = [], total, has_more } = response.data;
+      
+      // Fetch stock availability for all products
       try {
         const stockResponse = await axios.get(`${API}/stock/inventory/all-stock`);
         const stockData = stockResponse.data.inventory || [];
@@ -84,24 +87,44 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
         });
         
         // Merge stock quantities with products
-        productData = productData.map(product => ({
+        const enrichedProducts = productData.map(product => ({
           ...product,
           stock_quantity: stockMap[product.product_id] || 0
         }));
+        
+        if (append) {
+          setProducts(prev => [...prev, ...enrichedProducts]);
+        } else {
+          setProducts(enrichedProducts);
+        }
       } catch (stockError) {
         console.warn('Could not fetch stock data:', stockError);
-        // Set stock_quantity to 0 for all products if stock fetch fails
-        productData = productData.map(product => ({
+        const enrichedProducts = productData.map(product => ({
           ...product,
           stock_quantity: 0
         }));
+        
+        if (append) {
+          setProducts(prev => [...prev, ...enrichedProducts]);
+        } else {
+          setProducts(enrichedProducts);
+        }
       }
       
-      setProducts(productData);
+      setTotalProducts(total || 0);
+      setHasMore(has_more || false);
+      setPage(pageNum);
+      
     } catch (error) {
       console.error('Error fetching products:', error);
       toast.error('Failed to load products');
-      setProducts([]); // Set empty array on error
+      if (!append) {
+        setProducts([]);
+      }
+    } finally {
+      if (append) {
+        setLoadingMore(false);
+      }
     }
   };
 
