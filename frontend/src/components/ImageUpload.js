@@ -74,6 +74,11 @@ const ImageUpload = ({
     }
   };
 
+  const handleCameraCapture = (base64Image) => {
+    setPreview(base64Image);
+    onChange(base64Image);
+  };
+
   const getAspectRatioClass = () => {
     switch(aspectRatio) {
       case 'square': return 'aspect-square';
