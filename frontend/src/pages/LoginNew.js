@@ -14,7 +14,9 @@ const API = `${BACKEND_URL}/api`;
 const LoginNew = ({ onLogin }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showBiometricOption, setShowBiometricOption] = useState(false);
   const [loginData, setLoginData] = useState({
     identifier: '', // email, mobile, or uid
     password: '',
