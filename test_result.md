@@ -1140,3 +1140,32 @@ frontend:
       - working: true
         agent: "main"
         comment: "IMPLEMENTED: Enhanced fetchProducts() to fetch and merge stock data. Process: 1) Fetch products from /api/products. 2) Fetch aggregated stock from /api/stock/inventory/all-stock. 3) Create stockMap by product_id. 4) Merge stock_quantity into each product. 5) Set stock_quantity to 0 if stock fetch fails. Marketplace now shows: Stock badges (Low Stock for <=10, Out of Stock for 0), Color-coded availability (green >10, yellow 1-10, red 0), Disable 'Add to Cart' for out-of-stock items, Stock count in product details modal. Users can see real-time stock availability before ordering."
+
+frontend:
+  - task: "Stockist Hierarchy Network Display"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/StockistHierarchy.js, /app/frontend/src/pages/MasterStockistDashboard.js, /app/frontend/src/pages/SubStockistDashboard.js, /app/frontend/src/pages/OutletPanel.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported: Need to show list of sub stockists to Master stockist. Same for sub stockist and outlet - they each should know their parents and who is under them."
+      - working: true
+        agent: "main"
+        comment: "IMPLEMENTED: Created StockistHierarchy component showing parent-child relationships. Features: 1) Parent card showing superior (Master for Sub, Sub for Outlet) with name, role, email, mobile, location. 2) Children card showing subordinates list (Sub Stockists for Master, Outlets for Sub) with count badge. 3) Color-coded role badges (purple=master, blue=sub, green=outlet). 4) Role icons (Building2, Store, User). 5) Empty states for no parent/children. 6) Scrollable list for multiple children. Added 'My Network' tab to Master/Sub dashboards and 'My Parent' tab to Outlet dashboard. Created backend endpoint GET /api/users/children/{uid} that queries parent_id, assigned_master_stockist, assigned_sub_stockist fields. Master stockists see all their sub stockists, Sub stockists see their master + all their outlets, Outlets see their sub stockist."
+
+backend:
+  - task: "User Children Hierarchy Endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "IMPLEMENTED: Created GET /api/users/children/{uid} endpoint to fetch subordinates. Uses MongoDB $or query to find users where parent_id OR assigned_master_stockist OR assigned_sub_stockist equals the given uid. Returns array of children with sensitive data removed (password_hash, reset_token). Includes count of children. Used by StockistHierarchy component to display network structure."
