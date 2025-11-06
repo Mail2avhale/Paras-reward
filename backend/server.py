@@ -952,11 +952,14 @@ async def register_biometric_credential(
         )
         
         # Verify registration
+        webauthn_origin = os.environ.get('WEBAUTHN_ORIGIN', 'http://localhost:3000')
+        webauthn_rp_id = os.environ.get('WEBAUTHN_RP_ID', 'localhost')
+        
         verification = verify_registration_response(
             credential=credential,
             expected_challenge=bytes.fromhex(challenge_doc["challenge"]),
-            expected_origin="https://emergentagent.com",  # Replace with your domain
-            expected_rp_id="emergentagent.com"
+            expected_origin=webauthn_origin,
+            expected_rp_id=webauthn_rp_id
         )
         
         # Store credential
