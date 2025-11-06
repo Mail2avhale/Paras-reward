@@ -672,6 +672,11 @@ const StockRequestSystem = () => {
                       variant="outline"
                       className="w-full mt-4"
                       onClick={() => {
+                        if (!Array.isArray(products) || products.length === 0) {
+                          toast.error('Loading products... Please try again in a moment');
+                          fetchData();
+                          return;
+                        }
                         setNewStockData({
                           product_id: item.product_id,
                           quantity: item.quantity.toString(),
