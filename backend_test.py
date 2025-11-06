@@ -3840,5 +3840,5 @@ def run_admin_marketplace_fix_test():
     return results
 
 if __name__ == "__main__":
-    # Run the focused test for the admin marketplace products API fix
-    run_admin_marketplace_fix_test()
+    # Run the focused test for product pagination optimization
+    run_product_pagination_test()
