@@ -39,9 +39,14 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
   const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
-    fetchProducts();
-    fetchUserData();
-    fetchCart();
+    setLoading(true);
+    Promise.all([
+      fetchProducts(),
+      fetchUserData(),
+      fetchCart()
+    ]).finally(() => {
+      setLoading(false);
+    });
   }, []);
 
   useEffect(() => {
