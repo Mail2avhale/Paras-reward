@@ -685,7 +685,7 @@ const StockRequestSystem = () => {
                       variant="outline"
                       className="w-full mt-4"
                       onClick={() => {
-                        if (!Array.isArray(products) || products.length === 0) {
+                        if (!productsLoaded || !Array.isArray(products) || products.length === 0) {
                           toast.error('Loading products... Please try again in a moment');
                           fetchData();
                           return;
@@ -697,9 +697,10 @@ const StockRequestSystem = () => {
                         });
                         setShowAddStockModal(true);
                       }}
+                      disabled={!productsLoaded}
                     >
                       <Edit className="h-4 w-4 mr-2" />
-                      Update Quantity
+                      {productsLoaded ? 'Update Quantity' : 'Loading...'}
                     </Button>
                   )}
                 </Card>
