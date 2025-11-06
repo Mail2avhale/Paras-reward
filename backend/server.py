@@ -4783,10 +4783,29 @@ async def distribute_delivery_charge(order_id: str):
     if distributions.get("master", 0) > 0 and master_stockist_user:
         amount = distributions["master"]
         if not master_stockist_user.get("profit_wallet_frozen", False):
+            # Update balance
             await db.users.update_one(
                 {"uid": master_stockist_id},
                 {"$inc": {"profit_wallet_balance": round(amount, 2)}}
             )
+            
+            # Log transaction
+            await log_transaction(
+                user_id=master_stockist_id,
+                wallet_type="profit_wallet",
+                transaction_type="profit_share",
+                amount=round(amount, 2),
+                description=f"Delivery charge commission from order {order_id}",
+                metadata={
+                    "order_id": order_id,
+                    "entity_type": "master_stockist",
+                    "commission_percentage": split.get("master", 0),
+                    "total_commission": round(total_commission, 2)
+                },
+                related_id=order_id,
+                related_type="order"
+            )
+            
             credited_entities.append(f"Master Stockist ({master_stockist_user.get('name', 'Unknown')}): ₹{round(amount, 2)}")
         
         commission_record = {
