@@ -788,7 +788,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Cart Order Placement Error Fix"
+    - "Manager Role Update Fix"
+    - "Manager Dashboard Loading Fix"
+    - "Stock Deduction on Order Delivery"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
