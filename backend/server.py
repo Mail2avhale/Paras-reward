@@ -1020,8 +1020,9 @@ async def get_biometric_login_options(email: str):
     ]
     
     # Generate authentication options
+    webauthn_rp_id = os.environ.get('WEBAUTHN_RP_ID', 'localhost')
     options = generate_authentication_options(
-        rp_id="emergentagent.com",  # Replace with your domain
+        rp_id=webauthn_rp_id,
         allow_credentials=allow_credentials,
         user_verification="preferred",
         timeout=60000
