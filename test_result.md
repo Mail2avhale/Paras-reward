@@ -1260,6 +1260,21 @@ frontend:
         agent: "main"
         comment: "PERMANENTLY FIXED: Root cause was race condition where component tried to render before products state was initialized as array. Applied multiple defensive layers: 1) Added early return guard at component level - if products or filteredProducts is not array, show loading spinner instead of rendering. 2) Added guard in useEffect that calls filterAndSortProducts - only executes if products is valid array. 3) Enhanced loading state management - setLoading(true) during data fetch. 4) All .map() calls already had guards. 5) Tested via screenshot tool - marketplace loads successfully with NO console errors. Component now has bulletproof initialization and handles all edge cases."
 
+  - task: "Admin Dashboard Marketplace Management - products.map is not a function"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/AdminDashboard.js"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported persistent 'products.map is not a function' error in Admin Dashboard's Marketplace Management section (Stock Transfer modal). Error occurs when trying to select products for stock transfer. Video analysis confirmed error was in Admin Marketplace, not user marketplace."
+      - working: "NA"
+        agent: "main"
+        comment: "FIXED: Root cause identified - StockTransferRequest component's fetchProducts function (line 2042-2049) was incorrectly accessing response.data instead of response.data.products. The API returns {total: X, products: [...]} structure but code tried to map the entire object. Fixed line 2045 from 'setProducts(response.data || [])' to 'setProducts(response.data?.products || [])'. This matches the correct implementation in MarketplaceManagement component (line 522). Added error handling to set empty array on catch. Ready for testing."
+
 agent_communication:
     -agent: "main"
     -message: "Communication message between agents"
