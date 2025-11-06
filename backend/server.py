@@ -7148,11 +7148,13 @@ async def assign_order_to_outlet(order_id: str, request: Request):
     if not outlet:
         raise HTTPException(status_code=404, detail="Outlet not found")
     
-    # Update order
+    # Update order with consistent field names
     result = await db.orders.update_one(
         {"order_id": order_id},
         {"$set": {
-            "assigned_outlet_id": outlet_id,
+            "outlet_id": outlet_id,
+            "assigned_outlet": outlet_id,  # For backward compatibility
+            "assigned_outlet_id": outlet_id,  # Legacy field
             "assigned_at": datetime.now(timezone.utc).isoformat(),
             "status": "assigned"
         }}
