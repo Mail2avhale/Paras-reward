@@ -85,9 +85,9 @@ const StockRequestSystem = () => {
       const inventoryRes = await axios.get(`${API}/stock/inventory/my-stock/${user.uid}`);
       setMyInventory(inventoryRes.data.inventory || []);
       
-      // Fetch products for request creation
-      const productsRes = await axios.get(`${API}/products`);
-      setProducts(productsRes.data || []);
+      // Fetch products for request creation (using pagination API)
+      const productsRes = await axios.get(`${API}/products?page=1&limit=1000`);
+      setProducts(productsRes.data?.products || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to fetch data');
