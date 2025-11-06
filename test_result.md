@@ -1002,3 +1002,19 @@ frontend:
       - working: true
         agent: "main"
         comment: "IMPLEMENTED: Added camera capture support for all KYC documents. Changes: 1) Updated Aadhaar Front ImageUpload component with enableCamera=true and cameraFacingMode='environment' (rear camera for better document quality). 2) Updated Aadhaar Back ImageUpload component with same camera settings. 3) Updated PAN Front ImageUpload component with camera support and rear camera mode. All KYC document fields now show Camera and Upload buttons. Users can capture documents directly using rear camera or upload from files. Rear camera used for better document capture quality and clarity. Camera modal opens with live preview, capture button, and retake functionality. Same enhanced error handling applies (Try Again, Choose File Instead buttons)."
+
+frontend:
+  - task: "Manager Role Navigation Fix"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/LoginNew.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported: Manager role not available/working in Admin. Manager users not redirected properly after login."
+      - working: true
+        agent: "main"
+        comment: "FIXED: Added manager role navigation in all login flows. Changes: 1) Added manager role redirect in handleLogin() - navigates to /manager after password login. 2) Added manager role redirect in handleBiometricLogin() - navigates to /manager after biometric login. 3) Added manager role redirect in BiometricSetup onClose() and onSuccess() callbacks - navigates to /manager after biometric setup. Manager role was already present in Admin dashboard dropdowns (role filter and role change) and ManagerDashboard component exists at /manager route. Issue was only missing navigation logic after login. Now managers are properly redirected to /manager dashboard on login."
