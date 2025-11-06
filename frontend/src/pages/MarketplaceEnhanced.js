@@ -609,23 +609,6 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
           </>
         )}
 
-        {filteredProducts.length === 0 && !loading && (
-          <Card className="bg-white/10 backdrop-blur-xl border border-white/20 p-12 text-center">
-            <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">No products found</h3>
-            <p className="text-gray-300 mb-4">Try adjusting your filters or search term</p>
-            <Button 
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedCategory('all');
-              }}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              Clear Filters
-            </Button>
-          </Card>
-        )}
-
         {/* AdSense */}
         {!isAdmin && filteredProducts.length > 0 && (
           <div className="mt-8">
