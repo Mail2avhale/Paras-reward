@@ -12,6 +12,7 @@ import {
 import { toast } from 'sonner';
 import StockRequestSystem from '@/pages/StockRequestSystem';
 import StockInventoryDisplay from '@/components/StockInventoryDisplay';
+import StockistHierarchy from '@/components/StockistHierarchy';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
