@@ -1218,100 +1218,63 @@ def test_complete_profit_wallet_transaction_logging_flow():
     except Exception as e:
         print(f"❌ Error in Phase 6: {e}")
     
-    # Test 5: Audit Trail Verification
-    print(f"\n6. AUDIT TRAIL VERIFICATION")
-    print("=" * 60)
+    # Final Summary
+    print(f"\n🏁 COMPLETE PROFIT WALLET TRANSACTION LOGGING FLOW TEST SUMMARY")
+    print("=" * 80)
     
-    try:
-        audit_trail_valid = True
-        
-        # Check one entity's transaction for audit trail completeness
-        response = requests.get(f"{API_BASE}/wallet/transactions/{outlet_uid}?wallet_type=profit_wallet", timeout=30)
-        if response.status_code == 200:
-            result = response.json()
-            transactions = result.get("transactions", [])
-            
-            if transactions:
-                latest_txn = transactions[0]
-                
-                # Verify transaction_id format (TXN-YYYYMMDD-XXXXXXXX)
-                txn_id = latest_txn.get("transaction_id", "")
-                if txn_id.startswith("TXN-") and len(txn_id) == 21:
-                    print(f"✅ Transaction ID format correct: {txn_id}")
-                else:
-                    print(f"❌ Transaction ID format incorrect: {txn_id}")
-                    audit_trail_valid = False
-                
-                # Verify status
-                status = latest_txn.get("status", "")
-                if status == "completed":
-                    print(f"✅ Transaction status correct: {status}")
-                else:
-                    print(f"❌ Transaction status incorrect: {status}")
-                    audit_trail_valid = False
-                
-                # Verify created_at timestamp
-                created_at = latest_txn.get("created_at", "")
-                if created_at:
-                    print(f"✅ Created timestamp present: {created_at}")
-                else:
-                    print(f"❌ Created timestamp missing")
-                    audit_trail_valid = False
-                
-                # Verify metadata completeness
-                metadata = latest_txn.get("metadata", {})
-                required_metadata = ["order_id", "entity_type", "commission_percentage", "total_commission"]
-                missing_metadata = []
-                
-                for field in required_metadata:
-                    if field in metadata:
-                        print(f"✅ Metadata {field}: {metadata[field]}")
-                    else:
-                        missing_metadata.append(field)
-                        print(f"❌ Missing metadata {field}")
-                        audit_trail_valid = False
-                
-                if audit_trail_valid:
-                    test_results["audit_trail_verification"] = True
-                    print(f"\n✅ Audit trail verification successful")
-                else:
-                    print(f"\n❌ Audit trail issues found")
-            else:
-                print(f"❌ No transactions found for audit trail verification")
-        else:
-            print(f"❌ Failed to get transactions for audit trail check")
-            
-    except Exception as e:
-        print(f"❌ Error verifying audit trail: {e}")
+    phases_summary = {
+        "Phase 1 - Outlet Assignment": [
+            ("Outlet assignment during checkout", test_results["outlet_assignment_during_checkout"]),
+            ("Outlet ID and assigned outlet fields", test_results["outlet_id_and_assigned_outlet_fields"]),
+            ("Outlet assignment logic verification", test_results["outlet_assignment_logic_verification"])
+        ],
+        "Phase 2 - Order Delivery": [
+            ("Order delivery without outlet error", test_results["order_delivery_without_outlet_error"]),
+            ("Delivery success confirmation", test_results["delivery_success_confirmation"])
+        ],
+        "Phase 3 - Delivery Charge Distribution": [
+            ("Delivery charge distribution trigger", test_results["delivery_charge_distribution_trigger"]),
+            ("Commission distribution success", test_results["commission_distribution_success"]),
+            ("Profit wallet balance updates", test_results["profit_wallet_balance_updates"])
+        ],
+        "Phase 4 - Transaction Logging (MAIN FOCUS)": [
+            ("Transaction type = profit_share", test_results["transaction_type_profit_share"]),
+            ("Wallet type = profit_wallet", test_results["wallet_type_profit_wallet"]),
+            ("Metadata completeness", test_results["metadata_completeness"]),
+            ("Balance before/after accuracy", test_results["balance_before_after_accuracy"])
+        ],
+        "Phase 5 - Transaction History Integration": [
+            ("Outlet transaction history", test_results["outlet_transaction_history"]),
+            ("Sub stockist transaction history", test_results["sub_stockist_transaction_history"]),
+            ("Master stockist transaction history", test_results["master_stockist_transaction_history"])
+        ],
+        "Phase 6 - End-to-End Verification": [
+            ("Complete audit trail", test_results["complete_audit_trail"]),
+            ("No duplicate transactions", test_results["no_duplicate_transactions"]),
+            ("Accurate balance calculations", test_results["accurate_balance_calculations"])
+        ]
+    }
     
-    # Test 6: No Duplicate Transactions
-    print(f"\n7. DUPLICATE TRANSACTION VERIFICATION")
-    print("=" * 60)
+    total_tests = 0
+    passed_tests = 0
     
-    try:
-        # Try to trigger distribution again - should not create duplicates
-        print(f"\n7.1. Attempting duplicate distribution...")
-        
-        # Send empty JSON object as the endpoint expects JSON
-        duplicate_data = {}
-        response = requests.post(f"{API_BASE}/orders/{order_id}/distribute-delivery-charge", json=duplicate_data, timeout=30)
-        print(f"Duplicate Distribution Status: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code == 200:
-            result = response.json()
-            message = result.get("message", "")
-            
-            if "already distributed" in message.lower():
-                print(f"✅ Duplicate distribution properly blocked")
-                test_results["no_duplicate_transactions"] = True
-            else:
-                print(f"❌ Duplicate distribution not blocked properly")
-        else:
-            print(f"⚠️  Unexpected response for duplicate distribution")
-            
-    except Exception as e:
-        print(f"❌ Error testing duplicate transactions: {e}")
+    for phase_name, tests in phases_summary.items():
+        print(f"\n{phase_name}:")
+        for test_name, result in tests:
+            status = "✅ PASS" if result else "❌ FAIL"
+            print(f"  {status} {test_name}")
+            total_tests += 1
+            if result:
+                passed_tests += 1
+    
+    print(f"\n📊 OVERALL RESULTS: {passed_tests}/{total_tests} tests passed ({(passed_tests/total_tests)*100:.1f}%)")
+    
+    if passed_tests == total_tests:
+        print(f"🎉 ALL TESTS PASSED - PROFIT WALLET TRANSACTION LOGGING FLOW IS WORKING PERFECTLY!")
+    elif passed_tests >= total_tests * 0.8:
+        print(f"✅ MOSTLY WORKING - Minor issues found but core functionality is operational")
+    else:
+        print(f"❌ SIGNIFICANT ISSUES - Multiple critical failures detected")
     
     return test_results
 
