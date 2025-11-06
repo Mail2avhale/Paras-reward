@@ -3,10 +3,10 @@ import { Camera, X, RotateCcw, Upload, FlipHorizontal, Check } from 'lucide-reac
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
-const CameraCapture = ({ onCapture, onClose, label = "Capture Photo" }) => {
+const CameraCapture = ({ onCapture, onClose, label = "Capture Photo", defaultFacingMode = "user" }) => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
-  const [facingMode, setFacingMode] = useState('environment'); // 'user' for front, 'environment' for back
+  const [facingMode, setFacingMode] = useState(defaultFacingMode); // 'user' for front (default for selfies), 'environment' for back
   const [error, setError] = useState(null);
   const [uploadMode, setUploadMode] = useState(false);
   
