@@ -1244,6 +1244,22 @@ frontend:
         agent: "main"
         comment: "FIXED: Enhanced StockistHierarchy component to fetch full user data first before looking for parent. Updated logic to check multiple fields for parent assignment: 1) For outlets: checks parent_id OR assigned_sub_stockist. 2) For sub stockists: checks parent_id OR assigned_master_stockist. 3) Component now fetches complete user data via GET /users/{uid} to get all parent relationship fields. 4) Added better error logging to identify missing parent assignments. 5) Created fix_stockist_parents.py script to fix any existing stockists with incomplete parent assignments. Backend endpoint /admin/stockists/create already sets both parent_id and assigned_* fields correctly for new stockists."
 
+frontend:
+  - task: "Marketplace Runtime Error - products.map is not a function"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/MarketplaceEnhanced.js"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported: When admin clicked on marketplace, error occurred showing 'products.map is not a function' TypeError."
+      - working: true
+        agent: "main"
+        comment: "FIXED: Added comprehensive array guards throughout MarketplaceEnhanced component to prevent TypeError when products data is not yet loaded or is not an array. Changes: 1) Added guard in filterAndSortProducts() to check if products is array before spreading. 2) Added empty state display when filteredProducts is empty or not an array. 3) Added Array.isArray() checks in product count display. 4) Added proper loading skeleton during data fetch. Component now handles all edge cases gracefully and shows appropriate messages instead of crashing."
+
 agent_communication:
     -agent: "main"
     -message: "Communication message between agents"
