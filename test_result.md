@@ -931,3 +931,16 @@ frontend:
       - working: true
         agent: "main"
         comment: "FIXED: Implemented responsive sidebar with mobile hamburger menu. Changes: 1) Added `sidebarOpen` state and `Menu/X` icons from lucide-react. 2) Updated sidebar to be hidden on mobile by default with `translate-x` transforms and `lg:translate-x-0` for desktop. 3) Added mobile backdrop overlay that closes menu when clicked. 4) Added hamburger menu button in header (visible only on mobile with `lg:hidden`). 5) Added close button (X) in sidebar header for mobile. 6) Updated main content area margin to `flex-1 lg:ml-64` for responsive layout. 7) Menu items now close sidebar on mobile after selection. Desktop view remains unchanged with sidebar always visible. Mobile view now has working hamburger menu that slides in/out with proper animations."
+
+frontend:
+  - task: "Camera Integration for KYC and Profile Pictures"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/CameraCapture.js, /app/frontend/src/components/ImageUpload.js, /app/frontend/src/pages/KYCVerification.js, /app/frontend/src/pages/ProfileEnhanced.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Complete camera integration for KYC documents and profile pictures. Created reusable CameraCapture component with features: 1) Camera access using navigator.mediaDevices.getUserMedia API. 2) Front/back camera switch for mobile devices. 3) Live camera preview with capture button. 4) Preview captured image before upload. 5) Retake functionality. 6) Automatic image compression to max 2MB while maintaining aspect ratio. 7) Support for both camera capture and file upload (user can choose method). 8) Camera fallback to file upload if camera access is denied. 9) Mobile and desktop support (webcam). 10) Updated ImageUpload component to include Camera/Upload toggle buttons. 11) Integrated into KYC Verification page for Aadhaar (front/back) and PAN card capture. 12) Integrated into Profile page with 'Take Photo' button for profile picture capture. 13) Full modal UI with gradient header, instructions, and clear UX. 14) Error handling for camera permission denied. Camera capture stores images as compressed base64 (max 2MB) and uploads to backend."
