@@ -421,30 +421,6 @@ const OutletPanel = ({ user, onLogout }) => {
               <StockRequestSystem />
             </TabsContent>
 
-            <TabsContent value="stock">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Stock Received</h2>
-              {stockMovements.received?.length > 0 ? (
-                <div className="space-y-2">
-                  {stockMovements.received.map((movement, idx) => (
-                    <Card key={idx} className="p-4 border-l-4 border-green-500">
-                      <div className="flex justify-between">
-                        <div>
-                          <p className="font-semibold">{movement.product_name || 'Product'}</p>
-                          <p className="text-sm text-gray-600">Quantity: {movement.quantity}</p>
-                          <p className="text-xs text-gray-500">Batch: {movement.batch_number}</p>
-                        </div>
-                        <span className="px-3 py-1 rounded-full text-xs bg-green-100 text-green-700 h-fit">
-                          {movement.status}
-                        </span>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-center py-8">No stock received yet</p>
-              )}
-            </TabsContent>
-
             <TabsContent value="earnings">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Earnings</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
