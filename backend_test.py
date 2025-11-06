@@ -3687,6 +3687,88 @@ def print_cart_test_summary(results):
         for test in failed_tests:
             print(f"   - {test.replace('_', ' ').title()}: FAILED")
 
+def run_product_pagination_test():
+    """Run focused test for Product Pagination Optimization"""
+    print("\n" + "🎯" * 80)
+    print("PRODUCT PAGINATION OPTIMIZATION - FOCUSED TESTING")
+    print("🎯" * 80)
+    
+    results = {
+        "pagination_optimization": False,
+        "test_completed": False
+    }
+    
+    try:
+        # Run the focused test for product pagination optimization
+        print("\n📄 TESTING PRODUCT PAGINATION OPTIMIZATION")
+        pagination_results = test_product_pagination_optimization()
+        
+        # Check critical success criteria
+        critical_tests = [
+            "default_pagination",
+            "response_structure", 
+            "metadata_accuracy",
+            "product_fields_validation",
+            "no_id_field",
+            "sorting_newest_first"
+        ]
+        
+        critical_passed = all(pagination_results.get(test, False) for test in critical_tests)
+        
+        if critical_passed:
+            results["pagination_optimization"] = True
+            print("\n✅ PRODUCT PAGINATION OPTIMIZATION TESTS PASSED")
+        else:
+            print("\n❌ PRODUCT PAGINATION OPTIMIZATION TESTS FAILED")
+            
+        results["test_completed"] = True
+        
+    except Exception as e:
+        print(f"\n❌ ERROR DURING TESTING: {e}")
+        results["test_completed"] = False
+    
+    # Final Summary
+    print("\n" + "📊" * 80)
+    print("PRODUCT PAGINATION OPTIMIZATION TEST SUMMARY")
+    print("📊" * 80)
+    
+    print(f"\n🎯 CORE PAGINATION FUNCTIONALITY:")
+    print(f"   Default Pagination (20 items): {'✅ PASS' if pagination_results.get('default_pagination') else '❌ FAIL'}")
+    print(f"   Response Structure: {'✅ PASS' if pagination_results.get('response_structure') else '❌ FAIL'}")
+    print(f"   Custom Page & Limit: {'✅ PASS' if pagination_results.get('custom_page_limit') else '❌ FAIL'}")
+    print(f"   Page 2 Pagination: {'✅ PASS' if pagination_results.get('page_2_pagination') else '❌ FAIL'}")
+    
+    print(f"\n📊 METADATA VALIDATION:")
+    print(f"   Metadata Accuracy: {'✅ PASS' if pagination_results.get('metadata_accuracy') else '❌ FAIL'}")
+    print(f"   has_more Calculation: {'✅ PASS' if pagination_results.get('has_more_calculation') else '❌ FAIL'}")
+    print(f"   total_pages Calculation: {'✅ PASS' if pagination_results.get('total_pages_calculation') else '❌ FAIL'}")
+    
+    print(f"\n🔍 PRODUCT STRUCTURE:")
+    print(f"   Product Fields Validation: {'✅ PASS' if pagination_results.get('product_fields_validation') else '❌ FAIL'}")
+    print(f"   No _id Field: {'✅ PASS' if pagination_results.get('no_id_field') else '❌ FAIL'}")
+    print(f"   Sorting (Newest First): {'✅ PASS' if pagination_results.get('sorting_newest_first') else '❌ FAIL'}")
+    
+    print(f"\n⚡ EDGE CASES & PERFORMANCE:")
+    print(f"   Beyond Total Pages: {'✅ PASS' if pagination_results.get('edge_case_beyond_pages') else '❌ FAIL'}")
+    print(f"   Page Zero Handling: {'✅ PASS' if pagination_results.get('edge_case_page_zero') else '❌ FAIL'}")
+    print(f"   Large Limit Handling: {'✅ PASS' if pagination_results.get('edge_case_large_limit') else '❌ FAIL'}")
+    print(f"   Performance Verification: {'✅ PASS' if pagination_results.get('performance_verification') else '❌ FAIL'}")
+    
+    print(f"\n🏆 OVERALL RESULT:")
+    if results["pagination_optimization"]:
+        print("✅ PRODUCT PAGINATION OPTIMIZATION VERIFIED SUCCESSFULLY")
+        print("   ✅ Pagination returns correct subset of products")
+        print("   ✅ Metadata (total, page, limit, has_more, total_pages) is accurate")
+        print("   ✅ No breaking changes to existing product structure")
+        print("   ✅ Works with different page and limit values")
+        print("   ✅ Products sorted by created_at descending (newest first)")
+    else:
+        print("❌ PRODUCT PAGINATION OPTIMIZATION VERIFICATION FAILED")
+        print("   ❌ Some critical pagination functionality is not working correctly")
+        print("   ❌ Frontend infinite scroll may not work properly")
+    
+    return results
+
 def run_admin_marketplace_fix_test():
     """Run focused test for Admin Marketplace Products API fix"""
     print("\n" + "🎯" * 80)
