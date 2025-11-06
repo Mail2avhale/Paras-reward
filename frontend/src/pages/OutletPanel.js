@@ -11,6 +11,7 @@ import {
   Zap, Gamepad2, Users, Store, Trophy, Crown, FileCheck, ShoppingBag
 } from 'lucide-react';
 import { toast } from 'sonner';
+import StockInventoryDisplay from '@/components/StockInventoryDisplay';
 import StockRequestSystem from '@/pages/StockRequestSystem';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
