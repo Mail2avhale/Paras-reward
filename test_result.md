@@ -1018,3 +1018,19 @@ frontend:
       - working: true
         agent: "main"
         comment: "FIXED: Added manager role navigation in all login flows. Changes: 1) Added manager role redirect in handleLogin() - navigates to /manager after password login. 2) Added manager role redirect in handleBiometricLogin() - navigates to /manager after biometric login. 3) Added manager role redirect in BiometricSetup onClose() and onSuccess() callbacks - navigates to /manager after biometric setup. Manager role was already present in Admin dashboard dropdowns (role filter and role change) and ManagerDashboard component exists at /manager route. Issue was only missing navigation logic after login. Now managers are properly redirected to /manager dashboard on login."
+
+backend:
+  - task: "Stock Request Parent Assignment Error Fix"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py, /app/backend/fix_parent_assignments.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported: When outlet and sub stockist request stock, error occurred: 'Parent sub_stockist not found or not assigned' for outlets and 'Parent master_stockist not found or not assigned' for sub stockists. Screenshots showed stock request modal with these errors."
+      - working: true
+        agent: "main"
+        comment: "FIXED: Stock request parent assignment issue. Problem: Code was looking for 'assigned_sub_stockist' for outlets and 'assigned_master_stockist' for sub stockists, but create/assign endpoints only set 'parent_id'. Solution: 1) Updated /admin/stockists/assign endpoint to set both parent_id AND role-specific fields (assigned_sub_stockist for outlets, assigned_master_stockist for sub stockists). 2) Updated /admin/stockists/create endpoint to set role-specific parent fields during creation. 3) Created fix_parent_assignments.py script to fix existing users who only had parent_id. Script ran successfully: Fixed 1 outlet (outlet@paras.com) and 1 sub stockist (sub@paras.com). Now outlets can request stock from their assigned sub stockist and sub stockists can request from their assigned master stockist without errors."
