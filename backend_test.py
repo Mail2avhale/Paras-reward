@@ -1108,8 +1108,8 @@ def test_complete_profit_wallet_transaction_logging_flow():
     except Exception as e:
         print(f"❌ Error in Phase 5: {e}")
     
-    # Test 4: Balance Tracking
-    print(f"\n5. BALANCE TRACKING VERIFICATION")
+    # PHASE 6: END-TO-END VERIFICATION
+    print(f"\n🎯 PHASE 6: END-TO-END VERIFICATION")
     print("=" * 60)
     
     try:
