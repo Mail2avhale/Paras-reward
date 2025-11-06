@@ -76,6 +76,19 @@ const LoginNew = ({ onLogin }) => {
       }
 
       toast.success('Login successful!');
+      
+      // Check if biometric should be offered (first login or biometric not set up)
+      const biometricSetupShown = localStorage.getItem('biometric_setup_shown');
+      const biometricEnabled = localStorage.getItem('biometric_enabled');
+      
+      if (isBiometricSupported() && !biometricEnabled && !biometricSetupShown) {
+        // Show biometric setup prompt
+        setLoggedInUser(response.data);
+        setShowBiometricSetupPrompt(true);
+        setLoading(false);
+        return;
+      }
+      
       onLogin(response.data);
       
       // Navigate based on role
