@@ -18,6 +18,7 @@ const StockRequestSystem = () => {
   const [pendingForMe, setPendingForMe] = useState([]);
   const [myInventory, setMyInventory] = useState([]);
   const [products, setProducts] = useState([]);
+  const [productsLoaded, setProductsLoaded] = useState(false); // Track if products successfully loaded
   const [loading, setLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
