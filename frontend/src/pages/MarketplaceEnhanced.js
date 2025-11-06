@@ -196,6 +196,35 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
     return ['all', ...categories];
   };
 
+  const loadMore = () => {
+    if (hasMore && !loadingMore) {
+      fetchProducts(page + 1, true);
+    }
+  };
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const sentinel = document.querySelector('#load-more-sentinel');
+    if (sentinel) {
+      observer.observe(sentinel);
+    }
+
+    return () => {
+      if (sentinel) {
+        observer.unobserve(sentinel);
+      }
+    };
+  }, [hasMore, loadingMore, page]);
+
   const addToCart = async (product) => {
     try {
       const userResponse = await axios.get(`${API}/users/${user.uid}`);
