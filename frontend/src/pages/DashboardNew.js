@@ -294,34 +294,27 @@ const DashboardNew = ({ user, onLogout }) => {
 
         {/* Feature Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          {/* Wallet Card */}
+          {/* Wallet Card - Cashback Only */}
           <Link to="/wallet">
             <Card className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-2xl hover:scale-105 transition-all duration-300 cursor-pointer group">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Wallet</h3>
+                  <h3 className="text-2xl font-bold text-white mb-2">My Wallet</h3>
                   <p className="text-blue-100">Manage your earnings</p>
                 </div>
                 <div className="bg-white/20 p-3 rounded-xl group-hover:scale-110 transition-transform">
                   <Wallet className="h-8 w-8 text-white" />
                 </div>
               </div>
-              <div className="space-y-3">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-blue-100">PRC Balance</p>
-                  <p className="text-2xl font-bold text-white">
-                    {(userData?.prc_balance || 0).toFixed(2)} PRC
+                  <p className="text-sm text-blue-100 mb-1">Cashback Balance</p>
+                  <p className="text-3xl font-bold text-white">
+                    ₹{((userData?.cashback_wallet_balance || 0)).toFixed(2)}
                   </p>
+                  <p className="text-xs text-blue-200 mt-2">Available to withdraw</p>
                 </div>
-                <div className="flex items-center justify-between pt-3 border-t border-white/20">
-                  <div>
-                    <p className="text-sm text-blue-100">Cashback Balance</p>
-                    <p className="text-xl font-bold text-white">
-                      ₹{((userData?.cashback_wallet_balance || 0)).toFixed(2)}
-                    </p>
-                  </div>
-                  <ArrowRight className="h-6 w-6 text-white" />
-                </div>
+                <ArrowRight className="h-8 w-8 text-white opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
               </div>
             </Card>
           </Link>
