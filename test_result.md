@@ -1293,6 +1293,18 @@ frontend:
         agent: "testing"
         comment: "COMPREHENSIVE BACKEND PAGINATION TESTING COMPLETE - ALL FUNCTIONALITY WORKING PERFECTLY: ✅ CORE PAGINATION FUNCTIONALITY: Default pagination (20 items) working correctly, custom page & limit parameters working (tested page=1&limit=5), page 2 pagination working correctly (empty when total=1), response structure contains all required fields (products, total, page, limit, total_pages, has_more). ✅ METADATA VALIDATION: All metadata calculations accurate - total_pages calculation correct (1 for 1 product with limit 5), has_more calculation correct (false when no more products), metadata accuracy verified across different page/limit combinations. ✅ PRODUCT STRUCTURE: All required product fields present (product_id, name, sku, prc_price, cash_price), _id field properly excluded from responses, product data structure intact with no breaking changes. ✅ EDGE CASES & PERFORMANCE: Page beyond total pages returns empty array correctly, page=0 handled gracefully (returns 500 as expected), large limit (1000) handled successfully, performance excellent (0.036 seconds response time). ✅ SORTING VERIFIED: Products sorted by created_at descending (newest first) as implemented. Backend pagination optimization is production-ready and working end-to-end with all success criteria met."
 
+  - task: "Profit Wallet Transaction Logging for Delivery Charge Distribution"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Complete transaction logging for profit wallet credits during delivery charge distribution. Modified distribute_delivery_charge() function to call log_transaction() for each entity (Outlet, Sub Stockist, Master Stockist) when profit_wallet_balance is credited. Each transaction log includes: user_id, wallet_type='profit_wallet', transaction_type='profit_share', amount, description with order_id, metadata with order_id/entity_type/commission_percentage/total_commission, related_id=order_id, related_type='order'. Transactions are now properly logged in the 'transactions' collection with complete audit trail including balance_before, balance_after, transaction_id, status='completed', and created_at timestamp. This enables: 1) Full transaction history for stockists, 2) Audit trail for all profit wallet credits, 3) Integration with wallet transaction history endpoints, 4) Proper balance tracking and reconciliation. Ready for testing."
+
 agent_communication:
     -agent: "main"
     -message: "Communication message between agents"
