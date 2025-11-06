@@ -223,8 +223,35 @@ const CameraCapture = ({ onCapture, onClose, label = "Capture Photo", defaultFac
         {/* Content */}
         <div className="p-6">
           {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-              {error}
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-red-800 mb-1">Camera Access Error</p>
+                  <p className="text-red-700 text-sm">{error}</p>
+                  <button
+                    onClick={() => {
+                      setError(null);
+                      setUploadMode(false);
+                      startCamera();
+                    }}
+                    className="mt-3 text-sm text-red-600 hover:text-red-800 font-medium underline"
+                  >
+                    Try Again
+                  </button>
+                  <span className="mx-2 text-red-400">|</span>
+                  <button
+                    onClick={() => {
+                      setError(null);
+                      setUploadMode(true);
+                      fileInputRef.current?.click();
+                    }}
+                    className="text-sm text-red-600 hover:text-red-800 font-medium underline"
+                  >
+                    Choose File Instead
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
