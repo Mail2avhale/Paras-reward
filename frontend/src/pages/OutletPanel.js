@@ -289,14 +289,18 @@ const OutletPanel = ({ user, onLogout }) => {
           <Tabs defaultValue="inventory" className="w-full">
             <TabsList className="grid w-full grid-cols-5 mb-6">
               <TabsTrigger value="inventory">My Inventory</TabsTrigger>
+              <TabsTrigger value="hierarchy">My Parent</TabsTrigger>
               <TabsTrigger value="orders">Deliver Orders</TabsTrigger>
               <TabsTrigger value="stock-requests">Stock Requests</TabsTrigger>
-              <TabsTrigger value="stock">Stock</TabsTrigger>
               <TabsTrigger value="earnings">Earnings</TabsTrigger>
             </TabsList>
 
             <TabsContent value="inventory">
               <StockInventoryDisplay userId={user.uid} title="Outlet Inventory" />
+            </TabsContent>
+
+            <TabsContent value="hierarchy">
+              <StockistHierarchy user={user} userRole="outlet" />
             </TabsContent>
 
             <TabsContent value="orders">
