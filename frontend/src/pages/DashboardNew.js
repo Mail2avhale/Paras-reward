@@ -208,21 +208,34 @@ const DashboardNew = ({ user, onLogout }) => {
           </div>
         </Card>
 
-        {/* Quick Actions Grid */}
+        {/* Quick Menu - Enhanced with 8 options */}
         <div className="mb-6">
           <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <Zap className="h-5 w-5 text-yellow-400" />
-            Quick Actions
+            <Sparkles className="h-5 w-5 text-yellow-400" />
+            Quick Menu
           </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {quickActions.map((action, idx) => (
               <Link key={idx} to={action.link}>
-                <Card className="bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-2xl hover:scale-105 transition-all duration-300 hover:bg-white/15 cursor-pointer group">
-                  <div className={`bg-gradient-to-br ${action.gradient} p-3 rounded-xl mb-3 w-fit group-hover:scale-110 transition-transform`}>
+                <Card className="relative bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-2xl hover:scale-105 transition-all duration-300 hover:bg-white/15 cursor-pointer group overflow-hidden">
+                  {/* Badge */}
+                  {action.badge && (
+                    <div className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      {action.badge}
+                    </div>
+                  )}
+                  
+                  {/* Icon */}
+                  <div className={`bg-gradient-to-br ${action.gradient} p-3 rounded-xl mb-3 w-fit group-hover:scale-110 transition-transform shadow-lg`}>
                     <action.icon className="h-6 w-6 text-white" />
                   </div>
+                  
+                  {/* Text */}
                   <h4 className="font-semibold text-white text-sm mb-1">{action.name}</h4>
                   <p className="text-xs text-gray-300">{action.description}</p>
+                  
+                  {/* Hover effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
                 </Card>
               </Link>
             ))}
