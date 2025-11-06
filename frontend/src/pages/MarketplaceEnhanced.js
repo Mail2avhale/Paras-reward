@@ -274,6 +274,19 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
 
   const totalPRC = cart.items?.reduce((sum, item) => sum + (item.prc_price * item.quantity), 0) || 0;
 
+  // Early return with loading state to prevent render errors
+  if (!Array.isArray(products) || !Array.isArray(filteredProducts)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <Navbar user={user} onLogout={onLogout} />
+        <div className="container mx-auto px-4 py-20 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white">Loading marketplace...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <Navbar user={user} onLogout={onLogout} />
