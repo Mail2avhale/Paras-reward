@@ -1002,7 +1002,9 @@ def test_profit_wallet_transaction_logging():
         # Try to trigger distribution again - should not create duplicates
         print(f"\n7.1. Attempting duplicate distribution...")
         
-        response = requests.post(f"{API_BASE}/orders/{order_id}/distribute-delivery-charge", timeout=30)
+        # Send empty JSON object as the endpoint expects JSON
+        duplicate_data = {}
+        response = requests.post(f"{API_BASE}/orders/{order_id}/distribute-delivery-charge", json=duplicate_data, timeout=30)
         print(f"Duplicate Distribution Status: {response.status_code}")
         print(f"Response: {response.text}")
         
