@@ -2086,27 +2086,41 @@ async def checkout(request: Request):
     user_district = user.get("district", "").strip()
     user_state = user.get("state", "").strip()
     
+    logging.info(f"Checkout: Finding outlet for user district='{user_district}', state='{user_state}'")
+    
     if user_district:
         # Escape special regex characters and use case-insensitive matching
         escaped_district = re.escape(user_district)
+        logging.info(f"Checkout: Searching for outlet in district '{escaped_district}' (escaped)")
         nearest_outlet = await db.users.find_one({
             "role": "outlet",
             "district": {"$regex": f"^{escaped_district}$", "$options": "i"}
         })
+        if nearest_outlet:
+            logging.info(f"Checkout: Found outlet by district: {nearest_outlet.get('uid')}")
     
     if not nearest_outlet and user_state:
         # Escape special regex characters and use case-insensitive matching
         escaped_state = re.escape(user_state)
+        logging.info(f"Checkout: Searching for outlet in state '{escaped_state}' (escaped)")
         nearest_outlet = await db.users.find_one({
             "role": "outlet",
             "state": {"$regex": f"^{escaped_state}$", "$options": "i"}
         })
+        if nearest_outlet:
+            logging.info(f"Checkout: Found outlet by state: {nearest_outlet.get('uid')}")
     
     if not nearest_outlet:
         # Fall back to any active outlet
+        logging.info("Checkout: No outlet found by location, using fallback")
         nearest_outlet = await db.users.find_one({"role": "outlet"})
+        if nearest_outlet:
+            logging.info(f"Checkout: Found outlet via fallback: {nearest_outlet.get('uid')}")
+        else:
+            logging.warning("Checkout: No outlets found in database!")
     
     outlet_id = nearest_outlet.get("uid") if nearest_outlet else None
+    logging.info(f"Checkout: Final outlet_id assigned: {outlet_id}")
     
     # Create order
     order = Order(
