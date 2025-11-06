@@ -5450,6 +5450,35 @@ async def get_user_stock_inventory(user_id: str):
     inventory = await db.stock_inventory.find({"user_id": user_id}, {"_id": 0}).to_list(None)
     return {"inventory": inventory}
 
+@api_router.get("/stock/inventory/all-stock")
+async def get_all_stock_aggregated():
+    """Get aggregated stock across all users for marketplace display"""
+    try:
+        # Aggregate stock by product_id
+        pipeline = [
+            {
+                "$group": {
+                    "_id": "$product_id",
+                    "total_quantity": {"$sum": "$quantity"},
+                    "product_name": {"$first": "$product_name"}
+                }
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "product_id": "$_id",
+                    "quantity": "$total_quantity",
+                    "product_name": 1
+                }
+            }
+        ]
+        
+        inventory = await db.stock_inventory.aggregate(pipeline).to_list(None)
+        return {"inventory": inventory}
+    except Exception as e:
+        print(f"Error aggregating stock: {str(e)}")
+        return {"inventory": []}
+
 @api_router.post("/admin/stock/add")
 async def admin_add_stock(request: Request):
     """Admin: Add stock to company inventory"""
