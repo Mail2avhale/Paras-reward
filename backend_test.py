@@ -1034,29 +1034,79 @@ def test_complete_profit_wallet_transaction_logging_flow():
     print("=" * 60)
     
     try:
-        for entity_name, entity_uid in entities:
-            print(f"\n4.{entities.index((entity_name, entity_uid)) + 1}. Testing {entity_name} transaction history...")
+        # Step 5.1: GET /api/wallet/transactions/{outlet_uid}
+        print(f"\n5.1. Testing outlet transaction history...")
+        
+        response = requests.get(f"{API_BASE}/wallet/transactions/{outlet_uid}", timeout=30)
+        if response.status_code == 200:
+            result = response.json()
+            transactions = result.get("transactions", [])
             
-            response = requests.get(f"{API_BASE}/wallet/transactions/{entity_uid}", timeout=30)
-            if response.status_code == 200:
-                result = response.json()
-                transactions = result.get("transactions", [])
-                
-                print(f"   ✅ Transaction history accessible")
-                print(f"   📋 Total transactions: {len(transactions)}")
-                
-                # Look for profit wallet transactions
-                profit_txns = [t for t in transactions if t.get("wallet_type") == "profit_wallet"]
-                print(f"   📋 Profit wallet transactions: {len(profit_txns)}")
-                
-                if profit_txns:
-                    test_results["transaction_history_integration"] = True
-                    print(f"   ✅ Profit wallet transactions appear in history")
-            else:
-                print(f"   ❌ Transaction history failed: {response.status_code}")
+            print(f"   ✅ Outlet transaction history accessible")
+            print(f"   📋 Total transactions: {len(transactions)}")
+            
+            # Look for profit wallet transactions
+            profit_txns = [t for t in transactions if t.get("wallet_type") == "profit_wallet"]
+            print(f"   📋 Profit wallet transactions: {len(profit_txns)}")
+            
+            if profit_txns:
+                test_results["outlet_transaction_history"] = True
+                print(f"   ✅ Profit wallet transactions appear in outlet history")
+        else:
+            print(f"   ❌ Outlet transaction history failed: {response.status_code}")
+        
+        # Step 5.2: GET /api/wallet/transactions/{sub_stockist_uid}
+        print(f"\n5.2. Testing sub stockist transaction history...")
+        
+        response = requests.get(f"{API_BASE}/wallet/transactions/{sub_uid}", timeout=30)
+        if response.status_code == 200:
+            result = response.json()
+            transactions = result.get("transactions", [])
+            
+            print(f"   ✅ Sub stockist transaction history accessible")
+            print(f"   📋 Total transactions: {len(transactions)}")
+            
+            # Look for profit wallet transactions
+            profit_txns = [t for t in transactions if t.get("wallet_type") == "profit_wallet"]
+            print(f"   📋 Profit wallet transactions: {len(profit_txns)}")
+            
+            if profit_txns:
+                test_results["sub_stockist_transaction_history"] = True
+                print(f"   ✅ Profit wallet transactions appear in sub stockist history")
+        else:
+            print(f"   ❌ Sub stockist transaction history failed: {response.status_code}")
+        
+        # Step 5.3: GET /api/wallet/transactions/{master_stockist_uid}
+        print(f"\n5.3. Testing master stockist transaction history...")
+        
+        response = requests.get(f"{API_BASE}/wallet/transactions/{master_uid}", timeout=30)
+        if response.status_code == 200:
+            result = response.json()
+            transactions = result.get("transactions", [])
+            
+            print(f"   ✅ Master stockist transaction history accessible")
+            print(f"   📋 Total transactions: {len(transactions)}")
+            
+            # Look for profit wallet transactions
+            profit_txns = [t for t in transactions if t.get("wallet_type") == "profit_wallet"]
+            print(f"   📋 Profit wallet transactions: {len(profit_txns)}")
+            
+            if profit_txns:
+                test_results["master_stockist_transaction_history"] = True
+                print(f"   ✅ Profit wallet transactions appear in master stockist history")
+        else:
+            print(f"   ❌ Master stockist transaction history failed: {response.status_code}")
+        
+        # Step 5.4: Verify profit wallet transactions appear in each user's history
+        if (test_results["outlet_transaction_history"] and 
+            test_results["sub_stockist_transaction_history"] and 
+            test_results["master_stockist_transaction_history"]):
+            print(f"\n✅ All entities have profit wallet transactions in their history")
+        else:
+            print(f"\n⚠️  Some entities missing profit wallet transactions in history")
                 
     except Exception as e:
-        print(f"❌ Error testing transaction history: {e}")
+        print(f"❌ Error in Phase 5: {e}")
     
     # Test 4: Balance Tracking
     print(f"\n5. BALANCE TRACKING VERIFICATION")
