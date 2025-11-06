@@ -153,6 +153,25 @@ const ManagerDashboard = ({ user, onLogout }) => {
     }
   };
 
+  const handleWithdrawalAction = async (withdrawalId, type, action) => {
+    try {
+      const endpoint = type === 'cashback' 
+        ? `/admin/withdrawals/cashback/${withdrawalId}/${action}`
+        : `/admin/withdrawals/profit/${withdrawalId}/${action}`;
+      
+      await axios.post(`${API}${endpoint}`, {
+        admin_notes: `${action} by manager`
+      });
+      
+      toast.success(`Withdrawal ${action}d successfully!`);
+      fetchWithdrawals();
+      fetchManagerStats();
+    } catch (error) {
+      console.error('Error handling withdrawal:', error);
+      toast.error(error.response?.data?.detail || 'Action failed');
+    }
+  };
+
   const menuItems = [
     { id: 'overview', icon: TrendingUp, label: 'Overview' },
     { id: 'kyc', icon: FileText, label: 'KYC Verification' },
