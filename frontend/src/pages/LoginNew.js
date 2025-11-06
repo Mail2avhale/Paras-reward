@@ -289,6 +289,24 @@ const LoginNew = ({ onLogin }) => {
           <Link to="/privacy" className="text-purple-600 hover:underline">Privacy Policy</Link>
         </p>
       </Card>
+
+      {/* Biometric Setup Prompt */}
+      {showBiometricSetupPrompt && loggedInUser && (
+        <BiometricSetup
+          user={loggedInUser}
+          onClose={() => {
+            localStorage.setItem('biometric_setup_shown', 'true');
+            setShowBiometricSetupPrompt(false);
+            onLogin(loggedInUser);
+            navigate(loggedInUser.role === 'admin' ? '/admin' : '/dashboard');
+          }}
+          onSuccess={() => {
+            localStorage.setItem('biometric_setup_shown', 'true');
+            onLogin(loggedInUser);
+            navigate(loggedInUser.role === 'admin' ? '/admin' : '/dashboard');
+          }}
+        />
+      )}
     </div>
   );
 };
