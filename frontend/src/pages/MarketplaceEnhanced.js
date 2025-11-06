@@ -484,7 +484,16 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
           <Card className="p-12 text-center bg-white/10 backdrop-blur-xl border border-white/20">
             <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">No Products Found</h3>
-            <p className="text-gray-300">Try adjusting your search or filters</p>
+            <p className="text-gray-300 mb-4">Try adjusting your search or filters</p>
+            <Button 
+              onClick={() => {
+                setSearchTerm('');
+                setSelectedCategory('all');
+              }}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              Clear Filters
+            </Button>
           </Card>
         ) : (
           <>
