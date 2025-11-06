@@ -1034,3 +1034,48 @@ backend:
       - working: true
         agent: "main"
         comment: "FIXED: Stock request parent assignment issue. Problem: Code was looking for 'assigned_sub_stockist' for outlets and 'assigned_master_stockist' for sub stockists, but create/assign endpoints only set 'parent_id'. Solution: 1) Updated /admin/stockists/assign endpoint to set both parent_id AND role-specific fields (assigned_sub_stockist for outlets, assigned_master_stockist for sub stockists). 2) Updated /admin/stockists/create endpoint to set role-specific parent fields during creation. 3) Created fix_parent_assignments.py script to fix existing users who only had parent_id. Script ran successfully: Fixed 1 outlet (outlet@paras.com) and 1 sub stockist (sub@paras.com). Now outlets can request stock from their assigned sub stockist and sub stockists can request from their assigned master stockist without errors."
+
+frontend:
+  - task: "Marketplace Products Loading Error Fix"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/MarketplaceEnhanced.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported: When admin moves to marketplace, error occurred: 'products.map is not a function'. Screenshot showed TypeError in console."
+      - working: true
+        agent: "main"
+        comment: "FIXED: Added array validation in fetchProducts() and getCategories(). Changes: 1) fetchProducts() now ensures response.data is array before setting (Array.isArray check). 2) Sets empty array [] on error. 3) Added toast.error on fetch failure. 4) getCategories() checks if products is array before mapping. 5) Returns ['all'] if products empty. Prevents 'map is not a function' error when API fails or returns non-array data."
+
+frontend:
+  - task: "Stock Request Edit/Delete Button Permissions"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/StockRequestSystem.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported: When admin approves master stockist stock request, error occurred: 'You can only edit your own requests'. Admin was seeing Edit and Delete buttons for requests made TO them, not BY them."
+      - working: true
+        agent: "main"
+        comment: "FIXED: Added requester ownership check for Edit/Delete buttons. Change: Updated condition from 'req.status === pending' to 'req.status === pending && req.requester_id === user.uid'. Now Edit and Delete buttons only show for requests created BY the current user, not requests TO the current user. Admin sees Approve/Reject buttons for incoming requests (correct), and Edit/Delete buttons only for their own outgoing requests (if any). Fixed authorization error."
+
+backend:
+  - task: "Admin Inventory Documentation"
+    implemented: true
+    working: "info"
+    file: "N/A - Documentation issue"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: false
+    status_history:
+      - working: "info"
+        agent: "main"
+        comment: "CLARIFIED: User reported admin inventory showing empty (No Stock Available). Investigation revealed: Admin actually HAS 0 stock items in database. This is EXPECTED behavior - admin must add stock via 'Add Stock' button in My Inventory tab. Empty inventory is not a bug, it's the initial state. Admin needs to manually add products to company inventory using the 'Add Stock' modal. Backend endpoint /stock/inventory/my-stock/{uid} is working correctly - it accurately shows 0 items because admin hasn't added any stock yet."
