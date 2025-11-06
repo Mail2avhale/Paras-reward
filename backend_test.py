@@ -768,7 +768,9 @@ def test_profit_wallet_transaction_logging():
         # Step 3: Trigger delivery charge distribution explicitly
         print(f"\n2.3. Triggering delivery charge distribution...")
         
-        response = requests.post(f"{API_BASE}/orders/{order_id}/distribute-delivery-charge", timeout=30)
+        # Send empty JSON object as the endpoint expects JSON
+        distribution_data = {}
+        response = requests.post(f"{API_BASE}/orders/{order_id}/distribute-delivery-charge", json=distribution_data, timeout=30)
         print(f"Distribution Status: {response.status_code}")
         print(f"Response: {response.text}")
         
