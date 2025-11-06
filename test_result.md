@@ -1304,6 +1304,21 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "IMPLEMENTED: Complete transaction logging for profit wallet credits during delivery charge distribution. Modified distribute_delivery_charge() function to call log_transaction() for each entity (Outlet, Sub Stockist, Master Stockist) when profit_wallet_balance is credited. Each transaction log includes: user_id, wallet_type='profit_wallet', transaction_type='profit_share', amount, description with order_id, metadata with order_id/entity_type/commission_percentage/total_commission, related_id=order_id, related_type='order'. Transactions are now properly logged in the 'transactions' collection with complete audit trail including balance_before, balance_after, transaction_id, status='completed', and created_at timestamp. This enables: 1) Full transaction history for stockists, 2) Audit trail for all profit wallet credits, 3) Integration with wallet transaction history endpoints, 4) Proper balance tracking and reconciliation. Ready for testing."
+      - working: "NA"
+        agent: "main"
+        comment: "ADDITIONAL FIX: Implemented automatic outlet assignment during checkout to resolve delivery charge distribution issue. Checkout now auto-assigns orders to nearest outlet based on user's district, then state, then any available outlet. Added outlet_id and assigned_outlet fields to order during creation. Updated admin order assignment endpoint to use consistent field names (outlet_id, assigned_outlet, assigned_outlet_id). This fixes the critical blocker where orders had no outlet assignment, preventing delivery and commission distribution. Ready for comprehensive testing of full flow: checkout → outlet assignment → delivery → profit wallet distribution → transaction logging."
+
+  - task: "Automatic Outlet Assignment During Checkout"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Automatic outlet assignment logic in checkout endpoint. System now finds nearest outlet based on user location hierarchy: 1) Same district (case-insensitive match), 2) Same state (if no district match), 3) Any active outlet (fallback). During order creation, outlet_id and assigned_outlet fields are set automatically. Updated admin assignment endpoint (POST /admin/orders/{order_id}/assign) to use consistent field names across the system (outlet_id, assigned_outlet, assigned_outlet_id for backward compatibility). This resolves the critical issue preventing delivery charge distribution and profit wallet transaction logging. Ready for end-to-end testing."
 
 agent_communication:
     -agent: "main"
