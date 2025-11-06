@@ -33,10 +33,11 @@ const Marketplace = ({ user, onLogout }) => {
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get(`${API}/products`);
-      setProducts(response.data);
+      const response = await axios.get(`${API}/products?page=1&limit=1000`);
+      setProducts(response.data?.products || []);
     } catch (error) {
       console.error('Error fetching products:', error);
+      setProducts([]);
     }
   };
 
