@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import StockInventoryDisplay from '@/components/StockInventoryDisplay';
+import StockistHierarchy from '@/components/StockistHierarchy';
 import StockRequestSystem from '@/pages/StockRequestSystem';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
