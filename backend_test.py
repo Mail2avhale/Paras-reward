@@ -634,7 +634,7 @@ def test_complete_profit_wallet_transaction_logging_flow():
     # Outlet
     outlet_user_data = {
         "first_name": "Outlet",
-        "last_name": "Owner",
+        "last_name": "TxnTest",
         "email": f"outlet_txn_{timestamp}@test.com",
         "mobile": f"9876542{timestamp % 1000:03d}",
         "password": "secure123456",
