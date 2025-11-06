@@ -1192,6 +1192,30 @@ async def get_user(uid: str):
     
     return user
 
+@api_router.get("/users/children/{uid}")
+async def get_user_children(uid: str):
+    """Get children (subordinates) of a user"""
+    try:
+        # Find users where parent_id or assigned_* fields match this uid
+        children = await db.users.find({
+            "$or": [
+                {"parent_id": uid},
+                {"assigned_master_stockist": uid},
+                {"assigned_sub_stockist": uid}
+            ]
+        }).to_list(None)
+        
+        # Remove sensitive data from each child
+        for child in children:
+            child.pop("password_hash", None)
+            child.pop("reset_token", None)
+            child.pop("_id", None)
+        
+        return {"children": children, "count": len(children)}
+    except Exception as e:
+        print(f"Error fetching children: {str(e)}")
+        return {"children": [], "count": 0}
+
 @api_router.put("/user/{uid}/profile")
 async def update_profile(uid: str, request: Request):
     """Update user profile"""
