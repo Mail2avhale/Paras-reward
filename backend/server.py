@@ -2086,17 +2086,21 @@ async def checkout(request: Request):
     user_state = user.get("state", "").strip()
     
     if user_district:
-        # Use case-insensitive regex for flexible matching
+        # Escape special regex characters and use case-insensitive matching
+        import re
+        escaped_district = re.escape(user_district)
         nearest_outlet = await db.users.find_one({
             "role": "outlet",
-            "district": {"$regex": f"^{user_district}$", "$options": "i"}
+            "district": {"$regex": f"^{escaped_district}$", "$options": "i"}
         })
     
     if not nearest_outlet and user_state:
-        # Use case-insensitive regex for flexible matching
+        # Escape special regex characters and use case-insensitive matching
+        import re
+        escaped_state = re.escape(user_state)
         nearest_outlet = await db.users.find_one({
             "role": "outlet",
-            "state": {"$regex": f"^{user_state}$", "$options": "i"}
+            "state": {"$regex": f"^{escaped_state}$", "$options": "i"}
         })
     
     if not nearest_outlet:
