@@ -3342,8 +3342,76 @@ def print_cart_test_summary(results):
         for test in failed_tests:
             print(f"   - {test.replace('_', ' ').title()}: FAILED")
 
+def run_admin_marketplace_fix_test():
+    """Run focused test for Admin Marketplace Products API fix"""
+    print("\n" + "🎯" * 80)
+    print("ADMIN MARKETPLACE PRODUCTS API FIX - FOCUSED TESTING")
+    print("🎯" * 80)
+    
+    results = {
+        "admin_marketplace_fix": False,
+        "test_completed": False
+    }
+    
+    try:
+        # Run the focused test for the admin marketplace products API fix
+        print("\n🔧 TESTING ADMIN MARKETPLACE PRODUCTS API STRUCTURE FIX")
+        fix_results = test_admin_marketplace_products_api_fix()
+        
+        # Check critical success criteria
+        critical_tests = [
+            "admin_products_structure",
+            "admin_products_total_field", 
+            "admin_products_products_array",
+            "admin_products_no_id_field"
+        ]
+        
+        critical_passed = all(fix_results.get(test, False) for test in critical_tests)
+        
+        if critical_passed:
+            results["admin_marketplace_fix"] = True
+            print("\n✅ ADMIN MARKETPLACE PRODUCTS API FIX TESTS PASSED")
+        else:
+            print("\n❌ ADMIN MARKETPLACE PRODUCTS API FIX TESTS FAILED")
+            
+        results["test_completed"] = True
+        
+    except Exception as e:
+        print(f"\n❌ ERROR DURING TESTING: {e}")
+        results["test_completed"] = False
+    
+    # Final Summary
+    print("\n" + "📊" * 80)
+    print("ADMIN MARKETPLACE FIX TEST SUMMARY")
+    print("📊" * 80)
+    
+    print(f"\n🎯 CRITICAL FIX VERIFICATION:")
+    print(f"   Admin Products API Structure: {'✅ PASS' if fix_results.get('admin_products_structure') else '❌ FAIL'}")
+    print(f"   Response has 'total' field: {'✅ PASS' if fix_results.get('admin_products_total_field') else '❌ FAIL'}")
+    print(f"   Response has 'products' array: {'✅ PASS' if fix_results.get('admin_products_products_array') else '❌ FAIL'}")
+    print(f"   No _id field in responses: {'✅ PASS' if fix_results.get('admin_products_no_id_field') else '❌ FAIL'}")
+    print(f"   Required product fields: {'✅ PASS' if fix_results.get('admin_products_required_fields') else '❌ FAIL'}")
+    
+    print(f"\n🔧 SUPPORTING APIS:")
+    print(f"   Admin Stats API: {'✅ PASS' if fix_results.get('admin_stats_api') else '❌ FAIL'}")
+    print(f"   Order Delivery Endpoint: {'✅ PASS' if fix_results.get('order_delivery_endpoint') else '❌ FAIL'}")
+    print(f"   Manager Support Tickets: {'✅ PASS' if fix_results.get('manager_support_tickets') else '❌ FAIL'}")
+    print(f"   Manager Membership Payments: {'✅ PASS' if fix_results.get('manager_membership_payments') else '❌ FAIL'}")
+    print(f"   Manager KYC List: {'✅ PASS' if fix_results.get('manager_kyc_list') else '❌ FAIL'}")
+    
+    print(f"\n🏆 OVERALL RESULT:")
+    if results["admin_marketplace_fix"]:
+        print("✅ ADMIN MARKETPLACE PRODUCTS API FIX VERIFIED SUCCESSFULLY")
+        print("   The frontend bug has been resolved - StockTransferRequest component")
+        print("   can now correctly access response.data.products array instead of")
+        print("   trying to map the entire response object.")
+    else:
+        print("❌ ADMIN MARKETPLACE PRODUCTS API FIX VERIFICATION FAILED")
+        print("   The API structure may not match frontend expectations.")
+        print("   Frontend may still encounter mapping errors.")
+    
+    return results
+
 if __name__ == "__main__":
-    # Test complete cart order placement flow after backend fixes
-    print("🚀 STARTING COMPLETE CART ORDER PLACEMENT FLOW TESTING")
-    cart_results = test_cart_order_placement_flow()
-    print_cart_test_summary(cart_results)
+    # Run the focused test for the admin marketplace products API fix
+    run_admin_marketplace_fix_test()
