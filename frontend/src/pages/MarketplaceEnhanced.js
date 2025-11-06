@@ -110,6 +110,12 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
   };
 
   const filterAndSortProducts = () => {
+    // Ensure products is an array
+    if (!Array.isArray(products)) {
+      setFilteredProducts([]);
+      return;
+    }
+    
     let filtered = [...products];
 
     // Search filter
