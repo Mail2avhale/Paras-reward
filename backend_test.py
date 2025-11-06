@@ -751,7 +751,9 @@ def test_profit_wallet_transaction_logging():
         # Step 2: Mark order as delivered (this should trigger distribution)
         print(f"\n2.2. Marking order as delivered...")
         
-        response = requests.post(f"{API_BASE}/orders/{order_id}/deliver", timeout=30)
+        # Send empty JSON object as the endpoint expects JSON
+        delivery_data = {}
+        response = requests.post(f"{API_BASE}/orders/{order_id}/deliver", json=delivery_data, timeout=30)
         print(f"Deliver Status: {response.status_code}")
         print(f"Response: {response.text}")
         
