@@ -12,6 +12,7 @@ from datetime import datetime, timezone, timedelta
 import secrets
 import string
 import base64
+import re
 from passlib.context import CryptContext
 
 ROOT_DIR = Path(__file__).parent
