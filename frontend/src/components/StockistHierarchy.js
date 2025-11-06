@@ -11,6 +11,7 @@ const StockistHierarchy = ({ user, userRole }) => {
   const [parent, setParent] = useState(null);
   const [children, setChildren] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fullUserData, setFullUserData] = useState(null);
 
   useEffect(() => {
     fetchHierarchy();
@@ -18,6 +19,11 @@ const StockistHierarchy = ({ user, userRole }) => {
 
   const fetchHierarchy = async () => {
     try {
+      // First, fetch the full user data to get parent_id fields
+      const userResponse = await axios.get(`${API}/users/${user.uid}`);
+      const userData = userResponse.data;
+      setFullUserData(userData);
+      
       // Fetch parent if not master_stockist
       if (userRole !== 'master_stockist') {
         // Try multiple fields to find parent: parent_id, assigned_sub_stockist, assigned_master_stockist
@@ -25,10 +31,10 @@ const StockistHierarchy = ({ user, userRole }) => {
         
         if (userRole === 'outlet') {
           // For outlets, check parent_id first, then assigned_sub_stockist
-          parentId = user.parent_id || user.assigned_sub_stockist;
+          parentId = userData.parent_id || userData.assigned_sub_stockist;
         } else if (userRole === 'sub_stockist') {
           // For sub stockists, check parent_id first, then assigned_master_stockist
-          parentId = user.parent_id || user.assigned_master_stockist;
+          parentId = userData.parent_id || userData.assigned_master_stockist;
         }
         
         if (parentId) {
@@ -37,12 +43,13 @@ const StockistHierarchy = ({ user, userRole }) => {
             setParent(parentResponse.data);
           } catch (err) {
             console.warn('Could not fetch parent:', err);
+            toast.error('Could not load parent information');
           }
         } else {
           console.log('No parent ID found in user data:', {
-            parent_id: user.parent_id,
-            assigned_sub_stockist: user.assigned_sub_stockist,
-            assigned_master_stockist: user.assigned_master_stockist,
+            parent_id: userData.parent_id,
+            assigned_sub_stockist: userData.assigned_sub_stockist,
+            assigned_master_stockist: userData.assigned_master_stockist,
             role: userRole
           });
         }
@@ -53,6 +60,7 @@ const StockistHierarchy = ({ user, userRole }) => {
       setChildren(childrenResponse.data.children || []);
     } catch (error) {
       console.error('Error fetching hierarchy:', error);
+      toast.error('Failed to load hierarchy data');
     } finally {
       setLoading(false);
     }
