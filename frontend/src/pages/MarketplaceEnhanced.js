@@ -51,9 +51,13 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
   const fetchProducts = async () => {
     try {
       const response = await axios.get(`${API}/products`);
-      setProducts(response.data);
+      // Ensure products is always an array
+      const productData = Array.isArray(response.data) ? response.data : [];
+      setProducts(productData);
     } catch (error) {
       console.error('Error fetching products:', error);
+      toast.error('Failed to load products');
+      setProducts([]); // Set empty array on error
     }
   };
 
