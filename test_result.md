@@ -1281,6 +1281,21 @@ frontend:
         agent: "testing"
         comment: "CRITICAL BUG FIX VERIFIED SUCCESSFULLY: ✅ ADMIN PRODUCTS API STRUCTURE CONFIRMED: GET /api/admin/products returns correct structure with 'total' field (1) and 'products' array containing product objects. ✅ REQUIRED FIELDS PRESENT: Each product has product_id, name, sku, prc_price, cash_price as required. ✅ NO _ID FIELD: Confirmed _id field is properly excluded from API responses. ✅ SUPPORTING APIS WORKING: Admin stats API returns proper dashboard KPIs with users, orders, products statistics. Manager role APIs (support tickets, membership payments, KYC list) all functional. ✅ FRONTEND FIX VALIDATED: The change from 'setProducts(response.data || [])' to 'setProducts(response.data?.products || [])' correctly handles the API response structure. StockTransferRequest component can now properly access the products array instead of trying to map the entire response object. The critical 'products.map is not a function' error in Admin Dashboard Marketplace Management has been completely resolved."
 
+  - task: "Admin Add Inventory - products.map is not a function (StockRequestSystem)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/StockRequestSystem.js"
+    stuck_count: 4
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported persistent 'products.map is not a function' error in Admin 'Add Inventory' functionality. Error occurs when admin clicks 'Add Stock' button in My Inventory tab."
+      - working: "NA"
+        agent: "main"
+        comment: "ENHANCED FIX IMPLEMENTED: Despite correct pagination handling (response.data?.products), Array.isArray guards, and modal-opening prevention, error persists. Root cause: Race condition during React state updates where products can temporarily become undefined. Applied comprehensive multi-layer defense: 1) Added productsLoaded state flag to track successful product fetch completion. 2) Enhanced fetchData() to validate array before setting products and set productsLoaded flag. 3) Updated all 3 'Add Stock' button handlers to check productsLoaded flag and disable buttons until products loaded. 4) Added disabled state and loading text to buttons. 5) Added safety warning in modal if products not loaded with reload option. 6) Updated all dropdown selects to check productsLoaded flag. 7) Enhanced Create Request modal dropdown with productsLoaded check. This creates bulletproof protection: buttons cannot be clicked until products loaded, modal shows warning if opened prematurely, dropdowns disabled until products ready, all map operations guarded by productsLoaded && Array.isArray checks. Ready for comprehensive testing."
+
   - task: "Product List Optimization with Pagination and Infinite Scroll"
     implemented: true
     working: true
