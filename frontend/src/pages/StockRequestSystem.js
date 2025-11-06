@@ -90,12 +90,22 @@ const StockRequestSystem = () => {
       const productsRes = await axios.get(`${API}/products?page=1&limit=1000`);
       const fetchedProducts = productsRes.data?.products || [];
       console.log('Fetched products:', fetchedProducts); // Debug log
-      setProducts(Array.isArray(fetchedProducts) ? fetchedProducts : []);
+      
+      // Validate that we got an array before setting
+      if (Array.isArray(fetchedProducts) && fetchedProducts.length >= 0) {
+        setProducts(fetchedProducts);
+        setProductsLoaded(true);
+      } else {
+        console.error('Products is not an array:', fetchedProducts);
+        setProducts([]);
+        setProductsLoaded(false);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to fetch data');
       // Ensure products is set to empty array on error
       setProducts([]);
+      setProductsLoaded(false);
     } finally {
       setLoading(false);
     }
