@@ -1,7 +1,7 @@
 // Enhanced Service Worker for PARAS REWARD PWA
-const CACHE_NAME = 'paras-reward-v2';
-const RUNTIME_CACHE = 'paras-runtime-v2';
-const API_CACHE = 'paras-api-v2';
+const CACHE_NAME = 'paras-reward-v3';
+const RUNTIME_CACHE = 'paras-runtime-v3';
+const API_CACHE = 'paras-api-v3';
 
 // Static assets to cache
 const urlsToCache = [
