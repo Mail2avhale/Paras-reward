@@ -270,14 +270,22 @@ const DashboardNew = ({ user, onLogout }) => {
                   <Wallet className="h-8 w-8 text-white" />
                 </div>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="space-y-3">
                 <div>
-                  <p className="text-3xl font-bold text-white">
-                    ₹{((userData?.cashback_wallet_balance || 0)).toFixed(2)}
+                  <p className="text-sm text-blue-100">PRC Balance</p>
+                  <p className="text-2xl font-bold text-white">
+                    {(userData?.prc_balance || 0).toFixed(2)} PRC
                   </p>
-                  <p className="text-sm text-blue-100">Available Balance</p>
                 </div>
-                <ArrowRight className="h-6 w-6 text-white" />
+                <div className="flex items-center justify-between pt-3 border-t border-white/20">
+                  <div>
+                    <p className="text-sm text-blue-100">Cashback Balance</p>
+                    <p className="text-xl font-bold text-white">
+                      ₹{((userData?.cashback_wallet_balance || 0)).toFixed(2)}
+                    </p>
+                  </div>
+                  <ArrowRight className="h-6 w-6 text-white" />
+                </div>
               </div>
             </Card>
           </Link>
