@@ -1537,7 +1537,14 @@ const AdminDashboard = ({ user, onLogout }) => {
               
               {/* Advanced Management - Direct View (Basic Management removed as all functions available here) */}
               <AdvancedUserManagement />
-              {(() => {
+            </div>
+          )}
+
+          {/* Payments Tab */}
+          {activeTab === 'payments' && (
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">VIP Payment Approvals</h2>
+              {vipPayments.filter(p => p.status === 'pending').length === 0 ? (
                 // Filter users based on search and role
                 const filteredUsers = users.filter(u => {
                   const matchesSearch = !searchQuery || 
