@@ -302,12 +302,38 @@ const LoginNew = ({ onLogin }) => {
             localStorage.setItem('biometric_setup_shown', 'true');
             setShowBiometricSetupPrompt(false);
             onLogin(loggedInUser);
-            navigate(loggedInUser.role === 'admin' ? '/admin' : '/dashboard');
+            // Navigate based on role
+            if (loggedInUser.role === 'admin') {
+              navigate('/admin');
+            } else if (loggedInUser.role === 'manager') {
+              navigate('/manager');
+            } else if (loggedInUser.role === 'master_stockist') {
+              navigate('/master-stockist');
+            } else if (loggedInUser.role === 'sub_stockist') {
+              navigate('/sub-stockist');
+            } else if (loggedInUser.role === 'outlet') {
+              navigate('/outlet');
+            } else {
+              navigate('/dashboard');
+            }
           }}
           onSuccess={() => {
             localStorage.setItem('biometric_setup_shown', 'true');
             onLogin(loggedInUser);
-            navigate(loggedInUser.role === 'admin' ? '/admin' : '/dashboard');
+            // Navigate based on role
+            if (loggedInUser.role === 'admin') {
+              navigate('/admin');
+            } else if (loggedInUser.role === 'manager') {
+              navigate('/manager');
+            } else if (loggedInUser.role === 'master_stockist') {
+              navigate('/master-stockist');
+            } else if (loggedInUser.role === 'sub_stockist') {
+              navigate('/sub-stockist');
+            } else if (loggedInUser.role === 'outlet') {
+              navigate('/outlet');
+            } else {
+              navigate('/dashboard');
+            }
           }}
         />
       )}
