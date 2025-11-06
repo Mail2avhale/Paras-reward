@@ -543,10 +543,20 @@ def test_withdrawal_management():
     
     return test_results
 
-def test_profit_wallet_transaction_logging():
-    """Test Profit Wallet Transaction Logging Verification"""
+def test_complete_profit_wallet_transaction_logging_flow():
+    """
+    COMPLETE PROFIT WALLET TRANSACTION LOGGING FLOW TEST
+    
+    Tests the complete flow as requested in the review:
+    Phase 1: Outlet Assignment - verify orders get outlet_id and assigned_outlet fields
+    Phase 2: Order Delivery - mark order as delivered without "No outlet assigned" error  
+    Phase 3: Delivery Charge Distribution - trigger distribution and verify commission updates
+    Phase 4: Transaction Logging Verification (MAIN FOCUS) - verify transaction records for profit_share
+    Phase 5: Transaction History Integration - verify transactions appear in wallet history
+    Phase 6: End-to-End Verification - complete audit trail verification
+    """
     print("\n" + "💰" * 80)
-    print("TESTING PROFIT WALLET TRANSACTION LOGGING VERIFICATION")
+    print("COMPLETE PROFIT WALLET TRANSACTION LOGGING FLOW TEST")
     print("💰" * 80)
     
     test_results = {
