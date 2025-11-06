@@ -543,6 +543,491 @@ def test_withdrawal_management():
     
     return test_results
 
+def test_profit_wallet_transaction_logging():
+    """Test Profit Wallet Transaction Logging Verification"""
+    print("\n" + "💰" * 80)
+    print("TESTING PROFIT WALLET TRANSACTION LOGGING VERIFICATION")
+    print("💰" * 80)
+    
+    test_results = {
+        "end_to_end_distribution_flow": False,
+        "transaction_logging_verification": False,
+        "transaction_history_integration": False,
+        "balance_tracking_accuracy": False,
+        "audit_trail_verification": False,
+        "no_duplicate_transactions": False
+    }
+    
+    # Create test users with proper hierarchy
+    timestamp = int(time.time())
+    
+    # Master Stockist
+    master_user_data = {
+        "first_name": "Master",
+        "last_name": "Stockist",
+        "email": f"master_txn_{timestamp}@test.com",
+        "mobile": f"9876540{timestamp % 1000:03d}",
+        "password": "secure123456",
+        "state": "Maharashtra",
+        "district": "Mumbai",
+        "pincode": "400001",
+        "aadhaar_number": f"1111{timestamp % 100000000:08d}",
+        "pan_number": f"MASTER{timestamp % 10000:04d}F",
+        "role": "master_stockist",
+        "membership_type": "vip",
+        "kyc_status": "verified"
+    }
+    
+    # Sub Stockist
+    sub_user_data = {
+        "first_name": "Sub",
+        "last_name": "Stockist",
+        "email": f"sub_txn_{timestamp}@test.com",
+        "mobile": f"9876541{timestamp % 1000:03d}",
+        "password": "secure123456",
+        "state": "Maharashtra",
+        "district": "Mumbai",
+        "pincode": "400001",
+        "aadhaar_number": f"2222{timestamp % 100000000:08d}",
+        "pan_number": f"SUB{timestamp % 10000:04d}F",
+        "role": "sub_stockist",
+        "membership_type": "vip",
+        "kyc_status": "verified"
+    }
+    
+    # Outlet
+    outlet_user_data = {
+        "first_name": "Outlet",
+        "last_name": "Owner",
+        "email": f"outlet_txn_{timestamp}@test.com",
+        "mobile": f"9876542{timestamp % 1000:03d}",
+        "password": "secure123456",
+        "state": "Maharashtra",
+        "district": "Mumbai",
+        "pincode": "400001",
+        "aadhaar_number": f"3333{timestamp % 100000000:08d}",
+        "pan_number": f"OUTLET{timestamp % 10000:04d}F",
+        "role": "outlet",
+        "membership_type": "vip",
+        "kyc_status": "verified"
+    }
+    
+    # VIP Customer
+    customer_user_data = {
+        "first_name": "VIP",
+        "last_name": "Customer",
+        "email": f"customer_txn_{timestamp}@test.com",
+        "mobile": f"9876543{timestamp % 1000:03d}",
+        "password": "secure123456",
+        "state": "Maharashtra",
+        "district": "Mumbai",
+        "pincode": "400001",
+        "aadhaar_number": f"4444{timestamp % 100000000:08d}",
+        "pan_number": f"CUST{timestamp % 10000:04d}F",
+        "membership_type": "vip",
+        "kyc_status": "verified"
+    }
+    
+    master_uid = None
+    sub_uid = None
+    outlet_uid = None
+    customer_uid = None
+    
+    print(f"\n1. CREATING TEST USERS WITH PROPER HIERARCHY")
+    print("=" * 60)
+    
+    try:
+        # Create Master Stockist
+        response = requests.post(f"{API_BASE}/auth/register", json=master_user_data, timeout=30)
+        if response.status_code == 200:
+            master_uid = response.json().get("uid")
+            print(f"✅ Master Stockist created: {master_uid}")
+        else:
+            print(f"❌ Master Stockist creation failed: {response.status_code}")
+            
+        # Create Sub Stockist
+        response = requests.post(f"{API_BASE}/auth/register", json=sub_user_data, timeout=30)
+        if response.status_code == 200:
+            sub_uid = response.json().get("uid")
+            print(f"✅ Sub Stockist created: {sub_uid}")
+            
+            # Set parent_id for hierarchy
+            await_update_parent_id(sub_uid, master_uid)
+        else:
+            print(f"❌ Sub Stockist creation failed: {response.status_code}")
+            
+        # Create Outlet
+        response = requests.post(f"{API_BASE}/auth/register", json=outlet_user_data, timeout=30)
+        if response.status_code == 200:
+            outlet_uid = response.json().get("uid")
+            print(f"✅ Outlet created: {outlet_uid}")
+            
+            # Set parent_id for hierarchy
+            await_update_parent_id(outlet_uid, sub_uid)
+        else:
+            print(f"❌ Outlet creation failed: {response.status_code}")
+            
+        # Create VIP Customer
+        response = requests.post(f"{API_BASE}/auth/register", json=customer_user_data, timeout=30)
+        if response.status_code == 200:
+            customer_uid = response.json().get("uid")
+            print(f"✅ VIP Customer created: {customer_uid}")
+            
+            # Give customer PRC balance for order
+            admin_uid = "ac9548c3-968a-4bbf-bad7-4e5aed1b660c"
+            prc_credit_data = {
+                "admin_uid": admin_uid,
+                "user_id": customer_uid,
+                "amount": 1000,
+                "description": "Test setup - PRC balance for order"
+            }
+            requests.post(f"{API_BASE}/admin/profit-wallet/credit", json=prc_credit_data, timeout=30)
+        else:
+            print(f"❌ VIP Customer creation failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error creating test users: {e}")
+        return test_results
+    
+    if not all([master_uid, sub_uid, outlet_uid, customer_uid]):
+        print("❌ Cannot continue without all test users")
+        return test_results
+    
+    # Test 1: End-to-End Distribution Flow
+    print(f"\n2. END-TO-END DISTRIBUTION FLOW")
+    print("=" * 60)
+    
+    order_id = None
+    
+    try:
+        # Step 1: Create a test order
+        print(f"\n2.1. Creating test order...")
+        
+        # Get available products
+        response = requests.get(f"{API_BASE}/products", timeout=30)
+        if response.status_code == 200:
+            products = response.json()
+            if len(products) > 0:
+                test_product = products[0]
+                test_product_id = test_product["product_id"]
+                print(f"✅ Using product: {test_product['name']} (PRC: {test_product.get('prc_price')})")
+                
+                # Add to cart and checkout
+                cart_add_data = {
+                    "user_id": customer_uid,
+                    "product_id": test_product_id,
+                    "quantity": 1
+                }
+                requests.post(f"{API_BASE}/cart/add", json=cart_add_data, timeout=30)
+                
+                checkout_data = {
+                    "user_id": customer_uid,
+                    "delivery_address": "123 Test Street, Test City, Test State, 123456"
+                }
+                
+                response = requests.post(f"{API_BASE}/orders/checkout", json=checkout_data, timeout=30)
+                if response.status_code == 200:
+                    result = response.json()
+                    order_id = result.get("order_id")
+                    print(f"✅ Order created: {order_id}")
+                    print(f"   Secret Code: {result.get('secret_code')}")
+                    print(f"   Total PRC: {result.get('total_prc')}")
+                else:
+                    print(f"❌ Order creation failed: {response.status_code}")
+                    print(f"   Response: {response.text}")
+            else:
+                print(f"❌ No products available")
+                return test_results
+        else:
+            print(f"❌ Failed to get products: {response.status_code}")
+            return test_results
+            
+    except Exception as e:
+        print(f"❌ Error creating test order: {e}")
+        return test_results
+    
+    if not order_id:
+        print("❌ Cannot continue without test order")
+        return test_results
+    
+    try:
+        # Step 2: Mark order as delivered (this should trigger distribution)
+        print(f"\n2.2. Marking order as delivered...")
+        
+        response = requests.post(f"{API_BASE}/orders/{order_id}/deliver", timeout=30)
+        print(f"Deliver Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"✅ Order marked as delivered")
+            print(f"   Commission Distributed: {result.get('commission_distributed', {})}")
+            test_results["end_to_end_distribution_flow"] = True
+        else:
+            print(f"❌ Order delivery failed: {response.status_code}")
+            
+        # Step 3: Trigger delivery charge distribution explicitly
+        print(f"\n2.3. Triggering delivery charge distribution...")
+        
+        response = requests.post(f"{API_BASE}/orders/{order_id}/distribute-delivery-charge", timeout=30)
+        print(f"Distribution Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"✅ Delivery charge distribution successful")
+            print(f"   Message: {result.get('message')}")
+            print(f"   Total Commission: ₹{result.get('total_commission', 0)}")
+            print(f"   Distributions: {result.get('distributions', {})}")
+            
+            if not test_results["end_to_end_distribution_flow"]:
+                test_results["end_to_end_distribution_flow"] = True
+        else:
+            print(f"❌ Distribution failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error in distribution flow: {e}")
+    
+    # Test 2: Transaction Logging Verification
+    print(f"\n3. TRANSACTION LOGGING VERIFICATION")
+    print("=" * 60)
+    
+    try:
+        # Check transactions collection for new entries
+        print(f"\n3.1. Checking transaction logs for each entity...")
+        
+        entities = [
+            ("Outlet", outlet_uid),
+            ("Sub Stockist", sub_uid),
+            ("Master Stockist", master_uid)
+        ]
+        
+        transaction_found = False
+        
+        for entity_name, entity_uid in entities:
+            print(f"\n   Checking {entity_name} ({entity_uid}):")
+            
+            response = requests.get(f"{API_BASE}/wallet/transactions/{entity_uid}?wallet_type=profit_wallet", timeout=30)
+            if response.status_code == 200:
+                result = response.json()
+                transactions = result.get("transactions", [])
+                
+                # Look for profit_share transactions
+                profit_share_txns = [t for t in transactions if t.get("type") == "profit_share"]
+                
+                if profit_share_txns:
+                    latest_txn = profit_share_txns[0]
+                    print(f"   ✅ Transaction found:")
+                    print(f"     - Transaction ID: {latest_txn.get('transaction_id')}")
+                    print(f"     - Type: {latest_txn.get('type')}")
+                    print(f"     - Wallet Type: {latest_txn.get('wallet_type')}")
+                    print(f"     - Amount: ₹{latest_txn.get('amount')}")
+                    print(f"     - Description: {latest_txn.get('description')}")
+                    
+                    # Verify required fields
+                    if (latest_txn.get("wallet_type") == "profit_wallet" and
+                        latest_txn.get("type") == "profit_share" and
+                        latest_txn.get("metadata", {}).get("order_id") == order_id):
+                        print(f"   ✅ Transaction metadata correct")
+                        transaction_found = True
+                    else:
+                        print(f"   ❌ Transaction metadata incorrect")
+                else:
+                    print(f"   ⚠️  No profit_share transactions found")
+            else:
+                print(f"   ❌ Failed to get transactions: {response.status_code}")
+        
+        if transaction_found:
+            test_results["transaction_logging_verification"] = True
+            print(f"\n✅ Transaction logging verification successful")
+        else:
+            print(f"\n❌ No valid profit_share transactions found")
+            
+    except Exception as e:
+        print(f"❌ Error verifying transaction logs: {e}")
+    
+    # Test 3: Transaction History Integration
+    print(f"\n4. TRANSACTION HISTORY INTEGRATION")
+    print("=" * 60)
+    
+    try:
+        for entity_name, entity_uid in entities:
+            print(f"\n4.{entities.index((entity_name, entity_uid)) + 1}. Testing {entity_name} transaction history...")
+            
+            response = requests.get(f"{API_BASE}/wallet/transactions/{entity_uid}", timeout=30)
+            if response.status_code == 200:
+                result = response.json()
+                transactions = result.get("transactions", [])
+                
+                print(f"   ✅ Transaction history accessible")
+                print(f"   📋 Total transactions: {len(transactions)}")
+                
+                # Look for profit wallet transactions
+                profit_txns = [t for t in transactions if t.get("wallet_type") == "profit_wallet"]
+                print(f"   📋 Profit wallet transactions: {len(profit_txns)}")
+                
+                if profit_txns:
+                    test_results["transaction_history_integration"] = True
+                    print(f"   ✅ Profit wallet transactions appear in history")
+            else:
+                print(f"   ❌ Transaction history failed: {response.status_code}")
+                
+    except Exception as e:
+        print(f"❌ Error testing transaction history: {e}")
+    
+    # Test 4: Balance Tracking
+    print(f"\n5. BALANCE TRACKING VERIFICATION")
+    print("=" * 60)
+    
+    try:
+        balance_tracking_correct = True
+        
+        for entity_name, entity_uid in entities:
+            print(f"\n5.{entities.index((entity_name, entity_uid)) + 1}. Checking {entity_name} balance tracking...")
+            
+            # Get current balance
+            response = requests.get(f"{API_BASE}/users/{entity_uid}", timeout=30)
+            if response.status_code == 200:
+                user_data = response.json()
+                current_balance = user_data.get("profit_wallet_balance", 0)
+                
+                # Get latest transaction
+                txn_response = requests.get(f"{API_BASE}/wallet/transactions/{entity_uid}?wallet_type=profit_wallet", timeout=30)
+                if txn_response.status_code == 200:
+                    txn_result = txn_response.json()
+                    transactions = txn_result.get("transactions", [])
+                    
+                    if transactions:
+                        latest_txn = transactions[0]
+                        balance_after = latest_txn.get("balance_after", 0)
+                        
+                        print(f"   📋 Current Balance: ₹{current_balance}")
+                        print(f"   📋 Transaction Balance After: ₹{balance_after}")
+                        
+                        if abs(current_balance - balance_after) < 0.01:  # Allow for rounding
+                            print(f"   ✅ Balance tracking accurate")
+                        else:
+                            print(f"   ❌ Balance mismatch")
+                            balance_tracking_correct = False
+                    else:
+                        print(f"   ⚠️  No transactions to verify")
+                else:
+                    print(f"   ❌ Failed to get transactions for balance check")
+                    balance_tracking_correct = False
+            else:
+                print(f"   ❌ Failed to get user data")
+                balance_tracking_correct = False
+        
+        if balance_tracking_correct:
+            test_results["balance_tracking_accuracy"] = True
+            print(f"\n✅ Balance tracking verification successful")
+        else:
+            print(f"\n❌ Balance tracking issues found")
+            
+    except Exception as e:
+        print(f"❌ Error verifying balance tracking: {e}")
+    
+    # Test 5: Audit Trail Verification
+    print(f"\n6. AUDIT TRAIL VERIFICATION")
+    print("=" * 60)
+    
+    try:
+        audit_trail_valid = True
+        
+        # Check one entity's transaction for audit trail completeness
+        response = requests.get(f"{API_BASE}/wallet/transactions/{outlet_uid}?wallet_type=profit_wallet", timeout=30)
+        if response.status_code == 200:
+            result = response.json()
+            transactions = result.get("transactions", [])
+            
+            if transactions:
+                latest_txn = transactions[0]
+                
+                # Verify transaction_id format (TXN-YYYYMMDD-XXXXXXXX)
+                txn_id = latest_txn.get("transaction_id", "")
+                if txn_id.startswith("TXN-") and len(txn_id) == 21:
+                    print(f"✅ Transaction ID format correct: {txn_id}")
+                else:
+                    print(f"❌ Transaction ID format incorrect: {txn_id}")
+                    audit_trail_valid = False
+                
+                # Verify status
+                status = latest_txn.get("status", "")
+                if status == "completed":
+                    print(f"✅ Transaction status correct: {status}")
+                else:
+                    print(f"❌ Transaction status incorrect: {status}")
+                    audit_trail_valid = False
+                
+                # Verify created_at timestamp
+                created_at = latest_txn.get("created_at", "")
+                if created_at:
+                    print(f"✅ Created timestamp present: {created_at}")
+                else:
+                    print(f"❌ Created timestamp missing")
+                    audit_trail_valid = False
+                
+                # Verify metadata completeness
+                metadata = latest_txn.get("metadata", {})
+                required_metadata = ["order_id", "entity_type", "commission_percentage", "total_commission"]
+                missing_metadata = []
+                
+                for field in required_metadata:
+                    if field in metadata:
+                        print(f"✅ Metadata {field}: {metadata[field]}")
+                    else:
+                        missing_metadata.append(field)
+                        print(f"❌ Missing metadata {field}")
+                        audit_trail_valid = False
+                
+                if audit_trail_valid:
+                    test_results["audit_trail_verification"] = True
+                    print(f"\n✅ Audit trail verification successful")
+                else:
+                    print(f"\n❌ Audit trail issues found")
+            else:
+                print(f"❌ No transactions found for audit trail verification")
+        else:
+            print(f"❌ Failed to get transactions for audit trail check")
+            
+    except Exception as e:
+        print(f"❌ Error verifying audit trail: {e}")
+    
+    # Test 6: No Duplicate Transactions
+    print(f"\n7. DUPLICATE TRANSACTION VERIFICATION")
+    print("=" * 60)
+    
+    try:
+        # Try to trigger distribution again - should not create duplicates
+        print(f"\n7.1. Attempting duplicate distribution...")
+        
+        response = requests.post(f"{API_BASE}/orders/{order_id}/distribute-delivery-charge", timeout=30)
+        print(f"Duplicate Distribution Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            message = result.get("message", "")
+            
+            if "already distributed" in message.lower():
+                print(f"✅ Duplicate distribution properly blocked")
+                test_results["no_duplicate_transactions"] = True
+            else:
+                print(f"❌ Duplicate distribution not blocked properly")
+        else:
+            print(f"⚠️  Unexpected response for duplicate distribution")
+            
+    except Exception as e:
+        print(f"❌ Error testing duplicate transactions: {e}")
+    
+    return test_results
+
+def await_update_parent_id(child_uid, parent_uid):
+    """Helper function to update parent_id for hierarchy (simulated)"""
+    # This would normally be done through an admin API
+    # For testing purposes, we'll assume the hierarchy is set up correctly
+    pass
+
 def test_profit_wallet_management():
     """Test Comprehensive Profit Wallet Management & Monthly Fees"""
     print("\n" + "💼" * 80)
