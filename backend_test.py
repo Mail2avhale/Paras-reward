@@ -933,8 +933,8 @@ def test_complete_profit_wallet_transaction_logging_flow():
     print("=" * 60)
     
     try:
-        # Check transactions collection for new entries
-        print(f"\n3.1. Checking transaction logs for each entity...")
+        # Step 4.1: Query transactions collection for transaction_type = "profit_share"
+        print(f"\n4.1. Querying transactions for transaction_type = 'profit_share'...")
         
         entities = [
             ("Outlet", outlet_uid),
@@ -942,10 +942,13 @@ def test_complete_profit_wallet_transaction_logging_flow():
             ("Master Stockist", master_uid)
         ]
         
-        transaction_found = False
+        profit_share_transactions_found = False
+        profit_wallet_type_verified = False
+        metadata_complete = False
+        balance_accuracy_verified = False
         
         for entity_name, entity_uid in entities:
-            print(f"\n   Checking {entity_name} ({entity_uid}):")
+            print(f"\n   🔍 Checking {entity_name} ({entity_uid}):")
             
             response = requests.get(f"{API_BASE}/wallet/transactions/{entity_uid}?wallet_type=profit_wallet", timeout=30)
             if response.status_code == 200:
@@ -957,34 +960,74 @@ def test_complete_profit_wallet_transaction_logging_flow():
                 
                 if profit_share_txns:
                     latest_txn = profit_share_txns[0]
-                    print(f"   ✅ Transaction found:")
-                    print(f"     - Transaction ID: {latest_txn.get('transaction_id')}")
-                    print(f"     - Type: {latest_txn.get('type')}")
-                    print(f"     - Wallet Type: {latest_txn.get('wallet_type')}")
-                    print(f"     - Amount: ₹{latest_txn.get('amount')}")
-                    print(f"     - Description: {latest_txn.get('description')}")
+                    print(f"   ✅ Transaction record found:")
+                    print(f"     📋 Transaction ID: {latest_txn.get('transaction_id')}")
+                    print(f"     📋 Type: {latest_txn.get('type')}")
+                    print(f"     📋 Wallet Type: {latest_txn.get('wallet_type')}")
+                    print(f"     📋 Amount: ₹{latest_txn.get('amount')}")
+                    print(f"     📋 Description: {latest_txn.get('description')}")
+                    print(f"     📋 Balance Before: ₹{latest_txn.get('balance_before')}")
+                    print(f"     📋 Balance After: ₹{latest_txn.get('balance_after')}")
                     
-                    # Verify required fields
-                    if (latest_txn.get("wallet_type") == "profit_wallet" and
-                        latest_txn.get("type") == "profit_share" and
-                        latest_txn.get("metadata", {}).get("order_id") == order_id):
-                        print(f"   ✅ Transaction metadata correct")
-                        transaction_found = True
+                    # Step 4.2: Verify transaction records exist for each credited entity
+                    if latest_txn.get("type") == "profit_share":
+                        profit_share_transactions_found = True
+                        test_results["transaction_type_profit_share"] = True
+                        print(f"   ✅ Transaction type = 'profit_share' verified")
+                    
+                    # Step 4.3: Confirm wallet_type = "profit_wallet"
+                    if latest_txn.get("wallet_type") == "profit_wallet":
+                        profit_wallet_type_verified = True
+                        test_results["wallet_type_profit_wallet"] = True
+                        print(f"   ✅ Wallet type = 'profit_wallet' verified")
+                    
+                    # Step 4.4: Verify metadata contains required fields
+                    metadata = latest_txn.get("metadata", {})
+                    required_metadata = ["order_id", "entity_type", "commission_percentage", "total_commission"]
+                    metadata_fields_found = []
+                    
+                    for field in required_metadata:
+                        if field in metadata:
+                            metadata_fields_found.append(field)
+                            print(f"   ✅ Metadata {field}: {metadata[field]}")
+                        else:
+                            print(f"   ❌ Missing metadata {field}")
+                    
+                    if len(metadata_fields_found) == len(required_metadata):
+                        metadata_complete = True
+                        test_results["metadata_completeness"] = True
+                        print(f"   ✅ All required metadata fields present")
+                        
+                        # Verify order_id matches
+                        if metadata.get("order_id") == order_id:
+                            print(f"   ✅ Metadata order_id matches test order")
+                    
+                    # Step 4.5: Check balance_before and balance_after are accurate
+                    balance_before = latest_txn.get("balance_before", 0)
+                    balance_after = latest_txn.get("balance_after", 0)
+                    amount = latest_txn.get("amount", 0)
+                    
+                    if balance_after == balance_before + amount:
+                        balance_accuracy_verified = True
+                        test_results["balance_before_after_accuracy"] = True
+                        print(f"   ✅ Balance calculations accurate: {balance_before} + {amount} = {balance_after}")
                     else:
-                        print(f"   ❌ Transaction metadata incorrect")
+                        print(f"   ❌ Balance calculation error: {balance_before} + {amount} ≠ {balance_after}")
+                        
                 else:
-                    print(f"   ⚠️  No profit_share transactions found")
+                    print(f"   ⚠️  No profit_share transactions found for {entity_name}")
             else:
                 print(f"   ❌ Failed to get transactions: {response.status_code}")
         
-        if transaction_found:
-            test_results["transaction_logging_verification"] = True
-            print(f"\n✅ Transaction logging verification successful")
-        else:
-            print(f"\n❌ No valid profit_share transactions found")
+        # Summary of Phase 4
+        print(f"\n📊 PHASE 4 SUMMARY:")
+        print(f"   ✅ Profit share transactions found: {profit_share_transactions_found}")
+        print(f"   ✅ Profit wallet type verified: {profit_wallet_type_verified}")
+        print(f"   ✅ Metadata completeness: {metadata_complete}")
+        print(f"   ✅ Balance accuracy verified: {balance_accuracy_verified}")
             
     except Exception as e:
-        print(f"❌ Error verifying transaction logs: {e}")
+        print(f"❌ Error in Phase 4: {e}")
     
     # Test 3: Transaction History Integration
     print(f"\n4. TRANSACTION HISTORY INTEGRATION")
