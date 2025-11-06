@@ -174,8 +174,15 @@ def test_profit_wallet_transaction_logging_complete_flow():
         # Get available products first
         response = requests.get(f"{API_BASE}/products", timeout=30)
         if response.status_code == 200:
-            products = response.json()
-            if isinstance(products, list) and len(products) > 0:
+            products_data = response.json()
+            if isinstance(products_data, dict) and "products" in products_data:
+                products = products_data["products"]
+            elif isinstance(products_data, list):
+                products = products_data
+            else:
+                products = []
+            
+            if len(products) > 0:
                 test_product = products[0]
                 print(f"   Using product: {test_product['name']} (PRC: {test_product.get('prc_price')}, Cash: {test_product.get('cash_price')})")
                 
