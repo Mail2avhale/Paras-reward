@@ -651,7 +651,7 @@ def test_complete_profit_wallet_transaction_logging_flow():
     # VIP Customer
     customer_user_data = {
         "first_name": "VIP",
-        "last_name": "Customer",
+        "last_name": "TxnCustomer",
         "email": f"customer_txn_{timestamp}@test.com",
         "mobile": f"9876543{timestamp % 1000:03d}",
         "password": "secure123456",
@@ -661,7 +661,8 @@ def test_complete_profit_wallet_transaction_logging_flow():
         "aadhaar_number": f"4444{timestamp % 100000000:08d}",
         "pan_number": f"CUST{timestamp % 10000:04d}F",
         "membership_type": "vip",
-        "kyc_status": "verified"
+        "kyc_status": "verified",
+        "prc_balance": 1000.0  # Sufficient balance for order
     }
     
     master_uid = None
