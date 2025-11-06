@@ -1536,9 +1536,7 @@ const AdminDashboard = ({ user, onLogout }) => {
               <h2 className="text-2xl font-bold text-gray-900 mb-6">User Management</h2>
               
               {/* Advanced Management - Direct View (Basic Management removed as all functions available here) */}
-            <div>
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
+              <AdvancedUserManagement />
                 <div className="flex gap-3 w-full md:w-auto">
                   <Input
                     placeholder="Search by name, email, or mobile..."
