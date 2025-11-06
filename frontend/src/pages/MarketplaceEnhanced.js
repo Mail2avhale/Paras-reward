@@ -115,6 +115,10 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
   };
 
   const getCategories = () => {
+    // Ensure products is an array before mapping
+    if (!Array.isArray(products) || products.length === 0) {
+      return ['all'];
+    }
     const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
     return ['all', ...categories];
   };
