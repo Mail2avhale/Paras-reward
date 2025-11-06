@@ -1228,6 +1228,22 @@ backend:
         agent: "main"
         comment: "FIXED: Added stock deduction logic to POST /orders/{order_id}/deliver endpoint. Previously, stock was only deducted in /outlet/verify-code endpoint but not in the main delivery endpoint used by OutletPanel. Now when outlet marks order as delivered: 1) Fetches order to get items list. 2) For each item, finds outlet's stock in stock_inventory collection. 3) Deducts quantity if sufficient stock exists ($inc: -quantity). 4) Logs warning if insufficient stock. 5) Updates order status to delivered. 6) Triggers delivery charge distribution. Stock inventory now correctly reflects delivered orders."
 
+frontend:
+  - task: "Parent Details Not Showing in Stockist Dashboards"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/StockistHierarchy.js"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported: Parents details not showing in outlet and sub stockist dashboards. Screenshots show 'No parent assigned' message."
+      - working: true
+        agent: "main"
+        comment: "FIXED: Enhanced StockistHierarchy component to fetch full user data first before looking for parent. Updated logic to check multiple fields for parent assignment: 1) For outlets: checks parent_id OR assigned_sub_stockist. 2) For sub stockists: checks parent_id OR assigned_master_stockist. 3) Component now fetches complete user data via GET /users/{uid} to get all parent relationship fields. 4) Added better error logging to identify missing parent assignments. 5) Created fix_stockist_parents.py script to fix any existing stockists with incomplete parent assignments. Backend endpoint /admin/stockists/create already sets both parent_id and assigned_* fields correctly for new stockists."
+
 agent_communication:
     -agent: "main"
     -message: "Communication message between agents"
