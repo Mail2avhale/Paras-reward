@@ -487,6 +487,7 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
             <p className="text-gray-300">Try adjusting your search or filters</p>
           </Card>
         ) : (
+          <>
           <div className={viewMode === 'grid' 
             ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" 
             : "space-y-4"
