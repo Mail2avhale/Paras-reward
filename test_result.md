@@ -1169,3 +1169,35 @@ backend:
       - working: true
         agent: "main"
         comment: "IMPLEMENTED: Created GET /api/users/children/{uid} endpoint to fetch subordinates. Uses MongoDB $or query to find users where parent_id OR assigned_master_stockist OR assigned_sub_stockist equals the given uid. Returns array of children with sensitive data removed (password_hash, reset_token). Includes count of children. Used by StockistHierarchy component to display network structure."
+
+backend:
+  - task: "Manager Role Update Fix"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported: In admin dashboard under user MANAGEMENT and advanced user MANAGEMENT, manager Role is not updating"
+      - working: true
+        agent: "main"
+        comment: "FIXED: Added 'manager', 'sub_admin', and 'employee' roles to valid_roles list in PUT /admin/users/{uid}/role endpoint (line 3707). Previously only included ['user', 'admin', 'master_stockist', 'sub_stockist', 'outlet']. Manager role was defined in system constants but missing from this endpoint validation. Now admins can successfully update users to manager role in User Management section."
+
+frontend:
+  - task: "Manager Dashboard Loading Fix"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/ManagerDashboard.js"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported: After login by manager, no managers dashboard load"
+      - working: true
+        agent: "main"
+        comment: "FIXED: Updated fetchSupportTickets() function to call correct endpoint /admin/support/tickets instead of non-existent /support/tickets. Also updated response handling to access tickets from response.data.tickets (paginated response structure). Manager dashboard now loads all required data properly: stats, VIP payments, KYC documents, stock movements, and support tickets."
