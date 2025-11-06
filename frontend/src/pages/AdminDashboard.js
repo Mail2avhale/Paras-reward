@@ -1537,27 +1537,6 @@ const AdminDashboard = ({ user, onLogout }) => {
               
               {/* Advanced Management - Direct View (Basic Management removed as all functions available here) */}
               <AdvancedUserManagement />
-                <div className="flex gap-3 w-full md:w-auto">
-                  <Input
-                    placeholder="Search by name, email, or mobile..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full md:w-64"
-                  />
-                  <select
-                    value={roleFilter}
-                    onChange={(e) => setRoleFilter(e.target.value)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                  >
-                    <option value="">All Roles</option>
-                    <option value="user">User</option>
-                    <option value="manager">Manager</option>
-                    <option value="admin">Admin</option>
-                    <option value="outlet">Outlet</option>
-                    <option value="master_stockist">Master Stockist</option>
-                    <option value="sub_stockist">Sub Stockist</option>
-                  </select>
-                </div>
               </div>
 
               {/* Filter and paginate users */}
