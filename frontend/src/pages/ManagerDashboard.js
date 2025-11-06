@@ -82,6 +82,37 @@ const ManagerDashboard = ({ user, onLogout }) => {
     }
   };
 
+  const fetchWithdrawals = async () => {
+    try {
+      const [cashbackRes, profitRes] = await Promise.all([
+        axios.get(`${API}/admin/withdrawals/cashback`),
+        axios.get(`${API}/admin/withdrawals/profit`)
+      ]);
+      setCashbackWithdrawals(cashbackRes.data?.withdrawals || []);
+      setProfitWithdrawals(profitRes.data?.withdrawals || []);
+    } catch (error) {
+      console.error('Error fetching withdrawals:', error);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/products`);
+      setProducts(response.data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
+
+  const fetchStockists = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/stockists`);
+      setStockists(response.data?.stockists || []);
+    } catch (error) {
+      console.error('Error fetching stockists:', error);
+    }
+  };
+
   const handlePaymentAction = async (paymentId, action) => {
     try {
       await axios.post(`${API}/membership/payment/${paymentId}/action`, { action });
