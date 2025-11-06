@@ -560,12 +560,35 @@ def test_complete_profit_wallet_transaction_logging_flow():
     print("💰" * 80)
     
     test_results = {
-        "end_to_end_distribution_flow": False,
-        "transaction_logging_verification": False,
-        "transaction_history_integration": False,
-        "balance_tracking_accuracy": False,
-        "audit_trail_verification": False,
-        "no_duplicate_transactions": False
+        # Phase 1: Outlet Assignment
+        "outlet_assignment_during_checkout": False,
+        "outlet_id_and_assigned_outlet_fields": False,
+        "outlet_assignment_logic_verification": False,
+        
+        # Phase 2: Order Delivery  
+        "order_delivery_without_outlet_error": False,
+        "delivery_success_confirmation": False,
+        
+        # Phase 3: Delivery Charge Distribution
+        "delivery_charge_distribution_trigger": False,
+        "commission_distribution_success": False,
+        "profit_wallet_balance_updates": False,
+        
+        # Phase 4: Transaction Logging Verification (MAIN FOCUS)
+        "transaction_type_profit_share": False,
+        "wallet_type_profit_wallet": False,
+        "metadata_completeness": False,
+        "balance_before_after_accuracy": False,
+        
+        # Phase 5: Transaction History Integration
+        "outlet_transaction_history": False,
+        "sub_stockist_transaction_history": False,
+        "master_stockist_transaction_history": False,
+        
+        # Phase 6: End-to-End Verification
+        "complete_audit_trail": False,
+        "no_duplicate_transactions": False,
+        "accurate_balance_calculations": False
     }
     
     # Create test users with proper hierarchy
