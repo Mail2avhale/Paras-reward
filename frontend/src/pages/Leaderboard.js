@@ -135,9 +135,9 @@ const Leaderboard = ({ user, onLogout }) => {
           </div>
         )}
 
-        {/* Rest of Leaderboard */}
+        {/* Top 10 Rankings */}
         <Card data-testid="leaderboard-list" className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">All Rankings</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Top 10 Rankings</h2>
           
           <div className="space-y-3">
             {leaderboard.map((entry, index) => (
