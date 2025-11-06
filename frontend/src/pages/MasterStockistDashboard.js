@@ -255,14 +255,18 @@ const MasterStockistDashboard = ({ user, onLogout }) => {
           <Tabs defaultValue="inventory" className="w-full">
             <TabsList className="grid w-full grid-cols-5 mb-6">
               <TabsTrigger value="inventory">My Inventory</TabsTrigger>
+              <TabsTrigger value="hierarchy">My Network</TabsTrigger>
               <TabsTrigger value="stock-requests">Stock Requests</TabsTrigger>
               <TabsTrigger value="stock">Stock Movements</TabsTrigger>
-              <TabsTrigger value="allocations">Sub Stockists</TabsTrigger>
               <TabsTrigger value="earnings">Earnings</TabsTrigger>
             </TabsList>
 
             <TabsContent value="inventory">
               <StockInventoryDisplay userId={user.uid} title="Master Stockist Inventory" />
+            </TabsContent>
+
+            <TabsContent value="hierarchy">
+              <StockistHierarchy user={user} userRole="master_stockist" />
             </TabsContent>
 
             <TabsContent value="stock-requests">
