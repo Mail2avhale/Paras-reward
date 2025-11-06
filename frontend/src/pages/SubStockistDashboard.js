@@ -249,14 +249,18 @@ const SubStockistDashboard = ({ user, onLogout }) => {
           <Tabs defaultValue="inventory" className="w-full">
             <TabsList className="grid w-full grid-cols-5 mb-6">
               <TabsTrigger value="inventory">My Inventory</TabsTrigger>
+              <TabsTrigger value="hierarchy">My Network</TabsTrigger>
               <TabsTrigger value="stock-requests">Stock Requests</TabsTrigger>
               <TabsTrigger value="stock">Stock</TabsTrigger>
-              <TabsTrigger value="outlets">Outlets</TabsTrigger>
               <TabsTrigger value="earnings">Earnings</TabsTrigger>
             </TabsList>
 
             <TabsContent value="inventory">
               <StockInventoryDisplay userId={user.uid} title="Sub Stockist Inventory" />
+            </TabsContent>
+
+            <TabsContent value="hierarchy">
+              <StockistHierarchy user={user} userRole="sub_stockist" />
             </TabsContent>
 
             <TabsContent value="stock-requests">
