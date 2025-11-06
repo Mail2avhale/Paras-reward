@@ -18,6 +18,7 @@ const API = `${BACKEND_URL}/api`;
 const ProfileEnhanced = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(false);
   const [profilePicture, setProfilePicture] = useState(user?.profile_picture || null);
+  const [showCamera, setShowCamera] = useState(false);
   const fileInputRef = useRef(null);
   
   // Location cascade state
