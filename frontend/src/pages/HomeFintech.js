@@ -34,9 +34,9 @@ const HomeFintech = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get(`${API}/products`);
+      const response = await axios.get(`${API}/products?page=1&limit=6`);
       // Show only first 6 visible products
-      const allProducts = Array.isArray(response.data) ? response.data : (response.data.products || []);
+      const allProducts = response.data?.products || [];
       const visibleProducts = allProducts.filter(p => p.visible !== false && p.is_active !== false);
       setProducts(visibleProducts.slice(0, 6));
     } catch (error) {
