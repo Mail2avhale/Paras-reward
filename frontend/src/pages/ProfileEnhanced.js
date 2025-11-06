@@ -687,6 +687,7 @@ const ProfileEnhanced = ({ user, onLogout }) => {
             onCapture={handleCameraCapture}
             onClose={() => setShowCamera(false)}
             label="Capture Profile Picture"
+            defaultFacingMode="user"
           />
         )}
 
