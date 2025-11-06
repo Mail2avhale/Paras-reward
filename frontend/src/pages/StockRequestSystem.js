@@ -87,10 +87,14 @@ const StockRequestSystem = () => {
       
       // Fetch products for request creation (using pagination API)
       const productsRes = await axios.get(`${API}/products?page=1&limit=1000`);
-      setProducts(productsRes.data?.products || []);
+      const fetchedProducts = productsRes.data?.products || [];
+      console.log('Fetched products:', fetchedProducts); // Debug log
+      setProducts(Array.isArray(fetchedProducts) ? fetchedProducts : []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to fetch data');
+      // Ensure products is set to empty array on error
+      setProducts([]);
     } finally {
       setLoading(false);
     }
