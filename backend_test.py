@@ -1018,7 +1018,16 @@ def await_update_parent_id(child_uid, parent_uid):
     """Helper function to update parent_id for hierarchy (simulated)"""
     # This would normally be done through an admin API
     # For testing purposes, we'll assume the hierarchy is set up correctly
-    pass
+    try:
+        # Try to update via a direct API call if available
+        update_data = {"parent_id": parent_uid}
+        response = requests.patch(f"{API_BASE}/users/{child_uid}", json=update_data, timeout=10)
+        if response.status_code == 200:
+            print(f"   ✅ Updated parent_id for {child_uid}")
+        else:
+            print(f"   ⚠️  Could not update parent_id: {response.status_code}")
+    except:
+        print(f"   ⚠️  Parent ID update not available - using flat hierarchy")
 
 def test_profit_wallet_management():
     """Test Comprehensive Profit Wallet Management & Monthly Fees"""
