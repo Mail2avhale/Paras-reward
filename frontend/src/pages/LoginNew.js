@@ -131,6 +131,8 @@ const LoginNew = ({ onLogin }) => {
         // Navigate based on role
         if (result.user.role === 'admin' || result.user.role === 'sub_admin') {
           navigate('/admin');
+        } else if (result.user.role === 'manager') {
+          navigate('/manager');
         } else if (result.user.role === 'master_stockist') {
           navigate('/master-stockist');
         } else if (result.user.role === 'sub_stockist') {
