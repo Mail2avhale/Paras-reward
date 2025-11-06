@@ -698,7 +698,8 @@ def test_profit_wallet_transaction_logging():
         # Get available products
         response = requests.get(f"{API_BASE}/products", timeout=30)
         if response.status_code == 200:
-            products = response.json()
+            products_data = response.json()
+            products = products_data.get("products", [])
             if len(products) > 0:
                 test_product = products[0]
                 test_product_id = test_product["product_id"]
@@ -710,7 +711,10 @@ def test_profit_wallet_transaction_logging():
                     "product_id": test_product_id,
                     "quantity": 1
                 }
-                requests.post(f"{API_BASE}/cart/add", json=cart_add_data, timeout=30)
+                cart_response = requests.post(f"{API_BASE}/cart/add", json=cart_add_data, timeout=30)
+                print(f"   Cart Add Status: {cart_response.status_code}")
+                if cart_response.status_code != 200:
+                    print(f"   Cart Add Response: {cart_response.text}")
                 
                 checkout_data = {
                     "user_id": customer_uid,
@@ -718,6 +722,7 @@ def test_profit_wallet_transaction_logging():
                 }
                 
                 response = requests.post(f"{API_BASE}/orders/checkout", json=checkout_data, timeout=30)
+                print(f"   Checkout Status: {response.status_code}")
                 if response.status_code == 200:
                     result = response.json()
                     order_id = result.get("order_id")
