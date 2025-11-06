@@ -944,3 +944,29 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "IMPLEMENTED: Complete camera integration for KYC documents and profile pictures. Created reusable CameraCapture component with features: 1) Camera access using navigator.mediaDevices.getUserMedia API. 2) Front/back camera switch for mobile devices. 3) Live camera preview with capture button. 4) Preview captured image before upload. 5) Retake functionality. 6) Automatic image compression to max 2MB while maintaining aspect ratio. 7) Support for both camera capture and file upload (user can choose method). 8) Camera fallback to file upload if camera access is denied. 9) Mobile and desktop support (webcam). 10) Updated ImageUpload component to include Camera/Upload toggle buttons. 11) Integrated into KYC Verification page for Aadhaar (front/back) and PAN card capture. 12) Integrated into Profile page with 'Take Photo' button for profile picture capture. 13) Full modal UI with gradient header, instructions, and clear UX. 14) Error handling for camera permission denied. Camera capture stores images as compressed base64 (max 2MB) and uploads to backend."
+
+backend:
+  - task: "Biometric Authentication (WebAuthn) - Backend APIs"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Complete WebAuthn biometric authentication system. Backend features: 1) Added BiometricCredential model to store public keys and device info. 2) POST /api/auth/biometric/register-options - generates WebAuthn registration options. 3) POST /api/auth/biometric/register - registers biometric credential with device name, public key storage, max 5 devices per user. 4) POST /api/auth/biometric/login-options - generates authentication challenge. 5) POST /api/auth/biometric/login - verifies biometric signature and authenticates user. 6) GET /api/auth/biometric/credentials/{user_id} - lists registered devices. 7) DELETE /api/auth/biometric/credentials/{credential_id} - removes biometric device. Uses webauthn Python library for credential verification. Stores challenges in webauthn_challenges collection with 5-minute expiry. Activity logging for biometric_registered, biometric_login, biometric_removed actions."
+
+frontend:
+  - task: "Biometric Authentication (WebAuthn) - Frontend Implementation"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/BiometricSetup.js, /app/frontend/src/utils/biometricAuth.js, /app/frontend/src/pages/LoginNew.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Full biometric login with fingerprint/Face ID support. Features: 1) Created BiometricSetup component - 3-step wizard (intro with benefits, device naming, biometric registration with live prompts). 2) Created biometricAuth.js utility with helpers: isBiometricSupported(), biometricLogin(), getBiometricDevices(), removeBiometricDevice(). 3) Updated LoginNew page with biometric login button (shows when biometric enabled), auto-prompt after first successful password login (one-time setup offer), biometric button with fingerprint icon appears for registered users. 4) WebAuthn API integration using navigator.credentials.create() for registration and navigator.credentials.get() for authentication. 5) Supports multiple devices (max 5), platform authenticators (Touch ID, Face ID, Windows Hello). 6) Security features: Challenge-response authentication, public key cryptography, signatures verified server-side, credentials never leave device. 7) UX: Auto-detect device name, fallback to password login always available, 'Use Password Instead' option shown, biometric setup can be skipped. Browser support: Chrome, Firefox, Safari, Edge (mobile + desktop)."
