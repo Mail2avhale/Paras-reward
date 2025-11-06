@@ -269,7 +269,3 @@ self.addEventListener('periodicsync', (event) => {
 });
 
 console.log('Service Worker: Enhanced PWA loaded');
-
-    })
-  );
-});
