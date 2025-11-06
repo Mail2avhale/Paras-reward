@@ -32,6 +32,9 @@ const ManagerDashboard = ({ user, onLogout }) => {
     fetchKYCDocuments();
     fetchStockMovements();
     fetchSupportTickets();
+    fetchWithdrawals();
+    fetchProducts();
+    fetchStockists();
   }, []);
 
   const fetchManagerStats = async () => {
