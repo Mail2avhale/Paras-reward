@@ -8029,13 +8029,21 @@ async def assign_stockist(request: StockistAssignRequest):
     if stockist_role == "master_stockist":
         raise HTTPException(status_code=400, detail="Master Stockist cannot be assigned to anyone")
     
-    # Update assignment
+    # Update assignment with role-specific fields
+    update_fields = {
+        "parent_id": request.parent_id,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Also set role-specific assignment fields for compatibility
+    if stockist_role == "outlet":
+        update_fields["assigned_sub_stockist"] = request.parent_id
+    elif stockist_role == "sub_stockist":
+        update_fields["assigned_master_stockist"] = request.parent_id
+    
     await db.users.update_one(
         {"uid": request.stockist_id},
-        {"$set": {
-            "parent_id": request.parent_id,
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }}
+        {"$set": update_fields}
     )
     
     # Log action
