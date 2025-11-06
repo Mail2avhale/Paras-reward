@@ -970,3 +970,19 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "IMPLEMENTED: Full biometric login with fingerprint/Face ID support. Features: 1) Created BiometricSetup component - 3-step wizard (intro with benefits, device naming, biometric registration with live prompts). 2) Created biometricAuth.js utility with helpers: isBiometricSupported(), biometricLogin(), getBiometricDevices(), removeBiometricDevice(). 3) Updated LoginNew page with biometric login button (shows when biometric enabled), auto-prompt after first successful password login (one-time setup offer), biometric button with fingerprint icon appears for registered users. 4) WebAuthn API integration using navigator.credentials.create() for registration and navigator.credentials.get() for authentication. 5) Supports multiple devices (max 5), platform authenticators (Touch ID, Face ID, Windows Hello). 6) Security features: Challenge-response authentication, public key cryptography, signatures verified server-side, credentials never leave device. 7) UX: Auto-detect device name, fallback to password login always available, 'Use Password Instead' option shown, biometric setup can be skipped. Browser support: Chrome, Firefox, Safari, Edge (mobile + desktop)."
+
+frontend:
+  - task: "Camera Integration Fixes - Profile Picture & Error Handling"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/CameraCapture.js, /app/frontend/src/components/ImageUpload.js, /app/frontend/src/pages/ProfileEnhanced.js"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported: 1) Error on profile picture upload. 2) No selfie/front camera available - camera defaulting to rear. 3) Camera option not showing properly for profile pictures. Screenshots showed 'Unable to access camera' error and camera permissions issues."
+      - working: true
+        agent: "main"
+        comment: "FIXED: Complete camera integration fixes. Changes: 1) Updated CameraCapture to accept defaultFacingMode prop - defaults to 'user' (front camera) for selfies instead of 'environment' (rear). 2) Updated ImageUpload to accept cameraFacingMode prop - allows specifying front/rear camera per use case. 3) ProfileEnhanced now passes defaultFacingMode='user' for profile picture capture. 4) Enhanced error handling in startCamera() with multiple fallback attempts: tries specific facing mode first, falls back to any available camera, provides detailed error messages based on error type (NotAllowedError=permission denied, NotFoundError=no camera, NotReadableError=camera in use, etc.). 5) Improved error UI with AlertCircle icon, clear error title, detailed message, 'Try Again' button, 'Choose File Instead' button. 6) Auto-switches to file upload mode on camera error. 7) Added video.onloadedmetadata handler to wait for video ready before playing. 8) Better browser compatibility checks. Front camera now works for selfies, rear camera for documents, graceful fallback to file upload on any error."
