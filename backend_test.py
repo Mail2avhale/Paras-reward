@@ -1029,8 +1029,8 @@ def test_complete_profit_wallet_transaction_logging_flow():
     except Exception as e:
         print(f"❌ Error in Phase 4: {e}")
     
-    # Test 3: Transaction History Integration
-    print(f"\n4. TRANSACTION HISTORY INTEGRATION")
+    # PHASE 5: TRANSACTION HISTORY INTEGRATION
+    print(f"\n📚 PHASE 5: TRANSACTION HISTORY INTEGRATION")
     print("=" * 60)
     
     try:
