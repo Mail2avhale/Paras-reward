@@ -1076,18 +1076,18 @@ const StockRequestSystem = () => {
                   value={newStockData.product_id}
                   onChange={(e) => setNewStockData({...newStockData, product_id: e.target.value})}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  disabled={newStockData.action === 'set' || !Array.isArray(products) || products.length === 0}
+                  disabled={newStockData.action === 'set' || !productsLoaded || !Array.isArray(products) || products.length === 0}
                 >
                   <option value="">
-                    {!Array.isArray(products) || products.length === 0 ? 'Loading products...' : 'Select Product'}
+                    {!productsLoaded || !Array.isArray(products) || products.length === 0 ? 'Loading products...' : 'Select Product'}
                   </option>
-                  {!loading && products && Array.isArray(products) && products.length > 0 && products.map((product) => (
+                  {productsLoaded && Array.isArray(products) && products.length > 0 && products.map((product) => (
                     <option key={product.product_id} value={product.product_id}>
                       {product.name} - {product.product_id}
                     </option>
                   ))}
                 </select>
-                {(!Array.isArray(products) || products.length === 0) && (
+                {(!productsLoaded || !Array.isArray(products) || products.length === 0) && (
                   <p className="text-xs text-red-500 mt-1">
                     Products are loading. Please wait...
                   </p>
