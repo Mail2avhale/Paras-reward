@@ -1535,16 +1535,64 @@ const AdminDashboard = ({ user, onLogout }) => {
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">User Management</h2>
               
-              {/* Advanced Management - Direct View (Basic Management removed as all functions available here) */}
-              <AdvancedUserManagement />
-            </div>
-          )}
+              {/* Tabs for Basic and Advanced */}
+              <div className="mb-6">
+                <div className="border-b border-gray-200">
+                  <nav className="-mb-px flex space-x-8">
+                    <button
+                      onClick={() => setUserManagementView('basic')}
+                      className={`${
+                        userManagementView === 'basic'
+                          ? 'border-purple-500 text-purple-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                    >
+                      Basic Management
+                    </button>
+                    <button
+                      onClick={() => setUserManagementView('advanced')}
+                      className={`${
+                        userManagementView === 'advanced'
+                          ? 'border-purple-500 text-purple-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                    >
+                      Advanced Management
+                    </button>
+                  </nav>
+                </div>
+              </div>
 
-          {/* Payments Tab */}
-          {activeTab === 'payments' && (
+              {/* Basic Management View */}
+              {userManagementView === 'basic' && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">VIP Payment Approvals</h2>
-              {vipPayments.filter(p => p.status === 'pending').length === 0 ? (
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
+                <div className="flex gap-3 w-full md:w-auto">
+                  <Input
+                    placeholder="Search by name, email, or mobile..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full md:w-64"
+                  />
+                  <select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  >
+                    <option value="">All Roles</option>
+                    <option value="user">User</option>
+                    <option value="manager">Manager</option>
+                    <option value="admin">Admin</option>
+                    <option value="outlet">Outlet</option>
+                    <option value="master_stockist">Master Stockist</option>
+                    <option value="sub_stockist">Sub Stockist</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Filter and paginate users */}
+              {(() => {
                 // Filter users based on search and role
                 const filteredUsers = users.filter(u => {
                   const matchesSearch = !searchQuery || 
