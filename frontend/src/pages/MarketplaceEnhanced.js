@@ -585,9 +585,28 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
             </Card>
           ))}
           </div>
+
+          {/* Infinite Scroll Sentinel */}
+          {hasMore && filteredProducts.length > 0 && (
+            <div id="load-more-sentinel" className="py-8 text-center">
+              {loadingMore && (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                  <p className="text-gray-400 text-sm">Loading more products...</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Products Count Info */}
+          {filteredProducts.length > 0 && totalProducts > 0 && (
+            <div className="text-center text-gray-400 text-sm mt-4">
+              Showing {filteredProducts.length} of {totalProducts} products
+            </div>
+          )}
         )}
 
-        {filteredProducts.length === 0 && (
+        {filteredProducts.length === 0 && !loading && (
           <Card className="bg-white/10 backdrop-blur-xl border border-white/20 p-12 text-center">
             <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">No products found</h3>
