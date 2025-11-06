@@ -52,7 +52,37 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
     try {
       const response = await axios.get(`${API}/products`);
       // Ensure products is always an array
-      const productData = Array.isArray(response.data) ? response.data : [];
+      let productData = Array.isArray(response.data) ? response.data : [];
+      
+      // Fetch stock availability for each product
+      try {
+        const stockResponse = await axios.get(`${API}/stock/inventory/all-stock`);
+        const stockData = stockResponse.data.inventory || [];
+        
+        // Create stock map by product_id
+        const stockMap = {};
+        stockData.forEach(stock => {
+          const pid = stock.product_id;
+          if (!stockMap[pid]) {
+            stockMap[pid] = 0;
+          }
+          stockMap[pid] += stock.quantity || 0;
+        });
+        
+        // Merge stock quantities with products
+        productData = productData.map(product => ({
+          ...product,
+          stock_quantity: stockMap[product.product_id] || 0
+        }));
+      } catch (stockError) {
+        console.warn('Could not fetch stock data:', stockError);
+        // Set stock_quantity to 0 for all products if stock fetch fails
+        productData = productData.map(product => ({
+          ...product,
+          stock_quantity: 0
+        }));
+      }
+      
       setProducts(productData);
     } catch (error) {
       console.error('Error fetching products:', error);
