@@ -832,6 +832,349 @@ async def forgot_password(email: str):
         "reset_token": reset_token  # Remove in production
     }
 
+# ========== BIOMETRIC AUTHENTICATION ROUTES ==========
+
+@api_router.post("/auth/biometric/register-options")
+async def get_biometric_register_options(user_id: str):
+    """Get WebAuthn registration options for biometric setup"""
+    from webauthn import generate_registration_options
+    from webauthn.helpers.structs import (
+        PublicKeyCredentialDescriptor,
+        AuthenticatorSelectionCriteria,
+        UserVerificationRequirement,
+        AuthenticatorAttachment,
+        ResidentKeyRequirement
+    )
+    
+    # Get user
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get existing credentials to exclude
+    existing_creds = await db.biometric_credentials.find({"user_id": user_id}).to_list(None)
+    exclude_credentials = [
+        PublicKeyCredentialDescriptor(id=bytes.fromhex(cred["credential_raw_id"]))
+        for cred in existing_creds
+    ]
+    
+    # Generate registration options
+    options = generate_registration_options(
+        rp_id="emergentagent.com",  # Replace with your domain
+        rp_name="PARAS REWARD",
+        user_id=user_id.encode('utf-8'),
+        user_name=user.get("email", "user"),
+        user_display_name=user.get("name", "User"),
+        exclude_credentials=exclude_credentials,
+        authenticator_selection=AuthenticatorSelectionCriteria(
+            authenticator_attachment=AuthenticatorAttachment.PLATFORM,
+            resident_key=ResidentKeyRequirement.PREFERRED,
+            user_verification=UserVerificationRequirement.PREFERRED
+        ),
+        timeout=60000  # 60 seconds
+    )
+    
+    # Store challenge in session (in production, use Redis/session store)
+    await db.webauthn_challenges.insert_one({
+        "user_id": user_id,
+        "challenge": options.challenge.hex(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()
+    })
+    
+    return {
+        "options": {
+            "challenge": options.challenge.hex(),
+            "rp": {"id": options.rp.id, "name": options.rp.name},
+            "user": {
+                "id": options.user.id.hex(),
+                "name": options.user.name,
+                "displayName": options.user.display_name
+            },
+            "pubKeyCredParams": [{"type": p.type, "alg": p.alg} for p in options.pub_key_cred_params],
+            "timeout": options.timeout,
+            "excludeCredentials": [{"id": c.id.hex(), "type": c.type} for c in options.exclude_credentials],
+            "authenticatorSelection": {
+                "authenticatorAttachment": options.authenticator_selection.authenticator_attachment,
+                "residentKey": options.authenticator_selection.resident_key,
+                "userVerification": options.authenticator_selection.user_verification
+            },
+            "attestation": options.attestation
+        }
+    }
+
+@api_router.post("/auth/biometric/register")
+async def register_biometric_credential(
+    user_id: str,
+    device_name: str,
+    credential_data: Dict
+):
+    """Register a new biometric credential"""
+    from webauthn import verify_registration_response
+    from webauthn.helpers.structs import RegistrationCredential
+    
+    # Get user
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check device limit (max 5 devices)
+    existing_count = await db.biometric_credentials.count_documents({"user_id": user_id})
+    if existing_count >= 5:
+        raise HTTPException(status_code=400, detail="Maximum 5 devices allowed. Please remove an old device first.")
+    
+    # Get stored challenge
+    challenge_doc = await db.webauthn_challenges.find_one(
+        {"user_id": user_id},
+        sort=[("created_at", -1)]
+    )
+    
+    if not challenge_doc:
+        raise HTTPException(status_code=400, detail="No registration challenge found. Please restart registration.")
+    
+    # Check if challenge expired
+    expires_at = datetime.fromisoformat(challenge_doc["expires_at"])
+    if datetime.now(timezone.utc) > expires_at:
+        raise HTTPException(status_code=400, detail="Registration challenge expired. Please restart registration.")
+    
+    try:
+        # Create RegistrationCredential object
+        credential = RegistrationCredential(
+            id=credential_data["id"],
+            raw_id=bytes.fromhex(credential_data["rawId"]),
+            response={
+                "client_data_json": bytes.fromhex(credential_data["response"]["clientDataJSON"]),
+                "attestation_object": bytes.fromhex(credential_data["response"]["attestationObject"]),
+            },
+            type=credential_data["type"]
+        )
+        
+        # Verify registration
+        verification = verify_registration_response(
+            credential=credential,
+            expected_challenge=bytes.fromhex(challenge_doc["challenge"]),
+            expected_origin="https://emergentagent.com",  # Replace with your domain
+            expected_rp_id="emergentagent.com"
+        )
+        
+        # Store credential
+        biometric_cred = {
+            "credential_id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "device_name": device_name,
+            "credential_public_key": verification.credential_public_key.hex(),
+            "credential_raw_id": verification.credential_id.hex(),
+            "counter": verification.sign_count,
+            "transports": credential_data.get("transports", []),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "last_used_at": None
+        }
+        
+        await db.biometric_credentials.insert_one(biometric_cred)
+        
+        # Delete used challenge
+        await db.webauthn_challenges.delete_one({"_id": challenge_doc["_id"]})
+        
+        # Log activity
+        await log_activity(
+            user_id=user_id,
+            action_type="biometric_registered",
+            description=f"Registered biometric credential on {device_name}",
+            metadata={"device_name": device_name}
+        )
+        
+        return {
+            "message": "Biometric credential registered successfully",
+            "credential_id": biometric_cred["credential_id"]
+        }
+        
+    except Exception as e:
+        print(f"Biometric registration error: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Failed to register biometric: {str(e)}")
+
+@api_router.post("/auth/biometric/login-options")
+async def get_biometric_login_options(email: str):
+    """Get WebAuthn authentication options for biometric login"""
+    from webauthn import generate_authentication_options
+    from webauthn.helpers.structs import PublicKeyCredentialDescriptor
+    
+    # Find user by email
+    user = await db.users.find_one({"email": {"$regex": f"^{email}$", "$options": "i"}})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get user's credentials
+    credentials = await db.biometric_credentials.find({"user_id": user["uid"]}).to_list(None)
+    if not credentials:
+        raise HTTPException(status_code=404, detail="No biometric credentials registered for this user")
+    
+    # Create credential descriptors
+    allow_credentials = [
+        PublicKeyCredentialDescriptor(id=bytes.fromhex(cred["credential_raw_id"]))
+        for cred in credentials
+    ]
+    
+    # Generate authentication options
+    options = generate_authentication_options(
+        rp_id="emergentagent.com",  # Replace with your domain
+        allow_credentials=allow_credentials,
+        user_verification="preferred",
+        timeout=60000
+    )
+    
+    # Store challenge
+    await db.webauthn_challenges.insert_one({
+        "user_id": user["uid"],
+        "challenge": options.challenge.hex(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()
+    })
+    
+    return {
+        "options": {
+            "challenge": options.challenge.hex(),
+            "timeout": options.timeout,
+            "rpId": options.rp_id,
+            "allowCredentials": [{"id": c.id.hex(), "type": c.type} for c in options.allow_credentials],
+            "userVerification": options.user_verification
+        }
+    }
+
+@api_router.post("/auth/biometric/login")
+async def biometric_login(
+    email: str,
+    credential_data: Dict
+):
+    """Authenticate user with biometric"""
+    from webauthn import verify_authentication_response
+    from webauthn.helpers.structs import AuthenticationCredential
+    
+    # Find user
+    user = await db.users.find_one({"email": {"$regex": f"^{email}$", "$options": "i"}})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get stored challenge
+    challenge_doc = await db.webauthn_challenges.find_one(
+        {"user_id": user["uid"]},
+        sort=[("created_at", -1)]
+    )
+    
+    if not challenge_doc:
+        raise HTTPException(status_code=400, detail="No authentication challenge found")
+    
+    # Get credential
+    credential_raw_id = credential_data["rawId"]
+    stored_credential = await db.biometric_credentials.find_one({
+        "user_id": user["uid"],
+        "credential_raw_id": credential_raw_id
+    })
+    
+    if not stored_credential:
+        raise HTTPException(status_code=404, detail="Credential not found")
+    
+    try:
+        # Create AuthenticationCredential object
+        credential = AuthenticationCredential(
+            id=credential_data["id"],
+            raw_id=bytes.fromhex(credential_data["rawId"]),
+            response={
+                "client_data_json": bytes.fromhex(credential_data["response"]["clientDataJSON"]),
+                "authenticator_data": bytes.fromhex(credential_data["response"]["authenticatorData"]),
+                "signature": bytes.fromhex(credential_data["response"]["signature"]),
+                "user_handle": bytes.fromhex(credential_data["response"].get("userHandle", "")) if credential_data["response"].get("userHandle") else None
+            },
+            type=credential_data["type"]
+        )
+        
+        # Verify authentication
+        verification = verify_authentication_response(
+            credential=credential,
+            expected_challenge=bytes.fromhex(challenge_doc["challenge"]),
+            expected_origin="https://emergentagent.com",  # Replace with your domain
+            expected_rp_id="emergentagent.com",
+            credential_public_key=bytes.fromhex(stored_credential["credential_public_key"]),
+            credential_current_sign_count=stored_credential["counter"]
+        )
+        
+        # Update credential counter and last used
+        await db.biometric_credentials.update_one(
+            {"credential_id": stored_credential["credential_id"]},
+            {
+                "$set": {
+                    "counter": verification.new_sign_count,
+                    "last_used_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        # Update user last login
+        await db.users.update_one(
+            {"uid": user["uid"]},
+            {
+                "$set": {"last_login": datetime.now(timezone.utc).isoformat()},
+                "$inc": {"login_count": 1}
+            }
+        )
+        
+        # Delete used challenge
+        await db.webauthn_challenges.delete_one({"_id": challenge_doc["_id"]})
+        
+        # Log activity
+        await log_activity(
+            user_id=user["uid"],
+            action_type="biometric_login",
+            description=f"Logged in with biometric on {stored_credential['device_name']}",
+            metadata={"device_name": stored_credential["device_name"]}
+        )
+        
+        # Return user data
+        user.pop("password_hash", None)
+        user.pop("reset_token", None)
+        
+        return User(**user)
+        
+    except Exception as e:
+        print(f"Biometric authentication error: {str(e)}")
+        raise HTTPException(status_code=401, detail="Biometric authentication failed")
+
+@api_router.get("/auth/biometric/credentials/{user_id}")
+async def get_user_biometric_credentials(user_id: str):
+    """Get list of registered biometric credentials for a user"""
+    credentials = await db.biometric_credentials.find({"user_id": user_id}).to_list(None)
+    
+    # Remove sensitive data
+    for cred in credentials:
+        cred.pop("_id", None)
+        cred.pop("credential_public_key", None)
+    
+    return {
+        "credentials": credentials,
+        "count": len(credentials),
+        "max_devices": 5
+    }
+
+@api_router.delete("/auth/biometric/credentials/{credential_id}")
+async def delete_biometric_credential(credential_id: str, user_id: str):
+    """Delete a biometric credential"""
+    result = await db.biometric_credentials.delete_one({
+        "credential_id": credential_id,
+        "user_id": user_id
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Credential not found")
+    
+    # Log activity
+    await log_activity(
+        user_id=user_id,
+        action_type="biometric_removed",
+        description="Removed biometric credential",
+        metadata={"credential_id": credential_id}
+    )
+    
+    return {"message": "Biometric credential deleted successfully"}
+
 # ========== USER PROFILE ROUTES ==========
 
 
