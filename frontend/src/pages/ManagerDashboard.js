@@ -176,7 +176,11 @@ const ManagerDashboard = ({ user, onLogout }) => {
     { id: 'overview', icon: TrendingUp, label: 'Overview' },
     { id: 'kyc', icon: FileText, label: 'KYC Verification' },
     { id: 'payments', icon: CreditCard, label: 'VIP Payments' },
+    { id: 'withdrawals-cashback', icon: Wallet, label: 'Cashback Withdrawals' },
+    { id: 'withdrawals-profit', icon: Wallet, label: 'Profit Withdrawals' },
+    { id: 'products', icon: ShoppingBag, label: 'Products' },
     { id: 'stock', icon: Truck, label: 'Stock Movements' },
+    { id: 'stockists', icon: Network, label: 'Stockist Hierarchy' },
     { id: 'support', icon: HeadphonesIcon, label: 'Support Tickets' },
   ];
 
