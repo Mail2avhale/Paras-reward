@@ -163,6 +163,7 @@ const ImageUpload = ({
           onCapture={handleCameraCapture}
           onClose={() => setShowCamera(false)}
           label={label}
+          defaultFacingMode={cameraFacingMode}
         />
       )}
 
