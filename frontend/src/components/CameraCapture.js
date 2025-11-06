@@ -32,26 +32,70 @@ const CameraCapture = ({ onCapture, onClose, label = "Capture Photo", defaultFac
       // Stop existing stream
       stopCamera();
       
-      // Request camera access
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: facingMode,
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        }
-      });
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera not supported on this browser');
+      }
+      
+      // Request camera access with multiple attempts
+      let stream;
+      try {
+        // Try with specific facing mode
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: facingMode },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
+        });
+      } catch (err) {
+        console.warn('Failed with specific facing mode, trying any camera:', err);
+        // Fallback: try any camera
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
+        });
+      }
       
       streamRef.current = stream;
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
-        setIsStreaming(true);
+        
+        // Wait for video to be ready
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play()
+            .then(() => {
+              setIsStreaming(true);
+            })
+            .catch(err => {
+              console.error('Video play error:', err);
+              setError('Unable to start camera. Please try again or use file upload.');
+            });
+        };
       }
     } catch (err) {
       console.error('Camera error:', err);
-      setError('Unable to access camera. Please check permissions or use file upload.');
+      
+      let errorMessage = 'Unable to access camera. ';
+      
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        errorMessage += 'Camera permission denied. Please enable camera in your browser settings.';
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        errorMessage += 'No camera found on this device.';
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        errorMessage += 'Camera is already in use by another application.';
+      } else if (err.name === 'OverconstrainedError' || err.name === 'ConstraintNotSatisfiedError') {
+        errorMessage += 'Camera does not support the requested settings.';
+      } else {
+        errorMessage += 'Please check permissions or use file upload.';
+      }
+      
+      setError(errorMessage);
       setIsStreaming(false);
+      setUploadMode(true); // Auto-switch to upload mode on error
     }
   };
 
