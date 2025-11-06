@@ -647,7 +647,15 @@ const ProfileEnhanced = ({ user, onLogout }) => {
                 {user?.name || 'Complete Your Profile'}
               </h2>
               <p className="text-gray-600 mb-4">{user?.email}</p>
-              <div className="flex gap-3 justify-center md:justify-start">
+              <div className="flex gap-3 justify-center md:justify-start flex-wrap">
+                <Button
+                  onClick={() => setShowCamera(true)}
+                  className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                  disabled={loading}
+                >
+                  <Camera className="h-4 w-4" />
+                  Take Photo
+                </Button>
                 <Button
                   onClick={() => fileInputRef.current?.click()}
                   variant="outline"
@@ -655,7 +663,7 @@ const ProfileEnhanced = ({ user, onLogout }) => {
                   className="flex items-center gap-2"
                 >
                   <Upload className="h-4 w-4" />
-                  Upload Photo
+                  Upload
                 </Button>
                 {profilePicture && (
                   <Button
@@ -672,6 +680,15 @@ const ProfileEnhanced = ({ user, onLogout }) => {
             </div>
           </div>
         </Card>
+
+        {/* Camera Capture Modal */}
+        {showCamera && (
+          <CameraCapture
+            onCapture={handleCameraCapture}
+            onClose={() => setShowCamera(false)}
+            label="Capture Profile Picture"
+          />
+        )}
 
         {/* Profile Completion Status Bar */}
         <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-purple-200">
