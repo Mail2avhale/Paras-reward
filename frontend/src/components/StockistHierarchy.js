@@ -20,9 +20,16 @@ const StockistHierarchy = ({ user, userRole }) => {
     try {
       // Fetch parent if not master_stockist
       if (userRole !== 'master_stockist') {
-        const parentId = userRole === 'outlet' 
-          ? user.assigned_sub_stockist 
-          : user.assigned_master_stockist;
+        // Try multiple fields to find parent: parent_id, assigned_sub_stockist, assigned_master_stockist
+        let parentId = null;
+        
+        if (userRole === 'outlet') {
+          // For outlets, check parent_id first, then assigned_sub_stockist
+          parentId = user.parent_id || user.assigned_sub_stockist;
+        } else if (userRole === 'sub_stockist') {
+          // For sub stockists, check parent_id first, then assigned_master_stockist
+          parentId = user.parent_id || user.assigned_master_stockist;
+        }
         
         if (parentId) {
           try {
@@ -31,6 +38,13 @@ const StockistHierarchy = ({ user, userRole }) => {
           } catch (err) {
             console.warn('Could not fetch parent:', err);
           }
+        } else {
+          console.log('No parent ID found in user data:', {
+            parent_id: user.parent_id,
+            assigned_sub_stockist: user.assigned_sub_stockist,
+            assigned_master_stockist: user.assigned_master_stockist,
+            role: userRole
+          });
         }
       }
 
