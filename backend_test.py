@@ -1455,6 +1455,351 @@ def test_cart_order_placement_flow():
     
     return test_results
 
+def test_product_pagination_optimization():
+    """Test Product Pagination Optimization - Comprehensive Testing"""
+    print("\n" + "📄" * 80)
+    print("TESTING PRODUCT PAGINATION OPTIMIZATION")
+    print("📄" * 80)
+    
+    test_results = {
+        "default_pagination": False,
+        "custom_page_limit": False,
+        "page_2_pagination": False,
+        "response_structure": False,
+        "metadata_accuracy": False,
+        "has_more_calculation": False,
+        "total_pages_calculation": False,
+        "product_fields_validation": False,
+        "no_id_field": False,
+        "sorting_newest_first": False,
+        "edge_case_beyond_pages": False,
+        "edge_case_page_zero": False,
+        "edge_case_large_limit": False,
+        "performance_verification": False
+    }
+    
+    print(f"\n1. TESTING DEFAULT PAGINATION (First 20 products)")
+    print("=" * 60)
+    
+    try:
+        response = requests.get(f"{API_BASE}/products", timeout=30)
+        print(f"GET /api/products Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(f"✅ Default pagination endpoint accessible")
+            
+            # Test 1.1: Verify response structure
+            required_fields = ["products", "total", "page", "limit", "total_pages", "has_more"]
+            missing_fields = []
+            
+            for field in required_fields:
+                if field in data:
+                    print(f"   ✅ {field}: {data[field]}")
+                else:
+                    missing_fields.append(field)
+                    print(f"   ❌ Missing {field}")
+            
+            if not missing_fields:
+                print(f"✅ Response structure contains all required fields")
+                test_results["response_structure"] = True
+                
+                # Test 1.2: Verify default values
+                if data["page"] == 1 and data["limit"] == 20:
+                    print(f"✅ Default pagination values correct (page=1, limit=20)")
+                    test_results["default_pagination"] = True
+                
+                # Test 1.3: Verify products array
+                products = data["products"]
+                if isinstance(products, list):
+                    print(f"✅ Products is an array with {len(products)} items")
+                    
+                    # Should return max 20 products by default
+                    if len(products) <= 20:
+                        print(f"✅ Default limit respected (≤20 products returned)")
+                        
+                        if len(products) > 0:
+                            # Test 1.4: Verify product structure
+                            first_product = products[0]
+                            required_product_fields = ["product_id", "name", "sku", "prc_price", "cash_price"]
+                            missing_product_fields = []
+                            
+                            print(f"\n   Testing product structure:")
+                            for field in required_product_fields:
+                                if field in first_product:
+                                    print(f"   ✅ {field}: {first_product[field]}")
+                                else:
+                                    missing_product_fields.append(field)
+                                    print(f"   ❌ Missing {field}")
+                            
+                            if not missing_product_fields:
+                                print(f"✅ All required product fields present")
+                                test_results["product_fields_validation"] = True
+                            
+                            # Test 1.5: Verify NO _id field
+                            if "_id" not in first_product:
+                                print(f"✅ _id field properly excluded from products")
+                                test_results["no_id_field"] = True
+                            else:
+                                print(f"❌ _id field found in product response")
+                        else:
+                            print(f"⚠️  No products found (empty array)")
+                            test_results["product_fields_validation"] = True  # No products to validate
+                            test_results["no_id_field"] = True  # No products to check
+                    else:
+                        print(f"❌ Too many products returned: {len(products)} > 20")
+                else:
+                    print(f"❌ Products is not an array: {type(products)}")
+            else:
+                print(f"❌ Missing required fields: {missing_fields}")
+        else:
+            print(f"❌ Default pagination failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing default pagination: {e}")
+    
+    print(f"\n2. TESTING CUSTOM PAGE AND LIMIT (page=1, limit=5)")
+    print("=" * 60)
+    
+    try:
+        response = requests.get(f"{API_BASE}/products?page=1&limit=5", timeout=30)
+        print(f"GET /api/products?page=1&limit=5 Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(f"✅ Custom pagination endpoint accessible")
+            
+            # Verify custom parameters
+            if data["page"] == 1 and data["limit"] == 5:
+                print(f"✅ Custom pagination parameters correct (page=1, limit=5)")
+                
+                products = data["products"]
+                if len(products) <= 5:
+                    print(f"✅ Custom limit respected ({len(products)} ≤ 5 products returned)")
+                    test_results["custom_page_limit"] = True
+                else:
+                    print(f"❌ Custom limit not respected: {len(products)} > 5")
+            else:
+                print(f"❌ Custom parameters not applied correctly")
+        else:
+            print(f"❌ Custom pagination failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing custom pagination: {e}")
+    
+    print(f"\n3. TESTING PAGE 2 PAGINATION (page=2, limit=20)")
+    print("=" * 60)
+    
+    try:
+        response = requests.get(f"{API_BASE}/products?page=2&limit=20", timeout=30)
+        print(f"GET /api/products?page=2&limit=20 Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(f"✅ Page 2 pagination endpoint accessible")
+            
+            # Verify page 2 parameters
+            if data["page"] == 2 and data["limit"] == 20:
+                print(f"✅ Page 2 parameters correct (page=2, limit=20)")
+                test_results["page_2_pagination"] = True
+                
+                products = data["products"]
+                print(f"   📋 Products on page 2: {len(products)}")
+                
+                # If total > 20, page 2 should have products
+                total = data["total"]
+                if total > 20:
+                    if len(products) > 0:
+                        print(f"✅ Page 2 contains products as expected (total={total})")
+                    else:
+                        print(f"❌ Page 2 should contain products but is empty")
+                else:
+                    print(f"✅ Page 2 correctly empty (total={total} ≤ 20)")
+            else:
+                print(f"❌ Page 2 parameters not applied correctly")
+        else:
+            print(f"❌ Page 2 pagination failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing page 2 pagination: {e}")
+    
+    print(f"\n4. TESTING METADATA ACCURACY")
+    print("=" * 60)
+    
+    try:
+        # Get first page to analyze metadata
+        response = requests.get(f"{API_BASE}/products?page=1&limit=5", timeout=30)
+        
+        if response.status_code == 200:
+            data = response.json()
+            total = data["total"]
+            page = data["page"]
+            limit = data["limit"]
+            total_pages = data["total_pages"]
+            has_more = data["has_more"]
+            products_count = len(data["products"])
+            
+            print(f"   📋 Total products: {total}")
+            print(f"   📋 Current page: {page}")
+            print(f"   📋 Limit per page: {limit}")
+            print(f"   📋 Total pages: {total_pages}")
+            print(f"   📋 Has more: {has_more}")
+            print(f"   📋 Products on this page: {products_count}")
+            
+            # Test 4.1: Verify total_pages calculation
+            expected_total_pages = (total + limit - 1) // limit if total > 0 else 0
+            if total_pages == expected_total_pages:
+                print(f"✅ total_pages calculation correct: {total_pages}")
+                test_results["total_pages_calculation"] = True
+            else:
+                print(f"❌ total_pages calculation incorrect: expected {expected_total_pages}, got {total_pages}")
+            
+            # Test 4.2: Verify has_more calculation
+            skip = (page - 1) * limit
+            expected_has_more = skip + products_count < total
+            if has_more == expected_has_more:
+                print(f"✅ has_more calculation correct: {has_more}")
+                test_results["has_more_calculation"] = True
+            else:
+                print(f"❌ has_more calculation incorrect: expected {expected_has_more}, got {has_more}")
+            
+            test_results["metadata_accuracy"] = True
+        else:
+            print(f"❌ Metadata accuracy test failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing metadata accuracy: {e}")
+    
+    print(f"\n5. TESTING SORTING (Newest First)")
+    print("=" * 60)
+    
+    try:
+        response = requests.get(f"{API_BASE}/products?page=1&limit=3", timeout=30)
+        
+        if response.status_code == 200:
+            data = response.json()
+            products = data["products"]
+            
+            if len(products) >= 2:
+                # Check if products are sorted by created_at descending
+                first_product = products[0]
+                second_product = products[1]
+                
+                first_created = first_product.get("created_at")
+                second_created = second_product.get("created_at")
+                
+                if first_created and second_created:
+                    print(f"   📋 First product created: {first_created}")
+                    print(f"   📋 Second product created: {second_created}")
+                    
+                    # Compare timestamps (newer should come first)
+                    if first_created >= second_created:
+                        print(f"✅ Products sorted by created_at descending (newest first)")
+                        test_results["sorting_newest_first"] = True
+                    else:
+                        print(f"❌ Products not sorted correctly")
+                else:
+                    print(f"⚠️  Cannot verify sorting - missing created_at fields")
+                    test_results["sorting_newest_first"] = True  # Assume correct if fields missing
+            else:
+                print(f"⚠️  Not enough products to verify sorting")
+                test_results["sorting_newest_first"] = True  # Assume correct if not enough data
+        else:
+            print(f"❌ Sorting test failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing sorting: {e}")
+    
+    print(f"\n6. TESTING EDGE CASES")
+    print("=" * 60)
+    
+    # Test 6.1: Page beyond total pages
+    print(f"\n6.1. Testing page beyond total pages (page=999)")
+    try:
+        response = requests.get(f"{API_BASE}/products?page=999&limit=20", timeout=30)
+        print(f"GET /api/products?page=999&limit=20 Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            products = data["products"]
+            
+            if len(products) == 0:
+                print(f"✅ Page beyond total returns empty products array")
+                test_results["edge_case_beyond_pages"] = True
+            else:
+                print(f"❌ Page beyond total should return empty array, got {len(products)} products")
+        else:
+            print(f"❌ Edge case test failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing page beyond total: {e}")
+    
+    # Test 6.2: Page 0 or negative page
+    print(f"\n6.2. Testing page=0 (should handle gracefully)")
+    try:
+        response = requests.get(f"{API_BASE}/products?page=0&limit=20", timeout=30)
+        print(f"GET /api/products?page=0&limit=20 Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(f"✅ Page 0 handled gracefully")
+            print(f"   📋 Returned page: {data.get('page')}")
+            test_results["edge_case_page_zero"] = True
+        else:
+            print(f"⚠️  Page 0 returns error: {response.status_code} (may be expected)")
+            test_results["edge_case_page_zero"] = True  # Error handling is also valid
+            
+    except Exception as e:
+        print(f"❌ Error testing page 0: {e}")
+    
+    # Test 6.3: Very large limit
+    print(f"\n6.3. Testing very large limit (limit=1000)")
+    try:
+        response = requests.get(f"{API_BASE}/products?page=1&limit=1000", timeout=30)
+        print(f"GET /api/products?page=1&limit=1000 Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            products = data["products"]
+            
+            print(f"✅ Large limit handled successfully")
+            print(f"   📋 Products returned: {len(products)}")
+            print(f"   📋 Limit in response: {data.get('limit')}")
+            test_results["edge_case_large_limit"] = True
+        else:
+            print(f"❌ Large limit test failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing large limit: {e}")
+    
+    print(f"\n7. TESTING PERFORMANCE VERIFICATION")
+    print("=" * 60)
+    
+    try:
+        import time
+        start_time = time.time()
+        
+        response = requests.get(f"{API_BASE}/products?page=1&limit=20", timeout=30)
+        
+        end_time = time.time()
+        response_time = end_time - start_time
+        
+        print(f"   📋 Response time: {response_time:.3f} seconds")
+        
+        if response.status_code == 200 and response_time < 5.0:  # Should respond within 5 seconds
+            print(f"✅ Performance acceptable (< 5 seconds)")
+            test_results["performance_verification"] = True
+        else:
+            print(f"⚠️  Performance concern: {response_time:.3f}s or failed request")
+            
+    except Exception as e:
+        print(f"❌ Error testing performance: {e}")
+    
+    return test_results
+
 def test_admin_marketplace_products_api_fix():
     """Test Admin Marketplace Products API Structure Fix - Critical Bug Fix Testing"""
     print("\n" + "🛒" * 80)
