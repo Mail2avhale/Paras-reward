@@ -50,7 +50,10 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
   }, []);
 
   useEffect(() => {
-    filterAndSortProducts();
+    // Only filter if products is a valid array
+    if (Array.isArray(products)) {
+      filterAndSortProducts();
+    }
   }, [products, searchTerm, selectedCategory, sortBy]);
 
   const fetchProducts = async () => {
