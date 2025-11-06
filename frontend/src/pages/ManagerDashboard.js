@@ -560,6 +560,172 @@ const ManagerDashboard = ({ user, onLogout }) => {
               )}
             </div>
           )}
+
+          {/* Cashback Withdrawals Tab */}
+          {activeTab === 'withdrawals-cashback' && (
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Cashback Withdrawal Requests</h2>
+              {cashbackWithdrawals.filter(w => w.status === 'pending').length === 0 ? (
+                <Card className="p-12 text-center bg-white">
+                  <Wallet className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No pending cashback withdrawals</p>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {cashbackWithdrawals.filter(w => w.status === 'pending').map((withdrawal) => (
+                    <Card key={withdrawal.withdrawal_id} className="p-6 bg-white">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p className="font-bold text-gray-900">₹{withdrawal.amount}</p>
+                          <p className="text-sm text-gray-600">User: {withdrawal.user_id}</p>
+                          <p className="text-xs text-gray-500">Requested: {withdrawal.requested_at}</p>
+                        </div>
+                        <span className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-700">
+                          {withdrawal.status}
+                        </span>
+                      </div>
+                      <div className="flex gap-2 mt-4">
+                        <Button
+                          onClick={() => handleWithdrawalAction(withdrawal.withdrawal_id, 'cashback', 'approve')}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Approve
+                        </Button>
+                        <Button
+                          onClick={() => handleWithdrawalAction(withdrawal.withdrawal_id, 'cashback', 'reject')}
+                          variant="outline"
+                          className="border-red-300 text-red-600 hover:bg-red-50"
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Reject
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Profit Withdrawals Tab */}
+          {activeTab === 'withdrawals-profit' && (
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Profit Withdrawal Requests</h2>
+              {profitWithdrawals.filter(w => w.status === 'pending').length === 0 ? (
+                <Card className="p-12 text-center bg-white">
+                  <Wallet className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No pending profit withdrawals</p>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {profitWithdrawals.filter(w => w.status === 'pending').map((withdrawal) => (
+                    <Card key={withdrawal.withdrawal_id} className="p-6 bg-white">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p className="font-bold text-gray-900">₹{withdrawal.amount}</p>
+                          <p className="text-sm text-gray-600">Stockist: {withdrawal.user_id}</p>
+                          <p className="text-xs text-gray-500">Requested: {withdrawal.requested_at}</p>
+                        </div>
+                        <span className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-700">
+                          {withdrawal.status}
+                        </span>
+                      </div>
+                      <div className="flex gap-2 mt-4">
+                        <Button
+                          onClick={() => handleWithdrawalAction(withdrawal.withdrawal_id, 'profit', 'approve')}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Approve
+                        </Button>
+                        <Button
+                          onClick={() => handleWithdrawalAction(withdrawal.withdrawal_id, 'profit', 'reject')}
+                          variant="outline"
+                          className="border-red-300 text-red-600 hover:bg-red-50"
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Reject
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Products Tab */}
+          {activeTab === 'products' && (
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Product Management</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {products.map((product) => (
+                  <Card key={product.product_id} className="p-6 bg-white">
+                    <div className="flex items-center justify-between mb-4">
+                      <Package className="h-8 w-8 text-indigo-600" />
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        product.is_active 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {product.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <h3 className="font-bold text-gray-900 mb-2">{product.name}</h3>
+                    <p className="text-sm text-gray-600 mb-2">SKU: {product.sku}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-lg font-bold text-indigo-600">{product.prc_price} PRC</p>
+                        <p className="text-sm text-gray-500">₹{product.cash_price} Cash</p>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Stockist Hierarchy Tab */}
+          {activeTab === 'stockists' && (
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Stockist Hierarchy</h2>
+              <div className="space-y-4">
+                {['master_stockist', 'sub_stockist', 'outlet'].map((role) => (
+                  <div key={role}>
+                    <h3 className="text-lg font-bold text-gray-700 mb-3 capitalize">
+                      {role.replace('_', ' ')}s ({stockists.filter(s => s.role === role).length})
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {stockists.filter(s => s.role === role).map((stockist) => (
+                        <Card key={stockist.uid} className="p-4 bg-white">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className={`p-2 rounded-lg ${
+                              role === 'master_stockist' ? 'bg-purple-100' :
+                              role === 'sub_stockist' ? 'bg-blue-100' : 'bg-green-100'
+                            }`}>
+                              <Users className={`h-5 w-5 ${
+                                role === 'master_stockist' ? 'text-purple-600' :
+                                role === 'sub_stockist' ? 'text-blue-600' : 'text-green-600'
+                              }`} />
+                            </div>
+                            <div>
+                              <p className="font-bold text-gray-900">{stockist.name}</p>
+                              <p className="text-xs text-gray-500">{stockist.email}</p>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            <p>Mobile: {stockist.mobile}</p>
+                            <p>Location: {stockist.district}, {stockist.state}</p>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
