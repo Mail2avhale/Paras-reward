@@ -860,8 +860,9 @@ async def get_biometric_register_options(user_id: str):
     ]
     
     # Generate registration options
+    webauthn_rp_id = os.environ.get('WEBAUTHN_RP_ID', 'localhost')
     options = generate_registration_options(
-        rp_id="emergentagent.com",  # Replace with your domain
+        rp_id=webauthn_rp_id,
         rp_name="PARAS REWARD",
         user_id=user_id.encode('utf-8'),
         user_name=user.get("email", "user"),
