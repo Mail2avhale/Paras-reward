@@ -2206,7 +2206,7 @@ const StockMovementManagement = () => {
                   onChange={(e) => setFormData({...formData, product_id: e.target.value})}
                 >
                   <option value="">Select Product</option>
-                  {products.map(product => (
+                  {Array.isArray(products) && products.map(product => (
                     <option key={product.product_id} value={product.product_id}>
                       {product.name} (Stock: {product.available_stock})
                     </option>
