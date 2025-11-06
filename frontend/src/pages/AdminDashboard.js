@@ -1535,36 +1535,7 @@ const AdminDashboard = ({ user, onLogout }) => {
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">User Management</h2>
               
-              {/* Tabs for Basic and Advanced */}
-              <div className="mb-6">
-                <div className="border-b border-gray-200">
-                  <nav className="-mb-px flex space-x-8">
-                    <button
-                      onClick={() => setUserManagementView('basic')}
-                      className={`${
-                        userManagementView === 'basic'
-                          ? 'border-purple-500 text-purple-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                    >
-                      Basic Management
-                    </button>
-                    <button
-                      onClick={() => setUserManagementView('advanced')}
-                      className={`${
-                        userManagementView === 'advanced'
-                          ? 'border-purple-500 text-purple-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                    >
-                      Advanced Management
-                    </button>
-                  </nav>
-                </div>
-              </div>
-
-              {/* Basic Management View */}
-              {userManagementView === 'basic' && (
+              {/* Advanced Management - Direct View (Basic Management removed as all functions available here) */}
             <div>
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
