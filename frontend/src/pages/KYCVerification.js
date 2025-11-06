@@ -138,6 +138,8 @@ const KYCVerification = ({ user, onLogout }) => {
                 aspectRatio="video"
                 maxSize={5}
                 required={true}
+                enableCamera={true}
+                cameraFacingMode="environment"
               />
 
               {/* Aadhaar Back */}
@@ -148,6 +150,8 @@ const KYCVerification = ({ user, onLogout }) => {
                 aspectRatio="video"
                 maxSize={5}
                 required={true}
+                enableCamera={true}
+                cameraFacingMode="environment"
               />
 
               {/* PAN Front */}
@@ -158,6 +162,8 @@ const KYCVerification = ({ user, onLogout }) => {
                 aspectRatio="video"
                 maxSize={5}
                 required={true}
+                enableCamera={true}
+                cameraFacingMode="environment"
               />
 
               <Button
