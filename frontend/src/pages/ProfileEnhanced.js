@@ -875,85 +875,40 @@ const ProfileEnhanced = ({ user, onLogout }) => {
                   </div>
 
                   {/* Aadhaar Front */}
-                  <div>
-                    <Label className="text-base font-semibold mb-3 block">Aadhaar Card - Front *</Label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-purple-500 transition-colors">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleKycFileUpload('aadhaar_front_base64', e)}
-                        className="hidden"
-                        id="aadhaar-front"
-                      />
-                      <label htmlFor="aadhaar-front" className="cursor-pointer">
-                        {kycData.aadhaar_front_base64 ? (
-                          <div>
-                            <img src={kycData.aadhaar_front_base64} alt="Aadhaar Front" className="max-h-40 mx-auto mb-2 rounded" />
-                            <p className="text-sm text-green-600 font-medium">✓ Uploaded</p>
-                          </div>
-                        ) : (
-                          <div>
-                            <Upload className="h-10 w-10 mx-auto mb-2 text-gray-400" />
-                            <p className="text-sm text-gray-600">Click to upload</p>
-                          </div>
-                        )}
-                      </label>
-                    </div>
-                  </div>
+                  <ImageUpload
+                    value={kycData.aadhaar_front_base64}
+                    onChange={(base64Image) => setKycData({...kycData, aadhaar_front_base64: base64Image})}
+                    label="Aadhaar Card - Front *"
+                    aspectRatio="video"
+                    maxSize={5}
+                    required={true}
+                    enableCamera={true}
+                    cameraFacingMode="environment"
+                  />
 
                   {/* Aadhaar Back */}
-                  <div>
-                    <Label className="text-base font-semibold mb-3 block">Aadhaar Card - Back *</Label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-purple-500 transition-colors">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleKycFileUpload('aadhaar_back_base64', e)}
-                        className="hidden"
-                        id="aadhaar-back"
-                      />
-                      <label htmlFor="aadhaar-back" className="cursor-pointer">
-                        {kycData.aadhaar_back_base64 ? (
-                          <div>
-                            <img src={kycData.aadhaar_back_base64} alt="Aadhaar Back" className="max-h-40 mx-auto mb-2 rounded" />
-                            <p className="text-sm text-green-600 font-medium">✓ Uploaded</p>
-                          </div>
-                        ) : (
-                          <div>
-                            <Upload className="h-10 w-10 mx-auto mb-2 text-gray-400" />
-                            <p className="text-sm text-gray-600">Click to upload</p>
-                          </div>
-                        )}
-                      </label>
-                    </div>
-                  </div>
+                  <ImageUpload
+                    value={kycData.aadhaar_back_base64}
+                    onChange={(base64Image) => setKycData({...kycData, aadhaar_back_base64: base64Image})}
+                    label="Aadhaar Card - Back *"
+                    aspectRatio="video"
+                    maxSize={5}
+                    required={true}
+                    enableCamera={true}
+                    cameraFacingMode="environment"
+                  />
 
                   {/* PAN Card */}
-                  <div>
-                    <Label className="text-base font-semibold mb-3 block">PAN Card - Front *</Label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-purple-500 transition-colors">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleKycFileUpload('pan_front_base64', e)}
-                        className="hidden"
-                        id="pan-front"
-                      />
-                      <label htmlFor="pan-front" className="cursor-pointer">
-                        {kycData.pan_front_base64 ? (
-                          <div>
-                            <img src={kycData.pan_front_base64} alt="PAN Front" className="max-h-40 mx-auto mb-2 rounded" />
-                            <p className="text-sm text-green-600 font-medium">✓ Uploaded</p>
-                          </div>
-                        ) : (
-                          <div>
-                            <Upload className="h-10 w-10 mx-auto mb-2 text-gray-400" />
-                            <p className="text-sm text-gray-600">Click to upload</p>
-                          </div>
-                        )}
-                      </label>
-                    </div>
-                  </div>
+                  <ImageUpload
+                    value={kycData.pan_front_base64}
+                    onChange={(base64Image) => setKycData({...kycData, pan_front_base64: base64Image})}
+                    label="PAN Card - Front *"
+                    aspectRatio="video"
+                    maxSize={5}
+                    required={true}
+                    enableCamera={true}
+                    cameraFacingMode="environment"
+                  />
 
                   <Button 
                     type="submit" 
