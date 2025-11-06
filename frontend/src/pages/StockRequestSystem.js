@@ -691,7 +691,7 @@ const StockRequestSystem = () => {
                   onChange={(e) => setNewRequest({...newRequest, product_id: e.target.value})}
                 >
                   <option value="">Select Product</option>
-                  {products.map((p) => (
+                  {Array.isArray(products) && products.map((p) => (
                     <option key={p.product_id} value={p.product_id}>
                       {p.name} - ₹{p.cashback_price}
                     </option>
