@@ -96,6 +96,49 @@ const LoginNew = ({ onLogin }) => {
     }
   };
 
+  const handleBiometricLogin = async () => {
+    if (!loginData.identifier) {
+      toast.error('Please enter your email first');
+      return;
+    }
+
+    setBiometricLoading(true);
+    try {
+      const result = await biometricLogin(loginData.identifier);
+      
+      if (result.success) {
+        toast.success('Biometric login successful!');
+        onLogin(result.user);
+        
+        // Navigate based on role
+        if (result.user.role === 'admin' || result.user.role === 'sub_admin') {
+          navigate('/admin');
+        } else if (result.user.role === 'master_stockist') {
+          navigate('/master-stockist');
+        } else if (result.user.role === 'sub_stockist') {
+          navigate('/sub-stockist');
+        } else if (result.user.role === 'outlet') {
+          navigate('/outlet');
+        } else {
+          navigate('/dashboard');
+        }
+      } else {
+        toast.error(result.error);
+      }
+    } catch (error) {
+      toast.error('Biometric login failed');
+    } finally {
+      setBiometricLoading(false);
+    }
+  };
+
+  // Check if biometric is available
+  useEffect(() => {
+    if (isBiometricSupported() && isBiometricEnabled()) {
+      setShowBiometricOption(true);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4">
       <Card className="w-full max-w-md bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8">
