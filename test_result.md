@@ -1295,11 +1295,11 @@ frontend:
 
   - task: "Profit Wallet Transaction Logging for Delivery Charge Distribution"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/backend/server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -1307,6 +1307,9 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "ADDITIONAL FIX: Implemented automatic outlet assignment during checkout to resolve delivery charge distribution issue. Checkout now auto-assigns orders to nearest outlet based on user's district, then state, then any available outlet. Added outlet_id and assigned_outlet fields to order during creation. Updated admin order assignment endpoint to use consistent field names (outlet_id, assigned_outlet, assigned_outlet_id). This fixes the critical blocker where orders had no outlet assignment, preventing delivery and commission distribution. Ready for comprehensive testing of full flow: checkout → outlet assignment → delivery → profit wallet distribution → transaction logging."
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL BUG FOUND - PROFIT WALLET TRANSACTION LOGGING COMPLETELY BLOCKED: ❌ COMPLETE END-TO-END FLOW FAILURE (1/18 tests passed): The entire profit wallet transaction logging system is non-functional due to a critical bug in automatic outlet assignment during checkout. ❌ ROOT CAUSE IDENTIFIED: In checkout endpoint (lines 2085-2086), user location is converted to lowercase (.lower().strip()) but outlets in database have proper case values ('Mumbai', 'Maharashtra'). The regex case-insensitive matching with MongoDB is failing, causing outlet_id and assigned_outlet to be None. ❌ IMPACT: Orders created without outlet assignment → delivery fails with 'No outlet assigned' error → distribution fails → no profit wallet credits → no transaction logging. ❌ VERIFICATION: Database contains 6 outlets with correct 'Mumbai'/'Maharashtra' values, exact string matching works, but regex case-insensitive matching fails. ❌ BLOCKING ENTIRE FEATURE: Cannot test transaction logging, wallet history, or audit trail because orders cannot be delivered due to missing outlet assignment. URGENT FIX NEEDED: Remove .lower().strip() from user location processing or fix regex matching logic."
 
   - task: "Automatic Outlet Assignment During Checkout"
     implemented: true
