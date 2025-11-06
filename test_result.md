@@ -375,15 +375,18 @@ backend:
 backend:
   - task: "Admin Dashboard KPIs APIs"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "IMPLEMENTED: Enhanced GET /api/admin/stats endpoint with comprehensive KPIs including: User statistics (total, VIP, free, stockists by type), Order statistics (total, pending, delivered), KYC statistics (total, pending, verified, rejected), VIP payment statistics, Withdrawal statistics with pending amounts, Product statistics, Financial overview (total revenue, security deposits), Stock movement statistics, Security deposit statistics, Annual renewal statistics, Recent activity (orders and withdrawals). Returns structured JSON with all dashboard metrics."
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE TESTING COMPLETE - MANAGER ROLE & STOCK DEDUCTION FIXES VERIFIED: ✅ MANAGER ROLE UPDATE FIX: All role updates working correctly - 'manager', 'sub_admin', 'employee' roles can be assigned via PUT /api/admin/users/{uid}/role, invalid roles properly rejected with 400 error, role changes verified in database. ✅ MANAGER DASHBOARD APIs: 4/5 endpoints working - GET /api/admin/stats returns comprehensive KPIs with users/orders/financial data, GET /api/membership/payments returns VIP payments list, GET /api/kyc/list returns KYC documents, GET /api/admin/stock/movements returns stock movements (3 movements found), GET /api/admin/support/tickets returns support tickets with pagination. ❌ STOCK DEDUCTION ON DELIVERY: Endpoint exists (POST /api/orders/{order_id}/deliver) but could not verify actual stock deduction due to lack of real orders and stock inventory management endpoints. Endpoint handles requests correctly (returns 404 for non-existent orders as expected). Overall: 2/3 critical fixes working correctly."
 
   - task: "Stock Management with Allocations"
     implemented: false
