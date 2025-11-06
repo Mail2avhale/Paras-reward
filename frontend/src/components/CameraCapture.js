@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, X, RotateCcw, Upload, FlipHorizontal, Check } from 'lucide-react';
+import { Camera, X, RotateCcw, Upload, FlipHorizontal, Check, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
