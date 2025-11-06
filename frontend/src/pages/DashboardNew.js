@@ -57,35 +57,71 @@ const DashboardNew = ({ user, onLogout }) => {
   const currentLevelProgress = prcBalance % 1000;
   const progressPercent = (currentLevelProgress / 1000) * 100;
 
-  // Quick actions
+  // Enhanced Quick Menu with more options
   const quickActions = [
     { 
       name: 'Start Mining', 
       icon: Play, 
       link: '/mining', 
       gradient: 'from-green-500 to-emerald-600',
-      description: 'Earn PRC now'
+      description: 'Earn PRC now',
+      badge: stats?.is_mining ? 'Active' : null
     },
     { 
       name: 'Tap Game', 
       icon: Zap, 
       link: '/game', 
       gradient: 'from-yellow-500 to-orange-600',
-      description: 'Bonus rewards'
+      description: 'Bonus rewards',
+      badge: null
     },
     { 
       name: 'Marketplace', 
       icon: ShoppingBag, 
       link: '/marketplace', 
       gradient: 'from-blue-500 to-indigo-600',
-      description: 'Redeem items'
+      description: 'Redeem items',
+      badge: null
+    },
+    { 
+      name: 'My Wallet', 
+      icon: Wallet, 
+      link: '/wallet', 
+      gradient: 'from-cyan-500 to-blue-600',
+      description: 'View balance',
+      badge: null
     },
     { 
       name: 'Referrals', 
       icon: Users, 
       link: '/referrals', 
       gradient: 'from-purple-500 to-pink-600',
-      description: 'Invite friends'
+      description: 'Invite friends',
+      badge: userData?.referral_count > 0 ? `${userData.referral_count}` : null
+    },
+    { 
+      name: 'My Orders', 
+      icon: Package, 
+      link: '/orders', 
+      gradient: 'from-orange-500 to-red-600',
+      description: 'Track orders',
+      badge: null
+    },
+    { 
+      name: 'Leaderboard', 
+      icon: Trophy, 
+      link: '/leaderboard', 
+      gradient: 'from-pink-500 to-rose-600',
+      description: 'Top miners',
+      badge: null
+    },
+    { 
+      name: 'VIP Status', 
+      icon: Crown, 
+      link: '/vip', 
+      gradient: 'from-amber-500 to-yellow-600',
+      description: isVIP ? 'Active' : 'Upgrade',
+      badge: isVIP ? 'VIP' : null
     }
   ];
 
