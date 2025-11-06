@@ -1299,11 +1299,11 @@ frontend:
 frontend:
   - task: "Remove Basic Management Tab from User Management"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/pages/AdminDashboard.js"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "user"
@@ -1311,6 +1311,24 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "IMPLEMENTED: Removed 'Basic Management' tab completely from Admin Dashboard User Management section. Changes: 1) Removed tab navigation buttons (Basic Management and Advanced Management tabs). 2) Removed entire Basic Management view code (approximately 190 lines). 3) Made Advanced Management the default and only view. 4) Simplified UI - User Management now directly shows AdvancedUserManagement component without tab switching. 5) Default userManagementView state already set to 'advanced'. Result: Cleaner UI with direct access to all user management functions through Advanced Management, eliminating redundancy. File linted successfully with no errors."
+      - working: true
+        agent: "user"
+        comment: "User confirmed fix is working fine after clearing browser cache."
+
+  - task: "Redesign User Dashboard - Remove PRC Balance & Enhanced Quick Menu"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/DashboardNew.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "user"
+        comment: "User requested: 1) Remove PRC balance from wallet card on user dashboard. 2) Give new look to user dashboard with all quick menu options."
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Complete user dashboard redesign with enhanced features. WALLET CARD CHANGES: 1) Removed PRC Balance display completely. 2) Kept only Cashback Balance as main metric. 3) Enhanced visual design with larger font (text-3xl) and better spacing. 4) Added 'Available to withdraw' helper text. 5) Improved hover animations with smoother transitions. QUICK MENU ENHANCEMENTS: 1) Expanded from 4 to 8 quick action cards. 2) Added new options: My Wallet, My Orders, Leaderboard, VIP Status. 3) Implemented dynamic badge system (Active for mining, referral count, VIP badge). 4) Enhanced visual effects: shadow-lg on icons, animated shimmer effect on hover. 5) Better grid spacing (gap-3) for improved layout on mobile and desktop. 6) Changed section title from 'Quick Actions' to 'Quick Menu'. NEW QUICK MENU OPTIONS: Start Mining (with Active badge if mining), Tap Game, Marketplace, My Wallet, Referrals (with count badge), My Orders, Leaderboard, VIP Status (with VIP badge if active). Result: Modern, cleaner dashboard with focus on cashback earnings and comprehensive quick access menu to all key features. File compiled successfully with no errors."
 
   - task: "Product List Optimization with Pagination and Infinite Scroll"
     implemented: true
