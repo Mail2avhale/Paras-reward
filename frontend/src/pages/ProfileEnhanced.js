@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { User, Lock, MapPin, CreditCard, Save, Camera, Trash2, Upload, FileText, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { getStates, getDistricts, getTahsils, getPinCodes } from '@/data/locationData';
+import CameraCapture from '@/components/CameraCapture';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
