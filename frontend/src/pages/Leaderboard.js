@@ -61,7 +61,7 @@ const Leaderboard = ({ user, onLogout }) => {
             <Trophy className="h-10 w-10 text-white" />
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">Leaderboard</h1>
-          <p className="text-lg text-gray-600">Top miners of the month</p>
+          <p className="text-lg text-gray-600">Top 10 miners of the month</p>
         </div>
 
         {/* Top 3 */}
