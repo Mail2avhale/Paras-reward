@@ -2082,16 +2082,18 @@ async def checkout(request: Request):
     # Find nearest outlet based on user location (state/district)
     # Try to find outlet in same district, then state, then any active outlet
     nearest_outlet = None
-    user_district = user.get("district", "").lower().strip()
-    user_state = user.get("state", "").lower().strip()
+    user_district = user.get("district", "").strip()
+    user_state = user.get("state", "").strip()
     
     if user_district:
+        # Use case-insensitive regex for flexible matching
         nearest_outlet = await db.users.find_one({
             "role": "outlet",
             "district": {"$regex": f"^{user_district}$", "$options": "i"}
         })
     
     if not nearest_outlet and user_state:
+        # Use case-insensitive regex for flexible matching
         nearest_outlet = await db.users.find_one({
             "role": "outlet",
             "state": {"$regex": f"^{user_state}$", "$options": "i"}
