@@ -986,3 +986,19 @@ frontend:
       - working: true
         agent: "main"
         comment: "FIXED: Complete camera integration fixes. Changes: 1) Updated CameraCapture to accept defaultFacingMode prop - defaults to 'user' (front camera) for selfies instead of 'environment' (rear). 2) Updated ImageUpload to accept cameraFacingMode prop - allows specifying front/rear camera per use case. 3) ProfileEnhanced now passes defaultFacingMode='user' for profile picture capture. 4) Enhanced error handling in startCamera() with multiple fallback attempts: tries specific facing mode first, falls back to any available camera, provides detailed error messages based on error type (NotAllowedError=permission denied, NotFoundError=no camera, NotReadableError=camera in use, etc.). 5) Improved error UI with AlertCircle icon, clear error title, detailed message, 'Try Again' button, 'Choose File Instead' button. 6) Auto-switches to file upload mode on camera error. 7) Added video.onloadedmetadata handler to wait for video ready before playing. 8) Better browser compatibility checks. Front camera now works for selfies, rear camera for documents, graceful fallback to file upload on any error."
+
+frontend:
+  - task: "KYC Document Camera Upload - Aadhaar & PAN Cards"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/KYCVerification.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported: Camera option not implemented for Aadhaar and PAN card upload. Only file upload was available."
+      - working: true
+        agent: "main"
+        comment: "IMPLEMENTED: Added camera capture support for all KYC documents. Changes: 1) Updated Aadhaar Front ImageUpload component with enableCamera=true and cameraFacingMode='environment' (rear camera for better document quality). 2) Updated Aadhaar Back ImageUpload component with same camera settings. 3) Updated PAN Front ImageUpload component with camera support and rear camera mode. All KYC document fields now show Camera and Upload buttons. Users can capture documents directly using rear camera or upload from files. Rear camera used for better document capture quality and clarity. Camera modal opens with live preview, capture button, and retake functionality. Same enhanced error handling applies (Try Again, Choose File Instead buttons)."
