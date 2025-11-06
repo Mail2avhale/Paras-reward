@@ -1971,15 +1971,25 @@ async def create_product(product: ProductCreate):
     return new_product
 
 @api_router.get("/products")
-async def get_products():
-    """Get all active products (public endpoint)"""
+async def get_products(page: int = 1, limit: int = 20):
+    """Get active products with pagination (public endpoint)"""
+    # Calculate skip value for pagination
+    skip = (page - 1) * limit
+    
+    # Get total count
+    total = await db.products.count_documents({
+        "is_active": True,
+        "visible": True
+    })
+    
+    # Get paginated products
     products = await db.products.find(
         {
             "is_active": True,
             "visible": True
         }, 
         {"_id": 0}
-    ).to_list(1000)
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
     # Convert datetime fields to ISO format for JSON serialization
     for product in products:
@@ -1993,7 +2003,14 @@ async def get_products():
                     except:
                         pass
     
-    return products
+    return {
+        "products": products,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
+        "has_more": skip + len(products) < total
+    }
 
 @api_router.get("/products/{product_id}", response_model=Product)
 async def get_product(product_id: str):
