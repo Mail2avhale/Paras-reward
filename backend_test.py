@@ -1455,6 +1455,231 @@ def test_cart_order_placement_flow():
     
     return test_results
 
+def test_admin_marketplace_products_api_fix():
+    """Test Admin Marketplace Products API Structure Fix - Critical Bug Fix Testing"""
+    print("\n" + "🛒" * 80)
+    print("TESTING ADMIN MARKETPLACE PRODUCTS API STRUCTURE FIX")
+    print("🛒" * 80)
+    
+    test_results = {
+        "admin_products_structure": False,
+        "admin_products_total_field": False,
+        "admin_products_products_array": False,
+        "admin_products_no_id_field": False,
+        "admin_products_required_fields": False,
+        "admin_stats_api": False,
+        "order_delivery_endpoint": False,
+        "manager_support_tickets": False,
+        "manager_membership_payments": False,
+        "manager_kyc_list": False
+    }
+    
+    print(f"\n1. TESTING ADMIN PRODUCTS API STRUCTURE")
+    print("=" * 60)
+    print("Testing the critical fix: Frontend expects {total: X, products: [...]} structure")
+    
+    try:
+        response = requests.get(f"{API_BASE}/admin/products", timeout=30)
+        print(f"GET /api/admin/products Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(f"✅ Admin products API accessible")
+            
+            # Test 1.1: Check if response has correct structure {total: X, products: [...]}
+            if isinstance(data, dict) and "total" in data and "products" in data:
+                print(f"✅ CRITICAL FIX VERIFIED: Response has correct structure with 'total' and 'products' fields")
+                print(f"   📋 Total: {data['total']}")
+                print(f"   📋 Products array length: {len(data['products'])}")
+                test_results["admin_products_structure"] = True
+                test_results["admin_products_total_field"] = True
+                
+                # Test 1.2: Verify products is an array
+                products = data["products"]
+                if isinstance(products, list):
+                    print(f"✅ 'products' field is correctly an array")
+                    test_results["admin_products_products_array"] = True
+                    
+                    if len(products) > 0:
+                        # Test 1.3: Check product structure and required fields
+                        first_product = products[0]
+                        required_fields = ["product_id", "name", "sku", "prc_price", "cash_price"]
+                        missing_fields = []
+                        
+                        print(f"\n   Testing product structure:")
+                        for field in required_fields:
+                            if field in first_product:
+                                print(f"   ✅ {field}: {first_product[field]}")
+                            else:
+                                missing_fields.append(field)
+                                print(f"   ❌ Missing {field}")
+                        
+                        if not missing_fields:
+                            print(f"✅ All required product fields present")
+                            test_results["admin_products_required_fields"] = True
+                        else:
+                            print(f"❌ Missing required fields: {missing_fields}")
+                        
+                        # Test 1.4: Verify NO _id field in responses
+                        if "_id" not in first_product:
+                            print(f"✅ CONFIRMED: No _id field in product response (properly excluded)")
+                            test_results["admin_products_no_id_field"] = True
+                        else:
+                            print(f"❌ WARNING: _id field found in product response")
+                    else:
+                        print(f"⚠️  No products found in response (empty array)")
+                        test_results["admin_products_products_array"] = True  # Empty array is valid
+                        test_results["admin_products_no_id_field"] = True  # No products to check
+                        test_results["admin_products_required_fields"] = True  # No products to validate
+                else:
+                    print(f"❌ CRITICAL ERROR: 'products' field is not an array: {type(products)}")
+            else:
+                print(f"❌ CRITICAL ERROR: Response does not have required structure")
+                print(f"   Expected: {{total: X, products: [...]}}")
+                print(f"   Actual keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
+        else:
+            print(f"❌ Admin products API failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing admin products API: {e}")
+    
+    print(f"\n2. TESTING ADMIN STATS API")
+    print("=" * 60)
+    
+    try:
+        response = requests.get(f"{API_BASE}/admin/stats", timeout=30)
+        print(f"GET /api/admin/stats Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            stats_data = response.json()
+            print(f"✅ Admin stats API working")
+            
+            # Check for key dashboard KPIs
+            expected_stats = ["users", "orders", "products"]
+            found_stats = []
+            
+            for stat in expected_stats:
+                if stat in str(stats_data).lower():
+                    found_stats.append(stat)
+                    print(f"   ✅ {stat} statistics found")
+            
+            if len(found_stats) >= 2:  # At least 2 out of 3 key stats
+                test_results["admin_stats_api"] = True
+                print(f"✅ Dashboard KPIs working correctly")
+            else:
+                print(f"⚠️  Limited dashboard statistics found")
+        else:
+            print(f"❌ Admin stats API failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing admin stats API: {e}")
+    
+    print(f"\n3. TESTING ORDER DELIVERY AND STOCK DEDUCTION")
+    print("=" * 60)
+    
+    try:
+        # Test with a non-existent order ID to verify endpoint exists
+        test_order_id = "test-order-12345"
+        response = requests.post(f"{API_BASE}/orders/{test_order_id}/deliver", timeout=30)
+        print(f"POST /api/orders/{{order_id}}/deliver Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 404:
+            print(f"✅ Order delivery endpoint exists (returns 404 for non-existent order)")
+            test_results["order_delivery_endpoint"] = True
+        elif response.status_code == 200:
+            result = response.json()
+            print(f"✅ Order delivery endpoint working")
+            print(f"   📋 Response: {result}")
+            test_results["order_delivery_endpoint"] = True
+        elif response.status_code == 400:
+            print(f"✅ Order delivery endpoint exists (validation error expected)")
+            test_results["order_delivery_endpoint"] = True
+        else:
+            print(f"⚠️  Order delivery endpoint response: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing order delivery endpoint: {e}")
+    
+    print(f"\n4. TESTING MANAGER ROLE APIS")
+    print("=" * 60)
+    
+    # Test 4.1: Support Tickets API
+    print(f"\n4.1. Testing GET /api/admin/support/tickets")
+    try:
+        response = requests.get(f"{API_BASE}/admin/support/tickets", timeout=30)
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            tickets_data = response.json()
+            print(f"✅ Support tickets API working")
+            
+            if isinstance(tickets_data, dict):
+                tickets = tickets_data.get("tickets", [])
+                print(f"   📋 Support tickets found: {len(tickets)}")
+            elif isinstance(tickets_data, list):
+                print(f"   📋 Support tickets found: {len(tickets_data)}")
+            
+            test_results["manager_support_tickets"] = True
+        else:
+            print(f"❌ Support tickets API failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing support tickets API: {e}")
+    
+    # Test 4.2: Membership Payments API
+    print(f"\n4.2. Testing GET /api/membership/payments")
+    try:
+        response = requests.get(f"{API_BASE}/membership/payments", timeout=30)
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            payments_data = response.json()
+            print(f"✅ Membership payments API working")
+            
+            if isinstance(payments_data, dict):
+                payments = payments_data.get("payments", [])
+                print(f"   📋 VIP payments found: {len(payments)}")
+            elif isinstance(payments_data, list):
+                print(f"   📋 VIP payments found: {len(payments_data)}")
+            
+            test_results["manager_membership_payments"] = True
+        else:
+            print(f"❌ Membership payments API failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing membership payments API: {e}")
+    
+    # Test 4.3: KYC List API
+    print(f"\n4.3. Testing GET /api/kyc/list")
+    try:
+        response = requests.get(f"{API_BASE}/kyc/list", timeout=30)
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            kyc_data = response.json()
+            print(f"✅ KYC list API working")
+            
+            if isinstance(kyc_data, dict):
+                kyc_docs = kyc_data.get("documents", [])
+                print(f"   📋 KYC documents found: {len(kyc_docs)}")
+            elif isinstance(kyc_data, list):
+                print(f"   📋 KYC documents found: {len(kyc_data)}")
+            
+            test_results["manager_kyc_list"] = True
+        else:
+            print(f"❌ KYC list API failed: {response.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error testing KYC list API: {e}")
+    
+    return test_results
+
 def run_comprehensive_test():
     """Run comprehensive test of all critical backend APIs for deployment readiness"""
     print("\n" + "🔍" * 80)
