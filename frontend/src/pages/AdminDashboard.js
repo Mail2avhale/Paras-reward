@@ -2042,9 +2042,10 @@ const StockMovementManagement = () => {
   const fetchProducts = async () => {
     try {
       const response = await axios.get(`${API}/admin/products`);
-      setProducts(response.data || []);
+      setProducts(response.data?.products || []);
     } catch (error) {
       console.error('Error fetching products:', error);
+      setProducts([]);
     }
   };
 
