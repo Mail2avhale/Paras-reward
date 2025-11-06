@@ -591,13 +591,16 @@ def test_complete_profit_wallet_transaction_logging_flow():
         "accurate_balance_calculations": False
     }
     
-    # Create test users with proper hierarchy
+    # Create test users with proper hierarchy for complete flow testing
     timestamp = int(time.time())
+    
+    print(f"\n🏗️  SETTING UP TEST ENVIRONMENT")
+    print("=" * 60)
     
     # Master Stockist
     master_user_data = {
         "first_name": "Master",
-        "last_name": "Stockist",
+        "last_name": "TxnTest",
         "email": f"master_txn_{timestamp}@test.com",
         "mobile": f"9876540{timestamp % 1000:03d}",
         "password": "secure123456",
