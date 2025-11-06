@@ -726,11 +726,12 @@ const StockRequestSystem = () => {
                   className="w-full border rounded p-3"
                   value={newRequest.product_id}
                   onChange={(e) => setNewRequest({...newRequest, product_id: e.target.value})}
+                  disabled={!productsLoaded}
                 >
-                  <option value="">Select Product</option>
-                  {!loading && products && Array.isArray(products) && products.length > 0 && products.map((p) => (
+                  <option value="">{productsLoaded ? 'Select Product' : 'Loading products...'}</option>
+                  {productsLoaded && Array.isArray(products) && products.length > 0 && products.map((p) => (
                     <option key={p.product_id} value={p.product_id}>
-                      {p.name} - ₹{p.cashback_price}
+                      {p.name} - ₹{p.cashback_price || p.cash_price || 0}
                     </option>
                   ))}
                 </select>
