@@ -14,10 +14,12 @@ const ImageUpload = ({
   label = "Upload Image",
   maxSize = 5, // MB
   aspectRatio = "square", // square, video, auto
-  required = false
+  required = false,
+  enableCamera = true // Enable camera capture
 }) => {
   const [preview, setPreview] = useState(value || null);
   const [uploading, setUploading] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
   const fileInputRef = useRef(null);
 
   // Sync preview with value prop
