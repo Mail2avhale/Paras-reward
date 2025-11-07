@@ -10514,7 +10514,7 @@ async def get_my_treasure_progress(uid: str):
 
 # Buy a clue
 @app.post("/api/treasure-hunts/buy-clue")
-async def buy_treasure_clue(request: BuyClueRequest, uid: str = Depends(require_user)):
+async def buy_treasure_clue(request: BuyClueRequest, uid: str):
     """Buy a clue for a treasure hunt - deducts PRC"""
     try:
         user = await db.users.find_one({"uid": uid})
