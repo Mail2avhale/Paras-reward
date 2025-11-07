@@ -170,7 +170,7 @@ const TreasureHunt = ({ user }) => {
             <Map className="h-12 w-12 text-yellow-400" />
             <h1 className="text-4xl font-bold text-white">PRC Treasure Hunt</h1>
           </div>
-          <p className="text-blue-200 text-lg">Find hidden treasures and earn PRC + 25% cashback!</p>
+          <p className="text-blue-200 text-lg">Find hidden treasures and earn 50% cashback!</p>
         </div>
 
         {/* Stats Cards */}
