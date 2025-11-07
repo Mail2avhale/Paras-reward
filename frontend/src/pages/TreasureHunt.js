@@ -12,28 +12,25 @@ import { useToast } from '../hooks/use-toast';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-const TreasureHunt = () => {
+const TreasureHunt = ({ user }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [hunts, setHunts] = useState([]);
   const [myProgress, setMyProgress] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
   const [activeGame, setActiveGame] = useState(null);
   const [gameMap, setGameMap] = useState(null);
   const [showStartModal, setShowStartModal] = useState(null);
   const [showGameModal, setShowGameModal] = useState(false);
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user'));
     if (!user) {
       navigate('/login');
       return;
     }
-    setCurrentUser(user);
     fetchData(user.uid);
-  }, [navigate]);
+  }, [user, navigate]);
 
   const fetchData = async (uid) => {
     try {
