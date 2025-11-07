@@ -22,6 +22,7 @@ const AdvancedUserManagement = () => {
   const [filterRole, setFilterRole] = useState('');
   const [filterMembership, setFilterMembership] = useState('');
   const [filterKYC, setFilterKYC] = useState('');
+  const [showDeleted, setShowDeleted] = useState(false);
   
   const [showEditModal, setShowEditModal] = useState(false);
   const [showBalanceModal, setShowBalanceModal] = useState(false);
