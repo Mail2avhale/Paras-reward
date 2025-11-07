@@ -15,7 +15,11 @@ const SEO = ({
   canonical = null
 }) => {
   const location = useLocation();
-  const currentUrl = `https://parasreward.com${location.pathname}`;
+  // Use environment variable or detect from window.location
+  const baseUrl = typeof window !== 'undefined' 
+    ? `${window.location.protocol}//${window.location.host}`
+    : 'https://parasreward.com';
+  const currentUrl = `${baseUrl}${location.pathname}`;
   const canonicalUrl = canonical || currentUrl;
 
   useEffect(() => {
