@@ -10323,13 +10323,18 @@ async def initialize_treasure_hunts():
             "total_clues": 4,
             "clue_cost": 5,
             "treasure_locations": [
-                {"id": 1, "x": 15, "y": 85, "is_treasure": False, "message": "Dark and empty..."},
+                {"id": 1, "x": 15, "y": 85, "is_treasure": True, "message": "💎 Amazing! You discovered the mystic gem!"},
                 {"id": 2, "x": 80, "y": 65, "is_treasure": True, "message": "💎 Amazing! You discovered the mystic gem!"},
-                {"id": 3, "x": 50, "y": 50, "is_treasure": False, "message": "Just rocks here..."},
-                {"id": 4, "x": 30, "y": 20, "is_treasure": False, "message": "Nothing of value..."},
-                {"id": 5, "x": 65, "y": 40, "is_treasure": False, "message": "Keep looking!"},
-                {"id": 6, "x": 40, "y": 70, "is_treasure": False, "message": "Try elsewhere!"},
-                {"id": 7, "x": 25, "y": 55, "is_treasure": False, "message": "Empty cave chamber..."}
+                {"id": 3, "x": 50, "y": 50, "is_treasure": True, "message": "💎 Amazing! You discovered the mystic gem!"},
+                {"id": 4, "x": 30, "y": 20, "is_treasure": True, "message": "💎 Amazing! You discovered the mystic gem!"},
+                {"id": 5, "x": 65, "y": 40, "is_treasure": False, "message": "Just rocks here..."},
+                {"id": 6, "x": 40, "y": 70, "is_treasure": False, "message": "Nothing of value..."},
+                {"id": 7, "x": 25, "y": 55, "is_treasure": False, "message": "Keep looking!"},
+                {"id": 8, "x": 75, "y": 30, "is_treasure": False, "message": "Try elsewhere!"},
+                {"id": 9, "x": 55, "y": 80, "is_treasure": False, "message": "Empty cave chamber..."},
+                {"id": 10, "x": 20, "y": 45, "is_treasure": False, "message": "Dark corner..."},
+                {"id": 11, "x": 85, "y": 50, "is_treasure": False, "message": "No treasure here!"},
+                {"id": 12, "x": 45, "y": 25, "is_treasure": False, "message": "Wrong spot!"}
             ],
             "clues": [
                 "The treasure is hidden in the eastern section of the cave.",
