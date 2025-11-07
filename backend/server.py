@@ -10642,22 +10642,12 @@ async def find_treasure(request: FindTreasureRequest, uid: str):
         }
         
         if is_treasure:
-            # Calculate cashback (25% of total PRC spent)
+            # Calculate cashback (25% of total PRC spent) - ONLY REWARD IS CASHBACK
             prc_spent = progress.get("prc_spent", 0)
-            cashback = int(prc_spent * 0.25)  # 25% cashback
-            reward = hunt["reward_prc"]
-            
-            # Award reward PRC
-            user = await db.users.find_one({"uid": uid})
-            current_prc = user.get("prc_balance", 0)
-            new_prc = current_prc + reward
-            
-            await db.users.update_one(
-                {"uid": uid},
-                {"$set": {"prc_balance": new_prc}}
-            )
+            cashback = round(prc_spent * 0.25, 2)  # 25% cashback rounded to 2 decimals
             
             # Award cashback to cashback wallet
+            user = await db.users.find_one({"uid": uid})
             current_cashback = user.get("cashback_wallet_balance", 0)
             new_cashback = current_cashback + cashback
             
@@ -10666,25 +10656,21 @@ async def find_treasure(request: FindTreasureRequest, uid: str):
                 {"$set": {"cashback_wallet_balance": new_cashback}}
             )
             
-            # Log transactions
-            await log_transaction(
-                user_id=uid,
-                wallet_type="prc",
-                transaction_type="credit",
-                amount=reward,
-                description=f"Treasure found reward: {hunt['title']}",
-                metadata={"progress_id": request.progress_id, "hunt_id": hunt["hunt_id"], "hunt_title": hunt["title"], "attempts": attempts},
-                related_id=request.progress_id,
-                related_type="treasure_reward"
-            )
-            
+            # Log cashback transaction (POSITIVE amount)
             await log_transaction(
                 user_id=uid,
                 wallet_type="cashback",
                 transaction_type="credit",
                 amount=cashback,
                 description=f"25% cashback for treasure hunt: {hunt['title']}",
-                metadata={"progress_id": request.progress_id, "hunt_id": hunt["hunt_id"], "prc_spent": prc_spent, "cashback_percentage": 25},
+                metadata={
+                    "progress_id": request.progress_id, 
+                    "hunt_id": hunt["hunt_id"], 
+                    "prc_spent": prc_spent, 
+                    "cashback_percentage": 25,
+                    "hunt_title": hunt["title"],
+                    "attempts": attempts
+                },
                 related_id=request.progress_id,
                 related_type="treasure_cashback"
             )
@@ -10704,10 +10690,9 @@ async def find_treasure(request: FindTreasureRequest, uid: str):
             )
             
             result.update({
-                "reward_prc": reward,
                 "cashback_earned": cashback,
-                "new_prc_balance": new_prc,
-                "new_cashback_balance": new_cashback
+                "new_cashback_balance": new_cashback,
+                "prc_spent_total": prc_spent
             })
         else:
             # Update attempts only
