@@ -10375,7 +10375,7 @@ async def initialize_treasure_hunts():
 
 # Get all available treasure hunts
 @app.get("/api/treasure-hunts")
-async def get_treasure_hunts(uid: str = Depends(require_user)):
+async def get_treasure_hunts(uid: str):
     """Get all available treasure hunts"""
     try:
         hunts = await db.treasure_hunts.find({"active": True}).to_list(length=100)
