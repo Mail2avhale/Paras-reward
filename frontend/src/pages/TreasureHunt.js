@@ -237,15 +237,15 @@ const TreasureHunt = ({ user }) => {
                 
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center justify-between text-white">
-                    <span className="text-sm">Cost:</span>
+                    <span className="text-sm">PRC Cost:</span>
                     <span className="font-bold">{hunt.prc_cost} PRC</span>
                   </div>
                   <div className="flex items-center justify-between text-white">
-                    <span className="text-sm">Reward:</span>
-                    <span className="font-bold">{hunt.reward_prc} PRC</span>
+                    <span className="text-sm">Cashback Reward:</span>
+                    <span className="font-bold text-green-200">₹{(hunt.prc_cost * hunt.cashback_percentage / 100).toFixed(2)}</span>
                   </div>
                   <div className="flex items-center justify-between text-white">
-                    <span className="text-sm">Cashback:</span>
+                    <span className="text-sm">Cashback Rate:</span>
                     <span className="font-bold">{hunt.cashback_percentage}%</span>
                   </div>
                   <div className="flex items-center justify-between text-white">
