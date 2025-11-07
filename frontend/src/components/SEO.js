@@ -138,9 +138,9 @@ export default SEO;
 // Pre-defined SEO configs for common pages
 export const SEOConfigs = {
   home: {
-    title: 'PARAS REWARD - Earn Daily Rewards & PRC Coins | India\'s #1 Reward Platform',
-    description: 'Join 10,000+ users earning daily rewards! Mine PRC coins, play treasure hunt, refer friends, and redeem for real cash. Free to join, VIP membership available.',
-    keywords: 'paras reward, earn daily rewards, prc coins, referral rewards, treasure hunt game, india reward app, earn money online',
+    title: 'PARAS REWARD - India\'s No.1 Mining-Based Reward Platform | Earn PRC Daily',
+    description: '🏆 India\'s No.1 Mining-Based Reward Platform ⚡ Mine PRC Daily | 🎮 Play Treasure Hunt (50% Cashback) | 💰 Refer & Earn 10% | 🛒 5000+ Products | 👥 10,000+ Active Users | Free Mining, VIP Benefits, Instant Withdrawals',
+    keywords: 'paras reward india, mining based reward platform, prc coins mining, daily mining rewards, treasure hunt cashback game, refer earn 10 percent india, free mining app, vip membership benefits, online earning platform india',
   },
   login: {
     title: 'Login - PARAS REWARD | Access Your Reward Account',
