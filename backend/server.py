@@ -10241,7 +10241,7 @@ class TreasureHuntModel(BaseModel):
     difficulty: str  # easy, medium, hard
     prc_cost: int
     reward_prc: int
-    cashback_percentage: int = 25
+    cashback_percentage: int = 50
     total_clues: int
     clue_cost: int = 5
     treasure_locations: List[Dict]
