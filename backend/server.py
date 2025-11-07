@@ -10439,7 +10439,7 @@ async def start_treasure_hunt(request: StartHuntRequest, uid: str):
         await log_transaction(
             user_id=uid,
             wallet_type="prc",
-            transaction_type="debit",
+            transaction_type="order",
             amount=hunt["prc_cost"],
             description=f"Started treasure hunt: {hunt['title']}",
             metadata={"hunt_id": request.hunt_id, "hunt_title": hunt["title"]},
