@@ -176,6 +176,54 @@ const TreasureHunt = ({ user }) => {
           <p className="text-blue-200 text-lg">Find hidden treasures and earn 50% cashback!</p>
         </div>
 
+        {/* Daily Top Hunter Banner */}
+        {dailyTopHunter && dailyTopHunter.has_top_hunter && (
+          <Card className="mb-6 bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 p-6 border-4 border-yellow-300">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="bg-white rounded-full p-3">
+                  <Trophy className="h-10 w-10 text-yellow-600" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+                    🏆 Daily Top Hunter
+                    {dailyTopHunter.is_current_user && <span className="text-yellow-200">(You!)</span>}
+                  </h3>
+                  <p className="text-white font-semibold text-lg">{dailyTopHunter.top_hunter.name}</p>
+                  <p className="text-yellow-100 text-sm">
+                    {dailyTopHunter.top_hunter.treasures_found} treasures found • {dailyTopHunter.top_hunter.prc_spent} PRC spent
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
+                  <p className="text-yellow-100 text-sm">100% Cashback Reward</p>
+                  <p className="text-3xl font-bold text-white">
+                    ₹{((dailyTopHunter.top_hunter.prc_spent / 10) * 1.0).toFixed(2)}
+                  </p>
+                  <p className="text-xs text-yellow-200 mt-1">
+                    {dailyTopHunter.bonus_awarded ? '✓ Awarded' : 'Pending'}
+                  </p>
+                </div>
+              </div>
+            </div>
+            {dailyTopHunter.is_current_user && (
+              <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-lg p-3">
+                <p className="text-white text-center font-semibold">
+                  🎉 Congratulations! You're today's top hunter! You'll receive 100% total cashback (50% base + 50% bonus)
+                </p>
+              </div>
+            )}
+            {!dailyTopHunter.is_current_user && (
+              <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-lg p-3">
+                <p className="text-white text-center">
+                  Find more treasures to become today's top hunter and earn 100% cashback!
+                </p>
+              </div>
+            )}
+          </Card>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card className="bg-white/10 backdrop-blur-xl border border-white/20 p-4">
