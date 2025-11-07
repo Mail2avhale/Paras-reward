@@ -330,5 +330,221 @@ export const blogArticles = [
         <li>Follow community guidelines</li>
       </ul>
     `
+  },
+  {
+    id: 9,
+    slug: "prc-treasure-hunt-game-guide",
+    title: "PRC Treasure Hunt: Play, Find Treasures & Earn 50% Cashback!",
+    excerpt: "Discover the exciting new Treasure Hunt game in Paras Reward! Play with PRC, find hidden treasures, and earn up to 100% cashback. Complete guide with tips and strategies.",
+    author: "PARAS REWARD Team",
+    date: "November 7, 2024",
+    readTime: "6 min read",
+    category: "Games",
+    image: "https://images.unsplash.com/photo-1506012787146-f92b2d7d6d96?w=800&h=400&fit=crop",
+    content: `
+      <p class="lead">Get ready for the most exciting feature in Paras Reward! The PRC Treasure Hunt game combines adventure, strategy, and real rewards. Spend your PRC coins to hunt for hidden treasures on an interactive map and earn up to 100% cashback!</p>
+
+      <h2>🎮 What Is PRC Treasure Hunt?</h2>
+      <p>PRC Treasure Hunt is an interactive map-based game where you:</p>
+      <ul>
+        <li><strong>Spend PRC</strong> to start treasure hunts</li>
+        <li><strong>Buy clues</strong> to narrow down treasure locations</li>
+        <li><strong>Click on the map</strong> to search for hidden treasures</li>
+        <li><strong>Earn instant 50% cashback</strong> on all PRC spent when you find the treasure</li>
+        <li><strong>Compete for daily top hunter</strong> and win 100% cashback bonus</li>
+      </ul>
+
+      <h2>💎 Three Exciting Treasure Hunts Available:</h2>
+      
+      <h3>🌿 1. Beginner's Fortune (Easy)</h3>
+      <ul>
+        <li><strong>Cost:</strong> 10 PRC to start</li>
+        <li><strong>Cashback:</strong> ₹0.50 (50% of ₹1 INR value)</li>
+        <li><strong>Clues:</strong> 3 available (5 PRC each)</li>
+        <li><strong>Time Limit:</strong> 30 minutes</li>
+        <li><strong>Difficulty:</strong> Perfect for beginners</li>
+        <li><strong>Theme:</strong> Find treasure in the ancient garden</li>
+      </ul>
+
+      <h3>⚔️ 2. Mystic Cave Challenge (Medium)</h3>
+      <ul>
+        <li><strong>Cost:</strong> 25 PRC to start</li>
+        <li><strong>Cashback:</strong> ₹1.25 (50% of ₹2.50 INR value)</li>
+        <li><strong>Clues:</strong> 4 available (5 PRC each)</li>
+        <li><strong>Time Limit:</strong> 45 minutes</li>
+        <li><strong>Difficulty:</strong> For experienced hunters</li>
+        <li><strong>Theme:</strong> Venture deep into mysterious caves</li>
+      </ul>
+
+      <h3>🐉 3. Dragon's Lair Expedition (Hard)</h3>
+      <ul>
+        <li><strong>Cost:</strong> 50 PRC to start</li>
+        <li><strong>Cashback:</strong> ₹2.50 (50% of ₹5 INR value)</li>
+        <li><strong>Clues:</strong> 5 available (5 PRC each)</li>
+        <li><strong>Time Limit:</strong> 60 minutes</li>
+        <li><strong>Difficulty:</strong> For brave treasure hunters only</li>
+        <li><strong>Theme:</strong> Find the Dragon's hidden treasure hoard</li>
+      </ul>
+
+      <h2>🎯 How to Play Treasure Hunt:</h2>
+      <ol>
+        <li><strong>Navigate to Treasure Hunt</strong> → From your dashboard, click on "Treasure Hunt" with the 50% CB badge</li>
+        <li><strong>Choose Your Hunt</strong> → Select from Easy, Medium, or Hard difficulty based on your PRC balance</li>
+        <li><strong>Start the Hunt</strong> → Confirm to spend PRC and start your adventure</li>
+        <li><strong>View the Map</strong> → You'll see an authentic treasure map with X marks at potential treasure locations</li>
+        <li><strong>Buy Clues (Optional)</strong> → Spend 5 PRC per clue to get hints about the treasure location</li>
+        <li><strong>Search Locations</strong> → Click on X marks on the map to search for treasure</li>
+        <li><strong>Find the Treasure</strong> → When you click the correct location, you win! Instant cashback credited to your cashback wallet</li>
+      </ol>
+
+      <h2>💰 Understanding the Cashback System:</h2>
+      
+      <h3>Regular 50% Cashback:</h3>
+      <p>Every PRC you spend in treasure hunts earns you 50% back in INR cashback:</p>
+      <ul>
+        <li><strong>Formula:</strong> (Total PRC Spent ÷ 10) × 50% = Cashback in INR</li>
+        <li><strong>Example 1:</strong> Spend 10 PRC → ₹1 value → ₹0.50 cashback</li>
+        <li><strong>Example 2:</strong> Spend 30 PRC (25 hunt + 5 clue) → ₹3 value → ₹1.50 cashback</li>
+        <li><strong>Example 3:</strong> Spend 100 PRC in a day → ₹10 value → ₹5 cashback</li>
+      </ul>
+
+      <h3>🏆 Daily Top Hunter 100% Cashback Bonus:</h3>
+      <p>Be the #1 treasure hunter of the day and earn an additional 50% cashback bonus!</p>
+      <ul>
+        <li><strong>Ranking:</strong> Based on treasures found, then PRC spent</li>
+        <li><strong>Bonus:</strong> Additional 50% cashback on top of the regular 50%</li>
+        <li><strong>Total:</strong> 100% cashback = get all your PRC spending back as INR!</li>
+        <li><strong>Example:</strong> Top hunter spends 100 PRC → Gets ₹5 during hunts + ₹5 bonus = ₹10 total (100%)</li>
+      </ul>
+
+      <h2>🎲 Game Features & Highlights:</h2>
+      
+      <h3>🗺️ Authentic Treasure Map Design:</h3>
+      <p>Each hunt features a beautifully designed treasure map with:</p>
+      <ul>
+        <li>Aged paper texture and amber/yellow gradient</li>
+        <li>Grid overlay showing coordinates</li>
+        <li>Compass rose for navigation</li>
+        <li>Red X marks at search locations</li>
+        <li>Golden treasure icon with pulse animation when found</li>
+        <li>Decorative borders and shadows</li>
+      </ul>
+
+      <h3>🔀 Randomized Treasure Locations:</h3>
+      <p>Treasure locations change with every game! This means:</p>
+      <ul>
+        <li>You can play the same hunt multiple times</li>
+        <li>No memorizing treasure spots</li>
+        <li>Every game is a fresh challenge</li>
+        <li>Better replay value and excitement</li>
+      </ul>
+
+      <h3>💡 Strategic Clue System:</h3>
+      <p>Buy clues to get hints about treasure location:</p>
+      <ul>
+        <li><strong>Cost:</strong> 5 PRC per clue</li>
+        <li><strong>Benefit:</strong> Narrows down the search area</li>
+        <li><strong>Strategy:</strong> Balance clue costs vs. search attempts</li>
+        <li><strong>Example Clue:</strong> "Both coordinates are between 40 and 60"</li>
+      </ul>
+
+      <h2>🏅 Leaderboard & Competition:</h2>
+      <p>Track the top 10 treasure hunters:</p>
+      <ul>
+        <li>See who's finding the most treasures</li>
+        <li>Check total PRC spent by top hunters</li>
+        <li>Compete for the #1 spot daily</li>
+        <li>Win 100% cashback as daily champion</li>
+      </ul>
+
+      <h2>📊 Track Your Stats:</h2>
+      <p>Your treasure hunt dashboard shows:</p>
+      <ul>
+        <li><strong>Treasures Found:</strong> Total successful hunts</li>
+        <li><strong>Active Hunts:</strong> Current hunts in progress</li>
+        <li><strong>Total Cashback:</strong> All cashback earned from treasure hunts</li>
+        <li><strong>PRC Spent:</strong> Total PRC invested in hunting</li>
+        <li><strong>Last 10 Completed Hunts:</strong> Your recent hunt history</li>
+      </ul>
+
+      <h2>💡 Pro Tips for Successful Treasure Hunting:</h2>
+      
+      <h3>1. Start with Easy Hunts:</h3>
+      <p>If you're new to treasure hunting, start with "Beginner's Fortune" to understand the mechanics before attempting harder hunts.</p>
+
+      <h3>2. Use Clues Wisely:</h3>
+      <p>Don't buy all clues at once! Try a few searches first. If you're stuck, buy one clue at a time to narrow down the location.</p>
+
+      <h3>3. Mind the Time Limit:</h3>
+      <p>Each hunt has a time limit (30-60 minutes). Make sure you have time to complete the hunt before starting.</p>
+
+      <h3>4. Balance Risk vs. Reward:</h3>
+      <ul>
+        <li><strong>Easy Hunt:</strong> Low cost (10 PRC), lower cashback (₹0.50), higher success rate</li>
+        <li><strong>Hard Hunt:</strong> High cost (50 PRC), higher cashback (₹2.50), more challenge</li>
+      </ul>
+
+      <h3>5. Play Multiple Times Daily:</h3>
+      <p>Since treasure locations are randomized, you can replay the same hunt multiple times and have a different experience each time!</p>
+
+      <h3>6. Compete for Top Hunter:</h3>
+      <p>If you're serious about maximizing earnings, compete for daily top hunter position to double your cashback!</p>
+
+      <h2>🎉 Benefits of Playing Treasure Hunt:</h2>
+      <ul>
+        <li>✅ <strong>Instant 50% Cashback</strong> on all PRC spent</li>
+        <li>✅ <strong>Fun & Engaging</strong> gameplay experience</li>
+        <li>✅ <strong>Up to 100% Cashback</strong> for top hunters</li>
+        <li>✅ <strong>No losing</strong> – you always get cashback back</li>
+        <li>✅ <strong>Unlimited replays</strong> – randomized treasures</li>
+        <li>✅ <strong>KYC not required</strong> – cashback auto-credited</li>
+        <li>✅ <strong>Quick games</strong> – 5-10 minutes per hunt</li>
+        <li>✅ <strong>Perfect for VIP users</strong> – convert PRC to cash via cashback</li>
+      </ul>
+
+      <h2>🎮 Example Success Story:</h2>
+      <blockquote class="bg-amber-50 border-l-4 border-amber-500 p-4 my-4">
+        <p class="italic">"I started playing PRC Treasure Hunt with my daily earnings. On my first day, I completed 5 Easy hunts spending 50 PRC (₹5 value) and earned ₹2.50 cashback instantly! The next day, I became the top hunter by completing 10 hunts and earned an additional ₹5 bonus. Total earnings: ₹7.50 for spending time playing a fun game!"</p>
+        <footer class="text-sm mt-2">— Rahul M., VIP Member</footer>
+      </blockquote>
+
+      <h2>📱 How to Access Treasure Hunt:</h2>
+      <ol>
+        <li>Login to your Paras Reward account</li>
+        <li>Go to your Dashboard</li>
+        <li>Click on "Treasure Hunt" card (9th option with "50% CB" badge)</li>
+        <li>Choose your adventure and start hunting!</li>
+      </ol>
+
+      <h2>❓ Frequently Asked Questions:</h2>
+
+      <h3>Q: What happens if I don't find the treasure in time?</h3>
+      <p>A: If the time limit expires, the hunt ends. You don't get cashback, but you can start a new hunt immediately.</p>
+
+      <h3>Q: Can I play if I'm not a VIP member?</h3>
+      <p>A: Yes! All users can play treasure hunt. However, VIP members can withdraw their cashback earnings.</p>
+
+      <h3>Q: Is the treasure location really random?</h3>
+      <p>A: Yes! Each hunt has multiple possible treasure locations, and one is randomly selected when you start. This ensures fair gameplay.</p>
+
+      <h3>Q: How many times can I play per day?</h3>
+      <p>A: Unlimited! As long as you have PRC balance, you can play as many treasure hunts as you want.</p>
+
+      <h3>Q: When is the cashback credited?</h3>
+      <p>A: Instantly! The moment you find the treasure, 50% cashback is credited to your cashback wallet.</p>
+
+      <h3>Q: When is the daily top hunter bonus awarded?</h3>
+      <p>A: The daily top hunter is determined at the end of each day, and the bonus is awarded within 24 hours.</p>
+
+      <h2>🚀 Ready to Start Your Treasure Hunting Adventure?</h2>
+      <p>PRC Treasure Hunt is the perfect way to make your PRC earnings even more rewarding. With 50% guaranteed cashback and the chance to win 100% as the top hunter, every game is an opportunity to boost your wallet.</p>
+
+      <p class="font-bold">Login now, choose your adventure, and start hunting for treasures! May the odds be ever in your favor! 🎯💰</p>
+
+      <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 mt-6">
+        <p class="text-center font-semibold text-purple-900">🎮 Access Treasure Hunt Now!</p>
+        <p class="text-center text-sm text-purple-700 mt-2">Dashboard → Treasure Hunt → Choose Your Adventure → Find Treasures → Earn Cashback!</p>
+      </div>
+    `
   }
 ];
