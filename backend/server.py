@@ -10561,12 +10561,14 @@ async def buy_treasure_clue(request: BuyClueRequest, uid: str):
         
         # Log transaction
         await log_transaction(
-            uid=uid,
+            user_id=uid,
+            wallet_type="prc",
             transaction_type="debit",
             amount=clue_cost,
-            currency="PRC",
             description=f"Bought clue #{request.clue_number + 1} for {hunt['title']}",
-            reference_id=f"clue_buy_{request.progress_id}_{request.clue_number}"
+            metadata={"progress_id": request.progress_id, "clue_number": request.clue_number, "hunt_title": hunt['title']},
+            related_id=request.progress_id,
+            related_type="treasure_clue"
         )
         
         # Update progress
