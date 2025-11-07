@@ -10447,12 +10447,23 @@ async def start_treasure_hunt(request: StartHuntRequest, uid: str):
             related_type="treasure_hunt"
         )
         
+        # Randomly select treasure location from available locations
+        import random
+        treasure_locations = [loc for loc in hunt["treasure_locations"] if loc.get("is_treasure", False)]
+        if treasure_locations:
+            selected_treasure = random.choice(treasure_locations)
+            treasure_location_id = selected_treasure["id"]
+        else:
+            # Fallback if no treasure marked
+            treasure_location_id = hunt["treasure_locations"][0]["id"]
+        
         # Create progress entry
         progress_id = f"progress_{uuid.uuid4()}"
         progress = {
             "progress_id": progress_id,
             "user_id": uid,
             "hunt_id": request.hunt_id,
+            "treasure_location_id": treasure_location_id,  # Store randomized treasure location
             "started_at": datetime.now(timezone.utc).isoformat(),
             "clues_revealed": [],
             "attempts": 0,
