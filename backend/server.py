@@ -10479,7 +10479,7 @@ async def start_treasure_hunt(request: StartHuntRequest, uid: str):
 
 # Get user's active treasure hunts
 @app.get("/api/treasure-hunts/my-progress")
-async def get_my_treasure_progress(uid: str = Depends(require_user)):
+async def get_my_treasure_progress(uid: str):
     """Get user's active and completed treasure hunts"""
     try:
         progress_list = await db.treasure_progress.find({"user_id": uid}).to_list(length=100)
