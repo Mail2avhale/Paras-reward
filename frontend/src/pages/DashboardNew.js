@@ -216,7 +216,7 @@ const DashboardNew = ({ user, onLogout }) => {
           </div>
         </Card>
 
-        {/* Quick Menu - Enhanced with 8 options */}
+        {/* Quick Menu - Enhanced with 9 options including Treasure Hunt */}
         <div className="mb-6">
           <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-yellow-400" />
