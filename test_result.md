@@ -1395,6 +1395,16 @@ frontend:
     stuck_count: 0
     priority: "high"
     needs_retesting: false
+
+  - task: "Admin Advanced User Management - User Deletion Fix"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/backend/server.py"
+      - "/app/frontend/src/pages/AdvancedUserManagement.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "user"
