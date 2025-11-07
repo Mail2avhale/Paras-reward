@@ -135,17 +135,17 @@ const AdvancedUserManagement = () => {
   };
 
   const handleDeleteUser = async (uid) => {
-    if (!window.confirm('Are you sure you want to deactivate this user?')) {
+    if (!window.confirm('Are you sure you want to delete this user? This will deactivate their account permanently.')) {
       return;
     }
     
     try {
       await axios.delete(`${API}/admin/users/${uid}/delete`);
-      toast.success('User deactivated successfully!');
+      toast.success('User deleted successfully!');
       fetchUsers();
     } catch (error) {
       console.error('Error deleting user:', error);
-      toast.error(error.response?.data?.detail || 'Failed to deactivate user');
+      toast.error(error.response?.data?.detail || 'Failed to delete user');
     }
   };
 
