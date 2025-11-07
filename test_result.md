@@ -1345,6 +1345,25 @@ frontend:
         agent: "main"
         comment: "IMPLEMENTED: Limited leaderboard display to top 10 earners only. Changes: 1) Modified fetchLeaderboard() to slice response data to first 10 entries using .slice(0, 10). 2) Updated page description from 'Top miners of the month' to 'Top 10 miners of the month'. 3) Changed section title from 'All Rankings' to 'Top 10 Rankings'. 4) Added comment in code explaining the top 10 limit. Result: Cleaner, focused leaderboard showing only the highest earners. This improves page performance and provides clear visibility to top performers. File linted successfully with no errors. Frontend compiled successfully."
 
+  - task: "PRC Treasure Hunt Game - Play with PRC & Share on Social Media"
+    implemented: true
+    working: "NA"
+    files: 
+      - "/app/backend/server.py"
+      - "/app/frontend/src/pages/TreasureHunt.js"
+      - "/app/frontend/src/pages/DashboardNew.js"
+      - "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "user"
+        comment: "User requested a game where users play using PRC and can share achievements on social media. Selected Option 4 (PRC Treasure Hunt) - virtual map-based game with simple click mechanics, PRC spending for hunts/clues, and 25% cashback on PRC consumption."
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Complete PRC Treasure Hunt game system with backend APIs and frontend UI. BACKEND: 1) Created 7 new API endpoints: get treasure hunts, start hunt, get progress, buy clue, find treasure, leaderboard, get game map. 2) Implemented TreasureHuntModel, UserTreasureProgress models. 3) Created 3 default treasure hunts (Easy: 10 PRC, Medium: 25 PRC, Hard: 50 PRC). 4) PRC deduction system with automatic 25% cashback to cashback wallet. 5) Transaction logging for all PRC spending and rewards. 6) Clue system (5 PRC per clue). 7) Time limit tracking. 8) Leaderboard aggregation by treasures found. 9) Startup initialization of default hunts. FRONTEND: 1) Created TreasureHunt.js page with full game UI. 2) Virtual map with clickable treasure locations. 3) Clue purchase and reveal system. 4) Active hunts tracking with progress display. 5) Completed hunts showcase with cashback earned. 6) Top 10 treasure hunters leaderboard. 7) Social sharing functionality (native share API + clipboard fallback). 8) Stats dashboard showing treasures found, active hunts, total cashback, PRC spent. 9) Beautiful gradient cards with difficulty-based colors. 10) Responsive design for mobile/desktop. INTEGRATION: 1) Added Treasure Hunt to dashboard quick menu (9th option with '25% CB' badge). 2) Added route /treasure-hunt in App.js. 3) Used Map icon from lucide-react. GAME MECHANICS: Users spend PRC to start hunts, buy clues to narrow down location, click map spots to find treasure, earn PRC reward + 25% cashback on success. All treasure hunts have unique themes (Garden, Cave, Dragon's Lair) with varying difficulty and rewards. SOCIAL SHARING: Share button creates shareable text with achievement details, uses native share API or clipboard. Backend compiled and running. Frontend compiled successfully. Ready for testing."
+
   - task: "Product List Optimization with Pagination and Infinite Scroll"
     implemented: true
     working: true
