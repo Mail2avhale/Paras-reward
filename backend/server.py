@@ -10437,12 +10437,14 @@ async def start_treasure_hunt(request: StartHuntRequest, uid: str):
         
         # Log transaction
         await log_transaction(
-            uid=uid,
+            user_id=uid,
+            wallet_type="prc",
             transaction_type="debit",
             amount=hunt["prc_cost"],
-            currency="PRC",
             description=f"Started treasure hunt: {hunt['title']}",
-            reference_id=f"hunt_start_{request.hunt_id}_{uuid.uuid4()}"
+            metadata={"hunt_id": request.hunt_id, "hunt_title": hunt["title"]},
+            related_id=request.hunt_id,
+            related_type="treasure_hunt"
         )
         
         # Create progress entry
