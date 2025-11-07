@@ -70,7 +70,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
     <>
       <OfflineIndicator />
       <BrowserRouter>
-        <Routes>
+        <Suspense fallback={<LoadingFallback />}>
+          <Routes>
           <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Home user={user} onLogout={handleLogout} />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/faq" element={<FAQ />} />
