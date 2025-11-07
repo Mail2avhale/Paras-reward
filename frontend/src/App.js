@@ -24,6 +24,7 @@ import Dashboard from "@/pages/Dashboard";
 import DashboardNew from "@/pages/DashboardNew";
 import Mining from "@/pages/Mining";
 import TapGame from "@/pages/TapGame";
+import TreasureHunt from "@/pages/TreasureHunt";
 import Referrals from "@/pages/Referrals";
 import Marketplace from "@/pages/Marketplace";
 import MarketplaceEnhanced from "@/pages/MarketplaceEnhanced";
