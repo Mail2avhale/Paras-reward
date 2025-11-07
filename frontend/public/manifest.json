@@ -2,11 +2,14 @@
   "name": "PARAS REWARD - Earn Daily Rewards",
   "short_name": "PARAS REWARD",
   "description": "India's #1 Reward Points Platform. Earn PRC through daily activities and redeem for real products.",
-  "start_url": "/",
+  "start_url": "/?utm_source=pwa",
   "display": "standalone",
   "background_color": "#1e1b4b",
   "theme_color": "#9333ea",
   "orientation": "portrait",
+  "scope": "/",
+  "lang": "en-US",
+  "dir": "ltr",
   "icons": [
     {
       "src": "/paras-logo.jpg",
