@@ -10288,7 +10288,7 @@ async def initialize_treasure_hunts():
             "difficulty": "easy",
             "prc_cost": 10,
             "reward_prc": 50,
-            "cashback_percentage": 25,
+            "cashback_percentage": 50,
             "total_clues": 3,
             "clue_cost": 5,
             "treasure_locations": [
@@ -10319,7 +10319,7 @@ async def initialize_treasure_hunts():
             "difficulty": "medium",
             "prc_cost": 25,
             "reward_prc": 120,
-            "cashback_percentage": 25,
+            "cashback_percentage": 50,
             "total_clues": 4,
             "clue_cost": 5,
             "treasure_locations": [
@@ -10353,7 +10353,7 @@ async def initialize_treasure_hunts():
             "difficulty": "hard",
             "prc_cost": 50,
             "reward_prc": 300,
-            "cashback_percentage": 25,
+            "cashback_percentage": 50,
             "total_clues": 5,
             "clue_cost": 5,
             "treasure_locations": [
@@ -10696,7 +10696,7 @@ async def find_treasure(request: FindTreasureRequest, uid: str):
                     "progress_id": request.progress_id, 
                     "hunt_id": hunt["hunt_id"], 
                     "prc_spent": prc_spent, 
-                    "cashback_percentage": 25,
+                    "cashback_percentage": 50,
                     "hunt_title": hunt["title"],
                     "attempts": attempts
                 },
