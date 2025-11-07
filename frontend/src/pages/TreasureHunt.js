@@ -14,6 +14,7 @@ const API = process.env.REACT_APP_BACKEND_URL;
 
 const TreasureHunt = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [hunts, setHunts] = useState([]);
   const [myProgress, setMyProgress] = useState([]);
