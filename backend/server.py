@@ -10778,7 +10778,62 @@ async def get_treasure_leaderboard(uid: str):
 @app.get("/api/treasure-hunts/game-map/{progress_id}")
 async def get_game_map(progress_id: str, uid: str):
     """Get game map data for active hunt (without revealing treasure location)"""
-
+    try:
+        progress = await db.treasure_progress.find_one({
+            "progress_id": progress_id,
+            "user_id": uid
+        })
+        if not progress:
+            raise HTTPException(status_code=404, detail="Progress not found")
+        
+        hunt = await db.treasure_hunts.find_one({"hunt_id": progress["hunt_id"]})
+        if not hunt:
+            raise HTTPException(status_code=404, detail="Hunt not found")
+        
+        # Return locations without revealing which is treasure (unless already found)
+        safe_locations = []
+        for loc in hunt["treasure_locations"]:
+            safe_loc = {
+                "id": loc["id"],
+                "x": loc["x"],
+                "y": loc["y"]
+            }
+            # If treasure already found, reveal it
+            if progress.get("found", False):
+                treasure_location_id = progress.get("treasure_location_id")
+                safe_loc["is_treasure"] = (loc["id"] == treasure_location_id)
+                if safe_loc["is_treasure"]:
+                    safe_loc["message"] = loc.get("message", "")
+            safe_locations.append(safe_loc)
+        
+        # Get revealed clues
+        revealed_clues = []
+        clues_revealed = progress.get("clues_revealed", [])
+        all_clues = hunt.get("clues", [])
+        for clue_idx in clues_revealed:
+            if clue_idx < len(all_clues):
+                revealed_clues.append({
+                    "number": clue_idx + 1,
+                    "text": all_clues[clue_idx]
+                })
+        
+        return {
+            "hunt_id": hunt["hunt_id"],
+            "title": hunt["title"],
+            "description": hunt["description"],
+            "difficulty": hunt["difficulty"],
+            "locations": safe_locations,
+            "revealed_clues": revealed_clues,
+            "total_clues": hunt["total_clues"],
+            "clue_cost": hunt["clue_cost"],
+            "attempts": progress.get("attempts", 0),
+            "found": progress.get("found", False),
+            "expires_at": progress.get("expires_at")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Daily Top Hunter - 100% Cashback Reward
 @app.get("/api/treasure-hunts/daily-top-hunter")
