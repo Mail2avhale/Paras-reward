@@ -36,15 +36,17 @@ const TreasureHunt = ({ user }) => {
   const fetchData = async (uid) => {
     try {
       setLoading(true);
-      const [huntsRes, progressRes, leaderboardRes] = await Promise.all([
+      const [huntsRes, progressRes, leaderboardRes, topHunterRes] = await Promise.all([
         axios.get(`${API}/treasure-hunts?uid=${uid}`),
         axios.get(`${API}/treasure-hunts/my-progress?uid=${uid}`),
-        axios.get(`${API}/treasure-hunts/leaderboard?uid=${uid}`)
+        axios.get(`${API}/treasure-hunts/leaderboard?uid=${uid}`),
+        axios.get(`${API}/treasure-hunts/daily-top-hunter?uid=${uid}`)
       ]);
 
       setHunts(huntsRes.data.hunts || []);
       setMyProgress(progressRes.data.progress || []);
       setLeaderboard(leaderboardRes.data.leaderboard || []);
+      setDailyTopHunter(topHunterRes.data);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({ description: 'Failed to load treasure hunt data', variant: 'destructive' });
