@@ -10,7 +10,7 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { useToast } from '../hooks/use-toast';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const TreasureHunt = () => {
   const navigate = useNavigate();
