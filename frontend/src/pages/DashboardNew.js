@@ -9,7 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { 
   Coins, Zap, Users, Gift, Trophy, Wallet, Crown, ShieldCheck, Package, 
   TrendingUp, Star, Target, Award, ArrowRight, Sparkles, Play, ShoppingBag,
-  Clock, CheckCircle2, Activity
+  Clock, CheckCircle2, Activity, Map
 } from 'lucide-react';
 import { ResponsiveAd, BannerAd, InFeedAd } from '@/components/AdSenseAd';
 
