@@ -333,12 +333,12 @@ const TreasureHunt = ({ user }) => {
                   
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center justify-between text-white text-sm">
-                      <span>Reward:</span>
-                      <span className="font-bold">{progress.reward_prc} PRC</span>
+                      <span>Cashback Earned:</span>
+                      <span className="font-bold text-green-200">₹{progress.cashback_earned}</span>
                     </div>
                     <div className="flex items-center justify-between text-white text-sm">
-                      <span>Cashback:</span>
-                      <span className="font-bold text-green-200">₹{progress.cashback_earned}</span>
+                      <span>PRC Spent:</span>
+                      <span className="font-bold">{progress.prc_spent} PRC</span>
                     </div>
                     <div className="flex items-center justify-between text-white text-sm">
                       <span>Attempts:</span>
