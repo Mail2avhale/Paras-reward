@@ -346,7 +346,8 @@ const AdvancedUserManagement = () => {
                     size="sm"
                     variant="destructive"
                     onClick={() => handleDeleteUser(user.uid)}
-                    title="Deactivate User"
+                    title="Delete User"
+                    disabled={user.is_active === false}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
