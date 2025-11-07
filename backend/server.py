@@ -10357,16 +10357,21 @@ async def initialize_treasure_hunts():
             "total_clues": 5,
             "clue_cost": 5,
             "treasure_locations": [
-                {"id": 1, "x": 10, "y": 10, "is_treasure": False, "message": "The dragon isn't here..."},
+                {"id": 1, "x": 10, "y": 10, "is_treasure": True, "message": "🐉 LEGENDARY! You found the Dragon's Hoard!"},
                 {"id": 2, "x": 90, "y": 90, "is_treasure": False, "message": "Wrong corner!"},
                 {"id": 3, "x": 55, "y": 45, "is_treasure": True, "message": "🐉 LEGENDARY! You found the Dragon's Hoard!"},
                 {"id": 4, "x": 30, "y": 80, "is_treasure": False, "message": "Just dragon scales..."},
-                {"id": 5, "x": 75, "y": 25, "is_treasure": False, "message": "Empty chamber..."},
-                {"id": 6, "x": 20, "y": 60, "is_treasure": False, "message": "Nothing but bones..."},
-                {"id": 7, "x": 85, "y": 50, "is_treasure": False, "message": "Keep searching!"},
+                {"id": 5, "x": 75, "y": 25, "is_treasure": True, "message": "🐉 LEGENDARY! You found the Dragon's Hoard!"},
+                {"id": 6, "x": 20, "y": 60, "is_treasure": True, "message": "🐉 LEGENDARY! You found the Dragon's Hoard!"},
+                {"id": 7, "x": 85, "y": 50, "is_treasure": True, "message": "🐉 LEGENDARY! You found the Dragon's Hoard!"},
                 {"id": 8, "x": 40, "y": 35, "is_treasure": False, "message": "Not quite..."},
                 {"id": 9, "x": 65, "y": 70, "is_treasure": False, "message": "Try again!"},
-                {"id": 10, "x": 50, "y": 15, "is_treasure": False, "message": "Almost there..."}
+                {"id": 10, "x": 50, "y": 15, "is_treasure": False, "message": "Almost there..."},
+                {"id": 11, "x": 15, "y": 75, "is_treasure": False, "message": "The dragon isn't here..."},
+                {"id": 12, "x": 80, "y": 35, "is_treasure": False, "message": "Empty chamber..."},
+                {"id": 13, "x": 35, "y": 50, "is_treasure": False, "message": "Nothing but bones..."},
+                {"id": 14, "x": 60, "y": 80, "is_treasure": False, "message": "Keep searching!"},
+                {"id": 15, "x": 25, "y": 25, "is_treasure": False, "message": "Wrong path!"}
             ],
             "clues": [
                 "The dragon guards its treasure in the heart of the lair.",
