@@ -313,15 +313,15 @@ const TreasureHunt = ({ user }) => {
           </div>
         )}
 
-        {/* Completed Hunts */}
+        {/* Completed Hunts - Show First 10 */}
         {myProgress.filter(p => p.found).length > 0 && (
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
               <Award className="h-6 w-6 text-yellow-400" />
-              Completed Hunts
+              Completed Hunts (Last 10)
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {myProgress.filter(p => p.found).map((progress) => (
+              {myProgress.filter(p => p.found).slice(0, 10).map((progress) => (
                 <Card key={progress.progress_id} className="bg-gradient-to-br from-yellow-500 to-orange-600 p-6 border-2 border-yellow-400">
                   <div className="flex items-center gap-3 mb-4">
                     <Trophy className="h-8 w-8 text-white" />
