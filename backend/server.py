@@ -8769,7 +8769,7 @@ async def delete_user_admin(uid: str):
         "created_at": datetime.now(timezone.utc).isoformat()
     })
     
-    return {"message": "User deactivated successfully"}
+    return {"message": "User deleted successfully"}
 
 
 # ========== ADMIN ORDER MANAGEMENT ROUTES ==========
