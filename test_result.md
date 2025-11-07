@@ -1384,6 +1384,25 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "BUG FIX #3: Root cause identified - log_transaction() function signature mismatch. Backend was throwing 500 Internal Server Error: 'log_transaction() got an unexpected keyword argument uid'. The treasure hunt code was using old log_transaction signature (uid, transaction_type, amount, currency, description, reference_id) but the function was updated to new signature (user_id, wallet_type, transaction_type, amount, description, metadata, related_id, related_type). FIXED: Updated all 4 log_transaction calls in treasure hunt code: 1) Start hunt transaction (line 10439): Changed uid→user_id, added wallet_type='prc', replaced currency→metadata, replaced reference_id→related_id/related_type. 2) Buy clue transaction (line 10563): Same updates. 3) Treasure reward transaction (line 10670): Changed to wallet_type='prc' with proper metadata. 4) Cashback transaction (line 10679): Changed to wallet_type='cashback' with cashback-specific metadata. All transactions now properly log to transaction history with correct wallet types. Backend restarted. API tested successfully: POST /api/treasure-hunts/start returns success with progress_id and deducts PRC correctly. Ready for re-testing."
+
+  - task: "Treasure Hunt - Increase Cashback to 50% & Daily Top Hunter 100% Bonus"
+    implemented: true
+    working: "NA"
+    files: 
+      - "/app/backend/server.py"
+      - "/app/frontend/src/pages/TreasureHunt.js"
+      - "/app/frontend/src/pages/DashboardNew.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "user"
+        comment: "User requested: 1) Design 100% cashback for daily top hunter. 2) Increase cashback from 25% to 50% for treasure hunt game."
+      - working: "NA"
+        agent: "main"
+        comment: "FEATURE IMPLEMENTATION: Complete cashback system overhaul with daily competition. PART 1 - 50% CASHBACK: 1) Updated backend calculation from 0.25 to 0.50 (line 10647). 2) Changed all treasure hunt definitions cashback_percentage from 25 to 50. 3) Updated transaction description to '50% cashback for treasure hunt'. 4) Updated frontend dashboard badge from '25% CB' to '50% CB'. 5) Updated treasure hunt page description to '50% cashback'. 6) Updated map success message to '50% cashback'. 7) Updated modal calculation display to show 50% calculation. CASHBACK EXAMPLES NOW: 10 PRC → ₹1 INR → 50% = ₹0.50 (was ₹0.25). 25 PRC → ₹2.50 INR → 50% = ₹1.25 (was ₹0.62). 50 PRC → ₹5 INR → 50% = ₹2.50 (was ₹1.25). 100 PRC → ₹10 INR → 50% = ₹5.00 (was ₹2.50). PART 2 - DAILY TOP HUNTER 100% BONUS: 1) Created new API endpoint GET /api/treasure-hunts/daily-top-hunter - finds today's top hunter by treasures found, shows user stats, checks if current user is top hunter, displays bonus status. 2) Created new API endpoint POST /api/treasure-hunts/award-daily-bonus - awards additional 50% cashback to top hunter (making total 100%), prevents duplicate awards, logs bonus transaction, records reward in daily_top_hunter_rewards collection. 3) Added dailyTopHunter state to frontend. 4) Integrated daily top hunter API call in fetchData. 5) Created beautiful banner showing: Daily top hunter name and stats, 100% cashback reward amount, 'You!' indicator if current user, Awarded/Pending status, Congratulations message for winner, Motivation message for others. REWARD LOGIC: Users get 50% cashback when finding treasure. Top hunter of the day gets additional 50% bonus = 100% total. Example: Top hunter spends 100 PRC today → Gets ₹5 during hunts (50%) → Gets ₹5 bonus at day end (50%) → Total: ₹10 (100% cashback). COMPETITION: Ranking by treasures found first, then PRC spent. Updates in real-time. Banner shows current leader. Creates daily competition and engagement. All services restarted. Frontend compiled successfully. Ready for testing."
+
       - working: "NA"
         agent: "user"
         comment: "User requested multiple improvements: 1) Show real map instead of simple dots. 2) Remove PRC reward - only give cashback (no PRC consumption as reward). 3) Fix cashback transaction to show as positive (+) credit, not negative (-). 4) Verify cashback is properly credited to wallet."
