@@ -48,11 +48,27 @@
       "icons": [{ "src": "/paras-logo.jpg", "sizes": "192x192" }]
     },
     {
+      "name": "Treasure Hunt",
+      "short_name": "Hunt",
+      "description": "Play & earn cashback",
+      "url": "/treasure-hunt",
+      "icons": [{ "src": "/paras-logo.jpg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Wallet",
+      "short_name": "Wallet",
+      "description": "Manage your balance",
+      "url": "/wallet",
+      "icons": [{ "src": "/paras-logo.jpg", "sizes": "192x192" }]
+    },
+    {
       "name": "Marketplace",
       "short_name": "Shop",
       "description": "Redeem rewards",
       "url": "/marketplace",
       "icons": [{ "src": "/paras-logo.jpg", "sizes": "192x192" }]
     }
-  ]
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
 }
