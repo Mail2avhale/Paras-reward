@@ -10668,21 +10668,25 @@ async def find_treasure(request: FindTreasureRequest, uid: str):
             
             # Log transactions
             await log_transaction(
-                uid=uid,
+                user_id=uid,
+                wallet_type="prc",
                 transaction_type="credit",
                 amount=reward,
-                currency="PRC",
                 description=f"Treasure found reward: {hunt['title']}",
-                reference_id=f"treasure_reward_{request.progress_id}"
+                metadata={"progress_id": request.progress_id, "hunt_id": hunt["hunt_id"], "hunt_title": hunt["title"], "attempts": attempts},
+                related_id=request.progress_id,
+                related_type="treasure_reward"
             )
             
             await log_transaction(
-                uid=uid,
+                user_id=uid,
+                wallet_type="cashback",
                 transaction_type="credit",
                 amount=cashback,
-                currency="INR",
                 description=f"25% cashback for treasure hunt: {hunt['title']}",
-                reference_id=f"treasure_cashback_{request.progress_id}"
+                metadata={"progress_id": request.progress_id, "hunt_id": hunt["hunt_id"], "prc_spent": prc_spent, "cashback_percentage": 25},
+                related_id=request.progress_id,
+                related_type="treasure_cashback"
             )
             
             # Update progress
