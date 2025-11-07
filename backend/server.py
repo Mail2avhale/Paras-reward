@@ -10403,7 +10403,7 @@ async def get_treasure_hunts(uid: str):
 
 # Start a treasure hunt
 @app.post("/api/treasure-hunts/start")
-async def start_treasure_hunt(request: StartHuntRequest, uid: str = Depends(require_user)):
+async def start_treasure_hunt(request: StartHuntRequest, uid: str):
     """Start a new treasure hunt - deducts PRC"""
     try:
         user = await db.users.find_one({"uid": uid})
