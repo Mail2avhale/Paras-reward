@@ -3880,10 +3880,15 @@ async def get_all_users_admin(
     search: Optional[str] = None,
     role: Optional[str] = None,
     membership: Optional[str] = None,
-    kyc_status: Optional[str] = None
+    kyc_status: Optional[str] = None,
+    show_deleted: Optional[bool] = False
 ):
     """Admin endpoint to get all users with filters and pagination"""
     query = {}
+    
+    # By default, hide deactivated/deleted users unless show_deleted is True
+    if not show_deleted:
+        query["is_active"] = {"$ne": False}
     
     # Search filter
     if search:
