@@ -81,7 +81,7 @@ const DashboardNew = ({ user, onLogout }) => {
       link: '/treasure-hunt', 
       gradient: 'from-amber-500 to-orange-600',
       description: 'Find treasures',
-      badge: '25% CB'
+      badge: '50% CB'
     },
     { 
       name: 'Marketplace', 
