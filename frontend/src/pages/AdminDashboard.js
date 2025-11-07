@@ -1069,6 +1069,7 @@ const AdminDashboard = ({ user, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', icon: Home, label: 'Dashboard' },
     { id: 'analytics', icon: TrendingUp, label: 'Analytics', link: '/admin/analytics' },
+    { id: 'video-ads', icon: Video, label: 'Video Ads', link: '/admin/video-ads' },
     { id: 'activity-logs', icon: Activity, label: 'Activity Logs' },
     { id: 'stockist-management', icon: UserCog, label: 'Stockist Management' },
     { id: 'financial-management', icon: DollarSign, label: 'Financial Management' },
