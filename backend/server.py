@@ -10691,7 +10691,7 @@ async def find_treasure(request: FindTreasureRequest, uid: str):
                 wallet_type="cashback",
                 transaction_type="cashback",
                 amount=cashback,
-                description=f"25% cashback for treasure hunt: {hunt['title']}",
+                description=f"50% cashback for treasure hunt: {hunt['title']}",
                 metadata={
                     "progress_id": request.progress_id, 
                     "hunt_id": hunt["hunt_id"], 
