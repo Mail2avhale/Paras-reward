@@ -10813,6 +10813,11 @@ async def get_game_map(progress_id: str, uid: str = Depends(require_user)):
 
 
 
+@app.on_event("startup")
+async def startup_db():
+    """Initialize database with default data"""
+    await initialize_treasure_hunts()
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
