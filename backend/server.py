@@ -10292,11 +10292,16 @@ async def initialize_treasure_hunts():
             "total_clues": 3,
             "clue_cost": 5,
             "treasure_locations": [
-                {"id": 1, "x": 20, "y": 30, "is_treasure": False, "message": "Nothing here... keep searching!"},
+                {"id": 1, "x": 20, "y": 30, "is_treasure": True, "message": "🎉 Congratulations! You found the treasure!"},
                 {"id": 2, "x": 45, "y": 60, "is_treasure": True, "message": "🎉 Congratulations! You found the treasure!"},
-                {"id": 3, "x": 70, "y": 40, "is_treasure": False, "message": "Just an empty spot..."},
+                {"id": 3, "x": 70, "y": 40, "is_treasure": True, "message": "🎉 Congratulations! You found the treasure!"},
                 {"id": 4, "x": 35, "y": 75, "is_treasure": False, "message": "Try another location!"},
-                {"id": 5, "x": 60, "y": 20, "is_treasure": False, "message": "Not here either!"}
+                {"id": 5, "x": 60, "y": 20, "is_treasure": False, "message": "Not here either!"},
+                {"id": 6, "x": 15, "y": 55, "is_treasure": False, "message": "Nothing here..."},
+                {"id": 7, "x": 80, "y": 25, "is_treasure": False, "message": "Keep searching!"},
+                {"id": 8, "x": 50, "y": 85, "is_treasure": False, "message": "Empty spot!"},
+                {"id": 9, "x": 25, "y": 45, "is_treasure": False, "message": "Try again!"},
+                {"id": 10, "x": 65, "y": 70, "is_treasure": False, "message": "Not the right place!"}
             ],
             "clues": [
                 "The treasure lies where flowers bloom the brightest.",
