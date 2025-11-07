@@ -87,10 +87,13 @@ const SEO = ({
         "@context": "https://schema.org",
         "@type": "WebApplication",
         "name": "PARAS REWARD",
+        "alternateName": "India's No.1 Mining-Based Reward Platform",
         "url": "https://parasreward.com",
         "description": description,
         "applicationCategory": "FinanceApplication",
         "operatingSystem": "Web, iOS, Android",
+        "logo": "https://parasreward.com/paras-logo.jpg",
+        "image": "https://parasreward.com/paras-logo.jpg",
         "offers": {
           "@type": "Offer",
           "price": "0",
@@ -103,7 +106,20 @@ const SEO = ({
         },
         "author": {
           "@type": "Organization",
-          "name": "PARAS REWARD"
+          "name": "PARAS REWARD",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://parasreward.com/paras-logo.jpg"
+          },
+          "sameAs": [
+            "https://www.facebook.com/parasreward",
+            "https://twitter.com/parasreward",
+            "https://www.instagram.com/parasreward"
+          ]
+        },
+        "potentialAction": {
+          "@type": "UseAction",
+          "target": "https://parasreward.com/register"
         }
       };
 
