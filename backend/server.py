@@ -10716,7 +10716,7 @@ async def find_treasure(request: FindTreasureRequest, uid: str):
 
 # Get treasure hunt leaderboard
 @app.get("/api/treasure-hunts/leaderboard")
-async def get_treasure_leaderboard(uid: str = Depends(require_user)):
+async def get_treasure_leaderboard(uid: str):
     """Get treasure hunt leaderboard - top hunters by treasures found"""
     try:
         # Aggregate user treasure hunt stats
