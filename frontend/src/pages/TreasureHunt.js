@@ -425,7 +425,7 @@ const TreasureHunt = ({ user }) => {
                 </div>
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                   <span>Calculation:</span>
-                  <span>{showStartModal.prc_cost} PRC = ₹{(showStartModal.prc_cost / 10).toFixed(2)} → 25% = ₹{((showStartModal.prc_cost / 10) * 0.25).toFixed(2)}</span>
+                  <span>{showStartModal.prc_cost} PRC = ₹{(showStartModal.prc_cost / 10).toFixed(2)} → 50% = ₹{((showStartModal.prc_cost / 10) * 0.50).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Cashback Rate:</span>
