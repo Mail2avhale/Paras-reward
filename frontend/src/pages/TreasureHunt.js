@@ -107,7 +107,7 @@ const TreasureHunt = ({ user }) => {
 
       if (response.data.found) {
         toast({ 
-          description: `🎉 ${response.data.message}\nReward: ${response.data.reward_prc} PRC | Cashback: ₹${response.data.cashback_earned}`
+          description: `🎉 ${response.data.message}\n💰 Cashback Earned: ₹${response.data.cashback_earned}\nTotal PRC Spent: ${response.data.prc_spent_total}`
         });
         setShowGameModal(false);
         fetchData(user.uid);
