@@ -306,6 +306,11 @@ const AdvancedUserManagement = () => {
                     <span className={`px-2 py-1 rounded text-xs font-semibold ${getKYCBadge(user.kyc_status)}`}>
                       KYC: {user.kyc_status?.toUpperCase()}
                     </span>
+                    {user.is_active === false && (
+                      <span className="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-700">
+                        DELETED
+                      </span>
+                    )}
                   </div>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
