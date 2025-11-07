@@ -56,6 +56,7 @@ const AdvancedUserManagement = () => {
       if (filterRole) url += `&role=${filterRole}`;
       if (filterMembership) url += `&membership=${filterMembership}`;
       if (filterKYC) url += `&kyc_status=${filterKYC}`;
+      if (showDeleted) url += `&show_deleted=true`;
       
       const response = await axios.get(url);
       setUsers(response.data.users || []);
