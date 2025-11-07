@@ -255,8 +255,25 @@ const AdvancedUserManagement = () => {
           </div>
         </div>
         
-        <div className="mt-4 text-sm text-gray-600">
-          Showing {users.length} of {total} users
+        <div className="mt-4 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="showDeleted"
+              checked={showDeleted}
+              onChange={(e) => {
+                setShowDeleted(e.target.checked);
+                setPage(1);
+              }}
+              className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+            />
+            <label htmlFor="showDeleted" className="text-sm font-medium text-gray-700 cursor-pointer">
+              Show Deleted Users
+            </label>
+          </div>
+          <div className="text-sm text-gray-600">
+            Showing {users.length} of {total} users
+          </div>
         </div>
       </Card>
 
