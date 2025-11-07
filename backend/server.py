@@ -10229,6 +10229,590 @@ async def get_activity_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+# ========================================
+# TREASURE HUNT GAME SYSTEM
+# ========================================
+
+class TreasureHuntModel(BaseModel):
+    hunt_id: str
+    title: str
+    description: str
+    difficulty: str  # easy, medium, hard
+    prc_cost: int
+    reward_prc: int
+    cashback_percentage: int = 25
+    total_clues: int
+    clue_cost: int = 5
+    treasure_locations: List[Dict]
+    time_limit_minutes: int
+    active: bool = True
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class UserTreasureProgress(BaseModel):
+    progress_id: str
+    user_id: str
+    hunt_id: str
+    started_at: str
+    clues_revealed: List[int] = []
+    attempts: int = 0
+    found: bool = False
+    found_at: Optional[str] = None
+    prc_spent: int = 0
+    cashback_earned: int = 0
+    completed: bool = False
+
+class StartHuntRequest(BaseModel):
+    hunt_id: str
+
+class BuyClueRequest(BaseModel):
+    progress_id: str
+    clue_number: int
+
+class FindTreasureRequest(BaseModel):
+    progress_id: str
+    location_id: int
+
+# Initialize default treasure hunts
+async def initialize_treasure_hunts():
+    """Create default treasure hunts if they don't exist"""
+    existing = await db.treasure_hunts.find_one({"hunt_id": "hunt_001"})
+    if existing:
+        return
+    
+    default_hunts = [
+        {
+            "hunt_id": "hunt_001",
+            "title": "Beginner's Fortune",
+            "description": "Find the hidden treasure in the ancient garden. Perfect for new treasure hunters!",
+            "difficulty": "easy",
+            "prc_cost": 10,
+            "reward_prc": 50,
+            "cashback_percentage": 25,
+            "total_clues": 3,
+            "clue_cost": 5,
+            "treasure_locations": [
+                {"id": 1, "x": 20, "y": 30, "is_treasure": False, "message": "Nothing here... keep searching!"},
+                {"id": 2, "x": 45, "y": 60, "is_treasure": True, "message": "🎉 Congratulations! You found the treasure!"},
+                {"id": 3, "x": 70, "y": 40, "is_treasure": False, "message": "Just an empty spot..."},
+                {"id": 4, "x": 35, "y": 75, "is_treasure": False, "message": "Try another location!"},
+                {"id": 5, "x": 60, "y": 20, "is_treasure": False, "message": "Not here either!"}
+            ],
+            "clues": [
+                "The treasure lies where flowers bloom the brightest.",
+                "Look near the center of the map, slightly to the right.",
+                "The X and Y coordinates are both between 40 and 60."
+            ],
+            "time_limit_minutes": 30,
+            "active": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "hunt_id": "hunt_002",
+            "title": "Mystic Cave Challenge",
+            "description": "Venture deep into the mysterious caves. Are you brave enough?",
+            "difficulty": "medium",
+            "prc_cost": 25,
+            "reward_prc": 120,
+            "cashback_percentage": 25,
+            "total_clues": 4,
+            "clue_cost": 5,
+            "treasure_locations": [
+                {"id": 1, "x": 15, "y": 85, "is_treasure": False, "message": "Dark and empty..."},
+                {"id": 2, "x": 80, "y": 65, "is_treasure": True, "message": "💎 Amazing! You discovered the mystic gem!"},
+                {"id": 3, "x": 50, "y": 50, "is_treasure": False, "message": "Just rocks here..."},
+                {"id": 4, "x": 30, "y": 20, "is_treasure": False, "message": "Nothing of value..."},
+                {"id": 5, "x": 65, "y": 40, "is_treasure": False, "message": "Keep looking!"},
+                {"id": 6, "x": 40, "y": 70, "is_treasure": False, "message": "Try elsewhere!"},
+                {"id": 7, "x": 25, "y": 55, "is_treasure": False, "message": "Empty cave chamber..."}
+            ],
+            "clues": [
+                "The treasure is hidden in the eastern section of the cave.",
+                "It's positioned high up, near the top of the map.",
+                "Look for coordinates above 60 on both axes.",
+                "The treasure X coordinate is greater than 75."
+            ],
+            "time_limit_minutes": 45,
+            "active": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "hunt_id": "hunt_003",
+            "title": "Dragon's Lair Expedition",
+            "description": "Only the bravest can find the dragon's hidden treasure hoard!",
+            "difficulty": "hard",
+            "prc_cost": 50,
+            "reward_prc": 300,
+            "cashback_percentage": 25,
+            "total_clues": 5,
+            "clue_cost": 5,
+            "treasure_locations": [
+                {"id": 1, "x": 10, "y": 10, "is_treasure": False, "message": "The dragon isn't here..."},
+                {"id": 2, "x": 90, "y": 90, "is_treasure": False, "message": "Wrong corner!"},
+                {"id": 3, "x": 55, "y": 45, "is_treasure": True, "message": "🐉 LEGENDARY! You found the Dragon's Hoard!"},
+                {"id": 4, "x": 30, "y": 80, "is_treasure": False, "message": "Just dragon scales..."},
+                {"id": 5, "x": 75, "y": 25, "is_treasure": False, "message": "Empty chamber..."},
+                {"id": 6, "x": 20, "y": 60, "is_treasure": False, "message": "Nothing but bones..."},
+                {"id": 7, "x": 85, "y": 50, "is_treasure": False, "message": "Keep searching!"},
+                {"id": 8, "x": 40, "y": 35, "is_treasure": False, "message": "Not quite..."},
+                {"id": 9, "x": 65, "y": 70, "is_treasure": False, "message": "Try again!"},
+                {"id": 10, "x": 50, "y": 15, "is_treasure": False, "message": "Almost there..."}
+            ],
+            "clues": [
+                "The dragon guards its treasure in the heart of the lair.",
+                "Look near the center, but not exactly at 50,50.",
+                "Both coordinates are between 40 and 60.",
+                "The Y coordinate is less than the X coordinate.",
+                "The treasure is within 10 units of coordinates 55,45."
+            ],
+            "time_limit_minutes": 60,
+            "active": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+    ]
+    
+    await db.treasure_hunts.insert_many(default_hunts)
+
+# Get all available treasure hunts
+@app.get("/api/treasure-hunts")
+async def get_treasure_hunts(uid: str = Depends(require_user)):
+    """Get all available treasure hunts"""
+    try:
+        hunts = await db.treasure_hunts.find({"active": True}).to_list(length=100)
+        
+        # Remove treasure locations and clues from response (prevent cheating)
+        safe_hunts = []
+        for hunt in hunts:
+            safe_hunt = {
+                "hunt_id": hunt["hunt_id"],
+                "title": hunt["title"],
+                "description": hunt["description"],
+                "difficulty": hunt["difficulty"],
+                "prc_cost": hunt["prc_cost"],
+                "reward_prc": hunt["reward_prc"],
+                "cashback_percentage": hunt.get("cashback_percentage", 25),
+                "total_clues": hunt["total_clues"],
+                "clue_cost": hunt["clue_cost"],
+                "time_limit_minutes": hunt["time_limit_minutes"]
+            }
+            safe_hunts.append(safe_hunt)
+        
+        return {"hunts": safe_hunts}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Start a treasure hunt
+@app.post("/api/treasure-hunts/start")
+async def start_treasure_hunt(request: StartHuntRequest, uid: str = Depends(require_user)):
+    """Start a new treasure hunt - deducts PRC"""
+    try:
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        hunt = await db.treasure_hunts.find_one({"hunt_id": request.hunt_id, "active": True})
+        if not hunt:
+            raise HTTPException(status_code=404, detail="Treasure hunt not found")
+        
+        # Check if user has enough PRC
+        user_prc = user.get("prc_balance", 0)
+        if user_prc < hunt["prc_cost"]:
+            raise HTTPException(status_code=400, detail="Insufficient PRC balance")
+        
+        # Check if user already has an active hunt for this
+        existing = await db.treasure_progress.find_one({
+            "user_id": uid,
+            "hunt_id": request.hunt_id,
+            "completed": False
+        })
+        if existing:
+            raise HTTPException(status_code=400, detail="You already have an active hunt for this treasure")
+        
+        # Deduct PRC
+        new_prc_balance = user_prc - hunt["prc_cost"]
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"prc_balance": new_prc_balance}}
+        )
+        
+        # Log transaction
+        await log_transaction(
+            uid=uid,
+            transaction_type="debit",
+            amount=hunt["prc_cost"],
+            currency="PRC",
+            description=f"Started treasure hunt: {hunt['title']}",
+            reference_id=f"hunt_start_{request.hunt_id}_{uuid.uuid4()}"
+        )
+        
+        # Create progress entry
+        progress_id = f"progress_{uuid.uuid4()}"
+        progress = {
+            "progress_id": progress_id,
+            "user_id": uid,
+            "hunt_id": request.hunt_id,
+            "started_at": datetime.now(timezone.utc).isoformat(),
+            "clues_revealed": [],
+            "attempts": 0,
+            "found": False,
+            "found_at": None,
+            "prc_spent": hunt["prc_cost"],
+            "cashback_earned": 0,
+            "completed": False,
+            "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=hunt["time_limit_minutes"])).isoformat()
+        }
+        
+        await db.treasure_progress.insert_one(progress)
+        
+        return {
+            "success": True,
+            "progress_id": progress_id,
+            "hunt_title": hunt["title"],
+            "prc_spent": hunt["prc_cost"],
+            "new_prc_balance": new_prc_balance,
+            "expires_at": progress["expires_at"]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get user's active treasure hunts
+@app.get("/api/treasure-hunts/my-progress")
+async def get_my_treasure_progress(uid: str = Depends(require_user)):
+    """Get user's active and completed treasure hunts"""
+    try:
+        progress_list = await db.treasure_progress.find({"user_id": uid}).to_list(length=100)
+        
+        enriched_progress = []
+        for progress in progress_list:
+            hunt = await db.treasure_hunts.find_one({"hunt_id": progress["hunt_id"]})
+            if hunt:
+                progress_data = {
+                    "progress_id": progress["progress_id"],
+                    "hunt_id": progress["hunt_id"],
+                    "hunt_title": hunt["title"],
+                    "difficulty": hunt["difficulty"],
+                    "started_at": progress["started_at"],
+                    "clues_revealed": progress.get("clues_revealed", []),
+                    "total_clues": hunt["total_clues"],
+                    "clue_cost": hunt["clue_cost"],
+                    "attempts": progress.get("attempts", 0),
+                    "found": progress.get("found", False),
+                    "found_at": progress.get("found_at"),
+                    "prc_spent": progress.get("prc_spent", 0),
+                    "cashback_earned": progress.get("cashback_earned", 0),
+                    "completed": progress.get("completed", False),
+                    "expires_at": progress.get("expires_at"),
+                    "reward_prc": hunt["reward_prc"]
+                }
+                enriched_progress.append(progress_data)
+        
+        return {"progress": enriched_progress}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Buy a clue
+@app.post("/api/treasure-hunts/buy-clue")
+async def buy_treasure_clue(request: BuyClueRequest, uid: str = Depends(require_user)):
+    """Buy a clue for a treasure hunt - deducts PRC"""
+    try:
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        progress = await db.treasure_progress.find_one({
+            "progress_id": request.progress_id,
+            "user_id": uid
+        })
+        if not progress:
+            raise HTTPException(status_code=404, detail="Progress not found")
+        
+        if progress.get("completed", False):
+            raise HTTPException(status_code=400, detail="This hunt is already completed")
+        
+        hunt = await db.treasure_hunts.find_one({"hunt_id": progress["hunt_id"]})
+        if not hunt:
+            raise HTTPException(status_code=404, detail="Hunt not found")
+        
+        # Check if clue number is valid
+        if request.clue_number < 0 or request.clue_number >= hunt["total_clues"]:
+            raise HTTPException(status_code=400, detail="Invalid clue number")
+        
+        # Check if clue already revealed
+        clues_revealed = progress.get("clues_revealed", [])
+        if request.clue_number in clues_revealed:
+            raise HTTPException(status_code=400, detail="Clue already revealed")
+        
+        # Check PRC balance
+        user_prc = user.get("prc_balance", 0)
+        clue_cost = hunt["clue_cost"]
+        if user_prc < clue_cost:
+            raise HTTPException(status_code=400, detail="Insufficient PRC balance")
+        
+        # Deduct PRC
+        new_prc_balance = user_prc - clue_cost
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"prc_balance": new_prc_balance}}
+        )
+        
+        # Log transaction
+        await log_transaction(
+            uid=uid,
+            transaction_type="debit",
+            amount=clue_cost,
+            currency="PRC",
+            description=f"Bought clue #{request.clue_number + 1} for {hunt['title']}",
+            reference_id=f"clue_buy_{request.progress_id}_{request.clue_number}"
+        )
+        
+        # Update progress
+        clues_revealed.append(request.clue_number)
+        prc_spent = progress.get("prc_spent", 0) + clue_cost
+        
+        await db.treasure_progress.update_one(
+            {"progress_id": request.progress_id},
+            {
+                "$set": {
+                    "clues_revealed": clues_revealed,
+                    "prc_spent": prc_spent
+                }
+            }
+        )
+        
+        # Get the clue text
+        clue_text = hunt.get("clues", [])[request.clue_number] if request.clue_number < len(hunt.get("clues", [])) else "No clue available"
+        
+        return {
+            "success": True,
+            "clue_number": request.clue_number,
+            "clue_text": clue_text,
+            "prc_spent": clue_cost,
+            "new_prc_balance": new_prc_balance,
+            "total_clues_revealed": len(clues_revealed)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Find treasure attempt
+@app.post("/api/treasure-hunts/find-treasure")
+async def find_treasure(request: FindTreasureRequest, uid: str = Depends(require_user)):
+    """Attempt to find treasure at a location"""
+    try:
+        progress = await db.treasure_progress.find_one({
+            "progress_id": request.progress_id,
+            "user_id": uid
+        })
+        if not progress:
+            raise HTTPException(status_code=404, detail="Progress not found")
+        
+        if progress.get("completed", False):
+            raise HTTPException(status_code=400, detail="This hunt is already completed")
+        
+        hunt = await db.treasure_hunts.find_one({"hunt_id": progress["hunt_id"]})
+        if not hunt:
+            raise HTTPException(status_code=404, detail="Hunt not found")
+        
+        # Find the location
+        location = None
+        for loc in hunt["treasure_locations"]:
+            if loc["id"] == request.location_id:
+                location = loc
+                break
+        
+        if not location:
+            raise HTTPException(status_code=404, detail="Location not found")
+        
+        # Increment attempts
+        attempts = progress.get("attempts", 0) + 1
+        
+        # Check if treasure found
+        is_treasure = location.get("is_treasure", False)
+        result = {
+            "found": is_treasure,
+            "message": location.get("message", ""),
+            "attempts": attempts
+        }
+        
+        if is_treasure:
+            # Calculate cashback (25% of total PRC spent)
+            prc_spent = progress.get("prc_spent", 0)
+            cashback = int(prc_spent * 0.25)  # 25% cashback
+            reward = hunt["reward_prc"]
+            
+            # Award reward PRC
+            user = await db.users.find_one({"uid": uid})
+            current_prc = user.get("prc_balance", 0)
+            new_prc = current_prc + reward
+            
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {"prc_balance": new_prc}}
+            )
+            
+            # Award cashback to cashback wallet
+            current_cashback = user.get("cashback_wallet_balance", 0)
+            new_cashback = current_cashback + cashback
+            
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {"cashback_wallet_balance": new_cashback}}
+            )
+            
+            # Log transactions
+            await log_transaction(
+                uid=uid,
+                transaction_type="credit",
+                amount=reward,
+                currency="PRC",
+                description=f"Treasure found reward: {hunt['title']}",
+                reference_id=f"treasure_reward_{request.progress_id}"
+            )
+            
+            await log_transaction(
+                uid=uid,
+                transaction_type="credit",
+                amount=cashback,
+                currency="INR",
+                description=f"25% cashback for treasure hunt: {hunt['title']}",
+                reference_id=f"treasure_cashback_{request.progress_id}"
+            )
+            
+            # Update progress
+            await db.treasure_progress.update_one(
+                {"progress_id": request.progress_id},
+                {
+                    "$set": {
+                        "found": True,
+                        "found_at": datetime.now(timezone.utc).isoformat(),
+                        "attempts": attempts,
+                        "cashback_earned": cashback,
+                        "completed": True
+                    }
+                }
+            )
+            
+            result.update({
+                "reward_prc": reward,
+                "cashback_earned": cashback,
+                "new_prc_balance": new_prc,
+                "new_cashback_balance": new_cashback
+            })
+        else:
+            # Update attempts only
+            await db.treasure_progress.update_one(
+                {"progress_id": request.progress_id},
+                {"$set": {"attempts": attempts}}
+            )
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get treasure hunt leaderboard
+@app.get("/api/treasure-hunts/leaderboard")
+async def get_treasure_leaderboard(uid: str = Depends(require_user)):
+    """Get treasure hunt leaderboard - top hunters by treasures found"""
+    try:
+        # Aggregate user treasure hunt stats
+        pipeline = [
+            {"$match": {"found": True, "completed": True}},
+            {"$group": {
+                "_id": "$user_id",
+                "treasures_found": {"$sum": 1},
+                "total_reward": {"$sum": "$cashback_earned"},
+                "total_prc_spent": {"$sum": "$prc_spent"}
+            }},
+            {"$sort": {"treasures_found": -1, "total_reward": -1}},
+            {"$limit": 10}
+        ]
+        
+        leaderboard_data = await db.treasure_progress.aggregate(pipeline).to_list(length=10)
+        
+        # Enrich with user data
+        leaderboard = []
+        for entry in leaderboard_data:
+            user = await db.users.find_one({"uid": entry["_id"]})
+            if user:
+                leaderboard.append({
+                    "user_id": entry["_id"],
+                    "name": user.get("name", "Anonymous"),
+                    "email": user.get("email", ""),
+                    "treasures_found": entry["treasures_found"],
+                    "total_cashback_earned": entry["total_reward"],
+                    "total_prc_spent": entry["total_prc_spent"]
+                })
+        
+        return {"leaderboard": leaderboard}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get game map data for active hunt
+@app.get("/api/treasure-hunts/game-map/{progress_id}")
+async def get_game_map(progress_id: str, uid: str = Depends(require_user)):
+    """Get game map data for active hunt (without revealing treasure location)"""
+    try:
+        progress = await db.treasure_progress.find_one({
+            "progress_id": progress_id,
+            "user_id": uid
+        })
+        if not progress:
+            raise HTTPException(status_code=404, detail="Progress not found")
+        
+        hunt = await db.treasure_hunts.find_one({"hunt_id": progress["hunt_id"]})
+        if not hunt:
+            raise HTTPException(status_code=404, detail="Hunt not found")
+        
+        # Return locations without revealing which is treasure (unless already found)
+        safe_locations = []
+        for loc in hunt["treasure_locations"]:
+            safe_loc = {
+                "id": loc["id"],
+                "x": loc["x"],
+                "y": loc["y"]
+            }
+            # If treasure already found, reveal it
+            if progress.get("found", False):
+                safe_loc["is_treasure"] = loc.get("is_treasure", False)
+                safe_loc["message"] = loc.get("message", "")
+            safe_locations.append(safe_loc)
+        
+        # Get revealed clues
+        revealed_clues = []
+        clues_revealed = progress.get("clues_revealed", [])
+        all_clues = hunt.get("clues", [])
+        for clue_idx in clues_revealed:
+            if clue_idx < len(all_clues):
+                revealed_clues.append({
+                    "number": clue_idx + 1,
+                    "text": all_clues[clue_idx]
+                })
+        
+        return {
+            "hunt_id": hunt["hunt_id"],
+            "title": hunt["title"],
+            "description": hunt["description"],
+            "difficulty": hunt["difficulty"],
+            "locations": safe_locations,
+            "revealed_clues": revealed_clues,
+            "total_clues": hunt["total_clues"],
+            "clue_cost": hunt["clue_cost"],
+            "attempts": progress.get("attempts", 0),
+            "found": progress.get("found", False),
+            "expires_at": progress.get("expires_at")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
