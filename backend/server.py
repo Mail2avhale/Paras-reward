@@ -11087,6 +11087,195 @@ async def award_daily_top_hunter_bonus(uid: str):
 
 
 
+# ========== VIDEO ADS ENDPOINTS ==========
+
+class VideoAdRequest(BaseModel):
+    """Video ad creation/update request"""
+    title: str
+    video_url: str
+    video_type: str = "youtube"  # 'direct', 'youtube', 'vimeo'
+    thumbnail_url: Optional[str] = None
+    description: Optional[str] = None
+    placement: str = "homepage"  # 'homepage', 'marketplace', 'pre_game', 'dashboard'
+    is_active: bool = True
+    autoplay: bool = True
+    skippable: bool = True
+    skip_after: int = 5
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    target_roles: List[str] = ["user"]  # Can target specific user roles
+
+@api_router.post("/admin/video-ads")
+async def create_video_ad(request: VideoAdRequest):
+    """Admin: Create a new video advertisement"""
+    try:
+        video_ad_id = f"video_{uuid.uuid4()}"
+        
+        video_ad = {
+            "video_ad_id": video_ad_id,
+            "title": request.title,
+            "video_url": request.video_url,
+            "video_type": request.video_type,
+            "thumbnail_url": request.thumbnail_url,
+            "description": request.description,
+            "placement": request.placement,
+            "is_active": request.is_active,
+            "autoplay": request.autoplay,
+            "skippable": request.skippable,
+            "skip_after": request.skip_after,
+            "start_date": request.start_date,
+            "end_date": request.end_date,
+            "target_roles": request.target_roles,
+            "views": 0,
+            "skips": 0,
+            "completions": 0,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.video_ads.insert_one(video_ad)
+        
+        return {
+            "success": True,
+            "video_ad_id": video_ad_id,
+            "message": "Video ad created successfully"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/video-ads")
+async def get_all_video_ads(
+    placement: Optional[str] = None,
+    is_active: Optional[bool] = None
+):
+    """Admin: Get all video advertisements"""
+    try:
+        query = {}
+        if placement:
+            query["placement"] = placement
+        if is_active is not None:
+            query["is_active"] = is_active
+        
+        video_ads = await db.video_ads.find(query).sort("created_at", -1).to_list(length=None)
+        
+        return {
+            "success": True,
+            "video_ads": video_ads,
+            "total": len(video_ads)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/video-ads/active")
+async def get_active_video_ads(
+    placement: str = "homepage",
+    user_role: str = "user"
+):
+    """Get active video ads for specific placement and user role"""
+    try:
+        now = datetime.now(timezone.utc).isoformat()
+        
+        query = {
+            "is_active": True,
+            "placement": placement,
+            "target_roles": {"$in": [user_role, "all"]},
+            "$or": [
+                {"start_date": None},
+                {"start_date": {"$lte": now}}
+            ],
+            "$or": [
+                {"end_date": None},
+                {"end_date": {"$gte": now}}
+            ]
+        }
+        
+        video_ads = await db.video_ads.find(query).sort("created_at", -1).limit(5).to_list(length=5)
+        
+        return {
+            "success": True,
+            "video_ads": video_ads
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/admin/video-ads/{video_ad_id}")
+async def update_video_ad(video_ad_id: str, request: VideoAdRequest):
+    """Admin: Update video advertisement"""
+    try:
+        update_data = request.dict()
+        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        
+        result = await db.video_ads.update_one(
+            {"video_ad_id": video_ad_id},
+            {"$set": update_data}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Video ad not found")
+        
+        return {
+            "success": True,
+            "message": "Video ad updated successfully"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/admin/video-ads/{video_ad_id}")
+async def delete_video_ad(video_ad_id: str):
+    """Admin: Delete video advertisement"""
+    try:
+        result = await db.video_ads.delete_one({"video_ad_id": video_ad_id})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Video ad not found")
+        
+        return {
+            "success": True,
+            "message": "Video ad deleted successfully"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/video-ads/{video_ad_id}/track")
+async def track_video_ad_event(
+    video_ad_id: str,
+    event_type: str,  # 'view', 'skip', 'complete'
+    watch_time: Optional[float] = 0
+):
+    """Track video ad engagement events"""
+    try:
+        update_field = {}
+        if event_type == "view":
+            update_field = {"$inc": {"views": 1}}
+        elif event_type == "skip":
+            update_field = {"$inc": {"skips": 1}}
+        elif event_type == "complete":
+            update_field = {"$inc": {"completions": 1}}
+        
+        if update_field:
+            await db.video_ads.update_one(
+                {"video_ad_id": video_ad_id},
+                update_field
+            )
+        
+        # Log individual event
+        await db.video_ad_events.insert_one({
+            "event_id": f"event_{uuid.uuid4()}",
+            "video_ad_id": video_ad_id,
+            "event_type": event_type,
+            "watch_time": watch_time,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.on_event("startup")
 async def startup_db():
     """Initialize database with default data"""
