@@ -10662,7 +10662,7 @@ async def find_treasure(request: FindTreasureRequest, uid: str):
             await log_transaction(
                 user_id=uid,
                 wallet_type="cashback",
-                transaction_type="credit",
+                transaction_type="cashback",
                 amount=cashback,
                 description=f"25% cashback for treasure hunt: {hunt['title']}",
                 metadata={
