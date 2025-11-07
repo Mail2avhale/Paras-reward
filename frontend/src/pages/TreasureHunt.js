@@ -57,12 +57,12 @@ const TreasureHunt = ({ user }) => {
       const response = await axios.post(
         `${API}/treasure-hunts/start`,
         { hunt_id: huntId },
-        { params: { uid: currentUser.uid } }
+        { params: { uid: user.uid } }
       );
 
       toast({ description: `Started ${response.data.hunt_title}! PRC deducted: ${response.data.prc_spent}` });
       setShowStartModal(null);
-      fetchData(currentUser.uid);
+      fetchData(user.uid);
     } catch (error) {
       toast({ description: error.response?.data?.detail || 'Failed to start hunt', variant: 'destructive' });
     }
