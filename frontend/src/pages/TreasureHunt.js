@@ -515,41 +515,78 @@ const TreasureHunt = ({ user }) => {
               <div className="mb-4">
                 <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                   <Map className="h-5 w-5" />
-                  Treasure Map
+                  Treasure Map - {gameMap.title}
                 </h4>
-                <div className="relative w-full aspect-square bg-gradient-to-br from-yellow-100 via-green-100 to-blue-100 rounded-lg border-4 border-yellow-600 overflow-hidden">
-                  {/* Grid background */}
-                  <div className="absolute inset-0 grid grid-cols-10 grid-rows-10 opacity-20">
-                    {Array.from({ length: 100 }).map((_, idx) => (
-                      <div key={idx} className="border border-gray-400"></div>
-                    ))}
+                <div className="relative w-full aspect-square bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-lg border-4 border-amber-700 overflow-hidden shadow-2xl"
+                     style={{
+                       backgroundImage: `
+                         linear-gradient(rgba(245, 158, 11, 0.05) 1px, transparent 1px),
+                         linear-gradient(90deg, rgba(245, 158, 11, 0.05) 1px, transparent 1px)
+                       `,
+                       backgroundSize: '20px 20px'
+                     }}>
+                  
+                  {/* Aged paper texture overlay */}
+                  <div className="absolute inset-0 opacity-10"
+                       style={{
+                         backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' /%3E%3C/filter%3E%3Crect width=\'100\' height=\'100\' filter=\'url(%23noise)\' opacity=\'0.3\'/%3E%3C/svg%3E")'
+                       }}>
                   </div>
                   
-                  {/* Treasure locations */}
+                  {/* Compass rose */}
+                  <div className="absolute top-4 right-4 w-12 h-12 opacity-30">
+                    <svg viewBox="0 0 100 100" className="text-amber-900">
+                      <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="2"/>
+                      <text x="50" y="20" textAnchor="middle" fill="currentColor" fontSize="20" fontWeight="bold">N</text>
+                      <text x="50" y="90" textAnchor="middle" fill="currentColor" fontSize="20" fontWeight="bold">S</text>
+                      <text x="15" y="55" textAnchor="middle" fill="currentColor" fontSize="20" fontWeight="bold">W</text>
+                      <text x="85" y="55" textAnchor="middle" fill="currentColor" fontSize="20" fontWeight="bold">E</text>
+                      <polygon points="50,10 55,50 50,45 45,50" fill="currentColor"/>
+                    </svg>
+                  </div>
+                  
+                  {/* Treasure locations with X marks */}
                   {gameMap.locations.map((location) => (
                     <button
                       key={location.id}
                       onClick={() => !gameMap.found && attemptFindTreasure(activeGame, location.id)}
                       disabled={gameMap.found}
-                      className={`absolute w-8 h-8 rounded-full transform -translate-x-1/2 -translate-y-1/2 transition-all ${
+                      className={`absolute w-10 h-10 transform -translate-x-1/2 -translate-y-1/2 transition-all ${
                         gameMap.found && location.is_treasure
-                          ? 'bg-yellow-400 scale-150 animate-pulse'
-                          : 'bg-red-500 hover:scale-125 hover:bg-red-600'
+                          ? 'scale-150 animate-bounce'
+                          : 'hover:scale-125'
                       } ${gameMap.found ? 'cursor-default' : 'cursor-pointer'}`}
                       style={{
                         left: `${location.x}%`,
                         top: `${location.y}%`
                       }}
-                      title={gameMap.found && location.is_treasure ? location.message : `Location ${location.id}`}
+                      title={gameMap.found && location.is_treasure ? location.message : `Search Location ${location.id}`}
                     >
-                      {gameMap.found && location.is_treasure && (
-                        <Trophy className="h-6 w-6 text-white absolute inset-0 m-auto" />
+                      {gameMap.found && location.is_treasure ? (
+                        <div className="relative">
+                          <div className="absolute inset-0 bg-yellow-400 rounded-full animate-ping opacity-75"></div>
+                          <Trophy className="h-10 w-10 text-yellow-600 drop-shadow-lg relative z-10" />
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <svg viewBox="0 0 100 100" className="w-10 h-10">
+                            <text x="50" y="70" textAnchor="middle" fill="#DC2626" fontSize="80" fontWeight="bold" fontFamily="serif" className="drop-shadow-md">✕</text>
+                          </svg>
+                        </div>
                       )}
                     </button>
                   ))}
+                  
+                  {/* Border decoration */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-amber-800 opacity-50"></div>
+                    <div className="absolute top-0 right-0 w-16 h-16 border-t-4 border-r-4 border-amber-800 opacity-50"></div>
+                    <div className="absolute bottom-0 left-0 w-16 h-16 border-b-4 border-l-4 border-amber-800 opacity-50"></div>
+                    <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-amber-800 opacity-50"></div>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-600 mt-2 text-center">
-                  {gameMap.found ? '🎉 Treasure Found!' : 'Click on red dots to search for treasure'}
+                <p className="text-xs text-gray-600 mt-2 text-center font-medium">
+                  {gameMap.found ? '🎉 Treasure Found! You earned 25% cashback!' : '🗺️ Click on the X marks to search for treasure'}
                 </p>
               </div>
               
