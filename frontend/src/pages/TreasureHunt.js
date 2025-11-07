@@ -63,11 +63,11 @@ const TreasureHunt = () => {
         { params: { uid: currentUser.uid } }
       );
 
-      toast.success(`Started ${response.data.hunt_title}! PRC deducted: ${response.data.prc_spent}`);
+      toast({ description: `Started ${response.data.hunt_title}! PRC deducted: ${response.data.prc_spent}` });
       setShowStartModal(null);
       fetchData(currentUser.uid);
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to start hunt');
+      toast({ description: error.response?.data?.detail || 'Failed to start hunt', variant: 'destructive' });
     }
   };
 
