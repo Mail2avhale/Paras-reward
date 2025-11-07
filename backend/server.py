@@ -10642,9 +10642,11 @@ async def find_treasure(request: FindTreasureRequest, uid: str):
         }
         
         if is_treasure:
-            # Calculate cashback (25% of total PRC spent) - ONLY REWARD IS CASHBACK
+            # Calculate cashback: Convert PRC to INR first (10 PRC = 1 INR), then 25%
             prc_spent = progress.get("prc_spent", 0)
-            cashback = round(prc_spent * 0.25, 2)  # 25% cashback rounded to 2 decimals
+            inr_value = prc_spent / 10  # Convert PRC to INR (10 PRC = 1 INR)
+            cashback = round(inr_value * 0.25, 2)  # 25% of INR value, rounded to 2 decimals
+            # Example: 100 PRC spent → 100/10 = 10 INR → 10 * 0.25 = 2.5 INR cashback
             
             # Award cashback to cashback wallet
             user = await db.users.find_one({"uid": uid})
