@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { toast } from 'react-hot-toast';
+import { useToast } from '../hooks/use-toast';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
