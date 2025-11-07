@@ -76,6 +76,14 @@ const DashboardNew = ({ user, onLogout }) => {
       badge: null
     },
     { 
+      name: 'Treasure Hunt', 
+      icon: Map, 
+      link: '/treasure-hunt', 
+      gradient: 'from-amber-500 to-orange-600',
+      description: 'Find treasures',
+      badge: '25% CB'
+    },
+    { 
       name: 'Marketplace', 
       icon: ShoppingBag, 
       link: '/marketplace', 
