@@ -46,7 +46,7 @@ const AdvancedUserManagement = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [page, searchTerm, filterRole, filterMembership, filterKYC]);
+  }, [page, searchTerm, filterRole, filterMembership, filterKYC, showDeleted]);
 
   const fetchUsers = async () => {
     setLoading(true);
