@@ -112,7 +112,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/master-stockist" element={user && user.role === "master_stockist" ? <MasterStockistDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/sub-stockist" element={user && user.role === "sub_stockist" ? <SubStockistDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/outlet" element={user && user.role === "outlet" ? <OutletPanel user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-        </Routes>
+          </Routes>
         </Suspense>
       </BrowserRouter>
       <Toaster position="top-center" richColors />
