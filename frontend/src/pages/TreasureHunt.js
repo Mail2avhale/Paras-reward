@@ -102,7 +102,7 @@ const TreasureHunt = ({ user }) => {
       const response = await axios.post(
         `${API}/treasure-hunts/find-treasure`,
         { progress_id: progressId, location_id: locationId },
-        { params: { uid: currentUser.uid } }
+        { params: { uid: user.uid } }
       );
 
       if (response.data.found) {
@@ -110,7 +110,7 @@ const TreasureHunt = ({ user }) => {
           description: `🎉 ${response.data.message}\nReward: ${response.data.reward_prc} PRC | Cashback: ₹${response.data.cashback_earned}`
         });
         setShowGameModal(false);
-        fetchData(currentUser.uid);
+        fetchData(user.uid);
       } else {
         toast({ description: response.data.message, variant: 'destructive' });
       }
