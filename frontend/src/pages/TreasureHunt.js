@@ -49,7 +49,7 @@ const TreasureHunt = () => {
       setLeaderboard(leaderboardRes.data.leaderboard || []);
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to load treasure hunt data');
+      toast({ description: 'Failed to load treasure hunt data', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
