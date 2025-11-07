@@ -10754,7 +10754,7 @@ async def get_treasure_leaderboard(uid: str):
 
 # Get game map data for active hunt
 @app.get("/api/treasure-hunts/game-map/{progress_id}")
-async def get_game_map(progress_id: str, uid: str = Depends(require_user)):
+async def get_game_map(progress_id: str, uid: str):
     """Get game map data for active hunt (without revealing treasure location)"""
     try:
         progress = await db.treasure_progress.find_one({
