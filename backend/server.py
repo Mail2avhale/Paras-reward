@@ -10644,8 +10644,9 @@ async def find_treasure(request: FindTreasureRequest, uid: str):
         # Increment attempts
         attempts = progress.get("attempts", 0) + 1
         
-        # Check if treasure found
-        is_treasure = location.get("is_treasure", False)
+        # Check if treasure found - use randomized location from progress
+        treasure_location_id = progress.get("treasure_location_id")
+        is_treasure = (request.location_id == treasure_location_id)
         result = {
             "found": is_treasure,
             "message": location.get("message", ""),
