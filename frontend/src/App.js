@@ -49,6 +49,7 @@ const GamificationDashboard = lazy(() => import("@/pages/GamificationDashboard")
 const FlashSalesPage = lazy(() => import("@/pages/FlashSalesPage"));
 const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
 const AdminAnalytics = lazy(() => import("@/pages/AdminAnalytics"));
+const AdminVideoAds = lazy(() => import("@/pages/AdminVideoAds"));
 const ManagerDashboard = lazy(() => import("@/pages/ManagerDashboard"));
 const MasterStockistDashboard = lazy(() => import("@/pages/MasterStockistDashboard"));
 const SubStockistDashboard = lazy(() => import("@/pages/SubStockistDashboard"));
