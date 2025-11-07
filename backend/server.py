@@ -10599,7 +10599,7 @@ async def buy_treasure_clue(request: BuyClueRequest, uid: str):
 
 # Find treasure attempt
 @app.post("/api/treasure-hunts/find-treasure")
-async def find_treasure(request: FindTreasureRequest, uid: str = Depends(require_user)):
+async def find_treasure(request: FindTreasureRequest, uid: str):
     """Attempt to find treasure at a location"""
     try:
         progress = await db.treasure_progress.find_one({
