@@ -86,12 +86,12 @@ const TreasureHunt = ({ user }) => {
       const response = await axios.post(
         `${API}/treasure-hunts/buy-clue`,
         { progress_id: progressId, clue_number: clueNumber },
-        { params: { uid: currentUser.uid } }
+        { params: { uid: user.uid } }
       );
 
       toast({ description: `Clue revealed! ${response.data.clue_text}` });
       loadGameMap(progressId);
-      fetchData(currentUser.uid);
+      fetchData(user.uid);
     } catch (error) {
       toast({ description: error.response?.data?.detail || 'Failed to buy clue', variant: 'destructive' });
     }
