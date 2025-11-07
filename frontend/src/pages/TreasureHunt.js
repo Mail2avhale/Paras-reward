@@ -416,19 +416,19 @@ const TreasureHunt = ({ user }) => {
               <h4 className="font-semibold text-blue-900 mb-3">Hunt Details:</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Cost:</span>
+                  <span className="text-gray-600">PRC Cost:</span>
                   <span className="font-bold text-gray-900">{showStartModal.prc_cost} PRC</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Reward:</span>
-                  <span className="font-bold text-green-600">{showStartModal.reward_prc} PRC</span>
+                  <span className="text-gray-600">Cashback Reward:</span>
+                  <span className="font-bold text-green-600">₹{(showStartModal.prc_cost * showStartModal.cashback_percentage / 100).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Cashback:</span>
-                  <span className="font-bold text-green-600">{showStartModal.cashback_percentage}% of PRC spent</span>
+                  <span className="text-gray-600">Cashback Rate:</span>
+                  <span className="font-bold text-green-600">{showStartModal.cashback_percentage}%</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Total Clues:</span>
+                  <span className="text-gray-600">Total Clues Available:</span>
                   <span className="font-bold text-gray-900">{showStartModal.total_clues}</span>
                 </div>
                 <div className="flex justify-between">
