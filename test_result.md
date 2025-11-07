@@ -1369,6 +1369,12 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "BUG FIX: Root cause identified - API URL missing '/api' prefix. The constant API was set to process.env.REACT_APP_BACKEND_URL instead of ${process.env.REACT_APP_BACKEND_URL}/api causing all API calls to fail with 404 errors. FIXED: Changed line 13 in TreasureHunt.js from 'const API = process.env.REACT_APP_BACKEND_URL' to 'const API = `${process.env.REACT_APP_BACKEND_URL}/api`'. This ensures all treasure hunt API calls include the correct /api prefix matching the backend route structure. Backend API verified working: curl test shows 3 treasure hunts returned correctly. Frontend recompiled successfully. Ready for re-testing."
+      - working: "NA"
+        agent: "user"
+        comment: "User reported game still not loading. When clicking Treasure Hunt from dashboard, page shows 'loading' and redirects back to dashboard instead of showing the game."
+      - working: "NA"
+        agent: "main"
+        comment: "BUG FIX #2: Root cause identified - Component prop mismatch causing redirect. TreasureHunt component was not receiving 'user' prop from App.js router, instead trying to get user from localStorage which was causing navigation back to login/dashboard. FIXED: 1) Updated TreasureHunt function signature to accept 'user' prop: const TreasureHunt = ({ user }) =>. 2) Removed currentUser state and localStorage.getItem('user') logic. 3) Updated useEffect to check 'user' prop directly instead of localStorage. 4) Replaced all 'currentUser.uid' references with 'user.uid' throughout the component (in startHunt, loadGameMap, buyClue, attemptFindTreasure functions). This matches the pattern used by other pages in the app (Mining, TapGame, etc.) that receive user as prop. Component now properly receives authenticated user from App.js route and doesn't redirect. Frontend linted successfully. Frontend compiled successfully. Ready for re-testing."
 
   - task: "Product List Optimization with Pagination and Infinite Scroll"
     implemented: true
