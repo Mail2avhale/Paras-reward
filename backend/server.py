@@ -10778,6 +10778,198 @@ async def get_treasure_leaderboard(uid: str):
 @app.get("/api/treasure-hunts/game-map/{progress_id}")
 async def get_game_map(progress_id: str, uid: str):
     """Get game map data for active hunt (without revealing treasure location)"""
+
+
+# Daily Top Hunter - 100% Cashback Reward
+@app.get("/api/treasure-hunts/daily-top-hunter")
+async def get_daily_top_hunter(uid: str):
+    """Get today's top treasure hunter and check if current user qualifies"""
+    try:
+        # Get today's date range
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = today_start + timedelta(days=1)
+        
+        # Find all treasures found today
+        pipeline = [
+            {
+                "$match": {
+                    "found": True,
+                    "found_at": {
+                        "$gte": today_start.isoformat(),
+                        "$lt": today_end.isoformat()
+                    }
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$user_id",
+                    "treasures_found_today": {"$sum": 1},
+                    "total_prc_spent_today": {"$sum": "$prc_spent"},
+                    "total_cashback_earned": {"$sum": "$cashback_earned"}
+                }
+            },
+            {
+                "$sort": {"treasures_found_today": -1, "total_prc_spent_today": -1}
+            },
+            {
+                "$limit": 1
+            }
+        ]
+        
+        top_hunter_data = await db.treasure_progress.aggregate(pipeline).to_list(length=1)
+        
+        if not top_hunter_data:
+            return {
+                "has_top_hunter": False,
+                "is_current_user": False,
+                "message": "No treasures found today yet!"
+            }
+        
+        top_hunter = top_hunter_data[0]
+        top_user = await db.users.find_one({"uid": top_hunter["_id"]})
+        
+        # Check if bonus already awarded today
+        bonus_awarded = await db.daily_top_hunter_rewards.find_one({
+            "date": today_start.isoformat()[:10],
+            "user_id": top_hunter["_id"]
+        })
+        
+        is_current_user = (uid == top_hunter["_id"])
+        
+        return {
+            "has_top_hunter": True,
+            "top_hunter": {
+                "user_id": top_hunter["_id"],
+                "name": top_user.get("name", "Anonymous") if top_user else "Anonymous",
+                "treasures_found": top_hunter["treasures_found_today"],
+                "prc_spent": top_hunter["total_prc_spent_today"],
+                "cashback_earned": top_hunter["total_cashback_earned"]
+            },
+            "is_current_user": is_current_user,
+            "bonus_awarded": bonus_awarded is not None,
+            "message": "🏆 Daily Top Hunter!" if is_current_user else "Keep hunting to become today's top hunter!"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Award Daily Top Hunter Bonus (Admin/System call or automated)
+@app.post("/api/treasure-hunts/award-daily-bonus")
+async def award_daily_top_hunter_bonus(uid: str):
+    """Award 100% cashback bonus to today's top hunter (called at day end)"""
+    try:
+        # Get today's date range
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = today_start + timedelta(days=1)
+        
+        # Find today's top hunter
+        pipeline = [
+            {
+                "$match": {
+                    "found": True,
+                    "found_at": {
+                        "$gte": today_start.isoformat(),
+                        "$lt": today_end.isoformat()
+                    }
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$user_id",
+                    "treasures_found_today": {"$sum": 1},
+                    "total_prc_spent_today": {"$sum": "$prc_spent"},
+                    "total_cashback_earned": {"$sum": "$cashback_earned"}
+                }
+            },
+            {
+                "$sort": {"treasures_found_today": -1, "total_prc_spent_today": -1}
+            },
+            {
+                "$limit": 1
+            }
+        ]
+        
+        top_hunter_data = await db.treasure_progress.aggregate(pipeline).to_list(length=1)
+        
+        if not top_hunter_data:
+            return {"success": False, "message": "No top hunter found for today"}
+        
+        top_hunter = top_hunter_data[0]
+        winner_uid = top_hunter["_id"]
+        
+        # Check if already awarded
+        existing_reward = await db.daily_top_hunter_rewards.find_one({
+            "date": today_start.isoformat()[:10],
+            "user_id": winner_uid
+        })
+        
+        if existing_reward:
+            return {"success": False, "message": "Bonus already awarded for today"}
+        
+        # Calculate 100% bonus (50% already given, give another 50%)
+        prc_spent = top_hunter["total_prc_spent_today"]
+        inr_value = prc_spent / 10
+        already_earned = top_hunter["total_cashback_earned"]  # 50% already given
+        bonus_cashback = round(inr_value * 0.50, 2)  # Additional 50% = 100% total
+        
+        # Award bonus to cashback wallet
+        user = await db.users.find_one({"uid": winner_uid})
+        current_cashback = user.get("cashback_wallet_balance", 0)
+        new_cashback = current_cashback + bonus_cashback
+        
+        await db.users.update_one(
+            {"uid": winner_uid},
+            {"$set": {"cashback_wallet_balance": new_cashback}}
+        )
+        
+        # Log bonus transaction
+        await log_transaction(
+            user_id=winner_uid,
+            wallet_type="cashback",
+            transaction_type="cashback",
+            amount=bonus_cashback,
+            description=f"🏆 Daily Top Hunter Bonus! 100% cashback (50% bonus)",
+            metadata={
+                "treasures_found": top_hunter["treasures_found_today"],
+                "prc_spent": prc_spent,
+                "date": today_start.isoformat()[:10],
+                "bonus_type": "daily_top_hunter"
+            },
+            related_id=f"daily_top_{today_start.isoformat()[:10]}",
+            related_type="daily_top_hunter_bonus"
+        )
+        
+        # Record reward
+        await db.daily_top_hunter_rewards.insert_one({
+            "reward_id": f"reward_{uuid.uuid4()}",
+            "date": today_start.isoformat()[:10],
+            "user_id": winner_uid,
+            "treasures_found": top_hunter["treasures_found_today"],
+            "prc_spent": prc_spent,
+            "base_cashback": already_earned,
+            "bonus_cashback": bonus_cashback,
+            "total_cashback": already_earned + bonus_cashback,
+            "awarded_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        winner_user = await db.users.find_one({"uid": winner_uid})
+        
+        return {
+            "success": True,
+            "winner": {
+                "user_id": winner_uid,
+                "name": winner_user.get("name", "Anonymous"),
+                "treasures_found": top_hunter["treasures_found_today"],
+                "prc_spent": prc_spent,
+                "base_cashback": already_earned,
+                "bonus_cashback": bonus_cashback,
+                "total_cashback": already_earned + bonus_cashback
+            },
+            "message": f"🏆 {winner_user.get('name', 'User')} awarded 100% total cashback as Daily Top Hunter!"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
     try:
         progress = await db.treasure_progress.find_one({
             "progress_id": progress_id,
