@@ -10563,7 +10563,7 @@ async def buy_treasure_clue(request: BuyClueRequest, uid: str):
         await log_transaction(
             user_id=uid,
             wallet_type="prc",
-            transaction_type="debit",
+            transaction_type="order",
             amount=clue_cost,
             description=f"Bought clue #{request.clue_number + 1} for {hunt['title']}",
             metadata={"progress_id": request.progress_id, "clue_number": request.clue_number, "hunt_title": hunt['title']},
