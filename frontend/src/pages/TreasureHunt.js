@@ -134,7 +134,7 @@ const TreasureHunt = () => {
       });
     } else {
       navigator.clipboard.writeText(text);
-      toast.success('Share text copied to clipboard!');
+      toast({ description: 'Share text copied to clipboard!' });
     }
   };
 
