@@ -1387,14 +1387,14 @@ frontend:
 
   - task: "Treasure Hunt - Increase Cashback to 50% & Daily Top Hunter 100% Bonus"
     implemented: true
-    working: "NA"
+    working: true
     files: 
       - "/app/backend/server.py"
       - "/app/frontend/src/pages/TreasureHunt.js"
       - "/app/frontend/src/pages/DashboardNew.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "user"
