@@ -109,18 +109,18 @@ const TreasureHunt = () => {
       );
 
       if (response.data.found) {
-        toast.success(`🎉 ${response.data.message}\nReward: ${response.data.reward_prc} PRC\nCashback: ₹${response.data.cashback_earned}`, {
-          duration: 6000
+        toast({ 
+          description: `🎉 ${response.data.message}\nReward: ${response.data.reward_prc} PRC | Cashback: ₹${response.data.cashback_earned}`
         });
         setShowGameModal(false);
         fetchData(currentUser.uid);
       } else {
-        toast.error(response.data.message);
+        toast({ description: response.data.message, variant: 'destructive' });
       }
 
       loadGameMap(progressId);
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to check location');
+      toast({ description: error.response?.data?.detail || 'Failed to check location', variant: 'destructive' });
     }
   };
 
