@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import axios from "axios";
@@ -8,46 +8,57 @@ import { NotificationProvider, useNotification } from "@/context/NotificationCon
 import ToastContainer from "@/components/ToastContainer";
 import OfflineIndicator from "@/components/OfflineIndicator";
 
-import HomeFintech from "@/pages/HomeFintech";
-import Home from "@/pages/Home";
-import HowItWorks from "@/pages/HowItWorks";
-import FAQ from "@/pages/FAQ";
-import Blog from "@/pages/Blog";
-import BlogArticle from "@/pages/BlogArticle";
-import Login from "@/pages/Login";
-import LoginNew from "@/pages/LoginNew";
-import RegisterSimple from "@/pages/RegisterSimple";
-import ForgotPassword from "@/pages/ForgotPassword";
-import ForgotPasswordNew from "@/pages/ForgotPasswordNew";
-import SupportTickets from "@/pages/SupportTickets";
-import Dashboard from "@/pages/Dashboard";
-import DashboardNew from "@/pages/DashboardNew";
-import Mining from "@/pages/Mining";
-import TapGame from "@/pages/TapGame";
-import TreasureHunt from "@/pages/TreasureHunt";
-import Referrals from "@/pages/Referrals";
-import Marketplace from "@/pages/Marketplace";
-import MarketplaceEnhanced from "@/pages/MarketplaceEnhanced";
-import Orders from "@/pages/Orders";
-import VIPMembership from "@/pages/VIPMembership";
-import WalletNew from "@/pages/WalletNew";
-import Leaderboard from "@/pages/Leaderboard";
-import ProfileEnhanced from "@/pages/ProfileEnhanced";
-import ReferralDashboard from "@/pages/ReferralDashboard";
-import GamificationDashboard from "@/pages/GamificationDashboard";
-import FlashSalesPage from "@/pages/FlashSalesPage";
-import AdminDashboard from "@/pages/AdminDashboard";
-import AdminAnalytics from "@/pages/AdminAnalytics";
-import ManagerDashboard from "@/pages/ManagerDashboard";
-import MasterStockistDashboard from "@/pages/MasterStockistDashboard";
-import SubStockistDashboard from "@/pages/SubStockistDashboard";
-import OutletPanel from "@/pages/OutletPanel";
-import StockRequestSystem from "@/pages/StockRequestSystem";
-import Setup from "@/pages/Setup";
-import AboutUs from "@/pages/AboutUs";
-import ContactUs from "@/pages/ContactUs";
-import TermsAndConditions from "@/pages/TermsAndConditions";
-import PrivacyPolicy from "@/pages/PrivacyPolicy";
+// Loading component
+const LoadingFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto mb-4"></div>
+      <p className="text-gray-600 font-medium">Loading...</p>
+    </div>
+  </div>
+);
+
+// Lazy load all pages for better performance
+const HomeFintech = lazy(() => import("@/pages/HomeFintech"));
+const Home = lazy(() => import("@/pages/Home"));
+const HowItWorks = lazy(() => import("@/pages/HowItWorks"));
+const FAQ = lazy(() => import("@/pages/FAQ"));
+const Blog = lazy(() => import("@/pages/Blog"));
+const BlogArticle = lazy(() => import("@/pages/BlogArticle"));
+const Login = lazy(() => import("@/pages/Login"));
+const LoginNew = lazy(() => import("@/pages/LoginNew"));
+const RegisterSimple = lazy(() => import("@/pages/RegisterSimple"));
+const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
+const ForgotPasswordNew = lazy(() => import("@/pages/ForgotPasswordNew"));
+const SupportTickets = lazy(() => import("@/pages/SupportTickets"));
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const DashboardNew = lazy(() => import("@/pages/DashboardNew"));
+const Mining = lazy(() => import("@/pages/Mining"));
+const TapGame = lazy(() => import("@/pages/TapGame"));
+const TreasureHunt = lazy(() => import("@/pages/TreasureHunt"));
+const Referrals = lazy(() => import("@/pages/Referrals"));
+const Marketplace = lazy(() => import("@/pages/Marketplace"));
+const MarketplaceEnhanced = lazy(() => import("@/pages/MarketplaceEnhanced"));
+const Orders = lazy(() => import("@/pages/Orders"));
+const VIPMembership = lazy(() => import("@/pages/VIPMembership"));
+const WalletNew = lazy(() => import("@/pages/WalletNew"));
+const Leaderboard = lazy(() => import("@/pages/Leaderboard"));
+const ProfileEnhanced = lazy(() => import("@/pages/ProfileEnhanced"));
+const ReferralDashboard = lazy(() => import("@/pages/ReferralDashboard"));
+const GamificationDashboard = lazy(() => import("@/pages/GamificationDashboard"));
+const FlashSalesPage = lazy(() => import("@/pages/FlashSalesPage"));
+const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
+const AdminAnalytics = lazy(() => import("@/pages/AdminAnalytics"));
+const ManagerDashboard = lazy(() => import("@/pages/ManagerDashboard"));
+const MasterStockistDashboard = lazy(() => import("@/pages/MasterStockistDashboard"));
+const SubStockistDashboard = lazy(() => import("@/pages/SubStockistDashboard"));
+const OutletPanel = lazy(() => import("@/pages/OutletPanel"));
+const StockRequestSystem = lazy(() => import("@/pages/StockRequestSystem"));
+const Setup = lazy(() => import("@/pages/Setup"));
+const AboutUs = lazy(() => import("@/pages/AboutUs"));
+const ContactUs = lazy(() => import("@/pages/ContactUs"));
+const TermsAndConditions = lazy(() => import("@/pages/TermsAndConditions"));
+const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
