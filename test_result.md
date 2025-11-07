@@ -1347,7 +1347,7 @@ frontend:
 
   - task: "PRC Treasure Hunt Game - Play with PRC & Share on Social Media"
     implemented: true
-    working: "NA"
+    working: true
     files: 
       - "/app/backend/server.py"
       - "/app/frontend/src/pages/TreasureHunt.js"
