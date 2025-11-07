@@ -23,6 +23,7 @@ const TreasureHunt = ({ user }) => {
   const [gameMap, setGameMap] = useState(null);
   const [showStartModal, setShowStartModal] = useState(null);
   const [showGameModal, setShowGameModal] = useState(false);
+  const [dailyTopHunter, setDailyTopHunter] = useState(null);
 
   useEffect(() => {
     if (!user) {
