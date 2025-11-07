@@ -590,7 +590,7 @@ const TreasureHunt = ({ user }) => {
                   </div>
                 </div>
                 <p className="text-xs text-gray-600 mt-2 text-center font-medium">
-                  {gameMap.found ? '🎉 Treasure Found! You earned 25% cashback!' : '🗺️ Click on the X marks to search for treasure'}
+                  {gameMap.found ? '🎉 Treasure Found! You earned 50% cashback!' : '🗺️ Click on the X marks to search for treasure'}
                 </p>
               </div>
               
