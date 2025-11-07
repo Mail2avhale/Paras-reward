@@ -71,7 +71,7 @@ const TreasureHunt = ({ user }) => {
   const loadGameMap = async (progressId) => {
     try {
       const response = await axios.get(
-        `${API}/treasure-hunts/game-map/${progressId}?uid=${currentUser.uid}`
+        `${API}/treasure-hunts/game-map/${progressId}?uid=${user.uid}`
       );
       setGameMap(response.data);
       setActiveGame(progressId);
