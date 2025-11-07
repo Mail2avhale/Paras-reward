@@ -6,11 +6,11 @@ import { useLocation } from 'react-router-dom';
  * Usage: <SEO title="Page Title" description="Page description" />
  */
 const SEO = ({ 
-  title = 'PARAS REWARD - Earn Daily Rewards & PRC Coins',
-  description = 'India\'s first reward-based platform. Earn PRC coins daily, play games, refer friends, and redeem for cash. Join 10,000+ users earning rewards!',
-  keywords = 'paras reward, prc coins, earn rewards, daily rewards, refer and earn, treasure hunt, crypto rewards, india rewards platform',
+  title = 'PARAS REWARD - India\'s No.1 Mining-Based Reward Platform',
+  description = 'India\'s No.1 mining-based reward platform. Mine PRC daily, play treasure hunt games, refer & earn 10% bonus, redeem 5000+ products. Join 10,000+ users earning real rewards! Free mining | VIP benefits | Instant cashback.',
+  keywords = 'paras reward, india mining platform, prc coins mining, earn daily rewards, treasure hunt game, refer and earn india, crypto mining app, reward platform india, online earning app',
   author = 'PARAS REWARD Team',
-  image = 'https://parasreward.com/logo512.png',
+  image = 'https://parasreward.com/paras-logo.jpg',
   type = 'website',
   canonical = null
 }) => {
