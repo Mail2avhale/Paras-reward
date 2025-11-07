@@ -73,45 +73,45 @@ function AppContent({ user, handleLogin, handleLogout }) {
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
             <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Home user={user} onLogout={handleLogout} />} />
-          <Route path="/how-it-works" element={<HowItWorks />} />
-          <Route path="/faq" element={<FAQ />} />
-          <Route path="/blog" element={<Blog />} />
-          <Route path="/blog/:slug" element={<BlogArticle />} />
-          <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginNew onLogin={handleLogin} />} />
-          <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <RegisterSimple />} />
-          <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" /> : <ForgotPasswordNew />} />
-          <Route path="/setup" element={<Setup />} />
-          
-          {/* Static Pages */}
-          <Route path="/about" element={<AboutUs />} />
-          <Route path="/contact" element={<ContactUs />} />
-          <Route path="/terms" element={<TermsAndConditions />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          
-          {/* Protected Routes */}
-          <Route path="/dashboard" element={user ? <DashboardNew user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/support" element={user ? <SupportTickets user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/mining" element={user ? <Mining user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/game" element={user ? <TapGame user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/treasure-hunt" element={user ? <TreasureHunt user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/referrals" element={user ? <Referrals user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/referrals/dashboard" element={user ? <ReferralDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/marketplace" element={user ? <MarketplaceEnhanced user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/flash-sales" element={user ? <FlashSalesPage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/orders" element={user ? <Orders user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/vip" element={user ? <VIPMembership user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/kyc" element={user ? <Navigate to="/profile" /> : <Navigate to="/login" />} />
-          <Route path="/wallet" element={user ? <WalletNew user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/leaderboard" element={user ? <Leaderboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/gamification" element={user ? <GamificationDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/profile" element={user ? <ProfileEnhanced user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/stock-requests" element={user && ["outlet", "sub_stockist", "master_stockist"].includes(user.role) ? <StockRequestSystem user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-          <Route path="/admin" element={user && user.role === "admin" ? <AdminDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-          <Route path="/admin/analytics" element={user && user.role === "admin" ? <AdminAnalytics user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-          <Route path="/manager" element={user && user.role === "manager" ? <ManagerDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-          <Route path="/master-stockist" element={user && user.role === "master_stockist" ? <MasterStockistDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-          <Route path="/sub-stockist" element={user && user.role === "sub_stockist" ? <SubStockistDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-          <Route path="/outlet" element={user && user.role === "outlet" ? <OutletPanel user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/faq" element={<FAQ />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogArticle />} />
+            <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginNew onLogin={handleLogin} />} />
+            <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <RegisterSimple />} />
+            <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" /> : <ForgotPasswordNew />} />
+            <Route path="/setup" element={<Setup />} />
+            
+            {/* Static Pages */}
+            <Route path="/about" element={<AboutUs />} />
+            <Route path="/contact" element={<ContactUs />} />
+            <Route path="/terms" element={<TermsAndConditions />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            
+            {/* Protected Routes */}
+            <Route path="/dashboard" element={user ? <DashboardNew user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/support" element={user ? <SupportTickets user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/mining" element={user ? <Mining user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/game" element={user ? <TapGame user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/treasure-hunt" element={user ? <TreasureHunt user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/referrals" element={user ? <Referrals user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/referrals/dashboard" element={user ? <ReferralDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/marketplace" element={user ? <MarketplaceEnhanced user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/flash-sales" element={user ? <FlashSalesPage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/orders" element={user ? <Orders user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/vip" element={user ? <VIPMembership user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/kyc" element={user ? <Navigate to="/profile" /> : <Navigate to="/login" />} />
+            <Route path="/wallet" element={user ? <WalletNew user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/leaderboard" element={user ? <Leaderboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/gamification" element={user ? <GamificationDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/profile" element={user ? <ProfileEnhanced user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/stock-requests" element={user && ["outlet", "sub_stockist", "master_stockist"].includes(user.role) ? <StockRequestSystem user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/admin" element={user && user.role === "admin" ? <AdminDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/analytics" element={user && user.role === "admin" ? <AdminAnalytics user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/manager" element={user && user.role === "manager" ? <ManagerDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/master-stockist" element={user && user.role === "master_stockist" ? <MasterStockistDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/sub-stockist" element={user && user.role === "sub_stockist" ? <SubStockistDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/outlet" element={user && user.role === "outlet" ? <OutletPanel user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
         </Routes>
         </Suspense>
       </BrowserRouter>
