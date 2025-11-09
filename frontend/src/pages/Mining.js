@@ -7,6 +7,7 @@ import { Coins, Play, Clock, Zap, TrendingUp, Users, AlertCircle, Crown } from '
 import { toast } from 'sonner';
 import { ResponsiveAd } from '@/components/AdSenseAd';
 import { Link } from 'react-router-dom';
+import notifications from '@/utils/notifications';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
