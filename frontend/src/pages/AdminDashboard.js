@@ -806,12 +806,13 @@ const MarketplaceManagement = () => {
             </div>
 
             <div>
-              <ImageUpload
+              <ImageCropUpload
                 value={formData.image_url}
                 onChange={(base64Image) => setFormData({...formData, image_url: base64Image})}
                 label="Product Image"
-                aspectRatio="square"
-                maxSize={5}
+                aspectRatio={1}
+                maxSizeMB={2}
+                required={false}
               />
             </div>
 
