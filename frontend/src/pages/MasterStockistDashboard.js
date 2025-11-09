@@ -5,9 +5,12 @@ import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import MetricCard from '@/components/manager/MetricCard';
+import StatusBadge from '@/components/manager/StatusBadge';
 import { 
   Package, DollarSign, Truck, AlertCircle, CheckCircle, Users,
-  Zap, Gamepad2, Store, Trophy, Crown, FileCheck, ShoppingBag
+  Zap, Gamepad2, Store, Trophy, Crown, FileCheck, ShoppingBag,
+  TrendingUp, Send, Box, ArrowRight, Building2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import StockInventoryDisplay from '@/components/StockInventoryDisplay';
@@ -30,16 +33,13 @@ const MasterStockistDashboard = ({ user, onLogout }) => {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch wallet data
       const walletRes = await axios.get(`${API}/wallet/${user.uid}`);
       setWalletData(walletRes.data);
 
-      // Fetch financial info (deposit + renewal)
       const financialRes = await axios.get(`${API}/stockist/${user.uid}/financial-info`);
       setSecurityDeposit(financialRes.data.security_deposit);
       setRenewalStatus(financialRes.data.renewal);
 
-      // Fetch stock movements
       const movementsRes = await axios.get(`${API}/stock/movements/${user.uid}`);
       setStockMovements(movementsRes.data);
 
@@ -74,12 +74,12 @@ const MasterStockistDashboard = ({ user, onLogout }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+      <div className="min-h-screen bg-gray-50">
         <Navbar user={user} onLogout={onLogout} />
-        <div className="flex items-center justify-center h-96">
+        <div className="flex items-center justify-center h-screen">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading...</p>
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading dashboard...</p>
           </div>
         </div>
       </div>
@@ -87,18 +87,54 @@ const MasterStockistDashboard = ({ user, onLogout }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-gray-50">
       <Navbar user={user} onLogout={onLogout} />
       
       <div className="container mx-auto px-4 py-8">
+        {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-2">Master Stockist Dashboard</h1>
-          <p className="text-gray-600">Manage your inventory, allocations, and earnings</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Master Stockist Dashboard</h1>
+          <p className="text-gray-600">Welcome back, {user.name}! Manage your inventory, allocations, and earnings.</p>
         </div>
 
-        {/* Quick Access Menu */}
-        <Card className="mb-8 p-6 bg-white/80 backdrop-blur-sm shadow-lg">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Access</h2>
+        {/* Key Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <MetricCard
+            title="Profit Wallet"
+            value={`₹${walletData?.profit_balance?.toLocaleString() || 0}`}
+            icon={DollarSign}
+            color="purple"
+            subtitle="Available balance"
+          />
+          
+          <MetricCard
+            title="Stock Distributions"
+            value={stockMovements.sent?.length || 0}
+            icon={Send}
+            color="green"
+            subtitle="To sub stockists"
+          />
+          
+          <MetricCard
+            title="Stock Received"
+            value={stockMovements.received?.length || 0}
+            icon={Truck}
+            color="blue"
+            subtitle="From company"
+          />
+          
+          <MetricCard
+            title="Renewal Status"
+            value={renewalStatus?.status || 'N/A'}
+            icon={renewalStatus?.status === 'approved' ? CheckCircle : AlertCircle}
+            color={renewalStatus?.status === 'approved' ? 'teal' : 'red'}
+            subtitle={renewalStatus?.renewal_end_date ? new Date(renewalStatus.renewal_end_date).toLocaleDateString() : 'Not active'}
+          />
+        </div>
+
+        {/* Quick Actions */}
+        <Card className="p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
             <Link to="/mining">
               <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center gap-2 hover:bg-purple-50">
@@ -151,216 +187,235 @@ const MasterStockistDashboard = ({ user, onLogout }) => {
           </div>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-2xl shadow-xl">
-            <DollarSign className="h-8 w-8 opacity-80 mb-2" />
-            <div className="text-3xl font-bold mb-1">₹{walletData?.profit_balance?.toLocaleString() || 0}</div>
-            <div className="text-purple-100">Profit Wallet</div>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-2xl shadow-xl">
-            <Package className="h-8 w-8 opacity-80 mb-2" />
-            <div className="text-3xl font-bold mb-1">{stockMovements.sent?.length || 0}</div>
-            <div className="text-green-100">Stock Transfers</div>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-2xl shadow-xl">
-            <Truck className="h-8 w-8 opacity-80 mb-2" />
-            <div className="text-3xl font-bold mb-1">{stockMovements.received?.length || 0}</div>
-            <div className="text-blue-100">Received Stock</div>
-          </Card>
-
-          <Card className={`bg-gradient-to-br ${renewalStatus?.is_overdue ? 'from-red-500 to-red-600' : 'from-teal-500 to-teal-600'} text-white p-6 rounded-2xl shadow-xl`}>
-            {renewalStatus?.is_overdue ? <AlertCircle className="h-8 w-8 opacity-80 mb-2" /> : <CheckCircle className="h-8 w-8 opacity-80 mb-2" />}
-            <div className="text-2xl font-bold mb-1">{renewalStatus?.renewal_status || 'N/A'}</div>
-            <div className="text-white opacity-90">Renewal Status</div>
-          </Card>
-        </div>
-
+        {/* Financial Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <Card className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl">
+          {/* Security Deposit */}
+          <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-900">Security Deposit</h3>
-              <span className={`px-3 py-1 rounded-full text-sm ${
-                securityDeposit?.status === 'approved' ? 'bg-green-100 text-green-700' :
-                securityDeposit?.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                'bg-gray-100 text-gray-700'
-              }`}>
-                {securityDeposit?.status || 'Not Submitted'}
-              </span>
+              {securityDeposit && (
+                <StatusBadge 
+                  status={securityDeposit.status} 
+                  type={securityDeposit.status === 'approved' ? 'success' : 
+                        securityDeposit.status === 'pending' ? 'warning' : 'default'}
+                />
+              )}
             </div>
             {securityDeposit ? (
               <div>
-                <div className="text-3xl font-bold text-purple-600 mb-2">
+                <div className="text-3xl font-bold text-purple-600 mb-4">
                   ₹{securityDeposit.amount?.toLocaleString() || 0}
                 </div>
-                <div className="text-sm text-gray-600 space-y-1">
-                  <p>Monthly Return: <span className="font-semibold text-green-600">₹{(securityDeposit.monthly_return_amount || 0).toLocaleString()}</span> ({((securityDeposit.monthly_return_rate || 0) * 100).toFixed(1)}%)</p>
-                  <p>Total Returned: <span className="font-semibold text-blue-600">₹{(securityDeposit.total_returned || 0).toLocaleString()}</span></p>
-                  <p>Balance Pending: <span className="font-semibold text-orange-600">₹{(securityDeposit.balance_pending || 0).toLocaleString()}</span></p>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                    <span className="text-sm text-gray-600">Monthly Return</span>
+                    <span className="font-semibold text-green-600">₹{(securityDeposit.monthly_return_amount || 0).toLocaleString()} ({((securityDeposit.monthly_return_rate || 0) * 100).toFixed(1)}%)</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                    <span className="text-sm text-gray-600">Total Returned</span>
+                    <span className="font-semibold text-blue-600">₹{(securityDeposit.total_returned || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
+                    <span className="text-sm text-gray-600">Balance Pending</span>
+                    <span className="font-semibold text-orange-600">₹{(securityDeposit.balance_pending || 0).toLocaleString()}</span>
+                  </div>
                   <p className="text-xs text-gray-500 mt-2">Created: {new Date(securityDeposit.created_at).toLocaleDateString()}</p>
                 </div>
               </div>
             ) : (
-              <p className="text-gray-500">No security deposit found. Required: ₹5,00,000</p>
+              <div className="text-center py-8">
+                <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-500">Required: ₹5,00,000</p>
+                <p className="text-xs text-gray-400 mt-1">Submit security deposit to activate</p>
+              </div>
             )}
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl">
+          {/* Annual Renewal */}
+          <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-900">Annual Renewal</h3>
-              <span className={`px-3 py-1 rounded-full text-sm ${
-                renewalStatus?.status === 'approved' ? 'bg-green-100 text-green-700' :
-                renewalStatus?.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                'bg-gray-100 text-gray-700'
-              }`}>
-                {renewalStatus?.status || 'Not Submitted'}
-              </span>
+              {renewalStatus && (
+                <StatusBadge 
+                  status={renewalStatus.status} 
+                  type={renewalStatus.status === 'approved' ? 'success' : 
+                        renewalStatus.status === 'pending' ? 'warning' : 'default'}
+                />
+              )}
             </div>
             {renewalStatus ? (
               <div>
-                <div className="text-2xl font-bold text-blue-600 mb-2">
+                <div className="text-3xl font-bold text-blue-600 mb-4">
                   ₹{renewalStatus.total_amount?.toLocaleString() || 0}
                 </div>
-                <div className="text-sm text-gray-600 space-y-1">
-                  <p>Base Amount: <span className="font-semibold">₹{(renewalStatus.base_amount || 0).toLocaleString()}</span></p>
-                  <p>GST ({((renewalStatus.gst_rate || 0) * 100).toFixed(0)}%): <span className="font-semibold">₹{(renewalStatus.gst_amount || 0).toLocaleString()}</span></p>
-                  <p>Valid Until: <span className="font-semibold">{renewalStatus.renewal_end_date ? new Date(renewalStatus.renewal_end_date).toLocaleDateString() : 'N/A'}</span></p>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <span className="text-sm text-gray-600">Base Amount</span>
+                    <span className="font-semibold">₹{(renewalStatus.base_amount || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <span className="text-sm text-gray-600">GST ({((renewalStatus.gst_rate || 0) * 100).toFixed(0)}%)</span>
+                    <span className="font-semibold">₹{(renewalStatus.gst_amount || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-teal-50 rounded-lg">
+                    <span className="text-sm text-gray-600">Valid Until</span>
+                    <span className="font-semibold text-teal-600">{renewalStatus.renewal_end_date ? new Date(renewalStatus.renewal_end_date).toLocaleDateString() : 'N/A'}</span>
+                  </div>
                   <p className="text-xs text-gray-500 mt-2">Created: {new Date(renewalStatus.created_at).toLocaleDateString()}</p>
                 </div>
               </div>
             ) : (
-              <p className="text-gray-500">Annual Fee: ₹50,000 + GST</p>
+              <div className="text-center py-8">
+                <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-500">Required: ₹59,000</p>
+                <p className="text-xs text-gray-400 mt-1">Annual fee (₹50,000 + 18% GST)</p>
+              </div>
             )}
           </Card>
         </div>
 
-        <Card className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xl font-bold text-gray-900 mb-1">Profit Wallet</h3>
-              <p className="text-gray-600">Balance: <span className="font-bold text-purple-600">₹{walletData?.profit_balance?.toLocaleString() || 0}</span></p>
-            </div>
-            <Button 
-              onClick={handleWithdrawal}
-              className="bg-purple-600 hover:bg-purple-700"
-              disabled={!walletData?.profit_balance || walletData.profit_balance < 50}
-            >
-              Withdraw
-            </Button>
-          </div>
-        </Card>
-
-        <Card className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl">
+        {/* Main Content Tabs */}
+        <Card className="p-6">
           <Tabs defaultValue="inventory" className="w-full">
             <TabsList className="grid w-full grid-cols-5 mb-6">
-              <TabsTrigger value="inventory">My Inventory</TabsTrigger>
-              <TabsTrigger value="hierarchy">My Network</TabsTrigger>
-              <TabsTrigger value="stock-requests">Stock Requests</TabsTrigger>
-              <TabsTrigger value="stock">Stock Movements</TabsTrigger>
+              <TabsTrigger value="inventory">Inventory</TabsTrigger>
+              <TabsTrigger value="hierarchy">Network</TabsTrigger>
+              <TabsTrigger value="movements">Movements</TabsTrigger>
+              <TabsTrigger value="request">Request Stock</TabsTrigger>
               <TabsTrigger value="earnings">Earnings</TabsTrigger>
             </TabsList>
 
+            {/* Inventory Tab */}
             <TabsContent value="inventory">
-              <StockInventoryDisplay userId={user.uid} title="Master Stockist Inventory" />
+              <StockInventoryDisplay userId={user.uid} />
             </TabsContent>
 
+            {/* Hierarchy Tab */}
             <TabsContent value="hierarchy">
-              <StockistHierarchy user={user} userRole="master_stockist" />
+              <StockistHierarchy userId={user.uid} userRole={user.role} />
             </TabsContent>
 
-            <TabsContent value="stock-requests">
-              <StockRequestSystem />
-            </TabsContent>
-
-            <TabsContent value="stock" className="space-y-4">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Stock Movements</h2>
-              
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Sent to Sub Stockists</h3>
-                  {stockMovements.sent?.length > 0 ? (
-                    <div className="space-y-2">
-                      {stockMovements.sent.map((movement, idx) => (
-                        <Card key={idx} className="p-4 border-l-4 border-purple-500">
-                          <div className="flex justify-between">
-                            <div>
-                              <p className="font-semibold">{movement.product_name || 'Product Transfer'}</p>
-                              <p className="text-sm text-gray-600">Quantity: {movement.quantity}</p>
-                              <p className="text-xs text-gray-500">Batch: {movement.batch_number}</p>
-                            </div>
-                            <span className={`px-3 py-1 rounded-full text-xs h-fit ${
-                              movement.status === 'completed' ? 'bg-green-100 text-green-700' :
-                              movement.status === 'approved' ? 'bg-blue-100 text-blue-700' :
-                              'bg-yellow-100 text-yellow-700'
-                            }`}>
-                              {movement.status}
-                            </span>
+            {/* Movements Tab */}
+            <TabsContent value="movements" className="space-y-6">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Sent to Sub Stockists</h3>
+                {stockMovements.sent?.length > 0 ? (
+                  <div className="space-y-3">
+                    {stockMovements.sent.map((movement, idx) => (
+                      <Card key={idx} className="p-4 border-l-4 border-purple-500">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-semibold text-gray-900">{movement.product_name || 'Stock Transfer'}</p>
+                            <p className="text-sm text-gray-600">Quantity: {movement.quantity}</p>
+                            <p className="text-xs text-gray-500">Batch: {movement.batch_number}</p>
                           </div>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 text-center py-8">No transfers sent</p>
-                  )}
-                </div>
+                          <StatusBadge 
+                            status={movement.status}
+                            type={movement.status === 'completed' ? 'success' : 
+                                  movement.status === 'approved' ? 'info' : 'warning'}
+                          />
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Send className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-500">No stock distributions yet</p>
+                  </div>
+                )}
+              </div>
 
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Received from Company</h3>
-                  {stockMovements.received?.length > 0 ? (
-                    <div className="space-y-2">
-                      {stockMovements.received.map((movement, idx) => (
-                        <Card key={idx} className="p-4 border-l-4 border-green-500">
-                          <div className="flex justify-between">
-                            <div>
-                              <p className="font-semibold">{movement.product_name || 'Product'}</p>
-                              <p className="text-sm text-gray-600">Quantity: {movement.quantity}</p>
-                              <p className="text-xs text-gray-500">Batch: {movement.batch_number}</p>
-                            </div>
-                            <span className={`px-3 py-1 rounded-full text-xs h-fit ${
-                              movement.status === 'completed' ? 'bg-green-100 text-green-700' :
-                              'bg-blue-100 text-blue-700'
-                            }`}>
-                              {movement.status}
-                            </span>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Received from Company</h3>
+                {stockMovements.received?.length > 0 ? (
+                  <div className="space-y-3">
+                    {stockMovements.received.map((movement, idx) => (
+                      <Card key={idx} className="p-4 border-l-4 border-green-500">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-semibold text-gray-900">{movement.product_name || 'Stock Receipt'}</p>
+                            <p className="text-sm text-gray-600">Quantity: {movement.quantity}</p>
+                            <p className="text-xs text-gray-500">Batch: {movement.batch_number}</p>
                           </div>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 text-center py-8">No stock received</p>
-                  )}
-                </div>
+                          <StatusBadge 
+                            status={movement.status}
+                            type={movement.status === 'completed' ? 'success' : 'info'}
+                          />
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Truck className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-500">No stock received yet</p>
+                  </div>
+                )}
               </div>
             </TabsContent>
 
-            <TabsContent value="allocations">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Sub Stockist Management</h2>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-                <Users className="h-12 w-12 text-blue-500 mx-auto mb-3" />
-                <p className="text-gray-700">Contact admin to allocate stock to sub stockists</p>
-              </div>
+            {/* Request Stock Tab */}
+            <TabsContent value="request">
+              <StockRequestSystem userId={user.uid} userRole={user.role} onSuccess={fetchDashboardData} />
             </TabsContent>
 
+            {/* Earnings Tab */}
             <TabsContent value="earnings">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Earnings Overview</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="p-4 border-l-4 border-purple-500">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Earnings Overview</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <Card className="p-6 border-l-4 border-purple-500">
                   <p className="text-sm text-gray-600 mb-1">Current Balance</p>
-                  <p className="text-2xl font-bold text-purple-600">₹{walletData?.profit_balance?.toLocaleString() || 0}</p>
+                  <p className="text-3xl font-bold text-purple-600">₹{walletData?.profit_balance?.toLocaleString() || 0}</p>
+                  <p className="text-xs text-gray-500 mt-2">Available for withdrawal</p>
                 </Card>
-                <Card className="p-4 border-l-4 border-green-500">
-                  <p className="text-sm text-gray-600 mb-1">Monthly Returns (3%)</p>
-                  <p className="text-2xl font-bold text-green-600">₹{((securityDeposit?.amount || 0) * 0.03).toLocaleString()}</p>
+
+                <Card className="p-6 border-l-4 border-green-500">
+                  <p className="text-sm text-gray-600 mb-1">Total Earnings</p>
+                  <p className="text-3xl font-bold text-green-600">₹{(walletData?.total_earnings || 0).toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 mt-2">Lifetime earnings</p>
                 </Card>
-                <Card className="p-4 border-l-4 border-blue-500">
-                  <p className="text-sm text-gray-600 mb-1">Delivery Commission</p>
-                  <p className="text-2xl font-bold text-blue-600">10%</p>
+
+                <Card className="p-6 border-l-4 border-blue-500">
+                  <p className="text-sm text-gray-600 mb-1">Monthly Return</p>
+                  <p className="text-3xl font-bold text-blue-600">₹{(securityDeposit?.monthly_return_amount || 0).toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 mt-2">From security deposit</p>
                 </Card>
               </div>
+
+              <Card className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">Profit Wallet Balance</h3>
+                    <p className="text-3xl font-bold text-purple-600 mb-2">₹{walletData?.profit_balance?.toLocaleString() || 0}</p>
+                    <p className="text-sm text-gray-600">Minimum withdrawal: ₹50</p>
+                  </div>
+                  <Button 
+                    onClick={handleWithdrawal}
+                    size="lg"
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                    disabled={!walletData?.profit_balance || walletData.profit_balance < 50}
+                  >
+                    <DollarSign className="mr-2 h-5 w-5" />
+                    Withdraw Funds
+                  </Button>
+                </div>
+              </Card>
             </TabsContent>
           </Tabs>
         </Card>
+
+        {/* Withdrawal Button */}
+        <div className="mt-8">
+          <Button 
+            onClick={handleWithdrawal}
+            className="w-full md:w-auto bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            disabled={!walletData?.profit_balance || walletData.profit_balance < 50}
+          >
+            <DollarSign className="mr-2 h-4 w-4" />
+            Request Withdrawal {walletData?.profit_balance >= 50 && `(₹${walletData.profit_balance.toLocaleString()})`}
+          </Button>
+        </div>
       </div>
     </div>
   );
