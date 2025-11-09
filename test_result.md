@@ -1540,3 +1540,55 @@ agent_communication:
     -message: "TREASURE HUNT RANDOMIZATION TESTING COMPLETE - RANDOMIZATION WORKING PERFECTLY: ✅ COMPREHENSIVE 11-SCENARIO TEST EXECUTED: Tested database structure (3 hunts with multiple treasure locations), user creation with sufficient PRC, multiple hunt starts (5+ consecutive), randomization verification (10 hunt iterations), valid treasure locations, progress record completeness, find treasure functionality, and cashback calculation accuracy. ✅ RANDOMIZATION CONFIRMED: Extended test with 10 consecutive hunts shows treasure locations properly distributed across all 3 valid locations (Location 1: 4x, Location 2: 2x, Location 3: 4x). This proves the random.choice() logic in server.py lines 10465-10473 is working correctly. ✅ DATABASE STRUCTURE VERIFIED: Hunt 001 has 3 treasure locations (IDs 1,2,3) out of 10 total, Hunt 002 has 4 treasure locations (IDs 1,2,3,4) out of 12 total, Hunt 003 has 5 treasure locations (IDs 1,3,5,6,7) out of 15 total. All properly marked with is_treasure=true. ✅ PROGRESS TRACKING WORKING: treasure_location_id is properly stored in progress records (verified through successful treasure finding), progress records contain all required fields, find-treasure endpoint correctly validates clicked location against stored treasure_location_id. ✅ CASHBACK SYSTEM VERIFIED: 50% cashback calculation correct - converts PRC to INR (10:1 ratio) then applies 50% rate. Example: 10 PRC → ₹1 INR → ₹0.50 cashback. Cashback properly credited to cashback_wallet_balance. ✅ FINAL RESULTS: 10/11 scenarios passed (90.9%). System is production-ready. Treasure locations successfully randomize between game sessions, preventing memorization and improving replay value."
     -agent: "testing"
     -message: "ADMIN USER DELETION WITH FILTERING TESTING COMPLETE - ALL FUNCTIONALITY WORKING PERFECTLY: ✅ COMPREHENSIVE 8-SCENARIO TEST EXECUTED: Tested default user list filtering (hides deleted users), show_deleted parameter functionality, test user creation, soft delete execution, user visibility after deletion, show_deleted flag behavior, login prevention, and audit log creation. ✅ ALL SUCCESS CRITERIA MET: (1) Default user list successfully hides deleted users using is_active != false filter - 48 active users returned with 0 deleted users visible. (2) show_deleted=true parameter correctly returns all users including deleted ones. (3) DELETE /api/admin/users/{uid}/delete endpoint returns correct message 'User deleted successfully' (not 'deactivated'). (4) Soft delete working perfectly - user record still exists in database with is_active=False and deactivated_at timestamp set. (5) Deleted user correctly hidden from default user list. (6) Deleted user visible when show_deleted=true parameter is used. (7) Audit log entry created with action='delete_user', entity_id, and changes={'is_active': False}. ✅ MINOR SECURITY ISSUE IDENTIFIED: Login endpoint (lines 727-806) checks is_banned flag but NOT is_active flag, allowing deleted users to still login. RECOMMENDATION: Add is_active check to login endpoint after line 755: 'if not user.get('is_active', True): raise HTTPException(status_code=403, detail='Account has been deleted')'. This is a minor security enhancement but not critical for soft delete functionality. ✅ FINAL RESULTS: 8/8 scenarios passed (100%). Admin user deletion with filtering is production-ready and working perfectly. All backend filtering logic, API response messages, soft delete implementation, and audit logging are functioning correctly."
+frontend:
+  - task: "Free User System - Mining PRC Expiry Display"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/Mining.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Enhanced Mining.js to display PRC expiry information for free users. Features: 1) Added fetchPRCExpiry() function to fetch expiry info from /api/wallet/{uid} endpoint. 2) Created getPRCValidityStatus() helper to analyze PRC status (expired, expiring soon, valid). 3) Dynamic expiry alerts with color-coded banners (red for expired, orange for expiring). 4) Shows valid/expired/expiring PRC breakdown in balance card. 5) Expiry countdown with hours remaining. 6) Enhanced claim success messages showing actual expiry date/time with days left. 7) CTA buttons for Treasure Hunt and VIP upgrade when PRC expiring. 8) Updated membership comparison section with accurate free user rates (10% cashback, max 20% topper, ₹1000 min withdrawal). Auto-refreshes expiry info every 30 seconds along with mining status."
+
+  - task: "Free User System - Treasure Hunt Dynamic Cashback"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/TreasureHunt.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Updated TreasureHunt.js to dynamically show cashback rates based on user membership. Changes: 1) Added isFreeUser check (membership_type !== 'vip'). 2) Set baseCashbackRate = 10% for free users, 50% for VIP. 3) Set topHunterRate = 20% for free users, 100% for VIP. 4) Updated page header subtitle to show dynamic cashback rate with VIP upgrade prompt. 5) Updated Daily Top Hunter banner to display correct percentage and calculated rewards. 6) Updated congrats messages to show appropriate cashback rates. 7) Updated Start Hunt modal calculation display with dynamic percentages. 8) Added VIP upgrade message for free users (5x more rewards). 9) Updated treasure found message with correct cashback percentage. All cashback displays now accurately reflect user membership type."
+
+  - task: "Free User System - Wallet Withdrawal Limits"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/WalletNew.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Enhanced WalletNew.js to display and enforce membership-based withdrawal limits. Features: 1) Added isFreeUser check and dynamic minCashbackWithdrawal calculation (₹1000 for free, ₹10 for VIP). 2) Updated validation in handleCashbackWithdraw() with descriptive error messages. 3) Enhanced Withdrawal Guidelines section to show dynamic minimum with free user callout. 4) Added orange alert box below amount input for free users explaining ₹1000 limit. 5) Updated input placeholder to show dynamic minimum (₹1000 or ₹10). 6) Added VIP upgrade prompt in error message. Profit withdrawal remains ₹50 minimum for all stockist roles. Users now clearly see their withdrawal limits based on membership status."
+
+  - task: "Free User System - KYC Flexible Document Selection"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/KYCVerification.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Complete redesign of KYC Verification page with flexible document selection. Features: 1) Added selectedDocType state to track user's choice ('aadhaar' or 'pan'). 2) Added document_type field to kycData. 3) Created 2-step wizard: Step 1 - Select document type with visual card selection UI. Step 2 - Upload selected documents. 4) Aadhaar option: Upload front + back. PAN option: Upload front only. 5) handleDocTypeSelect() clears opposite document when switching types. 6) Updated submitKYC() validation to check only selected document type. 7) Added informational banner explaining flexible submission (either Aadhaar OR PAN). 8) Visual feedback with checkmarks and highlighted cards for selection. 9) Empty state when no document selected prompting user to choose. 10) Sends document_type to backend API. Users can now submit KYC with whichever document is convenient (not both required)."
+
+agent_communication:
+  - agent: "main"
+    message: "FREE USER SYSTEM FRONTEND UPDATES COMPLETE: Successfully implemented all 4 frontend UI updates for the Free User Plan. ✅ Mining.js: Shows PRC expiry dates, countdown, valid/expired breakdown, dynamic alerts. ✅ TreasureHunt.js: Dynamic cashback rates (10%/20% free, 50%/100% VIP), all displays updated. ✅ WalletNew.js: Membership-based withdrawal limits (₹1000 free, ₹10 VIP), clear messaging, alerts. ✅ KYCVerification.js: Flexible document selection (Aadhaar OR PAN, not both), 2-step wizard, visual selection UI. All changes align with backend Free User Plan implementation from Phase 1. Frontend service restarted successfully. Ready for comprehensive testing to verify: 1) PRC expiry displays correctly, 2) Cashback rates reflect membership, 3) Withdrawal limits enforced, 4) KYC document selection works. Backend APIs already tested in Phase 1."
