@@ -385,7 +385,7 @@ const OutletPanel = ({ user, onLogout }) => {
 
             {/* Hierarchy Tab */}
             <TabsContent value="hierarchy">
-              <StockistHierarchy userId={user.uid} userRole={user.role} />
+              <StockistHierarchy user={user} userRole={user.role} />
             </TabsContent>
 
             {/* Request Stock Tab */}
