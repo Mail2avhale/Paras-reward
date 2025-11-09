@@ -10802,17 +10802,21 @@ async def find_treasure(request: FindTreasureRequest, uid: str):
             )
             
             # Log cashback transaction (POSITIVE amount)
+            user = await db.users.find_one({"uid": uid})
+            membership_type = user.get("membership_type", "free")
+            
             await log_transaction(
                 user_id=uid,
                 wallet_type="cashback",
                 transaction_type="cashback",
                 amount=cashback,
-                description=f"50% cashback for treasure hunt: {hunt['title']}",
+                description=f"{cashback_percentage}% cashback for treasure hunt: {hunt['title']}",
                 metadata={
                     "progress_id": request.progress_id, 
                     "hunt_id": hunt["hunt_id"], 
                     "prc_spent": prc_spent, 
-                    "cashback_percentage": 50,
+                    "cashback_percentage": cashback_percentage,
+                    "membership_type": membership_type,
                     "hunt_title": hunt["title"],
                     "attempts": attempts
                 },
