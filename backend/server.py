@@ -11099,7 +11099,6 @@ async def award_daily_top_hunter_bonus(uid: str):
         bonus_cashback = round(inr_value * bonus_rate, 2)
         
         # Award bonus to cashback wallet
-        user = await db.users.find_one({"uid": winner_uid})
         current_cashback = user.get("cashback_wallet_balance", 0)
         new_cashback = current_cashback + bonus_cashback
         
