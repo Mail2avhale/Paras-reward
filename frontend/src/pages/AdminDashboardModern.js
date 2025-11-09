@@ -343,6 +343,20 @@ const AdminDashboardModern = ({ user, onLogout }) => {
               <span className="text-green-600">₹{(stats?.financial?.total_revenue || 0).toLocaleString()}</span>
             </div>
           </Card>
+
+          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/admin-old')}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                <Settings className="h-6 w-6 text-gray-600" />
+              </div>
+              <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-1">Settings & More</h3>
+            <p className="text-sm text-gray-600">Products, payments, contact details</p>
+            <div className="mt-4 flex items-center space-x-4 text-xs">
+              <span className="text-gray-500">Full Admin Panel</span>
+            </div>
+          </Card>
         </div>
 
         {/* System Overview */}
