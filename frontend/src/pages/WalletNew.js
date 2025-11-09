@@ -419,7 +419,8 @@ const WalletNew = ({ user, onLogout }) => {
                     <ul className="space-y-1.5 text-xs text-gray-600">
                       <li className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-                        Minimum withdrawal: ₹10
+                        Minimum withdrawal: ₹{minCashbackWithdrawal}
+                        {isFreeUser && <span className="text-orange-600 font-semibold ml-1">(Free User - VIP: ₹10)</span>}
                       </li>
                       <li className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
