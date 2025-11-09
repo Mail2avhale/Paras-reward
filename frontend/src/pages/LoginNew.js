@@ -78,18 +78,7 @@ const LoginNew = ({ onLogin }) => {
 
       toast.success('Login successful!');
       
-      // Check if biometric should be offered (first login or biometric not set up)
-      const biometricSetupShown = localStorage.getItem('biometric_setup_shown');
-      const biometricEnabled = localStorage.getItem('biometric_enabled');
-      
-      if (isBiometricSupported() && !biometricEnabled && !biometricSetupShown) {
-        // Show biometric setup prompt
-        setLoggedInUser(response.data);
-        setShowBiometricSetupPrompt(true);
-        setLoading(false);
-        return;
-      }
-      
+      // CRITICAL: Call onLogin FIRST to set user state and allow authentication
       onLogin(response.data);
       
       // Navigate based on role
@@ -105,6 +94,22 @@ const LoginNew = ({ onLogin }) => {
         navigate('/outlet');
       } else {
         navigate('/dashboard');
+      }
+      
+      // Check if biometric should be offered (skip for admin/manager roles)
+      const biometricSetupShown = localStorage.getItem('biometric_setup_shown');
+      const biometricEnabled = localStorage.getItem('biometric_enabled');
+      const skipBiometricRoles = ['admin', 'sub_admin', 'manager'];
+      
+      if (
+        isBiometricSupported() && 
+        !biometricEnabled && 
+        !biometricSetupShown && 
+        !skipBiometricRoles.includes(response.data.role)
+      ) {
+        // Show biometric setup prompt (non-blocking)
+        setLoggedInUser(response.data);
+        setShowBiometricSetupPrompt(true);
       }
     } catch (error) {
       console.error('Login error:', error);
