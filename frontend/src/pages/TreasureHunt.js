@@ -68,11 +68,29 @@ const TreasureHunt = ({ user }) => {
         { params: { uid: user.uid } }
       );
 
-      toast({ description: `Started ${response.data.hunt_title}! PRC deducted: ${response.data.prc_spent}` });
+      toast({ 
+        description: `🎯 Started ${response.data.hunt_title}! ${response.data.prc_spent} PRC deducted. Good luck!`,
+        duration: 5000
+      });
       setShowStartModal(null);
       fetchData(user.uid);
     } catch (error) {
-      toast({ description: error.response?.data?.detail || 'Failed to start hunt', variant: 'destructive' });
+      const errorMsg = error.response?.data?.detail || 'Failed to start hunt';
+      
+      // Check if it's a PRC balance error
+      if (errorMsg.includes('Insufficient') || errorMsg.includes('valid PRC')) {
+        toast({ 
+          description: errorMsg,
+          variant: 'destructive',
+          duration: 8000
+        });
+      } else {
+        toast({ 
+          description: errorMsg, 
+          variant: 'destructive',
+          duration: 5000
+        });
+      }
     }
   };
 
