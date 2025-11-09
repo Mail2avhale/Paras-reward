@@ -81,7 +81,9 @@ const ProfileEnhanced = ({ user, onLogout }) => {
   });
 
   // KYC state
+  const [selectedDocType, setSelectedDocType] = useState(''); // 'aadhaar' or 'pan'
   const [kycData, setKycData] = useState({
+    document_type: '', // 'aadhaar' or 'pan'
     aadhaar_front_base64: '',
     aadhaar_back_base64: '',
     pan_front_base64: ''
