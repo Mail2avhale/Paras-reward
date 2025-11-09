@@ -61,6 +61,46 @@ const TreasureHunt = ({ user }) => {
   };
 
   const startHunt = async (huntId) => {
+    // Check PRC balance before attempting to start
+    const hunt = hunts.find(h => h.hunt_id === huntId);
+    const requiredPRC = hunt?.prc_cost || 0;
+    
+    // Get user's current PRC balance
+    try {
+      const balanceRes = await axios.get(`${API}/user/${user.uid}`);
+      const userBalance = balanceRes.data.prc_balance || 0;
+      const validPRCBalance = balanceRes.data.valid_prc_balance || 0;
+      
+      // Check if user has enough valid PRC (for free users) or total PRC (for VIP)
+      const effectiveBalance = isFreeUser ? validPRCBalance : userBalance;
+      
+      if (effectiveBalance < requiredPRC) {
+        // Show custom "Not Enough PRC" message
+        setShowStartModal(null);
+        toast({ 
+          title: "⚠️ NOT ENOUGH PRC TO PLAY GAME",
+          description: (
+            <div className="space-y-3">
+              <p className="font-medium">You need {requiredPRC} PRC to start this hunt.</p>
+              <p>Your current balance: {effectiveBalance.toFixed(2)} PRC</p>
+              <Button 
+                onClick={() => navigate('/mining')}
+                className="w-full mt-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+              >
+                MINE NOW
+              </Button>
+            </div>
+          ),
+          variant: 'destructive',
+          duration: 10000
+        });
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking balance:', error);
+    }
+    
+    // Proceed with starting the hunt
     try {
       const response = await axios.post(
         `${API}/treasure-hunts/start`,
@@ -79,10 +119,22 @@ const TreasureHunt = ({ user }) => {
       
       // Check if it's a PRC balance error
       if (errorMsg.includes('Insufficient') || errorMsg.includes('valid PRC')) {
+        setShowStartModal(null);
         toast({ 
-          description: errorMsg,
+          title: "⚠️ NOT ENOUGH PRC TO PLAY GAME",
+          description: (
+            <div className="space-y-3">
+              <p className="font-medium">{errorMsg}</p>
+              <Button 
+                onClick={() => navigate('/mining')}
+                className="w-full mt-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+              >
+                MINE NOW
+              </Button>
+            </div>
+          ),
           variant: 'destructive',
-          duration: 8000
+          duration: 10000
         });
       } else {
         toast({ 
