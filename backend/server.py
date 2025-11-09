@@ -3116,9 +3116,21 @@ async def request_cashback_withdrawal(request: Request):
     bank_account = data.get("bank_account")
     ifsc_code = data.get("ifsc_code")
     
-    # Validate minimum withdrawal
-    if amount < 10:
-        raise HTTPException(status_code=400, detail="Minimum withdrawal amount is ₹10")
+    # Validate minimum withdrawal based on membership
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    min_withdrawal = await get_withdrawal_limit(user_id)
+    if amount < min_withdrawal:
+        membership_type = user.get("membership_type", "free")
+        if membership_type == "free":
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Minimum withdrawal for free users is ₹{min_withdrawal}. Upgrade to VIP for ₹100 minimum."
+            )
+        else:
+            raise HTTPException(status_code=400, detail=f"Minimum withdrawal amount is ₹{min_withdrawal}")
     
     # Check withdrawal eligibility (includes KYC, balance, and lien checks)
     eligibility = await check_withdrawal_eligibility(user_id, amount, "cashback")
