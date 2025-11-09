@@ -48,6 +48,7 @@ const ReferralDashboard = lazy(() => import("@/pages/ReferralDashboard"));
 const GamificationDashboard = lazy(() => import("@/pages/GamificationDashboard"));
 const FlashSalesPage = lazy(() => import("@/pages/FlashSalesPage"));
 const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
+const AdminDashboardModern = lazy(() => import("@/pages/AdminDashboardModern"));
 const AdminAnalytics = lazy(() => import("@/pages/AdminAnalytics"));
 const AdminVideoAds = lazy(() => import("@/pages/AdminVideoAds"));
 const ManagerDashboard = lazy(() => import("@/pages/ManagerDashboard"));
