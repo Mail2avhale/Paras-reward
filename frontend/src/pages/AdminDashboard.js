@@ -1216,6 +1216,118 @@ const AdminDashboard = ({ user, onLogout }) => {
 
           {activeTab === 'dashboard' && (
             <div>
+              {/* Hero Section */}
+              <div className="relative overflow-hidden bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 rounded-2xl mb-8 shadow-lg">
+                <div className="absolute inset-0 bg-black opacity-10"></div>
+                <div className="absolute inset-0" style={{
+                  backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 50%)'
+                }}></div>
+                
+                <div className="relative z-10 p-8">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+                        Welcome back, Admin!
+                      </h1>
+                      <p className="text-blue-100 text-lg">
+                        Manage your platform efficiently from this unified dashboard
+                      </p>
+                    </div>
+                    <div className="hidden md:block">
+                      <div className="bg-white/20 backdrop-blur-lg rounded-xl p-4 border border-white/30">
+                        <div className="flex items-center space-x-2">
+                          <div className="h-10 w-10 rounded-full bg-green-400 flex items-center justify-center">
+                            <Activity className="h-5 w-5 text-white" />
+                          </div>
+                          <div className="text-white">
+                            <p className="text-xs opacity-90">System Status</p>
+                            <p className="text-sm font-bold">Operational</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Access Cards */}
+              <div className="mb-8">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Access</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <button
+                    onClick={() => setActiveTab('users')}
+                    className="p-4 bg-white hover:bg-purple-50 border-2 border-transparent hover:border-purple-300 rounded-xl shadow-sm transition-all group"
+                  >
+                    <div className="flex flex-col items-center space-y-2">
+                      <div className="h-12 w-12 rounded-full bg-purple-100 group-hover:bg-purple-200 flex items-center justify-center transition-colors">
+                        <Users className="h-6 w-6 text-purple-600" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">Users</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('products')}
+                    className="p-4 bg-white hover:bg-blue-50 border-2 border-transparent hover:border-blue-300 rounded-xl shadow-sm transition-all group"
+                  >
+                    <div className="flex flex-col items-center space-y-2">
+                      <div className="h-12 w-12 rounded-full bg-blue-100 group-hover:bg-blue-200 flex items-center justify-center transition-colors">
+                        <Package className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">Products</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('orders')}
+                    className="p-4 bg-white hover:bg-green-50 border-2 border-transparent hover:border-green-300 rounded-xl shadow-sm transition-all group"
+                  >
+                    <div className="flex flex-col items-center space-y-2">
+                      <div className="h-12 w-12 rounded-full bg-green-100 group-hover:bg-green-200 flex items-center justify-center transition-colors">
+                        <ShoppingCart className="h-6 w-6 text-green-600" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">Orders</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('financial-management')}
+                    className="p-4 bg-white hover:bg-amber-50 border-2 border-transparent hover:border-amber-300 rounded-xl shadow-sm transition-all group"
+                  >
+                    <div className="flex flex-col items-center space-y-2">
+                      <div className="h-12 w-12 rounded-full bg-amber-100 group-hover:bg-amber-200 flex items-center justify-center transition-colors">
+                        <DollarSign className="h-6 w-6 text-amber-600" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">Finance</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('stockist-management')}
+                    className="p-4 bg-white hover:bg-indigo-50 border-2 border-transparent hover:border-indigo-300 rounded-xl shadow-sm transition-all group"
+                  >
+                    <div className="flex flex-col items-center space-y-2">
+                      <div className="h-12 w-12 rounded-full bg-indigo-100 group-hover:bg-indigo-200 flex items-center justify-center transition-colors">
+                        <Store className="h-6 w-6 text-indigo-600" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">Stockists</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('settings')}
+                    className="p-4 bg-white hover:bg-gray-100 border-2 border-transparent hover:border-gray-300 rounded-xl shadow-sm transition-all group"
+                  >
+                    <div className="flex flex-col items-center space-y-2">
+                      <div className="h-12 w-12 rounded-full bg-gray-100 group-hover:bg-gray-200 flex items-center justify-center transition-colors">
+                        <Settings className="h-6 w-6 text-gray-600" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">Settings</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <Card className="p-6 bg-white">
