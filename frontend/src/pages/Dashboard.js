@@ -23,6 +23,12 @@ const Dashboard = ({ user, onLogout }) => {
   useEffect(() => {
     if (user?.role === 'manager') {
       navigate('/manager');
+    } else if (user?.role === 'master_stockist') {
+      navigate('/master-stockist');
+    } else if (user?.role === 'sub_stockist') {
+      navigate('/sub-stockist');
+    } else if (user?.role === 'outlet') {
+      navigate('/outlet');
     }
   }, [user, navigate]);
 
