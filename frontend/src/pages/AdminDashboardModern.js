@@ -257,10 +257,19 @@ const AdminDashboardModern = ({ user, onLogout }) => {
             <div className="space-y-4">
               {recentActivity.map((activity, index) => {
                 const Icon = activity.icon;
+                const colorClasses = {
+                  green: { bg: 'bg-green-100', text: 'text-green-600' },
+                  amber: { bg: 'bg-amber-100', text: 'text-amber-600' },
+                  blue: { bg: 'bg-blue-100', text: 'text-blue-600' },
+                  purple: { bg: 'bg-purple-100', text: 'text-purple-600' },
+                  red: { bg: 'bg-red-100', text: 'text-red-600' },
+                };
+                const colors = colorClasses[activity.color] || colorClasses.blue;
+                
                 return (
                   <div key={index} className="flex items-start space-x-3 pb-4 border-b last:border-b-0">
-                    <div className={`h-10 w-10 rounded-full bg-${activity.color}-100 flex items-center justify-center flex-shrink-0`}>
-                      <Icon className={`h-5 w-5 text-${activity.color}-600`} />
+                    <div className={`h-10 w-10 rounded-full ${colors.bg} flex items-center justify-center flex-shrink-0`}>
+                      <Icon className={`h-5 w-5 ${colors.text}`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900">{activity.action}</p>
