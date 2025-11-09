@@ -102,23 +102,28 @@ const WalletNew = ({ user, onLogout }) => {
 
   const handleCashbackWithdraw = async () => {
     if (!cashbackAmount || parseFloat(cashbackAmount) < minCashbackWithdrawal) {
-      toast.error(`Minimum withdrawal amount is ₹${minCashbackWithdrawal}${isFreeUser ? ' (Free User) - Upgrade to VIP for ₹10 minimum' : ''}`);
+      notifications.warning(
+        'Minimum Amount Required',
+        `Minimum withdrawal is ₹${minCashbackWithdrawal}. ${isFreeUser ? 'Upgrade to VIP membership for lower minimum withdrawal of just ₹10!' : ''}`
+      );
       return;
     }
 
     const isUpiMode = ['phonepe', 'googlepay', 'paytm', 'upi'].includes(cashbackPaymentMode);
     
     if (isUpiMode && !cashbackUpiId) {
-      toast.error('Please enter UPI ID or Mobile Number');
+      notifications.error('Payment Details Required', 'Please enter your UPI ID or Mobile Number to continue.');
       return;
     }
 
     if (cashbackPaymentMode === 'bank' && (!cashbackBankAccount || !cashbackIfsc || !cashbackAccountHolderName || !cashbackBankName)) {
-      toast.error('Please enter complete bank account details including bank name');
+      notifications.error('Bank Details Required', 'Please enter complete bank account details including account number, IFSC code, account holder name, and bank name.');
       return;
     }
 
     setLoading(true);
+    const loadingId = notifications.loading('Processing Withdrawal', 'Please wait while we process your withdrawal request...');
+    
     try {
       const response = await axios.post(`${API}/wallet/cashback/withdraw`, {
         user_id: user.uid,
@@ -131,11 +136,12 @@ const WalletNew = ({ user, onLogout }) => {
         ifsc_code: cashbackPaymentMode === 'bank' ? cashbackIfsc : null
       });
       
-      // Show enhanced success message with new fee breakdown
+      toast.dismiss(loadingId);
+      
       const data = response.data;
-      toast.success(
-        `Withdrawal request submitted! ₹${data.wallet_debited} debited. You'll receive ₹${data.amount_to_receive} (₹${data.withdrawal_fee} processing fee)`,
-        { duration: 5000 }
+      notifications.celebrate(
+        '💰 Withdrawal Request Submitted!',
+        `Your withdrawal of ₹${data.wallet_debited} has been initiated. You'll receive ₹${data.amount_to_receive} after deducting ₹${data.withdrawal_fee} processing fee. Funds will be transferred within 1-3 business days.`
       );
       
       setCashbackAmount('');
@@ -147,7 +153,12 @@ const WalletNew = ({ user, onLogout }) => {
       fetchWithdrawals();
     } catch (error) {
       console.error('Error withdrawing:', error);
-      toast.error(error.response?.data?.detail || 'Withdrawal failed');
+      toast.dismiss(loadingId);
+      
+      notifications.error(
+        'Withdrawal Failed',
+        error.response?.data?.detail || 'Unable to process withdrawal. Please check your details and try again.'
+      );
     } finally {
       setLoading(false);
     }
