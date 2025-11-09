@@ -11917,6 +11917,621 @@ async def get_users_report(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ========== PHASE 2: PRODUCT MANAGEMENT ==========
+
+@api_router.get("/manager/products")
+async def get_manager_products(
+    uid: str,
+    search: Optional[str] = None,
+    category: Optional[str] = None,
+    status: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50
+):
+    """Get products list with filters (Manager access)"""
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        query = {}
+        
+        if search:
+            query["$or"] = [
+                {"name": {"$regex": search, "$options": "i"}},
+                {"product_id": {"$regex": search, "$options": "i"}},
+                {"category": {"$regex": search, "$options": "i"}}
+            ]
+        
+        if category:
+            query["category"] = category
+        
+        if status:
+            query["active"] = (status == "active")
+        
+        total = await db.products.count_documents(query)
+        products = await db.products.find(query).skip(skip).limit(limit).sort("created_at", -1).to_list(length=limit)
+        
+        for product in products:
+            product.pop("_id", None)
+        
+        return {
+            "products": products,
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/manager/products")
+async def add_product(request: Request, uid: str):
+    """Add new product (Manager access)"""
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        data = await request.json()
+        
+        product_id = str(uuid.uuid4())
+        product = {
+            "product_id": product_id,
+            "name": data.get("name"),
+            "description": data.get("description", ""),
+            "category": data.get("category", ""),
+            "price": float(data.get("price", 0)),
+            "prc_cost": float(data.get("prc_cost", 0)),
+            "stock": int(data.get("stock", 0)),
+            "image_url": data.get("image_url", ""),
+            "active": data.get("active", True),
+            "created_by": uid,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.products.insert_one(product)
+        
+        # Log action
+        await db.manager_actions.insert_one({
+            "action_id": str(uuid.uuid4()),
+            "manager_id": uid,
+            "action_type": "product_add",
+            "target_product_id": product_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "details": {"product_name": product["name"]}
+        })
+        
+        return {"message": "Product added successfully", "product_id": product_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/manager/products/{product_id}")
+async def update_product(product_id: str, request: Request, uid: str):
+    """Update product (Manager access)"""
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        data = await request.json()
+        
+        update_data = {
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_by": uid
+        }
+        
+        if "name" in data:
+            update_data["name"] = data["name"]
+        if "description" in data:
+            update_data["description"] = data["description"]
+        if "category" in data:
+            update_data["category"] = data["category"]
+        if "price" in data:
+            update_data["price"] = float(data["price"])
+        if "prc_cost" in data:
+            update_data["prc_cost"] = float(data["prc_cost"])
+        if "stock" in data:
+            update_data["stock"] = int(data["stock"])
+        if "image_url" in data:
+            update_data["image_url"] = data["image_url"]
+        if "active" in data:
+            update_data["active"] = data["active"]
+        
+        result = await db.products.update_one(
+            {"product_id": product_id},
+            {"$set": update_data}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        # Log action
+        await db.manager_actions.insert_one({
+            "action_id": str(uuid.uuid4()),
+            "manager_id": uid,
+            "action_type": "product_update",
+            "target_product_id": product_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "details": {"updates": list(update_data.keys())}
+        })
+        
+        return {"message": "Product updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/manager/stock-movements")
+async def get_stock_movements(
+    uid: str,
+    product_id: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50
+):
+    """Get stock movement history (Manager access)"""
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        query = {}
+        if product_id:
+            query["product_id"] = product_id
+        
+        total = await db.stock_movements.count_documents(query)
+        movements = await db.stock_movements.find(query).skip(skip).limit(limit).sort("timestamp", -1).to_list(length=limit)
+        
+        for movement in movements:
+            movement.pop("_id", None)
+        
+        return {
+            "movements": movements,
+            "total": total
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ========== PHASE 2: FINANCIAL MANAGEMENT ==========
+
+@api_router.get("/manager/withdrawals")
+async def get_manager_withdrawals(
+    uid: str,
+    status: Optional[str] = None,
+    wallet_type: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50
+):
+    """Get withdrawal requests (Manager access)"""
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        # Query both cashback and profit withdrawals
+        cashback_query = {}
+        profit_query = {}
+        
+        if status:
+            cashback_query["status"] = status
+            profit_query["status"] = status
+        
+        cashback_withdrawals = []
+        profit_withdrawals = []
+        
+        if not wallet_type or wallet_type == "cashback":
+            cashback_withdrawals = await db.cashback_withdrawals.find(cashback_query).skip(skip).limit(limit).sort("created_at", -1).to_list(length=limit)
+            for w in cashback_withdrawals:
+                w.pop("_id", None)
+                w["wallet_type"] = "cashback"
+                # Get user info
+                user = await db.users.find_one({"uid": w.get("user_id")})
+                if user:
+                    w["user_name"] = user.get("name")
+                    w["user_email"] = user.get("email")
+        
+        if not wallet_type or wallet_type == "profit":
+            profit_withdrawals = await db.profit_withdrawals.find(profit_query).skip(skip).limit(limit).sort("created_at", -1).to_list(length=limit)
+            for w in profit_withdrawals:
+                w.pop("_id", None)
+                w["wallet_type"] = "profit"
+                # Get user info
+                user = await db.users.find_one({"uid": w.get("user_id")})
+                if user:
+                    w["user_name"] = user.get("name")
+                    w["user_email"] = user.get("email")
+        
+        all_withdrawals = cashback_withdrawals + profit_withdrawals
+        all_withdrawals.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        
+        return {
+            "withdrawals": all_withdrawals[:limit],
+            "total": len(all_withdrawals)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/manager/withdrawals/{withdrawal_id}/approve")
+async def approve_withdrawal(withdrawal_id: str, request: Request, uid: str):
+    """Approve withdrawal request (Manager access)"""
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        data = await request.json()
+        wallet_type = data.get("wallet_type", "cashback")
+        transaction_id = data.get("transaction_id", "")
+        notes = data.get("notes", "")
+        
+        collection = db.cashback_withdrawals if wallet_type == "cashback" else db.profit_withdrawals
+        
+        withdrawal = await collection.find_one({"withdrawal_id": withdrawal_id})
+        if not withdrawal:
+            raise HTTPException(status_code=404, detail="Withdrawal not found")
+        
+        if withdrawal.get("status") != "pending":
+            raise HTTPException(status_code=400, detail="Withdrawal is not pending")
+        
+        # Update withdrawal status
+        await collection.update_one(
+            {"withdrawal_id": withdrawal_id},
+            {"$set": {
+                "status": "approved",
+                "approved_by": uid,
+                "approved_at": datetime.now(timezone.utc).isoformat(),
+                "transaction_id": transaction_id,
+                "admin_notes": notes
+            }}
+        )
+        
+        # Log action
+        await db.manager_actions.insert_one({
+            "action_id": str(uuid.uuid4()),
+            "manager_id": uid,
+            "action_type": "withdrawal_approve",
+            "target_withdrawal_id": withdrawal_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "details": {
+                "wallet_type": wallet_type,
+                "amount": withdrawal.get("amount"),
+                "user_id": withdrawal.get("user_id")
+            }
+        })
+        
+        return {"message": "Withdrawal approved successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/manager/withdrawals/{withdrawal_id}/reject")
+async def reject_withdrawal(withdrawal_id: str, request: Request, uid: str):
+    """Reject withdrawal request (Manager access)"""
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        data = await request.json()
+        wallet_type = data.get("wallet_type", "cashback")
+        reason = data.get("reason", "")
+        
+        collection = db.cashback_withdrawals if wallet_type == "cashback" else db.profit_withdrawals
+        
+        withdrawal = await collection.find_one({"withdrawal_id": withdrawal_id})
+        if not withdrawal:
+            raise HTTPException(status_code=404, detail="Withdrawal not found")
+        
+        if withdrawal.get("status") != "pending":
+            raise HTTPException(status_code=400, detail="Withdrawal is not pending")
+        
+        # Update withdrawal status
+        await collection.update_one(
+            {"withdrawal_id": withdrawal_id},
+            {"$set": {
+                "status": "rejected",
+                "rejected_by": uid,
+                "rejected_at": datetime.now(timezone.utc).isoformat(),
+                "rejection_reason": reason
+            }}
+        )
+        
+        # Refund amount back to user's wallet
+        user_id = withdrawal.get("user_id")
+        amount = withdrawal.get("amount", 0)
+        
+        if wallet_type == "cashback":
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$inc": {"cashback_wallet": amount}}
+            )
+        else:
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$inc": {"profit_wallet": amount}}
+            )
+        
+        # Log action
+        await db.manager_actions.insert_one({
+            "action_id": str(uuid.uuid4()),
+            "manager_id": uid,
+            "action_type": "withdrawal_reject",
+            "target_withdrawal_id": withdrawal_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "details": {
+                "wallet_type": wallet_type,
+                "amount": amount,
+                "user_id": user_id,
+                "reason": reason
+            }
+        })
+        
+        return {"message": "Withdrawal rejected and amount refunded"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/manager/transactions")
+async def get_manager_transactions(
+    uid: str,
+    transaction_type: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100
+):
+    """Get transaction history (Manager access)"""
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        query = {}
+        if transaction_type:
+            query["transaction_type"] = transaction_type
+        
+        total = await db.transactions.count_documents(query)
+        transactions = await db.transactions.find(query).skip(skip).limit(limit).sort("timestamp", -1).to_list(length=limit)
+        
+        for txn in transactions:
+            txn.pop("_id", None)
+            # Get user info
+            user = await db.users.find_one({"uid": txn.get("user_id")})
+            if user:
+                txn["user_name"] = user.get("name")
+        
+        return {
+            "transactions": transactions,
+            "total": total
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ========== PHASE 2: COMMUNICATION TOOLS ==========
+
+@api_router.post("/manager/announcements")
+async def create_announcement(request: Request, uid: str):
+    """Create announcement for users (Manager access)"""
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        data = await request.json()
+        
+        announcement_id = str(uuid.uuid4())
+        announcement = {
+            "announcement_id": announcement_id,
+            "title": data.get("title"),
+            "message": data.get("message"),
+            "target_audience": data.get("target_audience", "all"),  # all, vip, free, stockists
+            "priority": data.get("priority", "normal"),  # low, normal, high
+            "created_by": uid,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "expires_at": data.get("expires_at"),
+            "active": True
+        }
+        
+        await db.announcements.insert_one(announcement)
+        
+        # Create notifications for targeted users
+        query = {"role": "user"}
+        if data.get("target_audience") == "vip":
+            query["membership_type"] = "vip"
+        elif data.get("target_audience") == "free":
+            query["$or"] = [{"membership_type": "free"}, {"membership_type": {"$exists": False}}]
+        elif data.get("target_audience") == "stockists":
+            query["role"] = {"$in": ["master_stockist", "sub_stockist", "outlet"]}
+        
+        target_users = await db.users.find(query).to_list(length=None)
+        
+        notifications = []
+        for user in target_users:
+            notifications.append({
+                "notification_id": str(uuid.uuid4()),
+                "user_id": user.get("uid"),
+                "title": data.get("title"),
+                "message": data.get("message"),
+                "type": "announcement",
+                "priority": data.get("priority", "normal"),
+                "read": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+        
+        if notifications:
+            await db.notifications.insert_many(notifications)
+        
+        # Log action
+        await db.manager_actions.insert_one({
+            "action_id": str(uuid.uuid4()),
+            "manager_id": uid,
+            "action_type": "announcement_create",
+            "target_announcement_id": announcement_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "details": {
+                "title": data.get("title"),
+                "target_audience": data.get("target_audience"),
+                "recipients_count": len(notifications)
+            }
+        })
+        
+        return {
+            "message": "Announcement created successfully",
+            "announcement_id": announcement_id,
+            "recipients": len(notifications)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/manager/announcements")
+async def get_announcements(uid: str, skip: int = 0, limit: int = 50):
+    """Get all announcements (Manager access)"""
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        total = await db.announcements.count_documents({})
+        announcements = await db.announcements.find().skip(skip).limit(limit).sort("created_at", -1).to_list(length=limit)
+        
+        for announcement in announcements:
+            announcement.pop("_id", None)
+        
+        return {
+            "announcements": announcements,
+            "total": total
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ========== PHASE 3: SUPPORT TICKETS ==========
+
+@api_router.get("/manager/tickets")
+async def get_manager_tickets(
+    uid: str,
+    status: Optional[str] = None,
+    priority: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50
+):
+    """Get support tickets (Manager access)"""
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        query = {}
+        if status:
+            query["status"] = status
+        if priority:
+            query["priority"] = priority
+        
+        total = await db.support_tickets.count_documents(query)
+        tickets = await db.support_tickets.find(query).skip(skip).limit(limit).sort("created_at", -1).to_list(length=limit)
+        
+        for ticket in tickets:
+            ticket.pop("_id", None)
+            # Get user info
+            user = await db.users.find_one({"uid": ticket.get("user_id")})
+            if user:
+                ticket["user_name"] = user.get("name")
+                ticket["user_email"] = user.get("email")
+        
+        return {
+            "tickets": tickets,
+            "total": total
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/manager/tickets/{ticket_id}")
+async def update_ticket(ticket_id: str, request: Request, uid: str):
+    """Update support ticket (Manager access)"""
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        data = await request.json()
+        
+        update_data = {
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_by": uid
+        }
+        
+        if "status" in data:
+            update_data["status"] = data["status"]
+            if data["status"] == "resolved":
+                update_data["resolved_at"] = datetime.now(timezone.utc).isoformat()
+                update_data["resolved_by"] = uid
+        
+        if "priority" in data:
+            update_data["priority"] = data["priority"]
+        
+        if "response" in data:
+            update_data["response"] = data["response"]
+            update_data["responded_at"] = datetime.now(timezone.utc).isoformat()
+            update_data["responded_by"] = uid
+        
+        if "assigned_to" in data:
+            update_data["assigned_to"] = data["assigned_to"]
+        
+        result = await db.support_tickets.update_one(
+            {"ticket_id": ticket_id},
+            {"$set": update_data}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Ticket not found")
+        
+        # Log action
+        await db.manager_actions.insert_one({
+            "action_id": str(uuid.uuid4()),
+            "manager_id": uid,
+            "action_type": "ticket_update",
+            "target_ticket_id": ticket_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "details": {"updates": list(update_data.keys())}
+        })
+        
+        return {"message": "Ticket updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ========== PHASE 3: STOCKIST MANAGEMENT ==========
+
+@api_router.get("/manager/stockists")
+async def get_manager_stockists(
+    uid: str,
+    role: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50
+):
+    """Get stockists list (Manager access)"""
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        query = {"role": {"$in": ["master_stockist", "sub_stockist", "outlet"]}}
+        
+        if role:
+            query["role"] = role
+        
+        total = await db.users.count_documents(query)
+        stockists = await db.users.find(query).skip(skip).limit(limit).sort("created_at", -1).to_list(length=limit)
+        
+        for stockist in stockists:
+            stockist.pop("_id", None)
+            stockist.pop("password", None)
+            
+            # Get performance metrics
+            orders_count = await db.orders.count_documents({"assigned_stockist": stockist.get("uid")})
+            delivered_count = await db.orders.count_documents({
+                "assigned_stockist": stockist.get("uid"),
+                "status": "delivered"
+            })
+            
+            stockist["orders_count"] = orders_count
+            stockist["delivered_count"] = delivered_count
+            stockist["fulfillment_rate"] = round((delivered_count / orders_count * 100) if orders_count > 0 else 0, 2)
+        
+        return {
+            "stockists": stockists,
+            "total": total
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ========== END MANAGER DASHBOARD ENDPOINTS ==========
 
 async def initialize_database_indexes():
