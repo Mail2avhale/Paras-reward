@@ -797,6 +797,7 @@ metadata:
 
 test_plan:
   current_focus:
+    - "Admin Dashboard Navigation Fix"
     - "Manager Role Update Fix"
     - "Manager Dashboard Loading Fix"
     - "Stock Deduction on Order Delivery"
