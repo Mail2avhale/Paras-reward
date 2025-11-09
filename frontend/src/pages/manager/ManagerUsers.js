@@ -382,15 +382,13 @@ const ManagerUsers = ({ user, onLogout }) => {
                           <CheckCircle className="mr-2 h-4 w-4" />
                           Approve KYC
                         </Button>
-                        <Button
-                          onClick={() => setShowRejectModal(true)}
-                          variant="outline"
-                        className="flex-1 border-red-600 text-red-600 hover:bg-red-50"
-                      >
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Reject KYC
-                      </Button>
-                    </div>
+                          className="flex-1 border-red-600 text-red-600 hover:bg-red-50"
+                        >
+                          <XCircle className="mr-2 h-4 w-4" />
+                          Reject KYC
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
