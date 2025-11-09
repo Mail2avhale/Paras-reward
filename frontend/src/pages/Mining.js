@@ -3,9 +3,10 @@ import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Coins, Play, Clock, Zap, TrendingUp, Users, AlertCircle } from 'lucide-react';
+import { Coins, Play, Clock, Zap, TrendingUp, Users, AlertCircle, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { ResponsiveAd } from '@/components/AdSenseAd';
+import { Link } from 'react-router-dom';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -13,15 +14,16 @@ const API = `${BACKEND_URL}/api`;
 const Mining = ({ user, onLogout }) => {
   const [miningStatus, setMiningStatus] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showValidityWarning, setShowValidityWarning] = useState(false);
   
-  // Check if user is admin
   const isAdmin = user?.role === 'admin';
+  const isFreeUser = user?.membership_type !== 'vip';
 
   useEffect(() => {
     fetchMiningStatus();
     const interval = setInterval(() => {
       fetchMiningStatus();
-    }, 30000); // Update every 30 seconds
+    }, 30000);
 
     return () => clearInterval(interval);
   }, []);
@@ -30,6 +32,11 @@ const Mining = ({ user, onLogout }) => {
     try {
       const response = await axios.get(`${API}/mining/status/${user.uid}`);
       setMiningStatus(response.data);
+      
+      // Check if user is free and should see validity warning
+      if (isFreeUser && response.data.current_balance > 0) {
+        setShowValidityWarning(true);
+      }
     } catch (error) {
       console.error('Error fetching mining status:', error);
     }
@@ -40,6 +47,11 @@ const Mining = ({ user, onLogout }) => {
     try {
       const response = await axios.post(`${API}/mining/start/${user.uid}`);
       toast.success(response.data.message);
+      if (isFreeUser) {
+        toast.info('⏰ Your PRC will be valid for 2 days. Upgrade to VIP for lifetime validity!', {
+          duration: 6000
+        });
+      }
       fetchMiningStatus();
     } catch (error) {
       console.error('Error starting mining:', error);
@@ -54,6 +66,14 @@ const Mining = ({ user, onLogout }) => {
     try {
       const response = await axios.post(`${API}/mining/claim/${user.uid}`);
       toast.success(`Claimed ${response.data.amount.toFixed(2)} PRC!`);
+      
+      if (response.data.expires_at) {
+        const expiryDate = new Date(response.data.expires_at);
+        toast.warning(`⏰ Valid until ${expiryDate.toLocaleDateString()} - Upgrade to VIP for lifetime validity!`, {
+          duration: 8000
+        });
+      }
+      
       if (response.data.note) {
         toast.info(response.data.note);
       }
@@ -80,6 +100,28 @@ const Mining = ({ user, onLogout }) => {
         <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">Rewards Center</h1>
         <p className="text-lg text-gray-600 mb-8">Earn PRC reward points through daily engagement activities (non-cryptocurrency reward system)</p>
 
+        {/* Free User PRC Validity Warning */}
+        {isFreeUser && showValidityWarning && (
+          <Card className="p-6 mb-6 bg-gradient-to-r from-orange-500 to-red-500 text-white border-none">
+            <div className="flex items-start gap-4">
+              <AlertCircle className="h-6 w-6 flex-shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="text-xl font-bold mb-2">⏰ Free User: PRC Valid for 2 Days Only</h3>
+                <p className="text-white/90 mb-4">
+                  Your mined PRC expires after 2 days. Use it to play Treasure Hunt before it expires!
+                  Upgrade to VIP for lifetime PRC validity + marketplace access + higher cashback.
+                </p>
+                <Link to="/vip">
+                  <Button className="bg-white text-orange-600 hover:bg-gray-100">
+                    <Crown className="mr-2 h-4 w-4" />
+                    Upgrade to VIP (₹1000/year)
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Session Status Banner */}
         {miningStatus && (
           <Card className={`p-6 mb-8 ${
@@ -102,6 +144,11 @@ const Mining = ({ user, onLogout }) => {
                       : 'Start a 24-hour reward session to earn PRC points'
                     }
                   </p>
+                  {isFreeUser && (
+                    <p className="text-xs text-white/75 mt-1">
+                      ⏰ Free User: PRC valid for 2 days | VIP: Lifetime validity
+                    </p>
+                  )}
                 </div>
               </div>
               {miningStatus.session_active && (
@@ -126,7 +173,14 @@ const Mining = ({ user, onLogout }) => {
             <div className="text-3xl font-bold text-gray-900">
               {miningStatus?.current_balance?.toFixed(2) || '0.00'}
             </div>
-            <p className="text-sm text-gray-500 mt-1">Available coins</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {isFreeUser ? 'Valid for 2 days' : 'Lifetime validity'}
+            </p>
+            {isFreeUser && miningStatus?.current_balance > 0 && (
+              <p className="text-xs text-orange-600 mt-2 font-medium">
+                ⏰ Use within 2 days!
+              </p>
+            )}
           </Card>
 
           <Card className="p-6 bg-white">
@@ -184,10 +238,15 @@ const Mining = ({ user, onLogout }) => {
                     <Play className="h-16 w-16 text-white" />
                   </div>
                   <h2 className="text-3xl font-bold text-gray-900 mb-3">Start Mining Session</h2>
-                  <p className="text-gray-600 max-w-2xl mx-auto">
+                  <p className="text-gray-600 max-w-2xl mx-auto mb-4">
                     Click the button below to start your 24-hour mining session. 
                     You'll earn PRC coins based on your mining rate and active referrals.
                   </p>
+                  {isFreeUser && (
+                    <p className="text-orange-600 font-medium text-sm">
+                      ⏰ Free User: Your PRC will be valid for 2 days
+                    </p>
+                  )}
                 </div>
 
                 <Button
@@ -197,116 +256,150 @@ const Mining = ({ user, onLogout }) => {
                 >
                   {loading ? 'Starting...' : 'Start Mining'}
                 </Button>
-
-                <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                    <div className="text-left">
-                      <p className="font-semibold text-yellow-900">Important:</p>
-                      <p className="text-sm text-yellow-800">
-                        • Mining sessions last 24 hours<br />
-                        • You must start a new session after 24 hours to continue mining<br />
-                        • Referral bonuses only count when both you and your referrals have active sessions<br />
-                        • {user.membership_type === 'free' 
-                          ? 'Free users: Mined coins are valid for 24 hours only. Upgrade to VIP for unlimited validity.' 
-                          : 'VIP: Your coins have unlimited validity!'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </>
             ) : (
               <>
                 <div className="mb-6">
-                  <div className="relative w-48 h-48 mx-auto mb-6">
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full animate-pulse"></div>
-                    <div className="absolute inset-2 bg-white rounded-full flex items-center justify-center">
-                      <div className="text-center">
-                        <Coins className="h-16 w-16 text-purple-600 mx-auto mb-2" />
-                        <p className="text-3xl font-bold text-gray-900">
-                          {miningStatus?.mined_this_session?.toFixed(2) || '0.00'}
-                        </p>
-                        <p className="text-sm text-gray-600">PRC Mined</p>
-                      </div>
+                  <div className="relative">
+                    <div className="w-32 h-32 bg-gradient-to-br from-green-600 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+                      <Coins className="h-16 w-16 text-white" />
                     </div>
+                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full animate-ping"></div>
                   </div>
                   <h2 className="text-3xl font-bold text-gray-900 mb-3">Mining in Progress</h2>
-                  <p className="text-gray-600 mb-2">
-                    Session ends in: <span className="font-bold text-purple-600">
-                      {formatTime(miningStatus.remaining_hours)}
-                    </span>
+                  <p className="text-gray-600 max-w-2xl mx-auto mb-2">
+                    You're currently earning {miningStatus.mining_rate_per_hour.toFixed(2)} PRC per hour.
                   </p>
-                  <p className="text-sm text-gray-500">
-                    Earning {miningStatus.mining_rate_per_hour.toFixed(2)} PRC per hour
-                  </p>
+                  {isFreeUser && (
+                    <p className="text-orange-600 font-medium text-sm">
+                      ⏰ PRC expires 2 days after claim. Use it for Treasure Hunt!
+                    </p>
+                  )}
+                  <div className="mt-6 p-6 bg-gradient-to-r from-purple-100 to-pink-100 rounded-2xl inline-block">
+                    <p className="text-sm text-gray-600 mb-2">Earned This Session</p>
+                    <p className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                      {miningStatus.mined_this_session.toFixed(2)}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-2">PRC</p>
+                  </div>
                 </div>
 
                 <Button
                   onClick={claimCoins}
-                  disabled={loading || (miningStatus?.mined_this_session || 0) < 1}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-12 py-6 text-xl rounded-2xl shadow-xl disabled:opacity-50"
+                  disabled={loading || miningStatus.mined_this_session < 0.01}
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-12 py-6 text-xl rounded-2xl shadow-xl"
                 >
-                  {loading ? 'Claiming...' : `Claim ${miningStatus?.mined_this_session?.toFixed(2) || '0.00'} PRC`}
+                  {loading ? 'Claiming...' : `Claim ${miningStatus.mined_this_session.toFixed(2)} PRC`}
                 </Button>
-
-                <p className="text-sm text-gray-500 mt-4">
-                  Claim your mined coins anytime during the session
-                </p>
               </>
             )}
           </div>
         </Card>
 
-        {/* Rate Breakdown */}
-        <Card className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl">
-          <h3 className="text-2xl font-bold text-gray-900 mb-6">Mining Rate Breakdown</h3>
-          
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-              <span className="text-gray-700 font-medium">Base Rate</span>
-              <span className="text-xl font-bold text-gray-900">
-                {miningStatus?.base_rate?.toFixed(2) || '0.00'} PRC/hour
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl">
-              <div>
-                <span className="text-gray-700 font-medium">Referral Bonus</span>
-                <p className="text-sm text-gray-600">
-                  {miningStatus?.active_referrals || 0} active referrals × 10% each
-                </p>
+        {/* Membership Comparison */}
+        {isFreeUser && (
+          <Card className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200">
+            <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">
+              Upgrade to VIP for Better Benefits!
+            </h3>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-xl">
+                <h4 className="font-bold text-lg mb-3 text-gray-700">Free User (Current)</h4>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-start">
+                    <span className="text-orange-500 mr-2">⏰</span>
+                    <span>PRC valid for <strong>2 days only</strong></span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-orange-500 mr-2">🎮</span>
+                    <span>Can only play <strong>Treasure Hunt</strong></span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-orange-500 mr-2">💰</span>
+                    <span>Treasure Hunt: <strong>10% cashback</strong></span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-orange-500 mr-2">🏪</span>
+                    <span>No marketplace access</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-orange-500 mr-2">💳</span>
+                    <span>Min withdrawal: <strong>₹1000</strong></span>
+                  </li>
+                </ul>
               </div>
-              <span className="text-xl font-bold text-blue-600">
-                +{((miningStatus?.active_referrals || 0) * 0.1 * (miningStatus?.base_rate || 0)).toFixed(2)} PRC/hour
-              </span>
+              <div className="bg-gradient-to-br from-purple-600 to-pink-600 p-6 rounded-xl text-white">
+                <h4 className="font-bold text-lg mb-3 flex items-center">
+                  <Crown className="mr-2" />
+                  VIP Member
+                </h4>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-start">
+                    <span className="text-yellow-300 mr-2">♾️</span>
+                    <span>PRC <strong>never expires</strong></span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-yellow-300 mr-2">🛒</span>
+                    <span>Full <strong>marketplace access</strong></span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-yellow-300 mr-2">💎</span>
+                    <span>Treasure Hunt: <strong>50% cashback</strong></span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-yellow-300 mr-2">🏆</span>
+                    <span>Top player: <strong>100% cashback</strong></span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-yellow-300 mr-2">💸</span>
+                    <span>Min withdrawal: <strong>₹100</strong></span>
+                  </li>
+                </ul>
+                <Link to="/vip">
+                  <Button className="w-full mt-4 bg-white text-purple-600 hover:bg-gray-100">
+                    Upgrade Now - ₹1000/year
+                  </Button>
+                </Link>
+              </div>
             </div>
+          </Card>
+        )}
 
-            <div className="flex items-center justify-between p-4 bg-purple-50 rounded-xl border-2 border-purple-200">
-              <span className="text-gray-900 font-bold text-lg">Total Rate</span>
-              <span className="text-2xl font-bold text-purple-600">
-                {miningStatus?.mining_rate_per_hour?.toFixed(2) || '0.00'} PRC/hour
-              </span>
+        {/* How It Works */}
+        <Card className="p-8 bg-white mt-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">How Mining Works</h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Play className="h-8 w-8 text-purple-600" />
+              </div>
+              <h3 className="font-bold text-lg mb-2">1. Start Session</h3>
+              <p className="text-gray-600 text-sm">
+                Start a 24-hour mining session to begin earning PRC coins automatically.
+              </p>
             </div>
-          </div>
-
-          <div className="mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
-            <p className="text-sm text-indigo-900">
-              <strong>💡 Tip:</strong> Increase your mining rate by inviting friends! 
-              Each active referral adds 10% bonus to your base rate (up to 200 referrals).
-            </p>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <TrendingUp className="h-8 w-8 text-green-600" />
+              </div>
+              <h3 className="font-bold text-lg mb-2">2. Earn PRC</h3>
+              <p className="text-gray-600 text-sm">
+                Your mining rate increases with referrals. The more friends, the more you earn!
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Coins className="h-8 w-8 text-blue-600" />
+              </div>
+              <h3 className="font-bold text-lg mb-2">3. Claim & Use</h3>
+              <p className="text-gray-600 text-sm">
+                {isFreeUser 
+                  ? 'Claim PRC and use within 2 days for Treasure Hunt. Upgrade for marketplace access!'
+                  : 'Claim PRC anytime and use for Treasure Hunt or shop in marketplace!'}
+              </p>
+            </div>
           </div>
         </Card>
-
-        {/* Bottom Ad */}
-        {!isAdmin && (
-          <div className="mt-8">
-            <ResponsiveAd 
-              adSlot="0987654321"
-              adFormat="auto"
-              fullWidthResponsive={true}
-            />
-          </div>
-        )}
       </div>
     </div>
   );
