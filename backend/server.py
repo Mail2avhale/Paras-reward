@@ -568,6 +568,88 @@ async def get_active_referrals(uid: str):
     
     return min(active_count, 200)  # Cap at 200
 
+async def get_valid_prc_balance(uid: str):
+    """
+    Calculate valid (non-expired) PRC balance for user
+    Free users: PRC expires after 2 days
+    VIP users: PRC never expires
+    """
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        return 0
+    
+    # VIP users have no expiry
+    if user.get("membership_type") == "vip":
+        return user.get("prc_balance", 0)
+    
+    # Free users: check transaction history for expiry
+    total_valid_prc = 0
+    now = datetime.now(timezone.utc)
+    
+    # Get all PRC earning transactions
+    transactions = await db.transactions.find({
+        "user_id": uid,
+        "transaction_type": {"$in": ["mining", "referral", "tap_game", "admin_credit"]}
+    }).sort("timestamp", -1).to_list(length=None)
+    
+    for txn in transactions:
+        # Check if transaction is within 2 days
+        txn_date = datetime.fromisoformat(txn.get("timestamp", now.isoformat()))
+        if txn_date.tzinfo is None:
+            txn_date = txn_date.replace(tzinfo=timezone.utc)
+        
+        days_old = (now - txn_date).days
+        
+        # If less than 2 days old, PRC is valid
+        if days_old < 2:
+            total_valid_prc += txn.get("prc_amount", 0)
+    
+    # Cap at actual balance (in case of spending)
+    actual_balance = user.get("prc_balance", 0)
+    return min(total_valid_prc, actual_balance)
+
+async def get_cashback_rate(user_id: str, is_top_player: bool = False):
+    """
+    Get cashback rate based on user membership
+    Free users: 10% regular, 20% top player
+    VIP users: 50% regular, 100% top player
+    """
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        return 0.10  # Default to free user rate
+    
+    is_vip = user.get("membership_type") == "vip"
+    
+    if is_vip:
+        return 1.0 if is_top_player else 0.50  # 100% or 50%
+    else:
+        return 0.20 if is_top_player else 0.10  # 20% or 10%
+
+async def get_withdrawal_limit(user_id: str):
+    """
+    Get minimum withdrawal limit based on membership
+    Free users: ₹1000
+    VIP users: ₹100
+    """
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        return 1000
+    
+    is_vip = user.get("membership_type") == "vip"
+    return 100 if is_vip else 1000
+
+async def can_use_marketplace(user_id: str):
+    """
+    Check if user can use marketplace
+    Free users: NO
+    VIP users: YES
+    """
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        return False
+    
+    return user.get("membership_type") == "vip"
+
 async def calculate_mining_rate(uid: str):
     """Calculate mining rate per minute"""
     base_rate = await get_base_rate()
