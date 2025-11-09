@@ -15,14 +15,17 @@ const Mining = ({ user, onLogout }) => {
   const [miningStatus, setMiningStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showValidityWarning, setShowValidityWarning] = useState(false);
+  const [prcExpiryInfo, setPrcExpiryInfo] = useState(null);
   
   const isAdmin = user?.role === 'admin';
   const isFreeUser = user?.membership_type !== 'vip';
 
   useEffect(() => {
     fetchMiningStatus();
+    fetchPRCExpiry();
     const interval = setInterval(() => {
       fetchMiningStatus();
+      fetchPRCExpiry();
     }, 30000);
 
     return () => clearInterval(interval);
@@ -39,6 +42,19 @@ const Mining = ({ user, onLogout }) => {
       }
     } catch (error) {
       console.error('Error fetching mining status:', error);
+    }
+  };
+
+  const fetchPRCExpiry = async () => {
+    if (!isFreeUser) return;
+    
+    try {
+      const response = await axios.get(`${API}/wallet/${user.uid}`);
+      if (response.data.prc_expiry_info) {
+        setPrcExpiryInfo(response.data.prc_expiry_info);
+      }
+    } catch (error) {
+      console.error('Error fetching PRC expiry:', error);
     }
   };
 
@@ -69,15 +85,18 @@ const Mining = ({ user, onLogout }) => {
       
       if (response.data.expires_at) {
         const expiryDate = new Date(response.data.expires_at);
-        toast.warning(`⏰ Valid until ${expiryDate.toLocaleDateString()} - Upgrade to VIP for lifetime validity!`, {
-          duration: 8000
-        });
+        const daysLeft = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
+        toast.warning(
+          `⏰ Valid until ${expiryDate.toLocaleDateString()} ${expiryDate.toLocaleTimeString()} (${daysLeft} days left)`,
+          { duration: 8000 }
+        );
       }
       
       if (response.data.note) {
         toast.info(response.data.note);
       }
       fetchMiningStatus();
+      fetchPRCExpiry();
     } catch (error) {
       console.error('Error claiming coins:', error);
       toast.error(error.response?.data?.detail || 'Failed to claim coins');
@@ -92,6 +111,36 @@ const Mining = ({ user, onLogout }) => {
     return `${h}h ${m}m`;
   };
 
+  const getPRCValidityStatus = () => {
+    if (!isFreeUser || !prcExpiryInfo) return null;
+    
+    const { valid_prc, expired_prc, expiring_soon_prc, earliest_expiry } = prcExpiryInfo;
+    
+    if (valid_prc === 0 && expired_prc > 0) {
+      return {
+        type: 'expired',
+        message: `All ${expired_prc.toFixed(2)} PRC has expired!`,
+        color: 'from-red-600 to-rose-700'
+      };
+    }
+    
+    if (expiring_soon_prc > 0 && earliest_expiry) {
+      const expiryDate = new Date(earliest_expiry);
+      const hoursLeft = Math.floor((expiryDate - new Date()) / (1000 * 60 * 60));
+      
+      return {
+        type: 'expiring',
+        message: `${expiring_soon_prc.toFixed(2)} PRC expiring in ${hoursLeft}h!`,
+        expiryDate: expiryDate,
+        color: 'from-orange-500 to-red-500'
+      };
+    }
+    
+    return null;
+  };
+
+  const validityStatus = getPRCValidityStatus();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       <Navbar user={user} onLogout={onLogout} />
@@ -100,8 +149,46 @@ const Mining = ({ user, onLogout }) => {
         <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">Rewards Center</h1>
         <p className="text-lg text-gray-600 mb-8">Earn PRC reward points through daily engagement activities (non-cryptocurrency reward system)</p>
 
+        {/* PRC Expiry Alert for Free Users */}
+        {isFreeUser && validityStatus && (
+          <Card className={`p-6 mb-6 bg-gradient-to-r ${validityStatus.color} text-white border-none`}>
+            <div className="flex items-start gap-4">
+              <AlertCircle className="h-6 w-6 flex-shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="text-xl font-bold mb-2">
+                  {validityStatus.type === 'expired' ? '⚠️ PRC Expired!' : '⏰ PRC Expiring Soon!'}
+                </h3>
+                <p className="text-white/90 mb-2">{validityStatus.message}</p>
+                {validityStatus.expiryDate && (
+                  <p className="text-sm text-white/80 mb-4">
+                    Expiry: {validityStatus.expiryDate.toLocaleDateString()} at {validityStatus.expiryDate.toLocaleTimeString()}
+                  </p>
+                )}
+                <p className="text-white/90 mb-4">
+                  {validityStatus.type === 'expired' 
+                    ? 'Mine new PRC or upgrade to VIP for lifetime validity!'
+                    : 'Use it to play Treasure Hunt before it expires! Upgrade to VIP for lifetime validity.'}
+                </p>
+                <div className="flex gap-3">
+                  <Link to="/treasure-hunt">
+                    <Button className="bg-white text-orange-600 hover:bg-gray-100">
+                      Play Treasure Hunt
+                    </Button>
+                  </Link>
+                  <Link to="/vip">
+                    <Button className="bg-white/20 text-white hover:bg-white/30">
+                      <Crown className="mr-2 h-4 w-4" />
+                      Upgrade to VIP
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Free User PRC Validity Warning */}
-        {isFreeUser && showValidityWarning && (
+        {isFreeUser && showValidityWarning && !validityStatus && (
           <Card className="p-6 mb-6 bg-gradient-to-r from-orange-500 to-red-500 text-white border-none">
             <div className="flex items-start gap-4">
               <AlertCircle className="h-6 w-6 flex-shrink-0 mt-1" />
@@ -176,10 +263,22 @@ const Mining = ({ user, onLogout }) => {
             <p className="text-sm text-gray-500 mt-1">
               {isFreeUser ? 'Valid for 2 days' : 'Lifetime validity'}
             </p>
-            {isFreeUser && miningStatus?.current_balance > 0 && (
-              <p className="text-xs text-orange-600 mt-2 font-medium">
-                ⏰ Use within 2 days!
-              </p>
+            {isFreeUser && prcExpiryInfo && prcExpiryInfo.valid_prc > 0 && (
+              <div className="mt-2">
+                <p className="text-xs text-green-600 font-medium">
+                  ✓ Valid: {prcExpiryInfo.valid_prc.toFixed(2)} PRC
+                </p>
+                {prcExpiryInfo.expired_prc > 0 && (
+                  <p className="text-xs text-red-600 font-medium">
+                    ✗ Expired: {prcExpiryInfo.expired_prc.toFixed(2)} PRC
+                  </p>
+                )}
+                {prcExpiryInfo.expiring_soon_prc > 0 && (
+                  <p className="text-xs text-orange-600 font-medium">
+                    ⏰ Expiring: {prcExpiryInfo.expiring_soon_prc.toFixed(2)} PRC
+                  </p>
+                )}
+              </div>
             )}
           </Card>
 
@@ -319,6 +418,10 @@ const Mining = ({ user, onLogout }) => {
                     <span>Treasure Hunt: <strong>10% cashback</strong></span>
                   </li>
                   <li className="flex items-start">
+                    <span className="text-orange-500 mr-2">🏆</span>
+                    <span>Daily topper: <strong>Max 20% cashback</strong></span>
+                  </li>
+                  <li className="flex items-start">
                     <span className="text-orange-500 mr-2">🏪</span>
                     <span>No marketplace access</span>
                   </li>
@@ -352,7 +455,7 @@ const Mining = ({ user, onLogout }) => {
                   </li>
                   <li className="flex items-start">
                     <span className="text-yellow-300 mr-2">💸</span>
-                    <span>Min withdrawal: <strong>₹100</strong></span>
+                    <span>Min withdrawal: <strong>₹10</strong></span>
                   </li>
                 </ul>
                 <Link to="/vip">
