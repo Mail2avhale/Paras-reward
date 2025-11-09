@@ -10,6 +10,7 @@ import {
   CreditCard, Image, QrCode, Building, AlertCircle, Loader
 } from 'lucide-react';
 import { toast } from 'sonner';
+import notifications from '@/utils/notifications';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
