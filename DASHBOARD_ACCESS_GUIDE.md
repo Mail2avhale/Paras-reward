@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://manager-dash.preview.emergentagent.com/setup
+   https://miner-rewards-1.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
