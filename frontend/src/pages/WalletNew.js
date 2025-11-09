@@ -32,6 +32,11 @@ const WalletNew = ({ user, onLogout }) => {
   const [withdrawals, setWithdrawals] = useState({ cashback_withdrawals: [], profit_withdrawals: [] });
   const [loading, setLoading] = useState(false);
   
+  // Determine minimum withdrawal based on membership
+  const isFreeUser = user?.membership_type !== 'vip';
+  const minCashbackWithdrawal = isFreeUser ? 1000 : 10;
+  const minProfitWithdrawal = 50;
+  
   // Cashback withdrawal form
   const [cashbackAmount, setCashbackAmount] = useState('');
   const [cashbackPaymentMode, setCashbackPaymentMode] = useState('phonepe');
