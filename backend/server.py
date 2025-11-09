@@ -11276,10 +11276,53 @@ async def track_video_ad_event(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+async def initialize_database_indexes():
+    """Create database indexes for better performance"""
+    try:
+        # Users collection indexes
+        await db.users.create_index("uid", unique=True)
+        await db.users.create_index("email", unique=True)
+        await db.users.create_index("mobile", unique=True)
+        
+        # Video ads indexes
+        await db.video_ads.create_index("video_ad_id", unique=True)
+        await db.video_ads.create_index("placement")
+        await db.video_ads.create_index("is_active")
+        
+        # Treasure hunts indexes
+        await db.treasure_hunts.create_index("hunt_id", unique=True)
+        await db.treasure_progress.create_index("progress_id", unique=True)
+        await db.treasure_progress.create_index("user_id")
+        
+        # Orders indexes
+        await db.orders.create_index("order_id", unique=True)
+        await db.orders.create_index("user_id")
+        
+        # Products indexes
+        await db.products.create_index("product_id", unique=True)
+        
+        print("✅ Database indexes created successfully")
+    except Exception as e:
+        print(f"⚠️ Index creation warning: {e}")
+        # Don't fail if indexes already exist
+
 @app.on_event("startup")
 async def startup_db():
     """Initialize database with default data"""
+    print("🚀 Starting database initialization...")
+    
+    # Create indexes
+    await initialize_database_indexes()
+    
+    # Initialize treasure hunts (creates if not exists)
     await initialize_treasure_hunts()
+    
+    # Check if video_ads collection exists, if not create sample
+    video_ads_count = await db.video_ads.count_documents({})
+    if video_ads_count == 0:
+        print("📹 No video ads found, database ready for admin to create videos")
+    
+    print("✅ Database initialization complete!")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
