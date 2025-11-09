@@ -12532,6 +12532,142 @@ async def get_manager_stockists(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ========== VIP MEMBERSHIP APPROVAL ==========
+
+@api_router.get("/manager/vip-requests")
+async def get_vip_requests(
+    uid: str,
+    status: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50
+):
+    """Get VIP membership payment requests (Manager access)"""
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        query = {}
+        if status:
+            query["status"] = status
+        
+        total = await db.vip_payments.count_documents(query)
+        payments = await db.vip_payments.find(query).skip(skip).limit(limit).sort("created_at", -1).to_list(length=limit)
+        
+        for payment in payments:
+            payment.pop("_id", None)
+            # Get user info
+            user = await db.users.find_one({"uid": payment.get("user_id")})
+            if user:
+                payment["user_name"] = user.get("name")
+                payment["user_email"] = user.get("email")
+                payment["current_membership"] = user.get("membership_type", "free")
+        
+        return {
+            "payments": payments,
+            "total": total
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/manager/vip-requests/{payment_id}/approve")
+async def approve_vip_payment(payment_id: str, uid: str):
+    """Approve VIP membership payment (Manager access)"""
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        payment = await db.vip_payments.find_one({"payment_id": payment_id})
+        if not payment:
+            raise HTTPException(status_code=404, detail="Payment not found")
+        
+        if payment.get("status") != "pending":
+            raise HTTPException(status_code=400, detail="Payment is not pending")
+        
+        user_id = payment.get("user_id")
+        
+        # Update payment status
+        await db.vip_payments.update_one(
+            {"payment_id": payment_id},
+            {"$set": {
+                "status": "approved",
+                "approved_by": uid,
+                "approved_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        # Update user to VIP
+        expiry_date = datetime.now(timezone.utc) + timedelta(days=365)
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {
+                "membership_type": "vip",
+                "vip_activated_at": datetime.now(timezone.utc).isoformat(),
+                "vip_expires_at": expiry_date.isoformat()
+            }}
+        )
+        
+        # Log action
+        await db.manager_actions.insert_one({
+            "action_id": str(uuid.uuid4()),
+            "manager_id": uid,
+            "action_type": "vip_approve",
+            "target_payment_id": payment_id,
+            "target_user_id": user_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "details": {"amount": payment.get("amount")}
+        })
+        
+        return {"message": "VIP membership approved successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/manager/vip-requests/{payment_id}/reject")
+async def reject_vip_payment(payment_id: str, request: Request, uid: str):
+    """Reject VIP membership payment (Manager access)"""
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        data = await request.json()
+        reason = data.get("reason", "")
+        
+        payment = await db.vip_payments.find_one({"payment_id": payment_id})
+        if not payment:
+            raise HTTPException(status_code=404, detail="Payment not found")
+        
+        if payment.get("status") != "pending":
+            raise HTTPException(status_code=400, detail="Payment is not pending")
+        
+        # Update payment status
+        await db.vip_payments.update_one(
+            {"payment_id": payment_id},
+            {"$set": {
+                "status": "rejected",
+                "rejected_by": uid,
+                "rejected_at": datetime.now(timezone.utc).isoformat(),
+                "rejection_reason": reason
+            }}
+        )
+        
+        # Log action
+        await db.manager_actions.insert_one({
+            "action_id": str(uuid.uuid4()),
+            "manager_id": uid,
+            "action_type": "vip_reject",
+            "target_payment_id": payment_id,
+            "target_user_id": payment.get("user_id"),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "details": {"reason": reason}
+        })
+        
+        return {"message": "VIP payment rejected", "reason": reason}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ========== END MANAGER DASHBOARD ENDPOINTS ==========
 
 async def initialize_database_indexes():
