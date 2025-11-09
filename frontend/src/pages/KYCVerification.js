@@ -49,29 +49,51 @@ const KYCVerification = ({ user, onLogout }) => {
   const submitKYC = async () => {
     // Validation: Check if document type is selected
     if (!selectedDocType) {
-      toast.error('Please select a document type (Aadhaar or PAN)');
+      notifications.error(
+        'Document Selection Required',
+        'Please select either Aadhaar or PAN card to continue with KYC verification.'
+      );
       return;
     }
 
     // Validation: Check if selected documents are uploaded
     if (selectedDocType === 'aadhaar') {
       if (!kycData.aadhaar_front_base64 || !kycData.aadhaar_back_base64) {
-        toast.error('Please upload both front and back of Aadhaar card');
+        notifications.error(
+          'Missing Documents',
+          'Please upload both front and back sides of your Aadhaar card.'
+        );
         return;
       }
     } else if (selectedDocType === 'pan') {
       if (!kycData.pan_front_base64) {
-        toast.error('Please upload PAN card');
+        notifications.error(
+          'Missing Document',
+          'Please upload your PAN card to continue.'
+        );
         return;
       }
     }
+
+    // Show loading notification
+    const loadingId = notifications.loading(
+      'Submitting KYC Documents',
+      'Please wait while we upload your documents securely...'
+    );
 
     try {
       await axios.post(`${API}/kyc/submit/${user.uid}`, {
         ...kycData,
         document_type: selectedDocType
       });
-      toast.success('KYC submitted for verification!');
+      
+      toast.dismiss(loadingId);
+      
+      notifications.celebrate(
+        '🎉 KYC Submitted Successfully!',
+        'Your documents have been submitted for verification. Our team will review them within 24-48 hours. You\'ll receive a notification once approved.'
+      );
+      
       fetchUserData();
       setKycData({
         document_type: '',
@@ -82,7 +104,12 @@ const KYCVerification = ({ user, onLogout }) => {
       setSelectedDocType('');
     } catch (error) {
       console.error('Error submitting KYC:', error);
-      toast.error(error.response?.data?.detail || 'Failed to submit KYC');
+      toast.dismiss(loadingId);
+      
+      notifications.error(
+        'Submission Failed',
+        error.response?.data?.detail || 'Failed to submit KYC documents. Please check your internet connection and try again.'
+      );
     }
   };
 
