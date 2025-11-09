@@ -196,7 +196,7 @@ const ManagerReports = ({ user, onLogout }) => {
                       <Tooltip />
                       <Legend />
                       <Line yAxisId="left" type="monotone" dataKey="orders" stroke="#8b5cf6" strokeWidth={2} name="Orders" />
-                      <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2" name="Revenue (₹)" />
+                      <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} name="Revenue (₹)" />
                     </LineChart>
                   </ResponsiveContainer>
                 </Card>
