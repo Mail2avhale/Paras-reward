@@ -1592,3 +1592,36 @@ frontend:
 agent_communication:
   - agent: "main"
     message: "FREE USER SYSTEM FRONTEND UPDATES COMPLETE: Successfully implemented all 4 frontend UI updates for the Free User Plan. ✅ Mining.js: Shows PRC expiry dates, countdown, valid/expired breakdown, dynamic alerts. ✅ TreasureHunt.js: Dynamic cashback rates (10%/20% free, 50%/100% VIP), all displays updated. ✅ WalletNew.js: Membership-based withdrawal limits (₹1000 free, ₹10 VIP), clear messaging, alerts. ✅ KYCVerification.js: Flexible document selection (Aadhaar OR PAN, not both), 2-step wizard, visual selection UI. All changes align with backend Free User Plan implementation from Phase 1. Frontend service restarted successfully. Ready for comprehensive testing to verify: 1) PRC expiry displays correctly, 2) Cashback rates reflect membership, 3) Withdrawal limits enforced, 4) KYC document selection works. Backend APIs already tested in Phase 1."
+
+backend:
+  - task: "Free User Treasure Hunt Start Issue"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported: 'When free user start hunt, no active start hunt load. VIP membership working properly' - Free users unable to start treasure hunts"
+      - working: "NA"
+        agent: "main"
+        comment: "FIXED: Root cause identified - treasure hunt start endpoint was checking total prc_balance instead of valid (non-expired) PRC for free users. Free users' PRC expires after 2 days, so they could have balance showing but it was expired PRC. Updated /api/treasure-hunts/start endpoint to: 1) Detect membership type (free vs VIP), 2) For free users: call get_valid_prc_balance() to check only non-expired PRC, 3) For VIP users: use total balance (no expiry), 4) Provide detailed error message explaining valid vs expired PRC with solutions. Also enhanced frontend error handling in TreasureHunt.js to show longer duration (8 seconds) for PRC balance errors and display full error messages. Now free users get clear feedback: 'Insufficient valid PRC. You need X PRC but only have Y valid PRC. Your expired PRC cannot be used. Mine more PRC or upgrade to VIP for lifetime validity!'"
+
+frontend:
+  - task: "Free User Treasure Hunt Error Messages"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/TreasureHunt.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "ENHANCED: Updated treasure hunt error handling to provide better user experience. Changes: 1) Detect PRC balance errors (contains 'Insufficient' or 'valid PRC'), 2) Show PRC errors for 8 seconds instead of 5 (more time to read explanation), 3) Display full backend error message with details, 4) Added success message enhancement with emoji and 'Good luck!' text. Users now get clear, actionable feedback when treasure hunt fails to start."
+
+agent_communication:
+  - agent: "main"
+    message: "FREE USER TREASURE HUNT FIX COMPLETE: Successfully resolved issue where free users couldn't start treasure hunts. ✅ ROOT CAUSE: Backend was checking total prc_balance which included expired PRC. Free users' PRC expires after 2 days. ✅ SOLUTION: Updated treasure hunt start endpoint to check valid (non-expired) PRC for free users using get_valid_prc_balance() helper function. VIP users unaffected. ✅ ERROR MESSAGES: Enhanced frontend to show detailed, helpful error messages for 8 seconds explaining valid vs expired PRC and suggesting solutions (mine more or upgrade to VIP). ✅ DOCUMENTATION: Created comprehensive fix guide at /app/FREE_USER_TREASURE_HUNT_FIX.md with testing checklist and deployment notes. Backend and frontend both restarted. Ready for testing with free user accounts."
