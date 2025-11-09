@@ -3859,10 +3859,8 @@ async def get_all_users(
         query["membership_type"] = membership_type
     
     # Filter by KYC status
-    if kyc_status == "verified":
-        query["kyc_verified"] = True
-    elif kyc_status == "pending":
-        query["kyc_verified"] = False
+    if kyc_status:
+        query["kyc_status"] = kyc_status
     
     # Search by name, email, or mobile
     if search:
