@@ -218,14 +218,16 @@ const TreasureHunt = ({ user }) => {
             {dailyTopHunter.is_current_user && (
               <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-lg p-3">
                 <p className="text-white text-center font-semibold">
-                  🎉 Congratulations! You're today's top hunter! You'll receive 100% total cashback (50% base + 50% bonus)
+                  🎉 Congratulations! You're today's top hunter! You'll receive {topHunterRate}% total cashback
+                  {!isFreeUser && <span> ({baseCashbackRate}% base + 50% bonus)</span>}
                 </p>
               </div>
             )}
             {!dailyTopHunter.is_current_user && (
               <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-lg p-3">
                 <p className="text-white text-center">
-                  Find more treasures to become today's top hunter and earn 100% cashback!
+                  Find more treasures to become today's top hunter and earn {topHunterRate}% cashback!
+                  {isFreeUser && <span className="text-yellow-300"> (Max 20% for free users)</span>}
                 </p>
               </div>
             )}
