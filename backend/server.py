@@ -3141,7 +3141,6 @@ async def request_cashback_withdrawal(request: Request):
             detail=eligibility["reason"]
         )
     
-    user = await db.users.find_one({"uid": user_id})
     cashback_balance = user.get("cashback_balance", 0)
     
     # NEW LOGIC: Fee deducted from withdrawal amount
