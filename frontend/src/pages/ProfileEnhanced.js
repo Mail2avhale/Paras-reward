@@ -578,26 +578,84 @@ const ProfileEnhanced = ({ user, onLogout }) => {
     }
   };
 
+  const handleDocTypeSelect = (type) => {
+    setSelectedDocType(type);
+    setKycData({
+      ...kycData,
+      document_type: type,
+      // Clear opposite document type when switching
+      aadhaar_front_base64: type === 'aadhaar' ? kycData.aadhaar_front_base64 : '',
+      aadhaar_back_base64: type === 'aadhaar' ? kycData.aadhaar_back_base64 : '',
+      pan_front_base64: type === 'pan' ? kycData.pan_front_base64 : ''
+    });
+  };
+
   const submitKYC = async (e) => {
     e.preventDefault();
-    if (!kycData.aadhaar_front_base64 || !kycData.aadhaar_back_base64 || !kycData.pan_front_base64) {
-      toast.error('Please upload all required documents');
+    
+    // Validation: Check if document type is selected
+    if (!selectedDocType) {
+      notifications.error(
+        'Document Selection Required',
+        'Please select either Aadhaar or PAN card to continue with KYC verification.'
+      );
       return;
     }
 
+    // Validation: Check if selected documents are uploaded
+    if (selectedDocType === 'aadhaar') {
+      if (!kycData.aadhaar_front_base64 || !kycData.aadhaar_back_base64) {
+        notifications.error(
+          'Missing Documents',
+          'Please upload both front and back sides of your Aadhaar card.'
+        );
+        return;
+      }
+    } else if (selectedDocType === 'pan') {
+      if (!kycData.pan_front_base64) {
+        notifications.error(
+          'Missing Document',
+          'Please upload your PAN card to continue.'
+        );
+        return;
+      }
+    }
+
     setLoading(true);
+    const loadingId = notifications.loading(
+      'Submitting KYC Documents',
+      'Please wait while we upload your documents securely...'
+    );
+    
     try {
-      await axios.post(`${API}/kyc/submit/${user.uid}`, kycData);
-      toast.success('KYC submitted for verification!');
+      await axios.post(`${API}/kyc/submit/${user.uid}`, {
+        ...kycData,
+        document_type: selectedDocType
+      });
+      
+      toast.dismiss(loadingId);
+      
+      notifications.celebrate(
+        '🎉 KYC Submitted Successfully!',
+        'Your documents have been submitted for verification. Our team will review them within 24-48 hours.'
+      );
+      
       setKycStatus('pending');
       setKycData({
+        document_type: '',
         aadhaar_front_base64: '',
         aadhaar_back_base64: '',
         pan_front_base64: ''
       });
+      setSelectedDocType('');
     } catch (error) {
       console.error('Error submitting KYC:', error);
-      toast.error(error.response?.data?.detail || 'Failed to submit KYC');
+      toast.dismiss(loadingId);
+      
+      notifications.error(
+        'Submission Failed',
+        error.response?.data?.detail || 'Failed to submit KYC documents. Please check your internet connection and try again.'
+      );
     } finally {
       setLoading(false);
     }
