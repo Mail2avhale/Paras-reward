@@ -55,6 +55,11 @@ const ManagerDashboardNew = lazy(() => import("@/pages/manager/ManagerDashboardN
 const ManagerUsers = lazy(() => import("@/pages/manager/ManagerUsers"));
 const ManagerOrders = lazy(() => import("@/pages/manager/ManagerOrders"));
 const ManagerReports = lazy(() => import("@/pages/manager/ManagerReports"));
+const ManagerProducts = lazy(() => import("@/pages/manager/ManagerProducts"));
+const ManagerFinance = lazy(() => import("@/pages/manager/ManagerFinance"));
+const ManagerCommunication = lazy(() => import("@/pages/manager/ManagerCommunication"));
+const ManagerSupport = lazy(() => import("@/pages/manager/ManagerSupport"));
+const ManagerStockists = lazy(() => import("@/pages/manager/ManagerStockists"));
 const MasterStockistDashboard = lazy(() => import("@/pages/MasterStockistDashboard"));
 const SubStockistDashboard = lazy(() => import("@/pages/SubStockistDashboard"));
 const OutletPanel = lazy(() => import("@/pages/OutletPanel"));
