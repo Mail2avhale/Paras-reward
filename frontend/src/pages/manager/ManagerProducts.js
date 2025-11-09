@@ -287,9 +287,15 @@ const ManagerProducts = ({ user, onLogout }) => {
                 <label className="text-sm font-medium mb-2 block">Stock</label>
                 <Input type="number" value={formData.stock} onChange={(e) => setFormData({...formData, stock: e.target.value})} />
               </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block">Image URL</label>
-                <Input value={formData.image_url} onChange={(e) => setFormData({...formData, image_url: e.target.value})} />
+              <div className="col-span-2">
+                <ImageCropUpload
+                  value={formData.image_url}
+                  onChange={(base64Image) => setFormData({...formData, image_url: base64Image})}
+                  label="Product Image"
+                  aspectRatio={1}
+                  maxSizeMB={2}
+                  required={false}
+                />
               </div>
               <div className="col-span-2">
                 <label className="text-sm font-medium mb-2 block">Description</label>
@@ -339,9 +345,15 @@ const ManagerProducts = ({ user, onLogout }) => {
                 <label className="text-sm font-medium mb-2 block">Stock</label>
                 <Input type="number" value={formData.stock} onChange={(e) => setFormData({...formData, stock: e.target.value})} />
               </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block">Image URL</label>
-                <Input value={formData.image_url} onChange={(e) => setFormData({...formData, image_url: e.target.value})} />
+              <div className="col-span-2">
+                <ImageCropUpload
+                  value={formData.image_url}
+                  onChange={(base64Image) => setFormData({...formData, image_url: base64Image})}
+                  label="Product Image"
+                  aspectRatio={1}
+                  maxSizeMB={2}
+                  required={false}
+                />
               </div>
               <div className="col-span-2">
                 <label className="text-sm font-medium mb-2 block">Description</label>
