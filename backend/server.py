@@ -10552,10 +10552,23 @@ async def start_treasure_hunt(request: StartHuntRequest, uid: str):
         if not hunt:
             raise HTTPException(status_code=404, detail="Treasure hunt not found")
         
-        # Check if user has enough PRC
-        user_prc = user.get("prc_balance", 0)
-        if user_prc < hunt["prc_cost"]:
-            raise HTTPException(status_code=400, detail="Insufficient PRC balance")
+        # Check if user has enough VALID PRC (non-expired for free users)
+        is_free_user = user.get("membership_type", "free") != "vip"
+        
+        if is_free_user:
+            # Free users: check valid (non-expired) PRC
+            valid_prc = await get_valid_prc_balance(uid)
+            if valid_prc < hunt["prc_cost"]:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Insufficient valid PRC. You need {hunt['prc_cost']} PRC but only have {round(valid_prc, 2)} valid PRC. Your expired PRC cannot be used. Mine more PRC or upgrade to VIP for lifetime validity!"
+                )
+            user_prc = user.get("prc_balance", 0)
+        else:
+            # VIP users: all PRC is valid
+            user_prc = user.get("prc_balance", 0)
+            if user_prc < hunt["prc_cost"]:
+                raise HTTPException(status_code=400, detail="Insufficient PRC balance")
         
         # Check if user already has an active hunt for this
         existing = await db.treasure_progress.find_one({
