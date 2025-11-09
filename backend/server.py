@@ -1713,10 +1713,9 @@ async def claim_mining(uid: str):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Check if user is VIP - only VIP users can earn PRC
+    # Both free and VIP users can mine now
     membership_type = user.get("membership_type", "free")
-    if membership_type != "vip":
-        raise HTTPException(status_code=403, detail="VIP membership required to earn PRC. Free users cannot accumulate PRC.")
+    is_vip = membership_type == "vip"
     
     # Check if mining session exists (backward compatible - treat None as True for old sessions)
     mining_active = user.get("mining_active")
