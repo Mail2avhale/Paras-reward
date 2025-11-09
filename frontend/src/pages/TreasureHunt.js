@@ -205,9 +205,9 @@ const TreasureHunt = ({ user }) => {
               </div>
               <div className="text-right">
                 <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
-                  <p className="text-yellow-100 text-sm">100% Cashback Reward</p>
+                  <p className="text-yellow-100 text-sm">{topHunterRate}% Cashback Reward</p>
                   <p className="text-3xl font-bold text-white">
-                    ₹{((dailyTopHunter.top_hunter.prc_spent / 10) * 1.0).toFixed(2)}
+                    ₹{((dailyTopHunter.top_hunter.prc_spent / 10) * (topHunterRate / 100)).toFixed(2)}
                   </p>
                   <p className="text-xs text-yellow-200 mt-1">
                     {dailyTopHunter.bonus_awarded ? '✓ Awarded' : 'Pending'}
