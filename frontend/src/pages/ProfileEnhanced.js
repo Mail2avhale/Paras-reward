@@ -454,7 +454,11 @@ const ProfileEnhanced = ({ user, onLogout }) => {
     // Check if there are any validation errors
     const hasErrors = Object.values(errors).some(error => error !== '');
     if (hasErrors) {
-      toast.error('Please fix all validation errors before submitting');
+      notifications.warning(
+        'Validation Errors',
+        'Please fix all validation errors before submitting your profile.'
+      );
+      setLoading(false);
       return;
     }
 
@@ -463,23 +467,41 @@ const ProfileEnhanced = ({ user, onLogout }) => {
     const hasBankDetails = profileData.bank_account_number && profileData.bank_ifsc && profileData.bank_name;
     
     if (!hasUPIDetails && !hasBankDetails) {
-      toast.error('Please provide either UPI details OR Bank details for withdrawals');
+      notifications.warning(
+        'Payment Method Required',
+        'Please provide either UPI details (PhonePe/GPay/Paytm/UPI ID) OR Bank details for future withdrawals.'
+      );
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
+    const loadingId = notifications.loading('Updating Profile', 'Please wait while we save your profile information...');
 
     try {
       await axios.put(`${API}/user/${user.uid}/complete-profile`, profileData);
-      toast.success('Profile updated successfully!');
+      
+      toast.dismiss(loadingId);
+      
+      notifications.success(
+        '✅ Profile Updated Successfully!',
+        'Your profile information has been saved. Changes will take effect immediately.'
+      );
       
       // Update localStorage
       const updatedUser = { ...user, ...profileData, profile_complete: true };
       localStorage.setItem('paras_user', JSON.stringify(updatedUser));
-      window.location.reload();
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast.error(error.response?.data?.detail || 'Failed to update profile');
+      toast.dismiss(loadingId);
+      
+      notifications.error(
+        'Update Failed',
+        error.response?.data?.detail || 'Failed to update profile. Please check your connection and try again.'
+      );
     } finally {
       setLoading(false);
     }
