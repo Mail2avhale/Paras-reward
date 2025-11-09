@@ -57,17 +57,31 @@ const VIPMembership = ({ user, onLogout }) => {
     try {
       // Validate fields
       if (!formData.utr_number) {
-        toast.error('UTR number is required');
+        notifications.warning(
+          'UTR Number Required',
+          'Please enter the UTR/Transaction Reference number from your payment confirmation.'
+        );
         setLoading(false);
         return;
       }
+
+      const loadingId = notifications.loading(
+        'Submitting Payment',
+        'Please wait while we verify your VIP membership payment...'
+      );
 
       const response = await axios.post(`${API}/membership/submit-payment`, {
         user_id: user.uid,
         ...formData
       });
 
-      toast.success(response.data.message);
+      toast.dismiss(loadingId);
+
+      notifications.celebrate(
+        '🎉 VIP Payment Submitted!',
+        'Your payment has been submitted successfully. Our team will verify and activate your VIP membership within 24 hours. You will receive a notification once approved.'
+      );
+      
       fetchPaymentStatus();
       
       // Reset form
@@ -80,7 +94,11 @@ const VIPMembership = ({ user, onLogout }) => {
       });
     } catch (error) {
       console.error('Error submitting payment:', error);
-      toast.error(error.response?.data?.detail || 'Failed to submit payment');
+      
+      notifications.error(
+        'Payment Submission Failed',
+        error.response?.data?.detail || 'Failed to submit payment. Please check your details and try again.'
+      );
     } finally {
       setLoading(false);
     }
