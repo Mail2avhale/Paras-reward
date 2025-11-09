@@ -285,7 +285,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
 
         {/* Management Sections */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
-          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/advanced-user-management')}>
+          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/admin-old')}>
             <div className="flex items-center justify-between mb-4">
               <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
                 <Users className="h-6 w-6 text-purple-600" />
@@ -300,7 +300,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
             </div>
           </Card>
 
-          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/advanced-order-management')}>
+          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/admin-old')}>
             <div className="flex items-center justify-between mb-4">
               <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
                 <ShoppingCart className="h-6 w-6 text-blue-600" />
@@ -315,7 +315,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
             </div>
           </Card>
 
-          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/stockist-management-admin')}>
+          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/admin-old')}>
             <div className="flex items-center justify-between mb-4">
               <div className="h-12 w-12 rounded-lg bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
                 <Store className="h-6 w-6 text-indigo-600" />
@@ -330,7 +330,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
             </div>
           </Card>
 
-          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/financial-management-admin')}>
+          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/admin-old')}>
             <div className="flex items-center justify-between mb-4">
               <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition-colors">
                 <DollarSign className="h-6 w-6 text-green-600" />
