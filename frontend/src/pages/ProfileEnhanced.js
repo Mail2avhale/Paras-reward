@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { getStates, getDistricts, getTahsils, getPinCodes } from '@/data/locationData';
 import CameraCapture from '@/components/CameraCapture';
 import ImageUpload from '@/components/ImageUpload';
+import notifications from '@/utils/notifications';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
