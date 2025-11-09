@@ -331,7 +331,7 @@ const ManagerUsers = ({ user, onLogout }) => {
                 </div>
 
                 {/* KYC Documents */}
-                {selectedUser.kyc_status === 'pending' && (
+                {(selectedUser.aadhaar_front_base64 || selectedUser.aadhaar_back_base64 || selectedUser.pan_front_base64) && (
                   <div className="border-t pt-6">
                     <h3 className="text-lg font-semibold mb-4">KYC Documents</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -341,8 +341,10 @@ const ManagerUsers = ({ user, onLogout }) => {
                           <img 
                             src={selectedUser.aadhaar_front_base64} 
                             alt="Aadhaar Front" 
-                            className="w-full border rounded-lg"
+                            className="w-full border rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => window.open(selectedUser.aadhaar_front_base64, '_blank')}
                           />
+                          <p className="text-xs text-gray-500 mt-1">Click to view full size</p>
                         </div>
                       )}
                       {selectedUser.aadhaar_back_base64 && (
@@ -351,8 +353,10 @@ const ManagerUsers = ({ user, onLogout }) => {
                           <img 
                             src={selectedUser.aadhaar_back_base64} 
                             alt="Aadhaar Back" 
-                            className="w-full border rounded-lg"
+                            className="w-full border rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => window.open(selectedUser.aadhaar_back_base64, '_blank')}
                           />
+                          <p className="text-xs text-gray-500 mt-1">Click to view full size</p>
                         </div>
                       )}
                       {selectedUser.pan_front_base64 && (
@@ -361,23 +365,26 @@ const ManagerUsers = ({ user, onLogout }) => {
                           <img 
                             src={selectedUser.pan_front_base64} 
                             alt="PAN Card" 
-                            className="w-full border rounded-lg"
+                            className="w-full border rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => window.open(selectedUser.pan_front_base64, '_blank')}
                           />
+                          <p className="text-xs text-gray-500 mt-1">Click to view full size</p>
                         </div>
                       )}
                     </div>
 
-                    <div className="flex gap-4 mt-6">
-                      <Button
-                        onClick={() => approveKYC(selectedUser.uid)}
-                        className="flex-1 bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Approve KYC
-                      </Button>
-                      <Button
-                        onClick={() => setShowRejectModal(true)}
-                        variant="outline"
+                    {selectedUser.kyc_status === 'pending' && (
+                      <div className="flex gap-4 mt-6">
+                        <Button
+                          onClick={() => approveKYC(selectedUser.uid)}
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                        >
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Approve KYC
+                        </Button>
+                        <Button
+                          onClick={() => setShowRejectModal(true)}
+                          variant="outline"
                         className="flex-1 border-red-600 text-red-600 hover:bg-red-50"
                       >
                         <XCircle className="mr-2 h-4 w-4" />
