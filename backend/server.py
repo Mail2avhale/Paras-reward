@@ -1742,9 +1742,12 @@ async def claim_mining(uid: str):
     rate_per_minute, _, _ = await calculate_mining_rate(uid)
     mined_amount = elapsed_minutes * rate_per_minute
     
-    # Update user balance (only for VIP users)
+    # Update user balance (free and VIP users)
     new_balance = user.get("prc_balance", 0) + mined_amount
     new_total_mined = user.get("total_mined", 0) + mined_amount
+    
+    # Calculate expiry date (2 days for free users, never for VIP)
+    expiry_date = None if is_vip else (now + timedelta(days=2)).isoformat()
     
     await db.users.update_one(
         {"uid": uid},
@@ -1756,6 +1759,25 @@ async def claim_mining(uid: str):
         }}
     )
     
+    # Create transaction record with expiry tracking
+    transaction_id = f"txn_{uuid.uuid4()}"
+    await db.transactions.insert_one({
+        "transaction_id": transaction_id,
+        "user_id": uid,
+        "transaction_type": "mining",
+        "prc_amount": mined_amount,
+        "inr_amount": 0,
+        "description": "Mining rewards claimed",
+        "timestamp": now.isoformat(),
+        "expires_at": expiry_date,  # NEW: Track expiry
+        "expired": False,
+        "balance_after": new_balance,
+        "metadata": {
+            "membership_type": membership_type,
+            "validity": "2 days" if not is_vip else "lifetime"
+        }
+    })
+    
     # Create wallet transaction record
     await db.wallet_transactions.insert_one({
         "transaction_id": str(uuid.uuid4()),
@@ -1765,14 +1787,16 @@ async def claim_mining(uid: str):
         "amount": mined_amount,
         "description": "Mining rewards claimed",
         "balance_after": new_balance,
-        "created_at": now.isoformat()
+        "created_at": now.isoformat(),
+        "expires_at": expiry_date
     })
     
     # Create notification for mining claim
+    validity_msg = " (Valid for 2 days - Upgrade to VIP for lifetime validity)" if not is_vip else " (Lifetime validity)"
     await create_notification(
         user_id=uid,
         title="Mining Rewards Claimed! ⛏️",
-        message=f"You've claimed {round(mined_amount, 2)} PRC from mining. New balance: {round(new_balance, 2)} PRC",
+        message=f"You've claimed {round(mined_amount, 2)} PRC from mining{validity_msg}. New balance: {round(new_balance, 2)} PRC",
         notification_type="mining",
         related_id=None,
         icon="⛏️"
@@ -1782,8 +1806,10 @@ async def claim_mining(uid: str):
         "message": "Coins claimed successfully",
         "amount": round(mined_amount, 2),
         "new_balance": round(new_balance, 2),
+        "valid_prc": round(await get_valid_prc_balance(uid), 2),
         "membership_type": membership_type,
-        "note": "VIP: unlimited PRC validity"
+        "expires_at": expiry_date,
+        "note": "Lifetime validity" if is_vip else "Valid for 2 days - Upgrade to VIP for lifetime validity"
     }
 
 # ========== TAP GAME ROUTES ==========
