@@ -164,6 +164,10 @@ function App() {
     setUser(null);
     localStorage.removeItem("paras_user");
     toast.success("Logged out successfully");
+    // Redirect to home page after logout
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 500);
   };
 
   if (loading) {
