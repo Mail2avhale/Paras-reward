@@ -123,6 +123,11 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/manager/users" element={user && user.role === "manager" ? <ManagerUsers user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/manager/orders" element={user && user.role === "manager" ? <ManagerOrders user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/manager/reports" element={user && user.role === "manager" ? <ManagerReports user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/manager/products" element={user && user.role === "manager" ? <ManagerProducts user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/manager/finance" element={user && user.role === "manager" ? <ManagerFinance user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/manager/communication" element={user && user.role === "manager" ? <ManagerCommunication user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/manager/support" element={user && user.role === "manager" ? <ManagerSupport user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/manager/stockists" element={user && user.role === "manager" ? <ManagerStockists user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/master-stockist" element={user && user.role === "master_stockist" ? <MasterStockistDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/sub-stockist" element={user && user.role === "sub_stockist" ? <SubStockistDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/outlet" element={user && user.role === "outlet" ? <OutletPanel user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
