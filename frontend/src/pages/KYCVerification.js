@@ -251,27 +251,23 @@ const KYCVerification = ({ user, onLogout }) => {
                 {selectedDocType === 'aadhaar' && (
                   <>
                     {/* Aadhaar Front */}
-                    <ImageUpload
+                    <ImageCropUpload
                       value={kycData.aadhaar_front_base64}
                       onChange={(base64Image) => setKycData({...kycData, aadhaar_front_base64: base64Image})}
-                      label="Aadhaar Card (Front) *"
-                      aspectRatio="video"
-                      maxSize={5}
+                      label="Aadhaar Card (Front)"
+                      aspectRatio={16/10}
+                      maxSizeMB={2}
                       required={true}
-                      enableCamera={true}
-                      cameraFacingMode="environment"
                     />
 
                     {/* Aadhaar Back */}
-                    <ImageUpload
+                    <ImageCropUpload
                       value={kycData.aadhaar_back_base64}
                       onChange={(base64Image) => setKycData({...kycData, aadhaar_back_base64: base64Image})}
-                      label="Aadhaar Card (Back) *"
-                      aspectRatio="video"
-                      maxSize={5}
+                      label="Aadhaar Card (Back)"
+                      aspectRatio={16/10}
+                      maxSizeMB={2}
                       required={true}
-                      enableCamera={true}
-                      cameraFacingMode="environment"
                     />
                   </>
                 )}
@@ -279,15 +275,13 @@ const KYCVerification = ({ user, onLogout }) => {
                 {selectedDocType === 'pan' && (
                   <>
                     {/* PAN Card */}
-                    <ImageUpload
+                    <ImageCropUpload
                       value={kycData.pan_front_base64}
                       onChange={(base64Image) => setKycData({...kycData, pan_front_base64: base64Image})}
-                      label="PAN Card *"
-                      aspectRatio="video"
-                      maxSize={5}
+                      label="PAN Card"
+                      aspectRatio={16/10}
+                      maxSizeMB={2}
                       required={true}
-                      enableCamera={true}
-                      cameraFacingMode="environment"
                     />
                   </>
                 )}
