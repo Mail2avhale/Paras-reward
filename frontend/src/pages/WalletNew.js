@@ -100,8 +100,8 @@ const WalletNew = ({ user, onLogout }) => {
   };
 
   const handleCashbackWithdraw = async () => {
-    if (!cashbackAmount || parseFloat(cashbackAmount) < 10) {
-      toast.error('Minimum withdrawal amount is ₹10');
+    if (!cashbackAmount || parseFloat(cashbackAmount) < minCashbackWithdrawal) {
+      toast.error(`Minimum withdrawal amount is ₹${minCashbackWithdrawal}${isFreeUser ? ' (Free User) - Upgrade to VIP for ₹10 minimum' : ''}`);
       return;
     }
 
