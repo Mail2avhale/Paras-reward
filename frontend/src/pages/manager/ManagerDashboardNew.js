@@ -133,6 +133,34 @@ const ManagerDashboardNew = ({ user, onLogout }) => {
                 View Reports
               </Button>
             </Link>
+            
+            <Link to="/manager/products">
+              <Button className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700">
+                <Package className="mr-2 h-4 w-4" />
+                Manage Products
+              </Button>
+            </Link>
+            
+            <Link to="/manager/finance">
+              <Button className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700">
+                <DollarSign className="mr-2 h-4 w-4" />
+                Financial Dashboard
+              </Button>
+            </Link>
+            
+            <Link to="/manager/communication">
+              <Button className="w-full bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700">
+                <AlertCircle className="mr-2 h-4 w-4" />
+                Send Announcements
+              </Button>
+            </Link>
+            
+            <Link to="/manager/support">
+              <Button className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700">
+                <AlertCircle className="mr-2 h-4 w-4" />
+                Support Tickets
+              </Button>
+            </Link>
           </div>
         </Card>
 
