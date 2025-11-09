@@ -1004,6 +1004,21 @@ frontend:
         comment: "FIXED: Complete camera integration fixes. Changes: 1) Updated CameraCapture to accept defaultFacingMode prop - defaults to 'user' (front camera) for selfies instead of 'environment' (rear). 2) Updated ImageUpload to accept cameraFacingMode prop - allows specifying front/rear camera per use case. 3) ProfileEnhanced now passes defaultFacingMode='user' for profile picture capture. 4) Enhanced error handling in startCamera() with multiple fallback attempts: tries specific facing mode first, falls back to any available camera, provides detailed error messages based on error type (NotAllowedError=permission denied, NotFoundError=no camera, NotReadableError=camera in use, etc.). 5) Improved error UI with AlertCircle icon, clear error title, detailed message, 'Try Again' button, 'Choose File Instead' button. 6) Auto-switches to file upload mode on camera error. 7) Added video.onloadedmetadata handler to wait for video ready before playing. 8) Better browser compatibility checks. Front camera now works for selfies, rear camera for documents, graceful fallback to file upload on any error."
 
 frontend:
+  - task: "Admin Dashboard Navigation - Missing Routes Fix"
+    implemented: false
+    working: false
+    file: "/app/frontend/src/App.js, /app/frontend/src/pages/AdminDashboardModern.js"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported: Admin quick menu not working. Modern admin dashboard quick action tiles and management cards not navigating to different admin pages."
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL NAVIGATION ISSUE IDENTIFIED - MISSING ROUTES: ❌ ROOT CAUSE: AdminDashboardModern component attempts to navigate to routes that DO NOT EXIST in App.js. ❌ MISSING ROUTES: /advanced-user-management, /advanced-order-management, /admin-analytics, /financial-management-admin, /stockist-management-admin, /admin-activity-logs - NONE defined in App.js routing. ❌ FAILING NAVIGATION: All Quick Action tiles (Manage Users, Manage Orders, Analytics, Financials, Stockists, Activity Logs) and Management Section cards (User Management, Orders, Stockists, Financials) fail to navigate. ❌ ONLY WORKING: /admin-old (Settings & More) is the only route that exists and works. ❌ TECHNICAL ANALYSIS: App.js defines /admin, /admin-old, /admin/analytics, /admin/video-ads but AdminDashboardModern uses different route patterns. SOLUTION NEEDED: Either create missing route components and add to App.js, OR update AdminDashboardModern navigation URLs to match existing routes."
+
   - task: "KYC Document Camera Upload - Aadhaar & PAN Cards"
     implemented: true
     working: true
