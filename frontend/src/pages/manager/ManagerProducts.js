@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import StatusBadge from '@/components/manager/StatusBadge';
+import ImageCropUpload from '@/components/ImageCropUpload';
 import notifications from '@/utils/notifications';
 import { Package, Search, Plus, Edit, Eye, BarChart } from 'lucide-react';
 import {
