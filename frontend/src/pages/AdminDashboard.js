@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import ImageUpload from '@/components/ImageUpload';
+import ImageCropUpload from '@/components/ImageCropUpload';
 import StockistManagementAdmin from '@/pages/StockistManagementAdmin';
 import FinancialManagementAdmin from '@/pages/FinancialManagementAdmin';
 import AdvancedUserManagement from '@/pages/AdvancedUserManagement';
