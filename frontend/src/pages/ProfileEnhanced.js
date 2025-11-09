@@ -952,56 +952,140 @@ const ProfileEnhanced = ({ user, onLogout }) => {
               {/* Document Upload Form */}
               {kycStatus !== 'verified' && (
                 <form onSubmit={submitKYC} className="space-y-6">
+                  {/* Information Banner */}
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                    <p className="text-sm text-blue-900">
-                      <strong>Required:</strong> Upload clear photos of your Aadhaar card (front & back) and PAN card.
-                    </p>
+                    <div className="flex items-start gap-3">
+                      <FileText className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-blue-900">
+                        <p className="font-semibold mb-1">Flexible Document Submission</p>
+                        <p>You can submit <strong>either Aadhaar card OR PAN card</strong> for KYC verification. Choose whichever document is convenient for you.</p>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Aadhaar Front */}
-                  <ImageUpload
-                    value={kycData.aadhaar_front_base64}
-                    onChange={(base64Image) => setKycData({...kycData, aadhaar_front_base64: base64Image})}
-                    label="Aadhaar Card - Front *"
-                    aspectRatio="video"
-                    maxSize={5}
-                    required={true}
-                    enableCamera={true}
-                    cameraFacingMode="environment"
-                  />
+                  {/* Document Type Selection */}
+                  <div className="mb-6">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Step 1: Select Document Type</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <button
+                        type="button"
+                        onClick={() => handleDocTypeSelect('aadhaar')}
+                        className={`p-6 border-2 rounded-xl transition-all ${
+                          selectedDocType === 'aadhaar'
+                            ? 'border-purple-600 bg-purple-50 shadow-lg'
+                            : 'border-gray-300 hover:border-purple-400 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="text-center">
+                          <FileText className={`h-12 w-12 mx-auto mb-3 ${
+                            selectedDocType === 'aadhaar' ? 'text-purple-600' : 'text-gray-400'
+                          }`} />
+                          <h5 className="font-bold text-lg mb-1">Aadhaar Card</h5>
+                          <p className="text-sm text-gray-600">Upload front and back</p>
+                          {selectedDocType === 'aadhaar' && (
+                            <div className="mt-2">
+                              <span className="inline-block px-3 py-1 bg-purple-600 text-white text-xs font-semibold rounded-full">
+                                ✓ Selected
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </button>
 
-                  {/* Aadhaar Back */}
-                  <ImageUpload
-                    value={kycData.aadhaar_back_base64}
-                    onChange={(base64Image) => setKycData({...kycData, aadhaar_back_base64: base64Image})}
-                    label="Aadhaar Card - Back *"
-                    aspectRatio="video"
-                    maxSize={5}
-                    required={true}
-                    enableCamera={true}
-                    cameraFacingMode="environment"
-                  />
+                      <button
+                        type="button"
+                        onClick={() => handleDocTypeSelect('pan')}
+                        className={`p-6 border-2 rounded-xl transition-all ${
+                          selectedDocType === 'pan'
+                            ? 'border-purple-600 bg-purple-50 shadow-lg'
+                            : 'border-gray-300 hover:border-purple-400 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="text-center">
+                          <FileText className={`h-12 w-12 mx-auto mb-3 ${
+                            selectedDocType === 'pan' ? 'text-purple-600' : 'text-gray-400'
+                          }`} />
+                          <h5 className="font-bold text-lg mb-1">PAN Card</h5>
+                          <p className="text-sm text-gray-600">Upload front only</p>
+                          {selectedDocType === 'pan' && (
+                            <div className="mt-2">
+                              <span className="inline-block px-3 py-1 bg-purple-600 text-white text-xs font-semibold rounded-full">
+                                ✓ Selected
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    </div>
+                  </div>
 
-                  {/* PAN Card */}
-                  <ImageUpload
-                    value={kycData.pan_front_base64}
-                    onChange={(base64Image) => setKycData({...kycData, pan_front_base64: base64Image})}
-                    label="PAN Card - Front *"
-                    aspectRatio="video"
-                    maxSize={5}
-                    required={true}
-                    enableCamera={true}
-                    cameraFacingMode="environment"
-                  />
+                  {/* Document Upload Section */}
+                  {selectedDocType && (
+                    <div className="space-y-6">
+                      <h4 className="text-lg font-semibold text-gray-800">Step 2: Upload Document(s)</h4>
+                      
+                      {selectedDocType === 'aadhaar' && (
+                        <>
+                          {/* Aadhaar Front */}
+                          <ImageUpload
+                            value={kycData.aadhaar_front_base64}
+                            onChange={(base64Image) => setKycData({...kycData, aadhaar_front_base64: base64Image})}
+                            label="Aadhaar Card (Front) *"
+                            aspectRatio="video"
+                            maxSize={5}
+                            required={true}
+                            enableCamera={true}
+                            cameraFacingMode="environment"
+                          />
 
-                  <Button 
-                    type="submit" 
-                    disabled={loading || kycStatus === 'pending'}
-                    className="w-full md:w-auto bg-purple-600 hover:bg-purple-700"
-                  >
-                    <FileText className="mr-2 h-4 w-4" />
-                    {loading ? 'Submitting...' : 'Submit KYC Documents'}
-                  </Button>
+                          {/* Aadhaar Back */}
+                          <ImageUpload
+                            value={kycData.aadhaar_back_base64}
+                            onChange={(base64Image) => setKycData({...kycData, aadhaar_back_base64: base64Image})}
+                            label="Aadhaar Card (Back) *"
+                            aspectRatio="video"
+                            maxSize={5}
+                            required={true}
+                            enableCamera={true}
+                            cameraFacingMode="environment"
+                          />
+                        </>
+                      )}
+
+                      {selectedDocType === 'pan' && (
+                        <>
+                          {/* PAN Card */}
+                          <ImageUpload
+                            value={kycData.pan_front_base64}
+                            onChange={(base64Image) => setKycData({...kycData, pan_front_base64: base64Image})}
+                            label="PAN Card *"
+                            aspectRatio="video"
+                            maxSize={5}
+                            required={true}
+                            enableCamera={true}
+                            cameraFacingMode="environment"
+                          />
+                        </>
+                      )}
+
+                      <Button 
+                        type="submit" 
+                        disabled={loading || kycStatus === 'pending'}
+                        className="w-full md:w-auto bg-purple-600 hover:bg-purple-700"
+                      >
+                        <FileText className="mr-2 h-4 w-4" />
+                        {loading ? 'Submitting...' : 'Submit KYC Documents'}
+                      </Button>
+                    </div>
+                  )}
+
+                  {!selectedDocType && (
+                    <div className="text-center py-12 text-gray-500">
+                      <FileText className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                      <p className="text-lg font-medium">Please select a document type to begin</p>
+                      <p className="text-sm mt-2">Choose Aadhaar or PAN card above</p>
+                    </div>
+                  )}
                 </form>
               )}
             </Card>
