@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://paras-rewards.preview.emergentagent.com/setup
+   https://prc-platform.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
