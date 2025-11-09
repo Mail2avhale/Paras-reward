@@ -80,27 +80,40 @@ const Mining = ({ user, onLogout }) => {
 
   const claimCoins = async () => {
     setLoading(true);
+    const loadingId = notifications.loading('Claiming PRC Rewards', 'Processing your mining rewards...');
+    
     try {
       const response = await axios.post(`${API}/mining/claim/${user.uid}`);
-      toast.success(`Claimed ${response.data.amount.toFixed(2)} PRC!`);
+      
+      toast.dismiss(loadingId);
+      
+      const claimedAmount = response.data.amount.toFixed(2);
       
       if (response.data.expires_at) {
         const expiryDate = new Date(response.data.expires_at);
         const daysLeft = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
-        toast.warning(
-          `⏰ Valid until ${expiryDate.toLocaleDateString()} ${expiryDate.toLocaleTimeString()} (${daysLeft} days left)`,
-          { duration: 8000 }
+        
+        notifications.celebrate(
+          `🎉 Claimed ${claimedAmount} PRC!`,
+          `Your rewards have been added to your balance. ${isFreeUser ? `⏰ Valid for ${daysLeft} days (until ${expiryDate.toLocaleDateString()} ${expiryDate.toLocaleTimeString()}). Upgrade to VIP for lifetime validity!` : '✨ Lifetime validity - use anytime!'}`
+        );
+      } else {
+        notifications.celebrate(
+          `🎉 Claimed ${claimedAmount} PRC!`,
+          'Your rewards have been added to your balance with lifetime validity!'
         );
       }
       
-      if (response.data.note) {
-        toast.info(response.data.note);
-      }
       fetchMiningStatus();
       fetchPRCExpiry();
     } catch (error) {
       console.error('Error claiming coins:', error);
-      toast.error(error.response?.data?.detail || 'Failed to claim coins');
+      toast.dismiss(loadingId);
+      
+      notifications.error(
+        'Claim Failed',
+        error.response?.data?.detail || 'Unable to claim your mining rewards. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
