@@ -448,11 +448,18 @@ const WalletNew = ({ user, onLogout }) => {
                   <label className="block text-sm font-semibold mb-3 text-gray-700">Amount (₹)</label>
                   <Input
                     type="number"
-                    placeholder="Minimum ₹10"
+                    placeholder={`Minimum ₹${minCashbackWithdrawal}`}
                     value={cashbackAmount}
                     onChange={(e) => setCashbackAmount(e.target.value)}
                     className="border-2 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-xl text-lg"
                   />
+                  {isFreeUser && (
+                    <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                      <p className="text-xs text-orange-700">
+                        ⚠️ <strong>Free User:</strong> Minimum ₹1000 withdrawal. Upgrade to VIP for ₹10 minimum!
+                      </p>
+                    </div>
+                  )}
                   <p className="text-xs text-gray-500 mt-2">
                     You'll receive: <span className="font-semibold text-blue-600">₹{cashbackAmount ? (parseFloat(cashbackAmount) - 5).toFixed(2) : '0.00'}</span> (after ₹5 fee)
                   </p>
