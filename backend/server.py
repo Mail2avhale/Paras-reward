@@ -11108,17 +11108,22 @@ async def award_daily_top_hunter_bonus(uid: str):
         )
         
         # Log bonus transaction
+        total_percentage = "100%" if is_vip else "20%"
+        bonus_percentage = "50%" if is_vip else "10%"
+        
         await log_transaction(
             user_id=winner_uid,
             wallet_type="cashback",
             transaction_type="cashback",
             amount=bonus_cashback,
-            description=f"🏆 Daily Top Hunter Bonus! 100% cashback (50% bonus)",
+            description=f"🏆 Daily Top Hunter Bonus! {total_percentage} total cashback ({bonus_percentage} bonus)",
             metadata={
                 "treasures_found": top_hunter["treasures_found_today"],
                 "prc_spent": prc_spent,
                 "date": today_start.isoformat()[:10],
-                "bonus_type": "daily_top_hunter"
+                "bonus_type": "daily_top_hunter",
+                "membership_type": membership_type,
+                "total_percentage": total_percentage
             },
             related_id=f"daily_top_{today_start.isoformat()[:10]}",
             related_type="daily_top_hunter_bonus"
