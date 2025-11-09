@@ -11431,6 +11431,494 @@ async def track_video_ad_event(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ========== MANAGER DASHBOARD ENDPOINTS ==========
+
+@api_router.get("/manager/dashboard")
+async def get_manager_dashboard(uid: str):
+    """Get manager dashboard overview metrics"""
+    # Verify manager role
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        # Get current date range
+        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        week_ago = today - timedelta(days=7)
+        month_ago = today - timedelta(days=30)
+        
+        # Total active users
+        total_users = await db.users.count_documents({"active": True, "role": "user"})
+        
+        # Users registered this week
+        new_users_week = await db.users.count_documents({
+            "role": "user",
+            "created_at": {"$gte": week_ago.isoformat()}
+        })
+        
+        # Total orders
+        total_orders = await db.orders.count_documents({})
+        
+        # Orders today
+        orders_today = await db.orders.count_documents({
+            "created_at": {"$gte": today.isoformat()}
+        })
+        
+        # Pending KYC approvals
+        pending_kyc = await db.users.count_documents({
+            "kyc_status": "pending",
+            "role": "user"
+        })
+        
+        # Pending withdrawals
+        pending_withdrawals = await db.cashback_withdrawals.count_documents({
+            "status": "pending"
+        })
+        
+        # Calculate revenue (sum of completed orders)
+        completed_orders = db.orders.find({"status": "delivered"})
+        total_revenue = 0
+        async for order in completed_orders:
+            total_revenue += order.get("total_amount", 0)
+        
+        # Sales trend (last 7 days)
+        sales_trend = []
+        for i in range(6, -1, -1):
+            day = today - timedelta(days=i)
+            day_end = day + timedelta(days=1)
+            day_orders = await db.orders.count_documents({
+                "created_at": {"$gte": day.isoformat(), "$lt": day_end.isoformat()}
+            })
+            sales_trend.append({
+                "date": day.strftime("%Y-%m-%d"),
+                "orders": day_orders
+            })
+        
+        # Recent activities (last 10)
+        recent_orders = await db.orders.find().sort("created_at", -1).limit(5).to_list(length=5)
+        recent_users = await db.users.find({"role": "user"}).sort("created_at", -1).limit(5).to_list(length=5)
+        
+        activities = []
+        for order in recent_orders:
+            activities.append({
+                "type": "order",
+                "message": f"New order #{order.get('order_id')} - ₹{order.get('total_amount', 0)}",
+                "time": order.get("created_at"),
+                "status": order.get("status")
+            })
+        
+        for user in recent_users:
+            activities.append({
+                "type": "user",
+                "message": f"New user registered: {user.get('name', 'Unknown')}",
+                "time": user.get("created_at"),
+                "status": "active"
+            })
+        
+        # Sort activities by time
+        activities.sort(key=lambda x: x.get("time", ""), reverse=True)
+        activities = activities[:10]
+        
+        return {
+            "metrics": {
+                "total_users": total_users,
+                "new_users_week": new_users_week,
+                "total_orders": total_orders,
+                "orders_today": orders_today,
+                "pending_kyc": pending_kyc,
+                "pending_withdrawals": pending_withdrawals,
+                "total_revenue": round(total_revenue, 2)
+            },
+            "sales_trend": sales_trend,
+            "recent_activities": activities
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/manager/users")
+async def get_manager_users(
+    uid: str,
+    search: Optional[str] = None,
+    kyc_status: Optional[str] = None,
+    membership_type: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50
+):
+    """Get users list with filters for manager"""
+    # Verify manager role
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        # Build query
+        query = {"role": "user"}
+        
+        if search:
+            query["$or"] = [
+                {"name": {"$regex": search, "$options": "i"}},
+                {"email": {"$regex": search, "$options": "i"}},
+                {"mobile": {"$regex": search, "$options": "i"}},
+                {"uid": {"$regex": search, "$options": "i"}}
+            ]
+        
+        if kyc_status:
+            query["kyc_status"] = kyc_status
+        
+        if membership_type:
+            query["membership_type"] = membership_type
+        
+        # Get total count
+        total = await db.users.count_documents(query)
+        
+        # Get users
+        users = await db.users.find(query).skip(skip).limit(limit).sort("created_at", -1).to_list(length=limit)
+        
+        # Remove sensitive data
+        for user in users:
+            user.pop("password", None)
+            user.pop("_id", None)
+        
+        return {
+            "users": users,
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/manager/kyc/approve")
+async def approve_kyc(uid: str, user_id: str):
+    """Approve user KYC (Manager access)"""
+    # Verify manager role
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        user = await db.users.find_one({"uid": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        if user.get("kyc_status") != "pending":
+            raise HTTPException(status_code=400, detail="KYC is not pending")
+        
+        # Update KYC status
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {
+                "kyc_status": "verified",
+                "kyc_verified_at": datetime.now(timezone.utc).isoformat(),
+                "kyc_verified_by": uid
+            }}
+        )
+        
+        # Log action
+        await db.manager_actions.insert_one({
+            "action_id": str(uuid.uuid4()),
+            "manager_id": uid,
+            "action_type": "kyc_approve",
+            "target_user_id": user_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "details": {"user_email": user.get("email")}
+        })
+        
+        return {"message": "KYC approved successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/manager/kyc/reject")
+async def reject_kyc(request: Request, uid: str, user_id: str):
+    """Reject user KYC with reason (Manager access)"""
+    # Verify manager role
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        data = await request.json()
+        reason = data.get("reason", "Documents not clear or incorrect")
+        
+        user = await db.users.find_one({"uid": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        if user.get("kyc_status") != "pending":
+            raise HTTPException(status_code=400, detail="KYC is not pending")
+        
+        # Update KYC status
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {
+                "kyc_status": "rejected",
+                "kyc_rejection_reason": reason,
+                "kyc_rejected_at": datetime.now(timezone.utc).isoformat(),
+                "kyc_rejected_by": uid
+            }}
+        )
+        
+        # Log action
+        await db.manager_actions.insert_one({
+            "action_id": str(uuid.uuid4()),
+            "manager_id": uid,
+            "action_type": "kyc_reject",
+            "target_user_id": user_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "details": {"user_email": user.get("email"), "reason": reason}
+        })
+        
+        return {"message": "KYC rejected", "reason": reason}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/manager/orders")
+async def get_manager_orders(
+    uid: str,
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50
+):
+    """Get orders list with filters for manager"""
+    # Verify manager role
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        # Build query
+        query = {}
+        
+        if status:
+            query["status"] = status
+        
+        if search:
+            query["$or"] = [
+                {"order_id": {"$regex": search, "$options": "i"}},
+                {"user_id": {"$regex": search, "$options": "i"}}
+            ]
+        
+        # Get total count
+        total = await db.orders.count_documents(query)
+        
+        # Get orders
+        orders = await db.orders.find(query).skip(skip).limit(limit).sort("created_at", -1).to_list(length=limit)
+        
+        # Enrich orders with user info
+        for order in orders:
+            order.pop("_id", None)
+            user = await db.users.find_one({"uid": order.get("user_id")})
+            if user:
+                order["user_name"] = user.get("name")
+                order["user_email"] = user.get("email")
+        
+        return {
+            "orders": orders,
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/manager/orders/{order_id}/status")
+async def update_order_status(order_id: str, request: Request, uid: str):
+    """Update order status (Manager access)"""
+    # Verify manager role
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        data = await request.json()
+        new_status = data.get("status")
+        notes = data.get("notes", "")
+        
+        valid_statuses = ["pending", "processing", "shipped", "delivered", "cancelled"]
+        if new_status not in valid_statuses:
+            raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+        
+        order = await db.orders.find_one({"order_id": order_id})
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        # Update order status
+        update_data = {
+            "status": new_status,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_by": uid
+        }
+        
+        if notes:
+            update_data["manager_notes"] = notes
+        
+        if new_status == "delivered":
+            update_data["delivered_at"] = datetime.now(timezone.utc).isoformat()
+        elif new_status == "shipped":
+            update_data["shipped_at"] = datetime.now(timezone.utc).isoformat()
+        
+        await db.orders.update_one(
+            {"order_id": order_id},
+            {"$set": update_data}
+        )
+        
+        # Log action
+        await db.manager_actions.insert_one({
+            "action_id": str(uuid.uuid4()),
+            "manager_id": uid,
+            "action_type": "order_status_update",
+            "target_order_id": order_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "details": {
+                "old_status": order.get("status"),
+                "new_status": new_status,
+                "notes": notes
+            }
+        })
+        
+        return {"message": f"Order status updated to {new_status}"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/manager/reports/sales")
+async def get_sales_report(
+    uid: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """Get sales report (Manager access)"""
+    # Verify manager role
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        # Default to last 30 days
+        if not end_date:
+            end_date = datetime.now(timezone.utc).isoformat()
+        if not start_date:
+            start_date = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+        
+        # Build query
+        query = {
+            "created_at": {"$gte": start_date, "$lte": end_date}
+        }
+        
+        # Get orders
+        orders = await db.orders.find(query).to_list(length=None)
+        
+        # Calculate metrics
+        total_orders = len(orders)
+        total_revenue = sum(order.get("total_amount", 0) for order in orders)
+        
+        # Orders by status
+        status_breakdown = {}
+        for order in orders:
+            status = order.get("status", "unknown")
+            status_breakdown[status] = status_breakdown.get(status, 0) + 1
+        
+        # Daily breakdown
+        daily_sales = {}
+        for order in orders:
+            date = order.get("created_at", "")[:10]  # Get YYYY-MM-DD
+            if date not in daily_sales:
+                daily_sales[date] = {"orders": 0, "revenue": 0}
+            daily_sales[date]["orders"] += 1
+            daily_sales[date]["revenue"] += order.get("total_amount", 0)
+        
+        # Convert to list
+        daily_sales_list = [
+            {"date": date, **metrics}
+            for date, metrics in sorted(daily_sales.items())
+        ]
+        
+        return {
+            "period": {"start": start_date, "end": end_date},
+            "summary": {
+                "total_orders": total_orders,
+                "total_revenue": round(total_revenue, 2),
+                "average_order_value": round(total_revenue / total_orders if total_orders > 0 else 0, 2)
+            },
+            "status_breakdown": status_breakdown,
+            "daily_sales": daily_sales_list
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/manager/reports/users")
+async def get_users_report(
+    uid: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """Get users report (Manager access)"""
+    # Verify manager role
+    if not await verify_management(uid):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    try:
+        # Default to last 30 days
+        if not end_date:
+            end_date = datetime.now(timezone.utc).isoformat()
+        if not start_date:
+            start_date = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+        
+        # Total users
+        total_users = await db.users.count_documents({"role": "user"})
+        
+        # New users in period
+        new_users = await db.users.count_documents({
+            "role": "user",
+            "created_at": {"$gte": start_date, "$lte": end_date}
+        })
+        
+        # VIP vs Free
+        vip_users = await db.users.count_documents({"role": "user", "membership_type": "vip"})
+        free_users = total_users - vip_users
+        
+        # KYC status breakdown
+        kyc_verified = await db.users.count_documents({"role": "user", "kyc_status": "verified"})
+        kyc_pending = await db.users.count_documents({"role": "user", "kyc_status": "pending"})
+        kyc_rejected = await db.users.count_documents({"role": "user", "kyc_status": "rejected"})
+        kyc_not_submitted = total_users - (kyc_verified + kyc_pending + kyc_rejected)
+        
+        # Daily user growth
+        users_list = await db.users.find({
+            "role": "user",
+            "created_at": {"$gte": start_date, "$lte": end_date}
+        }).to_list(length=None)
+        
+        daily_growth = {}
+        for user in users_list:
+            date = user.get("created_at", "")[:10]
+            daily_growth[date] = daily_growth.get(date, 0) + 1
+        
+        daily_growth_list = [
+            {"date": date, "new_users": count}
+            for date, count in sorted(daily_growth.items())
+        ]
+        
+        return {
+            "period": {"start": start_date, "end": end_date},
+            "summary": {
+                "total_users": total_users,
+                "new_users": new_users,
+                "vip_users": vip_users,
+                "free_users": free_users
+            },
+            "kyc_breakdown": {
+                "verified": kyc_verified,
+                "pending": kyc_pending,
+                "rejected": kyc_rejected,
+                "not_submitted": kyc_not_submitted
+            },
+            "daily_growth": daily_growth_list
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ========== END MANAGER DASHBOARD ENDPOINTS ==========
+
 async def initialize_database_indexes():
     """Create database indexes for better performance"""
     try:
@@ -11455,6 +11943,10 @@ async def initialize_database_indexes():
         
         # Products indexes
         await db.products.create_index("product_id", unique=True)
+        
+        # Manager actions index (for audit logging)
+        await db.manager_actions.create_index("manager_id")
+        await db.manager_actions.create_index("timestamp")
         
         print("✅ Database indexes created successfully")
     except Exception as e:
