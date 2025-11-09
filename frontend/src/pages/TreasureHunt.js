@@ -486,8 +486,13 @@ const TreasureHunt = ({ user }) => {
                 </div>
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                   <span>Calculation:</span>
-                  <span>{showStartModal.prc_cost} PRC = ₹{(showStartModal.prc_cost / 10).toFixed(2)} → 50% = ₹{((showStartModal.prc_cost / 10) * 0.50).toFixed(2)}</span>
+                  <span>{showStartModal.prc_cost} PRC = ₹{(showStartModal.prc_cost / 10).toFixed(2)} → {baseCashbackRate}% = ₹{((showStartModal.prc_cost / 10) * (baseCashbackRate / 100)).toFixed(2)}</span>
                 </div>
+                {isFreeUser && (
+                  <div className="text-xs text-orange-600 mt-2 font-medium">
+                    💡 Upgrade to VIP for 50% cashback (5x more rewards!)
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-600">Cashback Rate:</span>
                   <span className="font-bold text-green-600">{showStartModal.cashback_percentage}%</span>
