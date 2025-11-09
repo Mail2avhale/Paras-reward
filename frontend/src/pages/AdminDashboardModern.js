@@ -190,7 +190,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
             <h2 className="text-xl font-bold text-gray-900 mb-6">Quick Actions</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <Button
-                onClick={() => navigate('/advanced-user-management')}
+                onClick={() => navigate('/admin-old')}
                 variant="outline"
                 className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-purple-50 hover:border-purple-300 transition-all"
               >
@@ -199,7 +199,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
               </Button>
 
               <Button
-                onClick={() => navigate('/advanced-order-management')}
+                onClick={() => navigate('/admin-old')}
                 variant="outline"
                 className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-blue-50 hover:border-blue-300 transition-all"
               >
@@ -208,7 +208,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
               </Button>
 
               <Button
-                onClick={() => navigate('/admin-analytics')}
+                onClick={() => navigate('/admin/analytics')}
                 variant="outline"
                 className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-green-50 hover:border-green-300 transition-all"
               >
@@ -217,7 +217,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
               </Button>
 
               <Button
-                onClick={() => navigate('/financial-management-admin')}
+                onClick={() => navigate('/admin-old')}
                 variant="outline"
                 className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-amber-50 hover:border-amber-300 transition-all"
               >
@@ -226,7 +226,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
               </Button>
 
               <Button
-                onClick={() => navigate('/stockist-management-admin')}
+                onClick={() => navigate('/admin-old')}
                 variant="outline"
                 className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-indigo-50 hover:border-indigo-300 transition-all"
               >
@@ -235,7 +235,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
               </Button>
 
               <Button
-                onClick={() => navigate('/admin-activity-logs')}
+                onClick={() => navigate('/admin-old')}
                 variant="outline"
                 className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-red-50 hover:border-red-300 transition-all"
               >
