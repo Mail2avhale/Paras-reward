@@ -11080,11 +11080,23 @@ async def award_daily_top_hunter_bonus(uid: str):
         if existing_reward:
             return {"success": False, "message": "Bonus already awarded for today"}
         
-        # Calculate 100% bonus (50% already given, give another 50%)
+        # Calculate bonus based on membership
+        # Free users: Total 20% (10% already given, give another 10%)
+        # VIP users: Total 100% (50% already given, give another 50%)
         prc_spent = top_hunter["total_prc_spent_today"]
         inr_value = prc_spent / 10
-        already_earned = top_hunter["total_cashback_earned"]  # 50% already given
-        bonus_cashback = round(inr_value * 0.50, 2)  # Additional 50% = 100% total
+        already_earned = top_hunter["total_cashback_earned"]
+        
+        # Get user membership type
+        user = await db.users.find_one({"uid": winner_uid})
+        membership_type = user.get("membership_type", "free")
+        is_vip = membership_type == "vip"
+        
+        # Calculate bonus: Additional amount to reach top player rate
+        # Free: Give another 10% to reach 20% total
+        # VIP: Give another 50% to reach 100% total
+        bonus_rate = 0.50 if is_vip else 0.10
+        bonus_cashback = round(inr_value * bonus_rate, 2)
         
         # Award bonus to cashback wallet
         user = await db.users.find_one({"uid": winner_uid})
