@@ -230,34 +230,59 @@ const DashboardNew = ({ user, onLogout }) => {
           </div>
         </Card>
 
-        {/* Quick Menu - Optimized grid layout for better mobile experience */}
+        {/* Quick Menu - Compact 2-row layout */}
         <div className="mb-6">
-          <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+          <h3 className="text-xl font-bold text-white mb-3 flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-yellow-400" />
-            Quick Menu
+            Quick Actions
           </h3>
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-            {quickActions.map((action, idx) => (
+          
+          {/* Primary Actions - Featured row */}
+          <div className="grid grid-cols-4 gap-2 mb-2">
+            {primaryActions.map((action, idx) => (
               <Link key={idx} to={action.link}>
-                <Card className="relative bg-white/10 backdrop-blur-xl border border-white/20 p-3 rounded-xl hover:scale-105 transition-all duration-300 hover:bg-white/15 cursor-pointer group overflow-hidden">
+                <Card className="relative bg-white/10 backdrop-blur-xl border border-white/20 p-2.5 rounded-xl hover:scale-105 transition-all duration-200 hover:bg-white/15 cursor-pointer group overflow-hidden">
                   {/* Badge */}
                   {action.badge && (
-                    <div className="absolute top-1.5 right-1.5 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                    <div className="absolute top-1 right-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full shadow-lg">
                       {action.badge}
                     </div>
                   )}
                   
                   {/* Icon */}
-                  <div className={`bg-gradient-to-br ${action.gradient} p-2 rounded-lg mb-2 w-fit group-hover:scale-110 transition-transform shadow-lg mx-auto`}>
+                  <div className={`bg-gradient-to-br ${action.gradient} p-2 rounded-lg mb-1.5 w-fit group-hover:scale-110 transition-transform shadow-lg mx-auto`}>
                     <action.icon className="h-5 w-5 text-white" />
                   </div>
                   
                   {/* Text */}
-                  <h4 className="font-semibold text-white text-xs mb-0.5 text-center">{action.name}</h4>
-                  <p className="text-[10px] text-gray-300 text-center">{action.description}</p>
+                  <h4 className="font-bold text-white text-[11px] text-center leading-tight">{action.name}</h4>
                   
                   {/* Hover effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
+                </Card>
+              </Link>
+            ))}
+          </div>
+          
+          {/* Secondary Actions - Scrollable row */}
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {secondaryActions.map((action, idx) => (
+              <Link key={idx} to={action.link} className="flex-shrink-0">
+                <Card className="relative bg-white/5 backdrop-blur-xl border border-white/10 p-2 rounded-lg hover:bg-white/10 transition-all duration-200 cursor-pointer group w-16">
+                  {/* Badge */}
+                  {action.badge && (
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[7px] font-bold px-1 py-0.5 rounded-full shadow-md">
+                      {action.badge}
+                    </div>
+                  )}
+                  
+                  {/* Icon */}
+                  <div className={`bg-gradient-to-br ${action.gradient} p-1.5 rounded-md mb-1 w-fit group-hover:scale-110 transition-transform mx-auto`}>
+                    <action.icon className="h-4 w-4 text-white" />
+                  </div>
+                  
+                  {/* Text */}
+                  <h4 className="font-semibold text-white text-[9px] text-center leading-tight">{action.name}</h4>
                 </Card>
               </Link>
             ))}
