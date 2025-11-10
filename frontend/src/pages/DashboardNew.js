@@ -299,62 +299,147 @@ const DashboardNew = ({ user, onLogout }) => {
           </div>
         </div>
 
-        {/* Quick Menu - Compact 2-row layout */}
-        <div className="mb-6">
-          <h3 className="text-xl font-bold text-white mb-3 flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-yellow-400" />
-            Quick Actions
-          </h3>
-          
-          {/* Primary Actions - Featured row */}
-          <div className="grid grid-cols-4 gap-2 mb-2">
-            {primaryActions.map((action, idx) => (
-              <Link key={idx} to={action.link}>
-                <Card className="relative bg-white/10 backdrop-blur-xl border border-white/20 p-2.5 rounded-xl hover:scale-105 transition-all duration-200 hover:bg-white/15 cursor-pointer group overflow-hidden">
-                  {/* Badge */}
-                  {action.badge && (
-                    <div className="absolute top-1 right-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full shadow-lg">
-                      {action.badge}
-                    </div>
-                  )}
-                  
-                  {/* Icon */}
-                  <div className={`bg-gradient-to-br ${action.gradient} p-2 rounded-lg mb-1.5 w-fit group-hover:scale-110 transition-transform shadow-lg mx-auto`}>
-                    <action.icon className="h-5 w-5 text-white" />
-                  </div>
-                  
-                  {/* Text */}
-                  <h4 className="font-bold text-white text-[11px] text-center leading-tight">{action.name}</h4>
-                  
-                  {/* Hover effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
-                </Card>
-              </Link>
-            ))}
+        {/* QUICK ACCESS MENU - App-Style Grid */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-black text-white flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-yellow-400" />
+              Quick Access
+            </h3>
+            <button className="text-xs text-purple-300 font-semibold hover:text-white transition-colors">
+              View All →
+            </button>
           </div>
           
-          {/* Secondary Actions - Scrollable row */}
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {secondaryActions.map((action, idx) => (
-              <Link key={idx} to={action.link} className="flex-shrink-0">
-                <Card className="relative bg-white/5 backdrop-blur-xl border border-white/10 p-2 rounded-lg hover:bg-white/10 transition-all duration-200 cursor-pointer group w-16">
-                  {/* Badge */}
-                  {action.badge && (
-                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[7px] font-bold px-1 py-0.5 rounded-full shadow-md">
-                      {action.badge}
-                    </div>
-                  )}
-                  
-                  {/* Icon */}
-                  <div className={`bg-gradient-to-br ${action.gradient} p-1.5 rounded-md mb-1 w-fit group-hover:scale-110 transition-transform mx-auto`}>
-                    <action.icon className="h-4 w-4 text-white" />
+          {/* Main Grid - 4 columns on mobile, 5 on tablet, 6 on desktop */}
+          <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+            {/* Mining */}
+            <Link to="/mining">
+              <div className="relative bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group">
+                {stats?.is_mining && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse ring-2 ring-white"></div>
+                )}
+                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Play className="h-6 w-6 text-white" />
+                </div>
+                <h4 className="text-white font-bold text-sm mb-0.5">Mining</h4>
+                <p className="text-white/80 text-xs">Earn PRC</p>
+              </div>
+            </Link>
+
+            {/* Treasure Hunt */}
+            <Link to="/treasure-hunt">
+              <div className="relative bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group">
+                <div className="absolute -top-1 -right-1 bg-yellow-400 text-amber-900 text-[8px] font-black px-1.5 py-0.5 rounded-full">
+                  50%
+                </div>
+                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Map className="h-6 w-6 text-white" />
+                </div>
+                <h4 className="text-white font-bold text-sm mb-0.5">Treasure</h4>
+                <p className="text-white/80 text-xs">Hunt Now</p>
+              </div>
+            </Link>
+
+            {/* Scratch Card */}
+            <Link to="/scratch-card">
+              <div className="relative bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group">
+                <div className="absolute -top-1 -right-1 bg-yellow-400 text-pink-900 text-[8px] font-black px-1.5 py-0.5 rounded-full">
+                  {isVIP ? '50%' : '10%'}
+                </div>
+                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Sparkles className="h-6 w-6 text-white" />
+                </div>
+                <h4 className="text-white font-bold text-sm mb-0.5">Scratch</h4>
+                <p className="text-white/80 text-xs">Win Big</p>
+              </div>
+            </Link>
+
+            {/* Marketplace */}
+            <Link to="/marketplace">
+              <div className="relative bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group">
+                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <ShoppingBag className="h-6 w-6 text-white" />
+                </div>
+                <h4 className="text-white font-bold text-sm mb-0.5">Shop</h4>
+                <p className="text-white/80 text-xs">Browse</p>
+              </div>
+            </Link>
+
+            {/* Wallet */}
+            <Link to="/wallet">
+              <div className="relative bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group">
+                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Wallet className="h-6 w-6 text-white" />
+                </div>
+                <h4 className="text-white font-bold text-sm mb-0.5">Wallet</h4>
+                <p className="text-white/80 text-xs">Manage</p>
+              </div>
+            </Link>
+
+            {/* Tap Game */}
+            <Link to="/game">
+              <div className="relative bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group">
+                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Zap className="h-6 w-6 text-white" />
+                </div>
+                <h4 className="text-white font-bold text-sm mb-0.5">Tap Game</h4>
+                <p className="text-white/80 text-xs">Play</p>
+              </div>
+            </Link>
+
+            {/* Referrals */}
+            <Link to="/referrals">
+              <div className="relative bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group">
+                {userData?.referral_count > 0 && (
+                  <div className="absolute -top-1 -right-1 bg-green-400 text-green-900 text-[8px] font-black px-1.5 py-0.5 rounded-full">
+                    {userData.referral_count}
                   </div>
-                  
-                  {/* Text */}
-                  <h4 className="font-semibold text-white text-[9px] text-center leading-tight">{action.name}</h4>
-                </Card>
-              </Link>
-            ))}
+                )}
+                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Users className="h-6 w-6 text-white" />
+                </div>
+                <h4 className="text-white font-bold text-sm mb-0.5">Referrals</h4>
+                <p className="text-white/80 text-xs">Invite</p>
+              </div>
+            </Link>
+
+            {/* Orders */}
+            <Link to="/orders">
+              <div className="relative bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group">
+                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Package className="h-6 w-6 text-white" />
+                </div>
+                <h4 className="text-white font-bold text-sm mb-0.5">Orders</h4>
+                <p className="text-white/80 text-xs">Track</p>
+              </div>
+            </Link>
+
+            {/* Leaderboard */}
+            <Link to="/leaderboard">
+              <div className="relative bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group">
+                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Trophy className="h-6 w-6 text-white" />
+                </div>
+                <h4 className="text-white font-bold text-sm mb-0.5">Ranks</h4>
+                <p className="text-white/80 text-xs">Compete</p>
+              </div>
+            </Link>
+
+            {/* VIP */}
+            <Link to="/vip">
+              <div className={`relative rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group ${
+                isVIP 
+                  ? 'bg-gradient-to-br from-yellow-400 to-orange-500' 
+                  : 'bg-gradient-to-br from-amber-500 to-yellow-600'
+              }`}>
+                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Crown className="h-6 w-6 text-white" />
+                </div>
+                <h4 className="text-white font-bold text-sm mb-0.5">{isVIP ? 'VIP' : 'Upgrade'}</h4>
+                <p className="text-white/80 text-xs">{isVIP ? 'Active' : 'Go VIP'}</p>
+              </div>
+            </Link>
           </div>
         </div>
 
