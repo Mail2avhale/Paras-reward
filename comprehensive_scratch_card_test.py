@@ -390,8 +390,8 @@ def test_edge_cases(uid):
     # Test 1: Insufficient PRC balance
     print(f"\n📋 Testing insufficient PRC balance...")
     try:
-        # Try to purchase 1000 PRC card (should fail)
-        purchase_data = {"card_type": 1000}
+        # Try to purchase 100 PRC card when user has less than 100 PRC (should fail)
+        purchase_data = {"card_type": 100}
         response = requests.post(f"{API_BASE}/scratch-cards/purchase?uid={uid}", json=purchase_data, timeout=30)
         
         if response.status_code == 400:
