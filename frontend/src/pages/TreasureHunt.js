@@ -25,6 +25,7 @@ const TreasureHunt = ({ user }) => {
   const [showGameModal, setShowGameModal] = useState(false);
   const [dailyTopHunter, setDailyTopHunter] = useState(null);
   const [celebrationData, setCelebrationData] = useState(null);
+  const [feedbackMessage, setFeedbackMessage] = useState(null);
   
   // Determine user membership and cashback rates
   const isFreeUser = user?.membership_type !== 'vip';
