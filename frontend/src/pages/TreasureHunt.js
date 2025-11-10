@@ -142,11 +142,11 @@ const TreasureHunt = ({ user }) => {
         { params: { uid: user.uid } }
       );
 
-      toast({ description: `Clue revealed! ${response.data.clue_text}` });
+      toast.success(`Clue revealed! ${response.data.clue_text}`);
       loadGameMap(progressId);
       fetchData(user.uid);
     } catch (error) {
-      toast({ description: error.response?.data?.detail || 'Failed to buy clue', variant: 'destructive' });
+      toast.error(error.response?.data?.detail || 'Failed to buy clue');
     }
   };
 
