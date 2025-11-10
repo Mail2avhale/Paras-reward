@@ -26,12 +26,12 @@ const Navbar = ({ user, onLogout }) => {
     <nav className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
+          {/* Logo - Animated */}
           <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2">
             <img 
               src="/paras-logo.jpg" 
               alt="PARAS REWARD" 
-              className="h-12 w-auto object-contain"
+              className="h-12 w-auto object-contain logo-animated"
             />
           </Link>
 
