@@ -1188,6 +1188,16 @@ const AdminDashboard = ({ user, onLogout }) => {
             </div>
           )}
 
+          {/* PRC Analytics Tab */}
+          {activeTab === 'prc-analytics' && (
+            <div className="space-y-6">
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-6">
+                PRC Analytics Dashboard
+              </h2>
+              <PRCAnalytics />
+            </div>
+          )}
+
           {/* Activity Logs Tab */}
           {activeTab === 'activity-logs' && (
             <div className="space-y-6">
