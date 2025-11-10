@@ -173,5 +173,41 @@ code {
     }
 }
 
+/* Logo Animation */
+@keyframes logoFloat {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
 
+@keyframes logoGlow {
+    0%, 100% {
+        filter: drop-shadow(0 0 5px rgba(168, 85, 247, 0.4));
+    }
+    50% {
+        filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.8)) drop-shadow(0 0 25px rgba(236, 72, 153, 0.6));
+    }
+}
+
+@keyframes logoSpin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.logo-animated {
+    animation: logoFloat 3s ease-in-out infinite, logoGlow 2s ease-in-out infinite;
+    transition: all 0.3s ease;
+}
+
+.logo-animated:hover {
+    transform: scale(1.1) rotate(5deg);
+    filter: drop-shadow(0 0 20px rgba(168, 85, 247, 1)) drop-shadow(0 0 30px rgba(236, 72, 153, 0.8));
+}
 
