@@ -564,6 +564,17 @@ const ScratchCard = ({ user }) => {
         )}
       </div>
       
+      {/* Animated Feedback Overlay */}
+      {animatedFeedback && (
+        <AnimatedFeedback
+          message={animatedFeedback.message}
+          type={animatedFeedback.type}
+          duration={animatedFeedback.duration}
+          onClose={() => setAnimatedFeedback(null)}
+          position="center"
+        />
+      )}
+      
       {/* Win Celebration Overlay */}
       {celebrationData && (
         <WinCelebration
