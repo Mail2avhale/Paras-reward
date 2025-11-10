@@ -227,6 +227,13 @@ const ScratchCard = ({ user }) => {
 
     const percentage = (transparent / (pixels.length / 4)) * 100;
     
+    // Update progress bar if it exists
+    const progressBar = document.getElementById('scratch-progress');
+    if (progressBar && percentage < 60) {
+      progressBar.style.width = `${percentage}%`;
+    }
+    
+    // Reveal when 60% scratched
     if (percentage > 60 && !revealed && result) {
       setRevealed(true);
       canvas.style.display = 'none';
@@ -235,12 +242,12 @@ const ScratchCard = ({ user }) => {
       
       // Show quick feedback that scratching is complete
       setAnimatedFeedback({
-        message: `🎊 Scratching Complete!\n✨ Check Your Prize! ✨`,
-        type: 'info',
-        duration: 2000
+        message: `🎊 Fully Revealed!\n💰 See Your Cashback! 💰`,
+        type: 'success',
+        duration: 2500
       });
       
-      // Show big celebration after user sees the result (2.5 seconds)
+      // Show big celebration after user sees the result (3 seconds)
       if (result.cashback_won_inr && result.cashback_percentage) {
         setTimeout(() => {
           setAnimatedFeedback(null); // Clear the "complete" message
@@ -249,7 +256,7 @@ const ScratchCard = ({ user }) => {
             percentage: result.cashback_percentage,
             message: "YOU WON!"
           });
-        }, 2500);
+        }, 3000);
       }
       
       fetchHistory();
