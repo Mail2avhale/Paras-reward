@@ -1,16 +1,41 @@
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { InstallAppButton } from '@/components/PWAInstallPrompt';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Coins, Zap, Users, Gift, Star, TrendingUp, Shield, ArrowRight, CheckCircle2, Play, Sparkles, Target, Crown } from 'lucide-react';
+import { Coins, Zap, Users, Gift, Star, TrendingUp, Shield, ArrowRight, CheckCircle2, Play, Sparkles, Target, Crown, Facebook, Twitter, Instagram, Linkedin, Youtube, Send, MessageCircle } from 'lucide-react';
+
+const API = process.env.REACT_APP_BACKEND_URL || '';
 
 const Home = ({ user, onLogout }) => {
   const { t } = useTranslation();
   const [hoveredFeature, setHoveredFeature] = useState(null);
+  const [socialMedia, setSocialMedia] = useState({
+    facebook: '',
+    twitter: '',
+    instagram: '',
+    linkedin: '',
+    youtube: '',
+    telegram: '',
+    whatsapp: ''
+  });
+
+  useEffect(() => {
+    fetchSocialMedia();
+  }, []);
+
+  const fetchSocialMedia = async () => {
+    try {
+      const response = await axios.get(`${API}/api/admin/social-media-settings`);
+      setSocialMedia(response.data);
+    } catch (error) {
+      console.error('Error fetching social media:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
