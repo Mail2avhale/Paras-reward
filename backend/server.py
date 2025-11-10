@@ -10318,6 +10318,199 @@ async def update_social_media_settings(settings: SocialMediaSettings):
 
 # ========== END ADMIN SETTINGS ENDPOINTS ==========
 
+# ========== SCRATCH CARD GAME ENDPOINTS ==========
+
+import random
+
+class ScratchCardPurchase(BaseModel):
+    """Scratch Card Purchase Model"""
+    card_type: int  # 10, 50, or 100 PRC
+
+@api_router.get("/scratch-cards/available")
+async def get_available_scratch_cards():
+    """Get available scratch card types"""
+    return {
+        "cards": [
+            {
+                "id": 1,
+                "cost": 10,
+                "name": "Bronze Scratch Card",
+                "description": "Win 0-10% cashback (Free) or 10-50% (VIP)",
+                "min_cashback_free": 0,
+                "max_cashback_free": 10,
+                "min_cashback_vip": 10,
+                "max_cashback_vip": 50
+            },
+            {
+                "id": 2,
+                "cost": 50,
+                "name": "Silver Scratch Card",
+                "description": "Win 0-10% cashback (Free) or 10-50% (VIP)",
+                "min_cashback_free": 0,
+                "max_cashback_free": 10,
+                "min_cashback_vip": 10,
+                "max_cashback_vip": 50
+            },
+            {
+                "id": 3,
+                "cost": 100,
+                "name": "Gold Scratch Card",
+                "description": "Win 0-10% cashback (Free) or 10-50% (VIP)",
+                "min_cashback_free": 0,
+                "max_cashback_free": 10,
+                "min_cashback_vip": 10,
+                "max_cashback_vip": 50
+            }
+        ]
+    }
+
+def generate_scratch_reward(is_vip: bool, card_cost: int):
+    """Generate random scratch card reward"""
+    if is_vip:
+        # VIP users: 10%, 20%, 30%, 40%, 50%
+        cashback_percentages = [10, 20, 30, 40, 50]
+        # Weighted probabilities (50% gets lower rewards)
+        weights = [40, 30, 20, 7, 3]  # 40% chance of 10%, 3% chance of 50%
+        cashback_percentage = random.choices(cashback_percentages, weights=weights, k=1)[0]
+    else:
+        # Free users: 0% to 10%
+        cashback_percentages = [0, 2, 5, 7, 10]
+        weights = [40, 25, 20, 10, 5]  # 40% chance of 0%, 5% chance of 10%
+        cashback_percentage = random.choices(cashback_percentages, weights=weights, k=1)[0]
+    
+    # Calculate cashback amount in INR (10 PRC = ₹1)
+    prc_value_inr = card_cost / 10
+    cashback_inr = (prc_value_inr * cashback_percentage) / 100
+    
+    return {
+        "cashback_percentage": cashback_percentage,
+        "cashback_inr": round(cashback_inr, 2),
+        "card_cost_prc": card_cost,
+        "card_value_inr": prc_value_inr
+    }
+
+@api_router.post("/scratch-cards/purchase")
+async def purchase_scratch_card(purchase: ScratchCardPurchase, uid: str = None):
+    """Purchase and scratch a card"""
+    try:
+        if not uid:
+            raise HTTPException(status_code=400, detail="User ID required")
+        
+        # Validate card type
+        if purchase.card_type not in [10, 50, 100]:
+            raise HTTPException(status_code=400, detail="Invalid card type. Must be 10, 50, or 100 PRC")
+        
+        # Get user
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Check if VIP
+        is_vip = user.get("membership_type") == "vip"
+        
+        # Check PRC balance
+        current_balance = user.get("prc_balance", 0)
+        if current_balance < purchase.card_type:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Insufficient PRC balance. You need {purchase.card_type} PRC but have {current_balance} PRC"
+            )
+        
+        # Deduct PRC
+        new_balance = current_balance - purchase.card_type
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"prc_balance": new_balance}}
+        )
+        
+        # Generate reward
+        reward = generate_scratch_reward(is_vip, purchase.card_type)
+        
+        # Add cashback to user's wallet
+        cashback_wallet = user.get("cashback_wallet", 0)
+        new_cashback_wallet = cashback_wallet + reward["cashback_inr"]
+        
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"cashback_wallet": new_cashback_wallet}}
+        )
+        
+        # Record transaction
+        transaction_id = str(uuid.uuid4())
+        scratch_card_record = {
+            "transaction_id": transaction_id,
+            "uid": uid,
+            "card_type": purchase.card_type,
+            "is_vip": is_vip,
+            "cashback_percentage": reward["cashback_percentage"],
+            "cashback_inr": reward["cashback_inr"],
+            "prc_spent": purchase.card_type,
+            "prc_balance_before": current_balance,
+            "prc_balance_after": new_balance,
+            "cashback_wallet_before": cashback_wallet,
+            "cashback_wallet_after": new_cashback_wallet,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "game_type": "scratch_card"
+        }
+        
+        await db.scratch_cards.insert_one(scratch_card_record)
+        
+        # Log activity
+        await db.activity_logs.insert_one({
+            "uid": uid,
+            "action": "scratch_card_played",
+            "details": {
+                "card_cost": purchase.card_type,
+                "cashback_won": reward["cashback_inr"],
+                "percentage": reward["cashback_percentage"]
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": f"🎉 You won {reward['cashback_percentage']}% cashback!",
+            "transaction_id": transaction_id,
+            "card_cost_prc": purchase.card_type,
+            "card_value_inr": reward["card_value_inr"],
+            "cashback_percentage": reward["cashback_percentage"],
+            "cashback_won_inr": reward["cashback_inr"],
+            "new_prc_balance": new_balance,
+            "new_cashback_wallet": new_cashback_wallet,
+            "is_vip": is_vip
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/scratch-cards/history/{uid}")
+async def get_scratch_card_history(uid: str, limit: int = 20):
+    """Get user's scratch card history"""
+    try:
+        history = await db.scratch_cards.find(
+            {"uid": uid}
+        ).sort("timestamp", -1).limit(limit).to_list(length=limit)
+        
+        # Calculate statistics
+        total_spent = sum(card.get("prc_spent", 0) for card in history)
+        total_won = sum(card.get("cashback_inr", 0) for card in history)
+        
+        return {
+            "history": history,
+            "stats": {
+                "total_cards_played": len(history),
+                "total_prc_spent": total_spent,
+                "total_cashback_won": round(total_won, 2),
+                "avg_cashback_per_card": round(total_won / len(history), 2) if history else 0
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ========== END SCRATCH CARD GAME ENDPOINTS ==========
+
 app.include_router(api_router)
 
 app.add_middleware(
