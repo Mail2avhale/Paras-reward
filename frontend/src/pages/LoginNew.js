@@ -193,13 +193,13 @@ const LoginNew = ({ onLogin }) => {
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email/Mobile/UID</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('auth.email')} / {t('auth.mobile')} / UID</label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
                 data-testid="login-identifier-input"
                 type="text"
-                placeholder="Email, Mobile or UID"
+                placeholder={t('auth.email')}
                 value={loginData.identifier}
                 onChange={(e) => setLoginData({ ...loginData, identifier: e.target.value })}
                 required
@@ -209,12 +209,12 @@ const LoginNew = ({ onLogin }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('auth.password')}</label>
             <div className="relative">
               <Input
                 data-testid="login-password-input"
                 type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
+                placeholder={t('auth.password')}
                 value={loginData.password}
                 onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                 required
@@ -232,7 +232,7 @@ const LoginNew = ({ onLogin }) => {
 
           <div className="text-right">
             <Link to="/forgot-password" className="text-sm text-purple-600 hover:text-purple-700 font-medium">
-              Forgot Password?
+              {t('auth.forgot_password')}
             </Link>
           </div>
 
