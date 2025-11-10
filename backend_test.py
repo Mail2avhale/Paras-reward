@@ -48,45 +48,26 @@ print(f"Backend URL: {BACKEND_URL}")
 print(f"API Base: {API_BASE}")
 print("=" * 80)
 
-def test_profit_wallet_transaction_logging_complete_flow():
+def test_scratch_card_cashback_credit_fix():
     """
-    PROFIT WALLET TRANSACTION LOGGING - COMPLETE VERIFICATION (FINAL)
+    SCRATCH CARD CASHBACK CREDIT FIX - COMPREHENSIVE TESTING
     
-    Tests all 18 scenarios as requested:
-    
-    Phase 1: Outlet Assignment Verification (5 scenarios)
-    1. Create VIP test user with location data
-    2. Create test order via POST /api/orders/checkout  
-    3. ✅ Verify outlet_id is NOT None
-    4. ✅ Verify assigned_outlet is NOT None
-    5. ✅ Confirm outlet assignment logic finds outlets correctly
-
-    Phase 2: Order Delivery Flow (3 scenarios)
-    6. Verify order with secret code (POST /api/orders/verify)
-    7. ✅ Mark order as delivered (POST /api/orders/{order_id}/deliver)
-    8. ✅ Confirm delivery succeeds without "No outlet assigned" error
-
-    Phase 3: Delivery Charge Distribution (3 scenarios)
-    9. ✅ Trigger POST /api/orders/{order_id}/distribute-delivery-charge
-    10. ✅ Verify commission distribution succeeds
-    11. ✅ Check profit_wallet_balance updated for outlet/sub/master stockists
-
-    Phase 4: Transaction Logging (CRITICAL) (4 scenarios)
-    12. ✅ Query transactions collection for transaction_type = "profit_share"
-    13. ✅ Verify transaction records exist for each credited entity (3 transactions minimum)
-    14. ✅ Confirm wallet_type = "profit_wallet" in all records
-    15. ✅ Verify metadata contains: order_id, entity_type, commission_percentage, total_commission
-
-    Phase 5: Balance Tracking (2 scenarios)
-    16. ✅ Check balance_before and balance_after are accurate in transactions
-    17. ✅ Confirm balance_after matches current user profit_wallet_balance
-
-    Phase 6: Transaction History Integration (1 scenario)
-    18. ✅ GET /api/wallet/transactions/{uid} returns profit wallet transactions for all entities
+    Test Scenarios:
+    1. Create test user with sufficient PRC balance (at least 100 PRC)
+    2. Check user's initial cashback_wallet_balance
+    3. Purchase a scratch card (10 PRC Bronze card)
+    4. Verify:
+       - PRC balance deducted correctly
+       - Cashback credited to cashback_wallet_balance field
+       - Transaction logged in 'transactions' collection with type='scratch_card_reward'
+       - Scratch card record created in 'scratch_cards' collection
+       - Response includes correct cashback amount and new balance
+    5. Test with different card types (50 PRC Silver, 100 PRC Gold)
+    6. Verify transaction history shows scratch card rewards
     """
-    print(f"\n💰 PROFIT WALLET TRANSACTION LOGGING - COMPLETE VERIFICATION (FINAL)")
+    print(f"\n🎰 SCRATCH CARD CASHBACK CREDIT FIX - COMPREHENSIVE TESTING")
     print("=" * 80)
-    print(f"Testing all 18 scenarios for complete end-to-end verification")
+    print(f"Testing scratch card cashback credit and transaction logging")
     print("=" * 80)
     
     test_results = {
