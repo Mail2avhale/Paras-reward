@@ -149,62 +149,26 @@ def test_scratch_card_cashback_credit_fix():
         print(f"❌ Error creating test user: {e}")
         return test_results
     
-    # Scenario 2: Create test order via POST /api/orders/checkout
-    print(f"\n📋 Scenario 2: Create test order via POST /api/orders/checkout")
+    # Test available scratch cards endpoint
+    print(f"\n📋 Testing available scratch cards endpoint")
     
     try:
-        # Get available products first
-        response = requests.get(f"{API_BASE}/products", timeout=30)
+        response = requests.get(f"{API_BASE}/scratch-cards/available", timeout=30)
         if response.status_code == 200:
-            products_data = response.json()
-            if isinstance(products_data, dict) and "products" in products_data:
-                products = products_data["products"]
-            elif isinstance(products_data, list):
-                products = products_data
-            else:
-                products = []
-            
-            if len(products) > 0:
-                test_product = products[0]
-                print(f"   Using product: {test_product['name']} (PRC: {test_product.get('prc_price')}, Cash: {test_product.get('cash_price')})")
-                
-                # Add to cart first
-                cart_data = {
-                    "user_id": vip_uid,
-                    "product_id": test_product["product_id"],
-                    "quantity": 1
-                }
-                cart_response = requests.post(f"{API_BASE}/cart/add", json=cart_data, timeout=30)
-                print(f"   Cart add status: {cart_response.status_code}")
-                
-                # Checkout
-                checkout_data = {
-                    "user_id": vip_uid,
-                    "delivery_address": "123 Test Street, Mumbai, Maharashtra, 400001"
-                }
-                
-                response = requests.post(f"{API_BASE}/orders/checkout", json=checkout_data, timeout=30)
-                if response.status_code == 200:
-                    result = response.json()
-                    order_id = result.get("order_id")
-                    secret_code = result.get("secret_code")
-                    test_results["scenario_02_order_creation_checkout"] = True
-                    print(f"✅ Order created via checkout: {order_id}")
-                    print(f"   📋 Secret Code: {secret_code}")
-                    print(f"   📋 Total PRC: {result.get('total_prc')}")
-                else:
-                    print(f"❌ Order checkout failed: {response.status_code}")
-                    print(f"   Response: {response.text}")
-                    return test_results
-            else:
-                print(f"❌ No products available for testing")
-                return test_results
+            cards_data = response.json()
+            cards = cards_data.get("cards", [])
+            test_results["available_cards_endpoint"] = True
+            print(f"✅ Available scratch cards endpoint working")
+            print(f"   📋 Available cards: {len(cards)}")
+            for card in cards:
+                print(f"   📋 {card['name']}: {card['cost']} PRC - {card['description']}")
         else:
-            print(f"❌ Failed to get products: {response.status_code}")
+            print(f"❌ Available cards endpoint failed: {response.status_code}")
+            print(f"   Response: {response.text}")
             return test_results
             
     except Exception as e:
-        print(f"❌ Error creating order: {e}")
+        print(f"❌ Error getting available cards: {e}")
         return test_results
     
     # Scenarios 3-5: Verify outlet assignment
