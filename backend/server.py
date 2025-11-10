@@ -10493,7 +10493,7 @@ async def purchase_scratch_card(purchase: ScratchCardPurchase, uid: str = None):
             "cashback_percentage": reward["cashback_percentage"],
             "cashback_won_inr": reward["cashback_inr"],
             "new_prc_balance": new_balance,
-            "new_cashback_wallet": new_cashback_wallet,
+            "new_cashback_wallet": new_cashback_wallet_balance,
             "is_vip": is_vip
         }
         
