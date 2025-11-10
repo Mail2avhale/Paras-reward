@@ -113,7 +113,21 @@ const LoginNew = ({ onLogin }) => {
       }
     } catch (error) {
       console.error('Login error:', error);
-      toast.error(error.response?.data?.detail || 'Login failed. Please check your credentials.');
+      
+      // Handle specific error cases
+      if (error.response?.status === 404) {
+        // User not registered
+        toast.error('User not registered. Please register to continue.', {
+          duration: 6000,
+          action: {
+            label: 'Register Now',
+            onClick: () => navigate('/register')
+          }
+        });
+      } else {
+        // Other errors
+        toast.error(error.response?.data?.detail || 'Login failed. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
     }
