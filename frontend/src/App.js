@@ -46,6 +46,7 @@ const Leaderboard = lazy(() => import("@/pages/Leaderboard"));
 const ProfileEnhanced = lazy(() => import("@/pages/ProfileEnhanced"));
 const ReferralDashboard = lazy(() => import("@/pages/ReferralDashboard"));
 const GamificationDashboard = lazy(() => import("@/pages/GamificationDashboard"));
+const ScratchCard = lazy(() => import("@/pages/ScratchCard"));
 const FlashSalesPage = lazy(() => import("@/pages/FlashSalesPage"));
 const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
 const AdminDashboardModern = lazy(() => import("@/pages/AdminDashboardModern"));
