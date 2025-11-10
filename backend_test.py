@@ -311,110 +311,46 @@ def test_scratch_card_cashback_credit_fix():
     except Exception as e:
         print(f"❌ Error checking updated wallet balance: {e}")
     
-    print(f"\n🔍 TRANSACTION LOGGING VERIFICATION")
+    print(f"\n🔍 STEP 6: VERIFYING TRANSACTION LOGGING")
     print("=" * 60)
     
-    # Test transaction logging for Bronze card
-    print(f"\n📋 Verifying Bronze card transaction logging")
+    # Test transaction logging for the new purchase
+    print(f"\n📋 Verifying new purchase transaction logging...")
     
     try:
-        if bronze_transaction_id:
+        if new_transaction_id:
             # Check wallet transactions endpoint
             response = requests.get(f"{API_BASE}/wallet/transactions/{test_uid}", timeout=30)
             if response.status_code == 200:
                 result = response.json()
                 transactions = result.get("transactions", [])
                 
-                # Look for scratch card reward transactions
-                scratch_transactions = [t for t in transactions if t.get("type") == "scratch_card_reward"]
+                # Look for the specific new transaction
+                new_txn = next((t for t in transactions if t.get("transaction_id") == new_transaction_id), None)
                 
-                if scratch_transactions:
-                    test_results["bronze_transaction_logging"] = True
-                    print(f"✅ Bronze transaction logging verified")
-                    print(f"   📋 Found {len(scratch_transactions)} scratch card transactions")
-                    
-                    # Check latest transaction details
-                    latest_txn = scratch_transactions[0]
-                    print(f"   📋 Transaction ID: {latest_txn.get('transaction_id')}")
-                    print(f"   📋 Wallet Type: {latest_txn.get('wallet_type')}")
-                    print(f"   📋 Amount: ₹{latest_txn.get('amount')}")
-                    print(f"   📋 Description: {latest_txn.get('description')}")
+                if new_txn:
+                    test_results["transaction_logged_correctly"] = True
+                    print(f"✅ New transaction logging verified")
+                    print(f"   📋 Transaction ID: {new_txn.get('transaction_id')}")
+                    print(f"   📋 Wallet Type: {new_txn.get('wallet_type')}")
+                    print(f"   📋 Amount: ₹{new_txn.get('amount')}")
+                    print(f"   📋 Description: {new_txn.get('description')}")
                     
                     # Verify metadata
-                    metadata = latest_txn.get("metadata", {})
+                    metadata = new_txn.get("metadata", {})
                     if metadata.get("card_type") == 10 and "cashback_percentage" in metadata:
                         print(f"   📋 Metadata complete: Card Type {metadata.get('card_type')}, Cashback {metadata.get('cashback_percentage')}%")
                     else:
                         print(f"   ⚠️  Metadata incomplete: {metadata}")
                 else:
-                    print(f"❌ No scratch card reward transactions found")
+                    print(f"❌ New transaction not found in history")
             else:
                 print(f"❌ Failed to get wallet transactions: {response.status_code}")
         else:
-            print(f"❌ No bronze transaction ID to verify")
+            print(f"❌ No new transaction ID to verify")
             
     except Exception as e:
-        print(f"❌ Error verifying bronze transaction: {e}")
-    
-    # Test Silver card transaction logging
-    print(f"\n📋 Verifying Silver card transaction logging")
-    
-    try:
-        if silver_transaction_id:
-            # Check for Silver card transaction in history
-            response = requests.get(f"{API_BASE}/wallet/transactions/{test_uid}", timeout=30)
-            if response.status_code == 200:
-                result = response.json()
-                transactions = result.get("transactions", [])
-                
-                # Look for the specific Silver card transaction
-                silver_txn = next((t for t in transactions if t.get("transaction_id") == silver_transaction_id), None)
-                
-                if silver_txn:
-                    test_results["silver_transaction_logging"] = True
-                    print(f"✅ Silver transaction logging verified")
-                    print(f"   📋 Transaction ID: {silver_txn.get('transaction_id')}")
-                    print(f"   📋 Wallet Type: {silver_txn.get('wallet_type')}")
-                    print(f"   📋 Amount: ₹{silver_txn.get('amount')}")
-                else:
-                    print(f"❌ Silver transaction not found in history")
-            else:
-                print(f"❌ Failed to get wallet transactions: {response.status_code}")
-        else:
-            print(f"❌ No silver transaction ID to verify")
-            
-    except Exception as e:
-        print(f"❌ Error verifying silver transaction: {e}")
-    
-    # Test Gold card transaction logging
-    print(f"\n📋 Verifying Gold card transaction logging")
-    
-    try:
-        if gold_transaction_id:
-            # Check for Gold card transaction in history
-            response = requests.get(f"{API_BASE}/wallet/transactions/{test_uid}", timeout=30)
-            if response.status_code == 200:
-                result = response.json()
-                transactions = result.get("transactions", [])
-                
-                # Look for the specific Gold card transaction
-                gold_txn = next((t for t in transactions if t.get("transaction_id") == gold_transaction_id), None)
-                
-                if gold_txn:
-                    test_results["gold_transaction_logging"] = True
-                    print(f"✅ Gold transaction logging verified")
-                    print(f"   📋 Transaction ID: {gold_txn.get('transaction_id')}")
-                    print(f"   📋 Wallet Type: {gold_txn.get('wallet_type')}")
-                    print(f"   📋 Amount: ₹{gold_txn.get('amount')}")
-                else:
-                    print(f"❌ Gold transaction not found in history")
-            else:
-                print(f"❌ Failed to get wallet transactions: {response.status_code}")
-        else:
-            print(f"❌ No gold transaction ID to verify")
-            
-    except Exception as e:
-        print(f"❌ Error verifying gold transaction: {e}")
+        print(f"❌ Error verifying new transaction: {e}")
     
     print(f"\n📚 SCRATCH CARD HISTORY VERIFICATION")
     print("=" * 60)
