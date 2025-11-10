@@ -145,16 +145,22 @@ const ScratchCard = ({ user }) => {
 
     const percentage = (transparent / (pixels.length / 4)) * 100;
     
-    if (percentage > 60 && !revealed) {
+    if (percentage > 60 && !revealed && result) {
       setRevealed(true);
       canvas.style.display = 'none';
       
-      // Show big animated celebration
-      setCelebrationData({
-        amount: result.cashback_won_inr,
-        percentage: result.cashback_percentage,
-        message: "YOU WON!"
-      });
+      console.log('Scratch card revealed! Result:', result);
+      
+      // Show big animated celebration with proper null checks
+      if (result.cashback_won_inr && result.cashback_percentage) {
+        setTimeout(() => {
+          setCelebrationData({
+            amount: result.cashback_won_inr,
+            percentage: result.cashback_percentage,
+            message: "YOU WON!"
+          });
+        }, 500);
+      }
       
       fetchHistory();
     }
