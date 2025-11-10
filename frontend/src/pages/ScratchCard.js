@@ -220,9 +220,17 @@ const ScratchCard = ({ user }) => {
       
       console.log('Scratch card revealed! Result:', result);
       
-      // Show result card first for 2.5 seconds, THEN show celebration
+      // Show quick feedback that scratching is complete
+      setAnimatedFeedback({
+        message: `🎊 Scratching Complete!\n✨ Check Your Prize! ✨`,
+        type: 'info',
+        duration: 2000
+      });
+      
+      // Show big celebration after user sees the result (2.5 seconds)
       if (result.cashback_won_inr && result.cashback_percentage) {
         setTimeout(() => {
+          setAnimatedFeedback(null); // Clear the "complete" message
           setCelebrationData({
             amount: result.cashback_won_inr,
             percentage: result.cashback_percentage,
