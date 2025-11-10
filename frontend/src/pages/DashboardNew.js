@@ -232,31 +232,31 @@ const DashboardNew = ({ user, onLogout }) => {
           </div>
         </Card>
 
-        {/* Quick Menu - Enhanced with 9 options including Treasure Hunt */}
+        {/* Quick Menu - Optimized grid layout for better mobile experience */}
         <div className="mb-6">
           <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-yellow-400" />
             Quick Menu
           </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
             {quickActions.map((action, idx) => (
               <Link key={idx} to={action.link}>
-                <Card className="relative bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-2xl hover:scale-105 transition-all duration-300 hover:bg-white/15 cursor-pointer group overflow-hidden">
+                <Card className="relative bg-white/10 backdrop-blur-xl border border-white/20 p-3 rounded-xl hover:scale-105 transition-all duration-300 hover:bg-white/15 cursor-pointer group overflow-hidden">
                   {/* Badge */}
                   {action.badge && (
-                    <div className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    <div className="absolute top-1.5 right-1.5 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
                       {action.badge}
                     </div>
                   )}
                   
                   {/* Icon */}
-                  <div className={`bg-gradient-to-br ${action.gradient} p-3 rounded-xl mb-3 w-fit group-hover:scale-110 transition-transform shadow-lg`}>
-                    <action.icon className="h-6 w-6 text-white" />
+                  <div className={`bg-gradient-to-br ${action.gradient} p-2 rounded-lg mb-2 w-fit group-hover:scale-110 transition-transform shadow-lg mx-auto`}>
+                    <action.icon className="h-5 w-5 text-white" />
                   </div>
                   
                   {/* Text */}
-                  <h4 className="font-semibold text-white text-sm mb-1">{action.name}</h4>
-                  <p className="text-xs text-gray-300">{action.description}</p>
+                  <h4 className="font-semibold text-white text-xs mb-0.5 text-center">{action.name}</h4>
+                  <p className="text-[10px] text-gray-300 text-center">{action.description}</p>
                   
                   {/* Hover effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
