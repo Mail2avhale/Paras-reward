@@ -71,35 +71,33 @@ def test_scratch_card_cashback_credit_fix():
     print("=" * 80)
     
     test_results = {
-        # Phase 1: Outlet Assignment Verification (5 scenarios)
-        "scenario_01_vip_user_creation": False,
-        "scenario_02_order_creation_checkout": False,
-        "scenario_03_outlet_id_not_none": False,
-        "scenario_04_assigned_outlet_not_none": False,
-        "scenario_05_outlet_assignment_logic": False,
+        # Test Setup
+        "test_user_creation": False,
+        "available_cards_endpoint": False,
         
-        # Phase 2: Order Delivery Flow (3 scenarios)
-        "scenario_06_order_verification": False,
-        "scenario_07_order_delivery_success": False,
-        "scenario_08_no_outlet_assigned_error": False,
+        # Bronze Card (10 PRC) Tests
+        "bronze_card_purchase": False,
+        "bronze_prc_deduction": False,
+        "bronze_cashback_credit": False,
+        "bronze_transaction_logging": False,
+        "bronze_scratch_card_record": False,
         
-        # Phase 3: Delivery Charge Distribution (3 scenarios)
-        "scenario_09_distribution_trigger": False,
-        "scenario_10_commission_distribution": False,
-        "scenario_11_profit_wallet_updates": False,
+        # Silver Card (50 PRC) Tests
+        "silver_card_purchase": False,
+        "silver_prc_deduction": False,
+        "silver_cashback_credit": False,
+        "silver_transaction_logging": False,
         
-        # Phase 4: Transaction Logging (CRITICAL) (4 scenarios)
-        "scenario_12_profit_share_transactions": False,
-        "scenario_13_three_transaction_records": False,
-        "scenario_14_profit_wallet_type": False,
-        "scenario_15_metadata_completeness": False,
+        # Gold Card (100 PRC) Tests
+        "gold_card_purchase": False,
+        "gold_prc_deduction": False,
+        "gold_cashback_credit": False,
+        "gold_transaction_logging": False,
         
-        # Phase 5: Balance Tracking (2 scenarios)
-        "scenario_16_balance_accuracy": False,
-        "scenario_17_balance_matching": False,
-        
-        # Phase 6: Transaction History Integration (1 scenario)
-        "scenario_18_transaction_history": False
+        # Transaction History Tests
+        "wallet_transactions_endpoint": False,
+        "scratch_card_history_endpoint": False,
+        "transaction_details_verification": False
     }
     
     # Create test environment with proper hierarchy
