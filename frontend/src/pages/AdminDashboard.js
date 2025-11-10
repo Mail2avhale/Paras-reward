@@ -1315,7 +1315,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                   </button>
 
                   <button
-                    onClick={() => setActiveTab('settings')}
+                    onClick={() => navigate('/admin/settings')}
                     className="p-4 bg-white hover:bg-gray-100 border-2 border-transparent hover:border-gray-300 rounded-xl shadow-sm transition-all group"
                   >
                     <div className="flex flex-col items-center space-y-2">
