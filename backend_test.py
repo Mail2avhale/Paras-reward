@@ -171,47 +171,68 @@ def test_scratch_card_cashback_credit_fix():
         print(f"❌ Error getting available cards: {e}")
         return test_results
     
-    # Scenarios 3-5: Verify outlet assignment
-    print(f"\n📋 Scenarios 3-5: Verify outlet assignment fields and logic")
+    print(f"\n🎰 BRONZE CARD (10 PRC) TESTING")
+    print("=" * 60)
+    
+    # Test Bronze Card Purchase
+    print(f"\n📋 Testing Bronze Card (10 PRC) purchase")
+    
+    bronze_transaction_id = None
+    bronze_cashback_won = 0
     
     try:
-        # Get order details to check outlet assignment
-        response = requests.get(f"{API_BASE}/admin/orders/{order_id}", timeout=30)
+        # Get initial balances
+        response = requests.get(f"{API_BASE}/wallet/{test_uid}", timeout=30)
         if response.status_code == 200:
-            order_data = response.json()
-            outlet_id = order_data.get("outlet_id")
-            assigned_outlet = order_data.get("assigned_outlet")
+            wallet_data = response.json()
+            prc_before = wallet_data.get("prc_balance", 0)
+            cashback_before = wallet_data.get("cashback_wallet_balance", 0)
+            print(f"   📋 PRC Balance Before: {prc_before}")
+            print(f"   📋 Cashback Balance Before: {cashback_before}")
+        
+        # Purchase Bronze Card
+        purchase_data = {"card_type": 10}
+        response = requests.post(f"{API_BASE}/scratch-cards/purchase?uid={test_uid}", json=purchase_data, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            bronze_transaction_id = result.get("transaction_id")
+            bronze_cashback_won = result.get("cashback_won_inr", 0)
             
-            print(f"   📋 Order outlet_id: {outlet_id}")
-            print(f"   📋 Order assigned_outlet: {assigned_outlet}")
+            test_results["bronze_card_purchase"] = True
+            print(f"✅ Bronze card purchase successful")
+            print(f"   📋 Transaction ID: {bronze_transaction_id}")
+            print(f"   📋 Cashback Won: ₹{bronze_cashback_won}")
+            print(f"   📋 Cashback Percentage: {result.get('cashback_percentage')}%")
+            print(f"   📋 New PRC Balance: {result.get('new_prc_balance')}")
+            print(f"   📋 New Cashback Balance: {result.get('new_cashback_wallet')}")
             
-            # Scenario 3: Verify outlet_id is NOT None
-            if outlet_id is not None:
-                test_results["scenario_03_outlet_id_not_none"] = True
-                print(f"✅ Scenario 3: outlet_id is NOT None")
+            # Verify PRC deduction
+            expected_prc_after = prc_before - 10
+            actual_prc_after = result.get('new_prc_balance')
+            if abs(actual_prc_after - expected_prc_after) < 0.01:
+                test_results["bronze_prc_deduction"] = True
+                print(f"✅ PRC deduction correct: {prc_before} - 10 = {actual_prc_after}")
             else:
-                print(f"❌ Scenario 3: outlet_id is None")
+                print(f"❌ PRC deduction incorrect: Expected {expected_prc_after}, got {actual_prc_after}")
             
-            # Scenario 4: Verify assigned_outlet is NOT None
-            if assigned_outlet is not None:
-                test_results["scenario_04_assigned_outlet_not_none"] = True
-                print(f"✅ Scenario 4: assigned_outlet is NOT None")
+            # Verify cashback credit
+            expected_cashback_after = cashback_before + bronze_cashback_won
+            actual_cashback_after = result.get('new_cashback_wallet')
+            if abs(actual_cashback_after - expected_cashback_after) < 0.01:
+                test_results["bronze_cashback_credit"] = True
+                print(f"✅ Cashback credit correct: {cashback_before} + {bronze_cashback_won} = {actual_cashback_after}")
             else:
-                print(f"❌ Scenario 4: assigned_outlet is None")
-            
-            # Scenario 5: Confirm outlet assignment logic works
-            if outlet_id is not None and assigned_outlet is not None:
-                test_results["scenario_05_outlet_assignment_logic"] = True
-                print(f"✅ Scenario 5: Outlet assignment logic working correctly")
-            else:
-                print(f"❌ Scenario 5: Outlet assignment logic failed")
+                print(f"❌ Cashback credit incorrect: Expected {expected_cashback_after}, got {actual_cashback_after}")
+                
         else:
-            print(f"❌ Failed to get order details: {response.status_code}")
+            print(f"❌ Bronze card purchase failed: {response.status_code}")
+            print(f"   Response: {response.text}")
             
     except Exception as e:
-        print(f"❌ Error checking outlet assignment: {e}")
+        print(f"❌ Error purchasing bronze card: {e}")
     
-    print(f"\n🚚 PHASE 2: ORDER DELIVERY FLOW")
+    print(f"\n🥈 SILVER CARD (50 PRC) TESTING")
     print("=" * 60)
     
     # Scenario 6: Verify order with secret code
