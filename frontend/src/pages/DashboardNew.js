@@ -168,67 +168,132 @@ const DashboardNew = ({ user, onLogout }) => {
       <Navbar user={user} onLogout={onLogout} />
       <PWAInstallPrompt />
       
-      <div className="container mx-auto px-3 py-6 max-w-full lg:max-w-7xl xl:max-w-[90%]">
+      <div className="container mx-auto px-3 py-4 max-w-full lg:max-w-7xl xl:max-w-[90%]">
         
-        {/* Welcome Header with Avatar */}
-        <div className="mb-6 flex items-center gap-4">
-          <div className="relative">
-            <img
-              src={user.profile_picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=9333ea&color=fff&size=128`}
-              alt={user.name}
-              className="w-20 h-20 rounded-full border-4 border-purple-500 shadow-xl"
-            />
-            {isVIP && (
-              <div className="absolute -bottom-1 -right-1 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full p-1.5">
-                <Crown className="h-4 w-4 text-white" />
-              </div>
-            )}
+        {/* HERO SECTION */}
+        <div className="relative mb-6 overflow-hidden rounded-3xl">
+          {/* Animated Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-pink-600 to-indigo-700">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+            <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold text-white">
-              Welcome back, {userData?.first_name || user.name}!
-            </h1>
-            <p className="text-purple-300 flex items-center gap-2 mt-1">
-              <Activity className="h-4 w-4" />
-              Level {level} • {isVIP ? 'VIP Member' : 'Free Member'}
-            </p>
+          
+          {/* Hero Content */}
+          <div className="relative z-10 p-6 md:p-8">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              {/* Left Side - User Info & Balance */}
+              <div className="flex-1">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="relative group">
+                    <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-pink-400 rounded-full blur-md opacity-75 group-hover:opacity-100 transition-opacity"></div>
+                    <img
+                      src={user.profile_picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=9333ea&color=fff&size=128`}
+                      alt={user.name}
+                      className="relative w-24 h-24 rounded-full border-4 border-white shadow-2xl"
+                    />
+                    {isVIP && (
+                      <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full p-2 shadow-lg">
+                        <Crown className="h-5 w-5 text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <h1 className="text-3xl md:text-4xl font-black text-white mb-1 drop-shadow-lg">
+                      {userData?.first_name || user.name}
+                    </h1>
+                    <div className="flex items-center gap-3">
+                      <span className="px-3 py-1 bg-white/20 backdrop-blur-xl rounded-full text-sm font-bold text-white border border-white/30">
+                        Level {level}
+                      </span>
+                      <span className={`px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 ${
+                        isVIP 
+                          ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' 
+                          : 'bg-white/20 backdrop-blur-xl text-white border border-white/30'
+                      }`}>
+                        {isVIP && <Crown className="h-3 w-3" />}
+                        {isVIP ? 'VIP Member' : 'Free Member'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Balance Display */}
+                <div className="bg-white/10 backdrop-blur-2xl rounded-2xl p-6 border border-white/20">
+                  <p className="text-white/80 text-sm mb-2 font-semibold">Your Balance</p>
+                  <div className="flex items-baseline gap-3 mb-2">
+                    <h2 className="text-6xl md:text-7xl font-black text-white drop-shadow-2xl">
+                      {prcBalance.toFixed(0)}
+                    </h2>
+                    <span className="text-2xl font-bold text-white/80">PRC</span>
+                  </div>
+                  <p className="text-xl text-white/90 font-semibold">
+                    ≈ ₹{(prcBalance / 10).toFixed(2)} INR
+                  </p>
+                  
+                  {/* Level Progress Bar */}
+                  <div className="mt-4 pt-4 border-t border-white/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-bold text-white">Level Progress</span>
+                      <span className="text-sm text-white/80">{currentLevelProgress.toFixed(0)} / 1000 PRC</span>
+                    </div>
+                    <div className="relative h-3 bg-white/20 rounded-full overflow-hidden">
+                      <div 
+                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full transition-all duration-500"
+                        style={{ width: `${progressPercent}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-white/70 mt-1">
+                      {(1000 - currentLevelProgress).toFixed(0)} PRC to next level
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Right Side - Quick Stats Cards */}
+              <div className="grid grid-cols-2 gap-3 md:w-80">
+                <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-white/20 hover:bg-white/15 transition-all">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="bg-green-500/30 p-2 rounded-lg">
+                      <TrendingUp className="h-5 w-5 text-green-300" />
+                    </div>
+                  </div>
+                  <p className="text-2xl font-black text-white">{stats?.total_mined?.toFixed(0) || '0'}</p>
+                  <p className="text-xs text-white/70 font-medium">Total Mined</p>
+                </div>
+                
+                <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-white/20 hover:bg-white/15 transition-all">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="bg-blue-500/30 p-2 rounded-lg">
+                      <Users className="h-5 w-5 text-blue-300" />
+                    </div>
+                  </div>
+                  <p className="text-2xl font-black text-white">{stats?.total_referrals || '0'}</p>
+                  <p className="text-xs text-white/70 font-medium">Referrals</p>
+                </div>
+                
+                <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-white/20 hover:bg-white/15 transition-all">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="bg-purple-500/30 p-2 rounded-lg">
+                      <Activity className="h-5 w-5 text-purple-300" />
+                    </div>
+                  </div>
+                  <p className="text-2xl font-black text-white">{level}</p>
+                  <p className="text-xs text-white/70 font-medium">Current Level</p>
+                </div>
+                
+                <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-white/20 hover:bg-white/15 transition-all">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="bg-pink-500/30 p-2 rounded-lg">
+                      <Trophy className="h-5 w-5 text-pink-300" />
+                    </div>
+                  </div>
+                  <p className="text-2xl font-black text-white">{achievements.filter(a => a.earned).length}</p>
+                  <p className="text-xs text-white/70 font-medium">Achievements</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Main Balance Card - App-like */}
-        <Card className="bg-gradient-to-br from-purple-600 via-pink-600 to-purple-700 text-white p-6 rounded-3xl shadow-2xl mb-6 relative overflow-hidden">
-          {/* Decorative elements */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -ml-32 -mb-32"></div>
-          
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm text-white/80 mb-1">Total PRC Balance</p>
-                <h2 className="text-5xl font-bold flex items-baseline gap-2">
-                  {prcBalance.toFixed(2)}
-                  <span className="text-xl text-white/80">PRC</span>
-                </h2>
-                <p className="text-lg text-white/90 mt-2">≈ ₹{(prcBalance / 10).toFixed(2)} INR</p>
-              </div>
-              <div className="bg-white/20 backdrop-blur-xl p-5 rounded-2xl">
-                <Coins className="h-12 w-12" />
-              </div>
-            </div>
-            
-            {/* Level Progress */}
-            <div className="mt-4 bg-white/20 backdrop-blur-xl rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Level {level} Progress</span>
-                <span className="text-sm">{currentLevelProgress.toFixed(0)} / 1000</span>
-              </div>
-              <Progress value={progressPercent} className="h-2 bg-white/30" />
-              <p className="text-xs text-white/70 mt-2">
-                {(1000 - currentLevelProgress).toFixed(0)} PRC to Level {level + 1}
-              </p>
-            </div>
-          </div>
-        </Card>
 
         {/* Quick Menu - Compact 2-row layout */}
         <div className="mb-6">
