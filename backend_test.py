@@ -81,33 +81,22 @@ def test_scratch_card_cashback_credit_fix():
     print("=" * 80)
     
     test_results = {
-        # Test Setup
-        "test_user_creation": False,
-        "available_cards_endpoint": False,
+        # Fix Verification Tests
+        "existing_user_found": False,
+        "wallet_endpoint_shows_correct_balance": False,
+        "scratch_card_history_no_500_error": False,
+        "scratch_card_history_valid_json": False,
         
-        # Bronze Card (10 PRC) Tests
-        "bronze_card_purchase": False,
-        "bronze_prc_deduction": False,
-        "bronze_cashback_credit": False,
-        "bronze_transaction_logging": False,
-        "bronze_scratch_card_record": False,
+        # End-to-End Flow Tests
+        "new_purchase_successful": False,
+        "new_purchase_cashback_credited": False,
+        "wallet_shows_updated_balance": False,
+        "transaction_logged_correctly": False,
+        "history_includes_new_purchase": False,
         
-        # Silver Card (50 PRC) Tests
-        "silver_card_purchase": False,
-        "silver_prc_deduction": False,
-        "silver_cashback_credit": False,
-        "silver_transaction_logging": False,
-        
-        # Gold Card (100 PRC) Tests
-        "gold_card_purchase": False,
-        "gold_prc_deduction": False,
-        "gold_cashback_credit": False,
-        "gold_transaction_logging": False,
-        
-        # Transaction History Tests
-        "wallet_transactions_endpoint": False,
-        "scratch_card_history_endpoint": False,
-        "transaction_details_verification": False
+        # Overall System Health
+        "no_objectid_errors": False,
+        "field_consistency_fixed": False
     }
     
     # Create test environment
