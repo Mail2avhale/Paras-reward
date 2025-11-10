@@ -27,20 +27,39 @@ const BankingWallet = ({ user, walletBalance = 0 }) => {
     endDate: '',
     searchQuery: ''
   });
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false
+  });
 
   useEffect(() => {
     fetchTransactions();
-  }, [activeWallet]);
+  }, [activeWallet, pagination.page]);
 
   const fetchTransactions = async () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `${API}/transactions/user/${user.uid}/detailed?wallet_type=${activeWallet}&limit=50`
+        `${API}/wallet/transactions/${user.uid}?wallet_type=${activeWallet}_wallet&page=${pagination.page}&limit=${pagination.limit}`
       );
       
       setTransactions(response.data.transactions || []);
-      setSummary(response.data.summary || {});
+      setSummary({
+        total_credit: response.data.total_credit || 0,
+        total_debit: response.data.total_debit || 0,
+        total_transactions: response.data.total || 0
+      });
+      setPagination(prev => ({
+        ...prev,
+        total: response.data.total || 0,
+        totalPages: response.data.total_pages || 0,
+        hasNext: response.data.has_next || false,
+        hasPrev: response.data.has_prev || false
+      }));
     } catch (error) {
       console.error('Error fetching transactions:', error);
       toast.error('Failed to load transactions');
