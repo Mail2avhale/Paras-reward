@@ -10513,7 +10513,8 @@ async def get_scratch_card_history(uid: str, limit: int = 20):
     """Get user's scratch card history"""
     try:
         history = await db.scratch_cards.find(
-            {"uid": uid}
+            {"uid": uid},
+            {"_id": 0}  # Exclude _id field to avoid ObjectId serialization issues
         ).sort("timestamp", -1).limit(limit).to_list(length=limit)
         
         # Calculate statistics
