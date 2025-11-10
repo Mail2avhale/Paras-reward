@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Mail, LogIn, Eye, EyeOff, Fingerprint } from 'lucide-react';
+import { Mail, LogIn, Eye, EyeOff, Fingerprint, ArrowRight } from 'lucide-react';
 import { isBiometricSupported, biometricLogin, isBiometricEnabled } from '@/utils/biometricAuth';
 import BiometricSetup from '@/components/BiometricSetup';
 
