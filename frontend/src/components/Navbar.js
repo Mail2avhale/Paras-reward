@@ -34,6 +34,9 @@ const Navbar = ({ user, onLogout }) => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6">
+            {/* Language Switcher - Always visible */}
+            <LanguageSwitcher />
+            
             {user ? (
               <>
                 {/* Dashboard - Show for everyone */}
