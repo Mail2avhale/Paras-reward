@@ -168,7 +168,7 @@ const DashboardNew = ({ user, onLogout }) => {
       <Navbar user={user} onLogout={onLogout} />
       <PWAInstallPrompt />
       
-      <div className="container mx-auto px-4 py-6 max-w-6xl">
+      <div className="container mx-auto px-3 py-6 max-w-full lg:max-w-7xl xl:max-w-[90%]">
         
         {/* Welcome Header with Avatar */}
         <div className="mb-6 flex items-center gap-4">
