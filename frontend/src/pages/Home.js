@@ -120,7 +120,8 @@ const Home = ({ user, onLogout }) => {
             <div className="mt-12 flex flex-col items-center">
               <h3 className="text-xl font-semibold text-white mb-4">{t('footer.follow_us')}</h3>
               <div className="flex gap-4 items-center flex-wrap justify-center">
-                  {socialMedia.facebook && (
+                  {/* Facebook */}
+                  {socialMedia.facebook ? (
                     <a 
                       href={socialMedia.facebook} 
                       target="_blank" 
