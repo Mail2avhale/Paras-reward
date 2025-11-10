@@ -23,6 +23,7 @@ const LoginNew = ({ onLogin }) => {
   const [showBiometricOption, setShowBiometricOption] = useState(false);
   const [showBiometricSetupPrompt, setShowBiometricSetupPrompt] = useState(false);
   const [loggedInUser, setLoggedInUser] = useState(null);
+  const [animatedFeedback, setAnimatedFeedback] = useState(null);
   const [loginData, setLoginData] = useState({
     identifier: '', // email, mobile, or uid
     password: '',
