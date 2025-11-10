@@ -221,19 +221,6 @@ const Home = ({ user, onLogout }) => {
                   </a>
                 </div>
               </div>
-                    <a 
-                      href={socialMedia.twitter} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="group relative p-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl hover:bg-white/20 transition-all duration-300 hover:scale-110"
-                    >
-                      <Twitter className="h-7 w-7 text-white group-hover:text-blue-300 transition-colors" />
-                      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-white text-gray-900 px-2 py-1 rounded text-xs whitespace-nowrap">
-                        Twitter
-                      </div>
-                    </a>
-                </div>
-              </div>
           </div>
         </div>
       </div>
