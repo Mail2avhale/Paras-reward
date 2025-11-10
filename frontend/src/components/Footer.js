@@ -68,15 +68,15 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-lg font-bold mb-4">Quick Links</h3>
+            <h3 className="text-lg font-bold mb-4">{t('footer.quick_links')}</h3>
             <ul className="space-y-2">
-              <li><Link to="/" className="text-gray-300 hover:text-white transition-colors">Home</Link></li>
-              <li><Link to="/about" className="text-gray-300 hover:text-white transition-colors">About Us</Link></li>
-              <li><Link to="/how-it-works" className="text-gray-300 hover:text-white transition-colors">How It Works</Link></li>
+              <li><Link to="/" className="text-gray-300 hover:text-white transition-colors">{t('nav.home')}</Link></li>
+              <li><Link to="/about" className="text-gray-300 hover:text-white transition-colors">{t('nav.about')}</Link></li>
+              <li><Link to="/how-it-works" className="text-gray-300 hover:text-white transition-colors">{t('home.how_it_works')}</Link></li>
               <li><Link to="/blog" className="text-gray-300 hover:text-white transition-colors">Blog</Link></li>
-              <li><Link to="/mining" className="text-gray-300 hover:text-white transition-colors">Rewards System</Link></li>
-              <li><Link to="/referrals" className="text-gray-300 hover:text-white transition-colors">Referral System</Link></li>
-              <li><Link to="/vip" className="text-gray-300 hover:text-white transition-colors">VIP Membership</Link></li>
+              <li><Link to="/mining" className="text-gray-300 hover:text-white transition-colors">{t('nav.mining')}</Link></li>
+              <li><Link to="/referrals" className="text-gray-300 hover:text-white transition-colors">{t('nav.referrals')}</Link></li>
+              <li><Link to="/vip" className="text-gray-300 hover:text-white transition-colors">VIP</Link></li>
             </ul>
           </div>
 
