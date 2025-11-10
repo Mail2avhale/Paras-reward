@@ -253,42 +253,52 @@ const TermsAndConditions = () => {
             </ul>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Prohibited Activities</h2>
-            <p className="text-gray-700 leading-relaxed mb-4">
-              Users may NOT:
-            </p>
-            <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
-              <li>Create fake or duplicate accounts</li>
-              <li>Use bots or automated scripts</li>
-              <li>Misuse referral system</li>
-              <li>Post inappropriate content</li>
-            </ul>
-            <p className="text-red-600 font-semibold mt-4">
-              Violation may lead to permanent ban.
-            </p>
-          </section>
+          {/* Final Disclaimer Box */}
+          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl p-8 shadow-2xl">
+            <div className="flex items-start gap-4">
+              <CheckCircle className="h-10 w-10 flex-shrink-0" />
+              <div>
+                <h3 className="text-3xl font-black mb-4">✅ Final Disclaimer</h3>
+                <div className="bg-white/20 backdrop-blur-xl rounded-xl p-6 text-lg leading-relaxed space-y-3">
+                  <p className="font-bold text-xl">
+                    PARAS REWARD is purely an in-app mining and reward-based entertainment platform.
+                  </p>
+                  <p className="font-semibold">
+                    It has <span className="underline decoration-4">NO connection</span> with:
+                  </p>
+                  <ul className="space-y-2 ml-6">
+                    <li className="flex items-center gap-2">
+                      <span className="text-2xl">✗</span> Cryptocurrency
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-2xl">✗</span> Investment schemes
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-2xl">✗</span> Trading platforms
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-2xl">✗</span> MLM (Multi-Level Marketing)
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
 
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Limitation of Liability</h2>
-            <p className="text-gray-700 leading-relaxed">
-              We are not liable for any financial loss due to technical delays, app misuse, or withdrawal failures caused by third-party services.
+          {/* Contact Section */}
+          <div className="bg-gray-50 rounded-2xl p-8 text-center">
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">📧 Need Help?</h3>
+            <p className="text-gray-700 text-lg mb-4">
+              For any questions or concerns regarding these Terms & Conditions, please contact us:
             </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Governing Law</h2>
-            <p className="text-gray-700 leading-relaxed">
-              These terms are governed by the laws of India. For disputes, email: <a href="mailto:support@parasreward.com" className="text-purple-600 hover:underline font-semibold">support@parasreward.com</a>
-            </p>
-          </section>
-
-          <section className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">📝 Disclaimer</h3>
-            <p className="text-gray-700 leading-relaxed">
-              The earnings shown in PARAS REWARD depend on participation, referrals, and mining rules, and are not guaranteed. We are not a financial or investment platform. Use PARAS REWARD responsibly. All users are responsible for their tax and legal compliance.
-            </p>
-          </section>
+            <a 
+              href="mailto:support@parasreward.com" 
+              className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold px-8 py-4 rounded-full transition-colors text-lg shadow-lg"
+            >
+              <FileText className="h-5 w-5" />
+              support@parasreward.com
+            </a>
+          </div>
         </div>
       </div>
 
