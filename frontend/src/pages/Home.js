@@ -56,7 +56,7 @@ const Home = ({ user, onLogout }) => {
                   className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-10 py-7 text-lg rounded-2xl shadow-2xl hover:shadow-purple-500/50 transition-all duration-300 hover:scale-105 border-0"
                 >
                   <Play className="mr-2 h-5 w-5" />
-                  Start Earning Free
+                  {t('home.start_earning')}
                 </Button>
               </Link>
               
@@ -69,7 +69,7 @@ const Home = ({ user, onLogout }) => {
                   variant="outline" 
                   className="bg-white/10 backdrop-blur-xl border-2 border-white/30 text-white hover:bg-white/20 px-10 py-7 text-lg rounded-2xl shadow-xl transition-all duration-300"
                 >
-                  Learn How It Works
+                  {t('home.learn_more')}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
