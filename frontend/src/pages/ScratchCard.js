@@ -453,27 +453,54 @@ const ScratchCard = ({ user }) => {
                   </div>
                 </div>
               ) : (
-                <div className="relative">
-                  {/* Result behind canvas */}
-                  <div className={`p-12 rounded-2xl bg-gradient-to-br ${getCardColor(selectedCard.cost)} text-white text-center relative`}>
-                    <div className="animate-bounce mb-4">
-                      <Trophy className="h-20 w-20 mx-auto" />
+                <div className="relative overflow-hidden rounded-2xl">
+                  {/* Result behind canvas - Enhanced with animations */}
+                  <div className={`p-12 rounded-2xl bg-gradient-to-br ${getCardColor(selectedCard.cost)} text-white text-center relative overflow-hidden`}>
+                    {/* Animated background particles */}
+                    <div className="absolute inset-0 opacity-20">
+                      {[...Array(20)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="absolute w-2 h-2 bg-white rounded-full animate-float"
+                          style={{
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                            animationDelay: `${Math.random() * 3}s`,
+                            animationDuration: `${3 + Math.random() * 2}s`
+                          }}
+                        />
+                      ))}
                     </div>
-                    <div className="text-4xl font-bold mb-2">
-                      {result?.cashback_percentage}% CASHBACK!
-                    </div>
-                    <div className="text-2xl mb-4">
-                      You Won: ₹{result?.cashback_won_inr}
-                    </div>
-                    <div className="text-sm opacity-90">
-                      Added to your cashback wallet
+                    
+                    {/* Pulsing glow effect */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+                    
+                    {/* Content */}
+                    <div className="relative z-10">
+                      <div className="animate-bounce mb-4">
+                        <Trophy className="h-24 w-24 mx-auto drop-shadow-2xl" />
+                      </div>
+                      <div className="text-5xl font-black mb-3 drop-shadow-lg animate-pulse">
+                        {result?.cashback_percentage}% CASHBACK!
+                      </div>
+                      <div className="text-3xl font-bold mb-4 drop-shadow-md">
+                        🎉 You Won: ₹{result?.cashback_won_inr} 🎉
+                      </div>
+                      <div className="text-lg opacity-90 font-semibold">
+                        💰 Added to your cashback wallet!
+                      </div>
+                      <div className="mt-4 flex justify-center gap-2">
+                        <Sparkles className="h-6 w-6 animate-spin" />
+                        <Gift className="h-6 w-6 animate-bounce" />
+                        <Sparkles className="h-6 w-6 animate-spin" style={{ animationDirection: 'reverse' }} />
+                      </div>
                     </div>
                   </div>
 
-                  {/* Scratch Canvas */}
+                  {/* Scratch Canvas Overlay */}
                   <canvas
                     ref={canvasRef}
-                    className="absolute inset-0 w-full h-full rounded-2xl"
+                    className="absolute inset-0 w-full h-full rounded-2xl shadow-inner"
                     onMouseDown={handleMouseDown}
                     onMouseUp={handleMouseUp}
                     onMouseMove={handleMouseMove}
@@ -483,6 +510,13 @@ const ScratchCard = ({ user }) => {
                     onTouchMove={handleTouchMove}
                     style={{ touchAction: 'none' }}
                   />
+                  
+                  {/* Scratch indicator - shows progress */}
+                  {!revealed && (
+                    <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-bold animate-pulse">
+                      Keep Scratching! 👆
+                    </div>
+                  )}
                 </div>
               )}
 
