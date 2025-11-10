@@ -278,10 +278,10 @@ const LoginNew = ({ onLogin }) => {
             {loading ? (
               <div className="flex items-center justify-center">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                Signing in...
+                {t('common.loading')}
               </div>
             ) : (
-              'Sign In with Password'
+              {t('auth.sign_in')}
             )}
           </Button>
         </form>
