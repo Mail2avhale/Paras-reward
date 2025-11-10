@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { InstallAppButton } from '@/components/PWAInstallPrompt';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Coins, Zap, Users, Gift, Star, TrendingUp, Shield, ArrowRight, CheckCircle2, Play, Sparkles, Target, Crown } from 'lucide-react';
 
 const Home = ({ user, onLogout }) => {
+  const { t } = useTranslation();
   const [hoveredFeature, setHoveredFeature] = useState(null);
 
   return (
