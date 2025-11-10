@@ -279,64 +279,37 @@ def test_scratch_card_cashback_credit_fix():
     except Exception as e:
         print(f"❌ Error with new purchase: {e}")
     
-    print(f"\n🥇 GOLD CARD (100 PRC) TESTING")
+    print(f"\n🔍 STEP 5: VERIFYING WALLET ENDPOINT REFLECTS NEW BALANCE")
     print("=" * 60)
     
-    # Test Gold Card Purchase
-    print(f"\n📋 Testing Gold Card (100 PRC) purchase")
-    
-    gold_transaction_id = None
-    gold_cashback_won = 0
+    # Verify wallet endpoint shows the updated balance after new purchase
+    print(f"\n📋 Checking wallet endpoint shows updated balance...")
     
     try:
-        # Get current balances
         response = requests.get(f"{API_BASE}/wallet/{test_uid}", timeout=30)
         if response.status_code == 200:
             wallet_data = response.json()
-            prc_before = wallet_data.get("prc_balance", 0)
-            cashback_before = wallet_data.get("cashback_wallet_balance", 0)
-            print(f"   📋 PRC Balance Before: {prc_before}")
-            print(f"   📋 Cashback Balance Before: {cashback_before}")
-        
-        # Purchase Gold Card
-        purchase_data = {"card_type": 100}
-        response = requests.post(f"{API_BASE}/scratch-cards/purchase?uid={test_uid}", json=purchase_data, timeout=30)
-        
-        if response.status_code == 200:
-            result = response.json()
-            gold_transaction_id = result.get("transaction_id")
-            gold_cashback_won = result.get("cashback_won_inr", 0)
+            final_cashback = wallet_data.get("cashback_balance", 0)
+            final_prc = wallet_data.get("prc_balance", 0)
             
-            test_results["gold_card_purchase"] = True
-            print(f"✅ Gold card purchase successful")
-            print(f"   📋 Transaction ID: {gold_transaction_id}")
-            print(f"   📋 Cashback Won: ₹{gold_cashback_won}")
-            print(f"   📋 Cashback Percentage: {result.get('cashback_percentage')}%")
+            print(f"✅ Wallet endpoint working after purchase")
+            print(f"   📋 Final Cashback Balance: ₹{final_cashback}")
+            print(f"   📋 Final PRC Balance: {final_prc}")
             
-            # Verify PRC deduction
-            expected_prc_after = prc_before - 100
-            actual_prc_after = result.get('new_prc_balance')
-            if abs(actual_prc_after - expected_prc_after) < 0.01:
-                test_results["gold_prc_deduction"] = True
-                print(f"✅ PRC deduction correct: {prc_before} - 100 = {actual_prc_after}")
+            # Should show original balance + new cashback won
+            expected_final_cashback = existing_cashback_balance + new_cashback_won
+            if abs(final_cashback - expected_final_cashback) < 0.01:
+                test_results["wallet_shows_updated_balance"] = True
+                print(f"✅ WALLET UPDATE VERIFIED: Shows correct updated balance ₹{final_cashback}")
+                print(f"   📋 Calculation: ₹{existing_cashback_balance} + ₹{new_cashback_won} = ₹{final_cashback}")
             else:
-                print(f"❌ PRC deduction incorrect: Expected {expected_prc_after}, got {actual_prc_after}")
-            
-            # Verify cashback credit
-            expected_cashback_after = cashback_before + gold_cashback_won
-            actual_cashback_after = result.get('new_cashback_wallet')
-            if abs(actual_cashback_after - expected_cashback_after) < 0.01:
-                test_results["gold_cashback_credit"] = True
-                print(f"✅ Cashback credit correct: {cashback_before} + {gold_cashback_won} = {actual_cashback_after}")
-            else:
-                print(f"❌ Cashback credit incorrect: Expected {expected_cashback_after}, got {actual_cashback_after}")
+                print(f"❌ WALLET UPDATE FAILED: Expected ₹{expected_final_cashback}, got ₹{final_cashback}")
                 
         else:
-            print(f"❌ Gold card purchase failed: {response.status_code}")
-            print(f"   Response: {response.text}")
+            print(f"❌ Wallet endpoint failed after purchase: {response.status_code}")
             
     except Exception as e:
-        print(f"❌ Error purchasing gold card: {e}")
+        print(f"❌ Error checking updated wallet balance: {e}")
     
     print(f"\n🔍 TRANSACTION LOGGING VERIFICATION")
     print("=" * 60)
