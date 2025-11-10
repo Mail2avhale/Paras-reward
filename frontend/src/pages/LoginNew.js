@@ -247,12 +247,12 @@ const LoginNew = ({ onLogin }) => {
               {biometricLoading ? (
                 <div className="flex items-center justify-center">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Authenticating...
+                  {t('common.loading')}
                 </div>
               ) : (
                 <>
                   <Fingerprint className="h-6 w-6" />
-                  Sign In with Biometric
+                  {t('auth.biometric_login')}
                 </>
               )}
             </Button>
