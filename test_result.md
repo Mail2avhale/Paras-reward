@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "1. Scratch card cashback not credited in cashback wallet with transaction entry. 2. No admin dashboard view for PRC mined vs consumed analytics."
+user_problem_statement: "1. Scratch card cashback not credited in cashback wallet with transaction entry. 2. No admin dashboard view for PRC mined vs consumed analytics. 3. App download from homepage not working - shows 'You can't install the app on your device' error."
 
 backend:
   - task: "Profile-Based Password Recovery"
