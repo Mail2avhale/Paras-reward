@@ -691,12 +691,14 @@ const TreasureHunt = ({ user }) => {
                 
                 {/* Prominent Feedback Message */}
                 {feedbackMessage && (
-                  <div className={`mb-4 p-4 rounded-xl border-4 shadow-2xl animate-bounce ${
+                  <div className={`mb-4 p-6 rounded-2xl border-4 shadow-2xl animate-bounce ${
                     feedbackMessage.type === 'wrong' 
                       ? 'bg-gradient-to-r from-orange-500 to-red-500 border-red-600' 
+                      : feedbackMessage.type === 'start'
+                      ? 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 border-yellow-400'
                       : 'bg-gradient-to-r from-green-500 to-emerald-500 border-green-600'
                   }`}>
-                    <p className="text-white text-2xl font-black text-center drop-shadow-lg animate-pulse">
+                    <p className="text-white text-2xl md:text-3xl font-black text-center drop-shadow-2xl animate-pulse whitespace-pre-line">
                       {feedbackMessage.text}
                     </p>
                   </div>
