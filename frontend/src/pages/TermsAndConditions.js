@@ -41,42 +41,205 @@ const TermsAndConditions = () => {
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-12 space-y-10">
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Introduction</h2>
-            <p className="text-gray-700 leading-relaxed">
-              Welcome to <strong>PARAS REWARD</strong>. These Terms and Conditions govern your use of our platform, including website, app, and reward services. By using our service, you agree to be bound by the terms given below.
-            </p>
+          {/* Section 1: General Information */}
+          <section className="border-l-4 border-purple-600 pl-6 bg-purple-50 p-6 rounded-r-2xl">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="bg-purple-600 text-white rounded-full w-12 h-12 flex items-center justify-center font-black text-xl flex-shrink-0">
+                1
+              </div>
+              <div>
+                <h2 className="text-3xl font-black text-purple-900 mb-3 flex items-center gap-2">
+                  <Info className="h-7 w-7" />
+                  General Information
+                </h2>
+              </div>
+            </div>
+            <div className="space-y-4 text-gray-800 text-lg leading-relaxed ml-16">
+              <p className="font-bold text-xl text-purple-800">
+                🏆 PARAS REWARD is India's First Mining-Based Reward Platform.
+              </p>
+              <p>
+                This platform is designed to provide users with a <strong>fun and engaging experience</strong> through in-app activities, games, and reward points.
+              </p>
+              <p className="bg-red-100 border-2 border-red-500 p-4 rounded-lg font-bold text-red-900">
+                ⚠️ It is <span className="underline">NOT a cryptocurrency, token, or coin</span> of any kind.
+              </p>
+            </div>
           </section>
 
           <AdSenseAd slot="2234567890" format="auto" />
 
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Key Definitions</h2>
-            <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
-              <li><strong>User:</strong> Anyone who registers on PARAS REWARD</li>
-              <li><strong>PRC:</strong> Paras Reward Coin, the in-platform digital reward</li>
-              <li><strong>Mining:</strong> Earning PRC through time-based participation</li>
-              <li><strong>VIP Membership:</strong> Paid upgrade enabling access to redeem and other perks</li>
-            </ul>
+          {/* Section 2: In-App Usage Only */}
+          <section className="border-l-4 border-blue-600 pl-6 bg-blue-50 p-6 rounded-r-2xl">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center font-black text-xl flex-shrink-0">
+                2
+              </div>
+              <div>
+                <h2 className="text-3xl font-black text-blue-900 mb-3 flex items-center gap-2">
+                  <Shield className="h-7 w-7" />
+                  In-App Usage Only
+                </h2>
+              </div>
+            </div>
+            <div className="space-y-4 text-gray-800 text-lg leading-relaxed ml-16">
+              <p>
+                All rewards, mining points, or credits earned within the <strong>PARAS REWARD app</strong> are for <strong className="text-blue-700">in-app use only</strong>.
+              </p>
+              <ul className="space-y-3">
+                <li className="flex items-start gap-3">
+                  <span className="text-red-600 font-black text-2xl">✗</span>
+                  <span>These points <strong>cannot be exchanged, traded, or converted</strong> into real money or cryptocurrency.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-green-600 font-black text-2xl">✓</span>
+                  <span>Rewards may <strong>only be used</strong> for shopping, gaming, offers, or promotional features within the app.</span>
+                </li>
+              </ul>
+            </div>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Eligibility</h2>
-            <p className="text-gray-700 leading-relaxed mb-4">
-              You must be:
-            </p>
-            <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
-              <li>At least 18 years old</li>
-              <li>Located in India</li>
-              <li>Using a valid email and mobile number</li>
-            </ul>
+          {/* Section 3: Financial Disclaimer */}
+          <section className="border-l-4 border-orange-600 pl-6 bg-orange-50 p-6 rounded-r-2xl">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="bg-orange-600 text-white rounded-full w-12 h-12 flex items-center justify-center font-black text-xl flex-shrink-0">
+                3
+              </div>
+              <div>
+                <h2 className="text-3xl font-black text-orange-900 mb-3 flex items-center gap-2">
+                  <AlertCircle className="h-7 w-7" />
+                  Financial Disclaimer
+                </h2>
+              </div>
+            </div>
+            <div className="space-y-4 text-gray-800 text-lg leading-relaxed ml-16">
+              <div className="bg-yellow-100 border-2 border-yellow-500 p-5 rounded-lg">
+                <p className="font-black text-yellow-900 text-xl mb-3">⚠️ IMPORTANT:</p>
+                <ul className="space-y-2">
+                  <li>• PARAS REWARD is <strong>NOT a financial program</strong> or investment platform.</li>
+                  <li>• There is <strong>NO guarantee of earnings, profit, or fixed returns</strong>.</li>
+                  <li>• The app does <strong>NOT promise or commit</strong> to any specific income to users.</li>
+                </ul>
+              </div>
+            </div>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Earning & Mining</h2>
-            <p className="text-gray-700 leading-relaxed">
-              Users may earn PRC by logging in daily, completing tasks, or using the mining feature. Mining rate is subject to app rules and may change over time.
-            </p>
+          {/* Section 4: For Indian Users Only */}
+          <section className="border-l-4 border-green-600 pl-6 bg-green-50 p-6 rounded-r-2xl">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center font-black text-xl flex-shrink-0">
+                4
+              </div>
+              <div>
+                <h2 className="text-3xl font-black text-green-900 mb-3 flex items-center gap-2">
+                  <Globe className="h-7 w-7" />
+                  For Indian Users Only
+                </h2>
+              </div>
+            </div>
+            <div className="space-y-4 text-gray-800 text-lg leading-relaxed ml-16">
+              <div className="bg-green-100 border-2 border-green-600 p-5 rounded-lg">
+                <p className="mb-3">
+                  🇮🇳 The <strong>PARAS REWARD platform</strong> is strictly limited to <strong className="text-green-800">Indian citizens and residents</strong>.
+                </p>
+                <p className="font-bold text-red-800">
+                  ❌ Access or use of this platform from outside India is <span className="underline">unauthorized and invalid</span>.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <AdSenseAd slot="2234567890" format="auto" />
+
+          {/* Section 5: No Guarantee & Limitation of Liability */}
+          <section className="border-l-4 border-red-600 pl-6 bg-red-50 p-6 rounded-r-2xl">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="bg-red-600 text-white rounded-full w-12 h-12 flex items-center justify-center font-black text-xl flex-shrink-0">
+                5
+              </div>
+              <div>
+                <h2 className="text-3xl font-black text-red-900 mb-3 flex items-center gap-2">
+                  <AlertTriangle className="h-7 w-7" />
+                  No Guarantee & Limitation of Liability
+                </h2>
+              </div>
+            </div>
+            <div className="space-y-4 text-gray-800 text-lg leading-relaxed ml-16">
+              <div className="bg-red-100 border-2 border-red-500 p-5 rounded-lg">
+                <p className="font-bold text-red-900 mb-4 text-xl">⚠️ Use at Your Own Risk:</p>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600">•</span>
+                    <span>The use of this app is entirely at the user's <strong>own risk</strong>.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600">•</span>
+                    <span>PARAS REWARD shall <strong>not be responsible</strong> for any technical issue, data loss, server downtime, or reduction in earnings.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600">•</span>
+                    <span>The platform will <strong>not be liable</strong> for any financial or personal losses incurred by users.</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          {/* Section 6: Updates and Policy Changes */}
+          <section className="border-l-4 border-indigo-600 pl-6 bg-indigo-50 p-6 rounded-r-2xl">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="bg-indigo-600 text-white rounded-full w-12 h-12 flex items-center justify-center font-black text-xl flex-shrink-0">
+                6
+              </div>
+              <div>
+                <h2 className="text-3xl font-black text-indigo-900 mb-3 flex items-center gap-2">
+                  <FileText className="h-7 w-7" />
+                  Updates and Policy Changes
+                </h2>
+              </div>
+            </div>
+            <div className="space-y-4 text-gray-800 text-lg leading-relaxed ml-16">
+              <p>
+                PARAS REWARD <strong>reserves the right</strong> to modify, update, or discontinue any feature, mining rate, reward system, or service at any time <strong className="text-indigo-700">without prior notice</strong>.
+              </p>
+              <p className="bg-indigo-100 border-2 border-indigo-500 p-4 rounded-lg font-semibold">
+                📋 Users are responsible for reviewing these Terms & Conditions regularly to stay informed.
+              </p>
+            </div>
+          </section>
+
+          {/* Section 7: User Agreement */}
+          <section className="border-l-4 border-teal-600 pl-6 bg-teal-50 p-6 rounded-r-2xl">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="bg-teal-600 text-white rounded-full w-12 h-12 flex items-center justify-center font-black text-xl flex-shrink-0">
+                7
+              </div>
+              <div>
+                <h2 className="text-3xl font-black text-teal-900 mb-3 flex items-center gap-2">
+                  <CheckCircle className="h-7 w-7" />
+                  User Agreement
+                </h2>
+              </div>
+            </div>
+            <div className="space-y-4 text-gray-800 text-lg leading-relaxed ml-16">
+              <p className="font-bold text-xl text-teal-900 mb-4">
+                By using this app, you acknowledge and agree that:
+              </p>
+              <div className="bg-teal-100 border-2 border-teal-600 p-5 rounded-lg space-y-3">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-6 w-6 text-teal-600 flex-shrink-0 mt-1" />
+                  <p>You have <strong>read and understood</strong> all the above Terms & Conditions.</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-6 w-6 text-teal-600 flex-shrink-0 mt-1" />
+                  <p>You are using PARAS REWARD for <strong>entertainment and in-app reward purposes only</strong>.</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-6 w-6 text-teal-600 flex-shrink-0 mt-1" />
+                  <p>You are <strong>not expecting</strong> any financial return or guaranteed earnings from this platform.</p>
+                </div>
+              </div>
+            </div>
           </section>
 
           <AdSenseAd slot="2234567891" format="rectangle" />
