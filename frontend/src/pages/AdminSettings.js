@@ -35,7 +35,7 @@ const AdminSettings = ({ user }) => {
 
   const fetchSettings = async () => {
     try {
-      const response = await axios.get(`${API}/admin/social-media-settings`);
+      const response = await axios.get(`${API}/api/admin/social-media-settings`);
       setSocialMedia(response.data);
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -50,7 +50,7 @@ const AdminSettings = ({ user }) => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      await axios.post(`${API}/admin/social-media-settings`, socialMedia);
+      await axios.post(`${API}/api/admin/social-media-settings`, socialMedia);
       toast.success('Settings saved successfully!');
     } catch (error) {
       console.error('Error saving settings:', error);
