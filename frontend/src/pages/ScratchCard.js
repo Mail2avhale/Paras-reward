@@ -463,68 +463,73 @@ const ScratchCard = ({ user }) => {
                   </div>
                 </div>
               ) : (
-                <div className="relative overflow-hidden rounded-2xl">
-                  {/* Result behind canvas - Enhanced with animations */}
-                  <div className={`p-12 rounded-2xl bg-gradient-to-br ${getCardColor(selectedCard.cost)} text-white text-center relative overflow-hidden`}>
-                    {/* Animated background particles */}
-                    <div className="absolute inset-0 opacity-20">
-                      {[...Array(20)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="absolute w-2 h-2 bg-white rounded-full animate-float"
-                          style={{
-                            left: `${Math.random() * 100}%`,
-                            top: `${Math.random() * 100}%`,
-                            animationDelay: `${Math.random() * 3}s`,
-                            animationDuration: `${3 + Math.random() * 2}s`
-                          }}
-                        />
-                      ))}
-                    </div>
-                    
-                    {/* Pulsing glow effect */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
-                    
-                    {/* Content */}
-                    <div className="relative z-10">
-                      <div className="animate-bounce mb-4">
-                        <Trophy className="h-24 w-24 mx-auto drop-shadow-2xl" />
-                      </div>
-                      <div className="text-5xl font-black mb-3 drop-shadow-lg animate-pulse">
-                        {result?.cashback_percentage}% CASHBACK!
-                      </div>
-                      <div className="text-3xl font-bold mb-4 drop-shadow-md">
-                        🎉 You Won: ₹{result?.cashback_won_inr} 🎉
-                      </div>
-                      <div className="text-lg opacity-90 font-semibold">
-                        💰 Added to your cashback wallet!
-                      </div>
-                      <div className="mt-4 flex justify-center gap-2">
-                        <Sparkles className="h-6 w-6 animate-spin" />
-                        <Gift className="h-6 w-6 animate-bounce" />
-                        <Sparkles className="h-6 w-6 animate-spin" style={{ animationDirection: 'reverse' }} />
+                <div className="relative">
+                  {/* Real Scratch Card - Text printed underneath */}
+                  <div className="relative rounded-2xl overflow-hidden shadow-2xl" style={{ aspectRatio: '1.6', maxHeight: '400px' }}>
+                    {/* Card Base - This is what's UNDER the scratch coating */}
+                    <div className={`absolute inset-0 bg-gradient-to-br ${getCardColor(selectedCard.cost)} flex items-center justify-center p-8`}>
+                      {/* Prize Text - Printed on card */}
+                      <div className="text-center">
+                        {/* Trophy Icon */}
+                        <div className="mb-6">
+                          <Trophy className="h-20 w-20 md:h-28 md:w-28 mx-auto text-yellow-300 drop-shadow-2xl" />
+                        </div>
+                        
+                        {/* Win Text */}
+                        <div className="space-y-3">
+                          <div className="text-4xl md:text-6xl font-black text-white drop-shadow-2xl">
+                            CONGRATULATIONS!
+                          </div>
+                          
+                          <div className="text-3xl md:text-5xl font-black text-yellow-300 drop-shadow-xl my-4">
+                            {result?.cashback_percentage}% CASHBACK
+                          </div>
+                          
+                          <div className="text-2xl md:text-4xl font-bold text-white drop-shadow-lg">
+                            YOU WON
+                          </div>
+                          
+                          <div className="text-5xl md:text-7xl font-black text-white drop-shadow-2xl">
+                            ₹{result?.cashback_won_inr}
+                          </div>
+                          
+                          <div className="text-lg md:text-xl text-white/90 font-semibold mt-4">
+                            💰 Cashback Added to Your Wallet
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Scratch Canvas Overlay */}
-                  <canvas
-                    ref={canvasRef}
-                    className="absolute inset-0 w-full h-full rounded-2xl shadow-inner"
-                    onMouseDown={handleMouseDown}
-                    onMouseUp={handleMouseUp}
-                    onMouseMove={handleMouseMove}
-                    onMouseLeave={handleMouseUp}
-                    onTouchStart={handleTouchStart}
-                    onTouchEnd={handleTouchEnd}
-                    onTouchMove={handleTouchMove}
-                    style={{ touchAction: 'none' }}
-                  />
+                    {/* Scratch Canvas Layer - This is the coating user scratches off */}
+                    <canvas
+                      ref={canvasRef}
+                      className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"
+                      onMouseDown={handleMouseDown}
+                      onMouseUp={handleMouseUp}
+                      onMouseMove={handleMouseMove}
+                      onMouseLeave={handleMouseUp}
+                      onTouchStart={handleTouchStart}
+                      onTouchEnd={handleTouchEnd}
+                      onTouchMove={handleTouchMove}
+                      style={{ touchAction: 'none' }}
+                    />
+                    
+                    {/* Scratch Instruction Overlay */}
+                    {!revealed && (
+                      <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-bold animate-bounce pointer-events-none">
+                        👆 Scratch with your finger!
+                      </div>
+                    )}
+                  </div>
                   
-                  {/* Scratch indicator - shows progress */}
-                  {!revealed && (
-                    <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-bold animate-pulse">
-                      Keep Scratching! 👆
+                  {/* Scratch Progress Bar */}
+                  {isScratching && !revealed && (
+                    <div className="mt-4 bg-gray-200 rounded-full h-3 overflow-hidden shadow-inner">
+                      <div 
+                        className="bg-gradient-to-r from-purple-500 to-pink-500 h-full transition-all duration-300 rounded-full"
+                        style={{ width: '0%' }}
+                        id="scratch-progress"
+                      ></div>
                     </div>
                   )}
                 </div>
