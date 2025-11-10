@@ -350,35 +350,50 @@ def test_scratch_card_cashback_credit_fix():
     except Exception as e:
         print(f"❌ Error purchasing gold card: {e}")
     
-    print(f"\n💰 PHASE 3: DELIVERY CHARGE DISTRIBUTION")
+    print(f"\n🔍 TRANSACTION LOGGING VERIFICATION")
     print("=" * 60)
     
-    # Scenario 9: Trigger delivery charge distribution
-    print(f"\n📋 Scenario 9: Trigger delivery charge distribution")
+    # Test transaction logging for Bronze card
+    print(f"\n📋 Verifying Bronze card transaction logging")
     
     try:
-        distribution_data = {}
-        response = requests.post(f"{API_BASE}/orders/{order_id}/distribute-delivery-charge", json=distribution_data, timeout=30)
-        if response.status_code == 200:
-            result = response.json()
-            test_results["scenario_09_distribution_trigger"] = True
-            print(f"✅ Delivery charge distribution triggered successfully")
-            print(f"   📋 Message: {result.get('message')}")
-            print(f"   📋 Total Commission: ₹{result.get('total_commission', 0)}")
-            
-            # Scenario 10: Verify commission distribution succeeds
-            distributions = result.get('distributions', {})
-            if distributions:
-                test_results["scenario_10_commission_distribution"] = True
-                print(f"✅ Scenario 10: Commission distribution successful")
-                print(f"   📋 Distributions: {distributions}")
-            
+        if bronze_transaction_id:
+            # Check wallet transactions endpoint
+            response = requests.get(f"{API_BASE}/wallet/transactions/{test_uid}", timeout=30)
+            if response.status_code == 200:
+                result = response.json()
+                transactions = result.get("transactions", [])
+                
+                # Look for scratch card reward transactions
+                scratch_transactions = [t for t in transactions if t.get("type") == "scratch_card_reward"]
+                
+                if scratch_transactions:
+                    test_results["bronze_transaction_logging"] = True
+                    print(f"✅ Bronze transaction logging verified")
+                    print(f"   📋 Found {len(scratch_transactions)} scratch card transactions")
+                    
+                    # Check latest transaction details
+                    latest_txn = scratch_transactions[0]
+                    print(f"   📋 Transaction ID: {latest_txn.get('transaction_id')}")
+                    print(f"   📋 Wallet Type: {latest_txn.get('wallet_type')}")
+                    print(f"   📋 Amount: ₹{latest_txn.get('amount')}")
+                    print(f"   📋 Description: {latest_txn.get('description')}")
+                    
+                    # Verify metadata
+                    metadata = latest_txn.get("metadata", {})
+                    if metadata.get("card_type") == 10 and "cashback_percentage" in metadata:
+                        print(f"   📋 Metadata complete: Card Type {metadata.get('card_type')}, Cashback {metadata.get('cashback_percentage')}%")
+                    else:
+                        print(f"   ⚠️  Metadata incomplete: {metadata}")
+                else:
+                    print(f"❌ No scratch card reward transactions found")
+            else:
+                print(f"❌ Failed to get wallet transactions: {response.status_code}")
         else:
-            print(f"❌ Distribution failed: {response.status_code}")
-            print(f"   Response: {response.text}")
+            print(f"❌ No bronze transaction ID to verify")
             
     except Exception as e:
-        print(f"❌ Error triggering distribution: {e}")
+        print(f"❌ Error verifying bronze transaction: {e}")
     
     # Scenario 11: Check profit_wallet_balance updated
     print(f"\n📋 Scenario 11: Check profit_wallet_balance updates")
