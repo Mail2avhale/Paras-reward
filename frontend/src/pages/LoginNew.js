@@ -273,7 +273,7 @@ const LoginNew = ({ onLogin }) => {
             data-testid="login-submit-btn"
             type="submit"
             disabled={loading || biometricLoading}
-            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-6 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-6 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
           >
             {loading ? (
               <div className="flex items-center justify-center">
@@ -281,7 +281,10 @@ const LoginNew = ({ onLogin }) => {
                 {t('common.loading')}
               </div>
             ) : (
-              {t('auth.sign_in')}
+              <>
+                {t('auth.sign_in')}
+                <ArrowRight className="h-5 w-5" />
+              </>
             )}
           </Button>
         </form>
