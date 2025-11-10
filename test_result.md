@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Fix React error when user places order from cart. Error occurs during cart checkout causing frontend crash - error object being rendered directly instead of error message."
+user_problem_statement: "1. Scratch card cashback not credited in cashback wallet with transaction entry. 2. No admin dashboard view for PRC mined vs consumed analytics."
 
 backend:
   - task: "Profile-Based Password Recovery"
