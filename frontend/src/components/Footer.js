@@ -130,7 +130,7 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="border-t border-gray-700 mt-8 pt-8 text-center">
           <p className="text-gray-400">
-            © 2024 PARAS REWARD. All rights reserved. | India's #1 Reward Points Platform
+            {t('footer.copyright')} | {t('footer.tagline')}
           </p>
           <p className="text-gray-500 text-sm mt-2">
             Powered by Innovation • Trusted by 10,000+ Users
