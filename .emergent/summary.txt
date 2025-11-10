@@ -1,33 +1,37 @@
 <analysis>
-The trajectory details the AI engineer's work on the PARAS REWARD application. Initially, a critical Failed to fetch error on manager dashboard pages was diagnosed as an incorrect backend routing order in , which was successfully rectified. This involved reordering API endpoint definitions to ensure they were registered before the main router inclusion. Subsequently, the user requested a redesign of stockist dashboards, leading to , , and  being styled like the manager dashboard. Several issues, including missing React imports and incorrect prop passing, were identified and fixed during this redesign.
-
-A deployment readiness check was performed, confirming the app's stability. Image upload functionality for KYC documents and product management was enhanced with a new  component, enabling client-side cropping and compression. Crucially, a bug causing manager-approved KYC requests to reappear in the admin's pending list was resolved by standardizing the  field across backend endpoints. Document viewing in manager panels was also improved with persistent display and zoom.
-
-The admin dashboard underwent a redesign process, initially attempting a separate modern component (), but eventually consolidating efforts by enhancing the existing  with modern quick access elements and setting it as the unified default. Throughout, issues like dynamic Tailwind class names, broken navigation, and incorrect logout redirects were addressed. The current outstanding issues involve verifying the unified admin dashboard's quick access cards and ensuring consistent logout redirection for all user types.
+The AI engineer successfully transitioned the PARAS REWARD application from an initial MVP to a more feature-rich product. Key achievements include resolving critical backend routing issues, redesigning stockist dashboards, enhancing image uploads with client-side cropping, and fixing a persistent KYC status bug. The Admin Dashboard was unified and redesigned, addressing issues like dynamic Tailwind classes and navigation. Recent work focused on fixing specific user-reported bugs: the Admin dashboard's Products quick access, and the Treasure Hunt's insufficient PRC message. Subsequent features like multi-language support, animated logos, social media integration, a Scratch Card game, and PRC analytics were implemented iteratively, often requiring multiple rounds of debugging for compilation errors, JSON syntax, and display logic. The process involved constant interaction, verification, and adaptation based on user feedback, showcasing robust problem-solving and continuous integration practices.
 </analysis>
 
 <product_requirements>
-The PARAS REWARD application is a crypto-mining platform (10 PRC = ₹1 INR) featuring a multi-item cart, atomic PRC deduction, and a KYC-dependent cashback system. It includes multi-wallet financial systems, RBAC dashboards, password recovery via SendGrid, and support tickets. Recent general enhancements include real-time notifications, analytics, pagination, offline PWA, advanced search/filters, referral/gamification dashboards, flash sales, and a PRC Treasure Hunt game.
+The PARAS REWARD application is a crypto-mining platform (10 PRC = ₹1 INR) with multi-item cart, atomic PRC deduction, and KYC-dependent cashback. It features multi-wallet financial systems, RBAC dashboards, password recovery, and support tickets. Enhancements include real-time notifications, analytics, pagination, offline PWA, advanced search/filters, referral/gamification dashboards, flash sales, and a PRC Treasure Hunt game.
 
-This trajectory's specific feature additions and fixes include:
--   **Free User Plan**: Implemented mining with 2-day PRC validity, Treasure Hunt PRC usage, minimum ₹1000 cashback withdrawal, and dynamic cashback rates.
--   **Flexible KYC Document Selection**: Allowed users to submit either Aadhaar or PAN.
--   **Enhanced Notification System**: Integrated large, animated notifications for user actions.
--   **Manager Role Dashboard**: Comprehensive dashboard covering user management (with KYC approval), order management, sales & user reports, product management, financial tools, communication, support tickets, and stockist management.
--   **Image Upload Enhancements**: Implemented image crop, resize, and compress for KYC document uploads (2MB limit, auto-convert, balanced quality, full crop) and product images.
--   **Admin Dashboard Redesign**: Developed a modern, unified admin dashboard with quick access features, integrating all existing functionalities.
--   **Role-Based Redirection**: Ensured correct login and logout redirection for admin, manager, master stockist, sub-stockist, and outlet roles.
--   **Treasure Hunt PRC Check**: Added a proactive check for low PRC balance with a MINE NOW prompt.
+Key additions:
+-   **Free User Plan**: Mining with 2-day PRC validity, Treasure Hunt PRC usage, minimum ₹1000 cashback withdrawal, dynamic cashback.
+-   **Flexible KYC Document Selection**: Aadhaar or PAN submission.
+-   **Enhanced Notification System**: Large, animated notifications.
+-   **Manager Role Dashboard**: Comprehensive management (users, orders, reports, products, finance, communication, support, stockists).
+-   **Image Upload Enhancements**: Client-side crop, resize, compress for KYC/product images.
+-   **Admin Dashboard Redesign**: Modern, unified dashboard with quick access.
+-   **Role-Based Redirection**: Correct login/logout for all roles.
+-   **Treasure Hunt PRC Check**: Proactive low balance check with MINE NOW.
+-   **Multi-language Support**: Hindi, English, Marathi, Gujarati.
+-   **Android App Download**: Direct APK download from homepage.
+-   **Admin Social Media Settings**: Configure social media links for display on homepage/footer.
+-   **Animated Logo**: Visual enhancement for brand logo.
+-   **Scratch Card Game**: Cashback for VIP (10-50%) and Free (0-10%) users based on 10, 50, 100 PRC cards.
+-   **PRC Analytics Dashboard**: Graphical display of total PRC mined/consumed for admin.
 </product_requirements>
 
 <key_technical_concepts>
 -   **FastAPI**: Python web framework for backend APIs.
--   **React.js**: JavaScript library for frontend UI.
--   **MongoDB**: NoSQL database (UUIDs used for IDs).
--   **RBAC**: Role-Based Access Control.
--   **Tailwind CSS**: Utility-first CSS framework (dynamic class handling).
--   **Image Processing**: Client-side image cropping, resizing, and compression.
--   **Code Splitting/Lazy Loading**: Frontend performance optimization.
+-   **React.js**: JavaScript library for frontend UI (with lazy loading/code splitting).
+-   **MongoDB**: NoSQL database, using UUIDs for IDs.
+-   **RBAC**: Role-Based Access Control for dashboards.
+-   **Tailwind CSS**: Utility-first CSS framework.
+-   **Image Processing**: Client-side cropping, resizing, compression (e.g., ).
+-   **i18n (react-i18next)**: Internationalization for multi-language support.
+-   **Sonner Toast**: Modern toast notification library.
+-   **Recharts**: React charting library for data visualization.
 </key_technical_concepts>
 
 <code_architecture>
@@ -35,36 +39,48 @@ The application uses a monorepo structure with a Python FastAPI backend, a React
 
 
 
+**File Summaries and Changes:**
+
 -   ****:
-    -   **Summary**: Core API logic. Manager endpoints were moved to before  to resolve Not Found errors. KYC status handling was unified to use  consistently, fixing a bug where admin saw manager-approved KYCs as pending. The admin user's role in the DB was corrected.
+    -   **Summary**: Core API logic. Fixed routing order for manager endpoints. Unified KYC status handling. Updated login endpoint for User not registered message. Added endpoints for  and  game logic (generate, scratch) and  data.
 -   ****:
-    -   **Summary**: Main routing file. Updated to include lazy loading for new routes. Implemented  for universal logout redirection. Ensured correct role-based routing for admin and stockist dashboards.
+    -   **Summary**: Main routing file. Updated with lazy loading for new routes like  and . Ensured  for universal logout. Added  context setup.
 -   ****:
-    -   **Summary**: Old user dashboard. Updated with redirection logic for stockist roles to their specific dashboards and received a  import fix.
+    -   **Summary**: Main entry point. Updated to import and initialize .
 -   ****:
-    -   **Summary**: Newer user dashboard. Added role-based redirection logic for master, sub-stockist, outlet, and admin roles.
+    -   **Summary**: Global CSS. Added new keyframe animations (, ) for logo animation.
 -   ****:
-    -   **Summary**: Frontend for the PRC Treasure Hunt game. Enhanced with a proactive PRC balance check and a MINE NOW prompt when PRC is low.
+    -   **Summary**: Navigation bar. Modified to include  component. Incorporated  for navigation texts. Applied  for logo animation. Added Scratch Card menu item.
 -   ****:
-    -   **Summary**: Page for submitting KYC documents. Modified to integrate the new  component for enhanced image processing.
--   ****:
-    -   **Summary**: Outlet user dashboard. Redesigned to match the style of . Fixed missing  and corrected prop passing to .
--   ****:
-    -   **Summary**: Sub-stockist user dashboard. Redesigned to match the style of . Fixed missing  and corrected prop passing to .
--   ****:
-    -   **Summary**: Master stockist user dashboard. Redesigned to match the style of . Fixed missing  and corrected prop passing to .
--   ****:
-    -   **Summary**: The unified admin dashboard. Redesigned by adding a modern hero section with quick access cards to its existing structure, making it the default  route. Fixed dynamic Tailwind CSS class issues.  import was ensured.
+    -   **Summary**: Application footer. Modified to include  component. Incorporated  for footer texts. Dynamically fetches and displays social media links from backend (with placeholder/default links). Applied  for logo animation.
 -   ** (NEW)**:
-    -   **Summary**: A temporary file created for a new admin dashboard design but was later superseded by enhancing  directly. Fixed dynamic Tailwind class name issues.
--   ****:
-    -   **Summary**: Manager user management page. Enhanced to consistently display KYC documents (not just when pending) and added click-to-zoom functionality. Fixed JSX syntax errors.
--   ****:
-    -   **Summary**: Manager product management page. Updated to use  for direct image uploads instead of URL input.
+    -   **Summary**: Reusable component for client-side image processing.
 -   ** (NEW)**:
-    -   **Summary**: New reusable component implementing client-side image cropping, resizing, and compression.
--   **Various Admin/Stockist pages (e.g., StockistManagementAdmin.js, AdvancedUserManagement.js)**:
-    -   **Summary**: Multiple pages received fixes for missing  statements to ensure proper rendering and functionality.
+    -   **Summary**: Component to allow users to switch between supported languages (English, Hindi, Marathi, Gujarati).
+-   ****:
+    -   **Summary**: Handles PWA installation.  updated to trigger direct Android APK download from a configurable URL.
+-   ** (NEW)**:
+    -   **Summary**: Displays graphical representation of total PRC mined and consumed on the admin dashboard. Uses .
+-   ****:
+    -   **Summary**: Homepage. Integrated  for key text elements. Added a Follow Us section with dynamically fetched social media links (with default placeholders for immediate visibility).
+-   ****:
+    -   **Summary**: User login page. Fixed biometric modal blocking admin login. Enhanced error handling to display User not registered. Please register to continue. with a Register Now button. Fixed JSX syntax error. Updated toasts to use .
+-   ****:
+    -   **Summary**: Newer user dashboard. Added Scratch Card game as a quick action item.
+-   ****:
+    -   **Summary**: PRC Treasure Hunt game. Updated to use  for toast notifications (for insufficient PRC). Debugging logs were added and removed to verify PRC balance checks.
+-   ****:
+    -   **Summary**: Unified admin dashboard. Fixed Products quick access button to correctly navigate to the  tab. Fixed  to use . Updated Settings quick access to navigate to  page. Added a new menu item for .
+-   ** (NEW)**:
+    -   **Summary**: New page for admin to configure application settings, specifically social media links.
+-   ** (NEW)**:
+    -   **Summary**: New game page implementing the Scratch Card functionality with cashback rewards.
+-   ** (NEW)**:
+    -   **Summary**: i18n configuration file, setting up .
+-   **, , ,  (NEW)**:
+    -   **Summary**: Translation files for English, Hindi, Marathi, and Gujarati. Updated with various keys for different UI elements across the application, including fixes for JSON syntax errors.
+-   ** (NEW - placeholder)**:
+    -   **Summary**: Placeholder file for the Android APK download.
 </code_architecture>
 
 <pending_tasks>
@@ -81,14 +97,17 @@ The application uses a monorepo structure with a Python FastAPI backend, a React
 -   Implement Push Notifications.
 -   Complete Google Analytics event and conversion tracking.
 -   Implement structured data (Schema.org) for SEO.
--   Verify Quick access not added in the unified admin dashboard.
--   Ensure consistent logout redirection for *all* user types.
+-   Ensure consistent behavior of insufficient PRC message in Treasure Hunt (user still reported issue, though AI believed it was fixed).
+-   Expand translations to *all* remaining pages, as some text still remains in English after language switching.
 </pending_tasks>
 
 <current_work>
-Immediately prior to this summary, the AI engineer was addressing two issues: the user reported that Quick access not added in the unified admin dashboard (), and that all user types (not just admin) should redirect to the home page upon logout. The AI engineer has verified that the code for the Quick Access cards is present in  and that the  is correctly defaulting to 'dashboard'. The last action was to restart the frontend service to ensure the latest changes are loaded and then proceed with verification of both these issues.
+Immediately before this summary request, the AI engineer was working on integrating the new Scratch Card game into the user interface. This involved:
+1.  **Adding the Scratch Card to the user dashboard's Quick Actions**: The component was added to  after the Treasure Hunt quick action.
+2.  **Adding the Scratch Card as a menu item in the Navbar**: The relevant link was integrated into  for easy user access.
+The frontend service was restarted (, ) to apply these changes. A screenshot of the  route was attempted for verification, which showed a redirection to the login page (expected behavior when not logged in). The AI engineer concluded the implementation was complete.
 </current_work>
 
 <optional_next_step>
-Restart the frontend service to load recent changes and verify the visibility of Quick Access cards in the unified admin dashboard and the global logout redirection for all user types.
+Verify the Scratch Card game's quick access and Navbar integration by logging in as a user and checking its visibility and functionality.
 </optional_next_step>
