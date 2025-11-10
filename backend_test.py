@@ -154,27 +154,38 @@ def test_scratch_card_cashback_credit_fix():
         print(f"❌ Error setting up test user: {e}")
         return test_results
     
-    # Test available scratch cards endpoint
-    print(f"\n📋 Testing available scratch cards endpoint")
+    print(f"\n🔍 STEP 2: TESTING WALLET ENDPOINT FIX")
+    print("=" * 60)
+    
+    # Test Fix #1: Wallet endpoint should now prioritize cashback_wallet_balance field
+    print(f"\n📋 Testing wallet endpoint shows correct cashback balance...")
     
     try:
-        response = requests.get(f"{API_BASE}/scratch-cards/available", timeout=30)
+        response = requests.get(f"{API_BASE}/wallet/{test_uid}", timeout=30)
         if response.status_code == 200:
-            cards_data = response.json()
-            cards = cards_data.get("cards", [])
-            test_results["available_cards_endpoint"] = True
-            print(f"✅ Available scratch cards endpoint working")
-            print(f"   📋 Available cards: {len(cards)}")
-            for card in cards:
-                print(f"   📋 {card['name']}: {card['cost']} PRC - {card['description']}")
+            wallet_data = response.json()
+            returned_cashback = wallet_data.get("cashback_balance", 0)
+            returned_prc = wallet_data.get("prc_balance", 0)
+            
+            print(f"✅ Wallet endpoint working")
+            print(f"   📋 Returned Cashback Balance: ₹{returned_cashback}")
+            print(f"   📋 Returned PRC Balance: {returned_prc}")
+            
+            # Verify the fix: wallet should show the correct cashback balance
+            if abs(returned_cashback - existing_cashback_balance) < 0.01:
+                test_results["wallet_endpoint_shows_correct_balance"] = True
+                test_results["field_consistency_fixed"] = True
+                print(f"✅ WALLET FIX VERIFIED: Endpoint correctly shows ₹{returned_cashback} cashback")
+                print(f"   📋 Field priority fix working - cashback_wallet_balance field is prioritized")
+            else:
+                print(f"❌ WALLET FIX FAILED: Expected ₹{existing_cashback_balance}, got ₹{returned_cashback}")
+                print(f"   📋 Field priority issue still exists")
         else:
-            print(f"❌ Available cards endpoint failed: {response.status_code}")
+            print(f"❌ Wallet endpoint failed: {response.status_code}")
             print(f"   Response: {response.text}")
-            return test_results
             
     except Exception as e:
-        print(f"❌ Error getting available cards: {e}")
-        return test_results
+        print(f"❌ Error testing wallet endpoint: {e}")
     
     print(f"\n🎰 BRONZE CARD (10 PRC) TESTING")
     print("=" * 60)
