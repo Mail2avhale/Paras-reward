@@ -107,7 +107,7 @@ const BankingWallet = ({ user, walletBalance = 0 }) => {
   };
 
   const isCredit = (type) => {
-    return ['mining', 'tap_game', 'referral', 'cashback', 'withdrawal_rejected', 'admin_credit', 'profit_share'].includes(type);
+    return ['mining', 'tap_game', 'referral', 'cashback', 'withdrawal_rejected', 'admin_credit', 'profit_share', 'scratch_card_reward', 'treasure_hunt_reward'].includes(type);
   };
 
   const formatDate = (dateString) => {
