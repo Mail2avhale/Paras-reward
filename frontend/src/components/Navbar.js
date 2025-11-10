@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Menu } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,6 +13,8 @@ import NotificationBell from './NotificationBell';
 import LanguageSwitcher from './LanguageSwitcher';
 
 const Navbar = ({ user, onLogout }) => {
+  const { t } = useTranslation();
+  
   // Define role-based visibility (handle when user is null)
   const isRegularUser = !user || !user.role || user.role === 'user';
   const isAdmin = user?.role === 'admin';
