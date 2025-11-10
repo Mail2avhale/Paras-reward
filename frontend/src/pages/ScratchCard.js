@@ -26,6 +26,7 @@ const ScratchCard = ({ user }) => {
   const [loading, setLoading] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [celebrationData, setCelebrationData] = useState(null);
+  const [animatedFeedback, setAnimatedFeedback] = useState(null);
 
   useEffect(() => {
     if (!user) {
