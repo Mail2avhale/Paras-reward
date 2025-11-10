@@ -18,6 +18,7 @@ const Mining = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(false);
   const [showValidityWarning, setShowValidityWarning] = useState(false);
   const [prcExpiryInfo, setPrcExpiryInfo] = useState(null);
+  const [animatedFeedback, setAnimatedFeedback] = useState(null);
   
   const isAdmin = user?.role === 'admin';
   const isFreeUser = user?.membership_type !== 'vip';
