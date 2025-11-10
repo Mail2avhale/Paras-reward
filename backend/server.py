@@ -10426,17 +10426,34 @@ async def purchase_scratch_card(purchase: ScratchCardPurchase, uid: str = None):
         # Generate reward
         reward = generate_scratch_reward(is_vip, purchase.card_type)
         
-        # Add cashback to user's wallet
-        cashback_wallet = user.get("cashback_wallet", 0)
-        new_cashback_wallet = cashback_wallet + reward["cashback_inr"]
+        # Get current cashback wallet balance
+        cashback_wallet_balance = user.get("cashback_wallet_balance", 0)
+        new_cashback_wallet_balance = cashback_wallet_balance + reward["cashback_inr"]
         
+        # Update cashback wallet balance
         await db.users.update_one(
             {"uid": uid},
-            {"$set": {"cashback_wallet": new_cashback_wallet}}
+            {"$set": {"cashback_wallet_balance": new_cashback_wallet_balance}}
         )
         
-        # Record transaction
-        transaction_id = str(uuid.uuid4())
+        # Log transaction in transactions collection for proper transaction history
+        transaction_id = await log_transaction(
+            user_id=uid,
+            wallet_type="cashback_wallet",
+            transaction_type="scratch_card_reward",
+            amount=reward["cashback_inr"],
+            description=f"Scratch Card ({purchase.card_type} PRC) - Won {reward['cashback_percentage']}% cashback",
+            metadata={
+                "card_type": purchase.card_type,
+                "card_value_inr": reward["card_value_inr"],
+                "cashback_percentage": reward["cashback_percentage"],
+                "is_vip": is_vip,
+                "prc_spent": purchase.card_type
+            },
+            related_type="scratch_card"
+        )
+        
+        # Record in scratch_cards collection for game history
         scratch_card_record = {
             "transaction_id": transaction_id,
             "uid": uid,
@@ -10447,8 +10464,8 @@ async def purchase_scratch_card(purchase: ScratchCardPurchase, uid: str = None):
             "prc_spent": purchase.card_type,
             "prc_balance_before": current_balance,
             "prc_balance_after": new_balance,
-            "cashback_wallet_before": cashback_wallet,
-            "cashback_wallet_after": new_cashback_wallet,
+            "cashback_wallet_before": cashback_wallet_balance,
+            "cashback_wallet_after": new_cashback_wallet_balance,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "game_type": "scratch_card"
         }
