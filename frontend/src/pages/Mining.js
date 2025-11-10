@@ -533,6 +533,17 @@ const Mining = ({ user, onLogout }) => {
           </div>
         </Card>
       </div>
+      
+      {/* Animated Feedback Overlay */}
+      {animatedFeedback && (
+        <AnimatedFeedback
+          message={animatedFeedback.message}
+          type={animatedFeedback.type}
+          duration={animatedFeedback.duration}
+          onClose={() => setAnimatedFeedback(null)}
+          position="center"
+        />
+      )}
     </div>
   );
 };
