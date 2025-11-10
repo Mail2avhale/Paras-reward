@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Mail, MapPin, Phone } from 'lucide-react';
+import { Mail, MapPin, Phone, Facebook, Twitter, Instagram, Linkedin, Youtube, Send, MessageCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
@@ -15,9 +15,19 @@ const Footer = () => {
     email: 'support@parasreward.com',
     website: 'www.parasreward.com'
   });
+  const [socialMedia, setSocialMedia] = useState({
+    facebook: '',
+    twitter: '',
+    instagram: '',
+    linkedin: '',
+    youtube: '',
+    telegram: '',
+    whatsapp: ''
+  });
 
   useEffect(() => {
     fetchContactDetails();
+    fetchSocialMedia();
   }, []);
 
   const fetchContactDetails = async () => {
@@ -27,6 +37,15 @@ const Footer = () => {
     } catch (error) {
       console.error('Error fetching contact details:', error);
       // Keep default values on error
+    }
+  };
+
+  const fetchSocialMedia = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/social-media-settings`);
+      setSocialMedia(response.data);
+    } catch (error) {
+      console.error('Error fetching social media:', error);
     }
   };
 
