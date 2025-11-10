@@ -125,17 +125,29 @@ const LoginNew = ({ onLogin }) => {
       
       // Handle specific error cases
       if (error.response?.status === 404) {
-        // User not registered
-        toast.error('User not registered. Please register to continue.', {
-          duration: 6000,
-          action: {
-            label: 'Register Now',
-            onClick: () => navigate('/register')
-          }
+        // User not registered - show animated feedback
+        setAnimatedFeedback({
+          message: `❌ User Not Registered!\nPlease register to continue.`,
+          type: 'error',
+          duration: 4000
         });
+        
+        setTimeout(() => {
+          toast.error('Click here to register now', {
+            duration: 5000,
+            action: {
+              label: 'Register Now',
+              onClick: () => navigate('/register')
+            }
+          });
+        }, 4500);
       } else {
-        // Other errors
-        toast.error(error.response?.data?.detail || 'Login failed. Please check your credentials.');
+        // Other errors - show animated feedback
+        setAnimatedFeedback({
+          message: `❌ Login Failed!\n${error.response?.data?.detail || 'Check your credentials'}`,
+          type: 'error',
+          duration: 3000
+        });
       }
     } finally {
       setLoading(false);
