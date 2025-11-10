@@ -674,13 +674,27 @@ const TreasureHunt = ({ user }) => {
                 )}
               </div>
               
-              {/* Treasure Map */}
+              {/* Treasure Map - Enhanced 2D Animated */}
               <div className="mb-4">
                 <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                   <Map className="h-5 w-5" />
                   Treasure Map - {gameMap.title}
                 </h4>
-                <div className="relative w-full aspect-square bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-lg border-4 border-amber-700 overflow-hidden shadow-2xl"
+                
+                {/* Prominent Feedback Message */}
+                {feedbackMessage && (
+                  <div className={`mb-4 p-4 rounded-xl border-4 shadow-2xl animate-bounce ${
+                    feedbackMessage.type === 'wrong' 
+                      ? 'bg-gradient-to-r from-orange-500 to-red-500 border-red-600' 
+                      : 'bg-gradient-to-r from-green-500 to-emerald-500 border-green-600'
+                  }`}>
+                    <p className="text-white text-2xl font-black text-center drop-shadow-lg animate-pulse">
+                      {feedbackMessage.text}
+                    </p>
+                  </div>
+                )}
+                
+                <div className="relative w-full aspect-square bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-2xl border-4 border-amber-700 overflow-hidden shadow-2xl"
                      style={{
                        backgroundImage: `
                          linear-gradient(rgba(245, 158, 11, 0.05) 1px, transparent 1px),
@@ -689,17 +703,19 @@ const TreasureHunt = ({ user }) => {
                        backgroundSize: '20px 20px'
                      }}>
                   
-                  {/* Aged paper texture overlay */}
-                  <div className="absolute inset-0 opacity-10"
+                  {/* Animated aged paper texture overlay */}
+                  <div className="absolute inset-0 opacity-10 animate-pulse"
                        style={{
-                         backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' /%3E%3C/filter%3E%3Crect width=\'100\' height=\'100\' filter=\'url(%23noise)\' opacity=\'0.3\'/%3E%3C/svg%3E")'
+                         backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' /%3E%3C/filter%3E%3Crect width=\'100\' height=\'100\' filter=\'url(%23noise)\' opacity=\'0.3\'/%3E%3C/svg%3E")',
+                         animationDuration: '3s'
                        }}>
                   </div>
                   
-                  {/* Compass rose */}
-                  <div className="absolute top-4 right-4 w-12 h-12 opacity-30">
+                  {/* Animated Compass rose */}
+                  <div className="absolute top-4 right-4 w-16 h-16 opacity-40 animate-spin" style={{ animationDuration: '20s' }}>
                     <svg viewBox="0 0 100 100" className="text-amber-900">
                       <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="2"/>
+                      <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.5"/>
                       <text x="50" y="20" textAnchor="middle" fill="currentColor" fontSize="20" fontWeight="bold">N</text>
                       <text x="50" y="90" textAnchor="middle" fill="currentColor" fontSize="20" fontWeight="bold">S</text>
                       <text x="15" y="55" textAnchor="middle" fill="currentColor" fontSize="20" fontWeight="bold">W</text>
@@ -708,33 +724,56 @@ const TreasureHunt = ({ user }) => {
                     </svg>
                   </div>
                   
-                  {/* Treasure locations with X marks */}
-                  {gameMap.locations.map((location) => (
+                  {/* Animated treasure hunt instruction */}
+                  {!gameMap.found && (
+                    <div className="absolute top-4 left-4 bg-amber-900/80 backdrop-blur-sm text-amber-50 px-4 py-2 rounded-lg shadow-lg animate-pulse">
+                      <p className="text-sm font-bold">🔍 Click X marks to search!</p>
+                    </div>
+                  )}
+                  
+                  {/* Treasure locations with enhanced X marks and animations */}
+                  {gameMap.locations.map((location, idx) => (
                     <button
                       key={location.id}
                       onClick={() => !gameMap.found && attemptFindTreasure(activeGame, location.id)}
                       disabled={gameMap.found}
-                      className={`absolute w-10 h-10 transform -translate-x-1/2 -translate-y-1/2 transition-all ${
+                      className={`absolute w-12 h-12 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ${
                         gameMap.found && location.is_treasure
-                          ? 'scale-150 animate-bounce'
-                          : 'hover:scale-125'
-                      } ${gameMap.found ? 'cursor-default' : 'cursor-pointer'}`}
+                          ? 'scale-150 z-50'
+                          : 'hover:scale-150 hover:z-10'
+                      } ${gameMap.found ? 'cursor-default' : 'cursor-pointer group'}`}
                       style={{
                         left: `${location.x}%`,
-                        top: `${location.y}%`
+                        top: `${location.y}%`,
+                        animation: gameMap.found && location.is_treasure ? 'bounce 1s infinite' : `float ${3 + idx * 0.5}s ease-in-out infinite`
                       }}
                       title={gameMap.found && location.is_treasure ? location.message : `Search Location ${location.id}`}
                     >
                       {gameMap.found && location.is_treasure ? (
                         <div className="relative">
                           <div className="absolute inset-0 bg-yellow-400 rounded-full animate-ping opacity-75"></div>
-                          <Trophy className="h-10 w-10 text-yellow-600 drop-shadow-lg relative z-10" />
+                          <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full animate-pulse"></div>
+                          <Trophy className="h-12 w-12 text-yellow-600 drop-shadow-2xl relative z-10 animate-bounce" />
                         </div>
                       ) : (
                         <div className="relative">
-                          <svg viewBox="0 0 100 100" className="w-10 h-10">
+                          {/* Glow effect on hover */}
+                          <div className="absolute inset-0 bg-red-500 rounded-full opacity-0 group-hover:opacity-50 blur-xl transition-opacity"></div>
+                          
+                          {/* 3D-like shadow */}
+                          <div className="absolute top-1 left-1 opacity-20">
+                            <svg viewBox="0 0 100 100" className="w-12 h-12">
+                              <text x="50" y="70" textAnchor="middle" fill="#000" fontSize="80" fontWeight="bold" fontFamily="serif">✕</text>
+                            </svg>
+                          </div>
+                          
+                          {/* Main X mark */}
+                          <svg viewBox="0 0 100 100" className="w-12 h-12 relative z-10 group-hover:drop-shadow-2xl transition-all">
                             <text x="50" y="70" textAnchor="middle" fill="#DC2626" fontSize="80" fontWeight="bold" fontFamily="serif" className="drop-shadow-md">✕</text>
                           </svg>
+                          
+                          {/* Sparkle effect */}
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full opacity-0 group-hover:opacity-100 animate-ping"></div>
                         </div>
                       )}
                     </button>
