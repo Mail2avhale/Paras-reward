@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { ResponsiveAd } from '@/components/AdSenseAd';
 import { Link } from 'react-router-dom';
 import notifications from '@/utils/notifications';
+import AnimatedFeedback from '@/components/AnimatedFeedback';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
