@@ -180,6 +180,21 @@ backend:
         agent: "testing"
         comment: "Login endpoint works correctly. Tested with existing user credentials. Accepts query parameters (identifier, password) and returns complete user object. No issues found."
 
+  - task: "Scratch Card Cashback Credit Fix"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "FIXED: Backend scratch card endpoint to use correct field 'cashback_wallet_balance' instead of 'cashback_wallet'. Integrated proper transaction logging using log_transaction() function. Need to verify cashback is properly credited and transaction is logged."
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL ISSUES FOUND IN SCRATCH CARD SYSTEM (72.2% tests passed): ✅ WORKING: Scratch card purchase endpoints functional, PRC balance deduction correct, transaction logging working with proper metadata, all card types (10/50/100 PRC) purchasable. ❌ FIELD NAME INCONSISTENCY: Wallet endpoint returns 'cashback_balance' but scratch card system updates 'cashback_wallet_balance' - causing wallet to show ₹0 despite transactions being logged. User has ₹5.4 in cashback_wallet_balance but wallet endpoint prioritizes null cashback_balance field. ❌ SCRATCH CARD HISTORY ENDPOINT: Returns 500 Internal Server Error due to ObjectId serialization issues in MongoDB documents. ❌ CASHBACK CREDIT CALCULATIONS: Inconsistent between Silver/Gold cards - expected vs actual amounts don't match during testing. IMPACT: Core functionality works (PRC deduction, transaction logging) but users cannot see their cashback balance due to field name mismatch. History endpoint completely broken. Needs field name standardization and ObjectId serialization fix."
+
   - task: "Delivery Charge Configuration"
     implemented: true
     working: true
