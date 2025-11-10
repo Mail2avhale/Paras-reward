@@ -125,8 +125,16 @@ const TreasureHunt = ({ user }) => {
         { params: { uid: user.uid } }
       );
 
-      toast.success(`🎯 Started ${response.data.hunt_title}! ${response.data.prc_spent} PRC deducted. Good luck!`, {
-        duration: 5000
+      // Show prominent start message
+      setFeedbackMessage({
+        text: `🎯 Started: ${response.data.hunt_title}!\n🍀 Beginner's Fortune - Good Luck! 🍀`,
+        type: 'start'
+      });
+      
+      setTimeout(() => setFeedbackMessage(null), 4000);
+      
+      toast.success(`Hunt started! ${response.data.prc_spent} PRC spent. Find the treasure!`, {
+        duration: 4000
       });
       setShowStartModal(null);
       fetchData(user.uid);
