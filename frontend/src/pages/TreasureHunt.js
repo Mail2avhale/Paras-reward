@@ -64,17 +64,36 @@ const TreasureHunt = ({ user }) => {
     const hunt = hunts.find(h => h.hunt_id === huntId);
     const requiredPRC = hunt?.prc_cost || 0;
     
+    console.log('[TreasureHunt] Starting hunt check:', {
+      huntId,
+      requiredPRC,
+      isFreeUser
+    });
+    
     // Get user's current PRC balance
     try {
       const balanceRes = await axios.get(`${API}/user/${user.uid}`);
       const userBalance = balanceRes.data.prc_balance || 0;
       const validPRCBalance = balanceRes.data.valid_prc_balance || 0;
       
+      console.log('[TreasureHunt] Balance check:', {
+        userBalance,
+        validPRCBalance,
+        isFreeUser
+      });
+      
       // Check if user has enough valid PRC (for free users) or total PRC (for VIP)
       const effectiveBalance = isFreeUser ? validPRCBalance : userBalance;
       
+      console.log('[TreasureHunt] Effective balance vs required:', {
+        effectiveBalance,
+        requiredPRC,
+        hasEnough: effectiveBalance >= requiredPRC
+      });
+      
       if (effectiveBalance < requiredPRC) {
         // Show custom "Not Enough PRC" message
+        console.log('[TreasureHunt] Insufficient PRC - showing toast');
         setShowStartModal(null);
         toast.error(`⚠️ NOT ENOUGH PRC TO PLAY GAME\n\nYou need ${requiredPRC} PRC to start this hunt.\nYour current balance: ${effectiveBalance.toFixed(2)} PRC\n\n➡️ Go to Mining to earn more PRC`, {
           duration: 8000,
