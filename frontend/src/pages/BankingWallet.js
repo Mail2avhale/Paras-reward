@@ -80,7 +80,9 @@ const BankingWallet = ({ user, walletBalance = 0 }) => {
       admin_credit: <CheckCircle className="w-5 h-5 text-green-600" />,
       admin_debit: <AlertCircle className="w-5 h-5 text-red-600" />,
       delivery_charge: <TrendingDown className="w-5 h-5 text-gray-600" />,
-      profit_share: <TrendingUp className="w-5 h-5 text-green-600" />
+      profit_share: <TrendingUp className="w-5 h-5 text-green-600" />,
+      scratch_card_reward: <Gift className="w-5 h-5 text-pink-600" />,
+      treasure_hunt_reward: <Gift className="w-5 h-5 text-purple-600" />
     };
     return iconMap[type] || <Wallet className="w-5 h-5 text-gray-600" />;
   };
@@ -97,6 +99,8 @@ const BankingWallet = ({ user, walletBalance = 0 }) => {
       admin_credit: 'Admin Credit',
       admin_debit: 'Admin Debit',
       delivery_charge: 'Delivery Charge',
+      scratch_card_reward: 'Scratch Card Cashback',
+      treasure_hunt_reward: 'Treasure Hunt Cashback',
       profit_share: 'Profit Share'
     };
     return labelMap[type] || type;
