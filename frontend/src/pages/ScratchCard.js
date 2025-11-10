@@ -93,7 +93,7 @@ const ScratchCard = ({ user }) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     const rect = canvas.getBoundingClientRect();
     
     // Set canvas size with device pixel ratio for crisp rendering
@@ -104,60 +104,71 @@ const ScratchCard = ({ user }) => {
     canvas.style.width = rect.width + 'px';
     canvas.style.height = rect.height + 'px';
 
-    // Create realistic metallic scratch layer with gradient
-    const gradient = ctx.createLinearGradient(0, 0, rect.width, rect.height);
-    gradient.addColorStop(0, '#c0c0c0');
-    gradient.addColorStop(0.5, '#ffffff');
-    gradient.addColorStop(1, '#a8a8a8');
-    ctx.fillStyle = gradient;
+    // Create REALISTIC scratch coating (like lottery tickets)
+    // Base layer - dark metallic
+    const baseGradient = ctx.createLinearGradient(0, 0, rect.width, rect.height);
+    baseGradient.addColorStop(0, '#b8b8b8');
+    baseGradient.addColorStop(0.5, '#d4d4d4');
+    baseGradient.addColorStop(1, '#a0a0a0');
+    ctx.fillStyle = baseGradient;
     ctx.fillRect(0, 0, rect.width, rect.height);
     
-    // Add texture overlay for realistic metallic look
-    ctx.globalAlpha = 0.3;
-    for (let i = 0; i < rect.width; i += 2) {
-      for (let j = 0; j < rect.height; j += 2) {
-        if (Math.random() > 0.5) {
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(i, j, 1, 1);
+    // Add realistic texture pattern (looks like scratch coating material)
+    ctx.globalAlpha = 0.15;
+    for (let i = 0; i < rect.width; i += 3) {
+      for (let j = 0; j < rect.height; j += 3) {
+        const noise = Math.random();
+        if (noise > 0.6) {
+          ctx.fillStyle = noise > 0.8 ? '#ffffff' : '#000000';
+          ctx.fillRect(i, j, 2, 2);
         }
       }
     }
     ctx.globalAlpha = 1.0;
     
-    // Add shine effect
+    // Add diagonal shine streaks (like real scratch cards)
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    const shineGradient = ctx.createLinearGradient(0, 0, rect.width, 0);
-    shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
-    shineGradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
-    shineGradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.8)');
-    shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    ctx.fillStyle = shineGradient;
-    ctx.fillRect(rect.width * 0.2, 0, rect.width * 0.3, rect.height);
+    for (let i = 0; i < 3; i++) {
+      const x = (rect.width / 4) * (i + 0.5);
+      const shineGradient = ctx.createLinearGradient(x - 30, 0, x + 30, 0);
+      shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
+      shineGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.6)');
+      shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = shineGradient;
+      ctx.fillRect(x - 30, 0, 60, rect.height);
+    }
     ctx.restore();
     
-    // Add branding with shadow
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-    ctx.shadowBlur = 10;
+    // Add instruction text (subtle, like printed on coating)
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+    ctx.shadowBlur = 8;
     ctx.shadowOffsetX = 2;
     ctx.shadowOffsetY = 2;
-    ctx.fillStyle = '#9333ea';
-    ctx.font = 'bold 28px Arial';
+    
+    // Main instruction
+    ctx.fillStyle = '#6b21a8';
+    ctx.font = `bold ${Math.min(rect.width / 12, 32)}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('💎 SCRATCH HERE 💎', rect.width / 2, rect.height / 2 - 20);
+    ctx.fillText('💎 SCRATCH HERE 💎', rect.width / 2, rect.height / 2 - 15);
     
-    ctx.font = '18px Arial';
+    // Secondary instruction
+    ctx.font = `${Math.min(rect.width / 20, 18)}px Arial`;
     ctx.fillStyle = '#7c3aed';
-    ctx.fillText('👆 Drag your finger to reveal', rect.width / 2, rect.height / 2 + 20);
+    ctx.fillText('👆 Use your finger to reveal prize', rect.width / 2, rect.height / 2 + 20);
     
-    // Add sparkle indicators
+    // Add corner decorations (like real lottery tickets)
     ctx.shadowBlur = 0;
-    const sparkles = ['✨', '⭐', '💫'];
-    sparkles.forEach((sparkle, i) => {
-      ctx.font = '24px Arial';
-      ctx.fillText(sparkle, rect.width / 4 + i * rect.width / 4, rect.height / 4);
-      ctx.fillText(sparkle, rect.width / 4 + i * rect.width / 4, rect.height * 3 / 4);
+    const cornerSize = Math.min(rect.width, rect.height) / 15;
+    ctx.font = `${cornerSize}px Arial`;
+    ctx.fillStyle = '#9333ea';
+    
+    // Corners with sparkles
+    ['✨', '⭐', '💎', '🎁'].forEach((icon, i) => {
+      const x = i < 2 ? cornerSize : rect.width - cornerSize;
+      const y = (i % 2 === 0) ? cornerSize : rect.height - cornerSize;
+      ctx.fillText(icon, x, y);
     });
 
     canvas.style.cursor = 'grab';
