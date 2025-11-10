@@ -168,7 +168,7 @@ const Marketplace = ({ user, onLogout }) => {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       <Navbar user={user} onLogout={onLogout} />
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 py-8 max-w-full lg:max-w-7xl xl:max-w-[90%]">
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-2">Marketplace</h1>
