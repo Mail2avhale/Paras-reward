@@ -812,11 +812,13 @@ metadata:
 
 test_plan:
   current_focus:
+    - "Scratch Card Cashback Credit Fix"
     - "Admin Dashboard Navigation Fix"
     - "Manager Role Update Fix"
     - "Manager Dashboard Loading Fix"
     - "Stock Deduction on Order Delivery"
-  stuck_tasks: []
+  stuck_tasks:
+    - "Scratch Card Cashback Credit Fix"
   test_all: false
   test_priority: "high_first"
 
