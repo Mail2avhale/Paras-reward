@@ -66,24 +66,18 @@ print("=" * 80)
 
 def test_scratch_card_cashback_credit_fix():
     """
-    SCRATCH CARD CASHBACK CREDIT FIX - COMPREHENSIVE TESTING
+    SCRATCH CARD CASHBACK CREDIT FIX - RE-TESTING AFTER CRITICAL FIXES
     
     Test Scenarios:
-    1. Create test user with sufficient PRC balance (at least 100 PRC)
-    2. Check user's initial cashback_wallet_balance
-    3. Purchase a scratch card (10 PRC Bronze card)
-    4. Verify:
-       - PRC balance deducted correctly
-       - Cashback credited to cashback_wallet_balance field
-       - Transaction logged in 'transactions' collection with type='scratch_card_reward'
-       - Scratch card record created in 'scratch_cards' collection
-       - Response includes correct cashback amount and new balance
-    5. Test with different card types (50 PRC Silver, 100 PRC Gold)
-    6. Verify transaction history shows scratch card rewards
+    1. Find existing test user from previous tests (should have ₹5.4 in cashback_wallet_balance)
+    2. Test wallet endpoint fix - should now show correct cashback balance
+    3. Test scratch card history endpoint fix - should return valid JSON without 500 error
+    4. Purchase one more scratch card to verify end-to-end flow works
+    5. Verify all fixes are working correctly
     """
-    print(f"\n🎰 SCRATCH CARD CASHBACK CREDIT FIX - COMPREHENSIVE TESTING")
+    print(f"\n🎰 SCRATCH CARD CASHBACK CREDIT FIX - RE-TESTING AFTER CRITICAL FIXES")
     print("=" * 80)
-    print(f"Testing scratch card cashback credit and transaction logging")
+    print(f"Testing fixes: wallet endpoint field priority + history ObjectId serialization")
     print("=" * 80)
     
     test_results = {
