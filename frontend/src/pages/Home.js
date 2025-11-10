@@ -15,13 +15,13 @@ const Home = ({ user, onLogout }) => {
   const { t } = useTranslation();
   const [hoveredFeature, setHoveredFeature] = useState(null);
   const [socialMedia, setSocialMedia] = useState({
-    facebook: '',
-    twitter: '',
-    instagram: '',
-    linkedin: '',
-    youtube: '',
-    telegram: '',
-    whatsapp: ''
+    facebook: 'https://facebook.com',
+    twitter: 'https://twitter.com',
+    instagram: 'https://instagram.com',
+    linkedin: 'https://linkedin.com',
+    youtube: 'https://youtube.com',
+    telegram: 'https://t.me',
+    whatsapp: 'https://wa.me'
   });
 
   useEffect(() => {
@@ -31,7 +31,16 @@ const Home = ({ user, onLogout }) => {
   const fetchSocialMedia = async () => {
     try {
       const response = await axios.get(`${API}/api/admin/social-media-settings`);
-      setSocialMedia(response.data);
+      // Only update if values are not empty
+      const newSocialMedia = {};
+      Object.keys(response.data).forEach(key => {
+        if (response.data[key]) {
+          newSocialMedia[key] = response.data[key];
+        }
+      });
+      if (Object.keys(newSocialMedia).length > 0) {
+        setSocialMedia(prev => ({ ...prev, ...newSocialMedia }));
+      }
     } catch (error) {
       console.error('Error fetching social media:', error);
     }
