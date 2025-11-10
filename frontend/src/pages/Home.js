@@ -104,17 +104,118 @@ const Home = ({ user, onLogout }) => {
             <div className="grid grid-cols-3 gap-6 max-w-3xl mx-auto">
               <Card className="p-6 bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300">
                 <div className="text-3xl font-bold text-purple-400">10,000+</div>
-                <div className="text-gray-300 mt-1">Active Users</div>
+                <div className="text-gray-300 mt-1">{t('home.active_users')}</div>
               </Card>
               <Card className="p-6 bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300">
                 <div className="text-3xl font-bold text-pink-400">₹50L+</div>
-                <div className="text-gray-300 mt-1">Rewards Distributed</div>
+                <div className="text-gray-300 mt-1">{t('home.rewards_distributed')}</div>
               </Card>
               <Card className="p-6 bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300">
                 <div className="text-3xl font-bold text-purple-400">5000+</div>
-                <div className="text-gray-300 mt-1">Products</div>
+                <div className="text-gray-300 mt-1">{t('home.products')}</div>
               </Card>
             </div>
+
+            {/* Social Media Links */}
+            {(socialMedia.facebook || socialMedia.twitter || socialMedia.instagram || 
+              socialMedia.linkedin || socialMedia.youtube || socialMedia.telegram || socialMedia.whatsapp) && (
+              <div className="mt-12 flex flex-col items-center">
+                <h3 className="text-xl font-semibold text-white mb-4">{t('footer.follow_us')}</h3>
+                <div className="flex gap-4 items-center flex-wrap justify-center">
+                  {socialMedia.facebook && (
+                    <a 
+                      href={socialMedia.facebook} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="group relative p-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl hover:bg-white/20 transition-all duration-300 hover:scale-110"
+                    >
+                      <Facebook className="h-7 w-7 text-white group-hover:text-blue-400 transition-colors" />
+                      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-white text-gray-900 px-2 py-1 rounded text-xs whitespace-nowrap">
+                        Facebook
+                      </div>
+                    </a>
+                  )}
+                  {socialMedia.twitter && (
+                    <a 
+                      href={socialMedia.twitter} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="group relative p-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl hover:bg-white/20 transition-all duration-300 hover:scale-110"
+                    >
+                      <Twitter className="h-7 w-7 text-white group-hover:text-blue-300 transition-colors" />
+                      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-white text-gray-900 px-2 py-1 rounded text-xs whitespace-nowrap">
+                        Twitter
+                      </div>
+                    </a>
+                  )}
+                  {socialMedia.instagram && (
+                    <a 
+                      href={socialMedia.instagram} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="group relative p-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl hover:bg-white/20 transition-all duration-300 hover:scale-110"
+                    >
+                      <Instagram className="h-7 w-7 text-white group-hover:text-pink-400 transition-colors" />
+                      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-white text-gray-900 px-2 py-1 rounded text-xs whitespace-nowrap">
+                        Instagram
+                      </div>
+                    </a>
+                  )}
+                  {socialMedia.linkedin && (
+                    <a 
+                      href={socialMedia.linkedin} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="group relative p-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl hover:bg-white/20 transition-all duration-300 hover:scale-110"
+                    >
+                      <Linkedin className="h-7 w-7 text-white group-hover:text-blue-500 transition-colors" />
+                      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-white text-gray-900 px-2 py-1 rounded text-xs whitespace-nowrap">
+                        LinkedIn
+                      </div>
+                    </a>
+                  )}
+                  {socialMedia.youtube && (
+                    <a 
+                      href={socialMedia.youtube} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="group relative p-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl hover:bg-white/20 transition-all duration-300 hover:scale-110"
+                    >
+                      <Youtube className="h-7 w-7 text-white group-hover:text-red-500 transition-colors" />
+                      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-white text-gray-900 px-2 py-1 rounded text-xs whitespace-nowrap">
+                        YouTube
+                      </div>
+                    </a>
+                  )}
+                  {socialMedia.telegram && (
+                    <a 
+                      href={socialMedia.telegram} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="group relative p-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl hover:bg-white/20 transition-all duration-300 hover:scale-110"
+                    >
+                      <Send className="h-7 w-7 text-white group-hover:text-blue-400 transition-colors" />
+                      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-white text-gray-900 px-2 py-1 rounded text-xs whitespace-nowrap">
+                        Telegram
+                      </div>
+                    </a>
+                  )}
+                  {socialMedia.whatsapp && (
+                    <a 
+                      href={socialMedia.whatsapp} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="group relative p-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl hover:bg-white/20 transition-all duration-300 hover:scale-110"
+                    >
+                      <MessageCircle className="h-7 w-7 text-white group-hover:text-green-400 transition-colors" />
+                      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-white text-gray-900 px-2 py-1 rounded text-xs whitespace-nowrap">
+                        WhatsApp
+                      </div>
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
