@@ -444,6 +444,23 @@ const ScratchCard = ({ user }) => {
           </div>
         )}
       </div>
+      
+      {/* Win Celebration Overlay */}
+      {celebrationData && (
+        <WinCelebration
+          amount={celebrationData.amount}
+          percentage={celebrationData.percentage}
+          message={celebrationData.message}
+          onClose={() => {
+            setCelebrationData(null);
+            setSelectedCard(null);
+            setIsScratching(false);
+            setRevealed(false);
+            setResult(null);
+          }}
+          duration={6000}
+        />
+      )}
     </div>
   );
 };
