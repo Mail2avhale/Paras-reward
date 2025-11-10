@@ -356,3 +356,17 @@ code {
         transform: translate(-50%, -50%) translateY(-10px);
     }
 }
+
+/* Animated Feedback Progress Bar */
+@keyframes shrink-width {
+    from {
+        width: 100%;
+    }
+    to {
+        width: 0%;
+    }
+}
+
+.animate-shrink-width {
+    animation: shrink-width linear forwards;
+}
