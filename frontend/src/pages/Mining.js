@@ -65,16 +65,29 @@ const Mining = ({ user, onLogout }) => {
     setLoading(true);
     try {
       const response = await axios.post(`${API}/mining/start/${user.uid}`);
-      toast.success(response.data.message);
+      
+      // Show animated feedback
+      setAnimatedFeedback({
+        message: `⛏️ Mining Started!\n💎 Earning PRC Now!`,
+        type: 'success',
+        duration: 3000
+      });
+      
       if (isFreeUser) {
-        toast.info('⏰ Your PRC will be valid for 2 days. Upgrade to VIP for lifetime validity!', {
-          duration: 6000
-        });
+        setTimeout(() => {
+          toast.info('⏰ Your PRC will be valid for 2 days. Upgrade to VIP for lifetime validity!', {
+            duration: 6000
+          });
+        }, 3500);
       }
       fetchMiningStatus();
     } catch (error) {
       console.error('Error starting mining:', error);
-      toast.error(error.response?.data?.detail || 'Failed to start mining');
+      setAnimatedFeedback({
+        message: `❌ Mining Failed!\n${error.response?.data?.detail || 'Please try again'}`,
+        type: 'error',
+        duration: 3000
+      });
     } finally {
       setLoading(false);
     }
