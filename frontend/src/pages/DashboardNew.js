@@ -65,54 +65,56 @@ const DashboardNew = ({ user, onLogout }) => {
   const currentLevelProgress = prcBalance % 1000;
   const progressPercent = (currentLevelProgress / 1000) * 100;
 
-  // Enhanced Quick Menu with more options
-  const quickActions = [
+  // Primary Quick Actions - Most used features
+  const primaryActions = [
     { 
-      name: 'Start Mining', 
+      name: 'Mining', 
       icon: Play, 
       link: '/mining', 
       gradient: 'from-green-500 to-emerald-600',
-      description: 'Earn PRC now',
-      badge: stats?.is_mining ? 'Active' : null
+      badge: stats?.is_mining ? 'Active' : null,
+      priority: true
+    },
+    { 
+      name: 'Treasure', 
+      icon: Map, 
+      link: '/treasure-hunt', 
+      gradient: 'from-amber-500 to-orange-600',
+      badge: '50%',
+      priority: true
+    },
+    { 
+      name: 'Scratch', 
+      icon: Sparkles, 
+      link: '/scratch-card', 
+      gradient: 'from-pink-500 to-rose-600',
+      badge: isVIP ? '50%' : '10%',
+      priority: true
+    },
+    { 
+      name: 'Shop', 
+      icon: ShoppingBag, 
+      link: '/marketplace', 
+      gradient: 'from-blue-500 to-indigo-600',
+      badge: null,
+      priority: true
+    },
+  ];
+
+  // Secondary Quick Actions
+  const secondaryActions = [
+    { 
+      name: 'Wallet', 
+      icon: Wallet, 
+      link: '/wallet', 
+      gradient: 'from-cyan-500 to-blue-600',
+      badge: null
     },
     { 
       name: 'Tap Game', 
       icon: Zap, 
       link: '/game', 
       gradient: 'from-yellow-500 to-orange-600',
-      description: 'Bonus rewards',
-      badge: null
-    },
-    { 
-      name: 'Treasure Hunt', 
-      icon: Map, 
-      link: '/treasure-hunt', 
-      gradient: 'from-amber-500 to-orange-600',
-      description: 'Find treasures',
-      badge: '50% CB'
-    },
-    { 
-      name: 'Scratch Card', 
-      icon: Sparkles, 
-      link: '/scratch-card', 
-      gradient: 'from-pink-500 to-rose-600',
-      description: 'Win cashback',
-      badge: isVIP ? '10-50%' : '0-10%'
-    },
-    { 
-      name: 'Marketplace', 
-      icon: ShoppingBag, 
-      link: '/marketplace', 
-      gradient: 'from-blue-500 to-indigo-600',
-      description: 'Redeem items',
-      badge: null
-    },
-    { 
-      name: 'My Wallet', 
-      icon: Wallet, 
-      link: '/wallet', 
-      gradient: 'from-cyan-500 to-blue-600',
-      description: 'View balance',
       badge: null
     },
     { 
@@ -120,32 +122,28 @@ const DashboardNew = ({ user, onLogout }) => {
       icon: Users, 
       link: '/referrals', 
       gradient: 'from-purple-500 to-pink-600',
-      description: 'Invite friends',
       badge: userData?.referral_count > 0 ? `${userData.referral_count}` : null
     },
     { 
-      name: 'My Orders', 
+      name: 'Orders', 
       icon: Package, 
       link: '/orders', 
       gradient: 'from-orange-500 to-red-600',
-      description: 'Track orders',
       badge: null
     },
     { 
-      name: 'Leaderboard', 
+      name: 'Ranks', 
       icon: Trophy, 
       link: '/leaderboard', 
       gradient: 'from-pink-500 to-rose-600',
-      description: 'Top miners',
       badge: null
     },
     { 
-      name: 'VIP Status', 
+      name: 'VIP', 
       icon: Crown, 
       link: '/vip', 
       gradient: 'from-amber-500 to-yellow-600',
-      description: isVIP ? 'Active' : 'Upgrade',
-      badge: isVIP ? 'VIP' : null
+      badge: isVIP ? '✓' : '★'
     }
   ];
 
