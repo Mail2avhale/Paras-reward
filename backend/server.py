@@ -10245,6 +10245,79 @@ async def reject_vip_payment(payment_id: str, request: Request, uid: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 # ========== END MANAGER DASHBOARD ENDPOINTS ==========
+
+# ========== ADMIN SETTINGS ENDPOINTS ==========
+
+class SocialMediaSettings(BaseModel):
+    """Social Media Settings Model"""
+    facebook: Optional[str] = ""
+    twitter: Optional[str] = ""
+    instagram: Optional[str] = ""
+    linkedin: Optional[str] = ""
+    youtube: Optional[str] = ""
+    telegram: Optional[str] = ""
+    whatsapp: Optional[str] = ""
+
+@api_router.get("/admin/social-media-settings")
+async def get_social_media_settings():
+    """Get social media settings"""
+    try:
+        settings = await db.settings.find_one({"type": "social_media"})
+        if not settings:
+            # Return default empty settings
+            return {
+                "facebook": "",
+                "twitter": "",
+                "instagram": "",
+                "linkedin": "",
+                "youtube": "",
+                "telegram": "",
+                "whatsapp": ""
+            }
+        return {
+            "facebook": settings.get("facebook", ""),
+            "twitter": settings.get("twitter", ""),
+            "instagram": settings.get("instagram", ""),
+            "linkedin": settings.get("linkedin", ""),
+            "youtube": settings.get("youtube", ""),
+            "telegram": settings.get("telegram", ""),
+            "whatsapp": settings.get("whatsapp", "")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/social-media-settings")
+async def update_social_media_settings(settings: SocialMediaSettings):
+    """Update social media settings (Admin only)"""
+    try:
+        # Upsert settings
+        await db.settings.update_one(
+            {"type": "social_media"},
+            {
+                "$set": {
+                    "type": "social_media",
+                    "facebook": settings.facebook,
+                    "twitter": settings.twitter,
+                    "instagram": settings.instagram,
+                    "linkedin": settings.linkedin,
+                    "youtube": settings.youtube,
+                    "telegram": settings.telegram,
+                    "whatsapp": settings.whatsapp,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            },
+            upsert=True
+        )
+        
+        return {
+            "message": "Social media settings updated successfully",
+            "settings": settings.model_dump()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ========== END ADMIN SETTINGS ENDPOINTS ==========
+
 app.include_router(api_router)
 
 app.add_middleware(
