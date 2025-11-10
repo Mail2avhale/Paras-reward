@@ -76,22 +76,12 @@ const TreasureHunt = ({ user }) => {
       if (effectiveBalance < requiredPRC) {
         // Show custom "Not Enough PRC" message
         setShowStartModal(null);
-        toast({ 
-          title: "⚠️ NOT ENOUGH PRC TO PLAY GAME",
-          description: (
-            <div className="space-y-3">
-              <p className="font-medium">You need {requiredPRC} PRC to start this hunt.</p>
-              <p>Your current balance: {effectiveBalance.toFixed(2)} PRC</p>
-              <Button 
-                onClick={() => navigate('/mining')}
-                className="w-full mt-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-              >
-                MINE NOW
-              </Button>
-            </div>
-          ),
-          variant: 'destructive',
-          duration: 10000
+        toast.error(`⚠️ NOT ENOUGH PRC TO PLAY GAME\n\nYou need ${requiredPRC} PRC to start this hunt.\nYour current balance: ${effectiveBalance.toFixed(2)} PRC\n\n➡️ Go to Mining to earn more PRC`, {
+          duration: 8000,
+          action: {
+            label: 'MINE NOW',
+            onClick: () => navigate('/mining')
+          }
         });
         return;
       }
