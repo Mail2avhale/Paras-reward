@@ -94,21 +94,69 @@ const ScratchCard = ({ user }) => {
     const ctx = canvas.getContext('2d');
     const rect = canvas.getBoundingClientRect();
     
-    canvas.width = rect.width;
-    canvas.height = rect.height;
+    // Set canvas size with device pixel ratio for crisp rendering
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
 
-    // Create scratch layer
-    ctx.fillStyle = '#9333ea';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Create realistic metallic scratch layer with gradient
+    const gradient = ctx.createLinearGradient(0, 0, rect.width, rect.height);
+    gradient.addColorStop(0, '#c0c0c0');
+    gradient.addColorStop(0.5, '#ffffff');
+    gradient.addColorStop(1, '#a8a8a8');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, rect.width, rect.height);
     
-    // Add pattern
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 24px Arial';
+    // Add texture overlay for realistic metallic look
+    ctx.globalAlpha = 0.3;
+    for (let i = 0; i < rect.width; i += 2) {
+      for (let j = 0; j < rect.height; j += 2) {
+        if (Math.random() > 0.5) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(i, j, 1, 1);
+        }
+      }
+    }
+    ctx.globalAlpha = 1.0;
+    
+    // Add shine effect
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const shineGradient = ctx.createLinearGradient(0, 0, rect.width, 0);
+    shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
+    shineGradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
+    shineGradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.8)');
+    shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = shineGradient;
+    ctx.fillRect(rect.width * 0.2, 0, rect.width * 0.3, rect.height);
+    ctx.restore();
+    
+    // Add branding with shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+    ctx.fillStyle = '#9333ea';
+    ctx.font = 'bold 28px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('SCRATCH HERE', canvas.width / 2, canvas.height / 2);
-    ctx.font = '16px Arial';
-    ctx.fillText('👆 Drag to reveal', canvas.width / 2, canvas.height / 2 + 30);
+    ctx.fillText('💎 SCRATCH HERE 💎', rect.width / 2, rect.height / 2 - 20);
+    
+    ctx.font = '18px Arial';
+    ctx.fillStyle = '#7c3aed';
+    ctx.fillText('👆 Drag your finger to reveal', rect.width / 2, rect.height / 2 + 20);
+    
+    // Add sparkle indicators
+    ctx.shadowBlur = 0;
+    const sparkles = ['✨', '⭐', '💫'];
+    sparkles.forEach((sparkle, i) => {
+      ctx.font = '24px Arial';
+      ctx.fillText(sparkle, rect.width / 4 + i * rect.width / 4, rect.height / 4);
+      ctx.fillText(sparkle, rect.width / 4 + i * rect.width / 4, rect.height * 3 / 4);
+    });
 
     canvas.style.cursor = 'grab';
   };
