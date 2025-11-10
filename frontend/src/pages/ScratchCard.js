@@ -9,6 +9,7 @@ import {
   Coins, Wallet, History, Crown, Ticket
 } from 'lucide-react';
 import WinCelebration from '../components/WinCelebration';
+import AnimatedFeedback from '../components/AnimatedFeedback';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
