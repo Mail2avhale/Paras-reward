@@ -31,22 +31,21 @@ const Home = ({ user, onLogout }) => {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 mb-8 px-6 py-3 bg-gradient-to-r from-purple-600/20 to-pink-600/20 backdrop-blur-xl rounded-full border border-purple-500/30">
               <Sparkles className="h-5 w-5 text-yellow-400" />
-              <span className="text-white font-semibold">India's #1 Reward Points Platform</span>
+              <span className="text-white font-semibold">{t('home.badge')}</span>
               <Sparkles className="h-5 w-5 text-yellow-400" />
             </div>
             
             {/* Main Headline */}
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-              <span className="text-white">Turn Your Time Into</span>
+              <span className="text-white">{t('home.hero_title_1')}</span>
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 animate-gradient">
-                Real Rewards
+                {t('home.hero_title_2')}
               </span>
             </h1>
             
             <p className="text-xl text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed">
-              Join 10,000+ users earning PRC reward points daily through simple activities. 
-              No investment required. Redeem for real products from 5000+ items!
+              {t('home.hero_description')}
             </p>
             
             {/* CTA Buttons */}
