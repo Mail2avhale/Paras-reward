@@ -127,6 +127,10 @@ const PWAInstallPrompt = () => {
 export const InstallAppButton = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  
+  // APK download URL - can be configured via environment variable
+  const APK_URL = process.env.REACT_APP_APK_URL || '/paras-reward.apk';
 
   useEffect(() => {
     // Check if already installed
@@ -151,7 +155,38 @@ export const InstallAppButton = () => {
     };
   }, []);
 
+  const handleDownloadAPK = () => {
+    setIsDownloading(true);
+    
+    // Create a temporary anchor element to trigger download
+    const link = document.createElement('a');
+    link.href = APK_URL;
+    link.download = 'PARAS-REWARD.apk';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Show success message
+    setTimeout(() => {
+      setIsDownloading(false);
+      alert('APK download started! Please check your downloads folder.\n\nNote: You may need to enable "Install from Unknown Sources" in your Android settings to install the app.');
+    }, 1000);
+  };
+
   const handleInstallClick = async () => {
+    // Check if user is on Android
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    
+    if (isAndroid) {
+      // Offer direct APK download for Android users
+      const userChoice = confirm('Download PARAS REWARD Android App?\n\nYou will download the APK file directly.');
+      if (userChoice) {
+        handleDownloadAPK();
+      }
+      return;
+    }
+    
+    // For other devices, try PWA installation
     if (!deferredPrompt) {
       alert('To install:\n\n1. Tap the menu (⋮) in your browser\n2. Select "Add to Home screen" or "Install app"');
       return;
@@ -183,11 +218,12 @@ export const InstallAppButton = () => {
   return (
     <Button 
       onClick={handleInstallClick}
+      disabled={isDownloading}
       size="lg" 
       className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-10 py-7 text-lg rounded-2xl shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 hover:scale-105 border-0"
     >
       <Download className="mr-2 h-5 w-5" />
-      Install Android App
+      {isDownloading ? 'Downloading...' : 'Download Android App'}
     </Button>
   );
 };
