@@ -197,7 +197,23 @@ const TreasureHunt = ({ user }) => {
         setShowGameModal(false);
         fetchData(user.uid);
       } else {
-        toast.warning(response.data.message);
+        // Show prominent feedback message
+        const messages = [
+          "Not here! Keep searching! 🔍",
+          "Keep digging! The treasure awaits! ⛏️",
+          "Try another spot! You're getting closer! 🗺️",
+          "Almost there! Don't give up! 💪",
+          "Search continues... Follow the clues! 🧭"
+        ];
+        const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+        
+        setFeedbackMessage({
+          text: randomMessage,
+          type: 'wrong'
+        });
+        
+        // Clear feedback after 3 seconds
+        setTimeout(() => setFeedbackMessage(null), 3000);
       }
 
       loadGameMap(progressId);
