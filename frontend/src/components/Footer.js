@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Mail, MapPin, Phone } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
