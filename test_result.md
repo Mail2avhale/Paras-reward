@@ -820,8 +820,7 @@ test_plan:
     - "Manager Role Update Fix"
     - "Manager Dashboard Loading Fix"
     - "Stock Deduction on Order Delivery"
-  stuck_tasks:
-    - "Scratch Card Cashback Credit Fix"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
