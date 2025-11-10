@@ -41,7 +41,7 @@ const Footer = () => {
               <img 
                 src="/paras-logo.jpg" 
                 alt="PARAS REWARD" 
-                className="h-12 w-auto object-contain"
+                className="h-12 w-auto object-contain logo-animated"
               />
             </div>
             <p className="text-gray-300 mb-4">
