@@ -130,7 +130,7 @@ const TreasureHunt = ({ user }) => {
       setActiveGame(progressId);
       setShowGameModal(true);
     } catch (error) {
-      toast({ description: 'Failed to load game map', variant: 'destructive' });
+      toast.error('Failed to load game map');
     }
   };
 
