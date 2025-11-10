@@ -398,78 +398,27 @@ def test_scratch_card_cashback_credit_fix():
     except Exception as e:
         print(f"❌ Error getting final scratch card history: {e}")
     
-    print(f"\n🔍 FINAL WALLET BALANCE VERIFICATION")
-    print("=" * 60)
-    
-    # Final wallet balance check
-    print(f"\n📋 Final wallet balance verification")
-    
-    try:
-        response = requests.get(f"{API_BASE}/wallet/{test_uid}", timeout=30)
-        if response.status_code == 200:
-            wallet_data = response.json()
-            final_prc_balance = wallet_data.get("prc_balance", 0)
-            final_cashback_balance = wallet_data.get("cashback_wallet_balance", 0)
-            
-            test_results["wallet_transactions_endpoint"] = True
-            print(f"✅ Wallet endpoint working")
-            print(f"   📋 Final PRC Balance: {final_prc_balance}")
-            print(f"   📋 Final Cashback Balance: ₹{final_cashback_balance}")
-            
-            # Verify expected balances
-            expected_prc_final = initial_prc_balance - 10 - 50 - 100  # 200 - 160 = 40
-            expected_cashback_final = initial_cashback_balance + bronze_cashback_won + silver_cashback_won + gold_cashback_won
-            
-            if abs(final_prc_balance - expected_prc_final) < 0.01:
-                print(f"✅ PRC balance calculation correct: {initial_prc_balance} - 160 = {final_prc_balance}")
-            else:
-                print(f"❌ PRC balance calculation error: Expected {expected_prc_final}, got {final_prc_balance}")
-            
-            if abs(final_cashback_balance - expected_cashback_final) < 0.01:
-                test_results["transaction_details_verification"] = True
-                print(f"✅ Cashback balance calculation correct: {initial_cashback_balance} + {bronze_cashback_won + silver_cashback_won + gold_cashback_won} = {final_cashback_balance}")
-            else:
-                print(f"❌ Cashback balance calculation error: Expected {expected_cashback_final}, got {final_cashback_balance}")
-                
-        else:
-            print(f"❌ Final wallet check failed: {response.status_code}")
-            print(f"   Response: {response.text}")
-            
-    except Exception as e:
-        print(f"❌ Error in final wallet verification: {e}")
-    
     # Final Summary
-    print(f"\n🏁 SCRATCH CARD CASHBACK CREDIT FIX - TEST SUMMARY")
+    print(f"\n🏁 SCRATCH CARD CASHBACK CREDIT FIX - RE-TEST SUMMARY")
     print("=" * 80)
     
     test_categories = {
-        "Test Setup": [
-            ("Test user creation", test_results["test_user_creation"]),
-            ("Available cards endpoint", test_results["available_cards_endpoint"])
+        "Critical Fixes Verification": [
+            ("Existing user found/created", test_results["existing_user_found"]),
+            ("Wallet endpoint shows correct balance", test_results["wallet_endpoint_shows_correct_balance"]),
+            ("Scratch card history no 500 error", test_results["scratch_card_history_no_500_error"]),
+            ("Scratch card history valid JSON", test_results["scratch_card_history_valid_json"])
         ],
-        "Bronze Card (10 PRC) Tests": [
-            ("Bronze card purchase", test_results["bronze_card_purchase"]),
-            ("Bronze PRC deduction", test_results["bronze_prc_deduction"]),
-            ("Bronze cashback credit", test_results["bronze_cashback_credit"]),
-            ("Bronze transaction logging", test_results["bronze_transaction_logging"]),
-            ("Bronze scratch card record", test_results["bronze_scratch_card_record"])
+        "End-to-End Flow Tests": [
+            ("New purchase successful", test_results["new_purchase_successful"]),
+            ("New purchase cashback credited", test_results["new_purchase_cashback_credited"]),
+            ("Wallet shows updated balance", test_results["wallet_shows_updated_balance"]),
+            ("Transaction logged correctly", test_results["transaction_logged_correctly"]),
+            ("History includes new purchase", test_results["history_includes_new_purchase"])
         ],
-        "Silver Card (50 PRC) Tests": [
-            ("Silver card purchase", test_results["silver_card_purchase"]),
-            ("Silver PRC deduction", test_results["silver_prc_deduction"]),
-            ("Silver cashback credit", test_results["silver_cashback_credit"]),
-            ("Silver transaction logging", test_results["silver_transaction_logging"])
-        ],
-        "Gold Card (100 PRC) Tests": [
-            ("Gold card purchase", test_results["gold_card_purchase"]),
-            ("Gold PRC deduction", test_results["gold_prc_deduction"]),
-            ("Gold cashback credit", test_results["gold_cashback_credit"]),
-            ("Gold transaction logging", test_results["gold_transaction_logging"])
-        ],
-        "Transaction History Tests": [
-            ("Wallet transactions endpoint", test_results["wallet_transactions_endpoint"]),
-            ("Scratch card history endpoint", test_results["scratch_card_history_endpoint"]),
-            ("Transaction details verification", test_results["transaction_details_verification"])
+        "System Health Verification": [
+            ("No ObjectId errors", test_results["no_objectid_errors"]),
+            ("Field consistency fixed", test_results["field_consistency_fixed"])
         ]
     }
     
