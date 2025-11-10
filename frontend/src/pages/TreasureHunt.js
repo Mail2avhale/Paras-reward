@@ -109,28 +109,15 @@ const TreasureHunt = ({ user }) => {
       // Check if it's a PRC balance error
       if (errorMsg.includes('Insufficient') || errorMsg.includes('valid PRC')) {
         setShowStartModal(null);
-        toast({ 
-          title: "⚠️ NOT ENOUGH PRC TO PLAY GAME",
-          description: (
-            <div className="space-y-3">
-              <p className="font-medium">{errorMsg}</p>
-              <Button 
-                onClick={() => navigate('/mining')}
-                className="w-full mt-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-              >
-                MINE NOW
-              </Button>
-            </div>
-          ),
-          variant: 'destructive',
-          duration: 10000
+        toast.error(`⚠️ NOT ENOUGH PRC TO PLAY GAME\n\n${errorMsg}\n\n➡️ Go to Mining to earn more PRC`, {
+          duration: 8000,
+          action: {
+            label: 'MINE NOW',
+            onClick: () => navigate('/mining')
+          }
         });
       } else {
-        toast({ 
-          description: errorMsg, 
-          variant: 'destructive',
-          duration: 5000
-        });
+        toast.error(errorMsg, { duration: 5000 });
       }
     }
   };
