@@ -97,8 +97,7 @@ const TreasureHunt = ({ user }) => {
         { params: { uid: user.uid } }
       );
 
-      toast({ 
-        description: `🎯 Started ${response.data.hunt_title}! ${response.data.prc_spent} PRC deducted. Good luck!`,
+      toast.success(`🎯 Started ${response.data.hunt_title}! ${response.data.prc_spent} PRC deducted. Good luck!`, {
         duration: 5000
       });
       setShowStartModal(null);
