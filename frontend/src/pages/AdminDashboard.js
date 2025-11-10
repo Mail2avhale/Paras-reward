@@ -1267,7 +1267,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                   </button>
 
                   <button
-                    onClick={() => setActiveTab('products')}
+                    onClick={() => setActiveTab('marketplace')}
                     className="p-4 bg-white hover:bg-blue-50 border-2 border-transparent hover:border-blue-300 rounded-xl shadow-sm transition-all group"
                   >
                     <div className="flex flex-col items-center space-y-2">
