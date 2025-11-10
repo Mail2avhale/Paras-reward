@@ -93,12 +93,12 @@ const PaymentConfigSettings = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">QR Code Image</label>
-                  <ImageUpload
+                  <ImageCropUpload
                     value={config.qr_code_url}
                     onChange={(base64) => setConfig({...config, qr_code_url: base64})}
                     label="Upload QR Code"
                     maxSize={2}
-                    aspectRatio="square"
+                    aspectRatio={1}
                   />
                   <p className="text-xs text-gray-500 mt-2">Upload QR code for UPI payments (max 2MB)</p>
                 </div>
