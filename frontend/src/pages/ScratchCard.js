@@ -148,7 +148,14 @@ const ScratchCard = ({ user }) => {
     if (percentage > 60 && !revealed) {
       setRevealed(true);
       canvas.style.display = 'none';
-      toast.success(result.message, { duration: 5000 });
+      
+      // Show big animated celebration
+      setCelebrationData({
+        amount: result.cashback_won_inr,
+        percentage: result.cashback_percentage,
+        message: "YOU WON!"
+      });
+      
       fetchHistory();
     }
   };
