@@ -186,9 +186,13 @@ const TreasureHunt = ({ user }) => {
       );
 
       if (response.data.found) {
-        toast.success(`🎉 ${response.data.message}\n💰 Cashback Earned: ₹${response.data.cashback_earned}\nTotal PRC Spent: ${response.data.prc_spent_total}`, {
-          duration: 6000
+        // Show big animated celebration
+        setCelebrationData({
+          amount: response.data.cashback_earned,
+          percentage: response.data.cashback_percentage || baseCashbackRate,
+          message: "TREASURE FOUND!"
         });
+        
         setShowGameModal(false);
         fetchData(user.uid);
       } else {
