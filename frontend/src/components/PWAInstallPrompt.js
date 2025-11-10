@@ -224,7 +224,7 @@ export const InstallAppButton = () => {
       className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-10 py-7 text-lg rounded-2xl shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 hover:scale-105 border-0"
     >
       <Download className="mr-2 h-5 w-5" />
-      {isDownloading ? 'Downloading...' : 'Download Android App'}
+      {isDownloading ? 'Installing...' : 'Install App'}
     </Button>
   );
 };
