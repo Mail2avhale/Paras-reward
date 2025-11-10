@@ -10432,17 +10432,11 @@ async def purchase_scratch_card(purchase: ScratchCardPurchase, uid: str = None):
         # Generate reward
         reward = generate_scratch_reward(is_vip, purchase.card_type)
         
-        # Get current cashback wallet balance
+        # Get current cashback wallet balance (for response only)
         cashback_wallet_balance = user.get("cashback_wallet_balance", 0)
-        new_cashback_wallet_balance = cashback_wallet_balance + reward["cashback_inr"]
         
-        # Update cashback wallet balance
-        await db.users.update_one(
-            {"uid": uid},
-            {"$set": {"cashback_wallet_balance": new_cashback_wallet_balance}}
-        )
-        
-        # Log transaction in transactions collection for proper transaction history
+        # Log transaction in transactions collection - this function automatically updates the wallet balance
+        # DO NOT manually update wallet here as log_transaction() handles it
         transaction_id = await log_transaction(
             user_id=uid,
             wallet_type="cashback_wallet",
@@ -10458,6 +10452,9 @@ async def purchase_scratch_card(purchase: ScratchCardPurchase, uid: str = None):
             },
             related_type="scratch_card"
         )
+        
+        # Calculate new balance for response
+        new_cashback_wallet_balance = cashback_wallet_balance + reward["cashback_inr"]
         
         # Record in scratch_cards collection for game history
         scratch_card_record = {
