@@ -3338,8 +3338,8 @@ async def get_user_withdrawals(uid: str):
 
 
 @api_router.get("/wallet/transactions/{uid}")
-async def get_wallet_transactions(uid: str, wallet_type: str = None, page: int = 1, limit: int = 20):
-    """Get user's comprehensive wallet transaction history with pagination"""
+async def get_wallet_transactions(uid: str, wallet_type: str = None, page: int = 1, limit: int = 10):
+    """Get user's comprehensive wallet transaction history with pagination (default 10 per page)"""
     query = {"user_id": uid}
     
     # Filter by wallet type if specified
@@ -3358,8 +3358,8 @@ async def get_wallet_transactions(uid: str, wallet_type: str = None, page: int =
     ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
     # Calculate totals for current page
-    total_credit = sum(t["amount"] for t in transactions if t["type"] in ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share"])
-    total_debit = sum(t["amount"] for t in transactions if t["type"] in ["order", "withdrawal", "admin_debit", "delivery_charge"])
+    total_credit = sum(t["amount"] for t in transactions if t["type"] in ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share", "scratch_card_reward", "treasure_hunt_reward"])
+    total_debit = sum(t["amount"] for t in transactions if t["type"] in ["order", "withdrawal", "admin_debit", "delivery_charge", "scratch_card_purchase", "treasure_hunt_play"])
     
     return {
         "transactions": transactions,
@@ -3368,7 +3368,9 @@ async def get_wallet_transactions(uid: str, wallet_type: str = None, page: int =
         "limit": limit,
         "total_pages": total_pages,
         "total_credit": total_credit,
-        "total_debit": total_debit
+        "total_debit": total_debit,
+        "has_next": page < total_pages,
+        "has_prev": page > 1
     }
 
 @api_router.get("/transactions/user/{uid}/detailed")
