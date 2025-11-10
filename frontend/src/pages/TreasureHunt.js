@@ -28,6 +28,12 @@ const TreasureHunt = ({ user }) => {
   const isFreeUser = user?.membership_type !== 'vip';
   const baseCashbackRate = isFreeUser ? 10 : 50;
   const topHunterRate = isFreeUser ? 20 : 100;
+  
+  console.log('[TreasureHunt] User info:', {
+    uid: user?.uid,
+    membership_type: user?.membership_type,
+    isFreeUser
+  });
 
   useEffect(() => {
     if (!user) {
