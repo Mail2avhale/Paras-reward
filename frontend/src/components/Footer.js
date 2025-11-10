@@ -45,7 +45,7 @@ const Footer = () => {
               />
             </div>
             <p className="text-gray-300 mb-4">
-              India's #1 reward points platform. Earn PRC through daily activities and redeem for real products.
+              {t('footer.description')}
             </p>
             <div className="flex gap-4">
               <a href="#" className="text-gray-300 hover:text-white transition-colors">
