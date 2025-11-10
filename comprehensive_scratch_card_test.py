@@ -213,8 +213,8 @@ def test_scratch_card_purchase(uid, card_type, expected_prc_before, expected_cas
     print(f"\n📋 Purchasing {card_type} PRC scratch card...")
     
     try:
-        purchase_data = {"card_type": card_type, "uid": uid}
-        response = requests.post(f"{API_BASE}/scratch-cards/purchase", json=purchase_data, timeout=30)
+        purchase_data = {"card_type": card_type}
+        response = requests.post(f"{API_BASE}/scratch-cards/purchase?uid={uid}", json=purchase_data, timeout=30)
         
         if response.status_code == 200:
             result = response.json()
