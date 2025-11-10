@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Mail, LogIn, Eye, EyeOff, Fingerprint, ArrowRight } from 'lucide-react';
 import { isBiometricSupported, biometricLogin, isBiometricEnabled } from '@/utils/biometricAuth';
 import BiometricSetup from '@/components/BiometricSetup';
+import AnimatedFeedback from '@/components/AnimatedFeedback';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
