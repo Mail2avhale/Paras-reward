@@ -10511,6 +10511,139 @@ async def get_scratch_card_history(uid: str, limit: int = 20):
 
 # ========== END SCRATCH CARD GAME ENDPOINTS ==========
 
+# ========== ADMIN PRC ANALYTICS ENDPOINTS ==========
+
+@api_router.get("/admin/prc-analytics")
+async def get_prc_analytics():
+    """Get platform-wide PRC statistics for admin dashboard"""
+    try:
+        # Get all users
+        users = await db.users.find().to_list(length=None)
+        
+        # Calculate total PRC mined (sum of all user balances + spent PRC)
+        total_current_balance = sum(user.get("prc_balance", 0) for user in users)
+        
+        # Calculate PRC consumed from various sources
+        # 1. Marketplace orders
+        orders = await db.orders.find().to_list(length=None)
+        prc_spent_marketplace = sum(order.get("prc_amount", 0) for order in orders)
+        
+        # 2. Treasure Hunt
+        treasure_hunts = await db.treasure_hunt_progress.find().to_list(length=None)
+        prc_spent_treasure_hunt = sum(th.get("total_prc_spent", 0) for th in treasure_hunts)
+        
+        # 3. Scratch Cards
+        scratch_cards = await db.scratch_cards.find().to_list(length=None)
+        prc_spent_scratch_cards = sum(sc.get("prc_spent", 0) for sc in scratch_cards)
+        
+        # 4. VIP memberships
+        vip_users = [u for u in users if u.get("membership_type") == "vip"]
+        prc_spent_vip = len(vip_users) * 1000  # Assuming 1000 PRC per VIP
+        
+        # Calculate total consumed
+        total_prc_consumed = (
+            prc_spent_marketplace + 
+            prc_spent_treasure_hunt + 
+            prc_spent_scratch_cards + 
+            prc_spent_vip
+        )
+        
+        # Calculate total mined (current balance + consumed)
+        total_prc_mined = total_current_balance + total_prc_consumed
+        
+        # Get daily statistics for last 30 days
+        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+        
+        # Daily mining data
+        daily_mining = {}
+        mining_logs = await db.activity_logs.find({
+            "action": "mining_completed",
+            "timestamp": {"$gte": thirty_days_ago.isoformat()}
+        }).to_list(length=None)
+        
+        for log in mining_logs:
+            date = log.get("timestamp", "")[:10]  # Get YYYY-MM-DD
+            prc_earned = log.get("details", {}).get("prc_earned", 0)
+            if date in daily_mining:
+                daily_mining[date] += prc_earned
+            else:
+                daily_mining[date] = prc_earned
+        
+        # Daily consumption data
+        daily_consumption = {}
+        
+        # From orders
+        for order in orders:
+            if order.get("created_at"):
+                date = order.get("created_at")[:10]
+                if date >= thirty_days_ago.isoformat()[:10]:
+                    prc = order.get("prc_amount", 0)
+                    if date in daily_consumption:
+                        daily_consumption[date] += prc
+                    else:
+                        daily_consumption[date] = prc
+        
+        # From treasure hunts
+        for th in treasure_hunts:
+            if th.get("started_at"):
+                date = th.get("started_at")[:10]
+                if date >= thirty_days_ago.isoformat()[:10]:
+                    prc = th.get("total_prc_spent", 0)
+                    if date in daily_consumption:
+                        daily_consumption[date] += prc
+                    else:
+                        daily_consumption[date] = prc
+        
+        # From scratch cards
+        for sc in scratch_cards:
+            if sc.get("timestamp"):
+                date = sc.get("timestamp")[:10]
+                if date >= thirty_days_ago.isoformat()[:10]:
+                    prc = sc.get("prc_spent", 0)
+                    if date in daily_consumption:
+                        daily_consumption[date] += prc
+                    else:
+                        daily_consumption[date] = prc
+        
+        # Create timeline data
+        timeline_data = []
+        current_date = thirty_days_ago.date()
+        end_date = datetime.now(timezone.utc).date()
+        
+        while current_date <= end_date:
+            date_str = current_date.isoformat()
+            timeline_data.append({
+                "date": date_str,
+                "mined": daily_mining.get(date_str, 0),
+                "consumed": daily_consumption.get(date_str, 0)
+            })
+            current_date += timedelta(days=1)
+        
+        # Breakdown of consumption
+        consumption_breakdown = {
+            "marketplace": prc_spent_marketplace,
+            "treasure_hunt": prc_spent_treasure_hunt,
+            "scratch_cards": prc_spent_scratch_cards,
+            "vip_memberships": prc_spent_vip
+        }
+        
+        return {
+            "total_prc_mined": round(total_prc_mined, 2),
+            "total_prc_consumed": round(total_prc_consumed, 2),
+            "total_prc_in_circulation": round(total_current_balance, 2),
+            "consumption_rate": round((total_prc_consumed / total_prc_mined * 100), 2) if total_prc_mined > 0 else 0,
+            "consumption_breakdown": consumption_breakdown,
+            "timeline_data": timeline_data[-30:],  # Last 30 days
+            "total_users": len(users),
+            "vip_users": len(vip_users),
+            "avg_prc_per_user": round(total_current_balance / len(users), 2) if users else 0
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ========== END ADMIN PRC ANALYTICS ENDPOINTS ==========
+
 app.include_router(api_router)
 
 app.add_middleware(
