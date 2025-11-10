@@ -116,12 +116,10 @@ const Home = ({ user, onLogout }) => {
               </Card>
             </div>
 
-            {/* Social Media Links */}
-            {(socialMedia.facebook || socialMedia.twitter || socialMedia.instagram || 
-              socialMedia.linkedin || socialMedia.youtube || socialMedia.telegram || socialMedia.whatsapp) && (
-              <div className="mt-12 flex flex-col items-center">
-                <h3 className="text-xl font-semibold text-white mb-4">{t('footer.follow_us')}</h3>
-                <div className="flex gap-4 items-center flex-wrap justify-center">
+            {/* Social Media Links - Always Show */}
+            <div className="mt-12 flex flex-col items-center">
+              <h3 className="text-xl font-semibold text-white mb-4">{t('footer.follow_us')}</h3>
+              <div className="flex gap-4 items-center flex-wrap justify-center">
                   {socialMedia.facebook && (
                     <a 
                       href={socialMedia.facebook} 
