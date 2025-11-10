@@ -534,169 +534,101 @@ def test_scratch_card_cashback_credit_fix():
     except Exception as e:
         print(f"❌ Error in final wallet verification: {e}")
     
-    try:
-        if outlet_id:
-            # Get current user balance
-            response = requests.get(f"{API_BASE}/users/{outlet_id}", timeout=30)
-            if response.status_code == 200:
-                user_data = response.json()
-                current_balance = user_data.get("profit_wallet_balance", 0)
-                
-                # Get latest transaction
-                response = requests.get(f"{API_BASE}/wallet/transactions/{outlet_id}?wallet_type=profit_wallet", timeout=30)
-                if response.status_code == 200:
-                    result = response.json()
-                    transactions = result.get("transactions", [])
-                    
-                    if transactions:
-                        latest_txn = transactions[0]
-                        balance_before = latest_txn.get("balance_before", 0)
-                        balance_after = latest_txn.get("balance_after", 0)
-                        amount = latest_txn.get("amount", 0)
-                        
-                        # Scenario 16: Check balance_before and balance_after accuracy
-                        if balance_after == balance_before + amount:
-                            test_results["scenario_16_balance_accuracy"] = True
-                            print(f"✅ Scenario 16: Balance calculations accurate")
-                            print(f"   📋 Before: ₹{balance_before}, Amount: ₹{amount}, After: ₹{balance_after}")
-                        else:
-                            print(f"❌ Scenario 16: Balance calculation error")
-                        
-                        # Scenario 17: Confirm balance_after matches current balance
-                        if abs(current_balance - balance_after) < 0.01:  # Allow for rounding
-                            test_results["scenario_17_balance_matching"] = True
-                            print(f"✅ Scenario 17: Current balance matches transaction balance_after")
-                            print(f"   📋 Current: ₹{current_balance}, Transaction: ₹{balance_after}")
-                        else:
-                            print(f"❌ Scenario 17: Balance mismatch")
-                            print(f"   📋 Current: ₹{current_balance}, Transaction: ₹{balance_after}")
-                    else:
-                        print(f"❌ No transactions found for balance verification")
-            else:
-                print(f"❌ Failed to get user data for balance verification")
-                
-    except Exception as e:
-        print(f"❌ Error in balance tracking verification: {e}")
-    
-    print(f"\n📚 PHASE 6: TRANSACTION HISTORY INTEGRATION")
-    print("=" * 60)
-    
-    # Scenario 18: Transaction history integration
-    print(f"\n📋 Scenario 18: Transaction history integration")
-    
-    try:
-        if outlet_id:
-            response = requests.get(f"{API_BASE}/wallet/transactions/{outlet_id}", timeout=30)
-            if response.status_code == 200:
-                result = response.json()
-                transactions = result.get("transactions", [])
-                
-                # Look for profit wallet transactions
-                profit_txns = [t for t in transactions if t.get("wallet_type") == "profit_wallet"]
-                
-                if profit_txns:
-                    test_results["scenario_18_transaction_history"] = True
-                    print(f"✅ Scenario 18: Transaction history integration working")
-                    print(f"   📋 Total transactions: {len(transactions)}")
-                    print(f"   📋 Profit wallet transactions: {len(profit_txns)}")
-                else:
-                    print(f"❌ Scenario 18: No profit wallet transactions in history")
-            else:
-                print(f"❌ Failed to get transaction history: {response.status_code}")
-                
-    except Exception as e:
-        print(f"❌ Error in transaction history verification: {e}")
-    
     # Final Summary
-    print(f"\n🏁 COMPLETE VERIFICATION SUMMARY - ALL 18 SCENARIOS")
+    print(f"\n🏁 SCRATCH CARD CASHBACK CREDIT FIX - TEST SUMMARY")
     print("=" * 80)
     
-    phases = {
-        "Phase 1 - Outlet Assignment Verification": [
-            ("Scenario 1: VIP user creation", test_results["scenario_01_vip_user_creation"]),
-            ("Scenario 2: Order creation via checkout", test_results["scenario_02_order_creation_checkout"]),
-            ("Scenario 3: outlet_id is NOT None", test_results["scenario_03_outlet_id_not_none"]),
-            ("Scenario 4: assigned_outlet is NOT None", test_results["scenario_04_assigned_outlet_not_none"]),
-            ("Scenario 5: Outlet assignment logic", test_results["scenario_05_outlet_assignment_logic"])
+    test_categories = {
+        "Test Setup": [
+            ("Test user creation", test_results["test_user_creation"]),
+            ("Available cards endpoint", test_results["available_cards_endpoint"])
         ],
-        "Phase 2 - Order Delivery Flow": [
-            ("Scenario 6: Order verification", test_results["scenario_06_order_verification"]),
-            ("Scenario 7: Order delivery success", test_results["scenario_07_order_delivery_success"]),
-            ("Scenario 8: No outlet assigned error", test_results["scenario_08_no_outlet_assigned_error"])
+        "Bronze Card (10 PRC) Tests": [
+            ("Bronze card purchase", test_results["bronze_card_purchase"]),
+            ("Bronze PRC deduction", test_results["bronze_prc_deduction"]),
+            ("Bronze cashback credit", test_results["bronze_cashback_credit"]),
+            ("Bronze transaction logging", test_results["bronze_transaction_logging"]),
+            ("Bronze scratch card record", test_results["bronze_scratch_card_record"])
         ],
-        "Phase 3 - Delivery Charge Distribution": [
-            ("Scenario 9: Distribution trigger", test_results["scenario_09_distribution_trigger"]),
-            ("Scenario 10: Commission distribution", test_results["scenario_10_commission_distribution"]),
-            ("Scenario 11: Profit wallet updates", test_results["scenario_11_profit_wallet_updates"])
+        "Silver Card (50 PRC) Tests": [
+            ("Silver card purchase", test_results["silver_card_purchase"]),
+            ("Silver PRC deduction", test_results["silver_prc_deduction"]),
+            ("Silver cashback credit", test_results["silver_cashback_credit"]),
+            ("Silver transaction logging", test_results["silver_transaction_logging"])
         ],
-        "Phase 4 - Transaction Logging (CRITICAL)": [
-            ("Scenario 12: profit_share transactions", test_results["scenario_12_profit_share_transactions"]),
-            ("Scenario 13: Transaction records exist", test_results["scenario_13_three_transaction_records"]),
-            ("Scenario 14: profit_wallet type", test_results["scenario_14_profit_wallet_type"]),
-            ("Scenario 15: Metadata completeness", test_results["scenario_15_metadata_completeness"])
+        "Gold Card (100 PRC) Tests": [
+            ("Gold card purchase", test_results["gold_card_purchase"]),
+            ("Gold PRC deduction", test_results["gold_prc_deduction"]),
+            ("Gold cashback credit", test_results["gold_cashback_credit"]),
+            ("Gold transaction logging", test_results["gold_transaction_logging"])
         ],
-        "Phase 5 - Balance Tracking": [
-            ("Scenario 16: Balance accuracy", test_results["scenario_16_balance_accuracy"]),
-            ("Scenario 17: Balance matching", test_results["scenario_17_balance_matching"])
-        ],
-        "Phase 6 - Transaction History Integration": [
-            ("Scenario 18: Transaction history", test_results["scenario_18_transaction_history"])
+        "Transaction History Tests": [
+            ("Wallet transactions endpoint", test_results["wallet_transactions_endpoint"]),
+            ("Scratch card history endpoint", test_results["scratch_card_history_endpoint"]),
+            ("Transaction details verification", test_results["transaction_details_verification"])
         ]
     }
     
-    total_scenarios = 0
-    passed_scenarios = 0
+    total_tests = 0
+    passed_tests = 0
     
-    for phase_name, scenarios in phases.items():
-        print(f"\n{phase_name}:")
-        for scenario_name, result in scenarios:
+    for category_name, tests in test_categories.items():
+        print(f"\n{category_name}:")
+        for test_name, result in tests:
             status = "✅ PASS" if result else "❌ FAIL"
-            print(f"  {status} {scenario_name}")
-            total_scenarios += 1
+            print(f"  {status} {test_name}")
+            total_tests += 1
             if result:
-                passed_scenarios += 1
+                passed_tests += 1
     
-    print(f"\n📊 FINAL RESULTS: {passed_scenarios}/{total_scenarios} scenarios passed ({(passed_scenarios/total_scenarios)*100:.1f}%)")
+    print(f"\n📊 FINAL RESULTS: {passed_tests}/{total_tests} tests passed ({(passed_tests/total_tests)*100:.1f}%)")
     
-    if passed_scenarios == total_scenarios:
-        print(f"🎉 ALL 18 SCENARIOS PASSED - PROFIT WALLET TRANSACTION LOGGING IS WORKING PERFECTLY!")
-    elif passed_scenarios >= total_scenarios * 0.8:
-        print(f"✅ MOSTLY WORKING - {total_scenarios - passed_scenarios} scenarios failed but core functionality operational")
+    if passed_tests == total_tests:
+        print(f"🎉 ALL TESTS PASSED - SCRATCH CARD CASHBACK CREDIT FIX IS WORKING PERFECTLY!")
+        print(f"✅ Cashback properly credited to cashback_wallet_balance field")
+        print(f"✅ Transaction logging using log_transaction() function working")
+        print(f"✅ PRC balance deduction working correctly")
+        print(f"✅ Game history preserved in scratch_cards collection")
+        print(f"✅ Transaction history shows scratch card rewards")
+    elif passed_tests >= total_tests * 0.8:
+        print(f"✅ MOSTLY WORKING - {total_tests - passed_tests} tests failed but core functionality operational")
+        print(f"⚠️  Minor issues need attention")
     else:
-        print(f"❌ SIGNIFICANT ISSUES - {total_scenarios - passed_scenarios} scenarios failed, needs investigation")
+        print(f"❌ SIGNIFICANT ISSUES - {total_tests - passed_tests} tests failed, needs investigation")
+        print(f"❌ Scratch card cashback credit system has problems")
     
     return test_results
 
 def main():
-    """Run the complete profit wallet transaction logging verification"""
-    print(f"\n🚀 STARTING PROFIT WALLET TRANSACTION LOGGING VERIFICATION")
+    """Run the scratch card cashback credit fix verification"""
+    print(f"\n🚀 STARTING SCRATCH CARD CASHBACK CREDIT FIX TESTING")
     print(f"Timestamp: {datetime.now().isoformat()}")
     print("=" * 80)
     
-    # Run the complete 18-scenario test
-    results = test_profit_wallet_transaction_logging_complete_flow()
+    # Run the scratch card tests
+    results = test_scratch_card_cashback_credit_fix()
     
     # Count results
     total_tests = len(results)
     passed_tests = sum(1 for result in results.values() if result)
     
-    print(f"\n🏁 VERIFICATION COMPLETE")
+    print(f"\n🏁 TESTING COMPLETE")
     print("=" * 80)
-    print(f"📊 OVERALL RESULTS: {passed_tests}/{total_tests} scenarios passed ({(passed_tests/total_tests)*100:.1f}%)")
+    print(f"📊 OVERALL RESULTS: {passed_tests}/{total_tests} tests passed ({(passed_tests/total_tests)*100:.1f}%)")
     
     if passed_tests == total_tests:
-        print(f"\n🎉 SUCCESS - ALL SCENARIOS PASSED!")
-        print(f"✅ Profit wallet transaction logging system is working perfectly")
-        print(f"✅ Complete audit trail verified")
-        print(f"✅ All 18 test scenarios successful")
+        print(f"\n🎉 SUCCESS - ALL TESTS PASSED!")
+        print(f"✅ Scratch card cashback credit fix is working perfectly")
+        print(f"✅ All endpoints tested and verified")
+        print(f"✅ Transaction logging system working correctly")
         return 0
     elif passed_tests >= total_tests * 0.8:
-        print(f"\n⚠️  MOSTLY WORKING - {total_tests - passed_tests} scenarios failed")
+        print(f"\n⚠️  MOSTLY WORKING - {total_tests - passed_tests} tests failed")
         print(f"✅ Core functionality operational")
         print(f"⚠️  Minor issues need attention")
         return 0
     else:
-        print(f"\n❌ CRITICAL ISSUES - {total_tests - passed_tests} scenarios failed")
+        print(f"\n❌ CRITICAL ISSUES - {total_tests - passed_tests} tests failed")
         print(f"❌ Significant problems detected")
         print(f"❌ System needs investigation")
         return 1
