@@ -292,7 +292,7 @@ const LoginNew = ({ onLogin }) => {
               <div className="w-full border-t border-gray-300"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">New to PARAS REWARD?</span>
+              <span className="px-2 bg-white text-gray-500">{t('auth.dont_have_account')}</span>
             </div>
           </div>
 
@@ -302,7 +302,7 @@ const LoginNew = ({ onLogin }) => {
               type="button"
               className="w-full mt-4 bg-white border-2 border-purple-600 text-purple-600 hover:bg-purple-50 py-6 rounded-xl text-lg font-semibold transition-all"
             >
-              Create New Account
+              {t('auth.sign_up')}
             </Button>
           </Link>
         </div>
