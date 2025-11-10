@@ -211,9 +211,16 @@ const Home = ({ user, onLogout }) => {
                       </div>
                     </a>
                   )}
+                  
+                  {/* Show message if no social media configured */}
+                  {!socialMedia.facebook && !socialMedia.twitter && !socialMedia.instagram && 
+                   !socialMedia.linkedin && !socialMedia.youtube && !socialMedia.telegram && !socialMedia.whatsapp && (
+                    <div className="text-white/60 text-sm">
+                      Social media links will appear here once configured by admin
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
           </div>
         </div>
       </div>
