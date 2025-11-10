@@ -2,27 +2,45 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
 import AdSenseAd from '../components/AdSenseAd';
+import { AlertTriangle, Info, Shield, Globe, AlertCircle, FileText, CheckCircle } from 'lucide-react';
 
 const TermsAndConditions = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <Link to="/" className="inline-flex items-center text-purple-600 hover:text-purple-700 mb-4">
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Link to="/" className="inline-flex items-center text-white hover:text-purple-200 mb-4 transition-colors">
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
             Back to Home
           </Link>
-          <h1 className="text-4xl font-bold text-gray-900">Terms & Conditions</h1>
-          <p className="text-gray-600 mt-2">Effective Date: January 2025</p>
+          <h1 className="text-5xl font-black mb-3">Terms & Conditions</h1>
+          <p className="text-purple-100 text-lg">Please read these terms carefully before using PARAS REWARD</p>
+          <p className="text-purple-200 mt-2">Effective Date: January 2025</p>
+        </div>
+      </div>
+
+      {/* Important Notice Banner */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6">
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-2xl shadow-2xl p-6 border-4 border-white">
+          <div className="flex items-start gap-4">
+            <AlertTriangle className="h-8 w-8 flex-shrink-0 animate-pulse" />
+            <div>
+              <h3 className="text-2xl font-bold mb-2">⚠️ IMPORTANT DISCLAIMER</h3>
+              <p className="text-lg font-semibold leading-relaxed">
+                PARAS REWARD is purely an <span className="underline">in-app mining and reward-based entertainment platform</span>. 
+                It has <span className="underline">NO connection</span> with cryptocurrency, investment, trading, or any MLM (Multi-Level Marketing) scheme.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white rounded-lg shadow-lg p-8 space-y-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-12 space-y-10">
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Introduction</h2>
             <p className="text-gray-700 leading-relaxed">
