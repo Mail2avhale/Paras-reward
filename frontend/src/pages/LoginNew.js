@@ -80,7 +80,12 @@ const LoginNew = ({ onLogin }) => {
         return;
       }
 
-      toast.success('Login successful!');
+      // Show animated success message
+      setAnimatedFeedback({
+        message: `✅ Welcome Back!\n🎉 Login Successful!`,
+        type: 'success',
+        duration: 2000
+      });
       
       // CRITICAL: Call onLogin FIRST to set user state and allow authentication
       onLogin(response.data);
