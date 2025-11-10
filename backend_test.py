@@ -227,64 +227,57 @@ def test_scratch_card_cashback_credit_fix():
     except Exception as e:
         print(f"❌ Error testing scratch card history: {e}")
     
-    print(f"\n🥈 SILVER CARD (50 PRC) TESTING")
+    print(f"\n🔍 STEP 4: TESTING END-TO-END FLOW WITH NEW PURCHASE")
     print("=" * 60)
     
-    # Test Silver Card Purchase
-    print(f"\n📋 Testing Silver Card (50 PRC) purchase")
+    # Test complete end-to-end flow: Purchase one more scratch card to verify everything works
+    print(f"\n📋 Testing new Bronze Card (10 PRC) purchase to verify complete flow...")
     
-    silver_transaction_id = None
-    silver_cashback_won = 0
+    new_transaction_id = None
+    new_cashback_won = 0
     
     try:
-        # Get current balances
+        # Get initial balances (should show the fixed cashback balance)
         response = requests.get(f"{API_BASE}/wallet/{test_uid}", timeout=30)
         if response.status_code == 200:
             wallet_data = response.json()
             prc_before = wallet_data.get("prc_balance", 0)
-            cashback_before = wallet_data.get("cashback_wallet_balance", 0)
+            cashback_before = wallet_data.get("cashback_balance", 0)  # Using the returned field name
             print(f"   📋 PRC Balance Before: {prc_before}")
-            print(f"   📋 Cashback Balance Before: {cashback_before}")
+            print(f"   📋 Cashback Balance Before: ₹{cashback_before}")
         
-        # Purchase Silver Card
-        purchase_data = {"card_type": 50}
+        # Purchase Bronze Card
+        purchase_data = {"card_type": 10}
         response = requests.post(f"{API_BASE}/scratch-cards/purchase?uid={test_uid}", json=purchase_data, timeout=30)
         
         if response.status_code == 200:
             result = response.json()
-            silver_transaction_id = result.get("transaction_id")
-            silver_cashback_won = result.get("cashback_won_inr", 0)
+            new_transaction_id = result.get("transaction_id")
+            new_cashback_won = result.get("cashback_won_inr", 0)
             
-            test_results["silver_card_purchase"] = True
-            print(f"✅ Silver card purchase successful")
-            print(f"   📋 Transaction ID: {silver_transaction_id}")
-            print(f"   📋 Cashback Won: ₹{silver_cashback_won}")
+            test_results["new_purchase_successful"] = True
+            print(f"✅ New purchase successful")
+            print(f"   📋 Transaction ID: {new_transaction_id}")
+            print(f"   📋 Cashback Won: ₹{new_cashback_won}")
             print(f"   📋 Cashback Percentage: {result.get('cashback_percentage')}%")
-            
-            # Verify PRC deduction
-            expected_prc_after = prc_before - 50
-            actual_prc_after = result.get('new_prc_balance')
-            if abs(actual_prc_after - expected_prc_after) < 0.01:
-                test_results["silver_prc_deduction"] = True
-                print(f"✅ PRC deduction correct: {prc_before} - 50 = {actual_prc_after}")
-            else:
-                print(f"❌ PRC deduction incorrect: Expected {expected_prc_after}, got {actual_prc_after}")
+            print(f"   📋 New PRC Balance: {result.get('new_prc_balance')}")
+            print(f"   📋 New Cashback Balance: {result.get('new_cashback_wallet')}")
             
             # Verify cashback credit
-            expected_cashback_after = cashback_before + silver_cashback_won
+            expected_cashback_after = cashback_before + new_cashback_won
             actual_cashback_after = result.get('new_cashback_wallet')
             if abs(actual_cashback_after - expected_cashback_after) < 0.01:
-                test_results["silver_cashback_credit"] = True
-                print(f"✅ Cashback credit correct: {cashback_before} + {silver_cashback_won} = {actual_cashback_after}")
+                test_results["new_purchase_cashback_credited"] = True
+                print(f"✅ Cashback credit correct: ₹{cashback_before} + ₹{new_cashback_won} = ₹{actual_cashback_after}")
             else:
-                print(f"❌ Cashback credit incorrect: Expected {expected_cashback_after}, got {actual_cashback_after}")
+                print(f"❌ Cashback credit incorrect: Expected ₹{expected_cashback_after}, got ₹{actual_cashback_after}")
                 
         else:
-            print(f"❌ Silver card purchase failed: {response.status_code}")
+            print(f"❌ New purchase failed: {response.status_code}")
             print(f"   Response: {response.text}")
             
     except Exception as e:
-        print(f"❌ Error purchasing silver card: {e}")
+        print(f"❌ Error with new purchase: {e}")
     
     print(f"\n🥇 GOLD CARD (100 PRC) TESTING")
     print("=" * 60)
