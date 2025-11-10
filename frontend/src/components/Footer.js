@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom';
 import { Mail, MapPin, Phone } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import LanguageSwitcher from './LanguageSwitcher';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
 const Footer = () => {
+  const { t } = useTranslation();
   const [contactDetails, setContactDetails] = useState({
     address: 'PARAS REWARD\nMaharashtra, India',
     phone: '+91-XXXXXXXXXX',
