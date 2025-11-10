@@ -827,7 +827,7 @@ async def login(
     })
     
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not registered. Please register to continue.")
     
     # Verify password
     if user.get("password_hash"):
