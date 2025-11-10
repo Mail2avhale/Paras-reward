@@ -235,50 +235,120 @@ def test_scratch_card_cashback_credit_fix():
     print(f"\n🥈 SILVER CARD (50 PRC) TESTING")
     print("=" * 60)
     
-    # Scenario 6: Verify order with secret code
-    print(f"\n📋 Scenario 6: Verify order with secret code")
+    # Test Silver Card Purchase
+    print(f"\n📋 Testing Silver Card (50 PRC) purchase")
+    
+    silver_transaction_id = None
+    silver_cashback_won = 0
     
     try:
-        verify_data = {"secret_code": secret_code}
-        response = requests.post(f"{API_BASE}/orders/verify", json=verify_data, timeout=30)
+        # Get current balances
+        response = requests.get(f"{API_BASE}/wallet/{test_uid}", timeout=30)
+        if response.status_code == 200:
+            wallet_data = response.json()
+            prc_before = wallet_data.get("prc_balance", 0)
+            cashback_before = wallet_data.get("cashback_wallet_balance", 0)
+            print(f"   📋 PRC Balance Before: {prc_before}")
+            print(f"   📋 Cashback Balance Before: {cashback_before}")
+        
+        # Purchase Silver Card
+        purchase_data = {"card_type": 50}
+        response = requests.post(f"{API_BASE}/scratch-cards/purchase?uid={test_uid}", json=purchase_data, timeout=30)
+        
         if response.status_code == 200:
             result = response.json()
-            test_results["scenario_06_order_verification"] = True
-            print(f"✅ Order verification successful")
-            print(f"   📋 Message: {result.get('message')}")
-        else:
-            print(f"❌ Order verification failed: {response.status_code}")
-            print(f"   Response: {response.text}")
+            silver_transaction_id = result.get("transaction_id")
+            silver_cashback_won = result.get("cashback_won_inr", 0)
             
-    except Exception as e:
-        print(f"❌ Error verifying order: {e}")
-    
-    # Scenarios 7-8: Mark order as delivered
-    print(f"\n📋 Scenarios 7-8: Mark order as delivered")
-    
-    try:
-        delivery_data = {}
-        response = requests.post(f"{API_BASE}/orders/{order_id}/deliver", json=delivery_data, timeout=30)
-        if response.status_code == 200:
-            result = response.json()
-            message = result.get('message', '').lower()
+            test_results["silver_card_purchase"] = True
+            print(f"✅ Silver card purchase successful")
+            print(f"   📋 Transaction ID: {silver_transaction_id}")
+            print(f"   📋 Cashback Won: ₹{silver_cashback_won}")
+            print(f"   📋 Cashback Percentage: {result.get('cashback_percentage')}%")
             
-            test_results["scenario_07_order_delivery_success"] = True
-            print(f"✅ Scenario 7: Order delivery successful")
-            print(f"   📋 Message: {result.get('message')}")
-            
-            # Scenario 8: Confirm no "No outlet assigned" error
-            if 'no outlet assigned' not in message:
-                test_results["scenario_08_no_outlet_assigned_error"] = True
-                print(f"✅ Scenario 8: No 'No outlet assigned' error")
+            # Verify PRC deduction
+            expected_prc_after = prc_before - 50
+            actual_prc_after = result.get('new_prc_balance')
+            if abs(actual_prc_after - expected_prc_after) < 0.01:
+                test_results["silver_prc_deduction"] = True
+                print(f"✅ PRC deduction correct: {prc_before} - 50 = {actual_prc_after}")
             else:
-                print(f"❌ Scenario 8: Got 'No outlet assigned' error")
+                print(f"❌ PRC deduction incorrect: Expected {expected_prc_after}, got {actual_prc_after}")
+            
+            # Verify cashback credit
+            expected_cashback_after = cashback_before + silver_cashback_won
+            actual_cashback_after = result.get('new_cashback_wallet')
+            if abs(actual_cashback_after - expected_cashback_after) < 0.01:
+                test_results["silver_cashback_credit"] = True
+                print(f"✅ Cashback credit correct: {cashback_before} + {silver_cashback_won} = {actual_cashback_after}")
+            else:
+                print(f"❌ Cashback credit incorrect: Expected {expected_cashback_after}, got {actual_cashback_after}")
+                
         else:
-            print(f"❌ Order delivery failed: {response.status_code}")
+            print(f"❌ Silver card purchase failed: {response.status_code}")
             print(f"   Response: {response.text}")
             
     except Exception as e:
-        print(f"❌ Error delivering order: {e}")
+        print(f"❌ Error purchasing silver card: {e}")
+    
+    print(f"\n🥇 GOLD CARD (100 PRC) TESTING")
+    print("=" * 60)
+    
+    # Test Gold Card Purchase
+    print(f"\n📋 Testing Gold Card (100 PRC) purchase")
+    
+    gold_transaction_id = None
+    gold_cashback_won = 0
+    
+    try:
+        # Get current balances
+        response = requests.get(f"{API_BASE}/wallet/{test_uid}", timeout=30)
+        if response.status_code == 200:
+            wallet_data = response.json()
+            prc_before = wallet_data.get("prc_balance", 0)
+            cashback_before = wallet_data.get("cashback_wallet_balance", 0)
+            print(f"   📋 PRC Balance Before: {prc_before}")
+            print(f"   📋 Cashback Balance Before: {cashback_before}")
+        
+        # Purchase Gold Card
+        purchase_data = {"card_type": 100}
+        response = requests.post(f"{API_BASE}/scratch-cards/purchase?uid={test_uid}", json=purchase_data, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            gold_transaction_id = result.get("transaction_id")
+            gold_cashback_won = result.get("cashback_won_inr", 0)
+            
+            test_results["gold_card_purchase"] = True
+            print(f"✅ Gold card purchase successful")
+            print(f"   📋 Transaction ID: {gold_transaction_id}")
+            print(f"   📋 Cashback Won: ₹{gold_cashback_won}")
+            print(f"   📋 Cashback Percentage: {result.get('cashback_percentage')}%")
+            
+            # Verify PRC deduction
+            expected_prc_after = prc_before - 100
+            actual_prc_after = result.get('new_prc_balance')
+            if abs(actual_prc_after - expected_prc_after) < 0.01:
+                test_results["gold_prc_deduction"] = True
+                print(f"✅ PRC deduction correct: {prc_before} - 100 = {actual_prc_after}")
+            else:
+                print(f"❌ PRC deduction incorrect: Expected {expected_prc_after}, got {actual_prc_after}")
+            
+            # Verify cashback credit
+            expected_cashback_after = cashback_before + gold_cashback_won
+            actual_cashback_after = result.get('new_cashback_wallet')
+            if abs(actual_cashback_after - expected_cashback_after) < 0.01:
+                test_results["gold_cashback_credit"] = True
+                print(f"✅ Cashback credit correct: {cashback_before} + {gold_cashback_won} = {actual_cashback_after}")
+            else:
+                print(f"❌ Cashback credit incorrect: Expected {expected_cashback_after}, got {actual_cashback_after}")
+                
+        else:
+            print(f"❌ Gold card purchase failed: {response.status_code}")
+            print(f"   Response: {response.text}")
+            
+    except Exception as e:
+        print(f"❌ Error purchasing gold card: {e}")
     
     print(f"\n💰 PHASE 3: DELIVERY CHARGE DISTRIBUTION")
     print("=" * 60)
