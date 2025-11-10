@@ -304,6 +304,41 @@ const BankingWallet = ({ user, walletBalance = 0 }) => {
               ))}
             </div>
           )}
+          
+          {/* Pagination Controls */}
+          {!loading && filteredTransactions.length > 0 && (
+            <div className="p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Showing page {pagination.page} of {pagination.totalPages} ({pagination.total} total transactions)
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                  disabled={!pagination.hasPrev}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                >
+                  ← Previous
+                </Button>
+                
+                <div className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium">
+                  Page {pagination.page}
+                </div>
+                
+                <Button
+                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                  disabled={!pagination.hasNext}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                >
+                  Next →
+                </Button>
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Export Button */}
