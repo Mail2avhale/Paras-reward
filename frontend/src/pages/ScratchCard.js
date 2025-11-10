@@ -167,16 +167,37 @@ const ScratchCard = ({ user }) => {
 
     const ctx = canvas.getContext('2d');
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    const dpr = window.devicePixelRatio || 1;
     
-    const adjustedX = (x - rect.left) * scaleX;
-    const adjustedY = (y - rect.top) * scaleY;
+    // Calculate position accounting for device pixel ratio
+    const adjustedX = (x - rect.left) * dpr;
+    const adjustedY = (y - rect.top) * dpr;
 
+    // Use destination-out to make area transparent
     ctx.globalCompositeOperation = 'destination-out';
+    
+    // Create a larger, softer brush for more realistic scratching
+    const gradient = ctx.createRadialGradient(adjustedX, adjustedY, 0, adjustedX, adjustedY, 40 * dpr);
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
+    gradient.addColorStop(0.5, 'rgba(0, 0, 0, 0.8)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    
+    ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.arc(adjustedX, adjustedY, 30, 0, 2 * Math.PI);
+    ctx.arc(adjustedX, adjustedY, 40 * dpr, 0, 2 * Math.PI);
     ctx.fill();
+
+    // Add scratch marks for texture (jagged edges)
+    for (let i = 0; i < 3; i++) {
+      const offsetX = (Math.random() - 0.5) * 20 * dpr;
+      const offsetY = (Math.random() - 0.5) * 20 * dpr;
+      ctx.beginPath();
+      ctx.arc(adjustedX + offsetX, adjustedY + offsetY, 10 * dpr, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+
+    // Reset composite operation
+    ctx.globalCompositeOperation = 'source-over';
 
     // Check if enough scratched
     checkScratchPercentage(ctx, canvas);
