@@ -8,6 +8,7 @@ import {
   Sparkles, Trophy, Gift, Star, TrendingUp, ArrowLeft, 
   Coins, Wallet, History, Crown, Ticket
 } from 'lucide-react';
+import WinCelebration from '../components/WinCelebration';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
@@ -23,6 +24,7 @@ const ScratchCard = ({ user }) => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [celebrationData, setCelebrationData] = useState(null);
 
   useEffect(() => {
     if (!user) {
