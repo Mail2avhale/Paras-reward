@@ -932,6 +932,21 @@ agent_communication:
     message: "WITHDRAWAL AMOUNT DISPLAY FIX TESTING COMPLETE: Successfully verified the fix for withdrawal amount display issue. The frontend code now correctly uses `withdrawal.amount_requested` and `withdrawal.amount_to_receive` fields instead of the non-existent `withdrawal.amount` field. Backend API confirmed to return proper data structure. Users will now see correct requested amounts instead of ₹0.00. Fix is production-ready."
 
 frontend:
+  - task: "App Download/Installation Button Fix"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/PWAInstallPrompt.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported app download from homepage shows error 'You can't install the app on your device'. The placeholder APK file (55 bytes) cannot be installed."
+      - working: true
+        agent: "main"
+        comment: "FIXED: Identified root cause - /paras-reward.apk was a placeholder text file (55 bytes) instead of actual APK. Since this is a React PWA web application, updated PWAInstallPrompt.js to focus on Progressive Web App (PWA) installation instead of APK download. Changes: 1) Updated handleDownloadAPK() to show informative installation instructions instead of downloading placeholder. 2) Enhanced handleInstallClick() with better instructions for Android users on how to install PWA via browser menu. 3) Changed button text from 'Download Android App' to 'Install App' for clarity. 4) Added helpful alerts guiding users through PWA installation process. Users can now install the web app as a PWA which works like a native app. Native Android APK can be built separately using Capacitor if needed in future."
+
   - task: "Footer Dynamic Contact Details"
     implemented: true
     working: true
