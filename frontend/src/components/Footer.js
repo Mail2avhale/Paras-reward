@@ -90,7 +90,7 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Legal */}
+          {/* Legal & Contact */}
           <div>
             <h3 className="text-lg font-bold mb-4">Legal</h3>
             <ul className="space-y-2 mb-4">
@@ -98,7 +98,7 @@ const Footer = () => {
               <li><Link to="/terms" className="text-gray-300 hover:text-white transition-colors">Terms & Conditions</Link></li>
             </ul>
             <h3 className="text-lg font-bold mb-4 mt-6">Contact</h3>
-            <div className="space-y-2 text-gray-300 text-sm">
+            <div className="space-y-2 text-gray-300 text-sm mb-6">
               <div className="flex items-start gap-2">
                 <Mail className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <a href={`mailto:${contactDetails.email}`} className="hover:text-white transition-colors">
@@ -118,6 +118,9 @@ const Footer = () => {
                 </span>
               </div>
             </div>
+            
+            {/* Language Switcher in Footer */}
+            <LanguageSwitcher variant="footer" />
           </div>
 
         </div>
