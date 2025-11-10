@@ -122,5 +122,61 @@
     "daily_limit": "Daily Limit",
     "mined_today": "Mined Today",
     "next_mining": "Next Mining In"
+  },
+  "marketplace": {
+    "title": "Marketplace",
+    "browse_products": "Browse Products",
+    "categories": "Categories",
+    "add_to_cart": "Add to Cart",
+    "buy_now": "Buy Now",
+    "out_of_stock": "Out of Stock",
+    "price": "Price",
+    "description": "Description",
+    "specifications": "Specifications"
+  },
+  "orders": {
+    "title": "My Orders",
+    "order_id": "Order ID",
+    "date": "Date",
+    "status": "Status",
+    "total": "Total",
+    "pending": "Pending",
+    "processing": "Processing",
+    "shipped": "Shipped",
+    "delivered": "Delivered",
+    "cancelled": "Cancelled"
+  },
+  "wallet": {
+    "title": "My Wallet",
+    "balance": "Balance",
+    "transaction_history": "Transaction History",
+    "withdraw": "Withdraw",
+    "deposit": "Deposit",
+    "cashback": "Cashback"
+  },
+  "profile": {
+    "title": "My Profile",
+    "edit_profile": "Edit Profile",
+    "personal_info": "Personal Information",
+    "change_password": "Change Password",
+    "kyc_verification": "KYC Verification",
+    "logout": "Logout"
+  },
+  "buttons": {
+    "view_details": "View Details",
+    "apply": "Apply",
+    "reset": "Reset",
+    "download": "Download",
+    "upload": "Upload",
+    "update": "Update",
+    "continue": "Continue",
+    "go_back": "Go Back"
+  },
+  "messages": {
+    "success": "Success!",
+    "error": "Error!",
+    "loading": "Loading...",
+    "no_data": "No data available",
+    "coming_soon": "Coming Soon"
   }
 }
