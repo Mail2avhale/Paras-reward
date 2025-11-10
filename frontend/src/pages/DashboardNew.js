@@ -164,18 +164,20 @@ const DashboardNew = ({ user, onLogout }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 pb-20">
       <Navbar user={user} onLogout={onLogout} />
       <PWAInstallPrompt />
       
       <div className="container mx-auto px-3 py-4 max-w-full lg:max-w-7xl xl:max-w-[90%]">
         
-        {/* HERO SECTION */}
-        <div className="relative mb-6 overflow-hidden rounded-3xl">
-          {/* Animated Background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-pink-600 to-indigo-700">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        {/* MODERN HERO SECTION - Mobile First Design */}
+        <div className="relative mb-4 overflow-hidden rounded-3xl shadow-2xl">
+          {/* Animated Background with Mesh Gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-fuchsia-600 to-purple-700">
+            {/* Animated Blobs */}
+            <div className="absolute -top-24 -right-24 w-96 h-96 bg-pink-400/30 rounded-full blur-3xl animate-pulse"></div>
+            <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-400/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1.5s' }}></div>
+            <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-purple-300/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '0.75s' }}></div>
           </div>
           
           {/* Hero Content */}
