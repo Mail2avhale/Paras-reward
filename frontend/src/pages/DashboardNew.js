@@ -92,6 +92,14 @@ const DashboardNew = ({ user, onLogout }) => {
       badge: '50% CB'
     },
     { 
+      name: 'Scratch Card', 
+      icon: Sparkles, 
+      link: '/scratch-card', 
+      gradient: 'from-pink-500 to-rose-600',
+      description: 'Win cashback',
+      badge: isVIP ? '10-50%' : '0-10%'
+    },
+    { 
       name: 'Marketplace', 
       icon: ShoppingBag, 
       link: '/marketplace', 
