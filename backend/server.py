@@ -2620,8 +2620,14 @@ async def get_wallet(uid: str):
         else:
             days_until_maintenance = (next_maintenance - now).days
     
+    # Get cashback balance - prioritize cashback_wallet_balance as the primary field
+    cashback_balance = user.get("cashback_wallet_balance", 0)
+    if cashback_balance == 0:
+        # Fall back to legacy field names if cashback_wallet_balance is not set
+        cashback_balance = user.get("cashback_balance", user.get("cash_wallet_balance", 0))
+    
     return {
-        "cashback_balance": user.get("cashback_balance", user.get("cashback_wallet_balance", user.get("cash_wallet_balance", 0))),
+        "cashback_balance": cashback_balance,
         "profit_balance": user.get("profit_wallet_balance", 0),
         "prc_balance": user.get("prc_balance", 0),
         "wallet_status": user.get("wallet_status", "active"),
