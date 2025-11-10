@@ -9,6 +9,7 @@ import {
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
+import WinCelebration from '../components/WinCelebration';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -23,6 +24,7 @@ const TreasureHunt = ({ user }) => {
   const [showStartModal, setShowStartModal] = useState(null);
   const [showGameModal, setShowGameModal] = useState(false);
   const [dailyTopHunter, setDailyTopHunter] = useState(null);
+  const [celebrationData, setCelebrationData] = useState(null);
   
   // Determine user membership and cashback rates
   const isFreeUser = user?.membership_type !== 'vip';
