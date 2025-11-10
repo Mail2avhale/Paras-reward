@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ImageCropUpload from '@/components/ImageCropUpload';
+import PRCAnalytics from '../components/PRCAnalytics';
 import StockistManagementAdmin from '@/pages/StockistManagementAdmin';
 import FinancialManagementAdmin from '@/pages/FinancialManagementAdmin';
 import AdvancedUserManagement from '@/pages/AdvancedUserManagement';
