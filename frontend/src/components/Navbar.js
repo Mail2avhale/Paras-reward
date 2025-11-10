@@ -56,6 +56,9 @@ const Navbar = ({ user, onLogout }) => {
                 <Link to="/game" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
                   {t('nav.treasure_hunt')}
                 </Link>
+                <Link to="/scratch-card" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
+                  Scratch Card
+                </Link>
                 <Link to="/referrals" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
                   {t('nav.referrals')}
                 </Link>
