@@ -44,23 +44,23 @@ const Navbar = ({ user, onLogout }) => {
               <>
                 {/* Dashboard - Show for everyone */}
                 <Link to="/dashboard" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
-                  Dashboard
+                  {t('nav.dashboard')}
                 </Link>
             
             {/* Regular User Features - Only for users */}
             {isRegularUser && (
               <>
                 <Link to="/mining" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
-                  Mining
+                  {t('nav.mining')}
                 </Link>
                 <Link to="/game" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
-                  Game
+                  {t('nav.treasure_hunt')}
                 </Link>
                 <Link to="/referrals" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
-                  Referrals
+                  {t('nav.referrals')}
                 </Link>
                 <Link to="/marketplace" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
-                  Marketplace
+                  {t('nav.marketplace')}
                 </Link>
                 <Link to="/leaderboard" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
                   Leaderboard
