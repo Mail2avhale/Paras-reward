@@ -395,108 +395,144 @@ def test_scratch_card_cashback_credit_fix():
     except Exception as e:
         print(f"❌ Error verifying bronze transaction: {e}")
     
-    # Scenario 11: Check profit_wallet_balance updated
-    print(f"\n📋 Scenario 11: Check profit_wallet_balance updates")
-    
-    # We need to find the actual stockists that received the distribution
-    # Let's check the order details to see which outlets were involved
-    try:
-        response = requests.get(f"{API_BASE}/admin/orders/{order_id}", timeout=30)
-        if response.status_code == 200:
-            order_data = response.json()
-            outlet_id = order_data.get("outlet_id")
-            
-            if outlet_id:
-                # Get outlet user details
-                response = requests.get(f"{API_BASE}/users/{outlet_id}", timeout=30)
-                if response.status_code == 200:
-                    outlet_user = response.json()
-                    profit_balance = outlet_user.get("profit_wallet_balance", 0)
-                    
-                    if profit_balance > 0:
-                        test_results["scenario_11_profit_wallet_updates"] = True
-                        print(f"✅ Scenario 11: Profit wallet balance updated")
-                        print(f"   📋 Outlet {outlet_id} balance: ₹{profit_balance}")
-                    else:
-                        print(f"⚠️  Scenario 11: No profit wallet balance found for outlet")
-                else:
-                    print(f"❌ Failed to get outlet user details")
-            else:
-                print(f"❌ No outlet_id found in order")
-                
-    except Exception as e:
-        print(f"❌ Error checking profit wallet updates: {e}")
-    
-    print(f"\n🔍 PHASE 4: TRANSACTION LOGGING (CRITICAL)")
-    print("=" * 60)
-    
-    # Scenarios 12-15: Transaction logging verification
-    print(f"\n📋 Scenarios 12-15: Transaction logging verification")
+    # Test Silver card transaction logging
+    print(f"\n📋 Verifying Silver card transaction logging")
     
     try:
-        # Get order details to find involved entities
-        response = requests.get(f"{API_BASE}/admin/orders/{order_id}", timeout=30)
-        if response.status_code == 200:
-            order_data = response.json()
-            outlet_id = order_data.get("outlet_id")
-            
-            if outlet_id:
-                # Check transactions for the outlet
-                response = requests.get(f"{API_BASE}/wallet/transactions/{outlet_id}?wallet_type=profit_wallet", timeout=30)
-                if response.status_code == 200:
-                    result = response.json()
-                    transactions = result.get("transactions", [])
-                    
-                    # Look for profit_share transactions
-                    profit_share_txns = [t for t in transactions if t.get("type") == "profit_share"]
-                    
-                    if profit_share_txns:
-                        latest_txn = profit_share_txns[0]
-                        
-                        # Scenario 12: Query transactions for transaction_type = "profit_share"
-                        if latest_txn.get("type") == "profit_share":
-                            test_results["scenario_12_profit_share_transactions"] = True
-                            print(f"✅ Scenario 12: profit_share transactions found")
-                        
-                        # Scenario 13: Verify transaction records exist (at least 1 for outlet)
-                        if len(profit_share_txns) >= 1:
-                            test_results["scenario_13_three_transaction_records"] = True
-                            print(f"✅ Scenario 13: Transaction records exist ({len(profit_share_txns)} found)")
-                        
-                        # Scenario 14: Confirm wallet_type = "profit_wallet"
-                        if latest_txn.get("wallet_type") == "profit_wallet":
-                            test_results["scenario_14_profit_wallet_type"] = True
-                            print(f"✅ Scenario 14: wallet_type = 'profit_wallet' confirmed")
-                        
-                        # Scenario 15: Verify metadata completeness
-                        metadata = latest_txn.get("metadata", {})
-                        required_fields = ["order_id", "entity_type", "commission_percentage", "total_commission"]
-                        metadata_complete = all(field in metadata for field in required_fields)
-                        
-                        if metadata_complete and metadata.get("order_id") == order_id:
-                            test_results["scenario_15_metadata_completeness"] = True
-                            print(f"✅ Scenario 15: Metadata completeness verified")
-                            print(f"   📋 Order ID: {metadata.get('order_id')}")
-                            print(f"   📋 Entity Type: {metadata.get('entity_type')}")
-                            print(f"   📋 Commission %: {metadata.get('commission_percentage')}")
-                        else:
-                            print(f"❌ Scenario 15: Metadata incomplete or order_id mismatch")
-                            print(f"   📋 Metadata: {metadata}")
-                    else:
-                        print(f"❌ No profit_share transactions found")
-                else:
-                    print(f"❌ Failed to get transactions: {response.status_code}")
-            else:
-                print(f"❌ No outlet_id found for transaction verification")
+        if silver_transaction_id:
+            # Check for Silver card transaction in history
+            response = requests.get(f"{API_BASE}/wallet/transactions/{test_uid}", timeout=30)
+            if response.status_code == 200:
+                result = response.json()
+                transactions = result.get("transactions", [])
                 
+                # Look for the specific Silver card transaction
+                silver_txn = next((t for t in transactions if t.get("transaction_id") == silver_transaction_id), None)
+                
+                if silver_txn:
+                    test_results["silver_transaction_logging"] = True
+                    print(f"✅ Silver transaction logging verified")
+                    print(f"   📋 Transaction ID: {silver_txn.get('transaction_id')}")
+                    print(f"   📋 Wallet Type: {silver_txn.get('wallet_type')}")
+                    print(f"   📋 Amount: ₹{silver_txn.get('amount')}")
+                else:
+                    print(f"❌ Silver transaction not found in history")
+            else:
+                print(f"❌ Failed to get wallet transactions: {response.status_code}")
+        else:
+            print(f"❌ No silver transaction ID to verify")
+            
     except Exception as e:
-        print(f"❌ Error in transaction logging verification: {e}")
+        print(f"❌ Error verifying silver transaction: {e}")
     
-    print(f"\n📊 PHASE 5: BALANCE TRACKING")
+    # Test Gold card transaction logging
+    print(f"\n📋 Verifying Gold card transaction logging")
+    
+    try:
+        if gold_transaction_id:
+            # Check for Gold card transaction in history
+            response = requests.get(f"{API_BASE}/wallet/transactions/{test_uid}", timeout=30)
+            if response.status_code == 200:
+                result = response.json()
+                transactions = result.get("transactions", [])
+                
+                # Look for the specific Gold card transaction
+                gold_txn = next((t for t in transactions if t.get("transaction_id") == gold_transaction_id), None)
+                
+                if gold_txn:
+                    test_results["gold_transaction_logging"] = True
+                    print(f"✅ Gold transaction logging verified")
+                    print(f"   📋 Transaction ID: {gold_txn.get('transaction_id')}")
+                    print(f"   📋 Wallet Type: {gold_txn.get('wallet_type')}")
+                    print(f"   📋 Amount: ₹{gold_txn.get('amount')}")
+                else:
+                    print(f"❌ Gold transaction not found in history")
+            else:
+                print(f"❌ Failed to get wallet transactions: {response.status_code}")
+        else:
+            print(f"❌ No gold transaction ID to verify")
+            
+    except Exception as e:
+        print(f"❌ Error verifying gold transaction: {e}")
+    
+    print(f"\n📚 SCRATCH CARD HISTORY VERIFICATION")
     print("=" * 60)
     
-    # Scenarios 16-17: Balance tracking verification
-    print(f"\n📋 Scenarios 16-17: Balance tracking verification")
+    # Test scratch card history endpoint
+    print(f"\n📋 Testing scratch card history endpoint")
+    
+    try:
+        response = requests.get(f"{API_BASE}/scratch-cards/history/{test_uid}", timeout=30)
+        if response.status_code == 200:
+            result = response.json()
+            history = result.get("history", [])
+            stats = result.get("stats", {})
+            
+            test_results["scratch_card_history_endpoint"] = True
+            print(f"✅ Scratch card history endpoint working")
+            print(f"   📋 Total cards played: {stats.get('total_cards_played', 0)}")
+            print(f"   📋 Total PRC spent: {stats.get('total_prc_spent', 0)}")
+            print(f"   📋 Total cashback won: ₹{stats.get('total_cashback_won', 0)}")
+            print(f"   📋 Average cashback per card: ₹{stats.get('avg_cashback_per_card', 0)}")
+            
+            # Verify scratch card records were created
+            if len(history) >= 3:  # Should have Bronze, Silver, Gold
+                test_results["bronze_scratch_card_record"] = True
+                print(f"✅ Scratch card records created in database")
+                
+                # Check if records contain proper fields
+                for card in history[:3]:  # Check first 3 records
+                    if all(field in card for field in ["card_type", "cashback_percentage", "cashback_inr", "prc_spent"]):
+                        print(f"   📋 Card Type {card['card_type']}: {card['cashback_percentage']}% = ₹{card['cashback_inr']}")
+            else:
+                print(f"❌ Expected at least 3 scratch card records, found {len(history)}")
+                
+        else:
+            print(f"❌ Scratch card history endpoint failed: {response.status_code}")
+            print(f"   Response: {response.text}")
+            
+    except Exception as e:
+        print(f"❌ Error getting scratch card history: {e}")
+    
+    print(f"\n🔍 FINAL WALLET BALANCE VERIFICATION")
+    print("=" * 60)
+    
+    # Final wallet balance check
+    print(f"\n📋 Final wallet balance verification")
+    
+    try:
+        response = requests.get(f"{API_BASE}/wallet/{test_uid}", timeout=30)
+        if response.status_code == 200:
+            wallet_data = response.json()
+            final_prc_balance = wallet_data.get("prc_balance", 0)
+            final_cashback_balance = wallet_data.get("cashback_wallet_balance", 0)
+            
+            test_results["wallet_transactions_endpoint"] = True
+            print(f"✅ Wallet endpoint working")
+            print(f"   📋 Final PRC Balance: {final_prc_balance}")
+            print(f"   📋 Final Cashback Balance: ₹{final_cashback_balance}")
+            
+            # Verify expected balances
+            expected_prc_final = initial_prc_balance - 10 - 50 - 100  # 200 - 160 = 40
+            expected_cashback_final = initial_cashback_balance + bronze_cashback_won + silver_cashback_won + gold_cashback_won
+            
+            if abs(final_prc_balance - expected_prc_final) < 0.01:
+                print(f"✅ PRC balance calculation correct: {initial_prc_balance} - 160 = {final_prc_balance}")
+            else:
+                print(f"❌ PRC balance calculation error: Expected {expected_prc_final}, got {final_prc_balance}")
+            
+            if abs(final_cashback_balance - expected_cashback_final) < 0.01:
+                test_results["transaction_details_verification"] = True
+                print(f"✅ Cashback balance calculation correct: {initial_cashback_balance} + {bronze_cashback_won + silver_cashback_won + gold_cashback_won} = {final_cashback_balance}")
+            else:
+                print(f"❌ Cashback balance calculation error: Expected {expected_cashback_final}, got {final_cashback_balance}")
+                
+        else:
+            print(f"❌ Final wallet check failed: {response.status_code}")
+            print(f"   Response: {response.text}")
+            
+    except Exception as e:
+        print(f"❌ Error in final wallet verification: {e}")
     
     try:
         if outlet_id:
