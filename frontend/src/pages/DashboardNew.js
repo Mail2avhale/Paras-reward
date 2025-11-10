@@ -180,118 +180,120 @@ const DashboardNew = ({ user, onLogout }) => {
             <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-purple-300/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '0.75s' }}></div>
           </div>
           
-          {/* Hero Content */}
-          <div className="relative z-10 p-6 md:p-8">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-              {/* Left Side - User Info & Balance */}
-              <div className="flex-1">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="relative group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-pink-400 rounded-full blur-md opacity-75 group-hover:opacity-100 transition-opacity"></div>
-                    <img
-                      src={user.profile_picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=9333ea&color=fff&size=128`}
-                      alt={user.name}
-                      className="relative w-24 h-24 rounded-full border-4 border-white shadow-2xl"
-                    />
-                    {isVIP && (
-                      <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full p-2 shadow-lg">
-                        <Crown className="h-5 w-5 text-white" />
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <h1 className="text-3xl md:text-4xl font-black text-white mb-1 drop-shadow-lg">
-                      {userData?.first_name || user.name}
-                    </h1>
-                    <div className="flex items-center gap-3">
-                      <span className="px-3 py-1 bg-white/20 backdrop-blur-xl rounded-full text-sm font-bold text-white border border-white/30">
-                        Level {level}
-                      </span>
-                      <span className={`px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 ${
-                        isVIP 
-                          ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' 
-                          : 'bg-white/20 backdrop-blur-xl text-white border border-white/30'
-                      }`}>
-                        {isVIP && <Crown className="h-3 w-3" />}
-                        {isVIP ? 'VIP Member' : 'Free Member'}
-                      </span>
+          {/* Hero Content - Compact Mobile-First */}
+          <div className="relative z-10 p-4 md:p-6">
+            {/* User Profile Row */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-400 rounded-full blur-sm opacity-75 animate-pulse"></div>
+                  <img
+                    src={user.profile_picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=9333ea&color=fff&size=128`}
+                    alt={user.name}
+                    className="relative w-16 h-16 md:w-20 md:h-20 rounded-full border-3 border-white shadow-xl"
+                  />
+                  {isVIP && (
+                    <div className="absolute -bottom-1 -right-1 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full p-1.5 shadow-lg animate-bounce">
+                      <Crown className="h-3 w-3 md:h-4 md:w-4 text-white" />
                     </div>
-                  </div>
+                  )}
                 </div>
-                
-                {/* Balance Display */}
-                <div className="bg-white/10 backdrop-blur-2xl rounded-2xl p-6 border border-white/20">
-                  <p className="text-white/80 text-sm mb-2 font-semibold">Your Balance</p>
-                  <div className="flex items-baseline gap-3 mb-2">
-                    <h2 className="text-6xl md:text-7xl font-black text-white drop-shadow-2xl">
-                      {prcBalance.toFixed(0)}
-                    </h2>
-                    <span className="text-2xl font-bold text-white/80">PRC</span>
-                  </div>
-                  <p className="text-xl text-white/90 font-semibold">
-                    ≈ ₹{(prcBalance / 10).toFixed(2)} INR
-                  </p>
-                  
-                  {/* Level Progress Bar */}
-                  <div className="mt-4 pt-4 border-t border-white/20">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-bold text-white">Level Progress</span>
-                      <span className="text-sm text-white/80">{currentLevelProgress.toFixed(0)} / 1000 PRC</span>
-                    </div>
-                    <div className="relative h-3 bg-white/20 rounded-full overflow-hidden">
-                      <div 
-                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full transition-all duration-500"
-                        style={{ width: `${progressPercent}%` }}
-                      ></div>
-                    </div>
-                    <p className="text-xs text-white/70 mt-1">
-                      {(1000 - currentLevelProgress).toFixed(0)} PRC to next level
-                    </p>
+                <div>
+                  <h1 className="text-xl md:text-2xl font-black text-white mb-0.5">
+                    {userData?.first_name || user.name}
+                  </h1>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 bg-white/20 backdrop-blur-xl rounded-full text-xs font-bold text-white">
+                      Lvl {level}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 ${
+                      isVIP 
+                        ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-lg' 
+                        : 'bg-white/20 backdrop-blur-xl text-white'
+                    }`}>
+                      {isVIP && <Crown className="h-2.5 w-2.5" />}
+                      {isVIP ? 'VIP' : 'Free'}
+                    </span>
                   </div>
                 </div>
               </div>
               
-              {/* Right Side - Quick Stats Cards */}
-              <div className="grid grid-cols-2 gap-3 md:w-80">
-                <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-white/20 hover:bg-white/15 transition-all">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="bg-green-500/30 p-2 rounded-lg">
-                      <TrendingUp className="h-5 w-5 text-green-300" />
-                    </div>
+              {/* Notification Bell */}
+              <button className="bg-white/10 backdrop-blur-xl p-2.5 rounded-full border border-white/20 hover:bg-white/20 transition-all">
+                <Sparkles className="h-5 w-5 text-white" />
+              </button>
+            </div>
+            
+            {/* Balance Card - Prominent */}
+            <div className="bg-white/15 backdrop-blur-2xl rounded-2xl p-4 md:p-5 border border-white/30 shadow-2xl mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-white/80 text-xs font-medium mb-1">Total Balance</p>
+                  <div className="flex items-baseline gap-2">
+                    <h2 className="text-4xl md:text-5xl font-black text-white">
+                      {prcBalance.toFixed(0)}
+                    </h2>
+                    <span className="text-lg font-bold text-white/80">PRC</span>
                   </div>
-                  <p className="text-2xl font-black text-white">{stats?.total_mined?.toFixed(0) || '0'}</p>
-                  <p className="text-xs text-white/70 font-medium">Total Mined</p>
+                  <p className="text-sm text-white/90 font-semibold mt-1">
+                    ≈ ₹{(prcBalance / 10).toFixed(2)}
+                  </p>
                 </div>
-                
-                <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-white/20 hover:bg-white/15 transition-all">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="bg-blue-500/30 p-2 rounded-lg">
-                      <Users className="h-5 w-5 text-blue-300" />
-                    </div>
-                  </div>
-                  <p className="text-2xl font-black text-white">{stats?.total_referrals || '0'}</p>
-                  <p className="text-xs text-white/70 font-medium">Referrals</p>
+                <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-4 rounded-2xl shadow-lg">
+                  <Coins className="h-8 w-8 text-white" />
                 </div>
-                
-                <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-white/20 hover:bg-white/15 transition-all">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="bg-purple-500/30 p-2 rounded-lg">
-                      <Activity className="h-5 w-5 text-purple-300" />
-                    </div>
-                  </div>
-                  <p className="text-2xl font-black text-white">{level}</p>
-                  <p className="text-xs text-white/70 font-medium">Current Level</p>
+              </div>
+              
+              {/* Mini Progress Bar */}
+              <div className="pt-3 border-t border-white/20">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold text-white flex items-center gap-1">
+                    <Target className="h-3 w-3" />
+                    Level {level} → {level + 1}
+                  </span>
+                  <span className="text-xs text-white/70">{progressPercent.toFixed(0)}%</span>
                 </div>
-                
-                <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-white/20 hover:bg-white/15 transition-all">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="bg-pink-500/30 p-2 rounded-lg">
-                      <Trophy className="h-5 w-5 text-pink-300" />
-                    </div>
-                  </div>
-                  <p className="text-2xl font-black text-white">{achievements.filter(a => a.earned).length}</p>
-                  <p className="text-xs text-white/70 font-medium">Achievements</p>
+                <div className="relative h-2 bg-white/20 rounded-full overflow-hidden">
+                  <div 
+                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full transition-all duration-500 shadow-lg"
+                    style={{ width: `${progressPercent}%` }}
+                  ></div>
                 </div>
+              </div>
+            </div>
+            
+            {/* Quick Stats Row - 4 Compact Cards */}
+            <div className="grid grid-cols-4 gap-2">
+              <div className="bg-white/10 backdrop-blur-xl rounded-xl p-2.5 border border-white/20 text-center">
+                <div className="bg-green-500/30 w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-1">
+                  <Zap className="h-4 w-4 text-green-300" />
+                </div>
+                <p className="text-lg font-black text-white">{stats?.total_mined?.toFixed(0) || '0'}</p>
+                <p className="text-[9px] text-white/70 font-medium">Mined</p>
+              </div>
+              
+              <div className="bg-white/10 backdrop-blur-xl rounded-xl p-2.5 border border-white/20 text-center">
+                <div className="bg-blue-500/30 w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-1">
+                  <Users className="h-4 w-4 text-blue-300" />
+                </div>
+                <p className="text-lg font-black text-white">{stats?.total_referrals || '0'}</p>
+                <p className="text-[9px] text-white/70 font-medium">Referrals</p>
+              </div>
+              
+              <div className="bg-white/10 backdrop-blur-xl rounded-xl p-2.5 border border-white/20 text-center">
+                <div className="bg-purple-500/30 w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-1">
+                  <Package className="h-4 w-4 text-purple-300" />
+                </div>
+                <p className="text-lg font-black text-white">{stats?.total_orders || '0'}</p>
+                <p className="text-[9px] text-white/70 font-medium">Orders</p>
+              </div>
+              
+              <div className="bg-white/10 backdrop-blur-xl rounded-xl p-2.5 border border-white/20 text-center">
+                <div className="bg-pink-500/30 w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-1">
+                  <Trophy className="h-4 w-4 text-pink-300" />
+                </div>
+                <p className="text-lg font-black text-white">{achievements.filter(a => a.earned).length}</p>
+                <p className="text-[9px] text-white/70 font-medium">Badges</p>
               </div>
             </div>
           </div>
