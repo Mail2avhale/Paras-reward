@@ -53,7 +53,7 @@ const TreasureHunt = ({ user }) => {
       setDailyTopHunter(topHunterRes.data);
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast({ description: 'Failed to load treasure hunt data', variant: 'destructive' });
+      toast.error('Failed to load treasure hunt data');
     } finally {
       setLoading(false);
     }
