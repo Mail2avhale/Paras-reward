@@ -411,8 +411,8 @@ def test_edge_cases(uid):
     print(f"\n📋 Testing invalid card type...")
     try:
         # Try to purchase 25 PRC card (should fail - not available)
-        purchase_data = {"card_type": 25, "uid": uid}
-        response = requests.post(f"{API_BASE}/scratch-cards/purchase", json=purchase_data, timeout=30)
+        purchase_data = {"card_type": 25}
+        response = requests.post(f"{API_BASE}/scratch-cards/purchase?uid={uid}", json=purchase_data, timeout=30)
         
         if response.status_code == 400:
             result = response.json()
