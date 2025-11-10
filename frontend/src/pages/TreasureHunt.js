@@ -752,6 +752,17 @@ const TreasureHunt = ({ user }) => {
           </Card>
         </div>
       )}
+      
+      {/* Win Celebration Overlay */}
+      {celebrationData && (
+        <WinCelebration
+          amount={celebrationData.amount}
+          percentage={celebrationData.percentage}
+          message={celebrationData.message}
+          onClose={() => setCelebrationData(null)}
+          duration={6000}
+        />
+      )}
     </div>
   );
 };
