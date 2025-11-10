@@ -100,52 +100,53 @@ def test_scratch_card_cashback_credit_fix():
         "transaction_details_verification": False
     }
     
-    # Create test environment with proper hierarchy
+    # Create test environment
     timestamp = int(time.time())
     
-    print(f"\n🏗️  PHASE 1: OUTLET ASSIGNMENT VERIFICATION")
+    print(f"\n🏗️  TEST SETUP")
     print("=" * 60)
     
-    # Scenario 1: Create VIP test user with location data
-    print(f"\n📋 Scenario 1: Create VIP test user with location data")
+    # Create test user with sufficient PRC balance
+    print(f"\n📋 Creating test user with sufficient PRC balance")
     
-    vip_user_data = {
-        "first_name": "VIP",
-        "last_name": "TransactionTest",
-        "email": f"vip_txn_test_{timestamp}@test.com",
+    test_user_data = {
+        "first_name": "Scratch",
+        "last_name": "CardTester",
+        "email": f"scratch_test_{timestamp}@test.com",
         "mobile": f"9876543{timestamp % 1000:03d}",
         "password": "secure123456",
         "state": "Maharashtra",
         "district": "Mumbai",
         "pincode": "400001",
-        "aadhaar_number": f"5555{timestamp % 100000000:08d}",
-        "pan_number": f"VIPTXN{timestamp % 10000:04d}F",
-        "membership_type": "vip",
+        "aadhaar_number": f"1234{timestamp % 100000000:08d}",
+        "pan_number": f"SCRCH{timestamp % 10000:04d}T",
+        "membership_type": "vip",  # Test with VIP for better rewards
         "kyc_status": "verified",
-        "prc_balance": 1000.0
+        "prc_balance": 200.0,  # Sufficient for all card types
+        "cashback_wallet_balance": 0.0  # Start with zero cashback
     }
     
-    vip_uid = None
-    order_id = None
-    secret_code = None
-    outlet_id = None
+    test_uid = None
+    initial_prc_balance = 200.0
+    initial_cashback_balance = 0.0
     
     try:
-        response = requests.post(f"{API_BASE}/auth/register", json=vip_user_data, timeout=30)
+        response = requests.post(f"{API_BASE}/auth/register", json=test_user_data, timeout=30)
         if response.status_code == 200:
             result = response.json()
-            vip_uid = result.get("uid")
-            test_results["scenario_01_vip_user_creation"] = True
-            print(f"✅ VIP user created successfully: {vip_uid}")
-            print(f"   📋 Name: {vip_user_data['first_name']} {vip_user_data['last_name']}")
-            print(f"   📋 Location: {vip_user_data['state']}, {vip_user_data['district']}, {vip_user_data['pincode']}")
+            test_uid = result.get("uid")
+            test_results["test_user_creation"] = True
+            print(f"✅ Test user created successfully: {test_uid}")
+            print(f"   📋 Name: {test_user_data['first_name']} {test_user_data['last_name']}")
+            print(f"   📋 Initial PRC Balance: {initial_prc_balance}")
+            print(f"   📋 Initial Cashback Balance: {initial_cashback_balance}")
         else:
-            print(f"❌ VIP user creation failed: {response.status_code}")
+            print(f"❌ Test user creation failed: {response.status_code}")
             print(f"   Response: {response.text}")
             return test_results
             
     except Exception as e:
-        print(f"❌ Error creating VIP user: {e}")
+        print(f"❌ Error creating test user: {e}")
         return test_results
     
     # Scenario 2: Create test order via POST /api/orders/checkout
