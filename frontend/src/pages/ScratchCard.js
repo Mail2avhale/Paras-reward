@@ -220,7 +220,7 @@ const ScratchCard = ({ user }) => {
       
       console.log('Scratch card revealed! Result:', result);
       
-      // Show big animated celebration with proper null checks
+      // Show result card first for 2.5 seconds, THEN show celebration
       if (result.cashback_won_inr && result.cashback_percentage) {
         setTimeout(() => {
           setCelebrationData({
@@ -228,7 +228,7 @@ const ScratchCard = ({ user }) => {
             percentage: result.cashback_percentage,
             message: "YOU WON!"
           });
-        }, 500);
+        }, 2500);
       }
       
       fetchHistory();
