@@ -156,39 +156,39 @@ export const InstallAppButton = () => {
   }, []);
 
   const handleDownloadAPK = () => {
-    setIsDownloading(true);
-    
-    // Create a temporary anchor element to trigger download
-    const link = document.createElement('a');
-    link.href = APK_URL;
-    link.download = 'PARAS-REWARD.apk';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Show success message
-    setTimeout(() => {
-      setIsDownloading(false);
-      alert('APK download started! Please check your downloads folder.\n\nNote: You may need to enable "Install from Unknown Sources" in your Android settings to install the app.');
-    }, 1000);
+    // Show informative message instead of downloading placeholder
+    alert('📱 Install PARAS REWARD App\n\n' + 
+          '✅ For the best experience, install our Progressive Web App:\n\n' +
+          '1. Tap the menu (⋮) in your browser\n' +
+          '2. Select "Add to Home screen" or "Install app"\n' +
+          '3. Enjoy the full app experience!\n\n' +
+          'Native Android APK coming soon! 🚀');
   };
 
   const handleInstallClick = async () => {
     // Check if user is on Android
     const isAndroid = /Android/i.test(navigator.userAgent);
     
-    if (isAndroid) {
-      // Offer direct APK download for Android users
-      const userChoice = confirm('Download PARAS REWARD Android App?\n\nYou will download the APK file directly.');
-      if (userChoice) {
-        handleDownloadAPK();
-      }
+    if (isAndroid && !deferredPrompt) {
+      // Show installation instructions for Android users
+      alert('📱 Install PARAS REWARD App\n\n' + 
+            'To install this app on your device:\n\n' +
+            '1. Open this page in Chrome or Samsung Internet browser\n' +
+            '2. Tap the menu (⋮) button\n' +
+            '3. Select "Add to Home screen" or "Install app"\n' +
+            '4. Follow the on-screen instructions\n\n' +
+            'The app will be added to your home screen like a native app! 🚀');
       return;
     }
     
-    // For other devices, try PWA installation
+    // Try PWA installation if prompt is available
     if (!deferredPrompt) {
-      alert('To install:\n\n1. Tap the menu (⋮) in your browser\n2. Select "Add to Home screen" or "Install app"');
+      alert('📱 Install PARAS REWARD App\n\n' +
+            'To install this app:\n\n' +
+            '1. Tap the menu (⋮) in your browser\n' +
+            '2. Select "Add to Home screen" or "Install app"\n' +
+            '3. Enjoy the full app experience!\n\n' +
+            'Note: Make sure you\'re using a compatible browser (Chrome, Edge, or Samsung Internet).');
       return;
     }
 
@@ -197,6 +197,7 @@ export const InstallAppButton = () => {
     
     if (outcome === 'accepted') {
       console.log('User accepted the install prompt');
+      alert('✅ Installation started! The app will be added to your home screen.');
     }
     
     setDeferredPrompt(null);
