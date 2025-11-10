@@ -1,20 +1,36 @@
 #!/usr/bin/env python3
 """
-SCRATCH CARD CASHBACK CREDIT FIX - COMPREHENSIVE TESTING
+SCRATCH CARD CASHBACK CREDIT FIX - RE-TESTING AFTER CRITICAL FIXES
 
-Tests the scratch card game cashback credit functionality to verify:
-1. Cashback properly credited to cashback_wallet_balance field
-2. Transaction logging using log_transaction() function
-3. Proper PRC balance deduction
-4. Game history preservation in scratch_cards collection
-5. Transaction history shows scratch card rewards
+Re-tests the scratch card cashback credit functionality after applying two critical fixes:
 
-Test Scenarios:
-- Create test user with sufficient PRC balance
-- Purchase different card types (10, 50, 100 PRC)
-- Verify cashback credited to correct field
-- Verify transaction logging with proper details
-- Test transaction history endpoints
+FIXES APPLIED:
+1. Fixed wallet endpoint to prioritize 'cashback_wallet_balance' field correctly
+2. Fixed scratch card history endpoint to exclude ObjectId fields (added {"_id": 0} projection)
+
+TEST SCENARIOS:
+1. Find the test user from previous test (should have ₹5.4 in cashback_wallet_balance)
+2. Check wallet endpoint now returns correct cashback balance
+3. Verify scratch card history endpoint no longer returns 500 error
+4. Purchase one more scratch card to verify end-to-end flow:
+   - Check initial balances
+   - Purchase 10 PRC Bronze card
+   - Verify cashback credited
+   - Verify wallet endpoint shows updated balance
+   - Verify transaction in history
+   - Verify scratch card history works
+
+ENDPOINTS TO TEST:
+- GET /api/wallet/{uid} (should show ₹5.4 cashback_balance from previous tests)
+- GET /api/scratch-cards/history/{uid} (should return valid JSON without 500 error)
+- POST /api/scratch-cards/purchase (one more purchase to verify complete flow)
+- GET /api/wallet/transactions/{uid} (verify transaction logged)
+
+SUCCESS CRITERIA:
+- Wallet endpoint shows correct cashback balance (₹5.4 from previous tests)
+- Scratch card history returns valid JSON with stats
+- New purchase credits cashback correctly and wallet reflects it immediately
+- No ObjectId serialization errors
 """
 
 import requests
