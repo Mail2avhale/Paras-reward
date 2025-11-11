@@ -101,6 +101,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/terms" element={<TermsAndConditions />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/refund-policy" element={<RefundPolicy />} />
             
             {/* Protected Routes */}
             <Route path="/dashboard" element={user ? <DashboardNew user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
