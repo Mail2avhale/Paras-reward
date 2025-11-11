@@ -139,6 +139,7 @@ const Footer = () => {
             <ul className="space-y-2 mb-4">
               <li><Link to="/privacy" className="text-gray-300 hover:text-white transition-colors">{t('footer.privacy')}</Link></li>
               <li><Link to="/terms" className="text-gray-300 hover:text-white transition-colors">{t('footer.terms')}</Link></li>
+              <li><Link to="/refund-policy" className="text-gray-300 hover:text-white transition-colors">Refund Policy</Link></li>
             </ul>
             <h3 className="text-lg font-bold mb-4 mt-6">{t('nav.contact')}</h3>
             <div className="space-y-2 text-gray-300 text-sm mb-6">
