@@ -97,6 +97,12 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   // Validation Errors
   const [errors, setErrors] = useState({});
   
+  // Location cascade state
+  const [availableStates, setAvailableStates] = useState([]);
+  const [availableDistricts, setAvailableDistricts] = useState([]);
+  const [availableTahsils, setAvailableTahsils] = useState([]);
+  const [availablePincodes, setAvailablePincodes] = useState([]);
+  
   // Check authentication
   useEffect(() => {
     if (!user) {
