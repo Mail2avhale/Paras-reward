@@ -842,44 +842,106 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                       </div>
 
                       <div>
-                        <Label htmlFor="city">City</Label>
+                        <Label htmlFor="state">State *</Label>
+                        <select
+                          id="state"
+                          value={contactDetails.state}
+                          onChange={(e) => {
+                            setContactDetails({ 
+                              ...contactDetails, 
+                              state: e.target.value,
+                              district: '',
+                              tahsil: '',
+                              pincode: ''
+                            });
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                        >
+                          <option value="">Select State</option>
+                          {availableStates.map(state => (
+                            <option key={state} value={state}>{state}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="district">District *</Label>
+                        <select
+                          id="district"
+                          value={contactDetails.district}
+                          onChange={(e) => {
+                            setContactDetails({ 
+                              ...contactDetails, 
+                              district: e.target.value,
+                              tahsil: '',
+                              pincode: ''
+                            });
+                          }}
+                          disabled={!contactDetails.state}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        >
+                          <option value="">Select District</option>
+                          {availableDistricts.map(district => (
+                            <option key={district} value={district}>{district}</option>
+                          ))}
+                        </select>
+                        {!contactDetails.state && (
+                          <p className="text-xs text-gray-500 mt-1">Please select a state first</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <Label htmlFor="tahsil">Tahsil / Taluka</Label>
+                        <select
+                          id="tahsil"
+                          value={contactDetails.tahsil}
+                          onChange={(e) => {
+                            setContactDetails({ 
+                              ...contactDetails, 
+                              tahsil: e.target.value,
+                              pincode: ''
+                            });
+                          }}
+                          disabled={!contactDetails.district}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        >
+                          <option value="">Select Tahsil</option>
+                          {availableTahsils.map(tahsil => (
+                            <option key={tahsil} value={tahsil}>{tahsil}</option>
+                          ))}
+                        </select>
+                        {!contactDetails.district && (
+                          <p className="text-xs text-gray-500 mt-1">Please select a district first</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <Label htmlFor="city">City / Town</Label>
                         <Input
                           id="city"
                           value={contactDetails.city}
                           onChange={(e) => setContactDetails({ ...contactDetails, city: e.target.value })}
-                          placeholder="Enter city"
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="district">District</Label>
-                        <Input
-                          id="district"
-                          value={contactDetails.district}
-                          onChange={(e) => setContactDetails({ ...contactDetails, district: e.target.value })}
-                          placeholder="Enter district"
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="state">State</Label>
-                        <Input
-                          id="state"
-                          value={contactDetails.state}
-                          onChange={(e) => setContactDetails({ ...contactDetails, state: e.target.value })}
-                          placeholder="Enter state"
+                          placeholder="Enter city or town name"
                         />
                       </div>
 
                       <div>
                         <Label htmlFor="pincode">PIN Code</Label>
-                        <Input
+                        <select
                           id="pincode"
                           value={contactDetails.pincode}
                           onChange={(e) => setContactDetails({ ...contactDetails, pincode: e.target.value })}
-                          placeholder="6-digit PIN code"
-                          maxLength={6}
-                        />
+                          disabled={!contactDetails.tahsil}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        >
+                          <option value="">Select PIN Code</option>
+                          {availablePincodes.map(pin => (
+                            <option key={pin} value={pin}>{pin}</option>
+                          ))}
+                        </select>
+                        {!contactDetails.tahsil && (
+                          <p className="text-xs text-gray-500 mt-1">Please select a tahsil first</p>
+                        )}
                       </div>
                     </div>
                   </div>
