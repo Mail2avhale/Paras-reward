@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ImageCropUpload from '@/components/ImageCropUpload';
+import { locationData } from '@/data/locationData';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
