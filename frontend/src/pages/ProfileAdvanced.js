@@ -117,6 +117,47 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     }
   }, [user]);
   
+  // Initialize states list
+  useEffect(() => {
+    const states = Object.keys(locationData).sort();
+    setAvailableStates(states);
+  }, []);
+  
+  // Handle state change - populate districts
+  useEffect(() => {
+    if (contactDetails.state && locationData[contactDetails.state]) {
+      const districts = Object.keys(locationData[contactDetails.state].districts).sort();
+      setAvailableDistricts(districts);
+    } else {
+      setAvailableDistricts([]);
+      setAvailableTahsils([]);
+      setAvailablePincodes([]);
+    }
+  }, [contactDetails.state]);
+  
+  // Handle district change - populate tahsils
+  useEffect(() => {
+    if (contactDetails.state && contactDetails.district && 
+        locationData[contactDetails.state]?.districts[contactDetails.district]) {
+      const tahsils = Object.keys(locationData[contactDetails.state].districts[contactDetails.district].tahsils).sort();
+      setAvailableTahsils(tahsils);
+    } else {
+      setAvailableTahsils([]);
+      setAvailablePincodes([]);
+    }
+  }, [contactDetails.state, contactDetails.district]);
+  
+  // Handle tahsil change - populate pincodes
+  useEffect(() => {
+    if (contactDetails.state && contactDetails.district && contactDetails.tahsil &&
+        locationData[contactDetails.state]?.districts[contactDetails.district]?.tahsils[contactDetails.tahsil]) {
+      const pincodes = locationData[contactDetails.state].districts[contactDetails.district].tahsils[contactDetails.tahsil].pins || [];
+      setAvailablePincodes(pincodes);
+    } else {
+      setAvailablePincodes([]);
+    }
+  }, [contactDetails.state, contactDetails.district, contactDetails.tahsil]);
+  
   const fetchUserProfile = async () => {
     try {
       const response = await axios.get(`${API}/api/user/${user.uid}`);
