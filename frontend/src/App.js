@@ -72,6 +72,7 @@ const AboutUs = lazy(() => import("@/pages/AboutUs"));
 const ContactUs = lazy(() => import("@/pages/ContactUs"));
 const TermsAndConditions = lazy(() => import("@/pages/TermsAndConditions"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
+const RefundPolicy = lazy(() => import("@/pages/RefundPolicy"));
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
