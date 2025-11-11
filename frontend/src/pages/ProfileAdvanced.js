@@ -51,6 +51,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     city: user?.city || '',
     state: user?.state || '',
     district: user?.district || '',
+    tahsil: user?.tahsil || '',
     pincode: user?.pincode || '',
     alternate_mobile: user?.alternate_mobile || '',
     emergency_contact_name: user?.emergency_contact_name || '',
