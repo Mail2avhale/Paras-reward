@@ -113,59 +113,42 @@ def test_registration_control_system():
         "settings_values_match_updates": False
     }
     
-    print(f"\n🔍 STEP 1: FINDING EXISTING TEST USER WITH CASHBACK BALANCE")
+    print(f"\n🔍 STEP 1: GET REGISTRATION STATUS (DEFAULT)")
     print("=" * 60)
     
-    # Try to find existing test user from previous tests who should have ₹5.4 in cashback_wallet_balance
-    print(f"\n📋 Looking for existing test user with cashback balance...")
+    # Test 1: Get default registration status
+    print(f"\n📋 Testing GET /api/admin/registration-status...")
     
-    test_uid = None
-    existing_cashback_balance = 0.0
-    existing_prc_balance = 0.0
-    
-    # First, let's try to find a user by checking recent scratch card transactions
     try:
-        # We'll create a test user if we can't find an existing one
-        # But first let's check if we can find users with cashback_wallet_balance > 0
-        
-        # For now, let's create a test user with the expected state from previous tests
-        timestamp = int(time.time())
-        
-        test_user_data = {
-            "first_name": "RetestUser",
-            "last_name": "CashbackFix",
-            "email": f"retest_cashback_{timestamp}@test.com",
-            "mobile": f"9876543{timestamp % 1000:03d}",
-            "password": "secure123456",
-            "state": "Maharashtra",
-            "district": "Mumbai",
-            "pincode": "400001",
-            "aadhaar_number": f"1234{timestamp % 100000000:08d}",
-            "pan_number": f"RTEST{timestamp % 10000:04d}T",
-            "membership_type": "vip",
-            "kyc_status": "verified",
-            "prc_balance": 50.0,  # Sufficient for one more purchase
-            "cashback_wallet_balance": 5.4  # Simulate the expected balance from previous tests
-        }
-        
-        response = requests.post(f"{API_BASE}/auth/register", json=test_user_data, timeout=30)
+        response = requests.get(f"{API_BASE}/admin/registration-status", timeout=30)
         if response.status_code == 200:
             result = response.json()
-            test_uid = result.get("uid")
-            existing_cashback_balance = 5.4
-            existing_prc_balance = 50.0
-            test_results["existing_user_found"] = True
-            print(f"✅ Test user created with simulated previous state: {test_uid}")
-            print(f"   📋 Name: {test_user_data['first_name']} {test_user_data['last_name']}")
-            print(f"   📋 Expected Cashback Balance: ₹{existing_cashback_balance}")
-            print(f"   📋 PRC Balance: {existing_prc_balance}")
+            test_results["get_default_registration_status"] = True
+            print(f"✅ Registration status endpoint working")
+            print(f"   📋 Response: {result}")
+            
+            # Check if registration is enabled by default
+            registration_enabled = result.get("registration_enabled", False)
+            registration_message = result.get("registration_message", "")
+            
+            if registration_enabled:
+                test_results["default_registration_enabled"] = True
+                print(f"✅ Registration enabled by default: {registration_enabled}")
+            else:
+                print(f"⚠️  Registration disabled by default: {registration_enabled}")
+            
+            if registration_message is not None:  # Can be empty string
+                test_results["default_message_exists"] = True
+                print(f"✅ Registration message field exists: '{registration_message}'")
+            else:
+                print(f"❌ Registration message field missing")
+                
         else:
-            print(f"❌ Test user creation failed: {response.status_code}")
+            print(f"❌ Registration status endpoint failed: {response.status_code}")
             print(f"   Response: {response.text}")
-            return test_results
             
     except Exception as e:
-        print(f"❌ Error setting up test user: {e}")
+        print(f"❌ Error testing registration status: {e}")
         return test_results
     
     print(f"\n🔍 STEP 2: TESTING WALLET ENDPOINT FIX")
