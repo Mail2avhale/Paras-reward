@@ -10938,6 +10938,8 @@ async def get_settings():
             "master_renewal_fee": 50000.0,
             "sub_renewal_fee": 30000.0,
             "outlet_renewal_fee": 10000.0,
+            "registration_enabled": True,
+            "registration_message": "New user registrations are currently closed. Please check back later.",
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
         await db.settings.insert_one(default_settings)
