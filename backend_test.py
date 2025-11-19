@@ -456,18 +456,20 @@ def test_registration_control_system():
     print(f"\n📊 FINAL RESULTS: {passed_tests}/{total_tests} tests passed ({(passed_tests/total_tests)*100:.1f}%)")
     
     if passed_tests == total_tests:
-        print(f"🎉 ALL FIXES VERIFIED - SCRATCH CARD CASHBACK CREDIT SYSTEM FULLY WORKING!")
-        print(f"✅ FIX #1 VERIFIED: Wallet endpoint prioritizes cashback_wallet_balance field correctly")
-        print(f"✅ FIX #2 VERIFIED: Scratch card history endpoint excludes ObjectId fields (no 500 errors)")
-        print(f"✅ END-TO-END FLOW WORKING: Purchase → Cashback Credit → Wallet Update → History")
-        print(f"✅ Field consistency issues resolved")
-        print(f"✅ ObjectId serialization issues resolved")
+        print(f"🎉 ALL REGISTRATION CONTROL TESTS PASSED!")
+        print(f"✅ Registration status endpoint returns correct data")
+        print(f"✅ Toggle registration works (enable/disable)")
+        print(f"✅ Registration is blocked when disabled (both endpoints)")
+        print(f"✅ Custom message is displayed when blocked")
+        print(f"✅ Registration works when enabled")
+        print(f"✅ Message updates correctly")
+        print(f"✅ Settings persist across requests")
     elif passed_tests >= total_tests * 0.8:
-        print(f"✅ MOSTLY FIXED - {total_tests - passed_tests} tests failed but critical fixes working")
-        print(f"⚠️  Minor issues remain but core functionality operational")
+        print(f"✅ MOSTLY WORKING - {total_tests - passed_tests} tests failed but core functionality working")
+        print(f"⚠️  Minor issues remain but registration control operational")
     else:
-        print(f"❌ FIXES NOT WORKING - {total_tests - passed_tests} tests failed, critical issues remain")
-        print(f"❌ One or both fixes need further investigation")
+        print(f"❌ CRITICAL ISSUES - {total_tests - passed_tests} tests failed, registration control needs investigation")
+        print(f"❌ System not working as expected")
     
     return test_results
 
