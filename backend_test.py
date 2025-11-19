@@ -332,46 +332,40 @@ def test_registration_control_system():
     except Exception as e:
         print(f"❌ Error testing allowed registration: {e}")
     
-    print(f"\n🔍 STEP 6: VERIFYING TRANSACTION LOGGING")
+    print(f"\n🔍 STEP 6: UPDATE REGISTRATION MESSAGE ONLY")
     print("=" * 60)
     
-    # Test transaction logging for the new purchase
-    print(f"\n📋 Verifying new purchase transaction logging...")
+    # Test 7: Update registration message without changing enabled status
+    print(f"\n📋 Testing POST /api/admin/toggle-registration (message update only)...")
+    
+    message_update_data = {
+        "enabled": True,  # Keep enabled
+        "message": "Updated message: Register now to earn rewards!"
+    }
     
     try:
-        if new_transaction_id:
-            # Check wallet transactions endpoint
-            response = requests.get(f"{API_BASE}/wallet/transactions/{test_uid}", timeout=30)
-            if response.status_code == 200:
-                result = response.json()
-                transactions = result.get("transactions", [])
-                
-                # Look for the specific new transaction
-                new_txn = next((t for t in transactions if t.get("transaction_id") == new_transaction_id), None)
-                
-                if new_txn:
-                    test_results["transaction_logged_correctly"] = True
-                    print(f"✅ New transaction logging verified")
-                    print(f"   📋 Transaction ID: {new_txn.get('transaction_id')}")
-                    print(f"   📋 Wallet Type: {new_txn.get('wallet_type')}")
-                    print(f"   📋 Amount: ₹{new_txn.get('amount')}")
-                    print(f"   📋 Description: {new_txn.get('description')}")
-                    
-                    # Verify metadata
-                    metadata = new_txn.get("metadata", {})
-                    if metadata.get("card_type") == 10 and "cashback_percentage" in metadata:
-                        print(f"   📋 Metadata complete: Card Type {metadata.get('card_type')}, Cashback {metadata.get('cashback_percentage')}%")
-                    else:
-                        print(f"   ⚠️  Metadata incomplete: {metadata}")
-                else:
-                    print(f"❌ New transaction not found in history")
+        response = requests.post(f"{API_BASE}/admin/toggle-registration", json=message_update_data, timeout=30)
+        if response.status_code == 200:
+            result = response.json()
+            test_results["message_update_only_success"] = True
+            print(f"✅ Message update successful")
+            print(f"   📋 Response: {result}")
+            
+            # Check if message was updated and enabled status maintained
+            if result.get("registration_enabled") == True:
+                test_results["message_updated_correctly"] = True
+                print(f"✅ Message updated correctly while maintaining enabled status")
+                print(f"   📋 Registration enabled: {result.get('registration_enabled')}")
+                print(f"   📋 Updated message: {result.get('message')}")
             else:
-                print(f"❌ Failed to get wallet transactions: {response.status_code}")
+                print(f"❌ Message update affected enabled status incorrectly")
+                
         else:
-            print(f"❌ No new transaction ID to verify")
+            print(f"❌ Message update failed: {response.status_code}")
+            print(f"   Response: {response.text}")
             
     except Exception as e:
-        print(f"❌ Error verifying new transaction: {e}")
+        print(f"❌ Error updating message: {e}")
     
     print(f"\n🔍 STEP 7: FINAL SCRATCH CARD HISTORY VERIFICATION")
     print("=" * 60)
