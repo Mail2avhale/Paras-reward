@@ -767,6 +767,12 @@ async def simple_register(request: Request):
 @api_router.post("/auth/register")
 async def register_user(request: Request):
     """Enhanced user registration with duplicate checks"""
+    # Check if registration is enabled
+    settings = await db.settings.find_one({}, {"_id": 0, "registration_enabled": 1, "registration_message": 1})
+    if settings and not settings.get("registration_enabled", True):
+        message = settings.get("registration_message", "New user registrations are currently closed. Please check back later.")
+        raise HTTPException(status_code=403, detail=message)
+    
     data = await request.json()
     
     # Construct full name from first, middle, last name if provided
