@@ -10953,7 +10953,9 @@ async def update_settings(
     cashback_percentage: Optional[float] = None,
     delivery_split: Optional[str] = None,
     wallet_maintenance_fee: Optional[float] = None,
-    vip_membership_fee: Optional[float] = None
+    vip_membership_fee: Optional[float] = None,
+    registration_enabled: Optional[bool] = None,
+    registration_message: Optional[str] = None
 ):
     """Update system settings (Admin)"""
     update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
@@ -10971,9 +10973,42 @@ async def update_settings(
         update_data["wallet_maintenance_fee"] = wallet_maintenance_fee
     if vip_membership_fee is not None:
         update_data["vip_membership_fee"] = vip_membership_fee
+    if registration_enabled is not None:
+        update_data["registration_enabled"] = registration_enabled
+    if registration_message is not None:
+        update_data["registration_message"] = registration_message
     
     await db.settings.update_one({}, {"$set": update_data}, upsert=True)
     return {"message": "Settings updated"}
+
+# Registration Control Endpoints
+@api_router.get("/admin/registration-status")
+async def get_registration_status():
+    """Get registration enabled status"""
+    settings = await db.settings.find_one({}, {"_id": 0, "registration_enabled": 1, "registration_message": 1})
+    if not settings:
+        return {"registration_enabled": True, "registration_message": ""}
+    return settings
+
+@api_router.post("/admin/toggle-registration")
+async def toggle_registration(request: Request):
+    """Toggle registration enabled/disabled (Admin only)"""
+    data = await request.json()
+    enabled = data.get("enabled", True)
+    message = data.get("message", "New user registrations are currently closed. Please check back later.")
+    
+    await db.settings.update_one(
+        {},
+        {"$set": {
+            "registration_enabled": enabled,
+            "registration_message": message,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    
+    status = "enabled" if enabled else "disabled"
+    return {"message": f"Registration {status} successfully", "registration_enabled": enabled}
 
 # Withdrawal Management V2
 @api_router.post("/v2/withdrawal/request")
