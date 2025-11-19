@@ -407,26 +407,37 @@ def test_registration_control_system():
         print(f"❌ Error getting settings: {e}")
     
     # Final Summary
-    print(f"\n🏁 SCRATCH CARD CASHBACK CREDIT FIX - RE-TEST SUMMARY")
+    print(f"\n🏁 REGISTRATION CONTROL SYSTEM - TEST SUMMARY")
     print("=" * 80)
     
     test_categories = {
-        "Critical Fixes Verification": [
-            ("Existing user found/created", test_results["existing_user_found"]),
-            ("Wallet endpoint shows correct balance", test_results["wallet_endpoint_shows_correct_balance"]),
-            ("Scratch card history no 500 error", test_results["scratch_card_history_no_500_error"]),
-            ("Scratch card history valid JSON", test_results["scratch_card_history_valid_json"])
+        "Registration Status Tests": [
+            ("Get default registration status", test_results["get_default_registration_status"]),
+            ("Default registration enabled", test_results["default_registration_enabled"]),
+            ("Default message exists", test_results["default_message_exists"])
         ],
-        "End-to-End Flow Tests": [
-            ("New purchase successful", test_results["new_purchase_successful"]),
-            ("New purchase cashback credited", test_results["new_purchase_cashback_credited"]),
-            ("Wallet shows updated balance", test_results["wallet_shows_updated_balance"]),
-            ("Transaction logged correctly", test_results["transaction_logged_correctly"]),
-            ("History includes new purchase", test_results["history_includes_new_purchase"])
+        "Registration Control Tests": [
+            ("Disable registration success", test_results["disable_registration_success"]),
+            ("Disable registration response correct", test_results["disable_registration_response_correct"]),
+            ("Enable registration success", test_results["enable_registration_success"]),
+            ("Enable registration response correct", test_results["enable_registration_response_correct"])
         ],
-        "System Health Verification": [
-            ("No ObjectId errors", test_results["no_objectid_errors"]),
-            ("Field consistency fixed", test_results["field_consistency_fixed"])
+        "Registration Blocking Tests": [
+            ("Full registration blocked", test_results["full_registration_blocked"]),
+            ("Simple registration blocked", test_results["simple_registration_blocked"]),
+            ("Blocked message correct", test_results["blocked_message_correct"])
+        ],
+        "Registration Allowed Tests": [
+            ("Registration allowed when enabled", test_results["registration_allowed_when_enabled"]),
+            ("User created successfully", test_results["user_created_successfully"])
+        ],
+        "Message Update Tests": [
+            ("Message update only success", test_results["message_update_only_success"]),
+            ("Message updated correctly", test_results["message_updated_correctly"])
+        ],
+        "Settings Persistence Tests": [
+            ("Settings include registration fields", test_results["settings_include_registration_fields"]),
+            ("Settings values match updates", test_results["settings_values_match_updates"])
         ]
     }
     
