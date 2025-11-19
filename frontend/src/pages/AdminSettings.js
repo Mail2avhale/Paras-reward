@@ -256,6 +256,122 @@ const AdminSettings = ({ user }) => {
             </Button>
           </div>
         </Card>
+
+        {/* Registration Control */}
+        <Card className="p-8 shadow-xl mt-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <Users className="h-7 w-7 text-purple-600" />
+                Registration Control
+              </h2>
+              <p className="text-gray-600 mt-2">Enable or disable new user registrations on the platform</p>
+            </div>
+          </div>
+
+          {/* Current Status */}
+          <div className={`p-6 rounded-lg border-2 mb-6 ${
+            registrationEnabled 
+              ? 'bg-green-50 border-green-200' 
+              : 'bg-red-50 border-red-200'
+          }`}>
+            <div className="flex items-center gap-3 mb-2">
+              {registrationEnabled ? (
+                <>
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                  <span className="text-lg font-semibold text-green-900">Registration is Currently ENABLED</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-6 w-6 text-red-600" />
+                  <span className="text-lg font-semibold text-red-900">Registration is Currently DISABLED</span>
+                </>
+              )}
+            </div>
+            <p className="text-sm text-gray-700 ml-9">
+              {registrationEnabled 
+                ? 'New users can register and create accounts on the platform.' 
+                : 'New user registrations are blocked. Existing users can still login.'}
+            </p>
+          </div>
+
+          {/* Toggle Button */}
+          <div className="mb-6">
+            <Button
+              onClick={handleToggleRegistration}
+              disabled={loadingRegistration}
+              className={`w-full sm:w-auto px-8 py-4 text-lg font-semibold ${
+                registrationEnabled
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
+            >
+              {loadingRegistration ? (
+                'Processing...'
+              ) : registrationEnabled ? (
+                <>
+                  <XCircle className="h-5 w-5 mr-2" />
+                  Disable Registration
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-5 w-5 mr-2" />
+                  Enable Registration
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Custom Message Section */}
+          <div className="border-t pt-6">
+            <div className="flex items-start gap-2 mb-3">
+              <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div className="flex-1">
+                <label className="text-sm font-medium text-gray-700 block mb-2">
+                  Custom Message for Disabled Registration
+                </label>
+                <p className="text-xs text-gray-600 mb-3">
+                  This message will be shown to users when they try to register while registration is disabled.
+                </p>
+              </div>
+            </div>
+            
+            <textarea
+              value={registrationMessage}
+              onChange={(e) => setRegistrationMessage(e.target.value)}
+              placeholder="Enter message to display when registration is closed..."
+              rows={4}
+              maxLength={300}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+            />
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-xs text-gray-500">
+                {registrationMessage.length}/300 characters
+              </p>
+              <Button
+                onClick={handleUpdateMessage}
+                disabled={loadingRegistration || !registrationMessage.trim()}
+                variant="outline"
+                className="text-sm"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Update Message
+              </Button>
+            </div>
+          </div>
+
+          {/* Info Box */}
+          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-blue-900 mb-2">Important Notes:</h3>
+            <ul className="text-xs text-blue-800 space-y-1">
+              <li>• Disabling registration will prevent all new user signups</li>
+              <li>• Existing users will continue to have full access</li>
+              <li>• Login functionality remains unaffected</li>
+              <li>• You can enable/disable registration anytime</li>
+              <li>• Custom message supports up to 300 characters</li>
+            </ul>
+          </div>
+        </Card>
       </div>
     </div>
   );
