@@ -62,20 +62,23 @@ print(f"Backend URL: {BACKEND_URL}")
 print(f"API Base: {API_BASE}")
 print("=" * 80)
 
-def test_scratch_card_cashback_credit_fix():
+def test_registration_control_system():
     """
-    SCRATCH CARD CASHBACK CREDIT FIX - RE-TESTING AFTER CRITICAL FIXES
+    REGISTRATION CONTROL SYSTEM TESTING
     
     Test Scenarios:
-    1. Find existing test user from previous tests (should have ₹5.4 in cashback_wallet_balance)
-    2. Test wallet endpoint fix - should now show correct cashback balance
-    3. Test scratch card history endpoint fix - should return valid JSON without 500 error
-    4. Purchase one more scratch card to verify end-to-end flow works
-    5. Verify all fixes are working correctly
+    1. Get Registration Status (Default)
+    2. Disable Registration
+    3. Test Registration Blocked (when disabled)
+    4. Test Simple Registration Blocked (when disabled)
+    5. Enable Registration
+    6. Test Registration Allowed (when enabled)
+    7. Update Registration Message Only
+    8. Get Updated Settings
     """
-    print(f"\n🎰 SCRATCH CARD CASHBACK CREDIT FIX - RE-TESTING AFTER CRITICAL FIXES")
+    print(f"\n🔐 REGISTRATION CONTROL SYSTEM TESTING")
     print("=" * 80)
-    print(f"Testing fixes: wallet endpoint field priority + history ObjectId serialization")
+    print(f"Testing admin registration control functionality")
     print("=" * 80)
     
     test_results = {
