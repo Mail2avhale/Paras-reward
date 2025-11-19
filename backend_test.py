@@ -367,51 +367,44 @@ def test_registration_control_system():
     except Exception as e:
         print(f"❌ Error updating message: {e}")
     
-    print(f"\n🔍 STEP 7: FINAL SCRATCH CARD HISTORY VERIFICATION")
+    print(f"\n🔍 STEP 7: GET UPDATED SETTINGS")
     print("=" * 60)
     
-    # Final test of scratch card history endpoint to ensure it includes the new purchase
-    print(f"\n📋 Final scratch card history verification (should include new purchase)...")
+    # Test 8: Verify settings endpoint includes registration fields and values match
+    print(f"\n📋 Testing GET /api/v2/settings (should include registration fields)...")
     
     try:
-        response = requests.get(f"{API_BASE}/scratch-cards/history/{test_uid}", timeout=30)
+        response = requests.get(f"{API_BASE}/v2/settings", timeout=30)
         if response.status_code == 200:
             result = response.json()
-            history = result.get("history", [])
-            stats = result.get("stats", {})
+            print(f"✅ Settings endpoint working")
             
-            print(f"✅ Scratch card history endpoint working after new purchase")
-            print(f"   📋 Total cards played: {stats.get('total_cards_played', 0)}")
-            print(f"   📋 Total PRC spent: {stats.get('total_prc_spent', 0)}")
-            print(f"   📋 Total cashback won: ₹{stats.get('total_cashback_won', 0)}")
-            print(f"   📋 Average cashback per card: ₹{stats.get('avg_cashback_per_card', 0)}")
-            
-            # Verify the new purchase is included
-            if len(history) >= 1:  # Should have at least the new purchase
-                test_results["history_includes_new_purchase"] = True
-                print(f"✅ New purchase included in history")
+            # Check if registration fields are included
+            if "registration_enabled" in result and "registration_message" in result:
+                test_results["settings_include_registration_fields"] = True
+                print(f"✅ Settings include registration fields")
+                print(f"   📋 registration_enabled: {result.get('registration_enabled')}")
+                print(f"   📋 registration_message: '{result.get('registration_message')}'")
                 
-                # Check if the latest record contains proper fields and no _id
-                latest_card = history[0]  # Most recent should be first
-                if all(field in latest_card for field in ["card_type", "cashback_percentage", "cashback_inr", "prc_spent"]):
-                    print(f"   📋 Latest Card: Type {latest_card['card_type']}, {latest_card['cashback_percentage']}% = ₹{latest_card['cashback_inr']}")
-                    
-                    # Verify no _id field (ObjectId fix)
-                    if "_id" not in latest_card:
-                        print(f"   📋 ObjectId serialization fix confirmed - no _id field in response")
-                    else:
-                        print(f"   ⚠️  ObjectId field still present: {latest_card.get('_id')}")
+                # Verify values match latest updates
+                if (result.get("registration_enabled") == True and 
+                    "earn rewards" in result.get("registration_message", "").lower()):
+                    test_results["settings_values_match_updates"] = True
+                    print(f"✅ Settings values match latest updates")
                 else:
-                    print(f"   ⚠️  Missing required fields in history record")
+                    print(f"⚠️  Settings values don't match expected updates")
+                    print(f"   📋 Expected: enabled=True, message containing 'earn rewards'")
+                    print(f"   📋 Actual: enabled={result.get('registration_enabled')}, message='{result.get('registration_message')}'")
             else:
-                print(f"❌ No history records found")
+                print(f"❌ Settings missing registration fields")
+                print(f"   📋 Available fields: {list(result.keys())}")
                 
         else:
-            print(f"❌ Scratch card history endpoint failed: {response.status_code}")
+            print(f"❌ Settings endpoint failed: {response.status_code}")
             print(f"   Response: {response.text}")
             
     except Exception as e:
-        print(f"❌ Error getting final scratch card history: {e}")
+        print(f"❌ Error getting settings: {e}")
     
     # Final Summary
     print(f"\n🏁 SCRATCH CARD CASHBACK CREDIT FIX - RE-TEST SUMMARY")
