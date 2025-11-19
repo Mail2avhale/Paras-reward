@@ -22,6 +22,11 @@ const AdminSettings = ({ user }) => {
     telegram: '',
     whatsapp: ''
   });
+  
+  // Registration Control State
+  const [registrationEnabled, setRegistrationEnabled] = useState(true);
+  const [registrationMessage, setRegistrationMessage] = useState('New user registrations are currently closed. Please check back later.');
+  const [loadingRegistration, setLoadingRegistration] = useState(false);
 
   useEffect(() => {
     // Check if user is admin
