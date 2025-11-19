@@ -10679,6 +10679,35 @@ async def get_prc_analytics():
 
 # ========== END ADMIN PRC ANALYTICS ENDPOINTS ==========
 
+# Registration Control Endpoints
+@api_router.get("/admin/registration-status")
+async def get_registration_status():
+    """Get registration enabled status"""
+    settings = await db.settings.find_one({}, {"_id": 0, "registration_enabled": 1, "registration_message": 1})
+    if not settings:
+        return {"registration_enabled": True, "registration_message": ""}
+    return settings
+
+@api_router.post("/admin/toggle-registration")
+async def toggle_registration(request: Request):
+    """Toggle registration enabled/disabled (Admin only)"""
+    data = await request.json()
+    enabled = data.get("enabled", True)
+    message = data.get("message", "New user registrations are currently closed. Please check back later.")
+    
+    await db.settings.update_one(
+        {},
+        {"$set": {
+            "registration_enabled": enabled,
+            "registration_message": message,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    
+    status = "enabled" if enabled else "disabled"
+    return {"message": f"Registration {status} successfully", "registration_enabled": enabled}
+
 app.include_router(api_router)
 
 app.add_middleware(
