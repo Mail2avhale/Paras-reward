@@ -187,45 +187,74 @@ def test_registration_control_system():
     except Exception as e:
         print(f"❌ Error disabling registration: {e}")
     
-    print(f"\n🔍 STEP 3: TESTING SCRATCH CARD HISTORY ENDPOINT FIX")
+    print(f"\n🔍 STEP 3: TEST REGISTRATION BLOCKED (WHEN DISABLED)")
     print("=" * 60)
     
-    # Test Fix #2: Scratch card history endpoint should no longer return 500 error due to ObjectId serialization
-    print(f"\n📋 Testing scratch card history endpoint (should not return 500 error)...")
+    # Test 3: Test full registration blocked when disabled
+    print(f"\n📋 Testing POST /api/auth/register (should be blocked)...")
+    
+    timestamp = int(time.time())
+    full_registration_data = {
+        "email": f"newuser_{timestamp}@test.com",
+        "password": "Test@123",
+        "first_name": "Test",
+        "mobile": f"9876543{timestamp % 1000:03d}"
+    }
     
     try:
-        response = requests.get(f"{API_BASE}/scratch-cards/history/{test_uid}", timeout=30)
-        
-        if response.status_code == 200:
-            test_results["scratch_card_history_no_500_error"] = True
-            test_results["no_objectid_errors"] = True
-            print(f"✅ HISTORY FIX VERIFIED: No 500 error returned")
+        response = requests.post(f"{API_BASE}/auth/register", json=full_registration_data, timeout=30)
+        if response.status_code == 403:
+            test_results["full_registration_blocked"] = True
+            print(f"✅ Full registration correctly blocked (403)")
             
-            try:
-                result = response.json()
-                history = result.get("history", [])
-                stats = result.get("stats", {})
+            # Check if custom message is returned
+            error_detail = response.json().get("detail", "")
+            if "maintenance" in error_detail.lower():
+                test_results["blocked_message_correct"] = True
+                print(f"✅ Custom blocked message returned: '{error_detail}'")
+            else:
+                print(f"⚠️  Generic blocked message: '{error_detail}'")
                 
-                test_results["scratch_card_history_valid_json"] = True
-                print(f"✅ HISTORY FIX VERIFIED: Valid JSON returned")
-                print(f"   📋 History records: {len(history)}")
-                print(f"   📋 Stats: {stats}")
-                print(f"   📋 ObjectId serialization fix working - no _id fields in response")
-                
-            except json.JSONDecodeError as e:
-                print(f"❌ HISTORY FIX FAILED: Invalid JSON returned")
-                print(f"   📋 JSON decode error: {e}")
-                
-        elif response.status_code == 500:
-            print(f"❌ HISTORY FIX FAILED: Still returning 500 Internal Server Error")
-            print(f"   📋 ObjectId serialization issue not fixed")
-            print(f"   Response: {response.text}")
+        elif response.status_code == 200:
+            print(f"❌ Full registration NOT blocked - should have been blocked")
+            print(f"   Response: {response.json()}")
         else:
             print(f"⚠️  Unexpected status code: {response.status_code}")
             print(f"   Response: {response.text}")
             
     except Exception as e:
-        print(f"❌ Error testing scratch card history: {e}")
+        print(f"❌ Error testing full registration block: {e}")
+    
+    # Test 4: Test simple registration blocked when disabled
+    print(f"\n📋 Testing POST /api/auth/register/simple (should be blocked)...")
+    
+    simple_registration_data = {
+        "email": f"simple_{timestamp}@test.com",
+        "password": "Test@123"
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/auth/register/simple", json=simple_registration_data, timeout=30)
+        if response.status_code == 403:
+            test_results["simple_registration_blocked"] = True
+            print(f"✅ Simple registration correctly blocked (403)")
+            
+            # Check if custom message is returned
+            error_detail = response.json().get("detail", "")
+            if "maintenance" in error_detail.lower():
+                print(f"✅ Custom blocked message returned: '{error_detail}'")
+            else:
+                print(f"⚠️  Generic blocked message: '{error_detail}'")
+                
+        elif response.status_code == 200:
+            print(f"❌ Simple registration NOT blocked - should have been blocked")
+            print(f"   Response: {response.json()}")
+        else:
+            print(f"⚠️  Unexpected status code: {response.status_code}")
+            print(f"   Response: {response.text}")
+            
+    except Exception as e:
+        print(f"❌ Error testing simple registration block: {e}")
     
     print(f"\n🔍 STEP 4: TESTING END-TO-END FLOW WITH NEW PURCHASE")
     print("=" * 60)
