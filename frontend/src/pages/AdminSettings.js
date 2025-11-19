@@ -46,6 +46,15 @@ const AdminSettings = ({ user }) => {
       console.error('Error fetching settings:', error);
       toast.error('Failed to load settings');
     }
+    
+    // Fetch registration status
+    try {
+      const regResponse = await axios.get(`${API}/api/admin/registration-status`);
+      setRegistrationEnabled(regResponse.data.registration_enabled || false);
+      setRegistrationMessage(regResponse.data.registration_message || 'New user registrations are currently closed. Please check back later.');
+    } catch (error) {
+      console.error('Error fetching registration status:', error);
+    }
   };
 
   const handleChange = (field, value) => {
