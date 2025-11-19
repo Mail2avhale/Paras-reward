@@ -151,38 +151,41 @@ def test_registration_control_system():
         print(f"❌ Error testing registration status: {e}")
         return test_results
     
-    print(f"\n🔍 STEP 2: TESTING WALLET ENDPOINT FIX")
+    print(f"\n🔍 STEP 2: DISABLE REGISTRATION")
     print("=" * 60)
     
-    # Test Fix #1: Wallet endpoint should now prioritize cashback_wallet_balance field
-    print(f"\n📋 Testing wallet endpoint shows correct cashback balance...")
+    # Test 2: Disable registration with custom message
+    print(f"\n📋 Testing POST /api/admin/toggle-registration (disable)...")
+    
+    disable_data = {
+        "enabled": False,
+        "message": "Registration temporarily closed for maintenance."
+    }
     
     try:
-        response = requests.get(f"{API_BASE}/wallet/{test_uid}", timeout=30)
+        response = requests.post(f"{API_BASE}/admin/toggle-registration", json=disable_data, timeout=30)
         if response.status_code == 200:
-            wallet_data = response.json()
-            returned_cashback = wallet_data.get("cashback_balance", 0)
-            returned_prc = wallet_data.get("prc_balance", 0)
+            result = response.json()
+            test_results["disable_registration_success"] = True
+            print(f"✅ Disable registration successful")
+            print(f"   📋 Response: {result}")
             
-            print(f"✅ Wallet endpoint working")
-            print(f"   📋 Returned Cashback Balance: ₹{returned_cashback}")
-            print(f"   📋 Returned PRC Balance: {returned_prc}")
-            
-            # Verify the fix: wallet should show the correct cashback balance
-            if abs(returned_cashback - existing_cashback_balance) < 0.01:
-                test_results["wallet_endpoint_shows_correct_balance"] = True
-                test_results["field_consistency_fixed"] = True
-                print(f"✅ WALLET FIX VERIFIED: Endpoint correctly shows ₹{returned_cashback} cashback")
-                print(f"   📋 Field priority fix working - cashback_wallet_balance field is prioritized")
+            # Check response structure
+            if result.get("registration_enabled") == False and "disabled" in result.get("message", "").lower():
+                test_results["disable_registration_response_correct"] = True
+                print(f"✅ Disable registration response correct")
+                print(f"   📋 Registration enabled: {result.get('registration_enabled')}")
+                print(f"   📋 Message: {result.get('message')}")
             else:
-                print(f"❌ WALLET FIX FAILED: Expected ₹{existing_cashback_balance}, got ₹{returned_cashback}")
-                print(f"   📋 Field priority issue still exists")
+                print(f"❌ Disable registration response incorrect")
+                print(f"   📋 Expected registration_enabled=False, got: {result.get('registration_enabled')}")
+                
         else:
-            print(f"❌ Wallet endpoint failed: {response.status_code}")
+            print(f"❌ Disable registration failed: {response.status_code}")
             print(f"   Response: {response.text}")
             
     except Exception as e:
-        print(f"❌ Error testing wallet endpoint: {e}")
+        print(f"❌ Error disabling registration: {e}")
     
     print(f"\n🔍 STEP 3: TESTING SCRATCH CARD HISTORY ENDPOINT FIX")
     print("=" * 60)
