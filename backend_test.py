@@ -474,13 +474,13 @@ def test_registration_control_system():
     return test_results
 
 def main():
-    """Run the scratch card cashback credit fix verification"""
-    print(f"\n🚀 STARTING SCRATCH CARD CASHBACK CREDIT FIX TESTING")
+    """Run the registration control system testing"""
+    print(f"\n🚀 STARTING REGISTRATION CONTROL SYSTEM TESTING")
     print(f"Timestamp: {datetime.now().isoformat()}")
     print("=" * 80)
     
-    # Run the scratch card tests
-    results = test_scratch_card_cashback_credit_fix()
+    # Run the registration control tests
+    results = test_registration_control_system()
     
     # Count results
     total_tests = len(results)
@@ -492,9 +492,9 @@ def main():
     
     if passed_tests == total_tests:
         print(f"\n🎉 SUCCESS - ALL TESTS PASSED!")
-        print(f"✅ Scratch card cashback credit fix is working perfectly")
+        print(f"✅ Registration control system is working perfectly")
         print(f"✅ All endpoints tested and verified")
-        print(f"✅ Transaction logging system working correctly")
+        print(f"✅ Admin can control registration status and messages")
         return 0
     elif passed_tests >= total_tests * 0.8:
         print(f"\n⚠️  MOSTLY WORKING - {total_tests - passed_tests} tests failed")
@@ -504,7 +504,7 @@ def main():
     else:
         print(f"\n❌ CRITICAL ISSUES - {total_tests - passed_tests} tests failed")
         print(f"❌ Significant problems detected")
-        print(f"❌ System needs investigation")
+        print(f"❌ Registration control system needs investigation")
         return 1
 
 if __name__ == "__main__":
