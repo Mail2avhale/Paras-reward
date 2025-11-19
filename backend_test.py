@@ -292,37 +292,45 @@ def test_registration_control_system():
     except Exception as e:
         print(f"❌ Error enabling registration: {e}")
     
-    print(f"\n🔍 STEP 5: VERIFYING WALLET ENDPOINT REFLECTS NEW BALANCE")
+    print(f"\n🔍 STEP 5: TEST REGISTRATION ALLOWED (WHEN ENABLED)")
     print("=" * 60)
     
-    # Verify wallet endpoint shows the updated balance after new purchase
-    print(f"\n📋 Checking wallet endpoint shows updated balance...")
+    # Test 6: Test registration works when enabled
+    print(f"\n📋 Testing POST /api/auth/register/simple (should work now)...")
+    
+    timestamp = int(time.time())
+    allowed_registration_data = {
+        "email": f"allowed_{timestamp}@test.com",
+        "password": "Test@123"
+    }
+    
+    created_uid = None
     
     try:
-        response = requests.get(f"{API_BASE}/wallet/{test_uid}", timeout=30)
+        response = requests.post(f"{API_BASE}/auth/register/simple", json=allowed_registration_data, timeout=30)
         if response.status_code == 200:
-            wallet_data = response.json()
-            final_cashback = wallet_data.get("cashback_balance", 0)
-            final_prc = wallet_data.get("prc_balance", 0)
+            result = response.json()
+            created_uid = result.get("uid")
+            test_results["registration_allowed_when_enabled"] = True
+            print(f"✅ Registration allowed when enabled (200 OK)")
+            print(f"   📋 Response: {result}")
             
-            print(f"✅ Wallet endpoint working after purchase")
-            print(f"   📋 Final Cashback Balance: ₹{final_cashback}")
-            print(f"   📋 Final PRC Balance: {final_prc}")
-            
-            # Should show original balance + new cashback won
-            expected_final_cashback = existing_cashback_balance + new_cashback_won
-            if abs(final_cashback - expected_final_cashback) < 0.01:
-                test_results["wallet_shows_updated_balance"] = True
-                print(f"✅ WALLET UPDATE VERIFIED: Shows correct updated balance ₹{final_cashback}")
-                print(f"   📋 Calculation: ₹{existing_cashback_balance} + ₹{new_cashback_won} = ₹{final_cashback}")
+            # Check if user was created with UID
+            if created_uid:
+                test_results["user_created_successfully"] = True
+                print(f"✅ User created successfully with UID: {created_uid}")
             else:
-                print(f"❌ WALLET UPDATE FAILED: Expected ₹{expected_final_cashback}, got ₹{final_cashback}")
+                print(f"❌ User creation failed - no UID returned")
                 
+        elif response.status_code == 403:
+            print(f"❌ Registration still blocked - should be allowed now")
+            print(f"   Response: {response.json()}")
         else:
-            print(f"❌ Wallet endpoint failed after purchase: {response.status_code}")
+            print(f"⚠️  Unexpected status code: {response.status_code}")
+            print(f"   Response: {response.text}")
             
     except Exception as e:
-        print(f"❌ Error checking updated wallet balance: {e}")
+        print(f"❌ Error testing allowed registration: {e}")
     
     print(f"\n🔍 STEP 6: VERIFYING TRANSACTION LOGGING")
     print("=" * 60)
