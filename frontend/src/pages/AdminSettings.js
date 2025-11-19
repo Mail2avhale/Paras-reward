@@ -73,6 +73,44 @@ const AdminSettings = ({ user }) => {
       setLoading(false);
     }
   };
+  
+  const handleToggleRegistration = async () => {
+    setLoadingRegistration(true);
+    try {
+      const response = await axios.post(`${API}/api/admin/toggle-registration`, {
+        enabled: !registrationEnabled,
+        message: registrationMessage
+      });
+      
+      setRegistrationEnabled(!registrationEnabled);
+      const status = !registrationEnabled ? 'enabled' : 'disabled';
+      toast.success(`User registration ${status} successfully!`, {
+        description: !registrationEnabled ? 'New users can now register' : 'New user registrations are blocked',
+        duration: 4000
+      });
+    } catch (error) {
+      console.error('Error toggling registration:', error);
+      toast.error('Failed to update registration status');
+    } finally {
+      setLoadingRegistration(false);
+    }
+  };
+  
+  const handleUpdateMessage = async () => {
+    setLoadingRegistration(true);
+    try {
+      await axios.post(`${API}/api/admin/toggle-registration`, {
+        enabled: registrationEnabled,
+        message: registrationMessage
+      });
+      toast.success('Registration message updated successfully!');
+    } catch (error) {
+      console.error('Error updating message:', error);
+      toast.error('Failed to update message');
+    } finally {
+      setLoadingRegistration(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
