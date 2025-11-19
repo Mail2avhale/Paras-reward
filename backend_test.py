@@ -82,22 +82,35 @@ def test_registration_control_system():
     print("=" * 80)
     
     test_results = {
-        # Fix Verification Tests
-        "existing_user_found": False,
-        "wallet_endpoint_shows_correct_balance": False,
-        "scratch_card_history_no_500_error": False,
-        "scratch_card_history_valid_json": False,
+        # Registration Status Tests
+        "get_default_registration_status": False,
+        "default_registration_enabled": False,
+        "default_message_exists": False,
         
-        # End-to-End Flow Tests
-        "new_purchase_successful": False,
-        "new_purchase_cashback_credited": False,
-        "wallet_shows_updated_balance": False,
-        "transaction_logged_correctly": False,
-        "history_includes_new_purchase": False,
+        # Disable Registration Tests
+        "disable_registration_success": False,
+        "disable_registration_response_correct": False,
         
-        # Overall System Health
-        "no_objectid_errors": False,
-        "field_consistency_fixed": False
+        # Registration Blocked Tests
+        "full_registration_blocked": False,
+        "simple_registration_blocked": False,
+        "blocked_message_correct": False,
+        
+        # Enable Registration Tests
+        "enable_registration_success": False,
+        "enable_registration_response_correct": False,
+        
+        # Registration Allowed Tests
+        "registration_allowed_when_enabled": False,
+        "user_created_successfully": False,
+        
+        # Message Update Tests
+        "message_update_only_success": False,
+        "message_updated_correctly": False,
+        
+        # Settings Persistence Tests
+        "settings_include_registration_fields": False,
+        "settings_values_match_updates": False
     }
     
     print(f"\n🔍 STEP 1: FINDING EXISTING TEST USER WITH CASHBACK BALANCE")
