@@ -256,57 +256,41 @@ def test_registration_control_system():
     except Exception as e:
         print(f"❌ Error testing simple registration block: {e}")
     
-    print(f"\n🔍 STEP 4: TESTING END-TO-END FLOW WITH NEW PURCHASE")
+    print(f"\n🔍 STEP 4: ENABLE REGISTRATION")
     print("=" * 60)
     
-    # Test complete end-to-end flow: Purchase one more scratch card to verify everything works
-    print(f"\n📋 Testing new Bronze Card (10 PRC) purchase to verify complete flow...")
+    # Test 5: Enable registration with welcome message
+    print(f"\n📋 Testing POST /api/admin/toggle-registration (enable)...")
     
-    new_transaction_id = None
-    new_cashback_won = 0
+    enable_data = {
+        "enabled": True,
+        "message": "Welcome! Register to get started."
+    }
     
     try:
-        # Get initial balances (should show the fixed cashback balance)
-        response = requests.get(f"{API_BASE}/wallet/{test_uid}", timeout=30)
-        if response.status_code == 200:
-            wallet_data = response.json()
-            prc_before = wallet_data.get("prc_balance", 0)
-            cashback_before = wallet_data.get("cashback_balance", 0)  # Using the returned field name
-            print(f"   📋 PRC Balance Before: {prc_before}")
-            print(f"   📋 Cashback Balance Before: ₹{cashback_before}")
-        
-        # Purchase Bronze Card
-        purchase_data = {"card_type": 10}
-        response = requests.post(f"{API_BASE}/scratch-cards/purchase?uid={test_uid}", json=purchase_data, timeout=30)
-        
+        response = requests.post(f"{API_BASE}/admin/toggle-registration", json=enable_data, timeout=30)
         if response.status_code == 200:
             result = response.json()
-            new_transaction_id = result.get("transaction_id")
-            new_cashback_won = result.get("cashback_won_inr", 0)
+            test_results["enable_registration_success"] = True
+            print(f"✅ Enable registration successful")
+            print(f"   📋 Response: {result}")
             
-            test_results["new_purchase_successful"] = True
-            print(f"✅ New purchase successful")
-            print(f"   📋 Transaction ID: {new_transaction_id}")
-            print(f"   📋 Cashback Won: ₹{new_cashback_won}")
-            print(f"   📋 Cashback Percentage: {result.get('cashback_percentage')}%")
-            print(f"   📋 New PRC Balance: {result.get('new_prc_balance')}")
-            print(f"   📋 New Cashback Balance: {result.get('new_cashback_wallet')}")
-            
-            # Verify cashback credit
-            expected_cashback_after = cashback_before + new_cashback_won
-            actual_cashback_after = result.get('new_cashback_wallet')
-            if abs(actual_cashback_after - expected_cashback_after) < 0.01:
-                test_results["new_purchase_cashback_credited"] = True
-                print(f"✅ Cashback credit correct: ₹{cashback_before} + ₹{new_cashback_won} = ₹{actual_cashback_after}")
+            # Check response structure
+            if result.get("registration_enabled") == True and "enabled" in result.get("message", "").lower():
+                test_results["enable_registration_response_correct"] = True
+                print(f"✅ Enable registration response correct")
+                print(f"   📋 Registration enabled: {result.get('registration_enabled')}")
+                print(f"   📋 Message: {result.get('message')}")
             else:
-                print(f"❌ Cashback credit incorrect: Expected ₹{expected_cashback_after}, got ₹{actual_cashback_after}")
+                print(f"❌ Enable registration response incorrect")
+                print(f"   📋 Expected registration_enabled=True, got: {result.get('registration_enabled')}")
                 
         else:
-            print(f"❌ New purchase failed: {response.status_code}")
+            print(f"❌ Enable registration failed: {response.status_code}")
             print(f"   Response: {response.text}")
             
     except Exception as e:
-        print(f"❌ Error with new purchase: {e}")
+        print(f"❌ Error enabling registration: {e}")
     
     print(f"\n🔍 STEP 5: VERIFYING WALLET ENDPOINT REFLECTS NEW BALANCE")
     print("=" * 60)
