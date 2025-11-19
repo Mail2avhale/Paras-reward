@@ -1,36 +1,34 @@
 #!/usr/bin/env python3
 """
-SCRATCH CARD CASHBACK CREDIT FIX - RE-TESTING AFTER CRITICAL FIXES
+REGISTRATION CONTROL SYSTEM TESTING
 
-Re-tests the scratch card cashback credit functionality after applying two critical fixes:
-
-FIXES APPLIED:
-1. Fixed wallet endpoint to prioritize 'cashback_wallet_balance' field correctly
-2. Fixed scratch card history endpoint to exclude ObjectId fields (added {"_id": 0} projection)
+Tests the newly implemented Registration Control System for admin settings.
 
 TEST SCENARIOS:
-1. Find the test user from previous test (should have ₹5.4 in cashback_wallet_balance)
-2. Check wallet endpoint now returns correct cashback balance
-3. Verify scratch card history endpoint no longer returns 500 error
-4. Purchase one more scratch card to verify end-to-end flow:
-   - Check initial balances
-   - Purchase 10 PRC Bronze card
-   - Verify cashback credited
-   - Verify wallet endpoint shows updated balance
-   - Verify transaction in history
-   - Verify scratch card history works
+1. Get Registration Status (Default) - GET /api/admin/registration-status
+2. Disable Registration - POST /api/admin/toggle-registration
+3. Test Registration Blocked (when disabled) - POST /api/auth/register
+4. Test Simple Registration Blocked (when disabled) - POST /api/auth/register/simple
+5. Enable Registration - POST /api/admin/toggle-registration
+6. Test Registration Allowed (when enabled) - POST /api/auth/register/simple
+7. Update Registration Message Only - POST /api/admin/toggle-registration
+8. Get Updated Settings - GET /api/v2/settings
 
 ENDPOINTS TO TEST:
-- GET /api/wallet/{uid} (should show ₹5.4 cashback_balance from previous tests)
-- GET /api/scratch-cards/history/{uid} (should return valid JSON without 500 error)
-- POST /api/scratch-cards/purchase (one more purchase to verify complete flow)
-- GET /api/wallet/transactions/{uid} (verify transaction logged)
+- GET /api/admin/registration-status
+- POST /api/admin/toggle-registration
+- POST /api/auth/register
+- POST /api/auth/register/simple
+- GET /api/v2/settings
 
 SUCCESS CRITERIA:
-- Wallet endpoint shows correct cashback balance (₹5.4 from previous tests)
-- Scratch card history returns valid JSON with stats
-- New purchase credits cashback correctly and wallet reflects it immediately
-- No ObjectId serialization errors
+✅ Registration status endpoint returns correct data
+✅ Toggle registration works (enable/disable)
+✅ Registration is blocked when disabled (both endpoints)
+✅ Custom message is displayed when blocked
+✅ Registration works when enabled
+✅ Message updates correctly
+✅ Settings persist across requests
 """
 
 import requests
