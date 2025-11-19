@@ -931,6 +931,18 @@ agent_communication:
   - agent: "testing"
     message: "WITHDRAWAL AMOUNT DISPLAY FIX TESTING COMPLETE: Successfully verified the fix for withdrawal amount display issue. The frontend code now correctly uses `withdrawal.amount_requested` and `withdrawal.amount_to_receive` fields instead of the non-existent `withdrawal.amount` field. Backend API confirmed to return proper data structure. Users will now see correct requested amounts instead of ₹0.00. Fix is production-ready."
 
+  - task: "Registration Control System for Admin Settings"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE REGISTRATION CONTROL SYSTEM TESTING COMPLETE - ALL FUNCTIONALITY WORKING PERFECTLY (16/16 tests passed - 100%): ✅ REGISTRATION STATUS ENDPOINT: GET /api/admin/registration-status returns correct data with registration_enabled and registration_message fields, defaults to enabled=true with empty message. ✅ TOGGLE REGISTRATION CONTROL: POST /api/admin/toggle-registration successfully enables/disables registration with custom messages, proper response structure with confirmation messages. ✅ REGISTRATION BLOCKING VERIFIED: When disabled, both POST /api/auth/register and POST /api/auth/register/simple correctly return 403 errors with custom message 'Registration temporarily closed for maintenance.' ✅ REGISTRATION ALLOWED VERIFIED: When enabled, POST /api/auth/register/simple successfully creates users (tested with UID: ff0a45fe-e9cc-4637-a042-ec1fd26f8435), returns proper success response with UID. ✅ MESSAGE UPDATE FUNCTIONALITY: Admin can update registration message while maintaining enabled status, messages persist correctly across requests. ✅ SETTINGS PERSISTENCE: GET /api/v2/settings includes registration_enabled and registration_message fields, values match latest updates from toggle operations. ✅ ENDPOINT ROUTING FIX: Fixed critical issue where registration control endpoints were defined after app.include_router() call, moved endpoints before router inclusion to ensure proper registration. ✅ SUCCESS CRITERIA MET: Registration status endpoint returns correct data, toggle registration works (enable/disable), registration is blocked when disabled (both endpoints), custom message is displayed when blocked, registration works when enabled, message updates correctly, settings persist across requests. Registration control system is production-ready and fully functional for admin management."
+
 frontend:
   - task: "App Download/Installation Button Fix"
     implemented: true
