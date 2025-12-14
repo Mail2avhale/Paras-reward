@@ -981,18 +981,58 @@ async def get_delivery_charge(user, total_prc: float):
     return 50 if is_vip else 100
 
 async def calculate_mining_rate(uid: str):
-    """Calculate mining rate per minute"""
+    """
+    Calculate mining rate per minute with multi-level referral bonuses
+    
+    Formula:
+    - Base Rate: 50 (decreases by 1 per 200 users, min 20)
+    - Daily Multiplier: Current day of month
+    - Referral Bonuses (5 levels):
+      * Level 1: +10% per active referral
+      * Level 2: +5% per active referral
+      * Level 3: +2.5% per active referral
+      * Level 4: +1.5% per active referral
+      * Level 5: +1.0% per active referral
+    """
     base_rate = await get_base_rate()
-    active_referrals = await get_active_referrals(uid)
     current_date = datetime.now(timezone.utc).day
     
-    # Add referral bonus (10% per active referral)
-    referral_bonus = active_referrals * 0.1 * base_rate
-    total_rate = (current_date * base_rate) + referral_bonus
+    # Get multi-level active referrals
+    active_referrals_by_level = await count_active_referrals_by_level(uid)
+    
+    # Calculate referral bonuses for each level
+    referral_bonus_percentages = {
+        'level_1': 0.10,  # 10%
+        'level_2': 0.05,  # 5%
+        'level_3': 0.025, # 2.5%
+        'level_4': 0.015, # 1.5%
+        'level_5': 0.01   # 1.0%
+    }
+    
+    total_referral_bonus = 0
+    referral_breakdown = {}
+    
+    for level, count in active_referrals_by_level.items():
+        if count > 0:
+            bonus_percentage = referral_bonus_percentages.get(level, 0)
+            level_bonus = count * bonus_percentage * base_rate
+            total_referral_bonus += level_bonus
+            referral_breakdown[level] = {
+                'count': count,
+                'percentage': bonus_percentage * 100,
+                'bonus': level_bonus
+            }
+    
+    # Total daily rate = (current_date * base_rate) + total_referral_bonus
+    total_rate = (current_date * base_rate) + total_referral_bonus
     
     # Per minute rate
     per_minute_rate = total_rate / 1440
-    return per_minute_rate, base_rate, active_referrals
+    
+    # Total active referrals across all levels
+    total_active_referrals = sum(active_referrals_by_level.values())
+    
+    return per_minute_rate, base_rate, total_active_referrals, referral_breakdown
 
 async def update_mined_coins(uid: str):
     """Update user's mined coins based on time elapsed"""
