@@ -2418,9 +2418,10 @@ async def checkout(request: Request):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Check VIP status
-    if user.get("membership_type") != "vip":
-        raise HTTPException(status_code=403, detail="VIP membership required for marketplace access")
+    # Check marketplace access (VIP required and not expired)
+    marketplace_check = await check_vip_marketplace_access(user_id)
+    if not marketplace_check["allowed"]:
+        raise HTTPException(status_code=403, detail=marketplace_check["reason"])
     
     # Get cart
     cart = await db.carts.find_one({"user_id": user_id})
