@@ -3938,28 +3938,79 @@ async def get_wallet_transactions(uid: str, wallet_type: str = None, page: int =
     }
 
 @api_router.get("/transactions/user/{uid}")
-async def get_user_transactions_simple(uid: str):
-    """Get recent transactions for user dashboard - simple format"""
+async def get_user_transactions_simple(uid: str, page: int = 1, limit: int = 5):
+    """Get recent transactions for user dashboard with pagination - 5 records per page"""
     try:
+        skip = (page - 1) * limit
+        
+        # Get total count
+        total = await db.transactions.count_documents({"user_id": uid})
+        total_pages = (total + limit - 1) // limit if total > 0 else 1
+        
+        # Get transactions for current page
         transactions = await db.transactions.find(
             {"user_id": uid},
             {"_id": 0}
-        ).sort("created_at", -1).limit(10).to_list(10)
+        ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
         
-        # Format for dashboard compatibility
+        # Format for dashboard compatibility with detailed activity labels
         formatted = []
         for txn in transactions:
+            txn_type = txn.get("type", "unknown")
+            
+            # Enhanced descriptions for different activity types
+            if txn_type == "mining":
+                description = "Claimed mining rewards"
+            elif txn_type == "mining_started":
+                description = "Started mining session"
+            elif txn_type == "marketplace_purchase" or txn_type == "order":
+                description = txn.get("description", "Marketplace purchase")
+            elif txn_type == "bill_payment_request":
+                description = txn.get("description", "Bill payment request submitted")
+            elif txn_type == "gift_voucher_request":
+                description = txn.get("description", "Gift voucher request submitted")
+            elif txn_type == "referral_bonus" or txn_type == "referral":
+                description = "Referral bonus earned"
+            elif txn_type == "tap_game":
+                description = "Tap game rewards"
+            elif txn_type == "delivery_commission":
+                description = "Delivery commission earned"
+            elif txn_type == "delivery_charge":
+                description = txn.get("description", "Delivery charge deducted")
+            else:
+                description = txn.get("description", txn_type.replace("_", " ").title())
+            
             formatted.append({
-                "type": txn.get("type", "unknown"),
+                "type": txn_type,
                 "amount": txn.get("amount", 0),
                 "timestamp": txn.get("created_at"),
-                "description": txn.get("description", "")
+                "description": description
             })
         
-        return formatted
+        return {
+            "transactions": formatted,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1
+            }
+        }
     except Exception as e:
         print(f"Error fetching transactions: {e}")
-        return []
+        return {
+            "transactions": [],
+            "pagination": {
+                "page": 1,
+                "limit": 5,
+                "total": 0,
+                "total_pages": 1,
+                "has_next": False,
+                "has_prev": False
+            }
+        }
 
 
 @api_router.get("/transactions/user/{uid}/detailed")
