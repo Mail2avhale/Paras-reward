@@ -843,27 +843,12 @@ const ProfileAdvanced = ({ user, onLogout }) => {
 
                       <div>
                         <Label htmlFor="tahsil">Tahsil / Taluka</Label>
-                        <select
+                        <Input
                           id="tahsil"
                           value={contactDetails.tahsil}
-                          onChange={(e) => {
-                            setContactDetails({ 
-                              ...contactDetails, 
-                              tahsil: e.target.value,
-                              pincode: ''
-                            });
-                          }}
-                          disabled={!contactDetails.district}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                        >
-                          <option value="">Select Tahsil</option>
-                          {availableTahsils.map(tahsil => (
-                            <option key={tahsil} value={tahsil}>{tahsil}</option>
-                          ))}
-                        </select>
-                        {!contactDetails.district && (
-                          <p className="text-xs text-gray-500 mt-1">Please select a district first</p>
-                        )}
+                          onChange={(e) => setContactDetails({ ...contactDetails, tahsil: e.target.value })}
+                          placeholder="Enter your tahsil"
+                        />
                       </div>
 
                       <div>
@@ -878,21 +863,13 @@ const ProfileAdvanced = ({ user, onLogout }) => {
 
                       <div>
                         <Label htmlFor="pincode">PIN Code</Label>
-                        <select
+                        <Input
                           id="pincode"
                           value={contactDetails.pincode}
                           onChange={(e) => setContactDetails({ ...contactDetails, pincode: e.target.value })}
-                          disabled={!contactDetails.tahsil}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                        >
-                          <option value="">Select PIN Code</option>
-                          {availablePincodes.map(pin => (
-                            <option key={pin} value={pin}>{pin}</option>
-                          ))}
-                        </select>
-                        {!contactDetails.tahsil && (
-                          <p className="text-xs text-gray-500 mt-1">Please select a tahsil first</p>
-                        )}
+                          placeholder="Enter 6-digit PIN code"
+                          maxLength={6}
+                        />
                       </div>
                     </div>
                   </div>
