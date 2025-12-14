@@ -252,7 +252,7 @@ backend:
 
   - task: "Delivery Charge Auto-Distribution"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 2
     priority: "critical"
