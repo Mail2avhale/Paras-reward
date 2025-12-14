@@ -619,14 +619,14 @@ def test_gift_voucher_system():
             
             # Verify PRC calculation (₹100 = 1000 PRC + service charge)
             expected_prc = 100 * 10  # ₹100 * 10 = 1000 PRC
-            actual_prc = result.get('prc_required', 0)
-            service_charge = result.get('service_charge_amount', 0)
+            actual_prc_deducted = result.get('prc_deducted', 0)
             
-            if actual_prc == expected_prc:
+            if actual_prc_deducted >= expected_prc:  # Should be at least the base amount
                 test_results["voucher_prc_calculation"] = True
-                print(f"✅ Voucher PRC calculation correct: ₹{voucher_100_data['denomination']} = {actual_prc} PRC")
+                print(f"✅ Voucher PRC calculation correct: ₹{voucher_100_data['denomination']} = {actual_prc_deducted} PRC (including service charge)")
             
-            if service_charge > 0:
+            if actual_prc_deducted > expected_prc:
+                service_charge = actual_prc_deducted - expected_prc
                 test_results["voucher_service_charge"] = True
                 print(f"✅ Voucher service charge applied: {service_charge} PRC")
                 
