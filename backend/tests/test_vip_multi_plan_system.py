@@ -395,7 +395,8 @@ def test_vip_multi_plan_system():
             # Verify combined discount calculation
             response = requests.get(f"{API_BASE}/vip/plans", timeout=30)
             if response.status_code == 200:
-                updated_plans = response.json()
+                updated_response = response.json()
+                updated_plans = updated_response.get("plans", [])
                 yearly_plan = next((p for p in updated_plans if p["plan_type"] == "yearly"), None)
                 
                 if yearly_plan:
