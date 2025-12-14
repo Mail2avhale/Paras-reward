@@ -212,9 +212,6 @@ const Dashboard = ({ user, onLogout }) => {
             </div>
           </Card>
         )}
-
-        {!isAdmin && (
-        )}
       </div>
     </div>
   );
