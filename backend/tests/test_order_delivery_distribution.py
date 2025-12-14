@@ -80,10 +80,11 @@ class TestData:
         self.delivery_charge_rate = 0.15  # 15%
         self.delivery_charge = self.order_prc * self.delivery_charge_rate  # 150 PRC
         
-        # Distribution percentages (default)
-        self.master_percentage = 20  # 20%
-        self.sub_percentage = 30     # 30%
-        self.outlet_percentage = 50  # 50%
+        # Distribution percentages (actual configuration)
+        self.master_percentage = 10  # 10%
+        self.sub_percentage = 20     # 20%
+        self.outlet_percentage = 60  # 60%
+        self.company_percentage = 10 # 10%
         
         # Expected distribution amounts
         self.expected_master_amount = self.delivery_charge * (self.master_percentage / 100)  # 30 PRC
