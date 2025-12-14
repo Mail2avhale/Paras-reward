@@ -1,86 +1,216 @@
-<analysis>
-The AI engineer iteratively enhanced the PARAS REWARD application from MVP, addressing a wide range of user requests. Initial work focused on critical bug fixes and dashboard redesigns, including backend routing, stockist dashboards, image uploads, and KYC status. The Admin Dashboard was unified, fixing navigation and dynamic class issues. Subsequent feature development included multi-language support, animated logos, social media integration, a Scratch Card game, and PRC analytics. Throughout the trajectory, the AI engineer demonstrated a strong ability to diagnose and resolve issues, often involving detailed code inspection and iterative testing. Key efforts included refining transaction logging, implementing pagination, improving UI/UX (dashboard layout, animated feedback), and making the Scratch Card game more realistic. The process involved constant user interaction for clarification and feedback, leading to a robust and feature-rich application ready for deployment.
-</analysis>
+<analysis>Here is the summary of the current session:
 
-<product_requirements>
-The PARAS REWARD application is a crypto-mining platform (10 PRC = ₹1 INR) featuring multi-item cart, atomic PRC deduction, and KYC-dependent cashback. It has multi-wallet financial systems, RBAC dashboards, password recovery, and support tickets. Recent enhancements included real-time notifications, analytics, pagination, offline PWA, advanced search/filters, referral/gamification dashboards, flash sales, and a PRC Treasure Hunt game.
+**original_problem_statement:** The user requested a major application refactor with the following key requirements:
+- **Feature Removal**: Delete the Scratch Card and Treasure Hunt games.
+- **Wallet Simplification**: Remove the Cashback and Earning wallets, keeping only the main PRC balance.
+- **UI/UX Overhaul**:
+    - Redesign the user dashboard to mimic the style of Pi Network, PhonePe, or GPay, including a bottom menu bar for quick actions.
+    - Add Back buttons in all user sections for improved navigation.
+- **VIP Membership Rework**:
+    - Replace the single yearly plan with multiple tiers: Monthly, Quarterly, Half-Yearly, and Yearly.
+    - Allow an admin to set and apply discounts to these membership plans.
+- **Business Logic Updates**:
+    - Implement a PRC Burn rule: PRC earned by free users burns after 2 days, and PRC for expired VIPs burns after 5 days (using a FIFO approach).
+    - Block marketplace access for expired VIPs until they renew.
+    - Update the mining base rate to be dynamic (decreasing with more users) and expand the referral bonus system to five levels.
+- **Content Creation**: Add a Refund Policy page.
+- **New Features**:
+    - Build an advanced profile management page with sections for profile image, personal info, contact, bank details, security, and password change.
+    - Implement cascading dropdowns for State -> District -> Tehsil in the user profile.
+    - Add an admin setting to enable or disable new user registrations.
+- **Bug Fixes & Verification**:
+    - Address an error preventing the profile page from loading data.
+    - Fix an issue with a broken preview link.
+    - Add the PRC-to-INR conversion ratio back to the dashboard.
+    - Restore the Tap Game which was accidentally removed.
 
-Key additions made by the previous AI engineer include: Free User Plan implementation, Flexible KYC Document Selection, Enhanced Notification System, Manager Role Dashboard, Image Upload Enhancements (client-side crop/resize/compress), Admin Dashboard Redesign for unification and quick access, Role-Based Redirection, Proactive low balance check for Treasure Hunt, Multi-language Support (Hindi, English, Marathi, Gujarati), Android App Download, Admin Social Media Settings, Animated Logo, a Scratch Card Game with cashback, and a PRC Analytics Dashboard for graphical display of mined/consumed PRC.
-</product_requirements>
+**User's preferred language**: English
 
-<key_technical_concepts>
--   **FastAPI**: Python web framework for backend APIs.
--   **React.js**: JavaScript library for frontend UI (with lazy loading/code splitting).
--   **MongoDB**: NoSQL database, using UUIDs for IDs.
--   **RBAC**: Role-Based Access Control for dashboards.
--   **Tailwind CSS**: Utility-first CSS framework for rapid UI development.
--   **i18n (react-i18next)**: Internationalization for multi-language support.
--   **Sonner Toast**: Modern toast notification library.
--   **Recharts**: React charting library for data visualization.
-</key_technical_concepts>
+**what currently exists?**
+The application has undergone a significant refactoring. The Scratch Card and Treasure Hunt games, along with their associated wallet systems (cashback, profit), have been removed. The core financial system is now simplified to a single PRC wallet.
 
-<code_architecture>
-The application uses a monorepo structure with a Python FastAPI backend, a React.js frontend, and MongoDB.
+A new, modern user dashboard () has been created, featuring a bottom navigation bar and a design inspired by GPay/PhonePe. The mining rate calculation has been updated to use a dynamic base rate and a 5-level referral bonus system.
+
+The backend now contains the logic for a PRC Burn system, which removes PRC from free users after 2 days and from expired VIPs after 5 days, though this is not yet automated. An admin setting to toggle new user registrations has also been fully implemented.
+
+The VIP membership system is partially updated to support multiple plans (Monthly, Quarterly, etc.) with admin-controlled discounts. The backend data structures and price calculation helpers are in place, but the admin management endpoints and frontend UI are not yet complete.
+
+**Last working item**:
+- **Last item agent was working**: Implementing a multi-plan VIP membership system with admin-controlled discounts. The agent had just finished adding the necessary data structures ( dictionary) and helper functions (, ) to the backend file  to support variable pricing. The next step was to create the API endpoints for admins to manage these plans and discounts.
+- **Status**: IN PROGRESS
+- **Agent Testing Done**: N
+- **Which testing method agent to use?**: both
+- **User Testing Done**: N
+
+**All Pending/In progress Issue list**:
+-   **Issue 1**: The profile update endpoints in  were corrected, but the entire page functionality, especially saving data for each of the 6 sections, requires thorough testing.
+-   **Issue 2**: The PRC burn logic exists but is not automated. It needs to be triggered by a recurring job.
+
+**Issues Detail**:
+-   **Issue 1: Profile Management Functionality Verification**
+    -   **Attempted fixes**: The agent fixed the API URLs that were causing the Failed to load profile data error.
+    -   **Next debug checklist**:
+        -   Manually test saving data in each of the 6 sections of the  page.
+        -   Verify that API calls to , , , etc., are successful and save data correctly.
+        -   Check browser console and backend logs for any errors during save operations.
+    -   **Why fix this issue and what will be achieved with the fix?**: This will ensure the new advanced profile page is fully functional and users can manage their data.
+    -   **Status**: USER VERIFICATION PENDING
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: both
+    -   **Blocked on other issue**: None
+
+-   **Issue 2: PRC Burn Mechanism is Not Automated**
+    -   **Attempted fixes**: The agent created the backend function  in  which contains the complete burn logic.
+    -   **Next debug checklist**:
+        -   Integrate a scheduling library like  into .
+        -   Configure a recurring job (e.g., to run daily) that calls the  function.
+        -   Add logging to the job to monitor its execution and any errors.
+    -   **Why fix this issue and what will be achieved with the fix?**: This will automate the core business rule of burning expired PRC, encouraging user engagement and VIP upgrades without manual admin intervention.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: backend
+    -   **Blocked on other issue**: None
+
+**In progress Task List**:
+-   **Task 1**: Complete Multi-Plan VIP Membership & Discount System (P0)
+
+**Task Detail**:
+-   **Task 1: Complete Multi-Plan VIP Membership & Discount System**
+    -   **Where to resume**:
+        1.  **Backend**: In , create new API endpoints for the admin to manage VIP plans and discounts (e.g., ). These endpoints should allow updating the  and  values in the system settings.
+        2.  **Frontend (Admin)**: Create or update an admin settings page to include a UI for managing the VIP plans (prices, durations) and setting a global discount (percentage or fixed amount).
+        3.  **Frontend (User)**: Update the  page to fetch the available plans and display them to the user, showing the final price after any applicable discounts.
+    -   **What will be achieved with this?**: A flexible, multi-tiered VIP membership system that admins can control, creating more options for users and revenue opportunities.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: both
+    -   **Blocked on something**: None
+
+**Upcoming and Future Tasks**
+- **Upcoming Tasks**:
+    - **P0**: Implement frontend UI for PRC Expiry Countdown on the user dashboard () using the new  component.
+    - **P1**: Create the  page with UI to display burn statistics fetched from the backend.
+    - **P1**: Conduct comprehensive frontend testing for the  page, especially the cascading location dropdowns.
+    - **P2**: Implement user notifications for PRC that is about to expire.
+
+- **Future Tasks**:
+    - Complete implementation of profit wallet credit logging during delivery charge distribution.
+    - Implement order update/delete functionality for regular users.
+    - Build detailed advanced admin sections for Notifications, Commissions, and Rewards.
+    - Populate  with complete article content.
+    - Integrate  component into relevant pages.
+    - Implement Transaction Receipts.
+    - Address Biometric error (Failed to enable biometric login) in .
+    - Implement security fix for deleted users being able to log in.
+    - Implement Push Notifications.
+    - Complete Google Analytics event and conversion tracking.
+    - Expand translations to all remaining pages.
+
+**Completed work in this session**
+- **Feature Removals & Simplification**:
+  - Scratch Card and Treasure Hunt games removed from frontend and backend.
+  - Wallet system simplified to a single PRC balance; ,  and associated backend logic removed.
+- **Dashboard & UI Overhaul**:
+  - New modern dashboard created at .
+  - Bottom navigation bar implemented in .
+  - Back buttons added to , , and .
+- **New Features & Pages**:
+  - Advanced profile management page created at .
+  - Cascading location dropdowns (State -> District -> Tehsil) added to .
+  - Admin setting to toggle new user registrations implemented in  and .
+  - Refund Policy page created and integrated ().
+- **Business Logic Implementation**:
+  - PRC Burn rules (free user 2-day expiry, expired VIP 5-day expiry) implemented in .
+  - Marketplace access blocked for expired VIPs in .
+  - Dynamic mining base rate and 5-level referral bonus system implemented in .
+- **Bug Fixes**:
+  - Fixed Failed to load profile data on  by correcting API endpoint URLs.
+  - Resolved app crash (WalletNew is not defined) by removing dangling references in  and .
+  - Replaced non-functional Android APK download link with a PWA install prompt.
+- **VIP Membership (Partial)**:
+  - Updated VIP price to ₹299/month across frontend and backend.
+  - Laid the backend foundation for a multi-plan VIP system in .
+
+**Earlier issues found/mentioned but not fixed**
+-   None identified in this session that weren't addressed or added to the pending list.
+
+**Known issue recurrence from previous fork**
+-   None.
+
+**Code Architecture**
 
 
+**Key Technical Concepts**
+-   **Backend**: FastAPI, MongoDB, Pydantic
+-   **Frontend**: React.js, Tailwind CSS, react-router
+-   **Architecture**: Monorepo, REST API
+-   **Core Logic**: Role-Based Access Control (RBAC), FIFO (First-In, First-Out) for PRC burn
 
-**File Summaries and Changes:**
+**key DB schema**
+-   **users**:
+    -   :  - New array added to track each mining claim with a timestamp. This is critical for the FIFO PRC burn logic.
+-   **system_settings**:
+    -   :  - New field to control new user registrations.
+    -   :  - New dictionary holding the structure for multiple VIP plans.
+    -   :  - New dictionary for admin-controlled VIP discounts.
 
--   ****:
-    -   **Summary**: Core API logic. Fixed  retrieval logic. Updated  to correctly credit  and . Fixed  endpoint to handle ObjectId serialization. Removed double crediting logic for scratch cards. Added PRC Analytics endpoints.
--   ****:
-    -   **Summary**: Main routing file. Treasure Hunt route  is correctly defined.
--   ****:
-    -   **Summary**: Global CSS. Added new keyframe animations for logo animation (, ),  utility,  animation, and  animation for feedback messages.
--   ****:
-    -   **Summary**: Navigation bar. Modified  and  links in both desktop and mobile menus to ensure correct routing ( and ).
--   ** (NEW)**:
-    -   **Summary**: New reusable React component for displaying animated winning messages (e.g., for Scratch Card and Treasure Hunt).
--   ** (NEW)**:
-    -   **Summary**: New reusable React component for displaying prominent, animated feedback messages.
--   ****:
-    -   **Summary**: User login page. Integrated  for login success/error messages.
--   ****:
-    -   **Summary**: User dashboard. Redesigned with a modern hero-style layout, optimized quick actions menu for better mobile/desktop viewing, implemented horizontal scrolling for secondary actions, and updated to use full width.
--   ****:
-    -   **Summary**: Mining page. Integrated  for mining status and action messages.
--   ****:
-    -   **Summary**: Updated to use full width, removing  constraints.
--   ****:
-    -   **Summary**: Implemented pagination for transaction history (10 items per page by default). Updated  function and transaction icon/label mappings to include  and .
--   ****:
-    -   **Summary**: Content completely rewritten with new, detailed disclaimers about PARAS REWARD being an in-app reward platform, not a cryptocurrency or investment.
--   ****:
-    -   **Summary**: Integrated  for prize announcements and  for game start and error messages. Redesigned the treasure map with enhanced 2D animations and prominent feedback display. Corrected routing in  to point to .
--   ** (NEW)**:
-    -   **Summary**: Implemented realistic scratch mechanics with canvas, tracking scratch progress, revealing text (You won X cashback!), and integrating  and . Fixed double crediting bug and ensured proper flow for purchase, scratch, reveal, and celebration. Corrected  import and state declaration.
-</code_architecture>
+**changes in tech stack**
+-   None.
 
-<pending_tasks>
--   Optimize product list display in user panels (address persistent  error).
--   Complete implementation of profit wallet credit logging during delivery charge distribution.
--   Implement order update/delete functionality for regular users.
--   Build detailed advanced admin sections for Notifications, Commissions, and Rewards.
--   Populate  with complete article content.
--   Integrate  component into relevant pages.
--   Implement Transaction Receipts.
--   Implement roadmap features (VIP renewal reminders, Expense Tracking, etc.).
--   Address Biometric error (Failed to enable biometric login) in .
--   Implement security fix for deleted users being able to login.
--   Implement Push Notifications.
--   Complete Google Analytics event and conversion tracking.
--   Expand translations to *all* remaining pages, as some text still remains in English after language switching.
-</pending_tasks>
+**All files of reference**
+-   : The heart of all new business logic (PRC Burn, new mining rate, VIP plan structure).
+-   : The new primary user-facing dashboard.
+-   : The new, comprehensive profile management page.
+-   : Contains the updated routing structure reflecting all the refactoring.
+-   : Contains the UI for toggling user registration.
+-   : The page that needs to be updated for the new multi-plan system.
 
-<current_work>
-Immediately before this summary request, the AI engineer was focused on enhancing the user experience of the Scratch Card game to be more realistic. This involved:
-1.  **Implementing Realistic Scratching**: The  component was heavily modified to simulate a physical scratch card, where users reveal hidden text (You won cashback! or Better luck next time!) by scratching over a canvas with their finger/mouse. This required enhancements to canvas initialization, scratch functions, and event handlers for smoother, more realistic interaction.
-2.  **Flow Correction**: Debugging and fixing the flow where the celebration message was appearing too early. The new flow ensures the user first scratches the card, sees the revealed prize on the card, and *then* the animated celebration message ( and ) appears after a short delay, making the reveal more impactful.
-3.  **UI/UX Improvements**: Enhancing the visual presentation of the scratch card and its reveal animations.
+**Areas that need refactoring**:
+-   : This page needs a complete overhaul to support selecting from multiple plans (Monthly, Quarterly, etc.) instead of the current hardcoded single-plan UI.
 
-The backend changes related to scratch card cashback and transaction logging were previously verified. The frontend changes, particularly the visual aspects, were the immediate focus, leading up to a comprehensive health check for deployment.
-</current_work>
+**key api endpoints**
+-   : (MODIFIED) Now checks the  setting before allowing registration.
+-   : (MODIFIED) Now blocks marketplace access for users with an expired VIP status.
+-   : (MODIFIED) Now records each claim in the  array for the user.
+-   : (MODIFIED) The  function it calls now uses the new 5-level referral system.
+-   : (NEW) Endpoint to provide data for the admin burn dashboard.
+-   : (NEW) Manual trigger for the PRC burn job.
+-   : (CONFIRMED) The correct endpoint for fetching user data.
+-   : (CONFIRMED) The correct endpoint for updating user profile data.
 
-<optional_next_step>
-Thoroughly test the updated Scratch Card game flow and visuals in the frontend to ensure the realistic scratching, prize reveal, and animated messages function as expected.
-</optional_next_step>
+**Critical Info for New Agent**
+-   **PRC Burn Automation is CRITICAL**: The PRC Burn logic ( in ) has been written but is **NOT AUTOMATED**. The next agent must prioritize setting up a scheduler (like APScheduler) to run this job periodically (e.g., daily). Without this, the entire feature is incomplete.
+-   **Multi-Plan VIP is IN PROGRESS**: The task of implementing multiple VIP plans was started but not finished. The backend has the data structures but lacks the admin management APIs. The frontend () still shows the old single-plan UI and needs a complete redesign.
+-   **Major Refactor Done**: Be aware that significant parts of the application (Scratch Card, Treasure Hunt, multiple wallets) were intentionally removed. Do not try to restore them unless explicitly asked. The new central page for users is .
+
+**documents created in this job**
+- None.
+
+**Last 10 User Messages and any pending user messages**
+1.  **User**: Test VIP Membership and PRC Burn. (Request)
+2.  **Agent**: Acknowledged and explained that testing was initiated. (In Progress)
+3.  **User**: Go with your recommendation. (Approval for next steps)
+4.  **Agent**: Planned and started implementing user-facing expiry warnings and an admin burn dashboard. (Completed)
+5.  **User**: Update mining base rate and referral bonus to a 5-level system. (Request)
+6.  **Agent**: Acknowledged and implemented the new mining and referral logic in the backend. (Completed)
+7.  **User**: Set up multiple VIP membership plans (Monthly, Quarterly, etc.) and allow admin discounts. (Request)
+8.  **Agent**: Acknowledged and started backend implementation by creating data structures and helper functions for VIP plans. (In Progress)
+9.  **User**: Confirm VIP is 299/month and add back buttons everywhere. (Request)
+10. **Agent**: Verified the pricing and added back buttons to several key pages. (Completed)
+
+**Project Health Check:**
+-   **Broken**: , ,  were intentionally deleted as part of the refactor. All known references have been removed.
+-   **Mocked**: None.
+
+**3rd Party Integrations**
+-   None introduced in this session.
+
+**Testing status**
+-   **Testing agent used after significant changes**: YES. The backend testing agent was used to validate the PRC burn rules and VIP membership updates.
+-   **Troubleshoot agent used after agent stuck in loop**: NO
+-   **Test files created**: None.
+-   **Known regressions**: None identified, but the scale of the refactor introduces a risk of unknown regressions.
+
+**Credentials to test flow:**
+-   Use standard admin credentials to access admin features.
+-   Create new test users to verify registration toggle and free-user PRC burn rules.
+-   Create a VIP user and let their membership expire to test VIP-related burn rules and marketplace blocking.</analysis>
