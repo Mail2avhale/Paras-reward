@@ -140,13 +140,21 @@ def create_test_user(role, name, email, parent_id=None, prc_balance=0):
             
             # Set parent relationship if specified
             if parent_id and role in ["sub_stockist", "outlet"]:
-                update_data = {"parent_id": parent_id}
-                update_response = requests.put(f"{API_BASE}/admin/users/{uid}", 
+                update_data = {
+                    "parent_id": parent_id,
+                    "name": name,
+                    "mobile": user_data["mobile"],
+                    "state": user_data["state"],
+                    "district": user_data["district"],
+                    "pincode": user_data["pincode"]
+                }
+                update_response = requests.put(f"{API_BASE}/admin/users/{uid}/update", 
                                              json=update_data, timeout=30)
                 if update_response.status_code == 200:
                     print(f"✅ Set parent for {name}: {parent_id}")
                 else:
-                    print(f"⚠️  Failed to set parent for {name}")
+                    print(f"⚠️  Failed to set parent for {name}: {update_response.status_code}")
+                    print(f"   Response: {update_response.text}")
             
             return uid
         else:
