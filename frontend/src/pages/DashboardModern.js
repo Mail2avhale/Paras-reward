@@ -267,7 +267,15 @@ const DashboardModern = ({ user, onLogout }) => {
             <QuickActionButton 
               icon={Store} 
               label="Shop" 
-              onClick={() => navigate('/marketplace')}
+              onClick={() => {
+                if (stats.membershipType !== 'vip') {
+                  if (window.confirm('VIP membership required to shop in marketplace. Upgrade now?')) {
+                    navigate('/vip-membership');
+                  }
+                } else {
+                  navigate('/marketplace');
+                }
+              }}
               color="blue"
             />
             <QuickActionButton 
@@ -279,13 +287,29 @@ const DashboardModern = ({ user, onLogout }) => {
             <QuickActionButton 
               icon={CreditCard} 
               label="Bill Pay" 
-              onClick={() => navigate('/bill-payments')}
+              onClick={() => {
+                if (stats.membershipType !== 'vip') {
+                  if (window.confirm('VIP membership required to use bill payment services. Upgrade now?')) {
+                    navigate('/vip-membership');
+                  }
+                } else {
+                  navigate('/bill-payments');
+                }
+              }}
               color="cyan"
             />
             <QuickActionButton 
               icon={Gift} 
               label="Vouchers" 
-              onClick={() => navigate('/gift-vouchers')}
+              onClick={() => {
+                if (stats.membershipType !== 'vip') {
+                  if (window.confirm('VIP membership required to redeem gift vouchers. Upgrade now?')) {
+                    navigate('/vip-membership');
+                  }
+                } else {
+                  navigate('/gift-vouchers');
+                }
+              }}
               color="orange"
             />
           </div>
