@@ -12192,7 +12192,7 @@ async def update_settings(
     await db.settings.update_one({}, {"$set": update_data}, upsert=True)
     return {"message": "Settings updated"}
 
-app.include_router(api_router)
+# Note: app.include_router moved to after all route definitions
 
 app.add_middleware(
     CORSMiddleware,
