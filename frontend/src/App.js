@@ -117,7 +117,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/orders" element={user ? <Orders user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/vip" element={user ? <VIPMembership user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/kyc" element={user ? <Navigate to="/profile" /> : <Navigate to="/login" />} />
-            <Route path="/wallet" element={user ? <WalletNew user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            {/* Removed: Wallet/Withdrawal functionality */}
             <Route path="/leaderboard" element={user ? <Leaderboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/gamification" element={user ? <GamificationDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/profile" element={user ? <ProfileEnhanced user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
