@@ -3937,6 +3937,31 @@ async def get_wallet_transactions(uid: str, wallet_type: str = None, page: int =
         "has_prev": page > 1
     }
 
+@api_router.get("/transactions/user/{uid}")
+async def get_user_transactions_simple(uid: str):
+    """Get recent transactions for user dashboard - simple format"""
+    try:
+        transactions = await db.transactions.find(
+            {"user_id": uid},
+            {"_id": 0}
+        ).sort("created_at", -1).limit(10).to_list(10)
+        
+        # Format for dashboard compatibility
+        formatted = []
+        for txn in transactions:
+            formatted.append({
+                "type": txn.get("type", "unknown"),
+                "amount": txn.get("amount", 0),
+                "timestamp": txn.get("created_at"),
+                "description": txn.get("description", "")
+            })
+        
+        return formatted
+    except Exception as e:
+        print(f"Error fetching transactions: {e}")
+        return []
+
+
 @api_router.get("/transactions/user/{uid}/detailed")
 async def get_detailed_transaction_history(
     uid: str, 
