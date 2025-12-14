@@ -11394,6 +11394,529 @@ async def get_vip_plans_admin():
     plans = await get_all_vip_plans()
     return {"plans": plans}
 
+# ==================== BILL PAYMENT & RECHARGE ENDPOINTS ====================
+
+@api_router.post("/bill-payment/request")
+async def create_bill_payment_request(request: Request):
+    """Create a bill payment or recharge request (User)"""
+    data = await request.json()
+    user_id = data.get("user_id")
+    request_type = data.get("request_type")
+    amount_inr = float(data.get("amount_inr"))
+    details = data.get("details", {})
+    
+    # Validate request type
+    valid_types = ["mobile_recharge", "dish_recharge", "electricity_bill", "credit_card_payment", "loan_emi"]
+    if request_type not in valid_types:
+        raise HTTPException(status_code=400, detail=f"Invalid request type. Must be one of: {', '.join(valid_types)}")
+    
+    if amount_inr <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be positive")
+    
+    # Get user
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Calculate PRC required (100 INR = 1000 PRC)
+    prc_required = await calculate_bill_payment_prc(amount_inr)
+    
+    # Calculate service charge
+    service_charge = await get_bill_payment_service_charge(amount_inr, prc_required)
+    
+    # Total PRC to deduct
+    total_prc = prc_required + service_charge
+    
+    # Check if user has enough PRC
+    user_prc_balance = user.get("prc_balance", 0)
+    if user_prc_balance < total_prc:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Insufficient PRC. Required: {total_prc:.2f} PRC (₹{amount_inr} + service charge), Available: {user_prc_balance:.2f} PRC"
+        )
+    
+    # Create request
+    bill_request = {
+        "request_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "user_name": user.get("name", "Unknown"),
+        "user_email": user.get("email"),
+        "user_mobile": user.get("mobile"),
+        "request_type": request_type,
+        "amount_inr": amount_inr,
+        "prc_required": prc_required,
+        "service_charge_amount": service_charge,
+        "total_prc_deducted": total_prc,
+        "details": details,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "processed_at": None,
+        "admin_notes": None,
+        "processed_by": None
+    }
+    
+    # Deduct PRC immediately when request is created
+    new_balance = user_prc_balance - total_prc
+    await db.users.update_one(
+        {"uid": user_id},
+        {"$set": {"prc_balance": new_balance}}
+    )
+    
+    # Log transaction
+    await log_transaction(
+        user_id=user_id,
+        wallet_type="prc",
+        transaction_type="bill_payment_request",
+        amount=total_prc,
+        description=f"Bill payment request: {request_type} - ₹{amount_inr} (Request ID: {bill_request['request_id'][:8]})",
+        metadata={
+            "request_id": bill_request["request_id"],
+            "request_type": request_type,
+            "amount_inr": amount_inr,
+            "prc_required": prc_required,
+            "service_charge": service_charge
+        }
+    )
+    
+    # Save request
+    await db.bill_payment_requests.insert_one(bill_request)
+    
+    return {
+        "message": "Bill payment request created successfully",
+        "request_id": bill_request["request_id"],
+        "amount_inr": amount_inr,
+        "prc_deducted": total_prc,
+        "status": "pending",
+        "note": "PRC has been deducted. Admin will process your request shortly."
+    }
+
+@api_router.get("/bill-payment/requests/{user_id}")
+async def get_user_bill_payment_requests(user_id: str):
+    """Get all bill payment requests for a user"""
+    requests = await db.bill_payment_requests.find(
+        {"user_id": user_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    return {"requests": requests, "count": len(requests)}
+
+@api_router.get("/admin/bill-payment/requests")
+async def get_all_bill_payment_requests(
+    status: Optional[str] = None,
+    request_type: Optional[str] = None
+):
+    """Get all bill payment requests (Admin only)"""
+    query = {}
+    
+    if status:
+        query["status"] = status
+    if request_type:
+        query["request_type"] = request_type
+    
+    requests = await db.bill_payment_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    
+    # Get statistics
+    total_pending = await db.bill_payment_requests.count_documents({"status": "pending"})
+    total_completed = await db.bill_payment_requests.count_documents({"status": "completed"})
+    total_rejected = await db.bill_payment_requests.count_documents({"status": "rejected"})
+    
+    return {
+        "requests": requests,
+        "count": len(requests),
+        "stats": {
+            "pending": total_pending,
+            "completed": total_completed,
+            "rejected": total_rejected
+        }
+    }
+
+@api_router.post("/admin/bill-payment/process")
+async def process_bill_payment_request(request: Request):
+    """Process a bill payment request - approve, reject, or mark complete (Admin only)"""
+    data = await request.json()
+    request_id = data.get("request_id")
+    action = data.get("action")  # approve, reject, complete
+    admin_notes = data.get("admin_notes", "")
+    admin_uid = data.get("admin_uid")
+    
+    if action not in ["approve", "reject", "complete"]:
+        raise HTTPException(status_code=400, detail="Invalid action. Must be: approve, reject, or complete")
+    
+    # Get request
+    bill_request = await db.bill_payment_requests.find_one({"request_id": request_id})
+    if not bill_request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    current_status = bill_request.get("status")
+    user_id = bill_request.get("user_id")
+    total_prc = bill_request.get("total_prc_deducted")
+    
+    # Handle actions
+    if action == "reject":
+        if current_status == "completed":
+            raise HTTPException(status_code=400, detail="Cannot reject completed request")
+        
+        # Refund PRC to user
+        user = await db.users.find_one({"uid": user_id})
+        if user:
+            new_balance = user.get("prc_balance", 0) + total_prc
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$set": {"prc_balance": new_balance}}
+            )
+            
+            # Log refund transaction
+            await log_transaction(
+                user_id=user_id,
+                wallet_type="prc",
+                transaction_type="bill_payment_refund",
+                amount=total_prc,
+                description=f"Bill payment request rejected - Refund (Request ID: {request_id[:8]})",
+                metadata={"request_id": request_id, "reason": "rejected"}
+            )
+        
+        # Update request status
+        await db.bill_payment_requests.update_one(
+            {"request_id": request_id},
+            {"$set": {
+                "status": "rejected",
+                "processed_at": datetime.now(timezone.utc).isoformat(),
+                "admin_notes": admin_notes,
+                "processed_by": admin_uid
+            }}
+        )
+        
+        return {"message": "Request rejected and PRC refunded", "status": "rejected"}
+    
+    elif action == "approve":
+        if current_status != "pending":
+            raise HTTPException(status_code=400, detail=f"Cannot approve request with status: {current_status}")
+        
+        await db.bill_payment_requests.update_one(
+            {"request_id": request_id},
+            {"$set": {
+                "status": "processing",
+                "admin_notes": admin_notes,
+                "processed_by": admin_uid
+            }}
+        )
+        
+        return {"message": "Request approved and set to processing", "status": "processing"}
+    
+    elif action == "complete":
+        if current_status not in ["pending", "processing"]:
+            raise HTTPException(status_code=400, detail=f"Cannot complete request with status: {current_status}")
+        
+        await db.bill_payment_requests.update_one(
+            {"request_id": request_id},
+            {"$set": {
+                "status": "completed",
+                "processed_at": datetime.now(timezone.utc).isoformat(),
+                "admin_notes": admin_notes,
+                "processed_by": admin_uid
+            }}
+        )
+        
+        return {"message": "Request marked as completed", "status": "completed"}
+
+# ==================== GIFT VOUCHER REDEMPTION ENDPOINTS ====================
+
+@api_router.post("/gift-voucher/request")
+async def create_gift_voucher_request(request: Request):
+    """Create a PhonePe gift voucher redemption request (All user types)"""
+    data = await request.json()
+    user_id = data.get("user_id")
+    denomination = int(data.get("denomination"))
+    
+    # Validate denomination
+    valid_denominations = [10, 50, 100, 500, 1000, 5000]
+    if denomination not in valid_denominations:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid denomination. Must be one of: {', '.join(map(str, valid_denominations))}"
+        )
+    
+    # Get user
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user_role = user.get("role", "user")
+    
+    # Calculate PRC required (100 INR = 1000 PRC, so 10 INR = 100 PRC)
+    prc_required = denomination * 10
+    
+    # Calculate service charge
+    service_charge = await get_gift_voucher_service_charge(prc_required)
+    
+    # Total PRC to deduct
+    total_prc = prc_required + service_charge
+    
+    # Check if user has enough PRC
+    user_prc_balance = user.get("prc_balance", 0)
+    if user_prc_balance < total_prc:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Insufficient PRC. Required: {total_prc:.2f} PRC (₹{denomination} voucher + service charge), Available: {user_prc_balance:.2f} PRC"
+        )
+    
+    # Create request
+    voucher_request = {
+        "request_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "user_name": user.get("name", "Unknown"),
+        "user_email": user.get("email"),
+        "user_mobile": user.get("mobile"),
+        "user_role": user_role,
+        "denomination": denomination,
+        "prc_required": prc_required,
+        "service_charge_amount": service_charge,
+        "total_prc_deducted": total_prc,
+        "status": "pending",
+        "voucher_code": None,
+        "voucher_details": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "processed_at": None,
+        "admin_notes": None,
+        "processed_by": None
+    }
+    
+    # Deduct PRC immediately
+    new_balance = user_prc_balance - total_prc
+    await db.users.update_one(
+        {"uid": user_id},
+        {"$set": {"prc_balance": new_balance}}
+    )
+    
+    # Log transaction
+    await log_transaction(
+        user_id=user_id,
+        wallet_type="prc",
+        transaction_type="gift_voucher_request",
+        amount=total_prc,
+        description=f"PhonePe gift voucher request: ₹{denomination} (Request ID: {voucher_request['request_id'][:8]})",
+        metadata={
+            "request_id": voucher_request["request_id"],
+            "denomination": denomination,
+            "prc_required": prc_required,
+            "service_charge": service_charge
+        }
+    )
+    
+    # Save request
+    await db.gift_voucher_requests.insert_one(voucher_request)
+    
+    return {
+        "message": "Gift voucher request created successfully",
+        "request_id": voucher_request["request_id"],
+        "denomination": denomination,
+        "prc_deducted": total_prc,
+        "status": "pending",
+        "note": "PRC has been deducted. Admin will process your voucher request shortly."
+    }
+
+@api_router.get("/gift-voucher/requests/{user_id}")
+async def get_user_gift_voucher_requests(user_id: str):
+    """Get all gift voucher requests for a user"""
+    requests = await db.gift_voucher_requests.find(
+        {"user_id": user_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    return {"requests": requests, "count": len(requests)}
+
+@api_router.get("/admin/gift-voucher/requests")
+async def get_all_gift_voucher_requests(status: Optional[str] = None):
+    """Get all gift voucher requests (Admin only)"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    requests = await db.gift_voucher_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    
+    # Get statistics
+    total_pending = await db.gift_voucher_requests.count_documents({"status": "pending"})
+    total_completed = await db.gift_voucher_requests.count_documents({"status": "completed"})
+    total_rejected = await db.gift_voucher_requests.count_documents({"status": "rejected"})
+    
+    # Calculate total value
+    total_value_pending = 0
+    total_value_completed = 0
+    
+    async for req in db.gift_voucher_requests.find({"status": "pending"}):
+        total_value_pending += req.get("denomination", 0)
+    
+    async for req in db.gift_voucher_requests.find({"status": "completed"}):
+        total_value_completed += req.get("denomination", 0)
+    
+    return {
+        "requests": requests,
+        "count": len(requests),
+        "stats": {
+            "pending": total_pending,
+            "completed": total_completed,
+            "rejected": total_rejected,
+            "total_value_pending": total_value_pending,
+            "total_value_completed": total_value_completed
+        }
+    }
+
+@api_router.post("/admin/gift-voucher/process")
+async def process_gift_voucher_request(request: Request):
+    """Process a gift voucher request - approve with voucher code or reject (Admin only)"""
+    data = await request.json()
+    request_id = data.get("request_id")
+    action = data.get("action")  # approve, reject
+    voucher_code = data.get("voucher_code")
+    voucher_details = data.get("voucher_details", {})
+    admin_notes = data.get("admin_notes", "")
+    admin_uid = data.get("admin_uid")
+    
+    if action not in ["approve", "reject"]:
+        raise HTTPException(status_code=400, detail="Invalid action. Must be: approve or reject")
+    
+    # Get request
+    voucher_request = await db.gift_voucher_requests.find_one({"request_id": request_id})
+    if not voucher_request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    current_status = voucher_request.get("status")
+    user_id = voucher_request.get("user_id")
+    total_prc = voucher_request.get("total_prc_deducted")
+    
+    if action == "reject":
+        if current_status == "completed":
+            raise HTTPException(status_code=400, detail="Cannot reject completed request")
+        
+        # Refund PRC to user
+        user = await db.users.find_one({"uid": user_id})
+        if user:
+            new_balance = user.get("prc_balance", 0) + total_prc
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$set": {"prc_balance": new_balance}}
+            )
+            
+            # Log refund transaction
+            await log_transaction(
+                user_id=user_id,
+                wallet_type="prc",
+                transaction_type="gift_voucher_refund",
+                amount=total_prc,
+                description=f"Gift voucher request rejected - Refund (Request ID: {request_id[:8]})",
+                metadata={"request_id": request_id, "reason": "rejected"}
+            )
+        
+        # Update request status
+        await db.gift_voucher_requests.update_one(
+            {"request_id": request_id},
+            {"$set": {
+                "status": "rejected",
+                "processed_at": datetime.now(timezone.utc).isoformat(),
+                "admin_notes": admin_notes,
+                "processed_by": admin_uid
+            }}
+        )
+        
+        return {"message": "Request rejected and PRC refunded", "status": "rejected"}
+    
+    elif action == "approve":
+        if current_status != "pending":
+            raise HTTPException(status_code=400, detail=f"Cannot approve request with status: {current_status}")
+        
+        if not voucher_code:
+            raise HTTPException(status_code=400, detail="Voucher code is required for approval")
+        
+        # Update request status
+        await db.gift_voucher_requests.update_one(
+            {"request_id": request_id},
+            {"$set": {
+                "status": "completed",
+                "voucher_code": voucher_code,
+                "voucher_details": voucher_details,
+                "processed_at": datetime.now(timezone.utc).isoformat(),
+                "admin_notes": admin_notes,
+                "processed_by": admin_uid
+            }}
+        )
+        
+        return {
+            "message": "Gift voucher approved and provided to user",
+            "status": "completed",
+            "voucher_code": voucher_code
+        }
+
+# ==================== ADMIN SERVICE CHARGE CONFIGURATION ====================
+
+@api_router.get("/admin/service-charges")
+async def get_service_charge_config():
+    """Get service charge configuration (Admin only)"""
+    settings = await db.settings.find_one({}, {"_id": 0})
+    
+    if not settings:
+        # Return defaults
+        return {
+            "bill_payment": {
+                "charge_type": "percentage",
+                "charge_percentage": 2.0,
+                "charge_fixed": 20.0
+            },
+            "gift_voucher": {
+                "charge_type": "percentage",
+                "charge_percentage": 5.0,
+                "charge_fixed": 50.0
+            }
+        }
+    
+    return {
+        "bill_payment": {
+            "charge_type": settings.get("bill_payment_charge_type", "percentage"),
+            "charge_percentage": settings.get("bill_payment_charge_percentage", 2.0),
+            "charge_fixed": settings.get("bill_payment_charge_fixed", 20.0)
+        },
+        "gift_voucher": {
+            "charge_type": settings.get("gift_voucher_charge_type", "percentage"),
+            "charge_percentage": settings.get("gift_voucher_charge_percentage", 5.0),
+            "charge_fixed": settings.get("gift_voucher_charge_fixed", 50.0)
+        }
+    }
+
+@api_router.post("/admin/service-charges")
+async def update_service_charge_config(request: Request):
+    """Update service charge configuration (Admin only)"""
+    data = await request.json()
+    service_type = data.get("service_type")  # bill_payment or gift_voucher
+    charge_type = data.get("charge_type")  # percentage or fixed
+    charge_percentage = data.get("charge_percentage")
+    charge_fixed = data.get("charge_fixed")
+    
+    if service_type not in ["bill_payment", "gift_voucher"]:
+        raise HTTPException(status_code=400, detail="Invalid service type")
+    
+    if charge_type not in ["percentage", "fixed"]:
+        raise HTTPException(status_code=400, detail="Invalid charge type. Must be 'percentage' or 'fixed'")
+    
+    update_data = {}
+    
+    if service_type == "bill_payment":
+        update_data["bill_payment_charge_type"] = charge_type
+        if charge_percentage is not None:
+            update_data["bill_payment_charge_percentage"] = float(charge_percentage)
+        if charge_fixed is not None:
+            update_data["bill_payment_charge_fixed"] = float(charge_fixed)
+    else:
+        update_data["gift_voucher_charge_type"] = charge_type
+        if charge_percentage is not None:
+            update_data["gift_voucher_charge_percentage"] = float(charge_percentage)
+        if charge_fixed is not None:
+            update_data["gift_voucher_charge_fixed"] = float(charge_fixed)
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.settings.update_one({}, {"$set": update_data}, upsert=True)
+    
+    return {"message": "Service charge configuration updated successfully", "config": update_data}
+
 @api_router.get("/admin/users-at-risk")
 async def get_users_at_risk_of_burn():
     """Get users whose PRC is about to be burned (Admin only)"""
