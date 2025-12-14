@@ -1123,7 +1123,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
               </Card>
             )}
 
-            {/* 6. CHANGE PASSWORD SECTION */}
+            {/* 5. CHANGE PASSWORD SECTION */}
             {activeSection === 'password' && (
               <Card className="p-6 space-y-6">
                 <div>
