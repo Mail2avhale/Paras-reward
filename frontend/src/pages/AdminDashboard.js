@@ -1071,6 +1071,7 @@ const AdminDashboard = ({ user, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', icon: Home, label: 'Dashboard' },
     { id: 'prc-analytics', icon: TrendingUp, label: 'PRC Analytics' },
+    { id: 'burn-management', icon: Activity, label: 'Burn Management', link: '/admin/burn-management' },
     { id: 'analytics', icon: TrendingUp, label: 'Analytics', link: '/admin/analytics' },
     { id: 'video-ads', icon: Video, label: 'Video Ads', link: '/admin/video-ads' },
     { id: 'activity-logs', icon: Activity, label: 'Activity Logs' },
