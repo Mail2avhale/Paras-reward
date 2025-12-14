@@ -155,10 +155,11 @@ def test_vip_multi_plan_system():
     try:
         response = requests.get(f"{API_BASE}/vip/plans", timeout=30)
         if response.status_code == 200:
-            plans = response.json()
+            response_data = response.json()
+            plans = response_data.get("plans", [])
             test_results["public_plans_endpoint_works"] = True
             print(f"✅ Public VIP plans endpoint working")
-            print(f"   📋 Response: {json.dumps(plans, indent=2)}")
+            print(f"   📋 Response: {json.dumps(response_data, indent=2)}")
             
             # Check if all 4 plans are returned
             if len(plans) == 4:
