@@ -508,7 +508,7 @@ const AdvancedUserManagement = () => {
                 >
                   <option value="prc_balance">PRC Balance</option>
                   <option value="cashback_wallet_balance">Cashback Wallet</option>
-                  <option value="profit_wallet_balance">Profit Wallet</option>
+                  <option value="prc_wallet_balance">PRC Balance</option>
                 </select>
               </div>
 
