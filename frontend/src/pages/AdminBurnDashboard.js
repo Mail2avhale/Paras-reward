@@ -4,7 +4,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { 
   Flame, Users, TrendingDown, AlertTriangle, 
-  RefreshCw, BarChart3, Clock, ArrowLeft, Zap
+  RefreshCw, BarChart3, Clock, ArrowLeft, Zap, CheckCircle
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
