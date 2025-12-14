@@ -1096,54 +1096,6 @@ const AdminDashboard = ({ user, onLogout }) => {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Quick Role Switcher - Fixed Top Bar */}
-      <div className="fixed top-0 left-0 right-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg z-50 px-4 py-3">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5" />
-            <span className="font-semibold text-sm">Quick Switch:</span>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => navigate('/admin')}
-              className="px-3 py-1 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-xs font-medium transition-all backdrop-blur-sm border border-white border-opacity-30"
-            >
-              👑 Admin
-            </button>
-            <button
-              onClick={() => navigate('/manager')}
-              className="px-3 py-1 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-xs font-medium transition-all backdrop-blur-sm border border-white border-opacity-30"
-            >
-              📊 Manager
-            </button>
-            <button
-              onClick={() => navigate('/master-stockist')}
-              className="px-3 py-1 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-xs font-medium transition-all backdrop-blur-sm border border-white border-opacity-30"
-            >
-              🏆 Master
-            </button>
-            <button
-              onClick={() => navigate('/sub-stockist')}
-              className="px-3 py-1 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-xs font-medium transition-all backdrop-blur-sm border border-white border-opacity-30"
-            >
-              🎯 Sub Stockist
-            </button>
-            <button
-              onClick={() => navigate('/outlet')}
-              className="px-3 py-1 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-xs font-medium transition-all backdrop-blur-sm border border-white border-opacity-30"
-            >
-              🏪 Outlet
-            </button>
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="px-3 py-1 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-xs font-medium transition-all backdrop-blur-sm border border-white border-opacity-30"
-            >
-              👤 User Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Mobile Backdrop Overlay */}
       {sidebarOpen && (
         <div 
@@ -1154,7 +1106,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
       {/* Sidebar */}
       <div className={`
-        w-64 bg-white border-r border-gray-200 fixed h-full z-40 transition-transform duration-300 ease-in-out mt-14
+        w-64 bg-white border-r border-gray-200 fixed h-full z-40 transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
       `}>
