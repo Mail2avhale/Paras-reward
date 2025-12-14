@@ -4,7 +4,7 @@ import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Package, Plus, Minus, Trash2, CheckCircle } from 'lucide-react';
+import { ShoppingCart, Package, Plus, Minus, Trash2, CheckCircle, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
