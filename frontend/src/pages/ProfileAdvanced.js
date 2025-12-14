@@ -400,7 +400,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   const handleSaveContactDetails = async () => {
     setLoading(true);
     try {
-      await axios.put(`${API}/api/users/${user.uid}/profile`, contactDetails);
+      await axios.put(`${API}/api/user/${user.uid}/profile`, contactDetails);
       toast.success('Contact details updated successfully!');
       setErrors({});
     } catch (error) {
