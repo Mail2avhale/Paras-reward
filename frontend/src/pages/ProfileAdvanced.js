@@ -969,16 +969,6 @@ const ProfileAdvanced = ({ user, onLogout }) => {
               </Card>
             )}
 
-            {/* 4. BANK DETAILS SECTION */}
-            {/* Bank Details Section Removed */}
-
-            {/* 5. SECURITY OPTIONS SECTION */}
-                          maxLength={10}
-                        />
-                      </div>
-
-            {/* Bank section removed */}
-
             {/* 4. SECURITY OPTIONS SECTION */}
             {activeSection === 'security' && (
               <Card className="p-6 space-y-6">
