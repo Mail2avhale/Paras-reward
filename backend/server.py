@@ -14573,13 +14573,22 @@ app.include_router(api_router)
 async def health_check():
     """Health check endpoint for Kubernetes liveness and readiness probes"""
     try:
-        # Check if database is accessible
-        await db.command('ping')
+        # Check if database is accessible with timeout
+        await asyncio.wait_for(
+            client.admin.command('ping'),
+            timeout=5.0  # 5 second timeout for health checks
+        )
         return {
             "status": "healthy",
             "service": "paras-reward-backend",
-            "database": "connected"
+            "database": "connected",
+            "scheduler": "running" if scheduler.running else "stopped"
         }
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=503,
+            detail="Database health check timeout"
+        )
     except Exception as e:
         # Return 503 Service Unavailable if database is not accessible
         raise HTTPException(
