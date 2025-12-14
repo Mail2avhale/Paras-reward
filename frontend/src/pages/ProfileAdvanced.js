@@ -434,7 +434,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   const handleSaveSecurityOptions = async () => {
     setLoading(true);
     try {
-      await axios.put(`${API}/api/user/${user.uid}/profile`, securityOptions);
+      await axios.put(`${API}/api/users/${user.uid}/profile`, securityOptions);
       toast.success('Security options updated successfully!');
     } catch (error) {
       console.error('Error updating security options:', error);
