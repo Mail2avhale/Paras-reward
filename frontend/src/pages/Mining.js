@@ -176,6 +176,15 @@ const Mining = ({ user, onLogout }) => {
       <Navbar user={user} onLogout={onLogout} />
       
       <div className="container mx-auto px-3 py-8 max-w-full lg:max-w-7xl xl:max-w-[90%]">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-2 text-purple-600 hover:text-purple-700 mb-4 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span className="font-medium">Back to Dashboard</span>
+        </button>
+        
         <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">Rewards Center</h1>
         <p className="text-lg text-gray-600 mb-8">Earn PRC reward points through daily engagement activities (non-cryptocurrency reward system)</p>
 
