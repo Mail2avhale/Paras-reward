@@ -392,9 +392,9 @@ def test_delivery_charge_distribution():
             
             # Get balances after distribution
             user_balance_after = get_user_balance(test_data.user_uid)
-            outlet_balance_after = get_user_balance(test_data.outlet_uid, "profit_wallet_balance")
-            sub_balance_after = get_user_balance(test_data.sub_stockist_uid, "profit_wallet_balance")
-            master_balance_after = get_user_balance(test_data.master_stockist_uid, "profit_wallet_balance")
+            outlet_balance_after = get_user_balance(test_data.outlet_uid, "prc_balance")  # Changed to prc_balance
+            sub_balance_after = get_user_balance(test_data.sub_stockist_uid, "prc_balance")  # Changed to prc_balance
+            master_balance_after = get_user_balance(test_data.master_stockist_uid, "prc_balance")  # Changed to prc_balance
             
             print(f"📊 Balances after distribution:")
             print(f"   User PRC: {user_balance_after}")
