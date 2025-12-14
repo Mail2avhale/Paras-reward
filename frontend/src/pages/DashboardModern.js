@@ -269,9 +269,7 @@ const DashboardModern = ({ user, onLogout }) => {
               label="Shop" 
               onClick={() => {
                 if (stats.membershipType !== 'vip') {
-                  if (window.confirm('VIP membership required to shop in marketplace. Upgrade now?')) {
-                    navigate('/vip-membership');
-                  }
+                  alert('VIP membership required to shop in marketplace');
                 } else {
                   navigate('/marketplace');
                 }
@@ -289,9 +287,7 @@ const DashboardModern = ({ user, onLogout }) => {
               label="Bill Pay" 
               onClick={() => {
                 if (stats.membershipType !== 'vip') {
-                  if (window.confirm('VIP membership required to use bill payment services. Upgrade now?')) {
-                    navigate('/vip-membership');
-                  }
+                  alert('VIP membership required to use bill payment services');
                 } else {
                   navigate('/bill-payments');
                 }
@@ -303,9 +299,7 @@ const DashboardModern = ({ user, onLogout }) => {
               label="Vouchers" 
               onClick={() => {
                 if (stats.membershipType !== 'vip') {
-                  if (window.confirm('VIP membership required to redeem gift vouchers. Upgrade now?')) {
-                    navigate('/vip-membership');
-                  }
+                  alert('VIP membership required to redeem gift vouchers');
                 } else {
                   navigate('/gift-vouchers');
                 }
