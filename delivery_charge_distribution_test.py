@@ -400,25 +400,45 @@ def test_delivery_charge_distribution():
     # Update user to VIP status and verified KYC
     vip_update_data = {
         "membership_type": "vip",
-        "kyc_status": "verified",
-        "prc_balance": 1500.0
+        "kyc_status": "verified"
     }
     
     try:
-        response = requests.put(f"{API_BASE}/admin/users/{regular_user_uid}", 
+        response = requests.put(f"{API_BASE}/admin/users/{regular_user_uid}/update", 
                                json=vip_update_data, 
                                timeout=30)
         if response.status_code == 200:
-            print(f"✅ User updated to VIP with verified KYC and PRC balance")
-            test_results["prc_balance_credited"] = True
+            print(f"✅ User updated to VIP with verified KYC")
         else:
             print(f"⚠️  Failed to update user to VIP: {response.status_code}")
+            print(f"   Response: {response.text}")
+    except Exception as e:
+        print(f"⚠️  Error updating user to VIP: {e}")
+    
+    # Credit PRC balance using admin endpoint
+    print(f"\n💰 Crediting PRC balance using admin endpoint...")
+    balance_adjust_data = {
+        "balance_type": "prc_balance",
+        "amount": 1500.0,
+        "operation": "add",
+        "notes": "Test credit for delivery charge distribution testing"
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/admin/users/{regular_user_uid}/adjust-balance", 
+                               json=balance_adjust_data, 
+                               timeout=30)
+        if response.status_code == 200:
+            print(f"✅ PRC balance credited via admin endpoint")
+            test_results["prc_balance_credited"] = True
+        else:
+            print(f"⚠️  Failed to credit PRC via admin endpoint: {response.status_code}")
             print(f"   Response: {response.text}")
             # Try alternative method
             if credit_prc_balance(regular_user_uid, 1500):
                 test_results["prc_balance_credited"] = True
     except Exception as e:
-        print(f"⚠️  Error updating user to VIP: {e}")
+        print(f"⚠️  Error crediting PRC via admin endpoint: {e}")
         # Try alternative method
         if credit_prc_balance(regular_user_uid, 1500):
             test_results["prc_balance_credited"] = True
