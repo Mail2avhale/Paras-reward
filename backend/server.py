@@ -831,9 +831,9 @@ async def burn_expired_vip_prc():
                 # Log burn transaction
                 await log_transaction(
                     user_id=uid,
-                    transaction_type="prc_burn_expired_vip",
+                    wallet_type="prc",
+                    transaction_type="prc_burn",
                     amount=burned_amount,
-                    balance_after=new_balance,
                     description=f"Burned {burned_amount:.2f} PRC (VIP expired >5 days, downgraded to Free)",
                     metadata={"burn_reason": "vip_expiry_5days", "downgraded": True}
                 )
