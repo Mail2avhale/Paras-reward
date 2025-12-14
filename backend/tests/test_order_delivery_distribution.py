@@ -398,9 +398,9 @@ def test_delivery_charge_distribution():
             
             print(f"📊 Balances after distribution:")
             print(f"   User PRC: {user_balance_after}")
-            print(f"   Outlet Profit: {outlet_balance_after}")
-            print(f"   Sub Stockist Profit: {sub_balance_after}")
-            print(f"   Master Stockist Profit: {master_balance_after}")
+            print(f"   Outlet PRC: {outlet_balance_after}")
+            print(f"   Sub Stockist PRC: {sub_balance_after}")
+            print(f"   Master Stockist PRC: {master_balance_after}")
             
             # Calculate actual changes
             user_change = user_balance_before - user_balance_after
