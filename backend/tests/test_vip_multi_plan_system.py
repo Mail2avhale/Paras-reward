@@ -239,7 +239,8 @@ def test_vip_multi_plan_system():
     try:
         response = requests.get(f"{API_BASE}/admin/vip/plans", timeout=30)
         if response.status_code == 200:
-            admin_plans = response.json()
+            admin_response_data = response.json()
+            admin_plans = admin_response_data.get("plans", [])
             test_results["admin_plans_endpoint_works"] = True
             print(f"✅ Admin VIP plans endpoint working")
             
