@@ -95,9 +95,10 @@ print("=" * 80)
 
 def create_test_user_with_prc(prc_amount=1000):
     """Create a test user with specified PRC balance"""
-    timestamp = int(time.time())
+    timestamp = int(time.time() * 1000)  # Use milliseconds for more uniqueness
+    random_suffix = uuid.uuid4().hex[:6]  # Add random suffix
     user_data = {
-        "email": f"billpay_user_{timestamp}@test.com",
+        "email": f"billpay_user_{timestamp}_{random_suffix}@test.com",
         "password": "Test@123",
         "role": "user"
     }
