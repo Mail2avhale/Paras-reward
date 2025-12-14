@@ -179,6 +179,12 @@ const DashboardModern = ({ user, onLogout }) => {
 
       {/* Main Content */}
       <div className="max-w-md mx-auto px-4 -mt-20">
+        {/* PRC Expiry Warning (Free Users Only) */}
+        <PRCExpiryTimer 
+          miningHistory={miningHistory}
+          isFreeUser={stats.membershipType !== 'vip'}
+        />
+        
         {/* Stats Cards */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           {/* Total Mined */}
