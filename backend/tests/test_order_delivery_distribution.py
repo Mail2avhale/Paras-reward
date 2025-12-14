@@ -369,9 +369,9 @@ def test_delivery_charge_distribution():
     
     print(f"📊 Balances before distribution:")
     print(f"   User PRC: {user_balance_before}")
-    print(f"   Outlet Profit: {outlet_balance_before}")
-    print(f"   Sub Stockist Profit: {sub_balance_before}")
-    print(f"   Master Stockist Profit: {master_balance_before}")
+    print(f"   Outlet PRC: {outlet_balance_before}")
+    print(f"   Sub Stockist PRC: {sub_balance_before}")
+    print(f"   Master Stockist PRC: {master_balance_before}")
     
     # Trigger delivery charge distribution
     try:
