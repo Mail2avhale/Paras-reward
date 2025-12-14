@@ -805,10 +805,10 @@ async def get_vip_plan_pricing(plan_type: str = "monthly"):
     if not settings or "vip_plans" not in settings:
         # Return default plans if not in database
         default_plans = {
-            "monthly": {"price": 299.0, "duration_days": 30, "discount_percentage": 0, "label": "Monthly Plan"},
-            "quarterly": {"price": 799.0, "duration_days": 90, "discount_percentage": 10, "label": "Quarterly Plan"},
-            "half_yearly": {"price": 1499.0, "duration_days": 180, "discount_percentage": 15, "label": "Half-Yearly Plan"},
-            "yearly": {"price": 2799.0, "duration_days": 365, "discount_percentage": 20, "label": "Yearly Plan"}
+            "monthly": {"price": 299.0, "duration_days": 30, "discount_percentage": 0, "discount_fixed": 0, "label": "Monthly Plan"},
+            "quarterly": {"price": 897.0, "duration_days": 90, "discount_percentage": 0, "discount_fixed": 0, "label": "Quarterly Plan"},
+            "half_yearly": {"price": 1794.0, "duration_days": 180, "discount_percentage": 0, "discount_fixed": 0, "label": "Half-Yearly Plan"},
+            "yearly": {"price": 3588.0, "duration_days": 365, "discount_percentage": 0, "discount_fixed": 0, "label": "Yearly Plan"}
         }
         plan = default_plans.get(plan_type, default_plans["monthly"])
     else:
@@ -816,18 +816,23 @@ async def get_vip_plan_pricing(plan_type: str = "monthly"):
     
     base_price = plan["price"]
     discount_percentage = plan.get("discount_percentage", 0)
-    discount_amount = (base_price * discount_percentage) / 100
-    final_price = base_price - discount_amount
+    discount_fixed = plan.get("discount_fixed", 0)
+    
+    # Calculate total discount (percentage + fixed)
+    discount_from_percentage = (base_price * discount_percentage) / 100
+    total_discount = discount_from_percentage + discount_fixed
+    final_price = max(0, base_price - total_discount)
     
     return {
         "plan_type": plan_type,
         "base_price": base_price,
         "discount_percentage": discount_percentage,
-        "discount_amount": round(discount_amount, 2),
+        "discount_fixed": discount_fixed,
+        "discount_amount": round(total_discount, 2),
         "final_price": round(final_price, 2),
         "duration_days": plan["duration_days"],
         "label": plan["label"],
-        "savings": round(discount_amount, 2) if discount_amount > 0 else 0
+        "savings": round(total_discount, 2) if total_discount > 0 else 0
     }
 
 async def get_all_vip_plans():
@@ -11189,11 +11194,12 @@ async def get_vip_plans_public():
 
 @api_router.post("/admin/vip/update-plan")
 async def update_vip_plan(request: Request):
-    """Update VIP plan pricing and discount (Admin only)"""
+    """Update VIP plan pricing and discount (Admin only) - Supports both percentage and fixed discounts"""
     data = await request.json()
     plan_type = data.get("plan_type")  # monthly, quarterly, half_yearly, yearly
     price = data.get("price")
     discount_percentage = data.get("discount_percentage", 0)
+    discount_fixed = data.get("discount_fixed", 0)
     
     if not plan_type or plan_type not in ["monthly", "quarterly", "half_yearly", "yearly"]:
         raise HTTPException(status_code=400, detail="Invalid plan type")
@@ -11202,23 +11208,55 @@ async def update_vip_plan(request: Request):
         raise HTTPException(status_code=400, detail="Price must be positive")
     
     if discount_percentage < 0 or discount_percentage > 100:
-        raise HTTPException(status_code=400, detail="Discount must be between 0-100%")
+        raise HTTPException(status_code=400, detail="Discount percentage must be between 0-100%")
     
-    # Get current settings
+    if discount_fixed < 0:
+        raise HTTPException(status_code=400, detail="Fixed discount must be positive")
+    
+    # Get or create settings
     settings = await db.settings.find_one({})
     if not settings:
-        raise HTTPException(status_code=404, detail="Settings not found")
+        # Create initial settings with default VIP plans
+        initial_settings = {
+            "vip_plans": {
+                "monthly": {"price": 299.0, "duration_days": 30, "discount_percentage": 0, "discount_fixed": 0, "label": "Monthly Plan"},
+                "quarterly": {"price": 897.0, "duration_days": 90, "discount_percentage": 0, "discount_fixed": 0, "label": "Quarterly Plan"},
+                "half_yearly": {"price": 1794.0, "duration_days": 180, "discount_percentage": 0, "discount_fixed": 0, "label": "Half-Yearly Plan"},
+                "yearly": {"price": 3588.0, "duration_days": 365, "discount_percentage": 0, "discount_fixed": 0, "label": "Yearly Plan"}
+            },
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.settings.insert_one(initial_settings)
+        settings = initial_settings
     
     vip_plans = settings.get("vip_plans", {})
     
     # Update plan
     if plan_type not in vip_plans:
-        vip_plans[plan_type] = {}
+        # Initialize with defaults
+        default_labels = {
+            "monthly": "Monthly Plan",
+            "quarterly": "Quarterly Plan",
+            "half_yearly": "Half-Yearly Plan",
+            "yearly": "Yearly Plan"
+        }
+        default_durations = {
+            "monthly": 30,
+            "quarterly": 90,
+            "half_yearly": 180,
+            "yearly": 365
+        }
+        vip_plans[plan_type] = {
+            "label": default_labels[plan_type],
+            "duration_days": default_durations[plan_type]
+        }
     
     if price is not None:
         vip_plans[plan_type]["price"] = float(price)
     
     vip_plans[plan_type]["discount_percentage"] = float(discount_percentage)
+    vip_plans[plan_type]["discount_fixed"] = float(discount_fixed)
     
     # Save to database
     await db.settings.update_one(
@@ -11226,7 +11264,8 @@ async def update_vip_plan(request: Request):
         {"$set": {
             "vip_plans": vip_plans,
             "updated_at": datetime.now(timezone.utc).isoformat()
-        }}
+        }},
+        upsert=True
     )
     
     # Return updated plan
