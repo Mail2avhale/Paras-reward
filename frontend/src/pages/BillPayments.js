@@ -39,6 +39,14 @@ const BillPayments = ({ user, onLogout }) => {
       navigate('/login');
       return;
     }
+    
+    // Check VIP membership
+    if (user.membership_type !== 'vip') {
+      toast.error('VIP membership required to use bill payment services');
+      setTimeout(() => navigate('/vip-membership'), 2000);
+      return;
+    }
+    
     fetchRequests();
   }, [user, navigate]);
 
