@@ -3,6 +3,34 @@
 #====================================================================================================
 
 # THIS SECTION CONTAINS CRITICAL TESTING INSTRUCTIONS FOR BOTH AGENTS
+
+
+frontend:
+  - task: "Multi-Plan VIP Membership System"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/VIPMembership.js, /app/frontend/src/pages/AdminVIPPlans.js, /app/frontend/src/App.js, /app/frontend/src/pages/AdminDashboard.js"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "fork_agent"
+        comment: "IMPLEMENTED: Complete redesign of VIP membership system to support multiple plans with admin-controlled pricing. USER INTERFACE: VIPMembership.js now fetches and displays all 4 plans (Monthly, Quarterly, Half-Yearly, Yearly) in card grid layout, each card shows base price, discount savings, final price, and duration, visual selection with highlighted border and 'Selected' indicator, auto-selects monthly plan on page load, updates payment form dynamically with selected plan amount and details, payment submission includes plan_type and duration_days. ADMIN INTERFACE: Created new AdminVIPPlans.js page with dedicated management UI, individual cards for each plan with base price input, percentage discount slider (0-100%), fixed discount input (₹), live preview showing final price calculation, individual save button per plan + 'Save All' button, information banner explaining how discounts combine. ROUTING: Added AdminVIPPlans import and route at /admin/vip-plans in App.js, added 'VIP Plans' menu item in AdminDashboard.js sidebar linking to management page. All components use proper React hooks, responsive Tailwind CSS design, toast notifications for user feedback."
+
+backend:
+  - task: "Multi-Plan VIP Membership Pricing & Discounts"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "fork_agent"
+        comment: "IMPLEMENTED: Enhanced VIP plan system to support multiple tiers with flexible discount options. PRICING UPDATE: Updated default_plans dictionary with correct pricing: monthly ₹299/30 days, quarterly ₹897/90 days, half_yearly ₹1794/180 days, yearly ₹3588/365 days. DISCOUNT LOGIC: Modified get_vip_plan_pricing() function to support BOTH percentage and fixed discounts - percentage calculated first (base_price * discount_percentage / 100), fixed discount added to percentage discount, final_price ensures no negative values with max(0, base_price - total_discount), returns discount_percentage, discount_fixed, and total discount_amount. ADMIN ENDPOINT: Enhanced POST /api/admin/vip/update-plan to accept discount_fixed parameter, validation ensures discount_percentage 0-100%, validation ensures discount_fixed >= 0, creates initial settings document if missing, updates vip_plans dictionary with both discount types, uses upsert=True for database update. PUBLIC ENDPOINT: GET /api/vip/plans returns all 4 plans with calculated final prices including discounts. Settings stored in MongoDB 'settings' collection with vip_plans object containing plan configurations."
+
 # BOTH MAIN_AGENT AND TESTING_AGENT MUST PRESERVE THIS ENTIRE BLOCK
 
 # Communication Protocol:
@@ -1668,6 +1696,8 @@ frontend:
 agent_communication:
   - agent: "main"
     message: "FREE USER SYSTEM FRONTEND UPDATES COMPLETE: Successfully implemented all 4 frontend UI updates for the Free User Plan. ✅ Mining.js: Shows PRC expiry dates, countdown, valid/expired breakdown, dynamic alerts. ✅ TreasureHunt.js: Dynamic cashback rates (10%/20% free, 50%/100% VIP), all displays updated. ✅ WalletNew.js: Membership-based withdrawal limits (₹1000 free, ₹10 VIP), clear messaging, alerts. ✅ KYCVerification.js: Flexible document selection (Aadhaar OR PAN, not both), 2-step wizard, visual selection UI. All changes align with backend Free User Plan implementation from Phase 1. Frontend service restarted successfully. Ready for comprehensive testing to verify: 1) PRC expiry displays correctly, 2) Cashback rates reflect membership, 3) Withdrawal limits enforced, 4) KYC document selection works. Backend APIs already tested in Phase 1."
+  - agent: "fork_agent"
+    message: "MULTI-PLAN VIP MEMBERSHIP SYSTEM IMPLEMENTATION COMPLETE: Successfully implemented flexible VIP membership system with multiple plans and admin-controlled discounts as requested. ✅ BACKEND: Updated default VIP plan pricing (Monthly ₹299, Quarterly ₹897, Half-Yearly ₹1794, Yearly ₹3588), enhanced pricing calculation to support BOTH percentage AND fixed discounts (percentage applied first, then fixed amount), updated admin API endpoint POST /api/admin/vip/update-plan with discount_fixed parameter, created GET /api/vip/plans public endpoint returning all plan details with final prices after discounts. ✅ ADMIN FRONTEND: Created new AdminVIPPlans.js page with live preview for each plan, separate controls for base price, discount percentage (0-100%), and fixed discount (₹), visual cards showing plan duration, savings calculation, individual save buttons per plan + save all button, integrated into AdminDashboard menu and App.js routing at /admin/vip-plans. ✅ USER FRONTEND: Completely redesigned VIPMembership.js to show all 4 plans in card grid, visual plan selection with highlighting and 'Selected' indicator, displays original price, savings, and final price for each plan, auto-selects monthly plan by default, updates payment form with selected plan details, shows plan label and duration in payment confirmation. ✅ FEATURES: Admin can set pricing and discounts independently for each plan, both discount types work together (e.g., 10% + ₹50 off), users see real-time final prices reflecting admin discounts, payment submission includes plan_type and duration_days for proper VIP activation. System tested with curl - all 4 plans returning correct data. Ready for comprehensive testing to verify: 1) Admin can manage plans, 2) Users can select and purchase plans, 3) Discounts calculate correctly, 4) Payment submission works end-to-end."
 
 backend:
   - task: "Free User Treasure Hunt Start Issue"
