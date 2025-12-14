@@ -318,7 +318,7 @@ const Home = ({ user, onLogout }) => {
               {
                 icon: Crown,
                 title: 'VIP Membership',
-                description: 'Unlimited validity & exclusive benefits for ₹1000/year',
+                description: 'Unlimited validity & exclusive benefits',
                 color: 'yellow'
               },
               {
