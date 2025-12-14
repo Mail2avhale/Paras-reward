@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PARAS REWARD</string>
+    <string name="title_activity_main">PARAS REWARD</string>
+    <string name="package_name">com.parasreward.app</string>
+    <string name="custom_url_scheme">com.parasreward.app</string>
+</resources>
