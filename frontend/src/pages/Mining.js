@@ -14,6 +14,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const Mining = ({ user, onLogout }) => {
+  const navigate = useNavigate();
   const [miningStatus, setMiningStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showValidityWarning, setShowValidityWarning] = useState(false);
