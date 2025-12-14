@@ -608,11 +608,6 @@ const DashboardNew = ({ user, onLogout }) => {
             </div>
           </div>
         </Card>
-
-        {!isAdmin && (
-          <div className="mt-6">
-          </div>
-        )}
       </div>
     </div>
   );
