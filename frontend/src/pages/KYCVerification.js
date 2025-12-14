@@ -67,11 +67,25 @@ const KYCVerification = ({ user, onLogout }) => {
         );
         return;
       }
+      if (!kycData.aadhaar_number || kycData.aadhaar_number.length !== 12) {
+        notifications.error(
+          'Invalid Aadhaar Number',
+          'Please enter a valid 12-digit Aadhaar number.'
+        );
+        return;
+      }
     } else if (selectedDocType === 'pan') {
       if (!kycData.pan_front_base64) {
         notifications.error(
           'Missing Document',
           'Please upload your PAN card to continue.'
+        );
+        return;
+      }
+      if (!kycData.pan_number || kycData.pan_number.length !== 10) {
+        notifications.error(
+          'Invalid PAN Number',
+          'Please enter a valid 10-character PAN number.'
         );
         return;
       }
