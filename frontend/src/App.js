@@ -128,6 +128,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/analytics" element={user && user.role === "admin" ? <AdminAnalytics user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/admin/video-ads" element={user && user.role === "admin" ? <AdminVideoAds user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/admin/settings" element={user && user.role === "admin" ? <AdminSettings user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/burn-management" element={user?.role === 'admin' ? <AdminBurnDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/manager" element={user && user.role === "manager" ? <ManagerDashboardNew user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/manager/users" element={user && user.role === "manager" ? <ManagerUsers user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/manager/orders" element={user && user.role === "manager" ? <ManagerOrders user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
