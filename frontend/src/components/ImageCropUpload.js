@@ -315,30 +315,45 @@ const ImageCropUpload = ({
 
       {/* Upload Area or Preview */}
       {!preview ? (
-        <div
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors cursor-pointer bg-gray-50"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,.heic,.heif"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
+        <div className="space-y-4">
+          <div
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors cursor-pointer bg-gray-50"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,.heic,.heif"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            
+            <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600 font-medium mb-2">
+              Click to upload or drag and drop
+            </p>
+            <p className="text-sm text-gray-500">
+              JPG, PNG, HEIC, WebP (Max {maxSizeMB}MB)
+            </p>
+            <p className="text-xs text-gray-400 mt-2">
+              Image will be automatically resized and compressed
+            </p>
+          </div>
           
-          <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 font-medium mb-2">
-            Click to upload or drag and drop
-          </p>
-          <p className="text-sm text-gray-500">
-            JPG, PNG, HEIC, WebP (Max {maxSizeMB}MB)
-          </p>
-          <p className="text-xs text-gray-400 mt-2">
-            Image will be automatically resized and compressed
-          </p>
+          {/* Camera Button */}
+          <div className="text-center">
+            <Button
+              type="button"
+              onClick={startCamera}
+              variant="outline"
+              className="flex items-center gap-2 mx-auto"
+            >
+              <Camera className="h-4 w-4" />
+              Take Photo with Camera
+            </Button>
+          </div>
         </div>
       ) : (
         <Card className="p-4">
