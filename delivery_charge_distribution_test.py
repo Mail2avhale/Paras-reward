@@ -501,9 +501,9 @@ def test_delivery_charge_distribution():
     }
     
     print(f"📊 Final balances:")
-    print(f"   Master Stockist profit wallet: {final_balances['master']}")
-    print(f"   Sub Stockist profit wallet: {final_balances['sub']}")
-    print(f"   Outlet profit wallet: {final_balances['outlet']}")
+    print(f"   Master Stockist PRC: {final_balances['master']}")
+    print(f"   Sub Stockist PRC: {final_balances['sub']}")
+    print(f"   Outlet PRC: {final_balances['outlet']}")
     print(f"   Regular user PRC: {final_balances['user_prc']}")
     
     # Calculate expected distribution
