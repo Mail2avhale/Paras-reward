@@ -58,20 +58,6 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     emergency_contact_number: user?.emergency_contact_number || ''
   });
   
-  // Bank Details State
-  const [bankDetails, setBankDetails] = useState({
-    bank_account_holder_name: user?.bank_account_holder_name || '',
-    bank_account_number: user?.bank_account_number || '',
-    confirm_account_number: '',
-    bank_ifsc: user?.bank_ifsc || '',
-    bank_name: user?.bank_name || '',
-    bank_branch: user?.bank_branch || '',
-    bank_account_type: user?.bank_account_type || 'savings',
-    upi_id: user?.upi_id || '',
-    phonepe_number: user?.phonepe_number || '',
-    gpay_number: user?.gpay_number || '',
-    paytm_number: user?.paytm_number || ''
-  });
   
   // Security Options State
   const [securityOptions, setSecurityOptions] = useState({
@@ -411,23 +397,9 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     }
   };
   
-  const handleSaveBankDetails = async () => {
-    if (!validateBankDetails()) {
-      toast.error('Please fix validation errors');
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      const { confirm_account_number, ...bankData } = bankDetails;
-      await axios.put(`${API}/api/user/${user.uid}/profile`, bankData);
-      toast.success('Bank details updated successfully!');
-      setErrors({});
-    } catch (error) {
-      console.error('Error updating bank details:', error);
-      toast.error(error.response?.data?.detail || 'Failed to update bank details');
-    } finally {
-      setLoading(false);
+  const handleSaveBankDetailsRemoved = async () => {
+    // Bank details section removed
+    setLoading(false);
     }
   };
   
@@ -472,7 +444,6 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     { id: 'profile', label: 'Profile Image', icon: Camera, color: 'purple' },
     { id: 'personal', label: 'Personal Information', icon: User, color: 'blue' },
     { id: 'contact', label: 'Contact Details', icon: MapPin, color: 'green' },
-    { id: 'bank', label: 'Bank Details', icon: CreditCard, color: 'yellow' },
     { id: 'security', label: 'Security Options', icon: Shield, color: 'red' },
     { id: 'password', label: 'Change Password', icon: Lock, color: 'indigo' }
   ];
