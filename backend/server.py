@@ -221,15 +221,19 @@ class KYCDocument(BaseModel):
     user_id: str
     aadhaar_front: Optional[str] = None
     aadhaar_back: Optional[str] = None
+    aadhaar_number: Optional[str] = None
     pan_front: Optional[str] = None
+    pan_number: Optional[str] = None
     status: str = "pending"  # pending, verified, rejected
     submitted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     verified_at: Optional[datetime] = None
 
 class KYCSubmit(BaseModel):
-    aadhaar_front_base64: str
-    aadhaar_back_base64: str
-    pan_front_base64: str
+    aadhaar_front_base64: str = ""
+    aadhaar_back_base64: str = ""
+    aadhaar_number: str = ""
+    pan_front_base64: str = ""
+    pan_number: str = ""
 
 class Product(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -2611,7 +2615,9 @@ async def submit_kyc(uid: str, kyc_data: KYCSubmit):
         user_id=uid,
         aadhaar_front=kyc_data.aadhaar_front_base64,
         aadhaar_back=kyc_data.aadhaar_back_base64,
-        pan_front=kyc_data.pan_front_base64
+        aadhaar_number=kyc_data.aadhaar_number,
+        pan_front=kyc_data.pan_front_base64,
+        pan_number=kyc_data.pan_number
     )
     
     doc = kyc_doc.model_dump()
