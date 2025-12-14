@@ -24,8 +24,13 @@ const BillPayments = ({ user, onLogout }) => {
     operator: '',
     account_number: '',
     consumer_number: '',
-    card_number: '',
+    card_last4: '',
+    cardholder_name: '',
+    card_type: '',
     loan_account: '',
+    borrower_name: '',
+    loan_type: '',
+    bank_name: '',
     biller_name: ''
   });
 
@@ -50,8 +55,8 @@ const BillPayments = ({ user, onLogout }) => {
     { id: 'mobile_recharge', label: 'Mobile Recharge', icon: Smartphone, color: 'blue', fields: ['phone_number', 'operator'] },
     { id: 'dish_recharge', label: 'DTH/Dish Recharge', icon: Tv, color: 'purple', fields: ['consumer_number', 'operator'] },
     { id: 'electricity_bill', label: 'Electricity Bill', icon: Zap, color: 'yellow', fields: ['consumer_number', 'biller_name'] },
-    { id: 'credit_card_payment', label: 'Credit Card', icon: CreditCard, color: 'green', fields: ['card_number', 'biller_name'] },
-    { id: 'loan_emi', label: 'Loan/EMI', icon: Building, color: 'red', fields: ['loan_account', 'biller_name'] }
+    { id: 'credit_card_payment', label: 'Credit Card', icon: CreditCard, color: 'green', fields: ['card_last4', 'cardholder_name', 'bank_name', 'card_type'] },
+    { id: 'loan_emi', label: 'Loan/EMI', icon: Building, color: 'red', fields: ['loan_account', 'bank_name', 'borrower_name', 'loan_type'] }
   ];
 
   const currentType = requestTypes.find(t => t.id === selectedType);
@@ -246,31 +251,109 @@ const BillPayments = ({ user, onLogout }) => {
                   </div>
                 )}
 
-                {currentType.fields.includes('card_number') && (
-                  <div>
-                    <Label htmlFor="card">Card Number (Last 4 digits) *</Label>
-                    <Input
-                      id="card"
-                      value={formData.card_number}
-                      onChange={(e) => setFormData({ ...formData, card_number: e.target.value })}
-                      placeholder="Last 4 digits"
-                      maxLength={4}
-                      required
-                    />
-                  </div>
+                {currentType.fields.includes('card_last4') && (
+                  <>
+                    <div>
+                      <Label htmlFor="card_last4">Card Number (Last 4 digits) *</Label>
+                      <Input
+                        id="card_last4"
+                        value={formData.card_last4}
+                        onChange={(e) => setFormData({ ...formData, card_last4: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                        placeholder="XXXX"
+                        maxLength={4}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="cardholder_name">Cardholder Name *</Label>
+                      <Input
+                        id="cardholder_name"
+                        value={formData.cardholder_name}
+                        onChange={(e) => setFormData({ ...formData, cardholder_name: e.target.value })}
+                        placeholder="Name on card"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="card_type">Card Type *</Label>
+                      <select
+                        id="card_type"
+                        value={formData.card_type}
+                        onChange={(e) => setFormData({ ...formData, card_type: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      >
+                        <option value="">Select card type</option>
+                        <option value="visa">Visa</option>
+                        <option value="mastercard">Mastercard</option>
+                        <option value="rupay">RuPay</option>
+                        <option value="amex">American Express</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Label htmlFor="bank_name">Issuing Bank *</Label>
+                      <Input
+                        id="bank_name"
+                        value={formData.bank_name}
+                        onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+                        placeholder="e.g., HDFC Bank, SBI"
+                        required
+                      />
+                    </div>
+                  </>
                 )}
 
                 {currentType.fields.includes('loan_account') && (
-                  <div>
-                    <Label htmlFor="loan">Loan Account Number *</Label>
-                    <Input
-                      id="loan"
-                      value={formData.loan_account}
-                      onChange={(e) => setFormData({ ...formData, loan_account: e.target.value })}
-                      placeholder="Enter loan account number"
-                      required
-                    />
-                  </div>
+                  <>
+                    <div>
+                      <Label htmlFor="loan_account">Loan Account Number *</Label>
+                      <Input
+                        id="loan_account"
+                        value={formData.loan_account}
+                        onChange={(e) => setFormData({ ...formData, loan_account: e.target.value })}
+                        placeholder="Enter loan account number"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="borrower_name">Borrower Name *</Label>
+                      <Input
+                        id="borrower_name"
+                        value={formData.borrower_name}
+                        onChange={(e) => setFormData({ ...formData, borrower_name: e.target.value })}
+                        placeholder="Name of borrower"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="loan_type">Loan Type *</Label>
+                      <select
+                        id="loan_type"
+                        value={formData.loan_type}
+                        onChange={(e) => setFormData({ ...formData, loan_type: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      >
+                        <option value="">Select loan type</option>
+                        <option value="home_loan">Home Loan</option>
+                        <option value="personal_loan">Personal Loan</option>
+                        <option value="car_loan">Car Loan</option>
+                        <option value="education_loan">Education Loan</option>
+                        <option value="business_loan">Business Loan</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Label htmlFor="bank_name">Bank/NBFC Name *</Label>
+                      <Input
+                        id="bank_name"
+                        value={formData.bank_name}
+                        onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+                        placeholder="e.g., HDFC Bank, Bajaj Finance"
+                        required
+                      />
+                    </div>
+                  </>
                 )}
 
                 {currentType.fields.includes('operator') && (
