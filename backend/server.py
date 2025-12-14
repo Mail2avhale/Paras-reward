@@ -2303,7 +2303,7 @@ async def claim_mining(uid: str):
     
     # Calculate mined coins
     elapsed_minutes = (now - start_time).total_seconds() / 60
-    rate_per_minute, _, _ = await calculate_mining_rate(uid)
+    rate_per_minute, base_rate, total_active_referrals, referral_breakdown = await calculate_mining_rate(uid)
     mined_amount = elapsed_minutes * rate_per_minute
     
     # Update user balance (free and VIP users)
