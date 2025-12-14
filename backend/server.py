@@ -11180,6 +11180,68 @@ async def get_burn_statistics():
         "recent_burns": recent_burns
     }
 
+# VIP Plans Management Endpoints
+@api_router.get("/vip/plans")
+async def get_vip_plans_public():
+    """Get all VIP plans with pricing (public endpoint)"""
+    plans = await get_all_vip_plans()
+    return {"plans": plans}
+
+@api_router.post("/admin/vip/update-plan")
+async def update_vip_plan(request: Request):
+    """Update VIP plan pricing and discount (Admin only)"""
+    data = await request.json()
+    plan_type = data.get("plan_type")  # monthly, quarterly, half_yearly, yearly
+    price = data.get("price")
+    discount_percentage = data.get("discount_percentage", 0)
+    
+    if not plan_type or plan_type not in ["monthly", "quarterly", "half_yearly", "yearly"]:
+        raise HTTPException(status_code=400, detail="Invalid plan type")
+    
+    if price is not None and price < 0:
+        raise HTTPException(status_code=400, detail="Price must be positive")
+    
+    if discount_percentage < 0 or discount_percentage > 100:
+        raise HTTPException(status_code=400, detail="Discount must be between 0-100%")
+    
+    # Get current settings
+    settings = await db.settings.find_one({})
+    if not settings:
+        raise HTTPException(status_code=404, detail="Settings not found")
+    
+    vip_plans = settings.get("vip_plans", {})
+    
+    # Update plan
+    if plan_type not in vip_plans:
+        vip_plans[plan_type] = {}
+    
+    if price is not None:
+        vip_plans[plan_type]["price"] = float(price)
+    
+    vip_plans[plan_type]["discount_percentage"] = float(discount_percentage)
+    
+    # Save to database
+    await db.settings.update_one(
+        {},
+        {"$set": {
+            "vip_plans": vip_plans,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Return updated plan
+    updated_plan = await get_vip_plan_pricing(plan_type)
+    return {
+        "message": f"VIP {plan_type} plan updated successfully",
+        "plan": updated_plan
+    }
+
+@api_router.get("/admin/vip/plans")
+async def get_vip_plans_admin():
+    """Get all VIP plans for admin (includes edit capabilities)"""
+    plans = await get_all_vip_plans()
+    return {"plans": plans}
+
 @api_router.get("/admin/users-at-risk")
 async def get_users_at_risk_of_burn():
     """Get users whose PRC is about to be burned (Admin only)"""
