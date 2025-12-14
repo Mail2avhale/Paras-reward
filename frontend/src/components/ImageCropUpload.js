@@ -236,6 +236,67 @@ const ImageCropUpload = ({
     }
   };
 
+  // Start camera
+  const startCamera = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: 1280, height: 720 }
+      });
+      setStream(mediaStream);
+      setShowCamera(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      toast.error('Unable to access camera. Please check permissions.');
+    }
+  };
+
+  // Stop camera
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    setShowCamera(false);
+  };
+
+  // Capture photo from camera
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0);
+      
+      canvas.toBlob(async (blob) => {
+        stopCamera();
+        const file = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' });
+        
+        // Process the captured image
+        setOriginalSize(file.size);
+        setProcessing(true);
+        
+        try {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            setOriginalImage(e.target.result);
+            setShowCropModal(true);
+            setProcessing(false);
+          };
+          reader.readAsDataURL(file);
+        } catch (error) {
+          console.error('Error processing camera capture:', error);
+          toast.error('Failed to process camera capture');
+          setProcessing(false);
+        }
+      }, 'image/jpeg', 0.95);
+    }
+  };
+
   // Format file size
   const formatSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
