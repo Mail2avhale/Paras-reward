@@ -408,6 +408,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     { id: 'profile', label: 'Profile Image', icon: Camera, color: 'purple' },
     { id: 'personal', label: 'Personal Information', icon: User, color: 'blue' },
     { id: 'contact', label: 'Contact Details', icon: MapPin, color: 'green' },
+    { id: 'kyc', label: 'KYC Documents', icon: FileText, color: 'orange' },
     { id: 'security', label: 'Security Options', icon: Shield, color: 'red' },
     { id: 'password', label: 'Change Password', icon: Lock, color: 'indigo' }
   ];
