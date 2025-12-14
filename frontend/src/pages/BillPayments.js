@@ -101,8 +101,8 @@ const BillPayments = ({ user, onLogout }) => {
     }
 
     // Check PRC balance
-    if (user.prc_balance < totalPRC) {
-      toast.error(`Insufficient PRC balance. Required: ${totalPRC.toFixed(2)} PRC, Available: ${user.prc_balance?.toFixed(2) || 0} PRC`);
+    if (currentUser.prc_balance < totalPRC) {
+      toast.error(`Insufficient PRC balance. Required: ${totalPRC.toFixed(2)} PRC, Available: ${currentUser.prc_balance?.toFixed(2) || 0} PRC`);
       return;
     }
 
