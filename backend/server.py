@@ -2193,7 +2193,7 @@ async def start_mining(uid: str):
         wallet_type="prc",
         transaction_type="mining_started",
         amount=0,
-        description=f"Started 24-hour mining session",
+        description="Started 24-hour mining session",
         metadata={
             "session_start": now.isoformat(),
             "session_end": session_end.isoformat()
