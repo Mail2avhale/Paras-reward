@@ -14578,6 +14578,14 @@ async def initialize_database_indexes():
         # Users collection indexes
         await db.users.create_index("uid", unique=True)
         await db.users.create_index("email", unique=True)
+        
+        # Drop old mobile index if it exists (non-sparse) and create sparse index
+        try:
+            await db.users.drop_index("mobile_1")
+            print("✅ Dropped old mobile index")
+        except:
+            pass  # Index doesn't exist, that's fine
+        
         # Sparse index for mobile - allows multiple null values
         await db.users.create_index("mobile", unique=True, sparse=True)
         
