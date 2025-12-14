@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://wallet-refactor-1.preview.emergentagent.com/setup
+   https://voucher-pay-system.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

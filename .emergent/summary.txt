@@ -1,216 +1,186 @@
 <analysis>Here is the summary of the current session:
 
-**original_problem_statement:** The user requested a major application refactor with the following key requirements:
-- **Feature Removal**: Delete the Scratch Card and Treasure Hunt games.
-- **Wallet Simplification**: Remove the Cashback and Earning wallets, keeping only the main PRC balance.
-- **UI/UX Overhaul**:
-    - Redesign the user dashboard to mimic the style of Pi Network, PhonePe, or GPay, including a bottom menu bar for quick actions.
-    - Add Back buttons in all user sections for improved navigation.
-- **VIP Membership Rework**:
-    - Replace the single yearly plan with multiple tiers: Monthly, Quarterly, Half-Yearly, and Yearly.
-    - Allow an admin to set and apply discounts to these membership plans.
-- **Business Logic Updates**:
-    - Implement a PRC Burn rule: PRC earned by free users burns after 2 days, and PRC for expired VIPs burns after 5 days (using a FIFO approach).
-    - Block marketplace access for expired VIPs until they renew.
-    - Update the mining base rate to be dynamic (decreasing with more users) and expand the referral bonus system to five levels.
-- **Content Creation**: Add a Refund Policy page.
-- **New Features**:
-    - Build an advanced profile management page with sections for profile image, personal info, contact, bank details, security, and password change.
-    - Implement cascading dropdowns for State -> District -> Tehsil in the user profile.
-    - Add an admin setting to enable or disable new user registrations.
-- **Bug Fixes & Verification**:
-    - Address an error preventing the profile page from loading data.
-    - Fix an issue with a broken preview link.
-    - Add the PRC-to-INR conversion ratio back to the dashboard.
-    - Restore the Tap Game which was accidentally removed.
+**original_problem_statement:** The user requested a major application refactor and the addition of several new features.
+
+**Original Refactor Requirements:**
+*   **Feature Removal**: Delete Scratch Card and Treasure Hunt games.
+*   **Wallet Simplification**: Remove Cashback and Earning wallets, keeping only the main PRC balance.
+*   **UI/UX Overhaul**: Redesign the user dashboard, add a bottom menu, and include Back buttons.
+*   **VIP Membership Rework**: Introduce tiered plans (Monthly, Quarterly, etc.) with admin-controlled discounts.
+*   **Business Logic Updates**: Implement a PRC Burn rule for inactive users, block marketplace for expired VIPs, and update the mining rate.
+*   **New Features**: Build an advanced profile page, add cascading location dropdowns, and an admin setting to toggle registrations.
+*   **Bug Fixes**: Address profile page loading errors and other UI issues.
+
+**New Requirements from this Session:**
+*   **Bill Payment System**: Implement a feature for users to request mobile/DTH recharges, bill payments (electricity, credit card, loan EMI), which an admin can approve and process. This system should use PRC for payment and include configurable service charges.
+*   **Gift Voucher Redemption**: Allow users to redeem PRC for PhonePe gift vouchers, with admin approval and service charges.
+*   **Delivery Charge Update**: Increase the delivery charge to 15% and refactor the distribution logic to credit PRC directly to the Outlet, Sub-Stockist, and Master-Stockist wallets.
+*   **UI Cleanup & Enhancements**:
+    *   Remove the Bank Details section from the advanced profile page.
+    *   Add pagination to the Recent Activity feed on the dashboard.
+    *   Add easy-access Logout buttons to all major pages.
+    *   Implement a role-switching mechanism in the admin panel for easy navigation between Admin, Master Stockist, Sub-Stockist, and Outlet views.
+*   **Bug Fixes**: Resolve multiple user-reported issues, including PRC claim errors, missing UI elements, and crashes on admin pages.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The application has undergone a significant refactoring. The Scratch Card and Treasure Hunt games, along with their associated wallet systems (cashback, profit), have been removed. The core financial system is now simplified to a single PRC wallet.
+The application has been significantly enhanced. The multi-plan VIP membership system, a key feature from the previous session, is now fully implemented on both the backend and frontend and has been tested.
 
-A new, modern user dashboard () has been created, featuring a bottom navigation bar and a design inspired by GPay/PhonePe. The mining rate calculation has been updated to use a dynamic base rate and a 5-level referral bonus system.
+Three major new features have been added: a bill payment/recharge system, a gift voucher redemption system, and an admin panel for configuring service charges. The backend APIs and frontend UI pages for these features are complete.
 
-The backend now contains the logic for a PRC Burn system, which removes PRC from free users after 2 days and from expired VIPs after 5 days, though this is not yet automated. An admin setting to toggle new user registrations has also been fully implemented.
+The business logic for delivery charges has been updated to 15% and refactored to use a direct PRC-to-PRC distribution model, eliminating the old Profit Wallet. All frontend references to Profit Wallet have been removed and replaced with PRC balance displays.
 
-The VIP membership system is partially updated to support multiple plans (Monthly, Quarterly, etc.) with admin-controlled discounts. The backend data structures and price calculation helpers are in place, but the admin management endpoints and frontend UI are not yet complete.
+Significant UI/UX improvements were made, including removing the Bank Details section from the user profile, adding a role-switcher to the admin dashboard, placing logout buttons on all key pages, and implementing pagination for the transaction history. Numerous bugs reported by the user, such as PRC claim failures and UI glitches, have been fixed.
 
 **Last working item**:
-- **Last item agent was working**: Implementing a multi-plan VIP membership system with admin-controlled discounts. The agent had just finished adding the necessary data structures ( dictionary) and helper functions (, ) to the backend file  to support variable pricing. The next step was to create the API endpoints for admins to manage these plans and discounts.
-- **Status**: IN PROGRESS
-- **Agent Testing Done**: N
-- **Which testing method agent to use?**: both
+- **Last item agent was working**: Testing the complete order placement and delivery charge distribution flow after refactoring it to use PRC. The agent used a testing subagent which completed its run. The agent was about to analyze the results and summarize them for the user.
+- **Status**: USER VERIFICATION PENDING
+- **Agent Testing Done**: Y
+- **Which testing method agent to use?**: N/A (Testing was just completed; the next step is to analyze the results and fix the identified bug).
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1**: The profile update endpoints in  were corrected, but the entire page functionality, especially saving data for each of the 6 sections, requires thorough testing.
--   **Issue 2**: The PRC burn logic exists but is not automated. It needs to be triggered by a recurring job.
+- **Issue 1**: PRC distribution for delivery charges is failing for Sub-Stockists and Master-Stockists. (P0 - HIGHEST)
 
 **Issues Detail**:
--   **Issue 1: Profile Management Functionality Verification**
-    -   **Attempted fixes**: The agent fixed the API URLs that were causing the Failed to load profile data error.
+-   **Issue 1: Failed Delivery Charge Distribution to Stockists**
+    -   **Attempted fixes**: The  function in  was refactored to credit PRC directly instead of using the old . A testing subagent was run to validate this change.
     -   **Next debug checklist**:
-        -   Manually test saving data in each of the 6 sections of the  page.
-        -   Verify that API calls to , , , etc., are successful and save data correctly.
-        -   Check browser console and backend logs for any errors during save operations.
-    -   **Why fix this issue and what will be achieved with the fix?**: This will ensure the new advanced profile page is fully functional and users can manage their data.
-    -   **Status**: USER VERIFICATION PENDING
-    -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: both
-    -   **Blocked on other issue**: None
-
--   **Issue 2: PRC Burn Mechanism is Not Automated**
-    -   **Attempted fixes**: The agent created the backend function  in  which contains the complete burn logic.
-    -   **Next debug checklist**:
-        -   Integrate a scheduling library like  into .
-        -   Configure a recurring job (e.g., to run daily) that calls the  function.
-        -   Add logging to the job to monitor its execution and any errors.
-    -   **Why fix this issue and what will be achieved with the fix?**: This will automate the core business rule of burning expired PRC, encouraging user engagement and VIP upgrades without manual admin intervention.
-    -   **Status**: NOT STARTED
+        -   Analyze the test subagent's report, which indicated that PRC credit failed for Sub-Stockists and Master-Stockists.
+        -   Review the  function in . Pay close attention to the user lookup logic for the parent stockists ( or similar).
+        -   Verify the user data hierarchy is correctly set up for the test users (Outlet -> Sub-Stockist -> Master-Stockist).
+        -   Add detailed logging within the function to trace the user IDs and PRC amounts being calculated and credited at each step of the hierarchy.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical business logic failure. Fixing it will ensure the supply chain commission structure works as intended.
+    -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: backend
     -   **Blocked on other issue**: None
 
 **In progress Task List**:
--   **Task 1**: Complete Multi-Plan VIP Membership & Discount System (P0)
-
-**Task Detail**:
--   **Task 1: Complete Multi-Plan VIP Membership & Discount System**
-    -   **Where to resume**:
-        1.  **Backend**: In , create new API endpoints for the admin to manage VIP plans and discounts (e.g., ). These endpoints should allow updating the  and  values in the system settings.
-        2.  **Frontend (Admin)**: Create or update an admin settings page to include a UI for managing the VIP plans (prices, durations) and setting a global discount (percentage or fixed amount).
-        3.  **Frontend (User)**: Update the  page to fetch the available plans and display them to the user, showing the final price after any applicable discounts.
-    -   **What will be achieved with this?**: A flexible, multi-tiered VIP membership system that admins can control, creating more options for users and revenue opportunities.
-    -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: both
-    -   **Blocked on something**: None
+- None. The primary focus is resolving the P0 issue above.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
-    - **P0**: Implement frontend UI for PRC Expiry Countdown on the user dashboard () using the new  component.
-    - **P1**: Create the  page with UI to display burn statistics fetched from the backend.
-    - **P1**: Conduct comprehensive frontend testing for the  page, especially the cascading location dropdowns.
+    - **P1**: Automate the PRC Burn mechanism using a scheduler (e.g., ) in .
+    - **P1**: Implement frontend UI for a PRC Expiry Countdown timer on .
     - **P2**: Implement user notifications for PRC that is about to expire.
-
 - **Future Tasks**:
-    - Complete implementation of profit wallet credit logging during delivery charge distribution.
+    - Implement Transaction Receipts for all financial activities.
     - Implement order update/delete functionality for regular users.
     - Build detailed advanced admin sections for Notifications, Commissions, and Rewards.
-    - Populate  with complete article content.
-    - Integrate  component into relevant pages.
-    - Implement Transaction Receipts.
-    - Address Biometric error (Failed to enable biometric login) in .
-    - Implement security fix for deleted users being able to log in.
+    - Address the Biometric login error in .
+    - Implement a security fix for deleted users being able to log in.
     - Implement Push Notifications.
-    - Complete Google Analytics event and conversion tracking.
+    - Complete Google Analytics integration.
     - Expand translations to all remaining pages.
 
 **Completed work in this session**
-- **Feature Removals & Simplification**:
-  - Scratch Card and Treasure Hunt games removed from frontend and backend.
-  - Wallet system simplified to a single PRC balance; ,  and associated backend logic removed.
-- **Dashboard & UI Overhaul**:
-  - New modern dashboard created at .
-  - Bottom navigation bar implemented in .
-  - Back buttons added to , , and .
-- **New Features & Pages**:
-  - Advanced profile management page created at .
-  - Cascading location dropdowns (State -> District -> Tehsil) added to .
-  - Admin setting to toggle new user registrations implemented in  and .
-  - Refund Policy page created and integrated ().
-- **Business Logic Implementation**:
-  - PRC Burn rules (free user 2-day expiry, expired VIP 5-day expiry) implemented in .
-  - Marketplace access blocked for expired VIPs in .
-  - Dynamic mining base rate and 5-level referral bonus system implemented in .
+- **Multi-Plan VIP System**: Fully implemented and tested backend and frontend for tiered VIP plans with admin-managed discounts.
+- **New Feature Implementation**:
+  - Built backend & frontend for a bill payment/recharge request system.
+  - Built backend & frontend for a gift voucher redemption system.
+  - Created an admin page to configure service charges for the new features.
+- **Business Logic & Refactoring**:
+  - Updated delivery charge to 15% and refactored distribution to use direct PRC credits.
+  - Completely removed the Profit Wallet system from all backend logic and frontend panels.
+- **UI/UX Improvements**:
+  - Added a role-switcher to the admin dashboard for easy navigation between account types.
+  - Added easy-access Logout buttons on the dashboard, profile, and all new feature pages.
+  - Removed the Bank Details section from .
+  - Implemented pagination for the Recent Activity list on the user dashboard.
 - **Bug Fixes**:
-  - Fixed Failed to load profile data on  by correcting API endpoint URLs.
-  - Resolved app crash (WalletNew is not defined) by removing dangling references in  and .
-  - Replaced non-functional Android APK download link with a PWA install prompt.
-- **VIP Membership (Partial)**:
-  - Updated VIP price to ₹299/month across frontend and backend.
-  - Laid the backend foundation for a multi-plan VIP system in .
+  - Resolved a critical PRC claiming error by fixing a function signature mismatch.
+  - Fixed bugs preventing the Recent Activity feed from displaying and new feature buttons from being visible.
+  - Fixed a crash on the  page caused by a missing import.
+  - Cleaned up all leftover UI code from the removed Bank Details section.
 
 **Earlier issues found/mentioned but not fixed**
--   None identified in this session that weren't addressed or added to the pending list.
+- The automation of the PRC Burn job, which was a critical task from the previous summary, was not addressed in this session. It remains an upcoming task.
 
 **Known issue recurrence from previous fork**
--   None.
+- None.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend**: FastAPI, MongoDB, Pydantic
--   **Frontend**: React.js, Tailwind CSS, react-router
--   **Architecture**: Monorepo, REST API
--   **Core Logic**: Role-Based Access Control (RBAC), FIFO (First-In, First-Out) for PRC burn
+- **Backend**: FastAPI, MongoDB, Pydantic
+- **Frontend**: React.js, Tailwind CSS, react-router
+- **Architecture**: Monorepo with a monolithic backend and a React SPA frontend.
+- **New Concepts**: Admin role-switching/impersonation, dynamic form rendering based on user selection.
 
 **key DB schema**
--   **users**:
-    -   :  - New array added to track each mining claim with a timestamp. This is critical for the FIFO PRC burn logic.
 -   **system_settings**:
-    -   :  - New field to control new user registrations.
-    -   :  - New dictionary holding the structure for multiple VIP plans.
-    -   :  - New dictionary for admin-controlled VIP discounts.
+    -   :  - (NEW) Stores configurable charges for new services (bill pay, gift vouchers).
+-   **bill_payment_requests**:  - (NEW) Stores user requests for bill payments, including details like account number, provider, amount, and status.
+-   **gift_voucher_requests**:  - (NEW) Stores user requests for PhonePe gift vouchers, including denomination, amount, and status.
+-   **transactions**: Modified to log more activity types like mining_started, service_request, and gift_voucher_request.
 
 **changes in tech stack**
--   None.
+- None.
 
 **All files of reference**
--   : The heart of all new business logic (PRC Burn, new mining rate, VIP plan structure).
--   : The new primary user-facing dashboard.
--   : The new, comprehensive profile management page.
--   : Contains the updated routing structure reflecting all the refactoring.
--   : Contains the UI for toggling user registration.
--   : The page that needs to be updated for the new multi-plan system.
+-   : Contains all backend logic. Key functions to review are , and the new endpoints for services and gift vouchers.
+-   : Main user dashboard.
+-   : New user-facing feature page.
+-   : Main admin entry point with the new role-switcher.
+-   The various ,  files for different stockist roles.
 
 **Areas that need refactoring**:
--   : This page needs a complete overhaul to support selecting from multiple plans (Monthly, Quarterly, etc.) instead of the current hardcoded single-plan UI.
+-   The  file is now excessively large (over 13,000 lines) and contains logic for users, admins, orders, mining, payments, and more. It should be broken down into a more modular structure using FastAPI's  to separate concerns (e.g., , , ).
 
 **key api endpoints**
--   : (MODIFIED) Now checks the  setting before allowing registration.
--   : (MODIFIED) Now blocks marketplace access for users with an expired VIP status.
--   : (MODIFIED) Now records each claim in the  array for the user.
--   : (MODIFIED) The  function it calls now uses the new 5-level referral system.
--   : (NEW) Endpoint to provide data for the admin burn dashboard.
--   : (NEW) Manual trigger for the PRC burn job.
--   : (CONFIRMED) The correct endpoint for fetching user data.
--   : (CONFIRMED) The correct endpoint for updating user profile data.
+-   **New Service Endpoints**:
+    -   : User submits a bill payment request.
+    -   : Admin fetches all payment requests.
+    -   : Admin updates a request's status.
+-   **New Gift Voucher Endpoints**:
+    -   : User submits a voucher request.
+    -   : Admin fetches all voucher requests.
+    -   : Admin updates a voucher's status.
+-   **New Admin Settings Endpoints**:
+    -   
+    -   
+-   **Modified Endpoints**:
+    -   : The underlying  function was heavily modified and is partially broken.
+    -   : Fixed and verified.
+    -   : Now supports pagination.
+    -   : Now logs a transaction record.
 
 **Critical Info for New Agent**
--   **PRC Burn Automation is CRITICAL**: The PRC Burn logic ( in ) has been written but is **NOT AUTOMATED**. The next agent must prioritize setting up a scheduler (like APScheduler) to run this job periodically (e.g., daily). Without this, the entire feature is incomplete.
--   **Multi-Plan VIP is IN PROGRESS**: The task of implementing multiple VIP plans was started but not finished. The backend has the data structures but lacks the admin management APIs. The frontend () still shows the old single-plan UI and needs a complete redesign.
--   **Major Refactor Done**: Be aware that significant parts of the application (Scratch Card, Treasure Hunt, multiple wallets) were intentionally removed. Do not try to restore them unless explicitly asked. The new central page for users is .
+-   **Priority #1 is the Delivery Charge Bug**: The most critical task is to fix the delivery charge distribution logic in . The testing subagent has confirmed that PRC is not being credited to Sub-Stockists and Master-Stockists. This breaks a core business requirement.
+-   **PRC Burn is NOT Automated**: The logic for PRC burn exists but is still not triggered by a scheduler. This remains a high-priority upcoming task that was carried over from the last session.
+-   **Monolithic Backend**: Be aware that  is extremely large. While a full refactor isn't the immediate priority, be careful when making changes to avoid unintended side effects.
 
 **documents created in this job**
 - None.
 
 **Last 10 User Messages and any pending user messages**
-1.  **User**: Test VIP Membership and PRC Burn. (Request)
-2.  **Agent**: Acknowledged and explained that testing was initiated. (In Progress)
-3.  **User**: Go with your recommendation. (Approval for next steps)
-4.  **Agent**: Planned and started implementing user-facing expiry warnings and an admin burn dashboard. (Completed)
-5.  **User**: Update mining base rate and referral bonus to a 5-level system. (Request)
-6.  **Agent**: Acknowledged and implemented the new mining and referral logic in the backend. (Completed)
-7.  **User**: Set up multiple VIP membership plans (Monthly, Quarterly, etc.) and allow admin discounts. (Request)
-8.  **Agent**: Acknowledged and started backend implementation by creating data structures and helper functions for VIP plans. (In Progress)
-9.  **User**: Confirm VIP is 299/month and add back buttons everywhere. (Request)
-10. **Agent**: Verified the pricing and added back buttons to several key pages. (Completed)
+1.  **User**: Reported 4 bugs: recent activity not showing, PRC not claiming, new feature UI missing, and leftover text on profile. (Status: **Completed**)
+2.  **User**: Followed up on claim error and asked where the new feature UIs were. (Status: **Completed**)
+3.  **User**: Requested pagination for the Recent Activity list on the dashboard. (Status: **Completed**)
+4.  **User**: Followed up again on the claim error and requested more specific fields for Credit Card/Loan EMI payments. (Status: **Completed**)
+5.  **User**: Reported the leftover profile page text again. (Status: **Completed**)
+6.  **User**: Requested easy-to-access logout buttons on key pages. (Status: **Completed**)
+7.  **User**: Reported a crash on the Admin Burn Management page. (Status: **Completed**)
+8.  **User**: Requested an easy role-switcher for admins and the complete removal of the Profit Wallet system. (Status: **Completed**)
+9.  **User**: Gave approval to proceed with the profit wallet removal. (Status: **Completed**)
+10. **User**: Requested a full test of the order placement and delivery charge distribution flow. (Status: **In Progress** - Testing was run, but it uncovered the critical bug now pending).
 
 **Project Health Check:**
--   **Broken**: , ,  were intentionally deleted as part of the refactor. All known references have been removed.
+-   **Broken**: The PRC distribution logic in  is broken for Sub-Stockists and Master-Stockists.
 -   **Mocked**: None.
 
 **3rd Party Integrations**
--   None introduced in this session.
+-   None.
 
 **Testing status**
--   **Testing agent used after significant changes**: YES. The backend testing agent was used to validate the PRC burn rules and VIP membership updates.
+-   **Testing agent used after significant changes**: YES (Used to test the delivery charge distribution flow, which successfully identified the bug).
 -   **Troubleshoot agent used after agent stuck in loop**: NO
--   **Test files created**: None.
--   **Known regressions**: None identified, but the scale of the refactor introduces a risk of unknown regressions.
+-   **Test files created**: None persisted.
+-   **Known regressions**: The PRC delivery charge distribution to stockists is a regression introduced during the refactor from Profit Wallet.
 
 **Credentials to test flow:**
--   Use standard admin credentials to access admin features.
--   Create new test users to verify registration toggle and free-user PRC burn rules.
--   Create a VIP user and let their membership expire to test VIP-related burn rules and marketplace blocking.</analysis>
+-   Admin credentials are required to use the role-switcher and access admin panels.
+-   A full user hierarchy (User -> Outlet -> Sub-Stockist -> Master-Stockist) is needed to test the delivery charge distribution fix.</analysis>
