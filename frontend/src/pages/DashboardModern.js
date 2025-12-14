@@ -44,6 +44,8 @@ const DashboardModern = ({ user, onLogout }) => {
         referralCount: userData.referral_count || 0,
         membershipType: userData.membership_type || 'free'
       });
+      
+      setMiningHistory(userData.mining_history || []);
 
       // Fetch recent transactions
       try {
