@@ -20,6 +20,7 @@ const DashboardModern = ({ user, onLogout }) => {
     membershipType: 'free'
   });
   const [recentTransactions, setRecentTransactions] = useState([]);
+  const [miningHistory, setMiningHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('home');
 
