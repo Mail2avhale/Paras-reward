@@ -43,7 +43,6 @@ const Orders = lazy(() => import("@/pages/Orders"));
 const VIPMembership = lazy(() => import("@/pages/VIPMembership"));
 // Removed: WalletNew (withdrawal functionality removed)
 const Leaderboard = lazy(() => import("@/pages/Leaderboard"));
-const ProfileEnhanced = lazy(() => import("@/pages/ProfileEnhanced"));
 const ProfileAdvanced = lazy(() => import("@/pages/ProfileAdvanced"));
 const ReferralDashboard = lazy(() => import("@/pages/ReferralDashboard"));
 const GamificationDashboard = lazy(() => import("@/pages/GamificationDashboard"));
