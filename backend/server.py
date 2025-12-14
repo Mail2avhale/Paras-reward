@@ -5486,63 +5486,61 @@ async def distribute_delivery_charge(order_id: str):
     now = datetime.now(timezone.utc).isoformat()
     credited_entities = []
     
-    # Credit Outlet
+    # UPDATED: Credit PRC to Outlet (not profit_wallet)
     if distributions.get("outlet", 0) > 0 and outlet_user:
-        amount = distributions["outlet"]
-        if not outlet_user.get("profit_wallet_frozen", False):
-            # Update balance
-            await db.users.update_one(
-                {"uid": outlet_id},
-                {"$inc": {"profit_wallet_balance": round(amount, 2)}}
-            )
-            
-            # Log transaction
-            await log_transaction(
-                user_id=outlet_id,
-                wallet_type="profit_wallet",
-                transaction_type="profit_share",
-                amount=round(amount, 2),
-                description=f"Delivery charge commission from order {order_id}",
-                metadata={
-                    "order_id": order_id,
-                    "entity_type": "outlet",
-                    "commission_percentage": split.get("outlet", 0),
-                    "total_commission": round(total_commission, 2)
-                },
-                related_id=order_id,
-                related_type="order"
-            )
-            
-            credited_entities.append(f"Outlet ({outlet_user.get('name', 'Unknown')}): ₹{round(amount, 2)}")
+        amount_prc = distributions["outlet"]
+        # Update PRC balance
+        await db.users.update_one(
+            {"uid": outlet_id},
+            {"$inc": {"prc_balance": round(amount_prc, 2)}}
+        )
         
+        # Log transaction
+        await log_transaction(
+            user_id=outlet_id,
+            wallet_type="prc",
+            transaction_type="delivery_commission",
+            amount=round(amount_prc, 2),
+            description=f"15% delivery charge commission from order #{order_id[:8]}",
+            metadata={
+                "order_id": order_id,
+                "entity_type": "outlet",
+                "commission_percentage": split.get("outlet", 0),
+                "total_delivery_charge": round(delivery_charge_prc, 2)
+            },
+            related_id=order_id,
+            related_type="order"
+        )
+        
+        credited_entities.append(f"Outlet ({outlet_user.get('name', 'Unknown')}): {round(amount_prc, 2)} PRC")
+    
         commission_record = {
             "commission_id": str(uuid.uuid4()),
             "order_id": order_id,
             "entity_type": "outlet",
             "entity_id": outlet_id,
             "entity_name": outlet_user.get("name", "Unknown"),
-            "amount": round(amount, 2),
-            "type": "order_commission",
-            "status": "credited" if not outlet_user.get("profit_wallet_frozen", False) else "frozen",
+            "amount_prc": round(amount_prc, 2),
+            "type": "delivery_commission",
+            "status": "credited",
             "created_at": now
         }
         commission_records.append(commission_record)
     
-    # Credit Sub Stockist
+    # UPDATED: Credit PRC to Sub Stockist (not profit_wallet)
     if distributions.get("sub", 0) > 0 and sub_stockist_user:
-        amount = distributions["sub"]
-        if not sub_stockist_user.get("profit_wallet_frozen", False):
-            # Update balance
-            await db.users.update_one(
-                {"uid": sub_stockist_id},
-                {"$inc": {"profit_wallet_balance": round(amount, 2)}}
-            )
-            
-            # Log transaction
-            await log_transaction(
-                user_id=sub_stockist_id,
-                wallet_type="profit_wallet",
-                transaction_type="profit_share",
+        amount_prc = distributions["sub"]
+        # Update PRC balance
+        await db.users.update_one(
+            {"uid": sub_stockist_id},
+            {"$inc": {"prc_balance": round(amount_prc, 2)}}
+        )
+        
+        # Log transaction
+        await log_transaction(
+            user_id=sub_stockist_id,
+            wallet_type="prc",
+            transaction_type="delivery_commission",
                 amount=round(amount, 2),
                 description=f"Delivery charge commission from order {order_id}",
                 metadata={
