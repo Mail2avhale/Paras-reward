@@ -927,7 +927,154 @@ const ProfileAdvanced = ({ user, onLogout }) => {
               </Card>
             )}
 
-            {/* 4. SECURITY OPTIONS SECTION */}
+            {/* 4. KYC DOCUMENTS SECTION */}
+            {activeSection === 'kyc' && (
+              <Card className="p-6 space-y-6">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <FileText className="w-6 h-6 text-orange-600" />
+                    KYC Documents & Verification
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">View your KYC status and manage verification documents</p>
+                </div>
+
+                {/* KYC Status Card */}
+                <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className={`h-12 w-12 rounded-full flex items-center justify-center ${
+                          user?.kyc_status === 'verified' ? 'bg-green-100' :
+                          user?.kyc_status === 'pending' ? 'bg-yellow-100' :
+                          user?.kyc_status === 'rejected' ? 'bg-red-100' :
+                          'bg-gray-100'
+                        }`}>
+                          {user?.kyc_status === 'verified' ? (
+                            <CheckCircle className="h-6 w-6 text-green-600" />
+                          ) : user?.kyc_status === 'pending' ? (
+                            <AlertCircle className="h-6 w-6 text-yellow-600" />
+                          ) : user?.kyc_status === 'rejected' ? (
+                            <XCircle className="h-6 w-6 text-red-600" />
+                          ) : (
+                            <FileText className="h-6 w-6 text-gray-600" />
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900">KYC Verification Status</h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+                              user?.kyc_status === 'verified' ? 'bg-green-100 text-green-700' :
+                              user?.kyc_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                              user?.kyc_status === 'rejected' ? 'bg-red-100 text-red-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {user?.kyc_status === 'verified' ? '✓ Verified' :
+                               user?.kyc_status === 'pending' ? '⏳ Pending Review' :
+                               user?.kyc_status === 'rejected' ? '✗ Rejected' :
+                               '○ Not Submitted'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 text-sm">
+                        {user?.kyc_status === 'verified' && (
+                          <p className="text-green-800 font-medium">
+                            ✓ Your KYC is verified. You can now access all platform features.
+                          </p>
+                        )}
+                        {user?.kyc_status === 'pending' && (
+                          <p className="text-yellow-800 font-medium">
+                            ⏳ Your KYC documents are under review. This usually takes 24-48 hours.
+                          </p>
+                        )}
+                        {user?.kyc_status === 'rejected' && (
+                          <div>
+                            <p className="text-red-800 font-medium mb-2">
+                              ✗ Your KYC was rejected. Please resubmit with correct documents.
+                            </p>
+                            <Button
+                              onClick={() => navigate('/kyc')}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Resubmit KYC Documents
+                            </Button>
+                          </div>
+                        )}
+                        {!user?.kyc_status && (
+                          <div>
+                            <p className="text-gray-700 font-medium mb-2">
+                              ○ KYC verification is required to access premium features like marketplace redemption and bill payments.
+                            </p>
+                            <Button
+                              onClick={() => navigate('/kyc')}
+                              className="bg-orange-600 hover:bg-orange-700"
+                            >
+                              <FileText className="w-4 h-4 mr-2" />
+                              Submit KYC Documents
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* KYC Benefits Card */}
+                <Card className="bg-blue-50 border-2 border-blue-200 p-4">
+                  <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Why KYC Verification?
+                  </h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>Unlock marketplace product redemption</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>Enable bill payments and gift voucher redemption</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>Secure your account with verified identity</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>Access higher transaction limits</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>Comply with regulatory requirements</span>
+                    </li>
+                  </ul>
+                </Card>
+
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    onClick={() => navigate('/kyc')}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <FileText className="w-4 h-4" />
+                    {user?.kyc_status ? 'View KYC Details' : 'Submit KYC'}
+                  </Button>
+                  {user?.kyc_status === 'verified' && (
+                    <Button
+                      onClick={() => toast.info('Your KYC is already verified')}
+                      disabled
+                      className="bg-green-600"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Verified
+                    </Button>
+                  )}
+                </div>
+              </Card>
+            )}
+
+            {/* 5. SECURITY OPTIONS SECTION */}
             {activeSection === 'security' && (
               <Card className="p-6 space-y-6">
                 <div>
