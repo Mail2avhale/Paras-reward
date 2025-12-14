@@ -356,6 +356,89 @@ async def get_base_rate():
     current_base_rate = max(20, 50 - rate_decrease)
     
     return current_base_rate
+
+async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
+    """
+    Get multi-level referrals (up to 5 levels deep)
+    Returns: {
+        'level_1': [list of direct referrals],
+        'level_2': [list of level 2 referrals],
+        ...
+        'level_5': [list of level 5 referrals]
+    }
+    """
+    referrals_by_level = {}
+    current_level_users = [user_id]
+    
+    for level in range(1, max_levels + 1):
+        # Get users referred by current level users
+        next_level_users = []
+        
+        # Find all users whose referral code matches any user in current level
+        async for referrer in db.users.find({"uid": {"$in": current_level_users}}):
+            referral_code = referrer.get("referral_code")
+            if not referral_code:
+                continue
+            
+            # Find users who used this referral code
+            referred_users = []
+            async for referred_user in db.users.find({"referred_by": referral_code}):
+                referred_users.append(referred_user)
+                next_level_users.append(referred_user.get("uid"))
+            
+            # Store this level's referrals
+            if f'level_{level}' not in referrals_by_level:
+                referrals_by_level[f'level_{level}'] = []
+            referrals_by_level[f'level_{level}'].extend(referred_users)
+        
+        # Move to next level
+        current_level_users = next_level_users
+        
+        # Stop if no more referrals at this level
+        if not current_level_users:
+            break
+    
+    return referrals_by_level
+
+async def count_active_referrals_by_level(user_id: str):
+    """
+    Count active referrals at each level (up to 5 levels)
+    Active = logged in within last 24 hours
+    Returns: {
+        'level_1': count,
+        'level_2': count,
+        'level_3': count,
+        'level_4': count,
+        'level_5': count
+    }
+    """
+    referrals_by_level = await get_multi_level_referrals(user_id, max_levels=5)
+    active_counts = {
+        'level_1': 0,
+        'level_2': 0,
+        'level_3': 0,
+        'level_4': 0,
+        'level_5': 0
+    }
+    
+    # Time threshold for active users (24 hours ago)
+    now = datetime.now(timezone.utc)
+    active_threshold = now - timedelta(hours=24)
+    
+    for level, users in referrals_by_level.items():
+        for user in users:
+            last_login = user.get("last_login")
+            if last_login:
+                try:
+                    if isinstance(last_login, str):
+                        last_login = datetime.fromisoformat(last_login.replace('Z', '+00:00'))
+                    
+                    if last_login >= active_threshold:
+                        active_counts[level] += 1
+                except:
+                    pass
+    
+    return active_counts
 async def calculate_profile_completion(user: Dict) -> float:
     """Calculate profile completion percentage"""
     required_fields = [
