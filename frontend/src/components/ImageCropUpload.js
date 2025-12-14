@@ -170,13 +170,14 @@ const ImageCropUpload = ({
       // Create file from blob
       const file = new File([blob], 'document.jpg', { type: 'image/jpeg' });
 
-      // Compression options
+      // Compression options - Optimized for documents and profile pictures
       const options = {
         maxSizeMB: maxSizeMB,
-        maxWidthOrHeight: 2048,
+        maxWidthOrHeight: 1920, // Reduced from 2048 for better compression
         useWebWorker: true,
         fileType: 'image/jpeg',
-        initialQuality: 0.85 // Balanced quality
+        initialQuality: 0.8, // Good balance between quality and size
+        alwaysKeepResolution: false // Allow downsizing for better compression
       };
 
       // Compress image
