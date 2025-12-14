@@ -963,6 +963,55 @@ async def run_prc_burn_job():
 
 # ==================== END PRC BURN SYSTEM ====================
 
+# ==================== BILL PAYMENT & RECHARGE SYSTEM ====================
+
+async def calculate_bill_payment_prc(amount_inr: float):
+    """
+    Calculate PRC required for bill payment
+    Conversion: 100 INR = 1000 PRC
+    Formula: INR * 10 = PRC
+    """
+    return amount_inr * 10
+
+async def get_bill_payment_service_charge(amount_inr: float, prc_required: float):
+    """
+    Calculate service charge for bill payments based on admin settings
+    Returns service charge in PRC
+    """
+    settings = await db.settings.find_one({})
+    if not settings:
+        # Default: 2% service charge
+        return prc_required * 0.02
+    
+    charge_type = settings.get("bill_payment_charge_type", "percentage")  # percentage or fixed
+    
+    if charge_type == "percentage":
+        percentage = settings.get("bill_payment_charge_percentage", 2.0)  # Default 2%
+        return (prc_required * percentage) / 100
+    else:
+        # Fixed charge in PRC
+        return settings.get("bill_payment_charge_fixed", 20.0)  # Default 20 PRC
+
+async def get_gift_voucher_service_charge(prc_required: float):
+    """
+    Calculate service charge for gift voucher redemption
+    Returns service charge in PRC
+    """
+    settings = await db.settings.find_one({})
+    if not settings:
+        # Default: 5% service charge
+        return prc_required * 0.05
+    
+    charge_type = settings.get("gift_voucher_charge_type", "percentage")
+    
+    if charge_type == "percentage":
+        percentage = settings.get("gift_voucher_charge_percentage", 5.0)  # Default 5%
+        return (prc_required * percentage) / 100
+    else:
+        return settings.get("gift_voucher_charge_fixed", 50.0)  # Default 50 PRC
+
+# ==================== END BILL PAYMENT SYSTEM ====================
+
 async def check_unique_fields(field_name: str, value: str, exclude_uid: Optional[str] = None):
     """Check if field value is unique"""
     if not value:
