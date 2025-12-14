@@ -47,7 +47,7 @@ const ProfileEnhanced = lazy(() => import("@/pages/ProfileEnhanced"));
 const ProfileAdvanced = lazy(() => import("@/pages/ProfileAdvanced"));
 const ReferralDashboard = lazy(() => import("@/pages/ReferralDashboard"));
 const GamificationDashboard = lazy(() => import("@/pages/GamificationDashboard"));
-const ScratchCard = lazy(() => import("@/pages/ScratchCard"));
+// Removed: ScratchCard game (feature removed)
 const FlashSalesPage = lazy(() => import("@/pages/FlashSalesPage"));
 const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
 const AdminDashboardModern = lazy(() => import("@/pages/AdminDashboardModern"));
