@@ -327,16 +327,17 @@ const DashboardModern = ({ user, onLogout }) => {
             isActive={activeTab === 'mine'} 
           />
           <BottomNavItem 
+            icon={Gamepad2} 
+            label="" 
+            tabName="game" 
+            isActive={activeTab === 'game'}
+            isCenterButton={true}
+          />
+          <BottomNavItem 
             icon={ShoppingBag} 
             label="Shop" 
             tabName="shop" 
             isActive={activeTab === 'shop'} 
-          />
-          <BottomNavItem 
-            icon={UserPlus} 
-            label="Refer" 
-            tabName="refer" 
-            isActive={activeTab === 'refer'} 
           />
           <BottomNavItem 
             icon={User} 
