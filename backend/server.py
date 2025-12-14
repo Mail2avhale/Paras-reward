@@ -2003,14 +2003,26 @@ async def claim_mining(uid: str):
     # Calculate expiry date (2 days for free users, never for VIP)
     expiry_date = None if is_vip else (now + timedelta(days=2)).isoformat()
     
+    # Add to mining history for burn tracking
+    mining_entry = {
+        "amount": mined_amount,
+        "timestamp": now.isoformat(),
+        "burned": False,
+        "expires_at": expiry_date,
+        "membership_type": membership_type
+    }
+    
     await db.users.update_one(
         {"uid": uid},
-        {"$set": {
-            "prc_balance": new_balance,
-            "total_mined": new_total_mined,
-            "mining_start_time": now.isoformat(),  # Reset session start for continuous mining
-            "mining_active": True
-        }}
+        {
+            "$set": {
+                "prc_balance": new_balance,
+                "total_mined": new_total_mined,
+                "mining_start_time": now.isoformat(),  # Reset session start for continuous mining
+                "mining_active": True
+            },
+            "$push": {"mining_history": mining_entry}
+        }
     )
     
     # Create transaction record with expiry tracking
