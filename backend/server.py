@@ -14552,6 +14552,25 @@ async def track_video_ad_event(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Health check endpoint for Kubernetes
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Kubernetes liveness and readiness probes"""
+    try:
+        # Check if database is accessible
+        await db.command('ping')
+        return {
+            "status": "healthy",
+            "service": "paras-reward-backend",
+            "database": "connected"
+        }
+    except Exception as e:
+        # Return 503 Service Unavailable if database is not accessible
+        raise HTTPException(
+            status_code=503,
+            detail=f"Service unhealthy: {str(e)}"
+        )
+
 
 async def initialize_database_indexes():
     """Create database indexes for better performance"""
