@@ -14667,45 +14667,81 @@ async def startup_db():
     """Initialize database with default data and start scheduled tasks"""
     print("🚀 Starting database initialization...")
     
-    # Create indexes
-    await initialize_database_indexes()
+    # Verify MongoDB connection with retry logic for Atlas
+    max_retries = 3
+    retry_delay = 2
     
-    # Initialize treasure hunts (creates if not exists)
-    await initialize_treasure_hunts()
+    for attempt in range(max_retries):
+        try:
+            # Ping database to verify connection
+            await client.admin.command('ping')
+            print(f"✅ MongoDB connection successful (attempt {attempt + 1}/{max_retries})")
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                print(f"⚠️ MongoDB connection attempt {attempt + 1} failed: {e}")
+                print(f"   Retrying in {retry_delay} seconds...")
+                await asyncio.sleep(retry_delay)
+            else:
+                print(f"❌ MongoDB connection failed after {max_retries} attempts: {e}")
+                raise HTTPException(
+                    status_code=503,
+                    detail="Database connection failed. Please check MONGO_URL configuration."
+                )
     
-    # Check if video_ads collection exists, if not create sample
-    video_ads_count = await db.video_ads.count_documents({})
-    if video_ads_count == 0:
-        print("📹 No video ads found, database ready for admin to create videos")
+    try:
+        # Create indexes with error handling
+        await initialize_database_indexes()
+        print("✅ Database indexes initialized")
+    except Exception as e:
+        print(f"⚠️ Error initializing indexes (non-critical): {e}")
+    
+    try:
+        # Initialize treasure hunts (creates if not exists)
+        await initialize_treasure_hunts()
+        print("✅ Treasure hunts initialized")
+    except Exception as e:
+        print(f"⚠️ Error initializing treasure hunts (non-critical): {e}")
+    
+    try:
+        # Check if video_ads collection exists, if not create sample
+        video_ads_count = await db.video_ads.count_documents({})
+        if video_ads_count == 0:
+            print("📹 No video ads found, database ready for admin to create videos")
+    except Exception as e:
+        print(f"⚠️ Error checking video ads (non-critical): {e}")
     
     print("✅ Database initialization complete!")
     
     # Start scheduler for automated tasks
     print("⏰ Starting scheduled tasks...")
     
-    # Schedule PRC burn for free users - runs every hour
-    scheduler.add_job(
-        burn_expired_prc_for_free_users,
-        CronTrigger(hour='*'),  # Every hour
-        id='burn_free_user_prc',
-        name='Burn expired PRC for free users (48 hour expiry)',
-        replace_existing=True
-    )
-    
-    # Schedule PRC burn for expired VIP users - runs daily at 2 AM
-    scheduler.add_job(
-        burn_expired_vip_prc,
-        CronTrigger(hour=2, minute=0),  # Daily at 2 AM
-        id='burn_expired_vip_prc',
-        name='Burn PRC for expired VIP users (5 day grace period)',
-        replace_existing=True
-    )
-    
-    # Start the scheduler
-    scheduler.start()
-    print("✅ Scheduled tasks started:")
-    print("   - Free user PRC burn: Every hour")
-    print("   - Expired VIP PRC burn: Daily at 2 AM")
+    try:
+        # Schedule PRC burn for free users - runs every hour
+        scheduler.add_job(
+            burn_expired_prc_for_free_users,
+            CronTrigger(hour='*'),  # Every hour
+            id='burn_free_user_prc',
+            name='Burn expired PRC for free users (48 hour expiry)',
+            replace_existing=True
+        )
+        
+        # Schedule PRC burn for expired VIP users - runs daily at 2 AM
+        scheduler.add_job(
+            burn_expired_vip_prc,
+            CronTrigger(hour=2, minute=0),  # Daily at 2 AM
+            id='burn_expired_vip_prc',
+            name='Burn PRC for expired VIP users (5 day grace period)',
+            replace_existing=True
+        )
+        
+        # Start the scheduler
+        scheduler.start()
+        print("✅ Scheduled tasks started:")
+        print("   - Free user PRC burn: Every hour")
+        print("   - Expired VIP PRC burn: Daily at 2 AM")
+    except Exception as e:
+        print(f"⚠️ Error starting scheduler (non-critical): {e}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
