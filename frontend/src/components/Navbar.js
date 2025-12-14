@@ -198,15 +198,7 @@ const Navbar = ({ user, onLogout }) => {
                     <DropdownMenuItem asChild>
                       <Link to="/mining" className="cursor-pointer">Mining</Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/treasure-hunt" className="cursor-pointer">Treasure Hunt</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/game" className="cursor-pointer">Tap Game</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/scratch-card" className="cursor-pointer">Scratch Card</Link>
-                    </DropdownMenuItem>
+                    {/* Games removed - simplified experience */}
                     <DropdownMenuItem asChild>
                       <Link to="/referrals" className="cursor-pointer">Referrals</Link>
                     </DropdownMenuItem>
