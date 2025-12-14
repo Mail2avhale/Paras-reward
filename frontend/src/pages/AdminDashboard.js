@@ -1476,7 +1476,14 @@ const AdminDashboard = ({ user, onLogout }) => {
                 </div>
               </div>
 
-              {/* Stats Cards */}
+              {/* Key Metrics Section */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-gray-900">📊 Key Metrics</h2>
+                  <span className="text-sm text-gray-500">Real-time platform statistics</span>
+                </div>
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <Card className="p-6 bg-white">
                   <div className="flex items-center justify-between mb-2">
