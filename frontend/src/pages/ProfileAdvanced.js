@@ -977,9 +977,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                         />
                       </div>
 
-                      <div>
-                        <Label htmlFor="gpay_number">Google Pay Number</Label>
-            {/* Bank section removed - code ends here */}
+            {/* Bank section removed */}
 
             {/* 4. SECURITY OPTIONS SECTION */}
             {activeSection === 'security' && (
