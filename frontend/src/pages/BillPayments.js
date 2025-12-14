@@ -17,6 +17,7 @@ const BillPayments = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState([]);
+  const [currentUser, setCurrentUser] = useState(user);
   const [selectedType, setSelectedType] = useState('mobile_recharge');
   const [formData, setFormData] = useState({
     amount_inr: '',
@@ -47,8 +48,18 @@ const BillPayments = ({ user, onLogout }) => {
       return;
     }
     
+    fetchUserData();
     fetchRequests();
   }, [user, navigate]);
+
+  const fetchUserData = async () => {
+    try {
+      const response = await axios.get(`${API}/api/auth/user/${user.uid}`);
+      setCurrentUser(response.data);
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
 
   const fetchRequests = async () => {
     try {
