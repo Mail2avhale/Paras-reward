@@ -624,7 +624,8 @@ def test_vip_multi_plan_system():
             # Verify all updates persisted
             response = requests.get(f"{API_BASE}/vip/plans", timeout=30)
             if response.status_code == 200:
-                plans = response.json()
+                response_data = response.json()
+                plans = response_data.get("plans", [])
                 persistence_correct = True
                 independence_correct = True
                 
