@@ -309,29 +309,53 @@ const DashboardModern = ({ user, onLogout }) => {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-gray-900">
-                        {transaction.type === 'mining_reward' ? 'Mining Reward' :
-                         transaction.type === 'marketplace_purchase' ? 'Purchase' :
-                         transaction.type === 'referral_bonus' ? 'Referral Bonus' :
-                         transaction.type}
+                        {transaction.description || transaction.type}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {new Date(transaction.timestamp).toLocaleDateString()}
+                        {new Date(transaction.timestamp).toLocaleDateString()} {new Date(transaction.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className={`text-sm font-bold ${
-                      transaction.type === 'mining_reward' || transaction.type === 'referral_bonus' 
-                        ? 'text-green-600' 
-                        : 'text-red-600'
+                      transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      {transaction.type === 'mining_reward' || transaction.type === 'referral_bonus' ? '+' : '-'}
-                      {transaction.amount}
+                      {transaction.amount > 0 ? '+' : ''}{transaction.amount?.toFixed(2) || 0} PRC
                     </p>
-                    <p className="text-xs text-gray-500">PRC</p>
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {recentTransactions.length > 0 && pagination.total_pages > 1 && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={!pagination.has_prev}
+                className={`px-4 py-2 text-sm font-medium rounded-lg ${
+                  pagination.has_prev
+                    ? 'bg-purple-600 text-white hover:bg-purple-700'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                Previous
+              </button>
+              <div className="text-sm text-gray-600">
+                Page {pagination.page} of {pagination.total_pages}
+              </div>
+              <button
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={!pagination.has_next}
+                className={`px-4 py-2 text-sm font-medium rounded-lg ${
+                  pagination.has_next
+                    ? 'bg-purple-600 text-white hover:bg-purple-700'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                Next
+              </button>
             </div>
           )}
         </div>
