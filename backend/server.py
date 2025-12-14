@@ -14574,46 +14574,69 @@ async def health_check():
 
 async def initialize_database_indexes():
     """Create database indexes for better performance"""
+    # Users collection indexes
     try:
-        # Users collection indexes
         await db.users.create_index("uid", unique=True)
+    except Exception as e:
+        print(f"⚠️  UID index: {e}")
+    
+    try:
         await db.users.create_index("email", unique=True)
-        
-        # Drop old mobile index if it exists (non-sparse) and create sparse index
+    except Exception as e:
+        print(f"⚠️  Email index: {e}")
+    
+    # Mobile index - sparse to allow multiple null values
+    try:
+        # Try to drop old non-sparse index first
         try:
             await db.users.drop_index("mobile_1")
             print("✅ Dropped old mobile index")
         except:
-            pass  # Index doesn't exist, that's fine
+            pass
         
-        # Sparse index for mobile - allows multiple null values
+        # Create sparse unique index for mobile
         await db.users.create_index("mobile", unique=True, sparse=True)
-        
-        # Video ads indexes
+        print("✅ Created sparse mobile index")
+    except Exception as e:
+        print(f"⚠️  Mobile index: {e}")
+    
+    # Video ads indexes
+    try:
         await db.video_ads.create_index("video_ad_id", unique=True)
         await db.video_ads.create_index("placement")
         await db.video_ads.create_index("is_active")
-        
-        # Treasure hunts indexes
+    except Exception as e:
+        print(f"⚠️  Video ads indexes: {e}")
+    
+    # Treasure hunts indexes
+    try:
         await db.treasure_hunts.create_index("hunt_id", unique=True)
         await db.treasure_progress.create_index("progress_id", unique=True)
         await db.treasure_progress.create_index("user_id")
-        
-        # Orders indexes
+    except Exception as e:
+        print(f"⚠️  Treasure hunt indexes: {e}")
+    
+    # Orders indexes
+    try:
         await db.orders.create_index("order_id", unique=True)
         await db.orders.create_index("user_id")
-        
-        # Products indexes
+    except Exception as e:
+        print(f"⚠️  Orders indexes: {e}")
+    
+    # Products indexes
+    try:
         await db.products.create_index("product_id", unique=True)
-        
-        # Manager actions index (for audit logging)
+    except Exception as e:
+        print(f"⚠️  Products index: {e}")
+    
+    # Manager actions index (for audit logging)
+    try:
         await db.manager_actions.create_index("manager_id")
         await db.manager_actions.create_index("timestamp")
-        
-        print("✅ Database indexes created successfully")
     except Exception as e:
-        print(f"⚠️ Index creation warning: {e}")
-        # Don't fail if indexes already exist
+        print(f"⚠️  Manager actions indexes: {e}")
+    
+    print("✅ Database indexes initialization complete")
 
 @app.on_event("startup")
 async def startup_db():
