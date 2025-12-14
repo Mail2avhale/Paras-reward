@@ -11208,7 +11208,33 @@ async def get_settings():
             "wallet_maintenance_fee": 99.0,
             "withdrawal_min_amount": 10.0,
             "withdrawal_fee": 5.0,
-            "vip_membership_fee": 299.0,
+            # VIP Membership Plans
+            "vip_plans": {
+                "monthly": {
+                    "price": 299.0,
+                    "duration_days": 30,
+                    "discount_percentage": 0,
+                    "label": "Monthly Plan"
+                },
+                "quarterly": {
+                    "price": 799.0,
+                    "duration_days": 90,
+                    "discount_percentage": 10,
+                    "label": "Quarterly Plan"
+                },
+                "half_yearly": {
+                    "price": 1499.0,
+                    "duration_days": 180,
+                    "discount_percentage": 15,
+                    "label": "Half-Yearly Plan"
+                },
+                "yearly": {
+                    "price": 2799.0,
+                    "duration_days": 365,
+                    "discount_percentage": 20,
+                    "label": "Yearly Plan"
+                }
+            },
             "master_security_deposit": 500000.0,
             "sub_security_deposit": 300000.0,
             "outlet_security_deposit": 100000.0,
