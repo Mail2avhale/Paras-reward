@@ -11206,7 +11206,7 @@ async def update_vip_plan(request: Request):
     """Update VIP plan pricing and discount (Admin only) - Supports both percentage and fixed discounts"""
     data = await request.json()
     plan_type = data.get("plan_type")  # monthly, quarterly, half_yearly, yearly
-    price = data.get("price")
+    price = data.get("price") or data.get("base_price")  # Accept both price and base_price
     discount_percentage = data.get("discount_percentage", 0)
     discount_fixed = data.get("discount_fixed", 0)
     
