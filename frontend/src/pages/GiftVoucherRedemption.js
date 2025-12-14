@@ -226,7 +226,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
             {/* PRC Balance */}
             <Card className="p-6 bg-gradient-to-br from-purple-500 to-pink-600 text-white">
               <p className="text-sm opacity-90 mb-2">Available PRC Balance</p>
-              <p className="text-4xl font-bold">{user.prc_balance?.toFixed(2) || '0.00'}</p>
+              <p className="text-4xl font-bold">{currentUser?.prc_balance?.toFixed(2) || '0.00'}</p>
               <p className="text-xs opacity-75 mt-2">Redeem for PhonePe vouchers</p>
             </Card>
 
