@@ -173,7 +173,7 @@ def test_bill_payment_system():
     print(f"\n🔍 STEP 1: CREATE TEST USER WITH PRC BALANCE")
     print("=" * 60)
     
-    test_uid, test_email = create_test_user_with_prc(1000)  # 1000 PRC for testing
+    test_uid, test_email = create_test_user_with_prc(20000)  # 20000 PRC for testing (service charges seem high)
     if test_uid:
         test_results["test_user_created"] = True
         print(f"✅ Test user created: {test_uid}")
