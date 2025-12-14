@@ -552,7 +552,8 @@ def test_vip_multi_plan_system():
     try:
         response = requests.get(f"{API_BASE}/vip/plans", timeout=30)
         if response.status_code == 200:
-            plans = response.json()
+            response_data = response.json()
+            plans = response_data.get("plans", [])
             
             required_fields = [
                 "plan_type", "base_price", "discount_percentage", "discount_fixed", 
