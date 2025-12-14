@@ -21,6 +21,14 @@ const DashboardModern = ({ user, onLogout }) => {
   });
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [miningHistory, setMiningHistory] = useState([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 5,
+    total: 0,
+    total_pages: 1,
+    has_next: false,
+    has_prev: false
+  });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('home');
 
@@ -47,10 +55,11 @@ const DashboardModern = ({ user, onLogout }) => {
       
       setMiningHistory(userData.mining_history || []);
 
-      // Fetch recent transactions
+      // Fetch recent transactions with pagination (5 per page)
       try {
-        const transactionsResponse = await axios.get(`${API}/api/transactions/user/${user.uid}`);
-        setRecentTransactions(transactionsResponse.data.slice(0, 5) || []);
+        const transactionsResponse = await axios.get(`${API}/api/transactions/user/${user.uid}?page=${pagination.page}&limit=5`);
+        setRecentTransactions(transactionsResponse.data.transactions || []);
+        setPagination(transactionsResponse.data.pagination || pagination);
       } catch (error) {
         console.error('Error fetching transactions:', error);
         setRecentTransactions([]);
