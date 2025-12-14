@@ -201,12 +201,18 @@ const DashboardModern = ({ user, onLogout }) => {
         {/* Quick Actions */}
         <div className="bg-white rounded-2xl p-6 shadow-lg mb-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-3">
             <QuickActionButton 
               icon={Zap} 
               label="Mine" 
               onClick={() => navigate('/mining')}
               color="purple"
+            />
+            <QuickActionButton 
+              icon={Gamepad2} 
+              label="Tap Game" 
+              onClick={() => navigate('/game')}
+              color="pink"
             />
             <QuickActionButton 
               icon={Store} 
