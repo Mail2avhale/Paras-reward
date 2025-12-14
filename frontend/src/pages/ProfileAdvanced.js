@@ -366,7 +366,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   const handleSaveProfilePicture = async () => {
     setLoading(true);
     try {
-      await axios.put(`${API}/api/users/${user.uid}/profile`, {
+      await axios.put(`${API}/api/user/${user.uid}/profile`, {
         profile_picture: profilePicture
       });
       toast.success('Profile picture updated successfully!');
