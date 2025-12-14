@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { 
   TrendingUp, Users, ShoppingBag, User, Coins, 
   Zap, Gift, ArrowUpRight, Clock, CheckCircle,
-  Home, Store, UserPlus
+  Home, Store, UserPlus, Gamepad2
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
