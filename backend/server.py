@@ -650,6 +650,18 @@ async def can_use_marketplace(user_id: str):
     
     return user.get("membership_type") == "vip"
 
+async def get_delivery_charge(user, total_prc: float):
+    """
+    Calculate delivery charge based on user membership and PRC value
+    Free users: ₹100
+    VIP users: ₹50
+    """
+    is_vip = user.get("membership_type") == "vip"
+    if total_prc < 100:
+        return 100
+    # 10% of PRC value (or flat rate)
+    return 50 if is_vip else 100
+
 async def calculate_mining_rate(uid: str):
     """Calculate mining rate per minute"""
     base_rate = await get_base_rate()
