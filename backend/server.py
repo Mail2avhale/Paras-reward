@@ -788,6 +788,56 @@ async def burn_expired_vip_prc():
         logging.error(f"Error burning expired VIP PRC: {e}")
         return {"users_affected": 0, "total_burned": 0.0}
 
+async def get_vip_plan_pricing(plan_type: str = "monthly"):
+    """
+    Get VIP plan pricing with discounts applied
+    Returns: {
+        "plan_type": "monthly",
+        "base_price": 299.0,
+        "discount_percentage": 10,
+        "discount_amount": 29.9,
+        "final_price": 269.1,
+        "duration_days": 30,
+        "label": "Monthly Plan"
+    }
+    """
+    settings = await db.settings.find_one({})
+    if not settings or "vip_plans" not in settings:
+        # Return default plans if not in database
+        default_plans = {
+            "monthly": {"price": 299.0, "duration_days": 30, "discount_percentage": 0, "label": "Monthly Plan"},
+            "quarterly": {"price": 799.0, "duration_days": 90, "discount_percentage": 10, "label": "Quarterly Plan"},
+            "half_yearly": {"price": 1499.0, "duration_days": 180, "discount_percentage": 15, "label": "Half-Yearly Plan"},
+            "yearly": {"price": 2799.0, "duration_days": 365, "discount_percentage": 20, "label": "Yearly Plan"}
+        }
+        plan = default_plans.get(plan_type, default_plans["monthly"])
+    else:
+        plan = settings["vip_plans"].get(plan_type, settings["vip_plans"]["monthly"])
+    
+    base_price = plan["price"]
+    discount_percentage = plan.get("discount_percentage", 0)
+    discount_amount = (base_price * discount_percentage) / 100
+    final_price = base_price - discount_amount
+    
+    return {
+        "plan_type": plan_type,
+        "base_price": base_price,
+        "discount_percentage": discount_percentage,
+        "discount_amount": round(discount_amount, 2),
+        "final_price": round(final_price, 2),
+        "duration_days": plan["duration_days"],
+        "label": plan["label"],
+        "savings": round(discount_amount, 2) if discount_amount > 0 else 0
+    }
+
+async def get_all_vip_plans():
+    """Get all VIP plans with pricing"""
+    plans = []
+    for plan_type in ["monthly", "quarterly", "half_yearly", "yearly"]:
+        plan_data = await get_vip_plan_pricing(plan_type)
+        plans.append(plan_data)
+    return plans
+
 async def check_vip_marketplace_access(uid: str) -> Dict:
     """
     Check if user can access marketplace
