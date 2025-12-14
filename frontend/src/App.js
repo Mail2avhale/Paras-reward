@@ -54,6 +54,7 @@ const AdminDashboardModern = lazy(() => import("@/pages/AdminDashboardModern"));
 const AdminAnalytics = lazy(() => import("@/pages/AdminAnalytics"));
 const AdminVideoAds = lazy(() => import("@/pages/AdminVideoAds"));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
+const AdminBurnDashboard = lazy(() => import("@/pages/AdminBurnDashboard"));
 const ManagerDashboard = lazy(() => import("@/pages/ManagerDashboard"));
 const ManagerDashboardNew = lazy(() => import("@/pages/manager/ManagerDashboardNew"));
 const ManagerUsers = lazy(() => import("@/pages/manager/ManagerUsers"));
