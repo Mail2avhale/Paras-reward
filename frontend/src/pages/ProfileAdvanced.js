@@ -218,26 +218,6 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     return Object.keys(newErrors).length === 0;
   };
   
-  const validateBankDetails = () => {
-    const newErrors = {};
-    
-    if (bankDetails.bank_account_number && !bankDetails.confirm_account_number) {
-      newErrors.confirm_account_number = 'Please confirm account number';
-    } else if (bankDetails.bank_account_number !== bankDetails.confirm_account_number) {
-      newErrors.confirm_account_number = 'Account numbers do not match';
-    }
-    
-    if (bankDetails.bank_ifsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankDetails.bank_ifsc)) {
-      newErrors.bank_ifsc = 'Invalid IFSC code format';
-    }
-    
-    if (bankDetails.upi_id && !/^[\w.-]+@[\w.-]+$/.test(bankDetails.upi_id)) {
-      newErrors.upi_id = 'Invalid UPI ID format';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
   
   const validatePassword = () => {
     const newErrors = {};
