@@ -167,9 +167,11 @@ def get_user_balance(uid, balance_type="prc_balance"):
 
 def create_test_product():
     """Create a test product for ordering"""
+    unique_id = int(time.time() * 1000) % 1000000
     product_data = {
-        "name": f"Test Product {test_data.timestamp}",
+        "name": f"Test Product {unique_id}",
         "description": "Test product for order delivery testing",
+        "sku": f"TEST-PROD-{unique_id}",  # Add required SKU field
         "prc_price": test_data.order_prc,
         "cash_price": test_data.order_prc / 10,  # 100 INR
         "category": "Electronics",
