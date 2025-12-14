@@ -10727,7 +10727,7 @@ async def get_settings():
             "wallet_maintenance_fee": 99.0,
             "withdrawal_min_amount": 10.0,
             "withdrawal_fee": 5.0,
-            "vip_membership_fee": 1000.0,
+            "vip_membership_fee": 299.0,
             "master_security_deposit": 500000.0,
             "sub_security_deposit": 300000.0,
             "outlet_security_deposit": 100000.0,
