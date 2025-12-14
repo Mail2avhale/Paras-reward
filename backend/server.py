@@ -531,7 +531,7 @@ async def log_transaction(
     balance_before = user.get(balance_field, 0.0)
     
     # Calculate new balance
-    if transaction_type in ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share", "scratch_card_reward", "treasure_hunt_reward"]:
+    if transaction_type in ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share", "scratch_card_reward", "treasure_hunt_reward", "delivery_commission"]:
         # Credit transactions
         balance_after = balance_before + amount
     elif transaction_type in ["order", "withdrawal", "admin_debit", "delivery_charge", "scratch_card_purchase", "treasure_hunt_play"]:
