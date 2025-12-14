@@ -14555,6 +14555,9 @@ async def track_video_ad_event(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Include all API routes (must be after all route definitions)
+app.include_router(api_router)
+
 # Health check endpoint for Kubernetes
 @app.get("/health")
 async def health_check():
