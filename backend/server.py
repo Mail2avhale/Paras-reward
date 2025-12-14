@@ -14587,18 +14587,26 @@ async def initialize_database_indexes():
     
     # Mobile index - sparse to allow multiple null values
     try:
-        # Try to drop old non-sparse index first
-        try:
-            await db.users.drop_index("mobile_1")
-            print("✅ Dropped old mobile index")
-        except:
-            pass
+        # Check existing indexes
+        existing_indexes = await db.users.index_information()
+        mobile_index = existing_indexes.get("mobile_1", {})
         
-        # Create sparse unique index for mobile
-        await db.users.create_index("mobile", unique=True, sparse=True)
-        print("✅ Created sparse mobile index")
+        # If mobile index exists but is not sparse, drop and recreate
+        if "mobile_1" in existing_indexes and not mobile_index.get("sparse", False):
+            try:
+                await db.users.drop_index("mobile_1")
+                print("✅ Dropped old non-sparse mobile index")
+            except Exception as drop_error:
+                print(f"⚠️  Could not drop mobile index: {drop_error}")
+        
+        # Create or ensure sparse unique index for mobile
+        if "mobile_1" not in existing_indexes or not mobile_index.get("sparse", False):
+            await db.users.create_index("mobile", unique=True, sparse=True)
+            print("✅ Created sparse mobile index")
+        else:
+            print("✅ Mobile index already exists (sparse)")
     except Exception as e:
-        print(f"⚠️  Mobile index: {e}")
+        print(f"⚠️  Mobile index setup: {e}")
     
     # Video ads indexes
     try:
