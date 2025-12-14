@@ -161,7 +161,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   
   const fetchUserProfile = async () => {
     try {
-      const response = await axios.get(`${API}/api/user/${user.uid}`);
+      const response = await axios.get(`${API}/api/users/${user.uid}`);
       const userData = response.data;
       
       // Update all states with fetched data
