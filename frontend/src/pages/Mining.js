@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Coins, Play, Clock, Zap, TrendingUp, Users, AlertCircle, Crown, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { ResponsiveAd } from '@/components/AdSenseAd';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import notifications from '@/utils/notifications';
 import AnimatedFeedback from '@/components/AnimatedFeedback';
 
