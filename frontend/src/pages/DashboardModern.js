@@ -147,9 +147,12 @@ const DashboardModern = ({ user, onLogout }) => {
             </div>
             
             {/* Rupee Value */}
-            <div className="mt-4 bg-white bg-opacity-20 backdrop-blur-md px-6 py-2 rounded-full">
-              <p className="text-white text-sm">
+            <div className="mt-4 bg-white bg-opacity-20 backdrop-blur-md px-6 py-3 rounded-full">
+              <p className="text-white text-lg font-semibold">
                 ≈ ₹{(stats.prcBalance / 10).toFixed(2)}
+              </p>
+              <p className="text-white text-xs opacity-80 mt-1">
+                (10 PRC = ₹1)
               </p>
             </div>
           </div>
