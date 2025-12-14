@@ -376,9 +376,6 @@ const Referrals = ({ user, onLogout }) => {
             )}
           </div>
         </Card>
-
-        {!isAdmin && (
-        )}
       </div>
     </div>
   );
