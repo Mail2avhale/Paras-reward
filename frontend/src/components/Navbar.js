@@ -88,10 +88,7 @@ const Navbar = ({ user, onLogout }) => {
                   </DropdownMenuItem>
                 )}
                 
-                {/* Wallet - Show for all */}
-                <DropdownMenuItem asChild>
-                  <Link to="/wallet" className="cursor-pointer">Wallet</Link>
-                </DropdownMenuItem>
+                {/* Wallet removed - simplified to PRC balance only */}
                 
                 {/* Support - Show for all */}
                 <DropdownMenuItem asChild>
@@ -223,10 +220,7 @@ const Navbar = ({ user, onLogout }) => {
                   </DropdownMenuItem>
                 )}
                 
-                {/* Wallet - Show for all */}
-                <DropdownMenuItem asChild>
-                  <Link to="/wallet" className="cursor-pointer">Wallet</Link>
-                </DropdownMenuItem>
+                {/* Wallet removed - simplified to PRC balance only */}
                 
                 {/* Support - Show for all */}
                 <DropdownMenuItem asChild>
