@@ -20,7 +20,7 @@ const VIPMembership = ({ user, onLogout }) => {
   const [paymentStatus, setPaymentStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    amount: '1000',
+    amount: '299',
     date: new Date().toISOString().split('T')[0],
     time: new Date().toTimeString().split(' ')[0].substring(0, 5),
     utr_number: '',
@@ -86,7 +86,7 @@ const VIPMembership = ({ user, onLogout }) => {
       
       // Reset form
       setFormData({
-        amount: '1000',
+        amount: '299',
         date: new Date().toISOString().split('T')[0],
         time: new Date().toTimeString().split(' ')[0].substring(0, 5),
         utr_number: '',
