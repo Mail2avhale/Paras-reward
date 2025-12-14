@@ -374,7 +374,7 @@ const Home = ({ user, onLogout }) => {
                   Upgrade to VIP Membership
                 </h2>
                 <p className="text-xl text-purple-100 mb-8">
-                  Just ₹1000/year - Unlock unlimited rewards & exclusive benefits
+                  Starting from ₹299/month - Unlock unlimited rewards & exclusive benefits
                 </p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
