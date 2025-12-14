@@ -89,19 +89,19 @@ const OutletPanel = ({ user, onLogout }) => {
 
   const handleWithdrawal = async () => {
     try {
-      const amount = prompt('Enter withdrawal amount (min ₹50):');
-      if (!amount || parseFloat(amount) < 50) {
-        toast.error('Minimum ₹50');
+      const amount = prompt('Enter withdrawal amount in PRC (min 500 PRC):');
+      if (!amount || parseFloat(amount) < 500) {
+        toast.error('Minimum 500 PRC required');
         return;
       }
 
-      await axios.post(`${API}/wallet/profit/withdraw`, {
+      await axios.post(`${API}/wallet/prc/withdraw`, {
         uid: user.uid,
         amount: parseFloat(amount),
         payment_mode: 'upi'
       });
 
-      toast.success('Withdrawal requested');
+      toast.success('PRC withdrawal requested');
       fetchDashboardData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed');
