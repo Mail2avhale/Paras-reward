@@ -174,9 +174,11 @@ def create_test_product():
     
     product_data = {
         "name": "Test Product for Delivery Charge",
+        "sku": f"TEST-DELIVERY-{int(time.time())}",
         "description": "Test product to verify delivery charge distribution",
         "prc_price": 100.0,
         "cash_price": 10.0,
+        "type": "physical",
         "category": "Test",
         "stock_quantity": 100,
         "is_active": True,
