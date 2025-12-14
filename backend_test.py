@@ -184,7 +184,7 @@ def test_bill_payment_system():
             if wallet_response.status_code == 200:
                 wallet_data = wallet_response.json()
                 prc_balance = wallet_data.get("prc_balance", 0)
-                if prc_balance >= 500:  # Should have at least 500 PRC
+                if prc_balance >= 10000:  # Should have at least 10000 PRC
                     test_results["test_user_prc_credited"] = True
                     print(f"✅ User has sufficient PRC balance: {prc_balance}")
                 else:
