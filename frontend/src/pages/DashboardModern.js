@@ -70,7 +70,7 @@ const DashboardModern = ({ user, onLogout }) => {
     </button>
   );
 
-  const BottomNavItem = ({ icon: Icon, label, tabName, isActive }) => (
+  const BottomNavItem = ({ icon: Icon, label, tabName, isActive, isCenterButton = false }) => (
     <button
       onClick={() => {
         setActiveTab(tabName);
@@ -78,6 +78,8 @@ const DashboardModern = ({ user, onLogout }) => {
           navigate('/dashboard');
         } else if (tabName === 'mine') {
           navigate('/mining');
+        } else if (tabName === 'game') {
+          navigate('/game');
         } else if (tabName === 'shop') {
           navigate('/marketplace');
         } else if (tabName === 'refer') {
@@ -87,13 +89,25 @@ const DashboardModern = ({ user, onLogout }) => {
         }
       }}
       className={`flex flex-col items-center justify-center flex-1 py-3 transition-colors ${
+        isCenterButton 
+          ? 'relative -mt-6' 
+          : ''
+      } ${
         isActive 
           ? 'text-purple-600' 
           : 'text-gray-500 hover:text-purple-500'
       }`}
     >
-      <Icon className={`w-6 h-6 mb-1 ${isActive ? 'animate-bounce' : ''}`} />
-      <span className="text-xs font-medium">{label}</span>
+      {isCenterButton ? (
+        <div className="bg-gradient-to-br from-purple-600 to-blue-500 p-4 rounded-full shadow-2xl">
+          <Icon className={`w-8 h-8 text-white ${isActive ? 'animate-bounce' : ''}`} />
+        </div>
+      ) : (
+        <>
+          <Icon className={`w-6 h-6 mb-1 ${isActive ? 'animate-bounce' : ''}`} />
+          <span className="text-xs font-medium">{label}</span>
+        </>
+      )}
     </button>
   );
 
