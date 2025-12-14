@@ -338,12 +338,6 @@ const Home = ({ user, onLogout }) => {
                 title: 'No Investment',
                 description: '100% free to join. No hidden charges',
                 color: 'indigo'
-              },
-              {
-                icon: Coins,
-                title: '25% Cashback',
-                description: 'Get instant cashback on every product redemption',
-                color: 'pink'
               }
             ].map((feature, index) => (
               <Card
