@@ -94,18 +94,22 @@ test_data = TestData()
 
 def create_test_user(role, name, email, parent_id=None, prc_balance=0):
     """Create a test user with specified role and balance"""
+    # Generate unique identifiers
+    unique_id = int(time.time() * 1000) % 1000000  # More unique than timestamp
+    role_prefix = role[:3].upper()
+    
     user_data = {
         "email": email,
         "password": "Test@123",
         "role": role,
         "first_name": name.split()[0],
         "last_name": name.split()[-1] if len(name.split()) > 1 else "",
-        "mobile": f"98765{test_data.timestamp % 100000:05d}",
+        "mobile": f"9876{unique_id:06d}",  # More unique mobile numbers
         "state": "Maharashtra",
         "district": "Mumbai",
         "pincode": "400001",
-        "aadhaar_number": f"1234{test_data.timestamp % 100000000:08d}",
-        "pan_number": f"TEST{test_data.timestamp % 100000:05d}Z",
+        "aadhaar_number": f"1234{unique_id:08d}567",  # More unique Aadhaar
+        "pan_number": f"{role_prefix}{unique_id:05d}Z",  # More unique PAN
         "membership_type": "vip",
         "kyc_status": "verified"
     }
