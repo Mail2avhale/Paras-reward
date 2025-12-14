@@ -1107,27 +1107,179 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                   </ul>
                 </Card>
 
-                {/* Action Buttons */}
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    onClick={() => navigate('/kyc')}
-                    variant="outline"
-                    className="flex items-center gap-2"
-                  >
-                    <FileText className="w-4 h-4" />
-                    {user?.kyc_status ? 'View KYC Details' : 'Submit KYC'}
-                  </Button>
-                  {user?.kyc_status === 'verified' && (
-                    <Button
-                      onClick={() => toast.info('Your KYC is already verified')}
-                      disabled
-                      className="bg-green-600"
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Verified
-                    </Button>
-                  )}
-                </div>
+                {/* KYC Upload Form - Only show if not verified or pending */}
+                {(!user?.kyc_status || user?.kyc_status === 'rejected') && (
+                  <Card className="p-6 space-y-6 border-2 border-orange-300">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 mb-2">Submit Your KYC Documents</h3>
+                      <p className="text-sm text-gray-600">Upload Aadhaar and/or PAN card with document numbers</p>
+                    </div>
+
+                    {errors.kyc && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+                        {errors.kyc}
+                      </div>
+                    )}
+
+                    {/* Aadhaar Card Section */}
+                    <div className="space-y-4">
+                      <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <FileText className="h-5 w-5 text-blue-600" />
+                        Aadhaar Card
+                      </h4>
+                      
+                      {/* Aadhaar Number */}
+                      <div>
+                        <Label>Aadhaar Number</Label>
+                        <Input
+                          type="text"
+                          placeholder="Enter 12-digit Aadhaar number"
+                          maxLength={12}
+                          value={kycData.aadhaar_number}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '');
+                            setKycData({...kycData, aadhaar_number: value});
+                            if (errors.aadhaar_number) {
+                              const newErrors = {...errors};
+                              delete newErrors.aadhaar_number;
+                              setErrors(newErrors);
+                            }
+                          }}
+                          className={`font-mono ${errors.aadhaar_number ? 'border-red-500' : ''}`}
+                        />
+                        {errors.aadhaar_number && (
+                          <p className="text-xs text-red-500 mt-1">{errors.aadhaar_number}</p>
+                        )}
+                      </div>
+
+                      {/* Aadhaar Front */}
+                      <div>
+                        <ImageCropUpload
+                          value={kycData.aadhaar_front_base64}
+                          onChange={(base64) => {
+                            setKycData({...kycData, aadhaar_front_base64: base64});
+                            if (errors.aadhaar_front) {
+                              const newErrors = {...errors};
+                              delete newErrors.aadhaar_front;
+                              setErrors(newErrors);
+                            }
+                          }}
+                          label="Aadhaar Card (Front)"
+                          aspectRatio={16/10}
+                          maxSizeMB={2}
+                        />
+                        {errors.aadhaar_front && (
+                          <p className="text-xs text-red-500 mt-1">{errors.aadhaar_front}</p>
+                        )}
+                      </div>
+
+                      {/* Aadhaar Back */}
+                      <div>
+                        <ImageCropUpload
+                          value={kycData.aadhaar_back_base64}
+                          onChange={(base64) => {
+                            setKycData({...kycData, aadhaar_back_base64: base64});
+                            if (errors.aadhaar_back) {
+                              const newErrors = {...errors};
+                              delete newErrors.aadhaar_back;
+                              setErrors(newErrors);
+                            }
+                          }}
+                          label="Aadhaar Card (Back)"
+                          aspectRatio={16/10}
+                          maxSizeMB={2}
+                        />
+                        {errors.aadhaar_back && (
+                          <p className="text-xs text-red-500 mt-1">{errors.aadhaar_back}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-300"></div>
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="px-4 bg-white text-gray-500 font-medium">OR</span>
+                      </div>
+                    </div>
+
+                    {/* PAN Card Section */}
+                    <div className="space-y-4">
+                      <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <CreditCard className="h-5 w-5 text-purple-600" />
+                        PAN Card
+                      </h4>
+                      
+                      {/* PAN Number */}
+                      <div>
+                        <Label>PAN Number</Label>
+                        <Input
+                          type="text"
+                          placeholder="Enter 10-character PAN (e.g., ABCDE1234F)"
+                          maxLength={10}
+                          value={kycData.pan_number}
+                          onChange={(e) => {
+                            const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                            setKycData({...kycData, pan_number: value});
+                            if (errors.pan_number) {
+                              const newErrors = {...errors};
+                              delete newErrors.pan_number;
+                              setErrors(newErrors);
+                            }
+                          }}
+                          className={`font-mono uppercase ${errors.pan_number ? 'border-red-500' : ''}`}
+                        />
+                        {errors.pan_number && (
+                          <p className="text-xs text-red-500 mt-1">{errors.pan_number}</p>
+                        )}
+                      </div>
+
+                      {/* PAN Front */}
+                      <div>
+                        <ImageCropUpload
+                          value={kycData.pan_front_base64}
+                          onChange={(base64) => {
+                            setKycData({...kycData, pan_front_base64: base64});
+                            if (errors.pan_front) {
+                              const newErrors = {...errors};
+                              delete newErrors.pan_front;
+                              setErrors(newErrors);
+                            }
+                          }}
+                          label="PAN Card (Front)"
+                          aspectRatio={16/10}
+                          maxSizeMB={2}
+                        />
+                        {errors.pan_front && (
+                          <p className="text-xs text-red-500 mt-1">{errors.pan_front}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="flex justify-end pt-4 border-t">
+                      <Button
+                        onClick={handleSubmitKYC}
+                        disabled={loading}
+                        className="bg-orange-600 hover:bg-orange-700 text-white px-8"
+                      >
+                        {loading ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            Submitting...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4 mr-2" />
+                            Submit for Verification
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </Card>
+                )}
               </Card>
             )}
 
