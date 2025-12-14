@@ -87,9 +87,10 @@ class TestData:
         self.company_percentage = 10 # 10%
         
         # Expected distribution amounts
-        self.expected_master_amount = self.delivery_charge * (self.master_percentage / 100)  # 30 PRC
-        self.expected_sub_amount = self.delivery_charge * (self.sub_percentage / 100)        # 45 PRC
-        self.expected_outlet_amount = self.delivery_charge * (self.outlet_percentage / 100)  # 75 PRC
+        self.expected_master_amount = self.delivery_charge * (self.master_percentage / 100)  # 15 PRC
+        self.expected_sub_amount = self.delivery_charge * (self.sub_percentage / 100)        # 30 PRC
+        self.expected_outlet_amount = self.delivery_charge * (self.outlet_percentage / 100)  # 90 PRC
+        self.expected_company_amount = self.delivery_charge * (self.company_percentage / 100) # 15 PRC
 
 test_data = TestData()
 
