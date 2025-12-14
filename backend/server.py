@@ -99,6 +99,9 @@ def check_region_access(user: dict, target_region: str = None) -> bool:
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# Create scheduler for automated tasks
+scheduler = AsyncIOScheduler()
+
 # ========== MODELS ==========
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
