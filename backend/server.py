@@ -5578,13 +5578,8 @@ async def distribute_delivery_charge(order_id: str):
     # UPDATED: Credit PRC to Outlet (not profit_wallet)
     if distributions.get("outlet", 0) > 0 and outlet_user:
         amount_prc = distributions["outlet"]
-        # Update PRC balance
-        await db.users.update_one(
-            {"uid": outlet_id},
-            {"$inc": {"prc_balance": round(amount_prc, 2)}}
-        )
         
-        # Log transaction
+        # Log transaction (this also updates PRC balance)
         await log_transaction(
             user_id=outlet_id,
             wallet_type="prc",
@@ -5619,13 +5614,8 @@ async def distribute_delivery_charge(order_id: str):
     # UPDATED: Credit PRC to Sub Stockist (not profit_wallet)
     if distributions.get("sub", 0) > 0 and sub_stockist_user:
         amount_prc = distributions["sub"]
-        # Update PRC balance
-        await db.users.update_one(
-            {"uid": sub_stockist_id},
-            {"$inc": {"prc_balance": round(amount_prc, 2)}}
-        )
         
-        # Log transaction
+        # Log transaction (this also updates PRC balance)
         await log_transaction(
             user_id=sub_stockist_id,
             wallet_type="prc",
@@ -5660,13 +5650,8 @@ async def distribute_delivery_charge(order_id: str):
     # UPDATED: Credit PRC to Master Stockist (not profit_wallet)
     if distributions.get("master", 0) > 0 and master_stockist_user:
         amount_prc = distributions["master"]
-        # Update PRC balance
-        await db.users.update_one(
-            {"uid": master_stockist_id},
-            {"$inc": {"prc_balance": round(amount_prc, 2)}}
-        )
         
-        # Log transaction
+        # Log transaction (this also updates PRC balance)
         await log_transaction(
             user_id=master_stockist_id,
             wallet_type="prc",
