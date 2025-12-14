@@ -44,6 +44,18 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
   const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
+    // Check VIP membership
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    
+    if (user.membership_type !== 'vip') {
+      toast.error('VIP membership required to access marketplace');
+      setTimeout(() => navigate('/vip-membership'), 2000);
+      return;
+    }
+    
     setLoading(true);
     Promise.all([
       fetchProducts(),
@@ -52,7 +64,7 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
     ]).finally(() => {
       setLoading(false);
     });
-  }, []);
+  }, [user, navigate]);
 
   useEffect(() => {
     // Only filter if products is a valid array
