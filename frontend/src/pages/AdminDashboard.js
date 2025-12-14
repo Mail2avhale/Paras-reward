@@ -1224,27 +1224,27 @@ const AdminDashboard = ({ user, onLogout }) => {
 
           {activeTab === 'dashboard' && (
             <div>
-              {/* Hero Section */}
-              <div className="relative overflow-hidden bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 rounded-2xl mb-8 shadow-lg">
+              {/* Hero Section with Search */}
+              <div className="relative overflow-hidden bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 rounded-2xl mb-6 shadow-lg">
                 <div className="absolute inset-0 bg-black opacity-10"></div>
                 <div className="absolute inset-0" style={{
                   backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 50%)'
                 }}></div>
                 
-                <div className="relative z-10 p-8">
-                  <div className="flex items-center justify-between">
+                <div className="relative z-10 p-6 md:p-8">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
                     <div>
-                      <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+                      <h1 className="text-2xl md:text-4xl font-bold text-white mb-1">
                         Welcome back, Admin!
                       </h1>
-                      <p className="text-blue-100 text-lg">
-                        Manage your platform efficiently from this unified dashboard
+                      <p className="text-blue-100 text-sm md:text-lg">
+                        Fast access dashboard - Everything you need at your fingertips
                       </p>
                     </div>
                     <div className="hidden md:block">
                       <div className="bg-white/20 backdrop-blur-lg rounded-xl p-4 border border-white/30">
                         <div className="flex items-center space-x-2">
-                          <div className="h-10 w-10 rounded-full bg-green-400 flex items-center justify-center">
+                          <div className="h-10 w-10 rounded-full bg-green-400 flex items-center justify-center animate-pulse">
                             <Activity className="h-5 w-5 text-white" />
                           </div>
                           <div className="text-white">
@@ -1255,12 +1255,65 @@ const AdminDashboard = ({ user, onLogout }) => {
                       </div>
                     </div>
                   </div>
+                  
+                  {/* Quick Search Bar */}
+                  <div className="max-w-2xl">
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Quick search users, orders, transactions..."
+                        className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/90 backdrop-blur-sm border-2 border-white/30 focus:border-white focus:outline-none transition-all"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
+              {/* Pending Approvals Alert Section */}
+              {(stats?.vip_payments?.pending > 0 || stats?.kyc?.pending > 0 || stats?.stock_requests?.pending > 0) && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Bell className="h-5 w-5 text-amber-600 mt-0.5 animate-bounce" />
+                    <div className="flex-1">
+                      <h3 className="text-sm font-bold text-amber-900 mb-1">⚡ Action Required</h3>
+                      <div className="flex flex-wrap gap-3 text-sm text-amber-800">
+                        {stats?.vip_payments?.pending > 0 && (
+                          <button 
+                            onClick={() => setActiveTab('payments')}
+                            className="hover:underline font-medium"
+                          >
+                            {stats.vip_payments.pending} VIP Payment{stats.vip_payments.pending > 1 ? 's' : ''} pending →
+                          </button>
+                        )}
+                        {stats?.kyc?.pending > 0 && (
+                          <button 
+                            onClick={() => setActiveTab('kyc')}
+                            className="hover:underline font-medium"
+                          >
+                            {stats.kyc.pending} KYC pending →
+                          </button>
+                        )}
+                        {stats?.stock_requests?.pending > 0 && (
+                          <button 
+                            onClick={() => setActiveTab('stock-requests')}
+                            className="hover:underline font-medium"
+                          >
+                            {stats.stock_requests.pending} Stock Request{stats.stock_requests.pending > 1 ? 's' : ''} pending →
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Quick Access Cards */}
-              <div className="mb-8">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Access</h2>
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-gray-900">⚡ Quick Access</h2>
+                  <span className="text-sm text-gray-500">Click any card for instant access</span>
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                   <button
                     onClick={() => setActiveTab('users')}
