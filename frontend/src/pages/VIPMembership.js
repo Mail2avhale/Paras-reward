@@ -19,8 +19,10 @@ const VIPMembership = ({ user, onLogout }) => {
   const [paymentConfig, setPaymentConfig] = useState(null);
   const [paymentStatus, setPaymentStatus] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [vipPlans, setVipPlans] = useState([]);
+  const [selectedPlan, setSelectedPlan] = useState(null);
   const [formData, setFormData] = useState({
-    amount: '299',
+    amount: '',
     date: new Date().toISOString().split('T')[0],
     time: new Date().toTimeString().split(' ')[0].substring(0, 5),
     utr_number: '',
@@ -28,9 +30,26 @@ const VIPMembership = ({ user, onLogout }) => {
   });
 
   useEffect(() => {
+    fetchVIPPlans();
     fetchPaymentConfig();
     fetchPaymentStatus();
   }, []);
+
+  const fetchVIPPlans = async () => {
+    try {
+      const response = await axios.get(`${API}/vip/plans`);
+      setVipPlans(response.data.plans || []);
+      
+      // Auto-select monthly plan by default if no plan selected
+      if (response.data.plans && response.data.plans.length > 0 && !selectedPlan) {
+        const monthlyPlan = response.data.plans.find(p => p.plan_type === 'monthly') || response.data.plans[0];
+        setSelectedPlan(monthlyPlan);
+        setFormData(prev => ({...prev, amount: monthlyPlan.final_price.toString()}));
+      }
+    } catch (error) {
+      console.error('Error fetching VIP plans:', error);
+    }
+  };
 
   const fetchPaymentConfig = async () => {
     try {
@@ -50,12 +69,29 @@ const VIPMembership = ({ user, onLogout }) => {
     }
   };
 
+  const handlePlanSelect = (plan) => {
+    setSelectedPlan(plan);
+    setFormData(prev => ({
+      ...prev,
+      amount: plan.final_price.toString()
+    }));
+  };
+
   const handleSubmitPayment = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       // Validate fields
+      if (!selectedPlan) {
+        notifications.warning(
+          'Select a Plan',
+          'Please select a VIP membership plan before proceeding.'
+        );
+        setLoading(false);
+        return;
+      }
+
       if (!formData.utr_number) {
         notifications.warning(
           'UTR Number Required',
@@ -72,6 +108,8 @@ const VIPMembership = ({ user, onLogout }) => {
 
       const response = await axios.post(`${API}/membership/submit-payment`, {
         user_id: user.uid,
+        plan_type: selectedPlan.plan_type,
+        duration_days: selectedPlan.duration_days,
         ...formData
       });
 
@@ -79,14 +117,14 @@ const VIPMembership = ({ user, onLogout }) => {
 
       notifications.celebrate(
         '🎉 VIP Payment Submitted!',
-        'Your payment has been submitted successfully. Our team will verify and activate your VIP membership within 24 hours. You will receive a notification once approved.'
+        `Your ${selectedPlan.label} payment has been submitted successfully. Our team will verify and activate your VIP membership within 24 hours.`
       );
       
       fetchPaymentStatus();
       
       // Reset form
       setFormData({
-        amount: '299',
+        amount: selectedPlan.final_price.toString(),
         date: new Date().toISOString().split('T')[0],
         time: new Date().toTimeString().split(' ')[0].substring(0, 5),
         utr_number: '',
@@ -138,6 +176,59 @@ const VIPMembership = ({ user, onLogout }) => {
           </div>
         </Card>
 
+        {/* VIP Plans Selection */}
+        {!isVIP && vipPlans.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Choose Your VIP Plan</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {vipPlans.map((plan) => {
+                const isSelected = selectedPlan?.plan_type === plan.plan_type;
+                const hasDiscount = plan.savings > 0;
+                
+                return (
+                  <Card
+                    key={plan.plan_type}
+                    onClick={() => handlePlanSelect(plan)}
+                    className={`p-6 cursor-pointer transition-all duration-200 hover:scale-105 ${
+                      isSelected
+                        ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-500 shadow-xl'
+                        : 'bg-white hover:shadow-lg'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-bold text-gray-900">{plan.label}</h3>
+                      {isSelected && <Crown className="h-6 w-6 text-yellow-600" />}
+                    </div>
+                    
+                    <p className="text-sm text-gray-600 mb-4">{plan.duration_days} days access</p>
+                    
+                    {hasDiscount && (
+                      <div className="mb-3">
+                        <p className="text-sm text-gray-500 line-through">₹{plan.base_price}</p>
+                        <p className="text-xs text-green-600 font-medium">Save ₹{plan.savings}</p>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-baseline gap-1 mb-4">
+                      <span className="text-3xl font-bold text-gray-900">₹{plan.final_price}</span>
+                    </div>
+                    
+                    {isSelected ? (
+                      <div className="bg-yellow-500 text-white text-center py-2 rounded-lg font-medium">
+                        Selected
+                      </div>
+                    ) : (
+                      <div className="bg-gray-100 text-gray-700 text-center py-2 rounded-lg font-medium hover:bg-gray-200">
+                        Select Plan
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Benefits Comparison */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* Free Plan */}
@@ -158,7 +249,7 @@ const VIPMembership = ({ user, onLogout }) => {
               </div>
               <div className="flex items-start gap-3">
                 <XCircle className="h-5 w-5 text-red-600 mt-0.5" />
-                <span className="text-gray-700">Coins expire after 24 hours</span>
+                <span className="text-gray-700">Coins expire after 2 days</span>
               </div>
               <div className="flex items-start gap-3">
                 <XCircle className="h-5 w-5 text-red-600 mt-0.5" />
@@ -175,7 +266,7 @@ const VIPMembership = ({ user, onLogout }) => {
           {/* VIP Plan */}
           <Card className="p-6 bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-500">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-2xl font-bold text-gray-900">VIP Plan</h3>
+              <h3 className="text-2xl font-bold text-gray-900">VIP Benefits</h3>
               <Crown className="h-8 w-8 text-yellow-600" />
             </div>
             <div className="space-y-3 mb-6">
@@ -204,10 +295,8 @@ const VIPMembership = ({ user, onLogout }) => {
                 <span className="text-gray-700 font-medium">Exclusive rewards</span>
               </div>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-gray-900">₹299</span>
-              <span className="text-lg text-gray-600">/month</span>
-              <span className="text-gray-600">/year</span>
+            <div className="text-lg text-gray-700">
+              Choose from flexible plans above
             </div>
           </Card>
         </div>
@@ -316,13 +405,19 @@ const VIPMembership = ({ user, onLogout }) => {
                       <form onSubmit={handleSubmitPayment} className="space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Amount (₹)
+                            Selected Plan & Amount (₹)
                           </label>
+                          {selectedPlan && (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-2">
+                              <p className="font-bold text-gray-900">{selectedPlan.label}</p>
+                              <p className="text-sm text-gray-600">{selectedPlan.duration_days} days</p>
+                            </div>
+                          )}
                           <Input
                             type="number"
                             value={formData.amount}
                             readOnly
-                            className="bg-gray-100"
+                            className="bg-gray-100 font-bold text-lg"
                           />
                         </div>
 
