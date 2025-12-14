@@ -35,7 +35,7 @@ const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const DashboardNew = lazy(() => import("@/pages/DashboardNew"));
 const Mining = lazy(() => import("@/pages/Mining"));
 const TapGame = lazy(() => import("@/pages/TapGame"));
-const TreasureHunt = lazy(() => import("@/pages/TreasureHunt"));
+const DashboardModern = lazy(() => import("@/pages/DashboardModern"));
 const Referrals = lazy(() => import("@/pages/Referrals"));
 const Marketplace = lazy(() => import("@/pages/Marketplace"));
 const MarketplaceEnhanced = lazy(() => import("@/pages/MarketplaceEnhanced"));
