@@ -124,12 +124,19 @@ def create_test_user(role, name, email, parent_id=None, prc_balance=0):
             
             # Set PRC balance if needed
             if prc_balance > 0:
-                credit_response = requests.post(f"{API_BASE}/wallet/credit-cashback/{uid}", 
-                                              json={"amount": prc_balance}, timeout=30)
+                balance_data = {
+                    "balance_type": "prc_balance",
+                    "amount": prc_balance,
+                    "operation": "set",
+                    "notes": "Test setup - initial balance"
+                }
+                credit_response = requests.post(f"{API_BASE}/admin/users/{uid}/adjust-balance", 
+                                              json=balance_data, timeout=30)
                 if credit_response.status_code == 200:
                     print(f"✅ Set PRC balance for {name}: {prc_balance} PRC")
                 else:
-                    print(f"⚠️  Failed to set PRC balance for {name}")
+                    print(f"⚠️  Failed to set PRC balance for {name}: {credit_response.status_code}")
+                    print(f"   Response: {credit_response.text}")
             
             # Set parent relationship if specified
             if parent_id and role in ["sub_stockist", "outlet"]:
