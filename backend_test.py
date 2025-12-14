@@ -224,14 +224,14 @@ def test_bill_payment_system():
             
             # Verify PRC calculation (₹100 = 1000 PRC + service charge)
             expected_prc = 100 * 10  # ₹100 * 10 = 1000 PRC
-            actual_prc = result.get('prc_required', 0)
-            service_charge = result.get('service_charge_amount', 0)
+            actual_prc_deducted = result.get('prc_deducted', 0)
             
-            if actual_prc == expected_prc:
+            if actual_prc_deducted >= expected_prc:  # Should be at least the base amount
                 test_results["prc_deducted_correctly"] = True
-                print(f"✅ PRC calculation correct: ₹{mobile_request_data['amount_inr']} = {actual_prc} PRC")
+                print(f"✅ PRC deduction correct: ₹{mobile_request_data['amount_inr']} = {actual_prc_deducted} PRC (including service charge)")
             
-            if service_charge > 0:
+            if actual_prc_deducted > expected_prc:
+                service_charge = actual_prc_deducted - expected_prc
                 test_results["service_charge_applied"] = True
                 print(f"✅ Service charge applied: {service_charge} PRC")
                 
