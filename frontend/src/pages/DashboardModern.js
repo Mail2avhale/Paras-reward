@@ -113,7 +113,7 @@ const DashboardModern = ({ user, onLogout }) => {
         } else if (tabName === 'refer') {
           navigate('/referrals');
         } else if (tabName === 'profile') {
-          navigate('/profile-advanced');
+          navigate('/profile');
         }
       }}
       className={`flex flex-col items-center justify-center flex-1 py-3 transition-colors ${
