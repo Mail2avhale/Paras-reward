@@ -1085,7 +1085,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                     <Shield className="h-4 w-4" />
                     Why KYC Verification?
                   </h4>
-                  <ul className="text-sm text-blue-800 space-y-1">
+                  <ul className="text-sm text-blue-800 space-y-1 mb-3">
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                       <span>Unlock marketplace product redemption</span>
@@ -1107,6 +1107,11 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                       <span>Comply with regulatory requirements</span>
                     </li>
                   </ul>
+                  {user?.kyc_status !== 'verified' && user?.kyc_status !== 'pending' && (
+                    <div className="mt-3 pt-3 border-t border-blue-300">
+                      <p className="text-xs text-blue-700 mb-2">👇 Scroll down to upload your documents</p>
+                    </div>
+                  )}
                 </Card>
 
                 {/* KYC Upload Form - Show unless verified */}
