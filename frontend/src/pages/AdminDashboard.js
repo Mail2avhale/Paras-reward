@@ -11,7 +11,6 @@ import FinancialManagementAdmin from '@/pages/FinancialManagementAdmin';
 import AdvancedUserManagement from '@/pages/AdvancedUserManagement';
 import AdvancedOrderManagement from '@/pages/AdvancedOrderManagement';
 import StockMovementSimple from '@/pages/StockMovementSimple';
-import WithdrawalManagementAdmin from '@/pages/WithdrawalManagementAdmin';
 import StockMovementApproval from '@/pages/StockMovementApproval';
 import StockRequestSystem from '@/pages/StockRequestSystem';
 import AdminActivityLogs from '@/pages/AdminActivityLogs';
@@ -1081,7 +1080,6 @@ const AdminDashboard = ({ user, onLogout }) => {
     { id: 'activity-logs', icon: Activity, label: 'Activity Logs' },
     { id: 'stockist-management', icon: UserCog, label: 'Stockist Management' },
     { id: 'financial-management', icon: DollarSign, label: 'Financial Management' },
-    { id: 'withdrawals', icon: CreditCard, label: 'Withdrawal Requests' },
     { id: 'stock-requests', icon: Package, label: 'Stock Requests' },
     { id: 'users', icon: Users, label: 'Users' },
     { id: 'stock-movement', icon: Truck, label: 'Stock Movement' },
