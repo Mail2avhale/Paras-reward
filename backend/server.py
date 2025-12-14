@@ -14575,7 +14575,7 @@ async def initialize_database_indexes():
 
 @app.on_event("startup")
 async def startup_db():
-    """Initialize database with default data"""
+    """Initialize database with default data and start scheduled tasks"""
     print("🚀 Starting database initialization...")
     
     # Create indexes
@@ -14590,6 +14590,33 @@ async def startup_db():
         print("📹 No video ads found, database ready for admin to create videos")
     
     print("✅ Database initialization complete!")
+    
+    # Start scheduler for automated tasks
+    print("⏰ Starting scheduled tasks...")
+    
+    # Schedule PRC burn for free users - runs every hour
+    scheduler.add_job(
+        burn_expired_prc_for_free_users,
+        CronTrigger(hour='*'),  # Every hour
+        id='burn_free_user_prc',
+        name='Burn expired PRC for free users (48 hour expiry)',
+        replace_existing=True
+    )
+    
+    # Schedule PRC burn for expired VIP users - runs daily at 2 AM
+    scheduler.add_job(
+        burn_expired_vip_prc,
+        CronTrigger(hour=2, minute=0),  # Daily at 2 AM
+        id='burn_expired_vip_prc',
+        name='Burn PRC for expired VIP users (5 day grace period)',
+        replace_existing=True
+    )
+    
+    # Start the scheduler
+    scheduler.start()
+    print("✅ Scheduled tasks started:")
+    print("   - Free user PRC burn: Every hour")
+    print("   - Expired VIP PRC burn: Daily at 2 AM")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
