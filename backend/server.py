@@ -801,6 +801,14 @@ async def get_vip_plan_pricing(plan_type: str = "monthly"):
         "label": "Monthly Plan"
     }
     """
+    # Default pricing for each plan type
+    default_prices = {
+        "monthly": 299.0,
+        "quarterly": 897.0,
+        "half_yearly": 1794.0,
+        "yearly": 3588.0
+    }
+    
     settings = await db.settings.find_one({})
     if not settings or "vip_plans" not in settings:
         # Return default plans if not in database
@@ -814,7 +822,8 @@ async def get_vip_plan_pricing(plan_type: str = "monthly"):
     else:
         plan = settings["vip_plans"].get(plan_type, settings["vip_plans"]["monthly"])
     
-    base_price = plan["price"]
+    # Handle missing price field by using default
+    base_price = plan.get("price", default_prices.get(plan_type, 299.0))
     discount_percentage = plan.get("discount_percentage", 0)
     discount_fixed = plan.get("discount_fixed", 0)
     
