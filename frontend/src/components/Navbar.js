@@ -53,6 +53,9 @@ const Navbar = ({ user, onLogout }) => {
                 <Link to="/mining" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
                   {t('nav.mining')}
                 </Link>
+                <Link to="/game" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
+                  Tap Game
+                </Link>
                 <Link to="/marketplace" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
                   {t('nav.marketplace')}
                 </Link>
