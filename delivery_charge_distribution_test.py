@@ -515,9 +515,9 @@ def test_delivery_charge_distribution():
     expected_master = delivery_charge * 0.10  # 1.5 PRC
     
     print(f"\n📊 Expected distribution (15% of 100 PRC = 15 PRC):")
-    print(f"   Outlet (50%): {expected_outlet} PRC")
-    print(f"   Sub Stockist (30%): {expected_sub} PRC")
-    print(f"   Master Stockist (20%): {expected_master} PRC")
+    print(f"   Outlet (60%): {expected_outlet} PRC")
+    print(f"   Sub Stockist (20%): {expected_sub} PRC")
+    print(f"   Master Stockist (10%): {expected_master} PRC")
     
     # Verify amounts received
     outlet_received = final_balances["outlet"] - initial_balances["outlet"]
