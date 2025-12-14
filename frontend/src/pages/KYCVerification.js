@@ -311,6 +311,25 @@ const KYCVerification = ({ user, onLogout }) => {
 
                 {selectedDocType === 'pan' && (
                   <>
+                    {/* PAN Number */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        PAN Number <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter 10-character PAN (e.g., ABCDE1234F)"
+                        maxLength={10}
+                        value={kycData.pan_number}
+                        onChange={(e) => {
+                          const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                          setKycData({...kycData, pan_number: value});
+                        }}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-purple-600 focus:outline-none transition-colors text-lg font-mono uppercase"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Format: 5 letters + 4 digits + 1 letter (e.g., ABCDE1234F)</p>
+                    </div>
+
                     {/* PAN Card */}
                     <ImageCropUpload
                       value={kycData.pan_front_base64}
