@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
-import AdSenseAd from '../components/AdSenseAd';
 import { Award, Users, TrendingUp, Heart } from 'lucide-react';
 
 const AboutUs = () => {
@@ -68,7 +67,6 @@ const AboutUs = () => {
           </div>
         </div>
 
-        <AdSenseAd slot="3234567890" format="auto" />
 
         {/* Mission & Values */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">

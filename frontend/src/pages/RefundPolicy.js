@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
-import AdSenseAd from '../components/AdSenseAd';
 
 const RefundPolicy = () => {
   return (
@@ -34,7 +33,6 @@ const RefundPolicy = () => {
             </p>
           </section>
 
-          <AdSenseAd slot="1234567890" format="auto" />
 
           {/* PRC (Reward Points) */}
           <section>
@@ -102,7 +100,6 @@ const RefundPolicy = () => {
             </div>
           </section>
 
-          <AdSenseAd slot="9876543210" format="auto" />
 
           {/* Marketplace Products */}
           <section>
@@ -213,7 +210,6 @@ const RefundPolicy = () => {
             </div>
           </section>
 
-          <AdSenseAd slot="1122334455" format="auto" />
 
           {/* Stockist Services */}
           <section>
@@ -346,7 +342,6 @@ const RefundPolicy = () => {
             </ol>
           </section>
 
-          <AdSenseAd slot="5544332211" format="auto" />
 
           {/* Important Notes */}
           <section>

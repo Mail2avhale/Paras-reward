@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
-import AdSenseAd from '../components/AdSenseAd';
 
 const PrivacyPolicy = () => {
   return (
@@ -29,7 +28,6 @@ const PrivacyPolicy = () => {
             </p>
           </section>
 
-          <AdSenseAd slot="1234567890" format="auto" />
 
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Information We Collect</h2>
@@ -50,7 +48,6 @@ const PrivacyPolicy = () => {
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Cookies & Web Beacons</h2>
             <p className="text-gray-700 leading-relaxed">
-              We use cookies to personalize user experience and analyze site usage. Third-party services such as Google AdSense may use cookies to serve ads based on previous interactions.
             </p>
           </section>
 
@@ -67,7 +64,6 @@ const PrivacyPolicy = () => {
             </ul>
           </section>
 
-          <AdSenseAd slot="1234567891" format="rectangle" />
 
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Third-Party Services</h2>
@@ -75,7 +71,6 @@ const PrivacyPolicy = () => {
               We use:
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
-              <li>Google AdSense for advertisements</li>
               <li>Firebase for user data and balances</li>
               <li>Payment providers for redemption/withdrawal</li>
             </ul>

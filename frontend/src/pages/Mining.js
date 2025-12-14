@@ -5,7 +5,6 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Coins, Play, Clock, Zap, TrendingUp, Users, AlertCircle, Crown, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { ResponsiveAd } from '@/components/AdSenseAd';
 import { Link, useNavigate } from 'react-router-dom';
 import notifications from '@/utils/notifications';
 import AnimatedFeedback from '@/components/AnimatedFeedback';
@@ -358,7 +357,6 @@ const Mining = ({ user, onLogout }) => {
         {/* Ad Space */}
         {!isAdmin && (
           <div className="mb-8">
-            <ResponsiveAd 
               adSlot="1234567890"
               adFormat="auto"
               fullWidthResponsive={true}

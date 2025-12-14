@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Users, Copy, Check, UserPlus, Link2, Share2, TrendingUp, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { ResponsiveAd, BannerAd } from '@/components/AdSenseAd';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -185,9 +184,7 @@ const Referrals = ({ user, onLogout }) => {
           </Card>
         </div>
 
-        {/* Google AdSense - Banner Ad (Hidden for Admin) */}
         {!isAdmin && (
-          <BannerAd adSlot="2345678901" />
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
@@ -383,9 +380,7 @@ const Referrals = ({ user, onLogout }) => {
           </div>
         </Card>
 
-        {/* Google AdSense - Responsive Ad (Hidden for Admin) */}
         {!isAdmin && (
-          <ResponsiveAd adSlot="3456789012" />
         )}
       </div>
     </div>

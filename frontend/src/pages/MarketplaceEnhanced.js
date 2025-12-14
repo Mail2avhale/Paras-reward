@@ -13,7 +13,6 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { InFeedAd, ResponsiveAd } from '@/components/AdSenseAd';
 import { ProductCardSkeleton } from '@/components/skeletons';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -618,10 +617,8 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
           </>
         )}
 
-        {/* AdSense */}
         {!isAdmin && filteredProducts.length > 0 && (
           <div className="mt-8">
-            <ResponsiveAd />
           </div>
         )}
       </div>

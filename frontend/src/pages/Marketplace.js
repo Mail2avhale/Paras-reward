@@ -8,7 +8,6 @@ import { ShoppingCart, Package, Plus, Minus, Trash2, CheckCircle, ArrowLeft } fr
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { InFeedAd, ResponsiveAd } from '@/components/AdSenseAd';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -245,7 +244,6 @@ const Marketplace = ({ user, onLogout }) => {
                 {/* Insert In-Feed Ad after every 4th product (Hidden for Admin) */}
                 {!isAdmin && (index + 1) % 4 === 0 && (
                   <div className="col-span-1 md:col-span-2 lg:col-span-3 xl:col-span-4">
-                    <InFeedAd adSlot="1234567893" />
                   </div>
                 )}
               </>

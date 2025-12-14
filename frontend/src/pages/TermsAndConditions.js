@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
-import AdSenseAd from '../components/AdSenseAd';
 import { AlertTriangle, Info, Shield, Globe, AlertCircle, FileText, CheckCircle } from 'lucide-react';
 
 const TermsAndConditions = () => {
@@ -67,7 +66,6 @@ const TermsAndConditions = () => {
             </div>
           </section>
 
-          <AdSenseAd slot="2234567890" format="auto" />
 
           {/* Section 2: In-App Usage Only */}
           <section className="border-l-4 border-blue-600 pl-6 bg-blue-50 p-6 rounded-r-2xl">
@@ -149,7 +147,6 @@ const TermsAndConditions = () => {
             </div>
           </section>
 
-          <AdSenseAd slot="2234567890" format="auto" />
 
           {/* Section 5: No Guarantee & Limitation of Liability */}
           <section className="border-l-4 border-red-600 pl-6 bg-red-50 p-6 rounded-r-2xl">
@@ -242,7 +239,6 @@ const TermsAndConditions = () => {
             </div>
           </section>
 
-          <AdSenseAd slot="2234567891" format="rectangle" />
 
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">PRC Redeem Process</h2>

@@ -11,7 +11,6 @@ import {
   TrendingUp, Star, Target, Award, ArrowRight, Sparkles, Play, ShoppingBag,
   Clock, CheckCircle2, Activity, Map
 } from 'lucide-react';
-import { ResponsiveAd, BannerAd, InFeedAd } from '@/components/AdSenseAd';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -610,10 +609,8 @@ const DashboardNew = ({ user, onLogout }) => {
           </div>
         </Card>
 
-        {/* AdSense - Only for non-admin */}
         {!isAdmin && (
           <div className="mt-6">
-            <ResponsiveAd />
           </div>
         )}
       </div>

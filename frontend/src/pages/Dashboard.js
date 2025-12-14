@@ -5,7 +5,6 @@ import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Coins, Zap, Users, Gift, Trophy, Wallet, Crown, ShieldCheck, Package } from 'lucide-react';
-import { ResponsiveAd, BannerAd, InFeedAd } from '@/components/AdSenseAd';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -137,9 +136,7 @@ const Dashboard = ({ user, onLogout }) => {
           </Card>
         </div>
 
-        {/* Google AdSense - Banner Ad (Hidden for Admin) */}
         {!isAdmin && (
-          <BannerAd adSlot="1234567891" />
         )}
 
         {/* Quick Actions */}
@@ -219,9 +216,7 @@ const Dashboard = ({ user, onLogout }) => {
           </Card>
         )}
 
-        {/* Google AdSense - Responsive Ad (Hidden for Admin) */}
         {!isAdmin && (
-          <ResponsiveAd adSlot="1234567894" />
         )}
       </div>
     </div>

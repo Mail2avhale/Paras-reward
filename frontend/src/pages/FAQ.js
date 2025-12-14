@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
-import AdSenseAd from '../components/AdSenseAd';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const FAQ = () => {
@@ -132,7 +131,6 @@ const FAQ = () => {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <AdSenseAd slot="4234567890" format="auto" />
 
         <div className="bg-white rounded-lg shadow-lg mt-8">
           {faqs.map((faq, index) => (
@@ -176,7 +174,6 @@ const FAQ = () => {
           </div>
         </div>
 
-        <AdSenseAd slot="4234567891" format="rectangle" />
       </div>
 
       <Footer />
