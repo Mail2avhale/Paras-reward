@@ -15,6 +15,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState([]);
+  const [currentUser, setCurrentUser] = useState(user);
   const [selectedDenomination, setSelectedDenomination] = useState(null);
 
   useEffect(() => {
@@ -30,8 +31,18 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
       return;
     }
     
+    fetchUserData();
     fetchRequests();
   }, [user, navigate]);
+
+  const fetchUserData = async () => {
+    try {
+      const response = await axios.get(`${API}/api/auth/user/${user.uid}`);
+      setCurrentUser(response.data);
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
 
   const fetchRequests = async () => {
     try {
@@ -62,8 +73,8 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
     }
 
     // Check PRC balance
-    if (user.prc_balance < totalPRC) {
-      toast.error(`Insufficient PRC balance. Required: ${totalPRC.toFixed(2)} PRC, Available: ${user.prc_balance?.toFixed(2) || 0} PRC`);
+    if (currentUser.prc_balance < totalPRC) {
+      toast.error(`Insufficient PRC balance. Required: ${totalPRC.toFixed(2)} PRC, Available: ${currentUser.prc_balance?.toFixed(2) || 0} PRC`);
       return;
     }
 
