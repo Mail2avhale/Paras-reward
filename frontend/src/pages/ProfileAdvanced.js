@@ -1212,7 +1212,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
               </Card>
             )}
 
-            {/* 5. CHANGE PASSWORD SECTION */}
+            {/* 6. CHANGE PASSWORD SECTION */}
             {activeSection === 'password' && (
               <Card className="p-6 space-y-6">
                 <div>
