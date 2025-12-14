@@ -54,6 +54,7 @@ const AdminDashboardModern = lazy(() => import("@/pages/AdminDashboardModern"));
 const AdminAnalytics = lazy(() => import("@/pages/AdminAnalytics"));
 const AdminVideoAds = lazy(() => import("@/pages/AdminVideoAds"));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
+const AdminVIPPlans = lazy(() => import("@/pages/AdminVIPPlans"));
 const AdminBurnDashboard = lazy(() => import("@/pages/AdminBurnDashboard"));
 const ManagerDashboard = lazy(() => import("@/pages/ManagerDashboard"));
 const ManagerDashboardNew = lazy(() => import("@/pages/manager/ManagerDashboardNew"));
@@ -128,6 +129,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/analytics" element={user && user.role === "admin" ? <AdminAnalytics user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/admin/video-ads" element={user && user.role === "admin" ? <AdminVideoAds user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/admin/settings" element={user && user.role === "admin" ? <AdminSettings user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/vip-plans" element={user && user.role === "admin" ? <AdminVIPPlans user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/admin/burn-management" element={user?.role === 'admin' ? <AdminBurnDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/manager" element={user && user.role === "manager" ? <ManagerDashboardNew user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/manager/users" element={user && user.role === "manager" ? <ManagerUsers user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
