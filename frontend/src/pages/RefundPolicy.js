@@ -186,7 +186,7 @@ const RefundPolicy = () => {
                   Once a withdrawal request is submitted and approved by admin, it <strong>cannot be cancelled or reversed</strong>.
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4 mt-2">
-                  <li>Minimum withdrawal amount: ₹10 for cashback wallet, ₹50 for profit wallet</li>
+                  <li>Minimum withdrawal amount: ₹10 for cashback wallet, ₹50 for PRC balance</li>
                   <li>Withdrawal fees apply as per platform terms</li>
                   <li>Processing time: 3-7 business days after admin approval</li>
                 </ul>
@@ -225,7 +225,7 @@ const RefundPolicy = () => {
                 <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
                   <li>Security deposits are <strong>refundable</strong> upon termination of stockist agreement</li>
                   <li>Refund will be processed after deduction of any pending dues, penalties, or outstanding amounts</li>
-                  <li>Monthly returns (3% of deposit) are credited to profit wallet and are non-refundable once credited</li>
+                  <li>Monthly returns (3% of deposit) are credited to PRC balance and are non-refundable once credited</li>
                   <li>Refund processing time: 15-30 business days after agreement termination</li>
                 </ul>
               </div>
@@ -240,10 +240,10 @@ const RefundPolicy = () => {
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">5.3 Commission & Profit Wallet</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">5.3 Commission & PRC balance</h3>
                 <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
                   <li>Commissions earned from delivery charges are non-refundable</li>
-                  <li>Once credited to profit wallet, amounts cannot be reversed</li>
+                  <li>Once credited to PRC balance, amounts cannot be reversed</li>
                   <li>Withdrawal processing follows standard wallet withdrawal policy</li>
                 </ul>
               </div>
@@ -277,12 +277,12 @@ const RefundPolicy = () => {
                   <tr className="border-b">
                     <td className="px-6 py-4 text-sm text-gray-700">Rejected Withdrawal</td>
                     <td className="px-6 py-4 text-sm text-gray-700">Immediate</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">Cashback/Profit Wallet</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">Cashback/PRC balance</td>
                   </tr>
                   <tr className="border-b bg-gray-50">
                     <td className="px-6 py-4 text-sm text-gray-700">Failed Bank Transfer</td>
                     <td className="px-6 py-4 text-sm text-gray-700">7-10 business days</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">Cashback/Profit Wallet</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">Cashback/PRC balance</td>
                   </tr>
                   <tr className="border-b">
                     <td className="px-6 py-4 text-sm text-gray-700">Security Deposit (Stockist)</td>

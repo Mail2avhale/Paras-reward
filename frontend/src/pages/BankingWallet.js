@@ -80,7 +80,7 @@ const BankingWallet = ({ user, walletBalance = 0 }) => {
       admin_credit: <CheckCircle className="w-5 h-5 text-green-600" />,
       admin_debit: <AlertCircle className="w-5 h-5 text-red-600" />,
       delivery_charge: <TrendingDown className="w-5 h-5 text-gray-600" />,
-      profit_share: <TrendingUp className="w-5 h-5 text-green-600" />,
+      PRC_share: <TrendingUp className="w-5 h-5 text-green-600" />,
       scratch_card_reward: <Gift className="w-5 h-5 text-pink-600" />,
       treasure_hunt_reward: <Gift className="w-5 h-5 text-purple-600" />
     };
@@ -101,13 +101,13 @@ const BankingWallet = ({ user, walletBalance = 0 }) => {
       delivery_charge: 'Delivery Charge',
       scratch_card_reward: 'Scratch Card Cashback',
       treasure_hunt_reward: 'Treasure Hunt Cashback',
-      profit_share: 'Profit Share'
+      PRC_share: 'PRC Share'
     };
     return labelMap[type] || type;
   };
 
   const isCredit = (type) => {
-    return ['mining', 'tap_game', 'referral', 'cashback', 'withdrawal_rejected', 'admin_credit', 'profit_share', 'scratch_card_reward', 'treasure_hunt_reward'].includes(type);
+    return ['mining', 'tap_game', 'referral', 'cashback', 'withdrawal_rejected', 'admin_credit', 'PRC_share', 'scratch_card_reward', 'treasure_hunt_reward'].includes(type);
   };
 
   const formatDate = (dateString) => {
@@ -159,16 +159,16 @@ const BankingWallet = ({ user, walletBalance = 0 }) => {
           
           {user?.role && ['master_stockist', 'sub_stockist', 'outlet'].includes(user.role) && (
             <Button
-              onClick={() => setActiveWallet('profit')}
+              onClick={() => setActiveWallet('PRC')}
               className={`flex-1 h-16 ${
-                activeWallet === 'profit'
+                activeWallet === 'PRC'
                   ? 'bg-gradient-to-r from-green-600 to-teal-600 text-white'
                   : 'bg-white text-gray-700 border border-gray-200'
               }`}
             >
               <div className="text-center">
-                <div className="text-lg font-bold">Profit Wallet</div>
-                <div className="text-sm opacity-90">₹{(user?.profit_balance || 0).toFixed(2)}</div>
+                <div className="text-lg font-bold">PRC Wallet</div>
+                <div className="text-sm opacity-90">₹{(user?.PRC_balance || 0).toFixed(2)}</div>
               </div>
             </Button>
           )}
