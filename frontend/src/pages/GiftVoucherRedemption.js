@@ -22,6 +22,14 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
       navigate('/login');
       return;
     }
+    
+    // Check VIP membership
+    if (user.membership_type !== 'vip') {
+      toast.error('VIP membership required to redeem gift vouchers');
+      setTimeout(() => navigate('/vip-membership'), 2000);
+      return;
+    }
+    
     fetchRequests();
   }, [user, navigate]);
 
