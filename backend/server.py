@@ -14620,4 +14620,12 @@ async def startup_db():
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    """Shutdown database client and scheduler"""
+    # Shutdown scheduler
+    if scheduler.running:
+        scheduler.shutdown()
+        print("⏰ Scheduler shut down")
+    
+    # Close database client
     client.close()
+    print("🔒 Database connection closed")
