@@ -175,19 +175,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
         emergency_contact_number: userData.emergency_contact_number || ''
       });
       
-      setBankDetails({
-        bank_account_holder_name: userData.bank_account_holder_name || '',
-        bank_account_number: userData.bank_account_number || '',
-        confirm_account_number: '',
-        bank_ifsc: userData.bank_ifsc || '',
-        bank_name: userData.bank_name || '',
-        bank_branch: userData.bank_branch || '',
-        bank_account_type: userData.bank_account_type || 'savings',
-        upi_id: userData.upi_id || '',
-        phonepe_number: userData.phonepe_number || '',
-        gpay_number: userData.gpay_number || '',
-        paytm_number: userData.paytm_number || ''
-      });
+      // Bank details section removed
       
       setSecurityOptions({
         two_factor_enabled: userData.two_factor_enabled || false,
