@@ -116,9 +116,8 @@ def create_test_user(role, name, email, mobile, parent_id=None):
             
             # If this user has a parent, assign the relationship
             if parent_id and role in ["sub_stockist", "outlet"]:
-                assign_data = {"parent_id": parent_id}
+                assign_data = {"stockist_id": uid, "parent_id": parent_id}
                 assign_response = requests.post(f"{API_BASE}/admin/stockists/assign", 
-                                              params={"uid": uid}, 
                                               json=assign_data, 
                                               timeout=30)
                 if assign_response.status_code == 200:
