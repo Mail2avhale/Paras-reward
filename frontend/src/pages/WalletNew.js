@@ -30,13 +30,13 @@ const API = `${BACKEND_URL}/api`;
 
 const WalletNew = ({ user, onLogout }) => {
   const [walletData, setWalletData] = useState(null);
-  const [withdrawals, setWithdrawals] = useState({ cashback_withdrawals: [], profit_withdrawals: [] });
+  const [withdrawals, setWithdrawals] = useState({ cashback_withdrawals: [], prc_withdrawals: [] });
   const [loading, setLoading] = useState(false);
   
   // Determine minimum withdrawal based on membership
   const isFreeUser = user?.membership_type !== 'vip';
   const minCashbackWithdrawal = isFreeUser ? 1000 : 10;
-  const minProfitWithdrawal = 50;
+  const minprcWithdrawal = 50;
   
   // Cashback withdrawal form
   const [cashbackAmount, setCashbackAmount] = useState('');
@@ -47,14 +47,14 @@ const WalletNew = ({ user, onLogout }) => {
   const [cashbackAccountHolderName, setCashbackAccountHolderName] = useState('');
   const [cashbackIfsc, setCashbackIfsc] = useState('');
   
-  // Profit withdrawal form
-  const [profitAmount, setProfitAmount] = useState('');
-  const [profitPaymentMode, setProfitPaymentMode] = useState('phonepe');
-  const [profitUpiId, setProfitUpiId] = useState('');
-  const [profitBankAccount, setProfitBankAccount] = useState('');
-  const [profitBankName, setProfitBankName] = useState('');
-  const [profitAccountHolderName, setProfitAccountHolderName] = useState('');
-  const [profitIfsc, setProfitIfsc] = useState('');
+  // prc withdrawal form
+  const [prcAmount, setprcAmount] = useState('');
+  const [prcPaymentMode, setprcPaymentMode] = useState('phonepe');
+  const [prcUpiId, setprcUpiId] = useState('');
+  const [prcBankAccount, setprcBankAccount] = useState('');
+  const [prcBankName, setprcBankName] = useState('');
+  const [prcAccountHolderName, setprcAccountHolderName] = useState('');
+  const [prcIfsc, setprcIfsc] = useState('');
 
   useEffect(() => {
     fetchWalletData();
@@ -65,20 +65,20 @@ const WalletNew = ({ user, onLogout }) => {
       // Load UPI details - prioritize in order
       const userUpiId = user.upi_id || user.phonepe_number || user.gpay_number || user.paytm_number || '';
       setCashbackUpiId(userUpiId);
-      setProfitUpiId(userUpiId);
+      setprcUpiId(userUpiId);
       
       // Load Bank details
       if (user.bank_account_holder_name) setCashbackAccountHolderName(user.bank_account_holder_name);
-      if (user.bank_account_holder_name) setProfitAccountHolderName(user.bank_account_holder_name);
+      if (user.bank_account_holder_name) setprcAccountHolderName(user.bank_account_holder_name);
       
       if (user.bank_account_number) setCashbackBankAccount(user.bank_account_number);
-      if (user.bank_account_number) setProfitBankAccount(user.bank_account_number);
+      if (user.bank_account_number) setprcBankAccount(user.bank_account_number);
       
       if (user.bank_name) setCashbackBankName(user.bank_name);
-      if (user.bank_name) setProfitBankName(user.bank_name);
+      if (user.bank_name) setprcBankName(user.bank_name);
       
       if (user.bank_ifsc) setCashbackIfsc(user.bank_ifsc);
-      if (user.bank_ifsc) setProfitIfsc(user.bank_ifsc);
+      if (user.bank_ifsc) setprcIfsc(user.bank_ifsc);
     }
   }, [user]);
 
@@ -164,35 +164,35 @@ const WalletNew = ({ user, onLogout }) => {
     }
   };
 
-  const handleProfitWithdraw = async () => {
-    if (!profitAmount || parseFloat(profitAmount) < 50) {
+  const handleprcWithdraw = async () => {
+    if (!prcAmount || parseFloat(prcAmount) < 50) {
       toast.error('Minimum withdrawal amount is ₹50');
       return;
     }
 
-    const isUpiMode = ['phonepe', 'googlepay', 'paytm', 'upi'].includes(profitPaymentMode);
+    const isUpiMode = ['phonepe', 'googlepay', 'paytm', 'upi'].includes(prcPaymentMode);
 
-    if (isUpiMode && !profitUpiId) {
+    if (isUpiMode && !prcUpiId) {
       toast.error('Please enter UPI ID or Mobile Number');
       return;
     }
 
-    if (profitPaymentMode === 'bank' && (!profitBankAccount || !profitIfsc || !profitAccountHolderName || !profitBankName)) {
+    if (prcPaymentMode === 'bank' && (!prcBankAccount || !prcIfsc || !prcAccountHolderName || !prcBankName)) {
       toast.error('Please enter complete bank account details including bank name');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API}/wallet/profit/withdraw`, {
+      const response = await axios.post(`${API}/wallet/prc/withdraw`, {
         user_id: user.uid,
-        amount: parseFloat(profitAmount),
-        payment_mode: profitPaymentMode,
-        upi_id: isUpiMode ? profitUpiId : null,
-        bank_account: profitPaymentMode === 'bank' ? profitBankAccount : null,
-        bank_name: profitPaymentMode === 'bank' ? profitBankName : null,
-        account_holder_name: profitPaymentMode === 'bank' ? profitAccountHolderName : null,
-        ifsc_code: profitPaymentMode === 'bank' ? profitIfsc : null
+        amount: parseFloat(prcAmount),
+        payment_mode: prcPaymentMode,
+        upi_id: isUpiMode ? prcUpiId : null,
+        bank_account: prcPaymentMode === 'bank' ? prcBankAccount : null,
+        bank_name: prcPaymentMode === 'bank' ? prcBankName : null,
+        account_holder_name: prcPaymentMode === 'bank' ? prcAccountHolderName : null,
+        ifsc_code: prcPaymentMode === 'bank' ? prcIfsc : null
       });
       
       // Show enhanced success message with new fee breakdown
@@ -202,11 +202,11 @@ const WalletNew = ({ user, onLogout }) => {
         { duration: 5000 }
       );
       
-      setProfitAmount('');
-      setProfitUpiId('');
-      setProfitBankAccount('');
-      setProfitAccountHolderName('');
-      setProfitIfsc('');
+      setprcAmount('');
+      setprcUpiId('');
+      setprcBankAccount('');
+      setprcAccountHolderName('');
+      setprcIfsc('');
       fetchWalletData();
       fetchWithdrawals();
     } catch (error) {
@@ -333,7 +333,7 @@ const WalletNew = ({ user, onLogout }) => {
             </div>
           </Card>
 
-          {/* Profit Wallet - Purple to Pink Gradient */}
+          {/* prc Wallet - Purple to Pink Gradient */}
           {isStockistOrOutlet && (
             <Card className="relative overflow-hidden bg-gradient-to-br from-purple-500 via-pink-500 to-rose-500 text-white p-8 rounded-3xl shadow-xl border-0 hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
               {/* Decorative gradient orbs */}
@@ -347,10 +347,10 @@ const WalletNew = ({ user, onLogout }) => {
                       <div className="bg-white/20 backdrop-blur-sm p-2 rounded-xl">
                         <TrendingUp className="h-6 w-6" />
                       </div>
-                      <p className="text-sm font-medium opacity-90">Profit Wallet</p>
+                      <p className="text-sm font-medium opacity-90">prc Wallet</p>
                     </div>
                     <h2 className="text-5xl font-bold tracking-tight">
-                      ₹{walletData?.profit_balance?.toFixed(2) || '0.00'}
+                      ₹{walletData?.prc_balance?.toFixed(2) || '0.00'}
                     </h2>
                   </div>
                 </div>
@@ -382,10 +382,10 @@ const WalletNew = ({ user, onLogout }) => {
             </TabsTrigger>
             {isStockistOrOutlet && (
               <TabsTrigger 
-                value="profit-withdraw"
+                value="prc-withdraw"
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 font-medium transition-all rounded-xl"
               >
-                Profit Withdraw
+                prc Withdraw
               </TabsTrigger>
             )}
             <TabsTrigger 
@@ -396,10 +396,10 @@ const WalletNew = ({ user, onLogout }) => {
             </TabsTrigger>
             {isStockistOrOutlet && (
               <TabsTrigger 
-                value="profit-history"
+                value="prc-history"
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 font-medium transition-all rounded-xl"
               >
-                Profit History
+                prc History
               </TabsTrigger>
             )}
           </TabsList>
@@ -564,11 +564,11 @@ const WalletNew = ({ user, onLogout }) => {
             </Card>
           </TabsContent>
 
-          {/* Profit Withdrawal */}
+          {/* prc Withdrawal */}
           {isStockistOrOutlet && (
-            <TabsContent value="profit-withdraw">
+            <TabsContent value="prc-withdraw">
               <Card className="p-6">
-                <h3 className="text-2xl font-bold mb-4">Withdraw from Profit Wallet</h3>
+                <h3 className="text-2xl font-bold mb-4">Withdraw from prc Wallet</h3>
                 
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
                   <div className="flex items-start gap-3">
@@ -591,17 +591,17 @@ const WalletNew = ({ user, onLogout }) => {
                     <Input
                       type="number"
                       placeholder="Minimum ₹50"
-                      value={profitAmount}
-                      onChange={(e) => setProfitAmount(e.target.value)}
+                      value={prcAmount}
+                      onChange={(e) => setprcAmount(e.target.value)}
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      You'll receive: ₹{profitAmount ? (parseFloat(profitAmount) - 5).toFixed(2) : '0.00'} (after ₹5 fee)
+                      You'll receive: ₹{prcAmount ? (parseFloat(prcAmount) - 5).toFixed(2) : '0.00'} (after ₹5 fee)
                     </p>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium mb-2">Payment Mode</label>
-                    <Select value={profitPaymentMode} onValueChange={setProfitPaymentMode}>
+                    <Select value={prcPaymentMode} onValueChange={setprcPaymentMode}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -615,12 +615,12 @@ const WalletNew = ({ user, onLogout }) => {
                     </Select>
                   </div>
 
-                  {['phonepe', 'googlepay', 'paytm', 'upi'].includes(profitPaymentMode) && (
+                  {['phonepe', 'googlepay', 'paytm', 'upi'].includes(prcPaymentMode) && (
                     <div>
                       <label className="block text-sm font-medium mb-2">UPI ID or Mobile Number</label>
                       <Input
                         placeholder="No payment details found. Update in Profile"
-                        value={profitUpiId}
+                        value={prcUpiId}
                         readOnly
                         className="bg-gray-50"
                       />
@@ -630,13 +630,13 @@ const WalletNew = ({ user, onLogout }) => {
                     </div>
                   )}
 
-                  {profitPaymentMode === 'bank' && (
+                  {prcPaymentMode === 'bank' && (
                     <>
                       <div>
                         <label className="block text-sm font-medium mb-2">Account Holder Name</label>
                         <Input
                           placeholder="No bank details found. Update in Profile"
-                          value={profitAccountHolderName}
+                          value={prcAccountHolderName}
                           readOnly
                           className="bg-gray-50"
                         />
@@ -645,7 +645,7 @@ const WalletNew = ({ user, onLogout }) => {
                         <label className="block text-sm font-medium mb-2">Bank Account Number</label>
                         <Input
                           placeholder="No bank details found. Update in Profile"
-                          value={profitBankAccount}
+                          value={prcBankAccount}
                           readOnly
                           className="bg-gray-50"
                         />
@@ -654,7 +654,7 @@ const WalletNew = ({ user, onLogout }) => {
                         <label className="block text-sm font-medium mb-2">Bank Name</label>
                         <Input
                           placeholder="No bank details found. Update in Profile"
-                          value={profitBankName}
+                          value={prcBankName}
                           readOnly
                           className="bg-gray-50"
                         />
@@ -663,7 +663,7 @@ const WalletNew = ({ user, onLogout }) => {
                         <label className="block text-sm font-medium mb-2">IFSC Code</label>
                         <Input
                           placeholder="No bank details found. Update in Profile"
-                          value={profitIfsc}
+                          value={prcIfsc}
                           readOnly
                           className="bg-gray-50"
                         />
@@ -675,7 +675,7 @@ const WalletNew = ({ user, onLogout }) => {
                   )}
 
                   <Button
-                    onClick={handleProfitWithdraw}
+                    onClick={handleprcWithdraw}
                     disabled={loading}
                     className="w-full bg-purple-600 hover:bg-purple-700"
                   >
@@ -757,20 +757,20 @@ const WalletNew = ({ user, onLogout }) => {
             </Card>
           </TabsContent>
 
-          {/* Profit Withdrawal History */}
+          {/* prc Withdrawal History */}
           {isStockistOrOutlet && (
-            <TabsContent value="profit-history">
+            <TabsContent value="prc-history">
               <Card className="p-6">
-                <h3 className="text-2xl font-bold mb-4">Profit Withdrawal History</h3>
+                <h3 className="text-2xl font-bold mb-4">prc Withdrawal History</h3>
                 
-                {withdrawals.profit_withdrawals.length === 0 ? (
+                {withdrawals.prc_withdrawals.length === 0 ? (
                   <div className="text-center py-12 text-gray-500">
                     <TrendingUp className="h-16 w-16 mx-auto mb-4 opacity-30" />
                     <p>No withdrawal history yet</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {withdrawals.profit_withdrawals.map((withdrawal) => (
+                    {withdrawals.prc_withdrawals.map((withdrawal) => (
                       <Card key={withdrawal.withdrawal_id} className="p-4 border">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">

@@ -210,7 +210,7 @@ const WithdrawalManagementAdmin = () => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Withdrawal Requests</h2>
-          <p className="text-gray-600">Manage cashback and profit wallet withdrawal requests</p>
+          <p className="text-gray-600">Manage cashback and PRC wallet withdrawal requests</p>
         </div>
       </div>
 
