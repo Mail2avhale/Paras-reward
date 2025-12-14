@@ -439,7 +439,7 @@ const BillPayments = ({ user, onLogout }) => {
             {/* PRC Balance */}
             <Card className="p-6 bg-gradient-to-br from-blue-500 to-purple-600 text-white">
               <p className="text-sm opacity-90 mb-2">Available PRC Balance</p>
-              <p className="text-4xl font-bold">{user.prc_balance?.toFixed(2) || '0.00'}</p>
+              <p className="text-4xl font-bold">{currentUser?.prc_balance?.toFixed(2) || '0.00'}</p>
               <p className="text-xs opacity-75 mt-2">100 INR = 1000 PRC</p>
             </Card>
 
