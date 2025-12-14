@@ -817,28 +817,12 @@ const ProfileAdvanced = ({ user, onLogout }) => {
 
                       <div>
                         <Label htmlFor="district">District *</Label>
-                        <select
+                        <Input
                           id="district"
                           value={contactDetails.district}
-                          onChange={(e) => {
-                            setContactDetails({ 
-                              ...contactDetails, 
-                              district: e.target.value,
-                              tahsil: '',
-                              pincode: ''
-                            });
-                          }}
-                          disabled={!contactDetails.state}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                        >
-                          <option value="">Select District</option>
-                          {availableDistricts.map(district => (
-                            <option key={district} value={district}>{district}</option>
-                          ))}
-                        </select>
-                        {!contactDetails.state && (
-                          <p className="text-xs text-gray-500 mt-1">Please select a state first</p>
-                        )}
+                          onChange={(e) => setContactDetails({ ...contactDetails, district: e.target.value })}
+                          placeholder="Enter your district"
+                        />
                       </div>
 
                       <div>
