@@ -644,9 +644,11 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                         </button>
                       </div>
                       <ImageCropUpload
-                        onImageCropped={handleProfilePictureCrop}
+                        onChange={handleProfilePictureCrop}
                         aspectRatio={1}
                         circularCrop={true}
+                        maxSizeMB={1}
+                        label="Profile Picture"
                       />
                     </div>
                   </div>
