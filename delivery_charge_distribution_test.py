@@ -461,9 +461,9 @@ def test_delivery_charge_distribution():
     
     # Get initial balances
     initial_balances = {
-        "master": get_user_balance(master_stockist_uid, "profit_wallet_balance"),
-        "sub": get_user_balance(sub_stockist_uid, "profit_wallet_balance"),
-        "outlet": get_user_balance(outlet_uid, "profit_wallet_balance"),
+        "master": get_user_balance(master_stockist_uid, "prc_balance"),
+        "sub": get_user_balance(sub_stockist_uid, "prc_balance"),
+        "outlet": get_user_balance(outlet_uid, "prc_balance"),
         "user_prc": get_user_balance(regular_user_uid, "prc_balance")
     }
     
