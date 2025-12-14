@@ -2258,8 +2258,15 @@ async def get_mining_status(uid: str):
     }
 
 @api_router.post("/mining/claim/{uid}")
-async def claim_mining(uid: str):
+@api_router.post("/user/claim-mining")
+async def claim_mining_endpoint(request: Request):
     """Claim mined coins from current session"""
+    data = await request.json()
+    uid = data.get("uid")
+    
+    if not uid:
+        raise HTTPException(status_code=400, detail="User ID required")
+    
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
