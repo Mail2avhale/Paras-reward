@@ -88,13 +88,34 @@ const API = `${BACKEND_URL}/api`;
 function AppContent({ user, handleLogin, handleLogout }) {
   const { toasts, removeToast } = useNotification();
 
+  // Helper function to get role-based default route
+  const getRoleBasedRoute = (user) => {
+    if (!user) return "/";
+    
+    switch (user.role) {
+      case 'admin':
+      case 'sub_admin':
+        return "/admin";
+      case 'manager':
+        return "/manager";
+      case 'master_stockist':
+        return "/master-stockist";
+      case 'sub_stockist':
+        return "/sub-stockist";
+      case 'outlet':
+        return "/outlet";
+      default:
+        return "/dashboard";
+    }
+  };
+
   return (
     <>
       <OfflineIndicator />
       <BrowserRouter>
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
-            <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Home user={user} onLogout={handleLogout} />} />
+            <Route path="/" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <Home user={user} onLogout={handleLogout} />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/faq" element={<FAQ />} />
             <Route path="/blog" element={<Blog />} />
