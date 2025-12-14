@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { 
   TrendingUp, Users, ShoppingBag, User, Coins, 
   Zap, Gift, ArrowUpRight, Clock, CheckCircle,
-  Home, Store, UserPlus, Gamepad2
+  Home, Store, UserPlus, Gamepad2, CreditCard
 } from 'lucide-react';
 import PRCExpiryTimer from '@/components/PRCExpiryTimer';
 
