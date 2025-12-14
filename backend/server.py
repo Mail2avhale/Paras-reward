@@ -22,9 +22,19 @@ from apscheduler.triggers.cron import CronTrigger
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
+# MongoDB connection with Atlas-compatible settings
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
+client = AsyncIOMotorClient(
+    mongo_url,
+    serverSelectionTimeoutMS=30000,  # 30 second timeout for Atlas
+    connectTimeoutMS=20000,  # 20 second connection timeout
+    socketTimeoutMS=20000,  # 20 second socket timeout
+    maxPoolSize=50,  # Connection pool for production
+    minPoolSize=10,
+    retryWrites=True,  # Enable retryable writes for Atlas
+    retryReads=True,  # Enable retryable reads for Atlas
+    w='majority'  # Write concern for data durability
+)
 db = client[os.environ['DB_NAME']]
 
 # Password hashing
