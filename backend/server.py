@@ -528,6 +528,234 @@ async def check_withdrawal_eligibility(user_id: str, amount: float, wallet_type:
     
     return {"eligible": True, "reason": "Eligible for withdrawal", "lien_amount": lien_amount}
 
+# ==================== PRC BURN SYSTEM ====================
+
+async def burn_expired_prc_for_free_users():
+    """
+    Burn PRC earned by free users after 48 hours (2 days)
+    FIFO - First Earned First Burn
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        burn_threshold = now - timedelta(days=2)
+        
+        # Find all free users
+        free_users = db.users.find({
+            "membership_type": {"$ne": "vip"},
+            "mining_history": {"$exists": True, "$ne": []}
+        })
+        
+        burn_count = 0
+        total_burned = 0.0
+        
+        async for user in free_users:
+            uid = user.get("uid")
+            mining_history = user.get("mining_history", [])
+            prc_balance = user.get("prc_balance", 0)
+            
+            if not mining_history or prc_balance <= 0:
+                continue
+            
+            # Find expired PRC (older than 48 hours)
+            burned_amount = 0.0
+            updated_history = []
+            
+            for entry in mining_history:
+                timestamp_str = entry.get("timestamp")
+                amount = entry.get("amount", 0)
+                is_burned = entry.get("burned", False)
+                
+                if is_burned:
+                    updated_history.append(entry)
+                    continue
+                
+                # Parse timestamp
+                try:
+                    if isinstance(timestamp_str, str):
+                        mining_time = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                    else:
+                        mining_time = timestamp_str
+                except:
+                    mining_time = now  # Skip if parse fails
+                
+                # Check if expired
+                if mining_time < burn_threshold and not is_burned:
+                    # Burn this PRC
+                    burned_amount += amount
+                    entry["burned"] = True
+                    entry["burned_at"] = now.isoformat()
+                
+                updated_history.append(entry)
+            
+            if burned_amount > 0:
+                # Update user balance and history
+                new_balance = max(0, prc_balance - burned_amount)
+                
+                await db.users.update_one(
+                    {"uid": uid},
+                    {
+                        "$set": {
+                            "prc_balance": new_balance,
+                            "mining_history": updated_history
+                        }
+                    }
+                )
+                
+                # Log burn transaction
+                await log_transaction(
+                    user_id=uid,
+                    transaction_type="prc_burn_free_user",
+                    amount=burned_amount,
+                    balance_after=new_balance,
+                    description=f"Burned {burned_amount:.2f} PRC (expired after 48 hours - Free user FIFO)",
+                    metadata={"burn_reason": "free_user_expiry", "burn_threshold_hours": 48}
+                )
+                
+                burn_count += 1
+                total_burned += burned_amount
+        
+        logging.info(f"Free user PRC burn: {burn_count} users, {total_burned:.2f} PRC burned")
+        return {"users_affected": burn_count, "total_burned": total_burned}
+        
+    except Exception as e:
+        logging.error(f"Error burning expired PRC for free users: {e}")
+        return {"users_affected": 0, "total_burned": 0.0}
+
+async def burn_expired_vip_prc():
+    """
+    Burn PRC for VIP users whose subscription expired more than 5 days ago
+    FIFO - First Mined First Burn
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        grace_period_end = now - timedelta(days=5)
+        
+        # Find expired VIP users (expired more than 5 days ago)
+        expired_vips = db.users.find({
+            "membership_type": "vip",
+            "vip_expiry": {"$lt": grace_period_end.isoformat()},
+            "mining_history": {"$exists": True, "$ne": []}
+        })
+        
+        burn_count = 0
+        total_burned = 0.0
+        
+        async for user in expired_vips:
+            uid = user.get("uid")
+            mining_history = user.get("mining_history", [])
+            prc_balance = user.get("prc_balance", 0)
+            
+            if not mining_history or prc_balance <= 0:
+                continue
+            
+            # Burn ALL remaining PRC for expired VIPs (FIFO)
+            burned_amount = 0.0
+            updated_history = []
+            
+            for entry in mining_history:
+                amount = entry.get("amount", 0)
+                is_burned = entry.get("burned", False)
+                
+                if not is_burned and amount > 0:
+                    # Burn this PRC
+                    burned_amount += amount
+                    entry["burned"] = True
+                    entry["burned_at"] = now.isoformat()
+                    entry["burn_reason"] = "vip_expired_5days"
+                
+                updated_history.append(entry)
+            
+            if burned_amount > 0:
+                # Update user balance and history
+                new_balance = max(0, prc_balance - burned_amount)
+                
+                await db.users.update_one(
+                    {"uid": uid},
+                    {
+                        "$set": {
+                            "prc_balance": new_balance,
+                            "mining_history": updated_history,
+                            "membership_type": "free"  # Downgrade to free
+                        }
+                    }
+                )
+                
+                # Log burn transaction
+                await log_transaction(
+                    user_id=uid,
+                    transaction_type="prc_burn_expired_vip",
+                    amount=burned_amount,
+                    balance_after=new_balance,
+                    description=f"Burned {burned_amount:.2f} PRC (VIP expired >5 days, downgraded to Free)",
+                    metadata={"burn_reason": "vip_expiry_5days", "downgraded": True}
+                )
+                
+                burn_count += 1
+                total_burned += burned_amount
+        
+        logging.info(f"Expired VIP PRC burn: {burn_count} users, {total_burned:.2f} PRC burned")
+        return {"users_affected": burn_count, "total_burned": total_burned}
+        
+    except Exception as e:
+        logging.error(f"Error burning expired VIP PRC: {e}")
+        return {"users_affected": 0, "total_burned": 0.0}
+
+async def check_vip_marketplace_access(uid: str) -> Dict:
+    """
+    Check if user can access marketplace
+    Expired VIP users are blocked from marketplace until renewal
+    """
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        return {"allowed": False, "reason": "User not found"}
+    
+    membership_type = user.get("membership_type", "free")
+    
+    # Free users can always access marketplace
+    if membership_type != "vip":
+        return {"allowed": True, "reason": ""}
+    
+    # Check VIP expiry
+    vip_expiry_str = user.get("vip_expiry")
+    if not vip_expiry_str:
+        return {"allowed": True, "reason": ""}
+    
+    try:
+        vip_expiry = datetime.fromisoformat(vip_expiry_str.replace('Z', '+00:00'))
+        now = datetime.now(timezone.utc)
+        
+        if vip_expiry < now:
+            # VIP expired - block marketplace
+            days_expired = (now - vip_expiry).days
+            return {
+                "allowed": False,
+                "reason": f"Your VIP membership expired {days_expired} days ago. Please renew to access marketplace.",
+                "days_expired": days_expired,
+                "requires_renewal": True
+            }
+        
+        return {"allowed": True, "reason": ""}
+    except:
+        return {"allowed": True, "reason": ""}
+
+async def run_prc_burn_job():
+    """
+    Scheduled job to burn expired PRC
+    Should be run periodically (every hour or daily)
+    """
+    logging.info("Starting PRC burn job...")
+    
+    # Burn free user PRC (48 hours expiry)
+    free_result = await burn_expired_prc_for_free_users()
+    
+    # Burn expired VIP PRC (5 days after expiry)
+    vip_result = await burn_expired_vip_prc()
+    
+    logging.info(f"PRC burn job complete: Free={free_result}, VIP={vip_result}")
+    return {"free_users": free_result, "expired_vips": vip_result}
+
+# ==================== END PRC BURN SYSTEM ====================
+
 async def check_unique_fields(field_name: str, value: str, exclude_uid: Optional[str] = None):
     """Check if field value is unique"""
     if not value:
