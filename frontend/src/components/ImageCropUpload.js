@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { 
   Upload, X, RotateCw, Check, FileImage, 
-  Scissors, Maximize2, Info, Download
+  Scissors, Maximize2, Info, Download, Camera
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -35,9 +35,13 @@ const ImageCropUpload = ({
   const [originalSize, setOriginalSize] = useState(0);
   const [compressedSize, setCompressedSize] = useState(0);
   const [processing, setProcessing] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [stream, setStream] = useState(null);
   
   const imgRef = useRef(null);
   const fileInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
   // Handle file selection
   const handleFileSelect = async (e) => {
