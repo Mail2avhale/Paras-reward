@@ -172,7 +172,6 @@ const DashboardModern = ({ user, onLogout }) => {
                 onClick={() => {
                   if (window.confirm('Are you sure you want to logout?')) {
                     onLogout();
-                    navigate('/login');
                   }
                 }}
                 className="flex items-center gap-1 px-3 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-all backdrop-blur-sm border border-white border-opacity-30"
