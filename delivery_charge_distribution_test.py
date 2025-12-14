@@ -223,12 +223,16 @@ def place_order(user_id, product_id):
         print(f"❌ Error placing order: {e}")
         return None, None
 
-def deliver_order(order_id):
+def deliver_order(order_id, outlet_id):
     """Deliver the order to trigger delivery charge distribution"""
     print(f"\n🚚 Delivering order {order_id}")
     
+    delivery_data = {"outlet_id": outlet_id}
+    
     try:
-        response = requests.post(f"{API_BASE}/orders/{order_id}/deliver", timeout=30)
+        response = requests.post(f"{API_BASE}/orders/{order_id}/deliver", 
+                               json=delivery_data, 
+                               timeout=30)
         if response.status_code == 200:
             result = response.json()
             print(f"✅ Order delivered successfully")
