@@ -81,6 +81,15 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     color: 'gray'
   });
   
+  // KYC State
+  const [kycData, setKycData] = useState({
+    aadhaar_front_base64: '',
+    aadhaar_back_base64: '',
+    aadhaar_number: '',
+    pan_front_base64: '',
+    pan_number: ''
+  });
+  
   // Validation Errors
   const [errors, setErrors] = useState({});
   
