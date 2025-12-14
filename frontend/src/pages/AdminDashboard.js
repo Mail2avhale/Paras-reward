@@ -1154,7 +1154,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
       {/* Sidebar */}
       <div className={`
-        w-64 bg-white border-r border-gray-200 fixed h-full z-50 transition-transform duration-300 ease-in-out
+        w-64 bg-white border-r border-gray-200 fixed h-full z-40 transition-transform duration-300 ease-in-out mt-14
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
       `}>
