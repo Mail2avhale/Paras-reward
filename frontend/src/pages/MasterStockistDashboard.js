@@ -100,8 +100,8 @@ const MasterStockistDashboard = ({ user, onLogout }) => {
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MetricCard
-            title="Profit Wallet"
-            value={`₹${walletData?.profit_balance?.toLocaleString() || 0}`}
+            title="PRC Balance"
+            value={`₹${walletData?.prc_balance?.toLocaleString() || 0}`}
             icon={DollarSign}
             color="purple"
             subtitle="Available balance"
@@ -366,7 +366,7 @@ const MasterStockistDashboard = ({ user, onLogout }) => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <Card className="p-6 border-l-4 border-purple-500">
                   <p className="text-sm text-gray-600 mb-1">Current Balance</p>
-                  <p className="text-3xl font-bold text-purple-600">₹{walletData?.profit_balance?.toLocaleString() || 0}</p>
+                  <p className="text-3xl font-bold text-purple-600">₹{walletData?.prc_balance?.toLocaleString() || 0}</p>
                   <p className="text-xs text-gray-500 mt-2">Available for withdrawal</p>
                 </Card>
 
@@ -386,15 +386,15 @@ const MasterStockistDashboard = ({ user, onLogout }) => {
               <Card className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-1">Profit Wallet Balance</h3>
-                    <p className="text-3xl font-bold text-purple-600 mb-2">₹{walletData?.profit_balance?.toLocaleString() || 0}</p>
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">PRC Balance Balance</h3>
+                    <p className="text-3xl font-bold text-purple-600 mb-2">₹{walletData?.prc_balance?.toLocaleString() || 0}</p>
                     <p className="text-sm text-gray-600">Minimum withdrawal: ₹50</p>
                   </div>
                   <Button 
                     onClick={handleWithdrawal}
                     size="lg"
                     className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                    disabled={!walletData?.profit_balance || walletData.profit_balance < 50}
+                    disabled={!walletData?.prc_balance || walletData.prc_balance < 50}
                   >
                     <DollarSign className="mr-2 h-5 w-5" />
                     Withdraw Funds
@@ -410,10 +410,10 @@ const MasterStockistDashboard = ({ user, onLogout }) => {
           <Button 
             onClick={handleWithdrawal}
             className="w-full md:w-auto bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-            disabled={!walletData?.profit_balance || walletData.profit_balance < 50}
+            disabled={!walletData?.prc_balance || walletData.prc_balance < 50}
           >
             <DollarSign className="mr-2 h-4 w-4" />
-            Request Withdrawal {walletData?.profit_balance >= 50 && `(₹${walletData.profit_balance.toLocaleString()})`}
+            Request Withdrawal {walletData?.prc_balance >= 50 && `(₹${walletData.prc_balance.toLocaleString()})`}
           </Button>
         </div>
       </div>

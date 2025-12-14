@@ -100,8 +100,8 @@ const SubStockistDashboard = ({ user, onLogout }) => {
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MetricCard
-            title="Profit Wallet"
-            value={`₹${walletData?.profit_balance?.toLocaleString() || 0}`}
+            title="PRC Balance"
+            value={`₹${walletData?.prc_balance?.toLocaleString() || 0}`}
             icon={DollarSign}
             color="purple"
             subtitle="Available balance"
@@ -366,10 +366,10 @@ const SubStockistDashboard = ({ user, onLogout }) => {
           <Button 
             onClick={handleWithdrawal}
             className="w-full md:w-auto bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-            disabled={!walletData?.profit_balance || walletData.profit_balance < 50}
+            disabled={!walletData?.prc_balance || walletData.prc_balance < 50}
           >
             <DollarSign className="mr-2 h-4 w-4" />
-            Request Withdrawal {walletData?.profit_balance >= 50 && `(₹${walletData.profit_balance.toLocaleString()})`}
+            Request Withdrawal {walletData?.prc_balance >= 50 && `(₹${walletData.prc_balance.toLocaleString()})`}
           </Button>
         </div>
       </div>

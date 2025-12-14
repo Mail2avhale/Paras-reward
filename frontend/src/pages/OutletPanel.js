@@ -136,8 +136,8 @@ const OutletPanel = ({ user, onLogout }) => {
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MetricCard
-            title="Profit Wallet"
-            value={`₹${walletData?.profit_balance?.toLocaleString() || 0}`}
+            title="PRC Balance"
+            value={`₹${walletData?.prc_balance?.toLocaleString() || 0}`}
             icon={DollarSign}
             color="purple"
             subtitle="Available balance"
