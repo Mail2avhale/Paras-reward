@@ -1109,8 +1109,8 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                   </ul>
                 </Card>
 
-                {/* KYC Upload Form - Only show if not verified or pending */}
-                {(!user?.kyc_status || user?.kyc_status === 'rejected') && (
+                {/* KYC Upload Form - Show unless verified */}
+                {user?.kyc_status !== 'verified' && user?.kyc_status !== 'pending' && (
                   <Card className="p-6 space-y-6 border-2 border-orange-300">
                     <div>
                       <h3 className="text-lg font-bold text-gray-900 mb-2">Submit Your KYC Documents</h3>
