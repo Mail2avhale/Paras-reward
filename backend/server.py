@@ -5371,7 +5371,11 @@ async def update_contact_details(request: Request):
 
 @api_router.post("/orders/{order_id}/distribute-delivery-charge")
 async def distribute_delivery_charge(order_id: str):
-    """Distribute commission based on order PRC value (10% of total PRC converted to ₹)"""
+    """
+    Distribute 15% of order PRC value to stockist hierarchy
+    UPDATED: Changed from 10% to 15%, and credits PRC instead of cash
+    15% of order PRC is deducted from user and distributed as PRC to outlet, sub stockist, master stockist
+    """
     # Find order
     order = await db.orders.find_one({"order_id": order_id})
     if not order:
@@ -5389,14 +5393,54 @@ async def distribute_delivery_charge(order_id: str):
     if order.get("status") != "delivered":
         raise HTTPException(status_code=400, detail="Order must be delivered before distribution")
     
-    # Calculate commission: 10% of order PRC value, converted to ₹ (10 PRC = ₹1)
+    # Calculate commission: 15% of order PRC value (UPDATED from 10% to 15%)
     # Support both legacy (prc_amount) and new (total_prc) order formats
     total_prc = order.get("total_prc", 0) or order.get("prc_amount", 0)
     if total_prc <= 0:
         return {"message": "No PRC value to distribute commission"}
     
-    # Commission = 10% of PRC value in ₹
-    total_commission = (total_prc * 0.10) / 10  # 10 PRC = ₹1
+    # UPDATED: 15% delivery charge in PRC (no conversion, stays as PRC)
+    delivery_charge_prc = total_prc * 0.15  # 15% of order PRC
+    
+    # Get user who placed the order
+    user_id = order.get("user_id")
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Deduct 15% PRC from user's balance
+    user_prc_balance = user.get("prc_balance", 0)
+    if user_prc_balance < delivery_charge_prc:
+        # User doesn't have enough PRC for delivery charge - mark as pending
+        await db.orders.update_one(
+            {"order_id": order_id},
+            {"$set": {"delivery_charge_pending": True, "delivery_charge_amount": delivery_charge_prc}}
+        )
+        return {
+            "message": "Delivery charge pending - insufficient user PRC balance",
+            "required": delivery_charge_prc,
+            "available": user_prc_balance,
+            "status": "pending"
+        }
+    
+    # Deduct PRC from user
+    new_user_balance = user_prc_balance - delivery_charge_prc
+    await db.users.update_one(
+        {"uid": user_id},
+        {"$set": {"prc_balance": new_user_balance}}
+    )
+    
+    # Log deduction transaction
+    await log_transaction(
+        user_id=user_id,
+        wallet_type="prc",
+        transaction_type="delivery_charge",
+        amount=delivery_charge_prc,
+        description=f"15% delivery charge for order #{order_id[:8]}",
+        metadata={"order_id": order_id, "percentage": 15},
+        related_id=order_id,
+        related_type="order"
+    )
     
     # Get distribution split (default: Master 10%, Sub 20%, Outlet 60%, Company 10%)
     config = await db.system_config.find_one({"config_type": "delivery"})
