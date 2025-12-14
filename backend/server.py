@@ -5442,12 +5442,13 @@ async def distribute_delivery_charge(order_id: str):
         related_type="order"
     )
     
-    # Get distribution split (default: Master 10%, Sub 20%, Outlet 60%, Company 10%)
+    # Get distribution split (default: Master 20%, Sub 30%, Outlet 50%)
+    # UPDATED: Removed company cut, split entire 15% among stockists
     config = await db.system_config.find_one({"config_type": "delivery"})
     if not config:
-        split = {"master": 10, "sub": 20, "outlet": 60, "company": 10}
+        split = {"master": 20, "sub": 30, "outlet": 50}  # Total = 100% of the 15% delivery charge
     else:
-        split = config.get("distribution_split", {"master": 10, "sub": 20, "outlet": 60, "company": 10})
+        split = config.get("distribution_split", {"master": 20, "sub": 30, "outlet": 50})
     
     # Get outlet_id from delivery
     outlet_id = order.get("outlet_id") or order.get("assigned_outlet")
@@ -5474,11 +5475,11 @@ async def distribute_delivery_charge(order_id: str):
         if master_stockist_id:
             master_stockist_user = await db.users.find_one({"uid": master_stockist_id, "role": "master_stockist"})
     
-    # Calculate distribution amounts
+    # Calculate distribution amounts in PRC (not cash)
     distributions = {}
     for entity, percentage in split.items():
-        amount = (total_commission * percentage) / 100
-        distributions[entity] = amount
+        amount_prc = (delivery_charge_prc * percentage) / 100
+        distributions[entity] = amount_prc
     
     # Create commission entries and credit wallets
     commission_records = []
