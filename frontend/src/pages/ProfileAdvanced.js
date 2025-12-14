@@ -983,59 +983,9 @@ const ProfileAdvanced = ({ user, onLogout }) => {
 
                       <div>
                         <Label htmlFor="gpay_number">Google Pay Number</Label>
-                        <Input
-                          id="gpay_number"
-                          value={bankDetails.gpay_number}
-                          onChange={(e) => setBankDetails({ ...bankDetails, gpay_number: e.target.value })}
-                          placeholder="10-digit mobile number"
-                          maxLength={10}
-                        />
-                      </div>
+            {/* Bank section removed - code ends here */}
 
-                      <div>
-                        <Label htmlFor="paytm_number">Paytm Number</Label>
-                        <Input
-                          id="paytm_number"
-                          value={bankDetails.paytm_number}
-                          onChange={(e) => setBankDetails({ ...bankDetails, paytm_number: e.target.value })}
-                          placeholder="10-digit mobile number"
-                          maxLength={10}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Security Notice */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h3 className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-2">
-                      <Shield className="w-4 h-4" />
-                      Security Notice
-                    </h3>
-                    <ul className="text-xs text-blue-800 space-y-1">
-                      <li>• Your bank details are encrypted and stored securely</li>
-                      <li>• Never share your account credentials with anyone</li>
-                      <li>• Double-check all details before saving</li>
-                      <li>• These details will be used for withdrawal processing</li>
-                    </ul>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={handleSaveBankDetails}
-                  disabled={loading}
-                  className="w-full sm:w-auto bg-yellow-600 hover:bg-yellow-700"
-                >
-                  {loading ? (
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-2" />
-                  )}
-                  Save Bank Details
-                </Button>
-              </Card>
-            )}
-
-            {/* 5. SECURITY OPTIONS SECTION */}
+            {/* 4. SECURITY OPTIONS SECTION */}
             {activeSection === 'security' && (
               <Card className="p-6 space-y-6">
                 <div>
