@@ -752,9 +752,9 @@ async def burn_expired_prc_for_free_users():
                 # Log burn transaction
                 await log_transaction(
                     user_id=uid,
-                    transaction_type="prc_burn_free_user",
+                    wallet_type="prc",
+                    transaction_type="prc_burn",
                     amount=burned_amount,
-                    balance_after=new_balance,
                     description=f"Burned {burned_amount:.2f} PRC (expired after 48 hours - Free user FIFO)",
                     metadata={"burn_reason": "free_user_expiry", "burn_threshold_hours": 48}
                 )
