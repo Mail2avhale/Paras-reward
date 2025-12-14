@@ -1415,11 +1415,6 @@ const AdminDashboard = ({ user, onLogout }) => {
                   <div className="text-sm font-medium text-yellow-600 mb-1">VIP Pending</div>
                   <div className="text-2xl font-bold text-yellow-900">{stats?.vip_payments?.pending || 0}</div>
                 </Card>
-
-                <Card className="p-4 bg-gradient-to-br from-red-50 to-red-100">
-                  <div className="text-sm font-medium text-red-600 mb-1">Withdrawals Pending</div>
-                  <div className="text-2xl font-bold text-red-900">{stats?.withdrawals?.pending_count || 0}</div>
-                </Card>
               </div>
 
               {/* Comprehensive Financial KPIs */}
@@ -1474,23 +1469,6 @@ const AdminDashboard = ({ user, onLogout }) => {
                     </div>
                     <div className="text-xs text-amber-700 mt-2">
                       VIP Users: {stats?.users?.vip || 0}
-                    </div>
-                  </Card>
-
-                  {/* Total Withdrawals Processed */}
-                  <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100">
-                    <div className="flex items-center justify-between mb-2">
-                      <CreditCard className="h-8 w-8 text-green-600" />
-                      <span className="text-xs font-semibold text-green-600 bg-green-200 px-2 py-1 rounded-full">
-                        PROCESSED
-                      </span>
-                    </div>
-                    <div className="text-sm font-medium text-green-600 mb-1">Withdrawals Processed</div>
-                    <div className="text-2xl font-bold text-green-900">
-                      ₹{(stats?.financial?.total_withdrawal_processed || 0).toLocaleString()}
-                    </div>
-                    <div className="text-xs text-green-700 mt-2">
-                      Pending: ₹{(stats?.withdrawals?.pending_amount || 0).toLocaleString()}
                     </div>
                   </Card>
 
