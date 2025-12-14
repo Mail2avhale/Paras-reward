@@ -468,9 +468,9 @@ def test_delivery_charge_distribution():
     }
     
     print(f"📊 Initial balances:")
-    print(f"   Master Stockist profit wallet: {initial_balances['master']}")
-    print(f"   Sub Stockist profit wallet: {initial_balances['sub']}")
-    print(f"   Outlet profit wallet: {initial_balances['outlet']}")
+    print(f"   Master Stockist PRC: {initial_balances['master']}")
+    print(f"   Sub Stockist PRC: {initial_balances['sub']}")
+    print(f"   Outlet PRC: {initial_balances['outlet']}")
     print(f"   Regular user PRC: {initial_balances['user_prc']}")
     
     # Place order
