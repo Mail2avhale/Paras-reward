@@ -511,6 +511,52 @@ const ImageCropUpload = ({
           </Card>
         </div>
       )}
+
+      {/* Camera Modal */}
+      {showCamera && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-2xl w-full p-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Take a Photo</h3>
+                <button
+                  onClick={stopCamera}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="relative bg-black rounded-lg overflow-hidden">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  className="w-full h-auto"
+                />
+              </div>
+              
+              <canvas ref={canvasRef} className="hidden" />
+              
+              <div className="flex justify-center gap-3">
+                <Button
+                  onClick={stopCamera}
+                  variant="outline"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={capturePhoto}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  <Camera className="h-4 w-4 mr-2" />
+                  Capture Photo
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
