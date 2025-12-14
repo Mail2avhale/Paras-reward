@@ -285,7 +285,8 @@ def test_vip_multi_plan_system():
             # Verify the update worked by checking public endpoint
             response = requests.get(f"{API_BASE}/vip/plans", timeout=30)
             if response.status_code == 200:
-                updated_plans = response.json()
+                updated_response = response.json()
+                updated_plans = updated_response.get("plans", [])
                 monthly_plan = next((p for p in updated_plans if p["plan_type"] == "monthly"), None)
                 
                 if monthly_plan and monthly_plan["base_price"] == 350.0:
