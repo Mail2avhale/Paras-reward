@@ -205,7 +205,8 @@ const VIPMembership = ({ user, onLogout }) => {
               </div>
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-gray-900">₹1,000</span>
+              <span className="text-4xl font-bold text-gray-900">₹299</span>
+              <span className="text-lg text-gray-600">/month</span>
               <span className="text-gray-600">/year</span>
             </div>
           </Card>
