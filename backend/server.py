@@ -345,6 +345,61 @@ class BiometricCredential(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_used_at: Optional[datetime] = None
 
+# ========== NEW FEATURES MODELS ==========
+
+class BillPaymentRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    request_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    request_type: str  # mobile_recharge, dish_recharge, electricity_bill, credit_card_payment, loan_emi
+    amount_inr: float  # Amount in INR
+    prc_required: float  # PRC required (amount * 10)
+    service_charge_amount: float  # Service charge in PRC
+    total_prc_deducted: float  # Total PRC deducted from user
+    details: Dict  # phone_number, operator, account_number, etc.
+    status: str = "pending"  # pending, approved, processing, completed, rejected
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    processed_at: Optional[datetime] = None
+    admin_notes: Optional[str] = None
+    processed_by: Optional[str] = None
+
+class BillPaymentRequestCreate(BaseModel):
+    request_type: str
+    amount_inr: float
+    details: Dict
+
+class BillPaymentProcess(BaseModel):
+    request_id: str
+    action: str  # approve, reject, complete
+    admin_notes: Optional[str] = None
+
+class GiftVoucherRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    request_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    user_role: str  # user, outlet, sub_stockist, master_stockist
+    denomination: int  # 10, 50, 100, 500, 1000, 5000
+    prc_required: float  # denomination * 10
+    service_charge_amount: float  # Service charge in PRC
+    total_prc_deducted: float  # Total PRC deducted
+    status: str = "pending"  # pending, approved, rejected, completed
+    voucher_code: Optional[str] = None
+    voucher_details: Optional[Dict] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    processed_at: Optional[datetime] = None
+    admin_notes: Optional[str] = None
+    processed_by: Optional[str] = None
+
+class GiftVoucherRequestCreate(BaseModel):
+    denomination: int
+
+class GiftVoucherProcess(BaseModel):
+    request_id: str
+    action: str  # approve, reject, complete
+    voucher_code: Optional[str] = None
+    voucher_details: Optional[Dict] = None
+    admin_notes: Optional[str] = None
+
 # ========== HELPER FUNCTIONS ==========
 async def get_base_rate():
     """Calculate mining base rate based on total users"""
