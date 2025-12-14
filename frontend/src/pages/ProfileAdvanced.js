@@ -420,7 +420,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     setLoading(true);
     try {
       const { confirm_account_number, ...bankData } = bankDetails;
-      await axios.put(`${API}/api/users/${user.uid}/profile`, bankData);
+      await axios.put(`${API}/api/user/${user.uid}/profile`, bankData);
       toast.success('Bank details updated successfully!');
       setErrors({});
     } catch (error) {
