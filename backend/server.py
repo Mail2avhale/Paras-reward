@@ -2060,7 +2060,7 @@ async def get_mining_status(uid: str):
             
             # Calculate mined coins during this session
             elapsed_minutes = (now - start_time).total_seconds() / 60
-            rate_per_minute, base_rate, active_referrals = await calculate_mining_rate(uid)
+            rate_per_minute, base_rate, active_referrals, referral_breakdown = await calculate_mining_rate(uid)
             mined_this_session = elapsed_minutes * rate_per_minute
         else:
             # Session expired, mark as inactive
@@ -2070,7 +2070,7 @@ async def get_mining_status(uid: str):
             )
     
     # Always calculate mining rate (potential rate even if not actively mining)
-    rate_per_minute, base_rate, active_referrals = await calculate_mining_rate(uid)
+    rate_per_minute, base_rate, active_referrals, referral_breakdown = await calculate_mining_rate(uid)
     mining_rate_per_hour = rate_per_minute * 60
     
     return {
@@ -2079,6 +2079,7 @@ async def get_mining_status(uid: str):
         "mining_rate_per_hour": mining_rate_per_hour,  # Backward compatibility
         "base_rate": base_rate,
         "active_referrals": active_referrals,
+        "referral_breakdown": referral_breakdown,  # New: multi-level breakdown
         "total_mined": user.get("total_mined", 0),
         "session_active": session_active,
         "remaining_hours": round(remaining_hours, 2) if session_active else 0,
