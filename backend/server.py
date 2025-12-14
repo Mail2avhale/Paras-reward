@@ -347,10 +347,15 @@ class BiometricCredential(BaseModel):
 
 # ========== HELPER FUNCTIONS ==========
 async def get_base_rate():
-    """Calculate base rate based on total users"""
+    """Calculate mining base rate based on total users"""
+    # Fetch total users
     total_users = await db.users.count_documents({})
-    base_rate = 50 - (total_users // 100)
-    return max(base_rate, 10)
+    
+    # Base rate starts at 50, decreases by 1 for every 200 users, min 20
+    rate_decrease = total_users // 200
+    current_base_rate = max(20, 50 - rate_decrease)
+    
+    return current_base_rate
 async def calculate_profile_completion(user: Dict) -> float:
     """Calculate profile completion percentage"""
     required_fields = [
