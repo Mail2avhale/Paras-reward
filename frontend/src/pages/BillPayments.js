@@ -112,8 +112,13 @@ const BillPayments = ({ user, onLogout }) => {
         operator: '',
         account_number: '',
         consumer_number: '',
-        card_number: '',
+        card_last4: '',
+        cardholder_name: '',
+        card_type: '',
         loan_account: '',
+        borrower_name: '',
+        loan_type: '',
+        bank_name: '',
         biller_name: ''
       });
 
@@ -422,6 +427,23 @@ const BillPayments = ({ user, onLogout }) => {
                 </p>
               </div>
             </Card>
+
+            {/* Security Note for Important Services */}
+            {(selectedType === 'credit_card_payment' || selectedType === 'loan_emi') && (
+              <Card className="p-6 bg-red-50 border-2 border-red-200">
+                <h3 className="font-bold text-red-900 mb-3 flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-red-600" />
+                  Important Security Notice
+                </h3>
+                <ul className="text-xs text-red-800 space-y-2">
+                  <li>✓ Only provide last 4 digits of card</li>
+                  <li>✓ Never share full card number or CVV</li>
+                  <li>✓ Verify bank/lender name correctly</li>
+                  <li>✓ Double-check account details before submitting</li>
+                  <li>✓ Admin will verify with bank/NBFC before processing</li>
+                </ul>
+              </Card>
+            )}
           </div>
         </div>
 
