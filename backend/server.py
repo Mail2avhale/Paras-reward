@@ -1045,7 +1045,7 @@ async def update_mined_coins(uid: str):
     elapsed_minutes = (current_time - mining_start).total_seconds() / 60
     
     if elapsed_minutes > 0:
-        rate_per_minute, _, _ = await calculate_mining_rate(uid)
+        rate_per_minute, _, _, _ = await calculate_mining_rate(uid)
         mined_amount = elapsed_minutes * rate_per_minute
         
         # Update user balance
