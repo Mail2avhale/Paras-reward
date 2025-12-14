@@ -10963,6 +10963,103 @@ async def toggle_registration(request: Request):
     status = "enabled" if enabled else "disabled"
     return {"message": f"Registration {status} successfully", "registration_enabled": enabled}
 
+# PRC Burn Admin Endpoints
+@api_router.post("/admin/burn-prc-now")
+async def trigger_prc_burn():
+    """Manually trigger PRC burn job (Admin only)"""
+    result = await run_prc_burn_job()
+    return {
+        "message": "PRC burn job completed",
+        "results": result
+    }
+
+@api_router.get("/admin/burn-statistics")
+async def get_burn_statistics():
+    """Get PRC burn statistics (Admin only)"""
+    # Get total burned from transactions
+    burn_transactions = await db.transactions.find({
+        "transaction_type": {"$in": ["prc_burn_free_user", "prc_burn_expired_vip"]}
+    }).to_list(None)
+    
+    total_burned = sum(t.get("prc_amount", 0) for t in burn_transactions)
+    free_user_burned = sum(t.get("prc_amount", 0) for t in burn_transactions if t.get("transaction_type") == "prc_burn_free_user")
+    vip_burned = sum(t.get("prc_amount", 0) for t in burn_transactions if t.get("transaction_type") == "prc_burn_expired_vip")
+    
+    # Count users with burned PRC
+    users_with_burned = await db.users.count_documents({
+        "mining_history.burned": True
+    })
+    
+    # Get recent burns
+    recent_burns = sorted(burn_transactions, key=lambda x: x.get("timestamp", ""), reverse=True)[:10]
+    
+    return {
+        "total_burned": total_burned,
+        "free_user_burned": free_user_burned,
+        "expired_vip_burned": vip_burned,
+        "users_affected": users_with_burned,
+        "recent_burns": recent_burns
+    }
+
+@api_router.get("/admin/users-at-risk")
+async def get_users_at_risk_of_burn():
+    """Get users whose PRC is about to be burned (Admin only)"""
+    now = datetime.now(timezone.utc)
+    burn_threshold = now - timedelta(days=2)
+    grace_period_end = now - timedelta(days=5)
+    
+    # Free users with PRC expiring soon (within 12 hours)
+    warning_threshold = now - timedelta(hours=36)  # 36 hours old = 12 hours to burn
+    
+    free_users_at_risk = []
+    async for user in db.users.find({
+        "membership_type": {"$ne": "vip"},
+        "mining_history": {"$exists": True}
+    }).limit(50):
+        at_risk_prc = 0
+        for entry in user.get("mining_history", []):
+            if not entry.get("burned", False):
+                try:
+                    mining_time = datetime.fromisoformat(entry.get("timestamp", "").replace('Z', '+00:00'))
+                    if mining_time < warning_threshold:
+                        at_risk_prc += entry.get("amount", 0)
+                except:
+                    pass
+        
+        if at_risk_prc > 0:
+            free_users_at_risk.append({
+                "uid": user.get("uid"),
+                "name": user.get("name"),
+                "email": user.get("email"),
+                "at_risk_prc": at_risk_prc
+            })
+    
+    # VIP users expired (in grace period)
+    expired_vips_at_risk = []
+    async for user in db.users.find({
+        "membership_type": "vip",
+        "vip_expiry": {"$exists": True}
+    }).limit(50):
+        try:
+            expiry = datetime.fromisoformat(user.get("vip_expiry", "").replace('Z', '+00:00'))
+            if expiry < now and expiry > grace_period_end:
+                days_expired = (now - expiry).days
+                expired_vips_at_risk.append({
+                    "uid": user.get("uid"),
+                    "name": user.get("name"),
+                    "email": user.get("email"),
+                    "prc_balance": user.get("prc_balance", 0),
+                    "days_expired": days_expired,
+                    "days_until_burn": 5 - days_expired
+                })
+        except:
+            pass
+    
+    return {
+        "free_users_at_risk": free_users_at_risk,
+        "expired_vips_at_risk": expired_vips_at_risk
+    }
+
 # Settings Management
 @api_router.get("/v2/settings")
 async def get_settings():
