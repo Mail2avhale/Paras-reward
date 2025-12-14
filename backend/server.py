@@ -11680,23 +11680,28 @@ async def process_bill_payment_request(request: Request):
             raise HTTPException(status_code=400, detail="Cannot reject completed request")
         
         # Refund PRC to user
-        user = await db.users.find_one({"uid": user_id})
-        if user:
-            new_balance = user.get("prc_balance", 0) + total_prc
-            await db.users.update_one(
-                {"uid": user_id},
-                {"$set": {"prc_balance": new_balance}}
-            )
-            
-            # Log refund transaction
-            await log_transaction(
-                user_id=user_id,
-                wallet_type="prc",
-                transaction_type="bill_payment_refund",
-                amount=total_prc,
-                description=f"Bill payment request rejected - Refund (Request ID: {request_id[:8]})",
-                metadata={"request_id": request_id, "reason": "rejected"}
-            )
+        user = await db.users.find_one({"uid": user_id}, {"_id": 0})
+        if not user:
+            print(f"⚠️ WARNING: User {user_id} not found for bill payment refund")
+            raise HTTPException(status_code=404, detail="User not found for refund")
+        
+        new_balance = user.get("prc_balance", 0) + total_prc
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {"prc_balance": new_balance}}
+        )
+        
+        print(f"✅ Refunded {total_prc} PRC to user {user_id}. New balance: {new_balance}")
+        
+        # Log refund transaction
+        await log_transaction(
+            user_id=user_id,
+            wallet_type="prc",
+            transaction_type="bill_payment_refund",
+            amount=total_prc,
+            description=f"Bill payment request rejected - Refund (Request ID: {request_id[:8]})",
+            metadata={"request_id": request_id, "reason": "rejected"}
+        )
         
         # Update request status
         await db.bill_payment_requests.update_one(
@@ -11919,23 +11924,28 @@ async def process_gift_voucher_request(request: Request):
             raise HTTPException(status_code=400, detail="Cannot reject completed request")
         
         # Refund PRC to user
-        user = await db.users.find_one({"uid": user_id})
-        if user:
-            new_balance = user.get("prc_balance", 0) + total_prc
-            await db.users.update_one(
-                {"uid": user_id},
-                {"$set": {"prc_balance": new_balance}}
-            )
-            
-            # Log refund transaction
-            await log_transaction(
-                user_id=user_id,
-                wallet_type="prc",
-                transaction_type="gift_voucher_refund",
-                amount=total_prc,
-                description=f"Gift voucher request rejected - Refund (Request ID: {request_id[:8]})",
-                metadata={"request_id": request_id, "reason": "rejected"}
-            )
+        user = await db.users.find_one({"uid": user_id}, {"_id": 0})
+        if not user:
+            print(f"⚠️ WARNING: User {user_id} not found for gift voucher refund")
+            raise HTTPException(status_code=404, detail="User not found for refund")
+        
+        new_balance = user.get("prc_balance", 0) + total_prc
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {"prc_balance": new_balance}}
+        )
+        
+        print(f"✅ Refunded {total_prc} PRC to user {user_id}. New balance: {new_balance}")
+        
+        # Log refund transaction
+        await log_transaction(
+            user_id=user_id,
+            wallet_type="prc",
+            transaction_type="gift_voucher_refund",
+            amount=total_prc,
+            description=f"Gift voucher request rejected - Refund (Request ID: {request_id[:8]})",
+            metadata={"request_id": request_id, "reason": "rejected"}
+        )
         
         # Update request status
         await db.gift_voucher_requests.update_one(
