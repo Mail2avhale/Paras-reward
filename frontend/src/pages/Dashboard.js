@@ -136,9 +136,6 @@ const Dashboard = ({ user, onLogout }) => {
           </Card>
         </div>
 
-        {!isAdmin && (
-        )}
-
         {/* Quick Actions */}
         <h3 className="text-2xl font-bold text-gray-900 mb-4">Quick Access</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4 mb-8">
