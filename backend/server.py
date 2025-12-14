@@ -5602,24 +5602,8 @@ async def distribute_delivery_charge(order_id: str):
             "entity_type": "master_stockist",
             "entity_id": master_stockist_id,
             "entity_name": master_stockist_user.get("name", "Unknown"),
-            "amount": round(amount, 2),
-            "type": "order_commission",
-            "status": "credited" if not master_stockist_user.get("profit_wallet_frozen", False) else "frozen",
-            "created_at": now
-        }
-        commission_records.append(commission_record)
-    
-    # Company share (stays with system)
-    if distributions.get("company", 0) > 0:
-        amount = distributions["company"]
-        commission_record = {
-            "commission_id": str(uuid.uuid4()),
-            "order_id": order_id,
-            "entity_type": "company",
-            "entity_id": "company_system",
-            "entity_name": "PARAS REWARD Company",
-            "amount": round(amount, 2),
-            "type": "order_commission",
+            "amount_prc": round(amount_prc, 2),
+            "type": "delivery_commission",
             "status": "credited",
             "created_at": now
         }
@@ -5634,16 +5618,17 @@ async def distribute_delivery_charge(order_id: str):
         {"order_id": order_id},
         {"$set": {
             "commission_distributed": True,
-            "commission_amount": round(total_commission, 2),
+            "delivery_charge_prc": round(delivery_charge_prc, 2),
             "commission_distributed_at": now,
             "credited_entities": credited_entities
         }}
     )
     
     return {
-        "message": "Commission distributed successfully across hierarchy",
+        "message": "15% delivery charge distributed successfully as PRC to stockist hierarchy",
         "order_id": order_id,
-        "total_commission": round(total_commission, 2),
+        "delivery_charge_prc": round(delivery_charge_prc, 2),
+        "user_prc_deducted": round(delivery_charge_prc, 2),
         "distributions": {k: round(v, 2) for k, v in distributions.items()},
         "credited_to": credited_entities,
         "hierarchy": {
