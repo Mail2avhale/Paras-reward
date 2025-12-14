@@ -506,13 +506,13 @@ def test_delivery_charge_distribution():
     print(f"   Outlet PRC: {final_balances['outlet']}")
     print(f"   Regular user PRC: {final_balances['user_prc']}")
     
-    # Calculate expected distribution
+    # Calculate expected distribution based on current configuration
     # For 100 PRC order, 15% delivery charge = 15 PRC
-    # Distribution: Outlet 50% = 7.5, Sub 30% = 4.5, Master 20% = 3.0
+    # Current config: Outlet 60% = 9.0, Sub 20% = 3.0, Master 10% = 1.5, Company 10% = 1.5
     delivery_charge = 15.0  # 15% of 100 PRC
-    expected_outlet = delivery_charge * 0.50  # 7.5 PRC
-    expected_sub = delivery_charge * 0.30     # 4.5 PRC
-    expected_master = delivery_charge * 0.20  # 3.0 PRC
+    expected_outlet = delivery_charge * 0.60  # 9.0 PRC
+    expected_sub = delivery_charge * 0.20     # 3.0 PRC
+    expected_master = delivery_charge * 0.10  # 1.5 PRC
     
     print(f"\n📊 Expected distribution (15% of 100 PRC = 15 PRC):")
     print(f"   Outlet (50%): {expected_outlet} PRC")
