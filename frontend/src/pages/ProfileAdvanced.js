@@ -1168,7 +1168,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                           }}
                           label="Aadhaar Card (Front)"
                           aspectRatio={16/10}
-                          maxSizeMB={2}
+                          maxSizeMB={0.5}
                         />
                         {errors.aadhaar_front && (
                           <p className="text-xs text-red-500 mt-1">{errors.aadhaar_front}</p>
@@ -1189,7 +1189,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                           }}
                           label="Aadhaar Card (Back)"
                           aspectRatio={16/10}
-                          maxSizeMB={2}
+                          maxSizeMB={0.5}
                         />
                         {errors.aadhaar_back && (
                           <p className="text-xs text-red-500 mt-1">{errors.aadhaar_back}</p>
@@ -1252,7 +1252,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                           }}
                           label="PAN Card (Front)"
                           aspectRatio={16/10}
-                          maxSizeMB={2}
+                          maxSizeMB={0.5}
                         />
                         {errors.pan_front && (
                           <p className="text-xs text-red-500 mt-1">{errors.pan_front}</p>
