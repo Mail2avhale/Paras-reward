@@ -159,21 +159,37 @@ const BillPayments = ({ user, onLogout }) => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Bill Payments & Recharge
-            </h1>
-            <p className="text-gray-600 text-sm mt-1">Pay bills and recharge using your PRC balance</p>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Bill Payments & Recharge
+              </h1>
+              <p className="text-gray-600 text-sm mt-1">Pay bills and recharge using your PRC balance</p>
+            </div>
           </div>
+          <Button
+            onClick={() => {
+              if (window.confirm('Are you sure you want to logout?')) {
+                onLogout();
+                navigate('/login');
+              }
+            }}
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span className="hidden sm:inline">Logout</span>
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
