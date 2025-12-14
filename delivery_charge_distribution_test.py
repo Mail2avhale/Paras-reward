@@ -394,9 +394,34 @@ def test_delivery_charge_distribution():
     print(f"\n🔍 STEP 2: SETUP TEST DATA")
     print("=" * 60)
     
-    # Credit PRC balance to regular user
-    if credit_prc_balance(regular_user_uid, 1500):
-        test_results["prc_balance_credited"] = True
+    # Make user VIP and verify KYC
+    print(f"\n🔑 Making user VIP and verifying KYC...")
+    
+    # Update user to VIP status and verified KYC
+    vip_update_data = {
+        "membership_type": "vip",
+        "kyc_status": "verified",
+        "prc_balance": 1500.0
+    }
+    
+    try:
+        response = requests.put(f"{API_BASE}/admin/users/{regular_user_uid}", 
+                               json=vip_update_data, 
+                               timeout=30)
+        if response.status_code == 200:
+            print(f"✅ User updated to VIP with verified KYC and PRC balance")
+            test_results["prc_balance_credited"] = True
+        else:
+            print(f"⚠️  Failed to update user to VIP: {response.status_code}")
+            print(f"   Response: {response.text}")
+            # Try alternative method
+            if credit_prc_balance(regular_user_uid, 1500):
+                test_results["prc_balance_credited"] = True
+    except Exception as e:
+        print(f"⚠️  Error updating user to VIP: {e}")
+        # Try alternative method
+        if credit_prc_balance(regular_user_uid, 1500):
+            test_results["prc_balance_credited"] = True
     
     # Create test product
     product_id = create_test_product()
