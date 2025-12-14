@@ -357,45 +357,140 @@ const Home = ({ user, onLogout }) => {
         </div>
       </div>
 
-      {/* VIP Section */}
-      <div className="bg-gradient-to-br from-purple-50 to-pink-50 py-20">
+      {/* VIP Membership Plans Section */}
+      <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 py-20">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <Card className="p-12 bg-gradient-to-br from-purple-600 to-pink-600 border-0 shadow-2xl">
-              <div className="text-center">
-                <Crown className="h-16 w-16 text-yellow-300 mx-auto mb-6" />
-                <h2 className="text-4xl font-bold text-white mb-4">
-                  Upgrade to VIP Membership
-                </h2>
-                <p className="text-xl text-purple-100 mb-8">
-                  Starting from ₹299/month - Unlock unlimited rewards & exclusive benefits
-                </p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                  {[
-                    'Unlimited PRC validity',
-                    'Instant UPI withdrawals',
-                    'Priority customer support',
-                    'Exclusive product access',
-                    'Higher reward rates',
-                    'No withdrawal limits'
-                  ].map((benefit, index) => (
-                    <div key={index} className="flex items-center gap-3 text-left bg-white/10 backdrop-blur-xl rounded-lg p-4">
-                      <CheckCircle2 className="h-6 w-6 text-yellow-300 flex-shrink-0" />
-                      <span className="text-white font-medium">{benefit}</span>
-                    </div>
-                  ))}
-                </div>
+          <div className="max-w-7xl mx-auto">
+            {/* Section Header */}
+            <div className="text-center mb-16">
+              <div className="inline-flex items-center gap-2 mb-4 px-6 py-2 bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-full border border-purple-300">
+                <Crown className="h-5 w-5 text-purple-600" />
+                <span className="text-purple-900 font-semibold">VIP Membership Plans</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+                Choose Your Plan
+              </h2>
+              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+                Unlock unlimited rewards, instant withdrawals & exclusive benefits
+              </p>
+            </div>
 
-                <Link to="/vip">
-                  <Button 
-                    size="lg"
-                    className="bg-white text-purple-600 hover:bg-gray-100 px-12 py-7 text-lg rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
-                  >
-                    Upgrade to VIP Now
-                    <Crown className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
+            {/* Pricing Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+              {/* Monthly Plan */}
+              <Card className="relative overflow-hidden bg-white border-2 border-purple-200 hover:border-purple-400 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
+                <div className="p-8">
+                  <div className="text-center mb-6">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl mb-4">
+                      <Zap className="h-8 w-8 text-white" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Monthly</h3>
+                    <div className="flex items-baseline justify-center gap-1">
+                      <span className="text-4xl font-bold text-purple-600">₹299</span>
+                      <span className="text-gray-500">/month</span>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-2">30 days validity</p>
+                  </div>
+                  <Link to="/vip">
+                    <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white">
+                      Get Started
+                    </Button>
+                  </Link>
+                </div>
+              </Card>
+
+              {/* Quarterly Plan */}
+              <Card className="relative overflow-hidden bg-white border-2 border-purple-200 hover:border-purple-400 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
+                <div className="p-8">
+                  <div className="text-center mb-6">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl mb-4">
+                      <Target className="h-8 w-8 text-white" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Quarterly</h3>
+                    <div className="flex items-baseline justify-center gap-1">
+                      <span className="text-4xl font-bold text-purple-600">₹897</span>
+                      <span className="text-gray-500">/3 months</span>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-2">90 days validity</p>
+                  </div>
+                  <Link to="/vip">
+                    <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white">
+                      Get Started
+                    </Button>
+                  </Link>
+                </div>
+              </Card>
+
+              {/* Half-Yearly Plan - Popular */}
+              <Card className="relative overflow-hidden bg-gradient-to-br from-purple-600 to-pink-600 border-0 shadow-2xl transform scale-105">
+                <div className="absolute top-0 right-0 bg-yellow-400 text-purple-900 px-4 py-1 text-xs font-bold rounded-bl-lg">
+                  POPULAR
+                </div>
+                <div className="p-8">
+                  <div className="text-center mb-6">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 backdrop-blur-xl rounded-2xl mb-4">
+                      <Star className="h-8 w-8 text-yellow-300" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-2">Half-Yearly</h3>
+                    <div className="flex items-baseline justify-center gap-1">
+                      <span className="text-4xl font-bold text-white">₹1,794</span>
+                      <span className="text-purple-100">/6 months</span>
+                    </div>
+                    <p className="text-sm text-purple-100 mt-2">180 days validity</p>
+                  </div>
+                  <Link to="/vip">
+                    <Button className="w-full bg-white text-purple-600 hover:bg-gray-100">
+                      Get Started
+                    </Button>
+                  </Link>
+                </div>
+              </Card>
+
+              {/* Yearly Plan - Best Value */}
+              <Card className="relative overflow-hidden bg-white border-2 border-purple-200 hover:border-purple-400 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
+                <div className="absolute top-0 right-0 bg-green-500 text-white px-4 py-1 text-xs font-bold rounded-bl-lg">
+                  BEST VALUE
+                </div>
+                <div className="p-8">
+                  <div className="text-center mb-6">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl mb-4">
+                      <Crown className="h-8 w-8 text-white" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Yearly</h3>
+                    <div className="flex items-baseline justify-center gap-1">
+                      <span className="text-4xl font-bold text-purple-600">₹3,588</span>
+                      <span className="text-gray-500">/year</span>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-2">365 days validity</p>
+                  </div>
+                  <Link to="/vip">
+                    <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white">
+                      Get Started
+                    </Button>
+                  </Link>
+                </div>
+              </Card>
+            </div>
+
+            {/* VIP Benefits */}
+            <Card className="p-8 bg-white/80 backdrop-blur-xl border border-purple-200 shadow-xl">
+              <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">All Plans Include</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  { icon: CheckCircle2, text: 'Unlimited PRC validity' },
+                  { icon: Zap, text: 'Instant UPI withdrawals' },
+                  { icon: Shield, text: 'Priority customer support' },
+                  { icon: Gift, text: 'Exclusive product access' },
+                  { icon: TrendingUp, text: 'Higher reward rates' },
+                  { icon: Target, text: 'No withdrawal limits' }
+                ].map((benefit, index) => (
+                  <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-purple-50 hover:bg-purple-100 transition-colors">
+                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <benefit.icon className="h-5 w-5 text-white" />
+                    </div>
+                    <span className="text-gray-900 font-medium">{benefit.text}</span>
+                  </div>
+                ))}
               </div>
             </Card>
           </div>
