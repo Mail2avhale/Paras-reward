@@ -11524,6 +11524,13 @@ async def create_bill_payment_request(request: Request):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # VIP membership check
+    if user.get("membership_type") != "vip":
+        raise HTTPException(
+            status_code=403, 
+            detail="VIP membership required to use bill payment services. Please upgrade to VIP."
+        )
+    
     # Calculate PRC required (100 INR = 1000 PRC)
     prc_required = await calculate_bill_payment_prc(amount_inr)
     
@@ -11746,6 +11753,13 @@ async def create_gift_voucher_request(request: Request):
     user = await db.users.find_one({"uid": user_id})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # VIP membership check
+    if user.get("membership_type") != "vip":
+        raise HTTPException(
+            status_code=403, 
+            detail="VIP membership required to redeem gift vouchers. Please upgrade to VIP."
+        )
     
     user_role = user.get("role", "user")
     
