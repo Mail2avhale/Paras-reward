@@ -385,11 +385,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     }
   };
   
-  const handleSaveBankDetailsRemoved = async () => {
-    // Bank details section removed
-    setLoading(false);
-    }
-  };
+  // Bank details section removed - handler removed
   
   const handleSaveSecurityOptions = async () => {
     setLoading(true);
