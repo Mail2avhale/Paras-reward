@@ -268,6 +268,25 @@ const KYCVerification = ({ user, onLogout }) => {
                 
                 {selectedDocType === 'aadhaar' && (
                   <>
+                    {/* Aadhaar Number */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Aadhaar Number <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter 12-digit Aadhaar number"
+                        maxLength={12}
+                        value={kycData.aadhaar_number}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          setKycData({...kycData, aadhaar_number: value});
+                        }}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-purple-600 focus:outline-none transition-colors text-lg font-mono"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Enter the 12-digit number from your Aadhaar card</p>
+                    </div>
+
                     {/* Aadhaar Front */}
                     <ImageCropUpload
                       value={kycData.aadhaar_front_base64}
