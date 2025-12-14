@@ -5541,61 +5541,60 @@ async def distribute_delivery_charge(order_id: str):
             user_id=sub_stockist_id,
             wallet_type="prc",
             transaction_type="delivery_commission",
-                amount=round(amount, 2),
-                description=f"Delivery charge commission from order {order_id}",
-                metadata={
-                    "order_id": order_id,
-                    "entity_type": "sub_stockist",
-                    "commission_percentage": split.get("sub", 0),
-                    "total_commission": round(total_commission, 2)
-                },
-                related_id=order_id,
-                related_type="order"
-            )
-            
-            credited_entities.append(f"Sub Stockist ({sub_stockist_user.get('name', 'Unknown')}): ₹{round(amount, 2)}")
+            amount=round(amount_prc, 2),
+            description=f"15% delivery charge commission from order #{order_id[:8]}",
+            metadata={
+                "order_id": order_id,
+                "entity_type": "sub_stockist",
+                "commission_percentage": split.get("sub", 0),
+                "total_delivery_charge": round(delivery_charge_prc, 2)
+            },
+            related_id=order_id,
+            related_type="order"
+        )
         
+        credited_entities.append(f"Sub Stockist ({sub_stockist_user.get('name', 'Unknown')}): {round(amount_prc, 2)} PRC")
+    
         commission_record = {
             "commission_id": str(uuid.uuid4()),
             "order_id": order_id,
             "entity_type": "sub_stockist",
             "entity_id": sub_stockist_id,
             "entity_name": sub_stockist_user.get("name", "Unknown"),
-            "amount": round(amount, 2),
-            "type": "order_commission",
-            "status": "credited" if not sub_stockist_user.get("profit_wallet_frozen", False) else "frozen",
+            "amount_prc": round(amount_prc, 2),
+            "type": "delivery_commission",
+            "status": "credited",
             "created_at": now
         }
         commission_records.append(commission_record)
     
-    # Credit Master Stockist
+    # UPDATED: Credit PRC to Master Stockist (not profit_wallet)
     if distributions.get("master", 0) > 0 and master_stockist_user:
-        amount = distributions["master"]
-        if not master_stockist_user.get("profit_wallet_frozen", False):
-            # Update balance
-            await db.users.update_one(
-                {"uid": master_stockist_id},
-                {"$inc": {"profit_wallet_balance": round(amount, 2)}}
-            )
-            
-            # Log transaction
-            await log_transaction(
-                user_id=master_stockist_id,
-                wallet_type="profit_wallet",
-                transaction_type="profit_share",
-                amount=round(amount, 2),
-                description=f"Delivery charge commission from order {order_id}",
-                metadata={
-                    "order_id": order_id,
-                    "entity_type": "master_stockist",
-                    "commission_percentage": split.get("master", 0),
-                    "total_commission": round(total_commission, 2)
-                },
-                related_id=order_id,
-                related_type="order"
-            )
-            
-            credited_entities.append(f"Master Stockist ({master_stockist_user.get('name', 'Unknown')}): ₹{round(amount, 2)}")
+        amount_prc = distributions["master"]
+        # Update PRC balance
+        await db.users.update_one(
+            {"uid": master_stockist_id},
+            {"$inc": {"prc_balance": round(amount_prc, 2)}}
+        )
+        
+        # Log transaction
+        await log_transaction(
+            user_id=master_stockist_id,
+            wallet_type="prc",
+            transaction_type="delivery_commission",
+            amount=round(amount_prc, 2),
+            description=f"15% delivery charge commission from order #{order_id[:8]}",
+            metadata={
+                "order_id": order_id,
+                "entity_type": "master_stockist",
+                "commission_percentage": split.get("master", 0),
+                "total_delivery_charge": round(delivery_charge_prc, 2)
+            },
+            related_id=order_id,
+            related_type="order"
+        )
+        
+        credited_entities.append(f"Master Stockist ({master_stockist_user.get('name', 'Unknown')}): {round(amount_prc, 2)} PRC")
         
         commission_record = {
             "commission_id": str(uuid.uuid4()),
