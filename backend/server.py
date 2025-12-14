@@ -2187,6 +2187,19 @@ async def start_mining(uid: str):
         }}
     )
     
+    # Log mining started activity
+    await log_transaction(
+        user_id=uid,
+        wallet_type="prc",
+        transaction_type="mining_started",
+        amount=0,
+        description=f"Started 24-hour mining session",
+        metadata={
+            "session_start": now.isoformat(),
+            "session_end": session_end.isoformat()
+        }
+    )
+    
     return {
         "message": "Mining started successfully",
         "session_active": True,
