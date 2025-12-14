@@ -1212,9 +1212,9 @@ const AdminDashboard = ({ user, onLogout }) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 lg:ml-64">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-4 lg:px-8 py-4 flex items-center justify-between">
+      <div className="flex-1 lg:ml-64 mt-14">
+        {/* Top Bar */}
+        <div className="bg-white border-b border-gray-200 sticky top-14 z-30 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             {/* Hamburger Menu Button for Mobile */}
             <button
