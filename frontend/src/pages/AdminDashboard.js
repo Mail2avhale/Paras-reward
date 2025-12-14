@@ -1074,6 +1074,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     { id: 'burn-management', icon: Activity, label: 'Burn Management', link: '/admin/burn-management' },
     { id: 'analytics', icon: TrendingUp, label: 'Analytics', link: '/admin/analytics' },
     { id: 'video-ads', icon: Video, label: 'Video Ads', link: '/admin/video-ads' },
+    { id: 'vip-plans', icon: Award, label: 'VIP Plans', link: '/admin/vip-plans' },
     { id: 'activity-logs', icon: Activity, label: 'Activity Logs' },
     { id: 'stockist-management', icon: UserCog, label: 'Stockist Management' },
     { id: 'financial-management', icon: DollarSign, label: 'Financial Management' },
