@@ -63,6 +63,21 @@ const DashboardModern = ({ user, onLogout }) => {
       } catch (error) {
         console.error('Error fetching transactions:', error);
         setRecentTransactions([]);
+
+  const fetchTransactionsPage = async (page) => {
+    try {
+      const transactionsResponse = await axios.get(`${API}/api/transactions/user/${user.uid}?page=${page}&limit=5`);
+      setRecentTransactions(transactionsResponse.data.transactions || []);
+      setPagination(transactionsResponse.data.pagination || pagination);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    fetchTransactionsPage(newPage);
+  };
+
       }
 
     } catch (error) {
