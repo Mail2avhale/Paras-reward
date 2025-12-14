@@ -109,18 +109,21 @@ def create_test_user_with_prc(prc_amount=1000):
             result = response.json()
             uid = result.get("uid")
             
-            # Credit PRC balance using admin endpoint
+            # Credit PRC balance using admin balance adjustment endpoint
             credit_data = {
+                "balance_type": "prc_balance",
                 "amount": prc_amount,
-                "description": f"Test PRC credit for bill payment testing"
+                "operation": "add",
+                "notes": f"Test PRC credit for bill payment testing"
             }
             
-            credit_response = requests.post(f"{API_BASE}/wallet/credit-prc/{uid}", json=credit_data, timeout=30)
+            credit_response = requests.post(f"{API_BASE}/admin/users/{uid}/adjust-balance", json=credit_data, timeout=30)
             if credit_response.status_code == 200:
                 print(f"✅ Created test user {uid} with {prc_amount} PRC balance")
                 return uid, user_data["email"]
             else:
                 print(f"⚠️  User created but PRC credit failed: {credit_response.status_code}")
+                print(f"   Response: {credit_response.text}")
                 return uid, user_data["email"]
         else:
             print(f"❌ Failed to create test user: {response.status_code}")
