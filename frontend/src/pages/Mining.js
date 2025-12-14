@@ -196,12 +196,12 @@ const Mining = ({ user, onLogout }) => {
                 <p className="text-white/90 mb-4">
                   {validityStatus.type === 'expired' 
                     ? 'Mine new PRC or upgrade to VIP for lifetime validity!'
-                    : 'Use it to play Treasure Hunt before it expires! Upgrade to VIP for lifetime validity.'}
+                    : 'Use it in the marketplace before it expires! Upgrade to VIP for lifetime validity.'}
                 </p>
                 <div className="flex gap-3">
-                  <Link to="/treasure-hunt">
+                  <Link to="/marketplace">
                     <Button className="bg-white text-orange-600 hover:bg-gray-100">
-                      Play Treasure Hunt
+                      Shop Now
                     </Button>
                   </Link>
                   <Link to="/vip">
