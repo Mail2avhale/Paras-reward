@@ -7,6 +7,7 @@ import {
   Zap, Gift, ArrowUpRight, Clock, CheckCircle,
   Home, Store, UserPlus, Gamepad2
 } from 'lucide-react';
+import PRCExpiryTimer from '@/components/PRCExpiryTimer';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
