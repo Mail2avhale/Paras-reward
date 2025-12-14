@@ -412,6 +412,54 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     }
   };
   
+  // KYC Submission Handler
+  const handleSubmitKYC = async () => {
+    // Validation
+    const newErrors = {};
+    
+    if (!kycData.aadhaar_front_base64 && !kycData.pan_front_base64) {
+      newErrors.kyc = 'Please upload at least one document (Aadhaar or PAN)';
+    }
+    
+    if (kycData.aadhaar_front_base64 || kycData.aadhaar_back_base64) {
+      if (!kycData.aadhaar_front_base64) {
+        newErrors.aadhaar_front = 'Aadhaar front is required';
+      }
+      if (!kycData.aadhaar_back_base64) {
+        newErrors.aadhaar_back = 'Aadhaar back is required';
+      }
+      if (!kycData.aadhaar_number || kycData.aadhaar_number.length !== 12) {
+        newErrors.aadhaar_number = 'Valid 12-digit Aadhaar number is required';
+      }
+    }
+    
+    if (kycData.pan_front_base64) {
+      if (!kycData.pan_number || kycData.pan_number.length !== 10) {
+        newErrors.pan_number = 'Valid 10-character PAN number is required';
+      }
+    }
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast.error('Please fix all validation errors');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await axios.post(`${API}/api/kyc/submit/${user.uid}`, kycData);
+      toast.success('KYC documents submitted successfully! Please wait for admin verification.');
+      setErrors({});
+      // Refresh user data
+      window.location.reload();
+    } catch (error) {
+      console.error('Error submitting KYC:', error);
+      toast.error(error.response?.data?.detail || 'Failed to submit KYC documents');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // Navigation items
   const sections = [
     { id: 'profile', label: 'Profile Image', icon: Camera, color: 'purple' },
