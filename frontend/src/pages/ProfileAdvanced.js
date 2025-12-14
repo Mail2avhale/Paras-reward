@@ -386,7 +386,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     
     setLoading(true);
     try {
-      await axios.put(`${API}/api/user/${user.uid}/profile`, personalInfo);
+      await axios.put(`${API}/api/users/${user.uid}/profile`, personalInfo);
       toast.success('Personal information updated successfully!');
       setErrors({});
     } catch (error) {
