@@ -211,7 +211,7 @@ const DashboardModern = ({ user, onLogout }) => {
         {/* Quick Actions */}
         <div className="bg-white rounded-2xl p-6 shadow-lg mb-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <QuickActionButton 
               icon={Zap} 
               label="Mine" 
@@ -235,6 +235,18 @@ const DashboardModern = ({ user, onLogout }) => {
               label="Refer" 
               onClick={() => navigate('/referrals')}
               color="green"
+            />
+            <QuickActionButton 
+              icon={CreditCard} 
+              label="Bill Pay" 
+              onClick={() => navigate('/bill-payments')}
+              color="cyan"
+            />
+            <QuickActionButton 
+              icon={Gift} 
+              label="Vouchers" 
+              onClick={() => navigate('/gift-vouchers')}
+              color="orange"
             />
           </div>
         </div>
