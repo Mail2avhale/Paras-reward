@@ -187,6 +187,7 @@ def create_test_product():
         "name": f"Test Product {unique_id}",
         "description": "Test product for order delivery testing",
         "sku": f"TEST-PROD-{unique_id}",  # Add required SKU field
+        "type": "physical",  # Add required type field
         "prc_price": test_data.order_prc,
         "cash_price": test_data.order_prc / 10,  # 100 INR
         "category": "Electronics",
