@@ -483,7 +483,7 @@ def test_delivery_charge_distribution():
         return test_results
     
     # Deliver order
-    if deliver_order(order_id):
+    if deliver_order(order_id, outlet_uid):
         test_results["order_delivered_successfully"] = True
     
     print(f"\n🔍 STEP 4: VERIFY DELIVERY CHARGE DISTRIBUTION")
