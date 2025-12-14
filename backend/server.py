@@ -13294,20 +13294,23 @@ async def purchase_flash_sale(sale_id: str, user_id: str, quantity: int = 1):
 @api_router.get("/notifications/{user_id}")
 async def get_user_notifications(user_id: str, limit: int = 50, unread_only: bool = False):
     """Get user notifications with optional filtering"""
-    query = {"user_id": user_id}
-    if unread_only:
-        query["is_read"] = False
-    
-    notifications = await db.notifications.find(query).sort("created_at", -1).limit(limit).to_list(limit)
-    
-    # Remove MongoDB _id
-    for notif in notifications:
-        notif.pop("_id", None)
-    
-    return {
-        "notifications": notifications,
-        "count": len(notifications)
-    }
+    try:
+        query = {"user_id": user_id}
+        if unread_only:
+            query["is_read"] = False
+        
+        notifications = await db.notifications.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+        
+        return {
+            "notifications": notifications,
+            "count": len(notifications)
+        }
+    except Exception as e:
+        print(f"Error fetching notifications: {e}")
+        return {
+            "notifications": [],
+            "count": 0
+        }
 
 @api_router.get("/notifications/{user_id}/count")
 async def get_unread_count(user_id: str):
