@@ -4148,9 +4148,9 @@ async def submit_vip_payment(request: Request):
         if not data.get(field):
             raise HTTPException(status_code=400, detail=f"{field} is required")
     
-    # Validate amount (should be ₹1000)
-    if float(data["amount"]) != 1000:
-        raise HTTPException(status_code=400, detail="VIP membership costs ₹1000")
+    # Validate amount (should be ₹299)
+    if float(data["amount"]) != 299:
+        raise HTTPException(status_code=400, detail="VIP membership costs ₹299 per month")
     
     # Check if user already has pending payment
     existing = await db.vip_payments.find_one({
