@@ -29,16 +29,19 @@ const TapGame = ({ user, onLogout }) => {
     // Send tap to backend every 10 taps or when reaching 0
     if ((taps + 1) % 10 === 0 || remainingTaps - 1 === 0) {
       try {
+        const tapsToSend = (taps + 1) % 10 === 0 ? 10 : (taps + 1);
         const response = await axios.post(`${API}/game/tap/${user.uid}`, {
-          taps: Math.min(10, taps + 1)
+          taps: tapsToSend
         });
         setRemainingTaps(response.data.remaining_taps);
+        toast.success(`+${response.data.prc_earned} PRC added!`);
         if (response.data.remaining_taps === 0) {
-          toast.success(`You earned ${response.data.prc_earned} PRC today!`);
+          toast.success(`🎉 Completed! You earned ${response.data.prc_earned} PRC today!`, { duration: 5000 });
         }
         setTaps(0); // Reset local counter
       } catch (error) {
         console.error('Error submitting taps:', error);
+        toast.error(error.response?.data?.detail || 'Failed to submit taps');
       }
     }
   };
