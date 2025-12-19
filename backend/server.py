@@ -1224,8 +1224,10 @@ async def calculate_mining_rate(uid: str):
                 'bonus': level_bonus
             }
     
-    # Total daily rate = (current_date * base_rate) + total_referral_bonus
-    total_rate = (current_date * base_rate) + total_referral_bonus
+    # Total daily rate = current_date × (base_rate + referral_bonus)
+    # This ensures referral bonuses also benefit from the daily multiplier
+    effective_base_rate = base_rate + total_referral_bonus
+    total_rate = current_date * effective_base_rate
     
     # Per minute rate
     per_minute_rate = total_rate / 1440
