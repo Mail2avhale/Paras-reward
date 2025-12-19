@@ -499,19 +499,33 @@ async def count_active_referrals_by_level(user_id: str):
     now = datetime.now(timezone.utc)
     active_threshold = now - timedelta(hours=24)
     
+    print(f"🔍 Checking active referrals for user {user_id}")
+    
     for level, users in referrals_by_level.items():
+        print(f"  Level {level}: {len(users)} total referrals")
         for user in users:
             last_login = user.get("last_login")
             if last_login:
                 try:
                     if isinstance(last_login, str):
                         last_login = datetime.fromisoformat(last_login.replace('Z', '+00:00'))
+                    elif isinstance(last_login, datetime):
+                        pass  # Already a datetime object
+                    else:
+                        continue
                     
                     if last_login >= active_threshold:
                         active_counts[level] += 1
-                except:
+                        print(f"    ✅ Active referral: {user.get('email')} (last login: {last_login})")
+                    else:
+                        print(f"    ⏰ Inactive referral: {user.get('email')} (last login: {last_login})")
+                except Exception as e:
+                    print(f"    ❌ Error processing referral: {e}")
                     pass
+            else:
+                print(f"    ⚠️ No last_login for referral: {user.get('email')}")
     
+    print(f"✅ Active referrals count: {active_counts}")
     return active_counts
 async def calculate_profile_completion(user: Dict) -> float:
     """Calculate profile completion percentage"""
