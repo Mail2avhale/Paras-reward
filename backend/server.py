@@ -4907,9 +4907,22 @@ async def submit_vip_payment(request: Request):
         if not data.get(field):
             raise HTTPException(status_code=400, detail=f"{field} is required")
     
-    # Validate amount (should be ₹299)
-    if float(data["amount"]) != 299:
-        raise HTTPException(status_code=400, detail="VIP membership costs ₹299 per month")
+    # Get plan type and validate amount
+    plan_type = data.get("plan_type", "monthly")
+    
+    # Duration mapping based on plan type
+    plan_details = {
+        "monthly": {"days": 30, "price": 299},
+        "quarterly": {"days": 90, "price": 897},
+        "half_yearly": {"days": 180, "price": 1794},
+        "yearly": {"days": 365, "price": 3588}
+    }
+    
+    if plan_type not in plan_details:
+        plan_type = "monthly"
+    
+    expected_price = plan_details[plan_type]["price"]
+    duration_days = plan_details[plan_type]["days"]
     
     # Check if user already has pending payment
     existing = await db.vip_payments.find_one({
@@ -4920,12 +4933,14 @@ async def submit_vip_payment(request: Request):
     if existing:
         raise HTTPException(status_code=400, detail="You already have a pending payment request")
     
-    # Create payment record
+    # Create payment record with plan details
     payment_id = str(uuid.uuid4())
     payment_record = {
         "payment_id": payment_id,
         "user_id": data["user_id"],
         "amount": float(data["amount"]),
+        "plan_type": plan_type,
+        "duration_days": duration_days,
         "date": data["date"],
         "time": data["time"],
         "utr_number": data["utr_number"],
@@ -4939,9 +4954,11 @@ async def submit_vip_payment(request: Request):
     await db.vip_payments.insert_one(payment_record)
     
     return {
-        "message": "Payment submitted successfully. Please wait for admin approval.",
+        "message": f"Payment submitted successfully for {plan_type} plan ({duration_days} days). Please wait for admin approval.",
         "payment_id": payment_id,
-        "status": "pending"
+        "status": "pending",
+        "plan_type": plan_type,
+        "duration_days": duration_days
     }
 
 @api_router.get("/membership/payments")
