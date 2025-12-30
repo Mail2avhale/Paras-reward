@@ -10,9 +10,9 @@ const ProfileCompletionBanner = ({ user, onDismiss, onQuickKYC }) => {
   const getCompletionStatus = () => {
     const checks = [
       { key: 'name', label: 'Name', complete: !!user?.name && user.name !== 'User' },
-      { key: 'phone', label: 'Phone', complete: !!user?.phone },
+      { key: 'phone', label: 'Phone', complete: !!user?.mobile || !!user?.phone },
       { key: 'email', label: 'Email', complete: !!user?.email },
-      { key: 'address', label: 'Address', complete: !!user?.address_line1 || !!user?.state },
+      { key: 'address', label: 'Address', complete: !!user?.address_line1 || !!user?.state || !!user?.pincode },
       { key: 'kyc', label: 'KYC Verified', complete: user?.kyc_status === 'verified' || user?.kyc_status === 'approved' }
     ];
 
