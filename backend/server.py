@@ -442,34 +442,27 @@ async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
     }
     """
     referrals_by_level = {}
-    current_level_users = [user_id]
+    current_level_uids = [user_id]
     
     for level in range(1, max_levels + 1):
         # Get users referred by current level users
-        next_level_users = []
+        next_level_uids = []
         
-        # Find all users whose referral code matches any user in current level
-        async for referrer in db.users.find({"uid": {"$in": current_level_users}}):
-            referral_code = referrer.get("referral_code")
-            if not referral_code:
-                continue
-            
-            # Find users who used this referral code
-            referred_users = []
-            async for referred_user in db.users.find({"referred_by": referral_code}):
-                referred_users.append(referred_user)
-                next_level_users.append(referred_user.get("uid"))
-            
-            # Store this level's referrals
-            if f'level_{level}' not in referrals_by_level:
-                referrals_by_level[f'level_{level}'] = []
-            referrals_by_level[f'level_{level}'].extend(referred_users)
+        # Find all users whose referred_by matches any UID in current level
+        referred_users = []
+        async for referred_user in db.users.find({"referred_by": {"$in": current_level_uids}}, {"_id": 0}):
+            referred_users.append(referred_user)
+            next_level_uids.append(referred_user.get("uid"))
+        
+        # Store this level's referrals
+        if referred_users:
+            referrals_by_level[f'level_{level}'] = referred_users
         
         # Move to next level
-        current_level_users = next_level_users
+        current_level_uids = next_level_uids
         
         # Stop if no more referrals at this level
-        if not current_level_users:
+        if not current_level_uids:
             break
     
     return referrals_by_level
