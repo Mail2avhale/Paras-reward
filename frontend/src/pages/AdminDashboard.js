@@ -1,26 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import ImageCropUpload from '@/components/ImageCropUpload';
-import PRCAnalytics from '../components/PRCAnalytics';
-import StockistManagementAdmin from '@/pages/StockistManagementAdmin';
-import FinancialManagementAdmin from '@/pages/FinancialManagementAdmin';
-import AdvancedUserManagement from '@/pages/AdvancedUserManagement';
-import AdvancedOrderManagement from '@/pages/AdvancedOrderManagement';
-import StockMovementSimple from '@/pages/StockMovementSimple';
-import StockMovementApproval from '@/pages/StockMovementApproval';
-import StockRequestSystem from '@/pages/StockRequestSystem';
-import AdminActivityLogs from '@/pages/AdminActivityLogs';
 import { 
-  Users, Package, CreditCard, FileText, CheckCircle, XCircle, 
-  Search, Shield, UserCog, Trash2, BarChart3, TrendingUp, TrendingDown,
-  Home, Store, Award, ShoppingCart, Bell, Settings, DollarSign,
-  ArrowUpRight, ArrowDownRight, Truck, HeadphonesIcon, Menu, X, Activity, Video
+  Users, Package, CreditCard, FileText, 
+  Search, BarChart3, TrendingUp, TrendingDown,
+  Store, Award, ShoppingCart, Bell, Settings, DollarSign,
+  ArrowUpRight, ArrowDownRight, Truck, Activity
 } from 'lucide-react';
-import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
