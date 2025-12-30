@@ -14,10 +14,6 @@ const API = `${BACKEND_URL}/api`;
 const AdminDashboard = ({ user, onLogout }) => {
   const [stats, setStats] = useState(null);
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
   const fetchStats = async () => {
     try {
       const response = await axios.get(`${API}/admin/stats`);
@@ -26,6 +22,10 @@ const AdminDashboard = ({ user, onLogout }) => {
       console.error('Error fetching stats:', error);
     }
   };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
