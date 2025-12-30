@@ -182,7 +182,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
         {/* Professional Navigation System */}
         {user && (
           <>
-            <TopBar user={user} />
+            <TopBar user={user} onLogout={handleLogout} />
             <BottomNav />
             <FloatingActionButton />
           </>
