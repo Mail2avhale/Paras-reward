@@ -72,10 +72,11 @@ def create_admin_user():
     
     try:
         # Try to login first
-        response = requests.get(f"{API_BASE}/auth/login", params={
+        login_params = {
             "identifier": admin_data["email"],
             "password": admin_data["password"]
-        }, timeout=30)
+        }
+        response = requests.post(f"{API_BASE}/auth/login", params=login_params, timeout=30)
         
         if response.status_code == 200:
             user_data = response.json()
