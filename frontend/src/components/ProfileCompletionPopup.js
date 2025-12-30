@@ -14,10 +14,10 @@ const ProfileCompletionPopup = ({ user, isOpen, onClose }) => {
     if (!user?.name || user.name === 'User') {
       items.push({ key: 'name', label: 'Add Your Name', icon: User, route: '/profile', section: 'personal' });
     }
-    if (!user?.phone) {
+    if (!user?.mobile && !user?.phone) {
       items.push({ key: 'phone', label: 'Add Phone Number', icon: User, route: '/profile', section: 'contact' });
     }
-    if (!user?.address_line1 && !user?.state) {
+    if (!user?.address_line1 && !user?.state && !user?.pincode) {
       items.push({ key: 'address', label: 'Add Address', icon: User, route: '/profile', section: 'contact' });
     }
     if (user?.kyc_status !== 'verified' && user?.kyc_status !== 'approved') {
