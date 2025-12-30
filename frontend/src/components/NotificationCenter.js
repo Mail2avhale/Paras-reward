@@ -26,10 +26,11 @@ const NotificationCenter = ({ userId, isOpen, onClose }) => {
     }
   }, [userId]);
 
-  // Close on outside click
+  // Close on outside click (excluding the bell button)
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (panelRef.current && !panelRef.current.contains(event.target)) {
+      const bellBtn = document.getElementById('notification-bell-btn');
+      if (panelRef.current && !panelRef.current.contains(event.target) && !bellBtn?.contains(event.target)) {
         onClose();
       }
     };
