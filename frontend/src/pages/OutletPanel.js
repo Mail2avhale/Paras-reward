@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +21,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const OutletPanel = ({ user, onLogout }) => {
+  const location = useLocation();
   const [secretCode, setSecretCode] = useState('');
   const [verifiedOrder, setVerifiedOrder] = useState(null);
   const [walletData, setWalletData] = useState(null);
@@ -29,6 +29,23 @@ const OutletPanel = ({ user, onLogout }) => {
   const [renewalStatus, setRenewalStatus] = useState(null);
   const [stockMovements, setStockMovements] = useState({ received: [] });
   const [loading, setLoading] = useState(true);
+  
+  // Determine active tab from URL path
+  const getActiveTabFromPath = () => {
+    const path = location.pathname;
+    if (path.includes('/orders')) return 'orders';
+    if (path.includes('/inventory')) return 'inventory';
+    if (path.includes('/verify')) return 'verify';
+    if (path.includes('/stock-requests')) return 'stock-requests';
+    if (path.includes('/wallet')) return 'wallet';
+    return 'overview';
+  };
+  
+  const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
+  
+  useEffect(() => {
+    setActiveTab(getActiveTabFromPath());
+  }, [location.pathname]);
 
   useEffect(() => {
     fetchDashboardData();
