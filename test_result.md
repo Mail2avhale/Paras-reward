@@ -128,15 +128,18 @@ frontend:
 
   - task: "Role-Based UI Layout System"
     implemented: true
-    working: true
+    working: false
     file: "/app/frontend/src/App.js, /app/frontend/src/components/layouts/AdminLayout.js, /app/frontend/src/components/layouts/ManagerLayout.js, /app/frontend/src/components/layouts/StockistLayout.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "IMPLEMENTED: Complete role-based layout system. Admin routes wrapped with AdminLayout (slate dark theme), Manager routes wrapped with ManagerLayout (indigo theme), Stockist routes wrapped with StockistLayout (emerald/teal/cyan themes based on role). Modified App.js to conditionally hide TopBar/BottomNav/FAB for admin, sub_admin, manager, master_stockist, sub_stockist, and outlet roles. Each layout has its own sidebar with role-specific menu items, collapsible sidebar, mobile responsive overlay, User View button to switch back to regular dashboard, and logout functionality."
+      - working: false
+        agent: "testing"
+        comment: "COMPREHENSIVE ROLE-BASED UI TESTING COMPLETE - CRITICAL ISSUES FOUND (62.5% tests passed): ✅ ADMIN LAYOUT WORKING PERFECTLY: Admin login (admin@paras.com) correctly redirects to /admin, AdminLayout sidebar visible with slate-900 dark theme, all admin menu items present (Dashboard, Users, Analytics, KYC, VIP Plans), User View button functional and navigates to /dashboard, standard navigation (TopBar/BottomNav/FAB) correctly hidden for admin role. ✅ USER VIEW FUNCTIONALITY: User View button successfully switches admin to regular dashboard view, navigation elements become visible in user view. ❌ CRITICAL ISSUE - REGULAR USER NAVIGATION BROKEN: Regular users can register and login successfully but dashboard shows blank/white page, TopBar with PARAS REWARD logo NOT visible, BottomNav with Home/Mine/Play/Profile items NOT visible, FloatingActionButton NOT visible, search bar and notification bell NOT visible. ✅ ADMIN CONTENT PROPERLY HIDDEN: Admin sidebar and admin-specific content correctly hidden for regular users. ✅ USER CONTENT PRESENT: User-specific content (Mining feature, PRC currency) detected in page source. IMPACT: Admin role-based layout working perfectly, but regular user navigation completely broken - users cannot access standard navigation elements (TopBar, BottomNav, FAB) that should be visible for non-admin roles."
 
 backend:
   - task: "Multi-Plan VIP Membership Pricing & Discounts"
