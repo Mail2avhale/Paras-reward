@@ -30,10 +30,8 @@ const AdminDashboard = ({ user, onLogout }) => {
   return (
     <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
       {/* Dashboard Content - No sidebar, AdminLayout handles navigation */}
-      <div>
-            <div>
-              {/* Hero Section with Search */}
-              <div className="relative overflow-hidden bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 rounded-2xl mb-6 shadow-lg">
+      {/* Hero Section with Search */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 rounded-2xl mb-6 shadow-lg">
                 <div className="absolute inset-0 bg-black opacity-10"></div>
                 <div className="absolute inset-0" style={{
                   backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 50%)'
