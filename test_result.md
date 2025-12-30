@@ -95,7 +95,7 @@ frontend:
 
   - task: "P1.10 - Notification System"
     implemented: true
-    working: false
+    working: true
     file: "/app/frontend/src/components/NotificationCenter.js, /app/frontend/src/components/TopBar.js"
     stuck_count: 0
     priority: "high"
@@ -107,6 +107,9 @@ frontend:
       - working: false
         agent: "testing"
         comment: "NOTIFICATION SYSTEM PARTIALLY WORKING: ✅ BELL ICON PRESENT: Bell icon found in TopBar navigation. ✅ NOTIFICATION ELEMENTS: 'Notifications' header and 'Mark All as Read' button elements detected. ❌ DROPDOWN NOT OPENING: Notification panel/dropdown does not open when bell icon is clicked. Attempted multiple methods to click bell icon but notification center dropdown does not become visible. ✅ CLOSE FUNCTIONALITY: Panel closing works (though panel wasn't visibly opened). IMPACT: Core notification UI elements exist but the primary interaction (opening notification dropdown) is not working, making the feature non-functional for users."
+      - working: true
+        agent: "main"
+        comment: "FIXED: Notification dropdown now opens correctly. Issue was click event propagation causing immediate close. Fixed by: 1) Added stopPropagation() to bell button click handler, 2) Added id='notification-bell-btn' to bell button, 3) Updated NotificationCenter click-outside handler to exclude bell button from triggering close. Verified with screenshot - dropdown opens showing all notifications with Mining Rewards, unread count badge (11), mark as read/delete buttons, and View All link."
 
   - task: "P1.1 - Professional Design Consistency"
     implemented: true
