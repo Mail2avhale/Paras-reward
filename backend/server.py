@@ -5026,17 +5026,9 @@ async def handle_payment_action(payment_id: str, request: Request):
         raise HTTPException(status_code=400, detail="Payment already processed")
     
     now = datetime.now(timezone.utc)
+    admin_notes = data.get("admin_notes", "")
     
     if action == "approve":
-        # Update payment status
-        await db.vip_payments.update_one(
-            {"payment_id": payment_id},
-            {"$set": {
-                "status": "approved",
-                "approved_at": now.isoformat()
-            }}
-        )
-        
         # Get plan duration from payment or default to plan type
         plan_type = payment.get("plan_type", "yearly")
         
@@ -5051,38 +5043,59 @@ async def handle_payment_action(payment_id: str, request: Request):
         # Get duration days from payment or mapping
         duration_days = payment.get("duration_days", duration_mapping.get(plan_type, 365))
         
-        # Calculate expiry date based on plan duration
-        expiry_date = now + timedelta(days=duration_days)
+        # Calculate validity dates
+        validity_start = now
+        validity_end = now + timedelta(days=duration_days)
+        
+        # Calculate next renewal date (same as validity end for now)
+        next_renewal = validity_end
+        
+        # Update payment status with all details
+        await db.vip_payments.update_one(
+            {"payment_id": payment_id},
+            {"$set": {
+                "status": "approved",
+                "approved_at": now.isoformat(),
+                "admin_notes": admin_notes or "Payment verified and approved",
+                "validity_start": validity_start.isoformat(),
+                "validity_end": validity_end.isoformat(),
+                "next_renewal_date": next_renewal.isoformat()
+            }}
+        )
         
         # Update user membership
         await db.users.update_one(
             {"uid": payment["user_id"]},
             {"$set": {
                 "membership_type": "vip",
-                "membership_expiry": expiry_date.isoformat(),
+                "membership_expiry": validity_end.isoformat(),
                 "vip_plan_type": plan_type,
-                "vip_start_date": now.isoformat(),
+                "vip_start_date": validity_start.isoformat(),
+                "auto_renew": payment.get("auto_renew", False),
                 "updated_at": now.isoformat()
             }}
         )
         
         return {
             "message": f"Payment approved. User upgraded to VIP ({plan_type} plan - {duration_days} days).",
-            "membership_expiry": expiry_date.isoformat(),
+            "membership_expiry": validity_end.isoformat(),
+            "validity_start": validity_start.isoformat(),
+            "validity_end": validity_end.isoformat(),
             "plan_type": plan_type,
             "duration_days": duration_days
         }
     else:
-        # Reject payment
+        # Reject payment with admin notes
         await db.vip_payments.update_one(
             {"payment_id": payment_id},
             {"$set": {
                 "status": "rejected",
-                "rejected_at": now.isoformat()
+                "rejected_at": now.isoformat(),
+                "admin_notes": admin_notes or "Payment rejected"
             }}
         )
         
-        return {"message": "Payment rejected"}
+        return {"message": "Payment rejected", "admin_notes": admin_notes}
 
 # ========== PRODUCT & MARKETPLACE MODELS ==========
 
