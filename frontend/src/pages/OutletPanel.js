@@ -424,17 +424,17 @@ const OutletPanel = ({ user, onLogout }) => {
 
             {/* Stock Inventory Tab */}
             <TabsContent value="stock">
-              <StockInventoryDisplay userId={user.uid} />
+              <StockInventoryDisplay userId={user?.uid} />
             </TabsContent>
 
             {/* Hierarchy Tab */}
             <TabsContent value="hierarchy">
-              <StockistHierarchy user={user} userRole={user.role} />
+              <StockistHierarchy user={user} userRole={user?.role} />
             </TabsContent>
 
             {/* Request Stock Tab */}
             <TabsContent value="request">
-              <StockRequestSystem userId={user.uid} userRole={user.role} onSuccess={fetchDashboardData} />
+              <StockRequestSystem userId={user?.uid} userRole={user?.role} onSuccess={fetchDashboardData} />
             </TabsContent>
           </Tabs>
         </Card>
@@ -449,7 +449,55 @@ const OutletPanel = ({ user, onLogout }) => {
             Request Withdrawal
           </Button>
         </div>
-      </div>
+        </div>
+      )}
+
+      {/* Other Tab Contents */}
+      {activeTab === 'orders' && (
+        <Card className="p-6">
+          <h2 className="text-xl font-bold mb-4">Orders Management</h2>
+          <p className="text-gray-600">View and manage delivery orders.</p>
+        </Card>
+      )}
+
+      {activeTab === 'verify' && (
+        <Card className="p-6">
+          <h2 className="text-xl font-bold mb-4">Verify Order</h2>
+          <p className="text-gray-600 mb-4">Enter secret code to verify and deliver order.</p>
+          <div className="flex gap-2 max-w-md">
+            <Input 
+              placeholder="Enter secret code..."
+              value={secretCode}
+              onChange={(e) => setSecretCode(e.target.value)}
+            />
+            <Button onClick={verifyOrder}>Verify</Button>
+          </div>
+        </Card>
+      )}
+
+      {activeTab === 'inventory' && (
+        <StockInventoryDisplay userId={user?.uid} />
+      )}
+
+      {activeTab === 'stock-requests' && (
+        <StockRequestSystem user={user} />
+      )}
+
+      {activeTab === 'wallet' && (
+        <Card className="p-6">
+          <h2 className="text-xl font-bold mb-4">Wallet Management</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-cyan-50 rounded-lg">
+              <p className="text-sm text-gray-600">PRC Balance</p>
+              <p className="text-2xl font-bold text-cyan-600">₹{walletData?.prc_balance?.toLocaleString() || 0}</p>
+            </div>
+            <div className="p-4 bg-green-50 rounded-lg">
+              <p className="text-sm text-gray-600">Total Earned</p>
+              <p className="text-2xl font-bold text-green-600">₹{walletData?.total_earned?.toLocaleString() || 0}</p>
+            </div>
+          </div>
+        </Card>
+      )}
     </div>
   );
 };
