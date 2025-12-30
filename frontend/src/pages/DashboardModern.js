@@ -17,7 +17,9 @@ const DashboardModern = ({ user, onLogout }) => {
     prcBalance: 0,
     totalMined: 0,
     referralCount: 0,
-    membershipType: 'free'
+    membershipType: 'free',
+    totalPrcUsed: 0,
+    totalPrcUsedValue: 0
   });
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [miningHistory, setMiningHistory] = useState([]);
@@ -46,11 +48,22 @@ const DashboardModern = ({ user, onLogout }) => {
       const userResponse = await axios.get(`${API}/api/users/${user.uid}`);
       const userData = userResponse.data;
       
+      // Fetch redeemed PRC stats
+      let redeemedStats = { total_prc_used: 0, total_rupee_value: 0 };
+      try {
+        const redeemedResponse = await axios.get(`${API}/api/user/stats/redeemed/${user.uid}`);
+        redeemedStats = redeemedResponse.data;
+      } catch (error) {
+        console.error('Error fetching redeemed stats:', error);
+      }
+      
       setStats({
         prcBalance: userData.prc_balance || 0,
         totalMined: userData.total_mined || 0,
         referralCount: userData.referral_count || 0,
-        membershipType: userData.membership_type || 'free'
+        membershipType: userData.membership_type || 'free',
+        totalPrcUsed: redeemedStats.total_prc_used || 0,
+        totalPrcUsedValue: redeemedStats.total_rupee_value || 0
       });
       
       setMiningHistory(userData.mining_history || []);
@@ -63,6 +76,15 @@ const DashboardModern = ({ user, onLogout }) => {
       } catch (error) {
         console.error('Error fetching transactions:', error);
         setRecentTransactions([]);
+      }
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchTransactionsPage = async (page) => {
     try {
@@ -76,16 +98,6 @@ const DashboardModern = ({ user, onLogout }) => {
 
   const handlePageChange = (newPage) => {
     fetchTransactionsPage(newPage);
-  };
-
-      }
-
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      toast.error('Failed to load dashboard data');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const QuickActionButton = ({ icon: Icon, label, onClick, color = 'purple' }) => (
