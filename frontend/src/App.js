@@ -61,6 +61,7 @@ const AdminBurnDashboard = lazy(() => import("@/pages/AdminBurnDashboard"));
 const AdminBillPayments = lazy(() => import("@/pages/AdminBillPayments"));
 const AdminGiftVouchers = lazy(() => import("@/pages/AdminGiftVouchers"));
 const AdminServiceCharges = lazy(() => import("@/pages/AdminServiceCharges"));
+const AdminPolicies = lazy(() => import("@/pages/AdminPolicies"));
 const BillPayments = lazy(() => import("@/pages/BillPayments"));
 const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption"));
 const ManagerDashboard = lazy(() => import("@/pages/ManagerDashboard"));
