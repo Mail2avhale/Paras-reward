@@ -26,7 +26,9 @@ const VIPMembership = ({ user, onLogout }) => {
     date: new Date().toISOString().split('T')[0],
     time: new Date().toTimeString().split(' ')[0].substring(0, 5),
     utr_number: '',
-    screenshot_url: ''
+    screenshot_url: '',
+    payment_method: 'UPI',
+    auto_renew: false
   });
 
   useEffect(() => {
