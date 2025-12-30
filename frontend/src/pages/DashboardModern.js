@@ -237,26 +237,34 @@ const DashboardModern = ({ user, onLogout }) => {
           isFreeUser={stats.membershipType !== 'vip'}
         />
         
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        {/* Stats Cards - 3 columns */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
           {/* Total Mined */}
-          <div className="bg-white rounded-2xl p-4 shadow-lg">
-            <div className="flex items-center justify-between mb-2">
+          <div className="bg-white rounded-2xl p-3 shadow-lg">
+            <div className="flex items-center justify-center mb-2">
               <TrendingUp className="w-5 h-5 text-green-500" />
-              <span className="text-xs text-gray-500">Total Mined</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900">{stats.totalMined.toLocaleString()}</div>
-            <div className="text-xs text-green-600 mt-1">PRC</div>
+            <div className="text-lg font-bold text-gray-900 text-center">{stats.totalMined.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
+            <div className="text-xs text-gray-500 text-center mt-1">Total Mined</div>
+          </div>
+
+          {/* Total PRC Used */}
+          <div className="bg-white rounded-2xl p-3 shadow-lg">
+            <div className="flex items-center justify-center mb-2">
+              <Coins className="w-5 h-5 text-purple-500" />
+            </div>
+            <div className="text-lg font-bold text-gray-900 text-center">{stats.totalPrcUsed.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
+            <div className="text-xs text-gray-500 text-center mt-1">PRC Used</div>
+            <div className="text-xs text-purple-600 text-center font-medium">≈ ₹{stats.totalPrcUsedValue}</div>
           </div>
 
           {/* Referrals */}
-          <div className="bg-white rounded-2xl p-4 shadow-lg">
-            <div className="flex items-center justify-between mb-2">
+          <div className="bg-white rounded-2xl p-3 shadow-lg">
+            <div className="flex items-center justify-center mb-2">
               <Users className="w-5 h-5 text-blue-500" />
-              <span className="text-xs text-gray-500">Referrals</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900">{stats.referralCount}</div>
-            <div className="text-xs text-blue-600 mt-1">Friends</div>
+            <div className="text-lg font-bold text-gray-900 text-center">{stats.referralCount}</div>
+            <div className="text-xs text-gray-500 text-center mt-1">Referrals</div>
           </div>
         </div>
 
