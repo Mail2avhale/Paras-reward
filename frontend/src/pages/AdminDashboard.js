@@ -1077,6 +1077,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     { id: 'bill-payments', icon: CreditCard, label: 'Bill Payments', link: '/admin/bill-payments' },
     { id: 'gift-vouchers', icon: Award, label: 'Gift Vouchers', link: '/admin/gift-vouchers' },
     { id: 'service-charges', icon: Settings, label: 'Service Charges', link: '/admin/service-charges' },
+    { id: 'policies', icon: FileText, label: 'Policy Editor', link: '/admin/policies' },
     { id: 'activity-logs', icon: Activity, label: 'Activity Logs' },
     { id: 'stockist-management', icon: UserCog, label: 'Stockist Management' },
     { id: 'financial-management', icon: DollarSign, label: 'Financial Management' },
