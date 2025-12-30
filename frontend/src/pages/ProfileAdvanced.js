@@ -90,6 +90,12 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     pan_number: ''
   });
   
+  // VIP Transactions State
+  const [vipTransactions, setVipTransactions] = useState([]);
+  const [vipTransactionsPage, setVipTransactionsPage] = useState(1);
+  const [vipTransactionsPagination, setVipTransactionsPagination] = useState({});
+  const [loadingVipTransactions, setLoadingVipTransactions] = useState(false);
+  
   // Validation Errors
   const [errors, setErrors] = useState({});
   
