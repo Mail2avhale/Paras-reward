@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Bell, Menu, X } from 'lucide-react';
+import { Search, Bell, Menu } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Sidebar from '@/components/Sidebar';
+import NotificationCenter from '@/components/NotificationCenter';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
 
@@ -13,6 +14,7 @@ const TopBar = ({ user, onLogout }) => {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   // Auto-hide on scroll down, show on scroll up
   useEffect(() => {
