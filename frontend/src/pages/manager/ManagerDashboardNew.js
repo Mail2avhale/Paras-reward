@@ -205,10 +205,10 @@ const ManagerDashboardNew = ({ user, onLogout }) => {
                 Support Tickets
               </Button>
             </Link>
-          </div>
-        </Card>
+            </div>
+          </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Sales Trend Chart */}
           <Card className="p-6 lg:col-span-2">
             <div className="flex items-center justify-between mb-6">
