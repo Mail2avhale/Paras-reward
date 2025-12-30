@@ -12,28 +12,10 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const AdminDashboard = ({ user, onLogout }) => {
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stats, setStats] = useState(null);
-  const [vipPayments, setVipPayments] = useState([]);
-  const [kycDocuments, setKycDocuments] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [usersTotal, setUsersTotal] = useState(0);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
-  const [userManagementView, setUserManagementView] = useState('advanced');
-  const [settingsView, setSettingsView] = useState('contact');
-  
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20); // Show 20 items per page
 
   useEffect(() => {
     fetchStats();
-    fetchVIPPayments();
-    fetchKYCDocuments();
-    fetchUsers();
   }, []);
 
   const fetchStats = async () => {
@@ -44,134 +26,6 @@ const AdminDashboard = ({ user, onLogout }) => {
       console.error('Error fetching stats:', error);
     }
   };
-
-  const fetchVIPPayments = async () => {
-    try {
-      const response = await axios.get(`${API}/membership/payments`);
-      setVipPayments(response.data);
-    } catch (error) {
-      console.error('Error fetching payments:', error);
-    }
-  };
-
-  const fetchKYCDocuments = async () => {
-    try {
-      const response = await axios.get(`${API}/kyc/list`);
-      setKycDocuments(response.data);
-    } catch (error) {
-      console.error('Error fetching KYC:', error);
-    }
-  };
-
-  const handlePaymentAction = async (paymentId, action) => {
-    try {
-      await axios.post(`${API}/membership/payment/${paymentId}/action`, { action });
-      toast.success(`Payment ${action}d successfully!`);
-      fetchVIPPayments();
-      fetchStats();
-    } catch (error) {
-      console.error('Error handling payment:', error);
-      toast.error('Action failed');
-    }
-  };
-
-  const handleKYCAction = async (kycId, action) => {
-    try {
-      await axios.post(`${API}/kyc/${kycId}/verify`, { action });
-      toast.success(`KYC ${action}d successfully!`);
-      fetchKYCDocuments();
-      fetchStats();
-    } catch (error) {
-      console.error('Error handling KYC:', error);
-      toast.error('Action failed');
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const params = {};
-      if (searchQuery) params.search = searchQuery;
-      if (roleFilter) params.role = roleFilter;
-      
-      const response = await axios.get(`${API}/admin/users`, { params });
-      setUsers(response.data.users);
-      setUsersTotal(response.data.total);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-  };
-
-  const handleRoleChange = async (uid, newRole) => {
-    try {
-      await axios.put(`${API}/admin/users/${uid}/role`, { role: newRole });
-      toast.success(`User role updated to ${newRole}`);
-      fetchUsers();
-      fetchStats();
-    } catch (error) {
-      console.error('Error updating role:', error);
-      toast.error(error.response?.data?.detail || 'Failed to update role');
-    }
-  };
-
-  const handleStatusChange = async (uid, isActive) => {
-    try {
-      await axios.put(`${API}/admin/users/${uid}/status`, { is_active: isActive });
-      toast.success(`User ${isActive ? 'activated' : 'deactivated'} successfully`);
-      fetchUsers();
-    } catch (error) {
-      console.error('Error updating status:', error);
-      toast.error(error.response?.data?.detail || 'Failed to update status');
-    }
-  };
-
-  const handleDeleteUser = async (uid, userName) => {
-    if (!window.confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      await axios.delete(`${API}/admin/users/${uid}`);
-      toast.success('User deleted successfully');
-      fetchUsers();
-      fetchStats();
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      toast.error(error.response?.data?.detail || 'Failed to delete user');
-    }
-  };
-
-  useEffect(() => {
-    const delaySearch = setTimeout(() => {
-      fetchUsers();
-    }, 500);
-    return () => clearTimeout(delaySearch);
-  }, [searchQuery, roleFilter]);
-
-  const menuItems = [
-    { id: 'dashboard', icon: Home, label: 'Dashboard' },
-    { id: 'prc-analytics', icon: TrendingUp, label: 'PRC Analytics' },
-    { id: 'burn-management', icon: Activity, label: 'Burn Management', link: '/admin/burn-management' },
-    { id: 'analytics', icon: TrendingUp, label: 'Analytics', link: '/admin/analytics' },
-    { id: 'video-ads', icon: Video, label: 'Video Ads', link: '/admin/video-ads' },
-    { id: 'vip-plans', icon: Award, label: 'VIP Plans', link: '/admin/vip-plans' },
-    { id: 'bill-payments', icon: CreditCard, label: 'Bill Payments', link: '/admin/bill-payments' },
-    { id: 'gift-vouchers', icon: Award, label: 'Gift Vouchers', link: '/admin/gift-vouchers' },
-    { id: 'service-charges', icon: Settings, label: 'Service Charges', link: '/admin/service-charges' },
-    { id: 'policies', icon: FileText, label: 'Policy Editor', link: '/admin/policies' },
-    { id: 'activity-logs', icon: Activity, label: 'Activity Logs' },
-    { id: 'stockist-management', icon: UserCog, label: 'Stockist Management' },
-    { id: 'financial-management', icon: DollarSign, label: 'Financial Management' },
-    { id: 'stock-requests', icon: Package, label: 'Stock Requests' },
-    { id: 'users', icon: Users, label: 'Users' },
-    { id: 'stock-movement', icon: Truck, label: 'Stock Movement' },
-    { id: 'orders', icon: ShoppingCart, label: 'Orders' },
-    { id: 'marketplace', icon: Store, label: 'Marketplace' },
-    { id: 'payments', icon: CreditCard, label: 'VIP Payments' },
-    { id: 'kyc', icon: FileText, label: 'KYC Verification' },
-    { id: 'support', icon: HeadphonesIcon, label: 'Support Tickets' },
-    { id: 'notifications', icon: Bell, label: 'Notifications' },
-    { id: 'settings', icon: Settings, label: 'Settings' },
-  ];
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
