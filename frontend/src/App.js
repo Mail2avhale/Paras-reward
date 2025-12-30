@@ -10,6 +10,9 @@ import OfflineIndicator from "@/components/OfflineIndicator";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import FloatingActionButton from "@/components/FloatingActionButton";
+import AdminLayout from "@/components/layouts/AdminLayout";
+import ManagerLayout from "@/components/layouts/ManagerLayout";
+import StockistLayout from "@/components/layouts/StockistLayout";
 
 // Loading component
 const LoadingFallback = () => (
