@@ -127,11 +127,10 @@ const OutletPanel = ({ user, onLogout }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar user={user} onLogout={onLogout} />
-        <div className="flex items-center justify-center h-screen">
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-cyan-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Loading dashboard...</p>
           </div>
         </div>
@@ -140,14 +139,42 @@ const OutletPanel = ({ user, onLogout }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar user={user} onLogout={onLogout} />
+    <div className="min-h-screen bg-gray-50 p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Outlet Dashboard</h1>
+        <p className="text-gray-600">Welcome back, {user?.name}! Manage your orders and track earnings.</p>
+      </div>
       
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Outlet Dashboard</h1>
-          <p className="text-gray-600">Welcome back, {user.name}! Manage your orders and track earnings.</p>
+      {/* Tab Navigation */}
+      <div className="mb-6">
+        <div className="flex flex-wrap gap-2 bg-white p-2 rounded-lg shadow-sm">
+          {[
+            { id: 'overview', label: 'Overview' },
+            { id: 'orders', label: 'Orders' },
+            { id: 'verify', label: 'Verify Order' },
+            { id: 'inventory', label: 'Inventory' },
+            { id: 'stock-requests', label: 'Stock Requests' },
+            { id: 'wallet', label: 'Wallet' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === tab.id
+                  ? 'bg-cyan-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      
+      {/* Tab Content */}
+      {activeTab === 'overview' && (
+        <div className="container mx-auto">
         </div>
 
         {/* Key Metrics */}
