@@ -103,7 +103,7 @@ const TopBar = ({ user, onLogout }) => {
 
             {/* Notifications */}
             <button
-              onClick={() => navigate('/support')}
+              onClick={() => setNotificationsOpen(!notificationsOpen)}
               className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <Bell className="h-5 w-5 text-gray-700" />
