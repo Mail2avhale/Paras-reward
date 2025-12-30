@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AlertCircle, CheckCircle, User, FileText, ChevronRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const ProfileCompletionBanner = ({ user, onDismiss }) => {
+const ProfileCompletionBanner = ({ user, onDismiss, onQuickKYC }) => {
   const navigate = useNavigate();
 
   // Calculate profile completion
