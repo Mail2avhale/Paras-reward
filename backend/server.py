@@ -2416,6 +2416,18 @@ async def claim_mining(uid: str):
         related_id=None,
         icon="⛏️"
     )
+    
+    # Return success response
+    return {
+        "success": True,
+        "claimed_amount": round(mined_amount, 4),
+        "new_balance": round(new_balance, 4),
+        "total_mined": round(new_total_mined, 4),
+        "membership_type": membership_type,
+        "validity": "2 days" if not is_vip else "lifetime",
+        "expires_at": expiry_date,
+        "message": f"Successfully claimed {round(mined_amount, 2)} PRC!"
+    }
 
 @api_router.get("/user/stats/redeemed/{uid}")
 async def get_user_redeemed_stats(uid: str):
