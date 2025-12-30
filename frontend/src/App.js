@@ -182,8 +182,11 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/manager/support" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerSupport user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
             <Route path="/manager/stockists" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerStockists user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
             <Route path="/master-stockist" element={user && user.role === "master_stockist" ? <StockistLayout user={user} onLogout={handleLogout} role="master_stockist"><MasterStockistDashboard user={user} onLogout={handleLogout} /></StockistLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/master-stockist/*" element={user && user.role === "master_stockist" ? <StockistLayout user={user} onLogout={handleLogout} role="master_stockist"><MasterStockistDashboard user={user} onLogout={handleLogout} /></StockistLayout> : <Navigate to="/dashboard" />} />
             <Route path="/sub-stockist" element={user && user.role === "sub_stockist" ? <StockistLayout user={user} onLogout={handleLogout} role="sub_stockist"><SubStockistDashboard user={user} onLogout={handleLogout} /></StockistLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/sub-stockist/*" element={user && user.role === "sub_stockist" ? <StockistLayout user={user} onLogout={handleLogout} role="sub_stockist"><SubStockistDashboard user={user} onLogout={handleLogout} /></StockistLayout> : <Navigate to="/dashboard" />} />
             <Route path="/outlet" element={user && user.role === "outlet" ? <StockistLayout user={user} onLogout={handleLogout} role="outlet"><OutletPanel user={user} onLogout={handleLogout} /></StockistLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/outlet/*" element={user && user.role === "outlet" ? <StockistLayout user={user} onLogout={handleLogout} role="outlet"><OutletPanel user={user} onLogout={handleLogout} /></StockistLayout> : <Navigate to="/dashboard" />} />
           </Routes>
         </Suspense>
         {/* Professional Navigation System - Only for regular users, not admin/manager/stockist roles */}
