@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://admin-ui-system-2.preview.emergentagent.com/setup
+   https://role-nav-repair.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
