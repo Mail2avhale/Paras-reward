@@ -1314,7 +1314,105 @@ const ProfileAdvanced = ({ user, onLogout }) => {
               </Card>
             )}
 
-            {/* 5. SECURITY OPTIONS SECTION */}
+            {/* 5. VIP TRANSACTIONS SECTION */}
+            {activeSection === 'vip-history' && (
+              <Card className="p-6 space-y-6">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <CreditCard className="w-6 h-6 text-yellow-600" />
+                    VIP Membership Transactions
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">View your VIP membership payment history</p>
+                </div>
+
+                {loadingVipTransactions ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                    <p className="text-gray-500 mt-2">Loading transactions...</p>
+                  </div>
+                ) : vipTransactions.length === 0 ? (
+                  <div className="text-center py-12">
+                    <CreditCard className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">No VIP transactions found</p>
+                    <p className="text-sm text-gray-400 mt-2">Purchase a VIP membership to see your transactions here</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-4">
+                      {vipTransactions.map((tx) => (
+                        <div key={tx.payment_id} className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-100">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg">
+                                <CreditCard className="h-5 w-5 text-white" />
+                              </div>
+                              <div>
+                                <p className="font-bold text-gray-900">{tx.plan_name || 'VIP Membership'}</p>
+                                <p className="text-xs text-gray-500">{new Date(tx.created_at).toLocaleString()}</p>
+                              </div>
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                              tx.status === 'approved' ? 'bg-green-100 text-green-700' :
+                              tx.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                              tx.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {tx.status?.toUpperCase()}
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <p className="text-gray-500">Amount Paid</p>
+                              <p className="font-bold text-gray-900">₹{tx.amount?.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-500">Duration</p>
+                              <p className="font-semibold text-gray-900">{tx.duration || 30} Days</p>
+                            </div>
+                            {tx.transaction_id && (
+                              <div className="col-span-2">
+                                <p className="text-gray-500">Transaction ID</p>
+                                <p className="font-mono text-xs text-gray-700 bg-white px-2 py-1 rounded">{tx.transaction_id}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Pagination */}
+                    {vipTransactionsPagination.total_pages > 1 && (
+                      <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                        <p className="text-sm text-gray-600">
+                          Page {vipTransactionsPage} of {vipTransactionsPagination.total_pages}
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fetchVipTransactions(vipTransactionsPage - 1)}
+                            disabled={!vipTransactionsPagination.has_prev}
+                          >
+                            Previous
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fetchVipTransactions(vipTransactionsPage + 1)}
+                            disabled={!vipTransactionsPagination.has_next}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </Card>
+            )}
+
+            {/* 6. SECURITY OPTIONS SECTION */}
             {activeSection === 'security' && (
               <Card className="p-6 space-y-6">
                 <div>
