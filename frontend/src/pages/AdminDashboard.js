@@ -1153,28 +1153,19 @@ const AdminDashboard = ({ user, onLogout }) => {
                       <h3 className="text-sm font-bold text-amber-900 mb-1">⚡ Action Required</h3>
                       <div className="flex flex-wrap gap-3 text-sm text-amber-800">
                         {stats?.vip_payments?.pending > 0 && (
-                          <button 
-                            onClick={() => setActiveTab('payments')}
-                            className="hover:underline font-medium"
-                          >
+                          <a href="/admin/vip-payments" className="hover:underline font-medium">
                             {stats.vip_payments.pending} VIP Payment{stats.vip_payments.pending > 1 ? 's' : ''} pending →
-                          </button>
+                          </a>
                         )}
                         {stats?.kyc?.pending > 0 && (
-                          <button 
-                            onClick={() => setActiveTab('kyc')}
-                            className="hover:underline font-medium"
-                          >
+                          <a href="/admin/kyc" className="hover:underline font-medium">
                             {stats.kyc.pending} KYC pending →
-                          </button>
+                          </a>
                         )}
                         {stats?.stock_requests?.pending > 0 && (
-                          <button 
-                            onClick={() => setActiveTab('stock-requests')}
-                            className="hover:underline font-medium"
-                          >
+                          <a href="/admin/stock-requests" className="hover:underline font-medium">
                             {stats.stock_requests.pending} Stock Request{stats.stock_requests.pending > 1 ? 's' : ''} pending →
-                          </button>
+                          </a>
                         )}
                       </div>
                     </div>
