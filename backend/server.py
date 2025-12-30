@@ -2681,29 +2681,6 @@ async def get_vip_payments():
             payment['created_at'] = datetime.fromisoformat(payment['created_at'])
     return payments
 
-@api_router.post("/membership/payment/{payment_id}/action")
-async def action_vip_payment(payment_id: str, action: VIPPaymentAction):
-    """Approve or reject VIP payment (Admin)"""
-    payment = await db.vip_payments.find_one({"payment_id": payment_id})
-    if not payment:
-        raise HTTPException(status_code=404, detail="Payment not found")
-    
-    # Update payment status
-    await db.vip_payments.update_one(
-        {"payment_id": payment_id},
-        {"$set": {"status": "approved" if action.action == "approve" else "rejected"}}
-    )
-    
-    # If approved, update user membership
-    if action.action == "approve":
-        expiry = datetime.now(timezone.utc) + timedelta(days=365)
-        await db.users.update_one(
-            {"uid": payment["user_id"]},
-            {"$set": {"membership_type": "vip", "membership_expiry": expiry.isoformat()}}
-        )
-    
-    return {"message": f"Payment {action.action}d successfully"}
-
 # ========== KYC ROUTES ==========
 @api_router.post("/kyc/submit/{uid}", response_model=KYCDocument)
 async def submit_kyc(uid: str, kyc_data: KYCSubmit):
