@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
-import Navbar from '@/components/Navbar';
+import { Link, useLocation } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import MetricCard from '@/components/manager/MetricCard';
@@ -17,8 +16,27 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const ManagerDashboardNew = ({ user, onLogout }) => {
+  const location = useLocation();
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // Determine active tab from URL path
+  const getActiveTabFromPath = () => {
+    const path = location.pathname;
+    if (path.includes('/users')) return 'users';
+    if (path.includes('/orders')) return 'orders';
+    if (path.includes('/kyc')) return 'kyc';
+    if (path.includes('/stockists')) return 'stockists';
+    if (path.includes('/finance')) return 'finance';
+    if (path.includes('/reports')) return 'reports';
+    return 'overview';
+  };
+  
+  const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
+  
+  useEffect(() => {
+    setActiveTab(getActiveTabFromPath());
+  }, [location.pathname]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -28,7 +46,7 @@ const ManagerDashboardNew = ({ user, onLogout }) => {
     setLoading(true);
     try {
       const response = await axios.get(`${API}/manager/dashboard`, {
-        params: { uid: user.uid }
+        params: { uid: user?.uid }
       });
       setDashboardData(response.data);
     } catch (error) {
@@ -40,11 +58,10 @@ const ManagerDashboardNew = ({ user, onLogout }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar user={user} onLogout={onLogout} />
-        <div className="flex items-center justify-center h-screen">
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Loading dashboard...</p>
           </div>
         </div>
