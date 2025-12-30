@@ -184,8 +184,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/outlet" element={user && user.role === "outlet" ? <StockistLayout user={user} onLogout={handleLogout} role="outlet"><OutletPanel user={user} onLogout={handleLogout} /></StockistLayout> : <Navigate to="/dashboard" />} />
           </Routes>
         </Suspense>
-        {/* Professional Navigation System */}
-        {user && (
+        {/* Professional Navigation System - Only for regular users, not admin/manager/stockist roles */}
+        {user && !['admin', 'sub_admin', 'manager', 'master_stockist', 'sub_stockist', 'outlet'].includes(user.role) && (
           <>
             <TopBar user={user} onLogout={handleLogout} />
             <BottomNav />
