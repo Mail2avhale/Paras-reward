@@ -404,7 +404,7 @@ const SubStockistDashboard = ({ user, onLogout }) => {
 
             {/* Request Stock Tab */}
             <TabsContent value="request">
-              <StockRequestSystem userId={user.uid} userRole={user.role} onSuccess={fetchDashboardData} />
+              <StockRequestSystem userId={user?.uid} userRole={user?.role} onSuccess={fetchDashboardData} />
             </TabsContent>
           </Tabs>
         </Card>
@@ -420,7 +420,44 @@ const SubStockistDashboard = ({ user, onLogout }) => {
             Request Withdrawal {walletData?.prc_balance >= 50 && `(₹${walletData.prc_balance.toLocaleString()})`}
           </Button>
         </div>
-      </div>
+        </div>
+      )}
+
+      {/* Other Tab Contents */}
+      {activeTab === 'orders' && (
+        <Card className="p-6">
+          <h2 className="text-xl font-bold mb-4">Orders Management</h2>
+          <p className="text-gray-600">View and manage all orders.</p>
+        </Card>
+      )}
+
+      {activeTab === 'inventory' && (
+        <StockInventoryDisplay userId={user?.uid} />
+      )}
+
+      {activeTab === 'outlets' && (
+        <StockistHierarchy userId={user?.uid} roleFilter="outlet" />
+      )}
+
+      {activeTab === 'stock-requests' && (
+        <StockRequestSystem user={user} />
+      )}
+
+      {activeTab === 'wallet' && (
+        <Card className="p-6">
+          <h2 className="text-xl font-bold mb-4">Wallet Management</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-teal-50 rounded-lg">
+              <p className="text-sm text-gray-600">PRC Balance</p>
+              <p className="text-2xl font-bold text-teal-600">₹{walletData?.prc_balance?.toLocaleString() || 0}</p>
+            </div>
+            <div className="p-4 bg-green-50 rounded-lg">
+              <p className="text-sm text-gray-600">Total Earned</p>
+              <p className="text-2xl font-bold text-green-600">₹{walletData?.total_earned?.toLocaleString() || 0}</p>
+            </div>
+          </div>
+        </Card>
+      )}
     </div>
   );
 };
