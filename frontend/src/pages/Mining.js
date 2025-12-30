@@ -171,8 +171,7 @@ const Mining = ({ user, onLogout }) => {
   const validityStatus = getPRCValidityStatus();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 pt-20">
-      <Navbar user={user} onLogout={onLogout} />
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 pt-20 pb-24">
       
       <div className="container mx-auto px-3 py-8 max-w-full lg:max-w-7xl xl:max-w-[90%]">
         {/* Back Button */}
