@@ -1167,14 +1167,16 @@ metadata:
 
 test_plan:
   current_focus:
-    - "P1.4 - Pagination for Bill/Voucher History (10 records/page)"
-    - "P1.8 - VIP Transactions in Profile"
-    - "P1.9 - Admin Policy Editor"
-    - "P1.10 - Notification System"
-    - "P1.1 - Professional Design Consistency"
+    - "Profile/KYC Completion Flow Bug Fix"
+    - "Notification System Fix"
+    - "Gradient Theme Consistency"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "PROFILE COMPLETION BUG FIXED: The 'Add Phone Number' was showing even when user had mobile number because ProfileCompletionBanner.js and ProfileCompletionPopup.js were checking 'user?.phone' but the actual database field is 'mobile'. Fixed by checking both 'user?.mobile || user?.phone'. Also improved address check to include pincode. Verified user mail2avhale@gmail.com now shows 100% complete profile with no banner displayed."
 
 agent_communication:
   - agent: "testing"
