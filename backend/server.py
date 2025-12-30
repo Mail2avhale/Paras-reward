@@ -14652,6 +14652,102 @@ async def track_video_ad_event(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============================================
+# ADMIN POLICIES MANAGEMENT
+# ============================================
+
+@api_router.get("/admin/policies")
+async def get_policies():
+    """Get all policies (terms, privacy, refund)"""
+    try:
+        policies = await db.policies.find_one({"type": "app_policies"}, {"_id": 0})
+        if not policies:
+            return {
+                "terms": "",
+                "privacy": "",
+                "refund": ""
+            }
+        return {
+            "terms": policies.get("terms", ""),
+            "privacy": policies.get("privacy", ""),
+            "refund": policies.get("refund", "")
+        }
+    except Exception as e:
+        print(f"Error fetching policies: {e}")
+        return {"terms": "", "privacy": "", "refund": ""}
+
+@api_router.post("/admin/policies")
+async def update_policies(data: dict):
+    """Update policies"""
+    try:
+        await db.policies.update_one(
+            {"type": "app_policies"},
+            {
+                "$set": {
+                    "terms": data.get("terms", ""),
+                    "privacy": data.get("privacy", ""),
+                    "refund": data.get("refund", ""),
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            },
+            upsert=True
+        )
+        return {"message": "Policies updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/policies/{policy_type}")
+async def get_public_policy(policy_type: str):
+    """Get a specific policy for public display"""
+    if policy_type not in ["terms", "privacy", "refund"]:
+        raise HTTPException(status_code=400, detail="Invalid policy type")
+    
+    try:
+        policies = await db.policies.find_one({"type": "app_policies"}, {"_id": 0})
+        if not policies:
+            return {"content": "", "policy_type": policy_type}
+        return {
+            "content": policies.get(policy_type, ""),
+            "policy_type": policy_type
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================
+# VIP PAYMENT TRANSACTIONS FOR USER HISTORY
+# ============================================
+
+@api_router.get("/user/vip-transactions/{uid}")
+async def get_user_vip_transactions(uid: str, page: int = 1, limit: int = 10):
+    """Get VIP payment transactions for a user"""
+    try:
+        skip = (page - 1) * limit
+        
+        # Get VIP payments for user
+        payments = await db.vip_payments.find(
+            {"user_id": uid},
+            {"_id": 0}
+        ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        
+        total = await db.vip_payments.count_documents({"user_id": uid})
+        
+        return {
+            "transactions": payments,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "total_pages": (total + limit - 1) // limit,
+                "has_next": skip + limit < total,
+                "has_prev": page > 1
+            }
+        }
+    except Exception as e:
+        print(f"Error fetching VIP transactions: {e}")
+        return {"transactions": [], "pagination": {}}
+
+
 # Include all API routes (must be after all route definitions)
 app.include_router(api_router)
 
