@@ -315,6 +315,11 @@ const AdvancedUserManagement = () => {
                     </span>
                     <span className={`px-2 py-1 rounded text-xs font-semibold ${getMembershipBadge(user.membership_type)}`}>
                       {user.membership_type?.toUpperCase()}
+                      {user.membership_type === 'vip' && user.membership_expiry && (
+                        <span className="ml-1 font-normal">
+                          (→ {new Date(user.membership_expiry).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })})
+                        </span>
+                      )}
                     </span>
                     <span className={`px-2 py-1 rounded text-xs font-semibold ${getKYCBadge(user.kyc_status)}`}>
                       KYC: {user.kyc_status?.toUpperCase()}
