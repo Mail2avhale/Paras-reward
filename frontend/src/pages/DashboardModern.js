@@ -253,6 +253,9 @@ const DashboardModern = ({ user, onLogout }) => {
 
       {/* Main Content */}
       <div className="max-w-md mx-auto px-4 -mt-20">
+        {/* Profile Completion Banner */}
+        <ProfileCompletionBanner user={userData} />
+
         {/* PRC Expiry Warning (Free Users Only) */}
         <PRCExpiryTimer 
           miningHistory={miningHistory}
