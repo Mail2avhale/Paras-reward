@@ -1180,164 +1180,152 @@ const AdminDashboard = ({ user, onLogout }) => {
                   <span className="text-sm text-gray-500">Click any card for instant access</span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                  <button
-                    onClick={() => setActiveTab('users')}
-                    className="p-4 bg-white hover:bg-purple-50 border-2 border-transparent hover:border-purple-300 rounded-xl shadow-sm transition-all group"
-                  >
-                    <div className="flex flex-col items-center space-y-2">
-                      <div className="h-12 w-12 rounded-full bg-purple-100 group-hover:bg-purple-200 flex items-center justify-center transition-colors">
-                        <Users className="h-6 w-6 text-purple-600" />
+                  <a href="/admin/users" className="block">
+                    <div className="p-4 bg-white hover:bg-purple-50 border-2 border-transparent hover:border-purple-300 rounded-xl shadow-sm transition-all group">
+                      <div className="flex flex-col items-center space-y-2">
+                        <div className="h-12 w-12 rounded-full bg-purple-100 group-hover:bg-purple-200 flex items-center justify-center transition-colors">
+                          <Users className="h-6 w-6 text-purple-600" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">Users</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-700">Users</span>
                     </div>
-                  </button>
+                  </a>
 
-                  <button
-                    onClick={() => setActiveTab('marketplace')}
-                    className="p-4 bg-white hover:bg-blue-50 border-2 border-transparent hover:border-blue-300 rounded-xl shadow-sm transition-all group"
-                  >
-                    <div className="flex flex-col items-center space-y-2">
-                      <div className="h-12 w-12 rounded-full bg-blue-100 group-hover:bg-blue-200 flex items-center justify-center transition-colors">
-                        <Package className="h-6 w-6 text-blue-600" />
+                  <a href="/admin/marketplace" className="block">
+                    <div className="p-4 bg-white hover:bg-blue-50 border-2 border-transparent hover:border-blue-300 rounded-xl shadow-sm transition-all group">
+                      <div className="flex flex-col items-center space-y-2">
+                        <div className="h-12 w-12 rounded-full bg-blue-100 group-hover:bg-blue-200 flex items-center justify-center transition-colors">
+                          <Package className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">Products</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-700">Products</span>
                     </div>
-                  </button>
+                  </a>
 
-                  <button
-                    onClick={() => setActiveTab('orders')}
-                    className="p-4 bg-white hover:bg-green-50 border-2 border-transparent hover:border-green-300 rounded-xl shadow-sm transition-all group"
-                  >
-                    <div className="flex flex-col items-center space-y-2">
-                      <div className="h-12 w-12 rounded-full bg-green-100 group-hover:bg-green-200 flex items-center justify-center transition-colors">
-                        <ShoppingCart className="h-6 w-6 text-green-600" />
+                  <a href="/admin/orders" className="block">
+                    <div className="p-4 bg-white hover:bg-green-50 border-2 border-transparent hover:border-green-300 rounded-xl shadow-sm transition-all group">
+                      <div className="flex flex-col items-center space-y-2">
+                        <div className="h-12 w-12 rounded-full bg-green-100 group-hover:bg-green-200 flex items-center justify-center transition-colors">
+                          <ShoppingCart className="h-6 w-6 text-green-600" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">Orders</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-700">Orders</span>
                     </div>
-                  </button>
+                  </a>
 
-                  <button
-                    onClick={() => setActiveTab('financial-management')}
-                    className="p-4 bg-white hover:bg-amber-50 border-2 border-transparent hover:border-amber-300 rounded-xl shadow-sm transition-all group"
-                  >
-                    <div className="flex flex-col items-center space-y-2">
-                      <div className="h-12 w-12 rounded-full bg-amber-100 group-hover:bg-amber-200 flex items-center justify-center transition-colors">
-                        <DollarSign className="h-6 w-6 text-amber-600" />
+                  <a href="/admin/financial-management" className="block">
+                    <div className="p-4 bg-white hover:bg-amber-50 border-2 border-transparent hover:border-amber-300 rounded-xl shadow-sm transition-all group">
+                      <div className="flex flex-col items-center space-y-2">
+                        <div className="h-12 w-12 rounded-full bg-amber-100 group-hover:bg-amber-200 flex items-center justify-center transition-colors">
+                          <DollarSign className="h-6 w-6 text-amber-600" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">Finance</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-700">Finance</span>
                     </div>
-                  </button>
+                  </a>
 
-                  <button
-                    onClick={() => setActiveTab('stockist-management')}
-                    className="p-4 bg-white hover:bg-indigo-50 border-2 border-transparent hover:border-indigo-300 rounded-xl shadow-sm transition-all group"
-                  >
-                    <div className="flex flex-col items-center space-y-2">
-                      <div className="h-12 w-12 rounded-full bg-indigo-100 group-hover:bg-indigo-200 flex items-center justify-center transition-colors">
-                        <Store className="h-6 w-6 text-indigo-600" />
+                  <a href="/admin/stockists" className="block">
+                    <div className="p-4 bg-white hover:bg-indigo-50 border-2 border-transparent hover:border-indigo-300 rounded-xl shadow-sm transition-all group">
+                      <div className="flex flex-col items-center space-y-2">
+                        <div className="h-12 w-12 rounded-full bg-indigo-100 group-hover:bg-indigo-200 flex items-center justify-center transition-colors">
+                          <Store className="h-6 w-6 text-indigo-600" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">Stockists</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-700">Stockists</span>
                     </div>
-                  </button>
+                  </a>
 
-                  <button
-                    onClick={() => setActiveTab('payments')}
-                    className="p-4 bg-white hover:bg-pink-50 border-2 border-transparent hover:border-pink-300 rounded-xl shadow-sm transition-all group relative"
-                  >
-                    {stats?.vip_payments?.pending > 0 && (
-                      <span className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-bounce">
-                        {stats.vip_payments.pending}
-                      </span>
-                    )}
-                    <div className="flex flex-col items-center space-y-2">
-                      <div className="h-12 w-12 rounded-full bg-pink-100 group-hover:bg-pink-200 flex items-center justify-center transition-colors">
-                        <CreditCard className="h-6 w-6 text-pink-600" />
+                  <a href="/admin/vip-payments" className="block">
+                    <div className="p-4 bg-white hover:bg-pink-50 border-2 border-transparent hover:border-pink-300 rounded-xl shadow-sm transition-all group relative">
+                      {stats?.vip_payments?.pending > 0 && (
+                        <span className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-bounce">
+                          {stats.vip_payments.pending}
+                        </span>
+                      )}
+                      <div className="flex flex-col items-center space-y-2">
+                        <div className="h-12 w-12 rounded-full bg-pink-100 group-hover:bg-pink-200 flex items-center justify-center transition-colors">
+                          <CreditCard className="h-6 w-6 text-pink-600" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">VIP Payments</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-700">VIP Payments</span>
                     </div>
-                  </button>
+                  </a>
 
-                  <button
-                    onClick={() => setActiveTab('kyc')}
-                    className="p-4 bg-white hover:bg-orange-50 border-2 border-transparent hover:border-orange-300 rounded-xl shadow-sm transition-all group relative"
-                  >
-                    {stats?.kyc?.pending > 0 && (
-                      <span className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-bounce">
-                        {stats.kyc.pending}
-                      </span>
-                    )}
-                    <div className="flex flex-col items-center space-y-2">
-                      <div className="h-12 w-12 rounded-full bg-orange-100 group-hover:bg-orange-200 flex items-center justify-center transition-colors">
-                        <FileText className="h-6 w-6 text-orange-600" />
+                  <a href="/admin/kyc" className="block">
+                    <div className="p-4 bg-white hover:bg-orange-50 border-2 border-transparent hover:border-orange-300 rounded-xl shadow-sm transition-all group relative">
+                      {stats?.kyc?.pending > 0 && (
+                        <span className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-bounce">
+                          {stats.kyc.pending}
+                        </span>
+                      )}
+                      <div className="flex flex-col items-center space-y-2">
+                        <div className="h-12 w-12 rounded-full bg-orange-100 group-hover:bg-orange-200 flex items-center justify-center transition-colors">
+                          <FileText className="h-6 w-6 text-orange-600" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">KYC</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-700">KYC</span>
                     </div>
-                  </button>
+                  </a>
 
-                  <button
-                    onClick={() => setActiveTab('stock-requests')}
-                    className="p-4 bg-white hover:bg-teal-50 border-2 border-transparent hover:border-teal-300 rounded-xl shadow-sm transition-all group relative"
-                  >
-                    {stats?.stock_requests?.pending > 0 && (
-                      <span className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-bounce">
-                        {stats.stock_requests.pending}
-                      </span>
-                    )}
-                    <div className="flex flex-col items-center space-y-2">
-                      <div className="h-12 w-12 rounded-full bg-teal-100 group-hover:bg-teal-200 flex items-center justify-center transition-colors">
-                        <Truck className="h-6 w-6 text-teal-600" />
+                  <a href="/admin/stock-requests" className="block">
+                    <div className="p-4 bg-white hover:bg-teal-50 border-2 border-transparent hover:border-teal-300 rounded-xl shadow-sm transition-all group relative">
+                      {stats?.stock_requests?.pending > 0 && (
+                        <span className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-bounce">
+                          {stats.stock_requests.pending}
+                        </span>
+                      )}
+                      <div className="flex flex-col items-center space-y-2">
+                        <div className="h-12 w-12 rounded-full bg-teal-100 group-hover:bg-teal-200 flex items-center justify-center transition-colors">
+                          <Truck className="h-6 w-6 text-teal-600" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">Stock Requests</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-700">Stock Requests</span>
                     </div>
-                  </button>
+                  </a>
 
-                  <button
-                    onClick={() => navigate('/admin/bill-payments')}
-                    className="p-4 bg-white hover:bg-cyan-50 border-2 border-transparent hover:border-cyan-300 rounded-xl shadow-sm transition-all group"
-                  >
-                    <div className="flex flex-col items-center space-y-2">
-                      <div className="h-12 w-12 rounded-full bg-cyan-100 group-hover:bg-cyan-200 flex items-center justify-center transition-colors">
-                        <CreditCard className="h-6 w-6 text-cyan-600" />
+                  <a href="/admin/bill-payments" className="block">
+                    <div className="p-4 bg-white hover:bg-cyan-50 border-2 border-transparent hover:border-cyan-300 rounded-xl shadow-sm transition-all group">
+                      <div className="flex flex-col items-center space-y-2">
+                        <div className="h-12 w-12 rounded-full bg-cyan-100 group-hover:bg-cyan-200 flex items-center justify-center transition-colors">
+                          <CreditCard className="h-6 w-6 text-cyan-600" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">Bill Payments</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-700">Bill Payments</span>
                     </div>
-                  </button>
+                  </a>
 
-                  <button
-                    onClick={() => navigate('/admin/gift-vouchers')}
-                    className="p-4 bg-white hover:bg-rose-50 border-2 border-transparent hover:border-rose-300 rounded-xl shadow-sm transition-all group"
-                  >
-                    <div className="flex flex-col items-center space-y-2">
-                      <div className="h-12 w-12 rounded-full bg-rose-100 group-hover:bg-rose-200 flex items-center justify-center transition-colors">
-                        <Award className="h-6 w-6 text-rose-600" />
+                  <a href="/admin/gift-vouchers" className="block">
+                    <div className="p-4 bg-white hover:bg-rose-50 border-2 border-transparent hover:border-rose-300 rounded-xl shadow-sm transition-all group">
+                      <div className="flex flex-col items-center space-y-2">
+                        <div className="h-12 w-12 rounded-full bg-rose-100 group-hover:bg-rose-200 flex items-center justify-center transition-colors">
+                          <Award className="h-6 w-6 text-rose-600" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">Gift Vouchers</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-700">Gift Vouchers</span>
                     </div>
-                  </button>
+                  </a>
 
-                  <button
-                    onClick={() => setActiveTab('prc-analytics')}
-                    className="p-4 bg-white hover:bg-violet-50 border-2 border-transparent hover:border-violet-300 rounded-xl shadow-sm transition-all group"
-                  >
-                    <div className="flex flex-col items-center space-y-2">
-                      <div className="h-12 w-12 rounded-full bg-violet-100 group-hover:bg-violet-200 flex items-center justify-center transition-colors">
-                        <TrendingUp className="h-6 w-6 text-violet-600" />
+                  <a href="/admin/analytics" className="block">
+                    <div className="p-4 bg-white hover:bg-violet-50 border-2 border-transparent hover:border-violet-300 rounded-xl shadow-sm transition-all group">
+                      <div className="flex flex-col items-center space-y-2">
+                        <div className="h-12 w-12 rounded-full bg-violet-100 group-hover:bg-violet-200 flex items-center justify-center transition-colors">
+                          <TrendingUp className="h-6 w-6 text-violet-600" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">Analytics</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-700">Analytics</span>
                     </div>
-                  </button>
+                  </a>
 
-                  <button
-                    onClick={() => setActiveTab('activity-logs')}
-                    className="p-4 bg-white hover:bg-slate-50 border-2 border-transparent hover:border-slate-300 rounded-xl shadow-sm transition-all group"
-                  >
-                    <div className="flex flex-col items-center space-y-2">
-                      <div className="h-12 w-12 rounded-full bg-slate-100 group-hover:bg-slate-200 flex items-center justify-center transition-colors">
-                        <Activity className="h-6 w-6 text-slate-600" />
+                  <a href="/admin/activity-logs" className="block">
+                    <div className="p-4 bg-white hover:bg-slate-50 border-2 border-transparent hover:border-slate-300 rounded-xl shadow-sm transition-all group">
+                      <div className="flex flex-col items-center space-y-2">
+                        <div className="h-12 w-12 rounded-full bg-slate-100 group-hover:bg-slate-200 flex items-center justify-center transition-colors">
+                          <Activity className="h-6 w-6 text-slate-600" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">Activity Logs</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-700">Activity Logs</span>
                     </div>
-                  </button>
+                  </a>
                 </div>
               </div>
 
