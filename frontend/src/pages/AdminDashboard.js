@@ -1656,18 +1656,6 @@ const AdminDashboard = ({ user, onLogout }) => {
   };
   
   export default AdminDashboard;
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">VIP Payment Approvals</h2>
-              {vipPayments.filter(p => p.status === 'pending').length === 0 ? (
-                <Card className="p-12 text-center bg-white">
-                  <CreditCard className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">No pending VIP payments</p>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {vipPayments.filter(p => p.status === 'pending').map((payment, index) => (
-                    <Card key={payment.payment_id} className="p-6 bg-white">
-                      <div className="flex items-center justify-between mb-4">
                         <div>
                           <p className="font-bold text-gray-900">₹{payment.amount}</p>
                           <p className="text-sm text-gray-600">{payment.user_id.substring(0, 12)}...</p>
