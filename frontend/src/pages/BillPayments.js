@@ -19,6 +19,8 @@ const BillPayments = ({ user, onLogout }) => {
   const [requests, setRequests] = useState([]);
   const [currentUser, setCurrentUser] = useState(user);
   const [selectedType, setSelectedType] = useState('mobile_recharge');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [formData, setFormData] = useState({
     amount_inr: '',
     phone_number: '',
