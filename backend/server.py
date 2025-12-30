@@ -1894,11 +1894,22 @@ async def update_profile(uid: str, request: Request):
     
     data = await request.json()
     
-    # Fields that can be updated
+    # Fields that can be updated - comprehensive list
     updatable_fields = [
-        "first_name", "middle_name", "last_name", "mobile",
-        "state", "district", "taluka", "tahsil", "village", "pincode",
-        "aadhaar_number", "pan_number", "upi_id"
+        # Personal Info
+        "first_name", "middle_name", "last_name", "name",
+        "gender", "date_of_birth", "bio",
+        # Contact Info
+        "mobile", "phone", "alternate_mobile", "email",
+        "address_line1", "address_line2",
+        "state", "district", "taluka", "tahsil", "city", "village", "pincode",
+        # Emergency Contact
+        "emergency_contact_name", "emergency_contact_number",
+        # Documents
+        "aadhaar_number", "pan_number", "upi_id",
+        # Security Options
+        "two_factor_enabled", "login_notifications", "transaction_alerts",
+        "biometric_enabled", "session_timeout"
     ]
     
     update_data = {}
@@ -1915,7 +1926,7 @@ async def update_profile(uid: str, request: Request):
             name_parts.append(data.get('middle_name', user.get('middle_name', '')))
         if data.get('last_name') or user.get('last_name'):
             name_parts.append(data.get('last_name', user.get('last_name', '')))
-        update_data['name'] = ' '.join(name_parts)
+        update_data['name'] = ' '.join(filter(None, name_parts))
     
     update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
     
