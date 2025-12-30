@@ -151,6 +151,13 @@ const TopBar = ({ user, onLogout }) => {
         user={user}
         onLogout={onLogout}
       />
+
+      {/* Notification Center */}
+      <NotificationCenter
+        userId={user?.uid}
+        isOpen={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+      />
     </>
   );
 };
