@@ -36,6 +36,24 @@ const DashboardModern = ({ user, onLogout }) => {
   });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('home');
+  const [showProfilePopup, setShowProfilePopup] = useState(false);
+  const [showKYCModal, setShowKYCModal] = useState(false);
+  const [userData, setUserData] = useState(null);
+
+  // Check if should show profile completion popup
+  useEffect(() => {
+    if (user?.uid) {
+      const lastSkipped = localStorage.getItem('profile_popup_skipped');
+      const skipDuration = 24 * 60 * 60 * 1000; // 24 hours
+      
+      if (!lastSkipped || (Date.now() - parseInt(lastSkipped)) > skipDuration) {
+        // Show popup after a short delay
+        setTimeout(() => {
+          setShowProfilePopup(true);
+        }, 2000);
+      }
+    }
+  }, [user]);
 
   useEffect(() => {
     if (user?.uid) {
