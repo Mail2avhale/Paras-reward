@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Zap, Gamepad2, Store, UserPlus, User } from 'lucide-react';
+import { Home, Zap, Gamepad2, User } from 'lucide-react';
 
 const BottomNav = () => {
   const navigate = useNavigate();
@@ -12,94 +12,62 @@ const BottomNav = () => {
     if (path === '/dashboard') return 'home';
     if (path === '/mining') return 'mine';
     if (path === '/game') return 'game';
-    if (path === '/marketplace') return 'shop';
-    if (path === '/referrals') return 'refer';
     if (path === '/profile' || path === '/profile-advanced') return 'profile';
     return 'home';
   };
 
   const activeTab = getActiveTab();
 
-  const BottomNavItem = ({ icon: Icon, label, tabName, isActive, isCenterButton = false }) => (
-    <button
-      onClick={() => {
-        if (tabName === 'home') {
-          navigate('/dashboard');
-        } else if (tabName === 'mine') {
-          navigate('/mining');
-        } else if (tabName === 'game') {
-          navigate('/game');
-        } else if (tabName === 'shop') {
-          navigate('/marketplace');
-        } else if (tabName === 'refer') {
-          navigate('/referrals');
-        } else if (tabName === 'profile') {
-          navigate('/profile');
-        }
-      }}
-      className={`flex flex-col items-center justify-center flex-1 py-3 transition-colors ${
-        isCenterButton 
-          ? 'relative -mt-6' 
-          : ''
-      } ${
-        isActive 
-          ? 'text-purple-600' 
-          : 'text-gray-500 hover:text-purple-500'
-      }`}
-    >
-      {isCenterButton ? (
-        <div className="bg-gradient-to-br from-purple-600 to-blue-500 p-4 rounded-full shadow-2xl">
-          <Icon className={`w-8 h-8 text-white ${isActive ? 'animate-bounce' : ''}`} />
-        </div>
-      ) : (
-        <>
-          <Icon className={`w-6 h-6 mb-1 ${isActive ? 'animate-bounce' : ''}`} />
-          <span className="text-xs font-medium">{label}</span>
-        </>
-      )}
-    </button>
-  );
+  const navItems = [
+    { id: 'home', label: 'Home', icon: Home, route: '/dashboard' },
+    { id: 'mine', label: 'Mine', icon: Zap, route: '/mining' },
+    { id: 'game', label: 'Play', icon: Gamepad2, route: '/game' },
+    { id: 'profile', label: 'Profile', icon: User, route: '/profile' },
+  ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg">
-      <div className="max-w-md mx-auto flex items-center justify-around h-16">
-        <BottomNavItem 
-          icon={Home} 
-          label="Home" 
-          tabName="home" 
-          isActive={activeTab === 'home'} 
-        />
-        <BottomNavItem 
-          icon={Zap} 
-          label="Mine" 
-          tabName="mine" 
-          isActive={activeTab === 'mine'} 
-        />
-        <BottomNavItem 
-          icon={Gamepad2} 
-          label="Play" 
-          tabName="game" 
-          isActive={activeTab === 'game'} 
-          isCenterButton 
-        />
-        <BottomNavItem 
-          icon={Store} 
-          label="Shop" 
-          tabName="shop" 
-          isActive={activeTab === 'shop'} 
-        />
-        <BottomNavItem 
-          icon={UserPlus} 
-          label="Refer" 
-          tabName="refer" 
-          isActive={activeTab === 'refer'} 
-        />
-        <BottomNavItem 
-          icon={User} 
-          label="Profile" 
-          tabName="profile" 
-          isActive={activeTab === 'profile'} 
-        />
+    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-2xl">
+      <div className="max-w-md mx-auto">
+        <div className="flex items-center justify-around h-16 px-2">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            
+            return (
+              <button
+                key={item.id}
+                onClick={() => navigate(item.route)}
+                className={`flex flex-col items-center justify-center flex-1 py-2 px-3 rounded-xl transition-all duration-300 ${
+                  isActive 
+                    ? 'bg-gradient-to-br from-purple-100 to-blue-100' 
+                    : 'hover:bg-gray-100'
+                }`}
+              >
+                <div className={`relative transition-all duration-300 ${
+                  isActive ? 'transform scale-110' : ''
+                }`}>
+                  <Icon 
+                    className={`h-6 w-6 transition-colors duration-300 ${
+                      isActive 
+                        ? 'text-purple-600' 
+                        : 'text-gray-500'
+                    }`}
+                  />
+                  {isActive && (
+                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-purple-600 rounded-full animate-pulse" />
+                  )}
+                </div>
+                <span className={`text-xs font-medium mt-1 transition-colors duration-300 ${
+                  isActive 
+                    ? 'text-purple-900 font-semibold' 
+                    : 'text-gray-600'
+                }`}>
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
