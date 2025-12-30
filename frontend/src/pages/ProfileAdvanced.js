@@ -203,9 +203,26 @@ const ProfileAdvanced = ({ user, onLogout }) => {
       setProfilePicture(userData.profile_picture || null);
       setProfilePicturePreview(userData.profile_picture || null);
       
+      // Fetch VIP transactions
+      fetchVipTransactions(1);
+      
     } catch (error) {
       console.error('Error fetching profile:', error);
       toast.error('Failed to load profile data');
+    }
+  };
+
+  const fetchVipTransactions = async (page) => {
+    try {
+      setLoadingVipTransactions(true);
+      const response = await axios.get(`${API}/api/user/vip-transactions/${user.uid}?page=${page}&limit=10`);
+      setVipTransactions(response.data.transactions || []);
+      setVipTransactionsPagination(response.data.pagination || {});
+      setVipTransactionsPage(page);
+    } catch (error) {
+      console.error('Error fetching VIP transactions:', error);
+    } finally {
+      setLoadingVipTransactions(false);
     }
   };
   
