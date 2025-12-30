@@ -170,18 +170,18 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/policies" element={user?.role === 'admin' ? <AdminLayout user={user} onLogout={handleLogout}><AdminPolicies user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/bill-payments" element={user ? <BillPayments user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/gift-vouchers" element={user ? <GiftVoucherRedemption user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/manager" element={user && user.role === "manager" ? <ManagerDashboardNew user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/manager/users" element={user && user.role === "manager" ? <ManagerUsers user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/manager/orders" element={user && user.role === "manager" ? <ManagerOrders user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/manager/reports" element={user && user.role === "manager" ? <ManagerReports user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/manager/products" element={user && user.role === "manager" ? <ManagerProducts user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/manager/finance" element={user && user.role === "manager" ? <ManagerFinance user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/manager/communication" element={user && user.role === "manager" ? <ManagerCommunication user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/manager/support" element={user && user.role === "manager" ? <ManagerSupport user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/manager/stockists" element={user && user.role === "manager" ? <ManagerStockists user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/master-stockist" element={user && user.role === "master_stockist" ? <MasterStockistDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/sub-stockist" element={user && user.role === "sub_stockist" ? <SubStockistDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/outlet" element={user && user.role === "outlet" ? <OutletPanel user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/manager" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerDashboardNew user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/manager/users" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerUsers user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/manager/orders" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerOrders user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/manager/reports" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerReports user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/manager/products" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerProducts user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/manager/finance" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerFinance user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/manager/communication" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerCommunication user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/manager/support" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerSupport user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/manager/stockists" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerStockists user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/master-stockist" element={user && user.role === "master_stockist" ? <StockistLayout user={user} onLogout={handleLogout} role="master_stockist"><MasterStockistDashboard user={user} onLogout={handleLogout} /></StockistLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/sub-stockist" element={user && user.role === "sub_stockist" ? <StockistLayout user={user} onLogout={handleLogout} role="sub_stockist"><SubStockistDashboard user={user} onLogout={handleLogout} /></StockistLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/outlet" element={user && user.role === "outlet" ? <StockistLayout user={user} onLogout={handleLogout} role="outlet"><OutletPanel user={user} onLogout={handleLogout} /></StockistLayout> : <Navigate to="/dashboard" />} />
           </Routes>
         </Suspense>
         {/* Professional Navigation System */}
