@@ -302,44 +302,45 @@ const ManagerDashboardNew = ({ user, onLogout }) => {
           </Card>
         </div>
 
-        {/* Recent Activities */}
-        <Card className="p-6 mt-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Activities</h2>
-          <div className="space-y-3">
-            {recentActivities.length > 0 ? (
-              recentActivities.map((activity, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      activity.type === 'order' ? 'bg-green-100' : 'bg-blue-100'
-                    }`}>
-                      {activity.type === 'order' ? (
-                        <ShoppingCart className={`h-5 w-5 ${activity.type === 'order' ? 'text-green-600' : 'text-blue-600'}`} />
-                      ) : (
-                        <Users className="h-5 w-5 text-blue-600" />
-                      )}
+          {/* Recent Activities */}
+          <Card className="p-6 mt-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Activities</h2>
+            <div className="space-y-3">
+              {recentActivities.length > 0 ? (
+                recentActivities.map((activity, index) => (
+                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        activity.type === 'order' ? 'bg-green-100' : 'bg-blue-100'
+                      }`}>
+                        {activity.type === 'order' ? (
+                          <ShoppingCart className={`h-5 w-5 ${activity.type === 'order' ? 'text-green-600' : 'text-blue-600'}`} />
+                        ) : (
+                          <Users className="h-5 w-5 text-blue-600" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{activity.message}</p>
+                        <p className="text-sm text-gray-500">
+                          {activity.time ? new Date(activity.time).toLocaleString() : 'Just now'}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{activity.message}</p>
-                      <p className="text-sm text-gray-500">
-                        {activity.time ? new Date(activity.time).toLocaleString() : 'Just now'}
-                      </p>
-                    </div>
+                    {activity.type === 'order' && activity.status && (
+                      <StatusBadge status={activity.status} type="order" />
+                    )}
                   </div>
-                  {activity.type === 'order' && activity.status && (
-                    <StatusBadge status={activity.status} type="order" />
-                  )}
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  <Clock className="h-12 w-12 mx-auto mb-2" />
+                  <p>No recent activities</p>
                 </div>
-              ))
-            ) : (
-              <div className="text-center py-8 text-gray-400">
-                <Clock className="h-12 w-12 mx-auto mb-2" />
-                <p>No recent activities</p>
-              </div>
-            )}
-          </div>
-        </Card>
-      </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
