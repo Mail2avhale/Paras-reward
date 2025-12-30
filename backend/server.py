@@ -1907,6 +1907,8 @@ async def update_profile(uid: str, request: Request):
         "emergency_contact_name", "emergency_contact_number",
         # Documents
         "aadhaar_number", "pan_number", "upi_id",
+        # Profile Picture
+        "profile_picture",
         # Security Options
         "two_factor_enabled", "login_notifications", "transaction_alerts",
         "biometric_enabled", "session_timeout"
