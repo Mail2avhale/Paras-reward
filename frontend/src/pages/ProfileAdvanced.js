@@ -947,36 +947,6 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                     </div>
                   </div>
 
-                  {/* Emergency Contact Section */}
-                  <div className="bg-red-50 rounded-lg p-4 space-y-4 border border-red-200">
-                    <h3 className="font-semibold text-red-900 flex items-center gap-2">
-                      <AlertCircle className="w-5 h-5" />
-                      Emergency Contact
-                    </h3>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="emergency_contact_name">Emergency Contact Name</Label>
-                        <Input
-                          id="emergency_contact_name"
-                          value={contactDetails.emergency_contact_name}
-                          onChange={(e) => setContactDetails({ ...contactDetails, emergency_contact_name: e.target.value })}
-                          placeholder="Full name"
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="emergency_contact_number">Emergency Contact Number</Label>
-                        <Input
-                          id="emergency_contact_number"
-                          value={contactDetails.emergency_contact_number}
-                          onChange={(e) => setContactDetails({ ...contactDetails, emergency_contact_number: e.target.value })}
-                          placeholder="10-digit mobile number"
-                          maxLength={10}
-                        />
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
                 <Button
