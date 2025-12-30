@@ -131,28 +131,6 @@ const RegisterSimple = () => {
 
         {/* Registration Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Role Selection */}
-          <div>
-            <Label htmlFor="role">Register As</Label>
-            <Select value={formData.role} onValueChange={(value) => handleChange('role', value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="user">User</SelectItem>
-                <SelectItem value="master_stockist">Master Stockist</SelectItem>
-                <SelectItem value="sub_stockist">Sub Stockist</SelectItem>
-                <SelectItem value="outlet">Outlet</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-gray-500 mt-1">
-              {formData.role === 'user' && 'Individual user - mine and redeem PRC coins'}
-              {formData.role === 'master_stockist' && 'Master Stockist - manage regions and sub-stockists'}
-              {formData.role === 'sub_stockist' && 'Sub Stockist - manage outlets in your area'}
-              {formData.role === 'outlet' && 'Outlet - verify orders and deliver products'}
-            </p>
-          </div>
-
           {/* Email */}
           <div>
             <Label htmlFor="email">Email Address</Label>
