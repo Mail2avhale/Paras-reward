@@ -82,6 +82,9 @@ const MasterStockistDashboard = lazy(() => import("@/pages/MasterStockistDashboa
 const SubStockistDashboard = lazy(() => import("@/pages/SubStockistDashboard"));
 const OutletPanel = lazy(() => import("@/pages/OutletPanel"));
 const StockRequestSystem = lazy(() => import("@/pages/StockRequestSystem"));
+const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
+const StockistManagementAdmin = lazy(() => import("@/pages/StockistManagementAdmin"));
+const AdvancedOrderManagement = lazy(() => import("@/pages/AdvancedOrderManagement"));
 const Setup = lazy(() => import("@/pages/Setup"));
 const AboutUs = lazy(() => import("@/pages/AboutUs"));
 const ContactUs = lazy(() => import("@/pages/ContactUs"));
