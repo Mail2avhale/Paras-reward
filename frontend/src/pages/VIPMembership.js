@@ -164,7 +164,9 @@ const VIPMembership = ({ user, onLogout }) => {
               </h3>
               <p className={`${isVIP ? 'text-white/90' : 'text-gray-600'}`}>
                 {isVIP 
-                  ? `Valid until: ${new Date(user.membership_expiry).toLocaleDateString()}`
+                  ? user.membership_expiry 
+                    ? `Valid until: ${new Date(user.membership_expiry).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                    : 'Lifetime VIP Membership'
                   : 'Upgrade to VIP for unlimited benefits'
                 }
               </p>
