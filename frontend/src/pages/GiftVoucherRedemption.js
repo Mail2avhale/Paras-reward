@@ -274,7 +274,10 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
 
         {/* Request History */}
         <Card className="p-6 mt-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Voucher History</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Voucher History</h2>
+            <p className="text-sm text-gray-500">Processing time: 3-7 days</p>
+          </div>
           
           {requests.length === 0 ? (
             <div className="text-center py-12">
@@ -282,50 +285,82 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
               <p className="text-gray-500">No voucher requests yet</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {requests.map((req) => (
-                <div
-                  key={req.request_id}
-                  className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="text-2xl">
-                        {denominations.find(d => d.value === req.denomination)?.icon || '🎁'}
+            <>
+              <div className="space-y-4">
+                {requests
+                  .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                  .map((req) => (
+                  <div
+                    key={req.request_id}
+                    className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <div className="text-2xl">
+                          {denominations.find(d => d.value === req.denomination)?.icon || '🎁'}
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-900">₹{req.denomination} Voucher</p>
+                          <p className="text-xs text-gray-600">
+                            {new Date(req.created_at).toLocaleString()}
+                          </p>
+                        </div>
                       </div>
+                      {getStatusBadge(req.status)}
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 text-sm mt-3">
                       <div>
-                        <p className="font-bold text-gray-900">₹{req.denomination} Voucher</p>
-                        <p className="text-xs text-gray-600">
-                          {new Date(req.created_at).toLocaleString()}
-                        </p>
+                        <p className="text-gray-600">PRC Deducted</p>
+                        <p className="font-semibold text-gray-900">{req.total_prc_deducted.toFixed(2)} PRC</p>
                       </div>
+                      {req.voucher_code && (
+                        <div>
+                          <p className="text-gray-600">Voucher Code</p>
+                          <p className="font-mono font-bold text-green-700 bg-green-50 px-2 py-1 rounded">
+                            {req.voucher_code}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                    {getStatusBadge(req.status)}
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 text-sm mt-3">
-                    <div>
-                      <p className="text-gray-600">PRC Deducted</p>
-                      <p className="font-semibold text-gray-900">{req.total_prc_deducted.toFixed(2)} PRC</p>
-                    </div>
-                    {req.voucher_code && (
-                      <div>
-                        <p className="text-gray-600">Voucher Code</p>
-                        <p className="font-mono font-bold text-green-700 bg-green-50 px-2 py-1 rounded">
-                          {req.voucher_code}
-                        </p>
+                    
+                    {req.admin_notes && (
+                      <div className="mt-3 p-2 bg-yellow-50 rounded text-xs text-gray-700">
+                        <strong>Note:</strong> {req.admin_notes}
                       </div>
                     )}
                   </div>
-                  
-                  {req.admin_notes && (
-                    <div className="mt-3 p-2 bg-yellow-50 rounded text-xs text-gray-700">
-                      <strong>Note:</strong> {req.admin_notes}
-                    </div>
-                  )}
+                ))}
+              </div>
+              
+              {/* Pagination */}
+              {requests.length > itemsPerPage && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                  <p className="text-sm text-gray-600">
+                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, requests.length)} of {requests.length} records
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    <span className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium">
+                      {currentPage} / {Math.ceil(requests.length / itemsPerPage)}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(Math.ceil(requests.length / itemsPerPage), p + 1))}
+                      disabled={currentPage >= Math.ceil(requests.length / itemsPerPage)}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </Card>
       </div>
