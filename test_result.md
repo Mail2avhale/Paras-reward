@@ -1122,7 +1122,12 @@ metadata:
   test_sequence: 1
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "P1.4 - Pagination for Bill/Voucher History (10 records/page)"
+    - "P1.8 - VIP Transactions in Profile"
+    - "P1.9 - Admin Policy Editor"
+    - "P1.10 - Notification System"
+    - "P1.1 - Professional Design Consistency"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
