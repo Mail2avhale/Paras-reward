@@ -272,8 +272,7 @@ const WalletNew = ({ user, onLogout }) => {
   const isStockistOrOutlet = ['master_stockist', 'sub_stockist', 'outlet'].includes(user?.role);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      <Navbar user={user} onLogout={onLogout} />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 pt-20 pb-24">
       
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Elegant Gradient Header */}
