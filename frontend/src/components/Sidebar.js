@@ -122,41 +122,6 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
               <X className="h-6 w-6 text-white" />
             </button>
           </div>
-
-          {/* User Info Card */}
-          {user && (
-            <div className="mt-5 p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/10">
-              <div className="flex items-center space-x-3">
-                <div className="h-14 w-14 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg ring-2 ring-white/30">
-                  <span className="text-white font-bold text-xl">
-                    {user.name?.charAt(0)?.toUpperCase() || 'U'}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-white text-base truncate">{user.name || 'User'}</p>
-                  <p className="text-sm text-white/60 truncate">{user.email}</p>
-                </div>
-              </div>
-              <div className="mt-4 flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="h-8 w-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-md">
-                    <span className="text-white text-sm font-bold">₹</span>
-                  </div>
-                  <div>
-                    <span className="text-white font-bold text-lg">
-                      {user.prc_balance?.toLocaleString() || '0'}
-                    </span>
-                    <span className="text-white/70 text-sm ml-1">PRC</span>
-                  </div>
-                </div>
-                {user.vip_level && (
-                  <span className="px-3 py-1.5 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold rounded-full shadow-md">
-                    VIP {user.vip_level}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Menu Items */}
