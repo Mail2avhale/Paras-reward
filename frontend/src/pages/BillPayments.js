@@ -486,7 +486,10 @@ const BillPayments = ({ user, onLogout }) => {
 
         {/* Request History */}
         <Card className="p-6 mt-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Request History</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Request History</h2>
+            <p className="text-sm text-gray-500">Processing time: 3-7 days</p>
+          </div>
           
           {requests.length === 0 ? (
             <div className="text-center py-12">
@@ -494,32 +497,66 @@ const BillPayments = ({ user, onLogout }) => {
               <p className="text-gray-500">No requests yet</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Type</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Amount</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">PRC Deducted</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Status</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {requests.map((req) => (
-                    <tr key={req.request_id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4 text-sm">{getTypeLabel(req.request_type)}</td>
-                      <td className="py-3 px-4 text-sm font-medium">₹{req.amount_inr}</td>
-                      <td className="py-3 px-4 text-sm">{req.total_prc_deducted.toFixed(2)} PRC</td>
-                      <td className="py-3 px-4">{getStatusBadge(req.status)}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600">
-                        {new Date(req.created_at).toLocaleDateString()}
-                      </td>
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Type</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Amount</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">PRC Deducted</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Status</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Date</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {requests
+                      .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                      .map((req) => (
+                      <tr key={req.request_id} className="border-b hover:bg-gray-50">
+                        <td className="py-3 px-4 text-sm">{getTypeLabel(req.request_type)}</td>
+                        <td className="py-3 px-4 text-sm font-medium">₹{req.amount_inr}</td>
+                        <td className="py-3 px-4 text-sm">{req.total_prc_deducted.toFixed(2)} PRC</td>
+                        <td className="py-3 px-4">{getStatusBadge(req.status)}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">
+                          {new Date(req.created_at).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Pagination */}
+              {requests.length > itemsPerPage && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <p className="text-sm text-gray-600">
+                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, requests.length)} of {requests.length} records
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium">
+                      {currentPage} / {Math.ceil(requests.length / itemsPerPage)}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(Math.ceil(requests.length / itemsPerPage), p + 1))}
+                      disabled={currentPage >= Math.ceil(requests.length / itemsPerPage)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </Card>
       </div>
