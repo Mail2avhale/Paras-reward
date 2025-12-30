@@ -158,16 +158,16 @@ function AppContent({ user, handleLogin, handleLogout }) {
             {/* Legacy route redirect - keeping for backward compatibility */}
             <Route path="/profile-advanced" element={<Navigate to="/profile" replace />} />
             <Route path="/stock-requests" element={user && ["outlet", "sub_stockist", "master_stockist"].includes(user.role) ? <StockRequestSystem user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/admin" element={user && user.role === "admin" ? <AdminDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/analytics" element={user && user.role === "admin" ? <AdminAnalytics user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/video-ads" element={user && user.role === "admin" ? <AdminVideoAds user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/settings" element={user && user.role === "admin" ? <AdminSettings user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/vip-plans" element={user && user.role === "admin" ? <AdminVIPPlans user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/burn-management" element={user?.role === 'admin' ? <AdminBurnDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/bill-payments" element={user?.role === 'admin' ? <AdminBillPayments user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/gift-vouchers" element={user?.role === 'admin' ? <AdminGiftVouchers user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/service-charges" element={user?.role === 'admin' ? <AdminServiceCharges user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/policies" element={user?.role === 'admin' ? <AdminPolicies user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/admin" element={user && user.role === "admin" ? <AdminLayout user={user} onLogout={handleLogout}><AdminDashboard user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/analytics" element={user && user.role === "admin" ? <AdminLayout user={user} onLogout={handleLogout}><AdminAnalytics user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/video-ads" element={user && user.role === "admin" ? <AdminLayout user={user} onLogout={handleLogout}><AdminVideoAds user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/settings" element={user && user.role === "admin" ? <AdminLayout user={user} onLogout={handleLogout}><AdminSettings user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/vip-plans" element={user && user.role === "admin" ? <AdminLayout user={user} onLogout={handleLogout}><AdminVIPPlans user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/burn-management" element={user?.role === 'admin' ? <AdminLayout user={user} onLogout={handleLogout}><AdminBurnDashboard user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/bill-payments" element={user?.role === 'admin' ? <AdminLayout user={user} onLogout={handleLogout}><AdminBillPayments user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/gift-vouchers" element={user?.role === 'admin' ? <AdminLayout user={user} onLogout={handleLogout}><AdminGiftVouchers user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/service-charges" element={user?.role === 'admin' ? <AdminLayout user={user} onLogout={handleLogout}><AdminServiceCharges user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/policies" element={user?.role === 'admin' ? <AdminLayout user={user} onLogout={handleLogout}><AdminPolicies user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/bill-payments" element={user ? <BillPayments user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/gift-vouchers" element={user ? <GiftVoucherRedemption user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/manager" element={user && user.role === "manager" ? <ManagerDashboardNew user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
