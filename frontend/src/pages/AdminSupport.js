@@ -28,7 +28,7 @@ const AdminSupport = ({ user }) => {
   const fetchTickets = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/support/tickets/all`);
+      const response = await axios.get(`${API}/admin/support/tickets`);
       setTickets(response.data || []);
     } catch (error) {
       console.error('Error fetching tickets:', error);
