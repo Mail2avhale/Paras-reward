@@ -50,15 +50,20 @@ const TopBar = ({ user }) => {
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <div 
-          className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
+          className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity"
           onClick={() => navigate('/dashboard')}
         >
-          <div className="h-9 w-9 bg-gradient-to-br from-purple-600 to-blue-500 rounded-xl flex items-center justify-center shadow-lg">
-            <span className="text-white font-bold text-lg">P</span>
+          <div className="h-10 w-10 bg-gradient-to-br from-purple-600 to-blue-500 rounded-xl flex items-center justify-center shadow-lg">
+            <span className="text-white font-bold text-xl">PR</span>
           </div>
-          <span className="font-bold text-xl text-gray-900 hidden sm:block">
-            PARAS REWARD
-          </span>
+          <div className="flex flex-col">
+            <span className="font-bold text-lg text-gray-900 leading-tight">
+              PARAS REWARD
+            </span>
+            <span className="text-xs text-purple-600 leading-tight">
+              India's No.1 Mining Platform
+            </span>
+          </div>
         </div>
 
         {/* Search Bar - Desktop */}
@@ -114,20 +119,12 @@ const TopBar = ({ user }) => {
             )}
           </button>
 
-          {/* Profile Avatar - Mobile */}
+          {/* Menu Icon */}
           <button
-            onClick={() => navigate('/profile')}
-            className="md:hidden"
+            onClick={() => navigate('/settings')}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-600 to-blue-500 flex items-center justify-center overflow-hidden border-2 border-white shadow-md">
-              {user?.profile_picture ? (
-                <img src={user.profile_picture} alt="Profile" className="h-full w-full object-cover" />
-              ) : (
-                <span className="text-white text-sm font-bold">
-                  {user?.first_name?.charAt(0) || 'U'}
-                </span>
-              )}
-            </div>
+            <Menu className="h-5 w-5 text-gray-700" />
           </button>
         </div>
       </div>
