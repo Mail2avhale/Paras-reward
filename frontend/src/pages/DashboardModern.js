@@ -152,64 +152,64 @@ const DashboardModern = ({ user, onLogout }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 pb-24">
-      {/* Header Section */}
-      <div className="bg-gradient-to-r from-purple-600 via-blue-500 to-indigo-600 text-white pt-8 pb-32 px-4">
+      {/* Header Section - Matching App Theme */}
+      <div 
+        className="text-white pt-20 pb-36 px-4"
+        style={{
+          background: 'linear-gradient(135deg, #7c3aed 0%, #6366f1 50%, #3b82f6 100%)'
+        }}
+      >
         <div className="max-w-md mx-auto">
-          {/* Welcome Message */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold">Welcome Back!</h1>
-              <p className="text-purple-100">{user?.name || 'User'}</p>
-            </div>
+          {/* User Name - Prominent Display */}
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-xl font-semibold text-white tracking-wide">
+              {user?.name || 'User'}
+            </h1>
             <div className="flex items-center gap-2">
               {stats.membershipType === 'vip' && (
-                <div className="bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">
+                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-1 shadow-lg">
                   <Zap className="w-4 h-4" />
                   VIP
                 </div>
               )}
-              <button
-                onClick={() => {
-                  if (window.confirm('Are you sure you want to logout?')) {
-                    onLogout();
-                  }
-                }}
-                className="flex items-center gap-1 px-3 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-all backdrop-blur-sm border border-white border-opacity-30"
-                title="Logout"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                <span className="text-xs font-medium">Logout</span>
-              </button>
             </div>
           </div>
 
-          {/* PRC Balance - Large Circle */}
-          <div className="flex flex-col items-center justify-center mb-6">
+          {/* PRC Balance - Clean Circular Design */}
+          <div className="flex flex-col items-center justify-center">
             <div className="relative">
+              {/* Outer Glow Ring */}
+              <div className="absolute inset-0 rounded-full bg-blue-400/20 blur-xl scale-110"></div>
+              
               {/* Outer Ring */}
-              <div className="w-48 h-48 rounded-full bg-white bg-opacity-20 backdrop-blur-lg flex items-center justify-center shadow-2xl border-4 border-white border-opacity-30">
-                {/* Inner Circle */}
-                <div className="w-40 h-40 rounded-full bg-gradient-to-br from-white to-purple-100 flex flex-col items-center justify-center shadow-xl">
-                  <Coins className="w-10 h-10 text-purple-600 mb-2 animate-pulse" />
-                  <div className="text-4xl font-bold text-purple-900">
-                    {stats.prcBalance.toLocaleString()}
+              <div className="relative w-52 h-52 rounded-full bg-gradient-to-br from-blue-400/30 to-purple-400/30 p-1.5 shadow-2xl">
+                {/* Middle Ring */}
+                <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-300/20 to-purple-300/20 p-1">
+                  {/* Inner White Circle */}
+                  <div className="w-full h-full rounded-full bg-white flex flex-col items-center justify-center shadow-inner">
+                    {/* PRC Icon */}
+                    <div className="mb-2">
+                      <Coins className="w-8 h-8 text-purple-500" />
+                    </div>
+                    {/* Balance Amount */}
+                    <div className="text-4xl font-bold text-purple-900 tracking-tight">
+                      {stats.prcBalance.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 3 })}
+                    </div>
+                    {/* Label */}
+                    <div className="text-sm font-semibold text-purple-500 mt-1">
+                      PRC Balance
+                    </div>
                   </div>
-                  <div className="text-sm text-purple-600 font-semibold">PRC Balance</div>
                 </div>
               </div>
-              
-              {/* Pulse Animation */}
-              <div className="absolute inset-0 rounded-full bg-white opacity-20 animate-ping"></div>
             </div>
             
-            {/* Rupee Value */}
-            <div className="mt-4 bg-white bg-opacity-20 backdrop-blur-md px-6 py-3 rounded-full">
-              <p className="text-white text-lg font-semibold">
+            {/* Rupee Conversion Value */}
+            <div className="mt-6 bg-white/15 backdrop-blur-md px-8 py-3 rounded-2xl border border-white/20">
+              <p className="text-white text-xl font-bold text-center">
                 ≈ ₹{(stats.prcBalance / 10).toFixed(2)}
               </p>
-              <p className="text-white text-xs opacity-80 mt-1">
+              <p className="text-white/70 text-xs text-center mt-1">
                 (10 PRC = ₹1)
               </p>
             </div>
