@@ -1649,21 +1649,13 @@ const AdminDashboard = ({ user, onLogout }) => {
                 </Card>
               </div>
             </div>
-          )}
-
-          {/* Users Tab - Combined Basic & Advanced */}
-          {activeTab === 'users' && (
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">User Management</h2>
-              
-              
-              {/* Advanced Management - All user management functions available here */}
-              <AdvancedUserManagement />
-            </div>
-          )}
-
-          {/* Payments Tab */}
-          {activeTab === 'payments' && (
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  export default AdminDashboard;
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">VIP Payment Approvals</h2>
               {vipPayments.filter(p => p.status === 'pending').length === 0 ? (
