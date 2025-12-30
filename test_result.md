@@ -2015,6 +2015,18 @@ frontend:
         agent: "main"
         comment: "Created NotificationCenter component with dropdown panel showing notifications. Integrated with TopBar bell icon click"
 
+  - task: "Enhanced VIP Membership Transactions Section"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/ProfileAdvanced.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Enhanced VIP Membership Transactions section with comprehensive transaction details. New fields added: Plan Name and submission date, Status badge (APPROVED/PENDING/REJECTED), Amount Paid and Duration (30/90/180/365 days), Payment Method (UPI/Bank Transfer), UTR/Reference Number, Validity Period (Start date to End date) for approved payments, Next Renewal Date for approved payments, Auto Renew Status (Enabled/Disabled), Admin Notes especially for rejected payments, View Invoice button for approved payments. Enhanced UI with better styling and comprehensive transaction information display."
+
 agent_communication:
   - agent: "main"
     message: "Implemented P1.4, P1.8, P1.9, P1.10. Notification center shows mining rewards. Admin policy editor has 3 tabs. VIP transactions section added to profile. Pagination added to bill/voucher history. Processing time message updated to 3-7 days."
