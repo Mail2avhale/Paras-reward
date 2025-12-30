@@ -125,7 +125,7 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
         </div>
 
         {/* Menu Items */}
-        <div className="flex-1 overflow-y-auto py-4" style={{ maxHeight: 'calc(100vh - 320px)' }}>
+        <div className="flex-1 overflow-y-auto py-4" style={{ maxHeight: 'calc(100vh - 180px)' }}>
           <div className="px-4 space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
