@@ -14842,6 +14842,82 @@ async def get_user_vip_transactions(uid: str, page: int = 1, limit: int = 10):
         print(f"Error fetching VIP transactions: {e}")
         return {"transactions": [], "pagination": {}}
 
+@api_router.get("/user/vip-invoice/{payment_id}")
+async def get_vip_invoice(payment_id: str):
+    """Get invoice details for a VIP payment"""
+    try:
+        payment = await db.vip_payments.find_one({"payment_id": payment_id}, {"_id": 0})
+        if not payment:
+            raise HTTPException(status_code=404, detail="Payment not found")
+        
+        # Get user details
+        user = await db.users.find_one({"uid": payment["user_id"]}, {"_id": 0, "name": 1, "email": 1, "mobile": 1, "address_line1": 1, "city": 1, "state": 1, "pincode": 1})
+        
+        # Plan names
+        plan_names = {
+            "monthly": "Monthly VIP Plan",
+            "quarterly": "Quarterly VIP Plan",
+            "half_yearly": "Half-Yearly VIP Plan",
+            "yearly": "Yearly VIP Plan"
+        }
+        
+        invoice_data = {
+            "invoice_number": payment.get("invoice_number", f"INV-{payment_id[:8].upper()}"),
+            "payment_id": payment_id,
+            "date": payment.get("approved_at") or payment.get("submitted_at"),
+            "status": payment.get("status"),
+            
+            # Customer details
+            "customer_name": user.get("name", "N/A") if user else "N/A",
+            "customer_email": user.get("email", "N/A") if user else "N/A",
+            "customer_mobile": user.get("mobile", "N/A") if user else "N/A",
+            "customer_address": f"{user.get('address_line1', '')}, {user.get('city', '')}, {user.get('state', '')} - {user.get('pincode', '')}" if user else "N/A",
+            
+            # Plan details
+            "plan_type": payment.get("plan_type", "monthly"),
+            "plan_name": plan_names.get(payment.get("plan_type", "monthly"), "VIP Membership"),
+            "duration_days": payment.get("duration_days", 30),
+            
+            # Payment details
+            "amount": payment.get("amount", 0),
+            "payment_method": payment.get("payment_method", "UPI"),
+            "utr_number": payment.get("utr_number", "N/A"),
+            
+            # Validity
+            "validity_start": payment.get("validity_start"),
+            "validity_end": payment.get("validity_end"),
+            
+            # Company details
+            "company_name": "PARAS REWARD",
+            "company_address": "India",
+            "company_email": "support@parasreward.com",
+            "company_gstin": "N/A"
+        }
+        
+        return invoice_data
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error generating invoice: {e}")
+        raise HTTPException(status_code=500, detail="Error generating invoice")
+
+@api_router.post("/user/vip-auto-renew/{uid}")
+async def toggle_auto_renew(uid: str, request: Request):
+    """Toggle auto-renew setting for VIP membership"""
+    try:
+        data = await request.json()
+        auto_renew = data.get("auto_renew", False)
+        
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"auto_renew": auto_renew, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        return {"message": f"Auto-renew {'enabled' if auto_renew else 'disabled'}", "auto_renew": auto_renew}
+    except Exception as e:
+        print(f"Error toggling auto-renew: {e}")
+        raise HTTPException(status_code=500, detail="Error updating auto-renew setting")
+
 
 # Include all API routes (must be after all route definitions)
 app.include_router(api_router)
