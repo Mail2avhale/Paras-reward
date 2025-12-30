@@ -67,7 +67,8 @@ const DashboardModern = ({ user, onLogout }) => {
       
       // Fetch user data
       const userResponse = await axios.get(`${API}/api/users/${user.uid}`);
-      const userData = userResponse.data;
+      const fetchedUserData = userResponse.data;
+      setUserData(fetchedUserData);
       
       // Fetch redeemed PRC stats
       let redeemedStats = { total_prc_used: 0, total_rupee_value: 0 };
@@ -79,15 +80,15 @@ const DashboardModern = ({ user, onLogout }) => {
       }
       
       setStats({
-        prcBalance: userData.prc_balance || 0,
-        totalMined: userData.total_mined || 0,
-        referralCount: userData.referral_count || 0,
-        membershipType: userData.membership_type || 'free',
+        prcBalance: fetchedUserData.prc_balance || 0,
+        totalMined: fetchedUserData.total_mined || 0,
+        referralCount: fetchedUserData.referral_count || 0,
+        membershipType: fetchedUserData.membership_type || 'free',
         totalPrcUsed: redeemedStats.total_prc_used || 0,
         totalPrcUsedValue: redeemedStats.total_rupee_value || 0
       });
       
-      setMiningHistory(userData.mining_history || []);
+      setMiningHistory(fetchedUserData.mining_history || []);
 
       // Fetch recent transactions with pagination (5 per page)
       try {
