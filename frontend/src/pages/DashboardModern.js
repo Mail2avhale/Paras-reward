@@ -254,7 +254,10 @@ const DashboardModern = ({ user, onLogout }) => {
       {/* Main Content */}
       <div className="max-w-md mx-auto px-4 -mt-20">
         {/* Profile Completion Banner */}
-        <ProfileCompletionBanner user={userData} />
+        <ProfileCompletionBanner 
+          user={userData} 
+          onQuickKYC={() => setShowKYCModal(true)}
+        />
 
         {/* PRC Expiry Warning (Free Users Only) */}
         <PRCExpiryTimer 
