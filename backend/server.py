@@ -9574,6 +9574,8 @@ class UserUpdateRequest(BaseModel):
     mobile: Optional[str] = None
     role: Optional[str] = None
     membership_type: Optional[str] = None
+    membership_expiry: Optional[str] = None
+    vip_plan_type: Optional[str] = None
     kyc_status: Optional[str] = None
     is_active: Optional[bool] = None
 
