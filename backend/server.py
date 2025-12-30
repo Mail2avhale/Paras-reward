@@ -5029,8 +5029,8 @@ async def handle_payment_action(payment_id: str, request: Request):
     admin_notes = data.get("admin_notes", "")
     
     if action == "approve":
-        # Get plan duration from payment or default to plan type
-        plan_type = payment.get("plan_type", "yearly")
+        # Get plan type from payment - IMPORTANT: default to "monthly" NOT "yearly"
+        plan_type = payment.get("plan_type", "monthly")
         
         # Duration mapping based on plan type
         duration_mapping = {
@@ -5040,8 +5040,17 @@ async def handle_payment_action(payment_id: str, request: Request):
             "yearly": 365
         }
         
-        # Get duration days from payment or mapping
-        duration_days = payment.get("duration_days", duration_mapping.get(plan_type, 365))
+        # Get duration days from payment record first, then from mapping
+        # CRITICAL: Always use the correct duration based on what user paid for
+        duration_days = payment.get("duration_days")
+        if duration_days is None:
+            duration_days = duration_mapping.get(plan_type, 30)  # Default to 30 days (monthly)
+        
+        # Validate duration_days is a valid number
+        try:
+            duration_days = int(duration_days)
+        except (TypeError, ValueError):
+            duration_days = duration_mapping.get(plan_type, 30)
         
         # Calculate validity dates
         validity_start = now
