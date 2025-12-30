@@ -27,7 +27,7 @@ const AdminOrders = ({ user }) => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/orders/all`);
+      const response = await axios.get(`${API}/admin/orders/all`);
       setOrders(response.data || []);
     } catch (error) {
       console.error('Error fetching orders:', error);
