@@ -8,6 +8,9 @@ import {
   Home, Store, UserPlus, Gamepad2, CreditCard
 } from 'lucide-react';
 import PRCExpiryTimer from '@/components/PRCExpiryTimer';
+import ProfileCompletionBanner from '@/components/ProfileCompletionBanner';
+import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
+import QuickKYCModal from '@/components/QuickKYCModal';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
