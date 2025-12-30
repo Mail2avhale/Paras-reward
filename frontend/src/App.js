@@ -7,7 +7,9 @@ import { toast } from "sonner";
 import { NotificationProvider, useNotification } from "@/context/NotificationContext";
 import ToastContainer from "@/components/ToastContainer";
 import OfflineIndicator from "@/components/OfflineIndicator";
+import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
+import FloatingActionButton from "@/components/FloatingActionButton";
 
 // Loading component
 const LoadingFallback = () => (
@@ -177,8 +179,14 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/outlet" element={user && user.role === "outlet" ? <OutletPanel user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
           </Routes>
         </Suspense>
-        {/* Show Bottom Navigation for logged-in users */}
-        {user && <BottomNav />}
+        {/* Professional Navigation System */}
+        {user && (
+          <>
+            <TopBar user={user} />
+            <BottomNav />
+            <FloatingActionButton />
+          </>
+        )}
       </BrowserRouter>
       <Toaster position="top-center" richColors />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
