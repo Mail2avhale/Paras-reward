@@ -1,88 +1,62 @@
-<analysis>**original_problem_statement:** The user initially requested a major application refactor, including feature removal, UI overhaul, and business logic updates. Throughout the session, the scope expanded significantly to include:
-- A new bill payment and gift voucher redemption system.
-- A refactor of the delivery charge and commission logic.
-- Numerous bug fixes related to PRC claims, UI crashes, and broken functionality.
-- A role-based dashboard landing fix for different user types.
-- Automation of the PRC Burn mechanism.
-- Removal of the Quick Switch admin menu and Google AdSense code.
-- Creation of an APK build guide using Capacitor.
-- Implementation of VIP-only restrictions for key features.
-- Resolution of multiple critical deployment-blocking errors related to database indexes, health checks, and API routing.
-- A redesign of the Home page to remove a cashback card and add new VIP membership pricing cards.
-- A fix for stale PRC balance display on feature pages.
-- A fix to convert profile location dropdowns to text inputs.
-- A fix for a non-functional logout button.
+<analysis>**original_problem_statement:** The user's initial goals included fixing critical bugs (referral bonus, tap game), redesigning navigation, adding KYC functionality, and implementing numerous new features. In this session, the user's requests evolved to focus heavily on UI/UX refinement. This included redesigning the new sidebar and dashboard to match a specific style, simplifying the user registration flow, removing redundant fields from the profile page, and fixing a major bug where profile data was not being saved. The user also requested a better system for guiding users to complete their profile/KYC and, most recently, a way to create distinct dashboard experiences for different user roles (Admin, Manager, etc.).
 
 **User's preferred language**: English
 
 **what currently exists?**
-The application is feature-rich and has undergone extensive bug fixing and enhancement. Major systems like multi-plan VIP, bill payments, and gift vouchers are implemented. The critical PRC delivery charge distribution bug has been resolved. The PRC burn mechanism is now automated via a scheduler. Multiple user-reported UI/UX issues, including role-based dashboard landing, broken logout buttons, and crashes, have been fixed. All Google AdSense code has been removed, and the project has been configured with Capacitor for future APK builds. Two separate sets of critical deployment-blocking bugs have been resolved, making the application stable for production. The home page has been redesigned with updated VIP plan cards.
+The application is a rewards platform with a newly refined global navigation system consisting of a , , and a feature-rich, theme-matching . The dashboard and registration process have been significantly improved based on user feedback. A comprehensive system to guide users through profile and KYC completion (including a banner, popup, and a Quick KYC modal) has been implemented. Critical bugs related to profile data saving and duplicate navigation bars have been resolved. The agent was in the middle of creating separate, dedicated UI layouts for administrative roles (Admin, Manager, Stockist) to distinguish their experience from that of a regular user.
 
 **Last working item**:
-- **Last item agent was working**: The agent had just redesigned the Home page to include new VIP membership cards. However, the user reported via a screenshot that one of the new cards was still showing an old price (1000) instead of the correct, updated pricing. The agent was about to investigate this UI bug.
+- **Last item agent was working**: Implementing a role-based layout system. The user expressed that accessing functions for different roles (admin, manager, etc.) was complex. The agent started implementing Option C, which involves creating dedicated layouts (, , ) to provide a completely separate UI for each administrative role, distinct from the standard user app experience.
 - **Status**: IN PROGRESS
 - **Agent Testing Done**: N
 - **Which testing method agent to use?**: screenshot tool
-- **User Testing Done**: Y (User found the bug)
+- **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1**: Incorrect VIP membership price on the redesigned Home page. (P0 - HIGHEST)
-
-**Issues Detail**:
--   **Issue 1: Incorrect VIP Membership Price on Home Page Card**
-    -   **Attempted fixes**: The agent redesigned the home page () to replace a text-based VIP promotion with a new section containing styled cards for each VIP plan. Despite this, the user's screenshot shows an old price is still being displayed.
-    -   **Next debug checklist**:
-        -   Analyze the user-provided screenshot ().
-        -   Review the code for the new VIP card section in .
-        -   Check for any hardcoded old price values (e.g., 1000) that might have been missed during the redesign.
-        -   Verify that the text and values being displayed are dynamic or correctly reflect the new pricing structure.
-        -   Take a new screenshot after fixing to confirm the UI is correct.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a user-facing issue that displays incorrect pricing information on the main landing page, which can confuse potential customers and damage trust. Fixing it will ensure accurate information is presented.
-    -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: Y (The home page pricing has been addressed before).
-    -   **Should Test frontend/backend/both after fix?**: frontend
-    -   **Blocked on other issue**: None
+- There are no outstanding bug reports. The current focus is on new feature implementation.
 
 **In progress Task List**:
-- None.
+- **Task 1: Complete Role-Based UI Implementation (P0 - HIGHEST)**
+    - **Where to resume**: The agent has created the new layout components and modified  to prevent the standard user  and  from rendering for admin roles. The next crucial step is to wrap the admin, manager, and stockist routes within their respective new layout components inside .
+    - **What will be achieved with this?**: This will provide a clean, dedicated, and uncluttered interface for each administrative role, solving the user's problem of conflicting menus and complex access.
+    - **Status**: IN PROGRESS
+    - **Should Test frontend/backend/both after fix?**: frontend
+    - **Blocked on something**: None
 
 **Upcoming and Future Tasks**
-- **Upcoming Tasks**:
-    - **P1**: Implement frontend UI for a PRC Expiry Countdown timer on  (The component exists but needs final verification of its data source).
-    - **P2**: Implement user notifications for PRC that is about to expire.
-- **Future Tasks**:
-    - Implement Transaction Receipts for all financial activities.
-    - Implement order update/delete functionality for regular users.
-    - Build detailed advanced admin sections for Notifications, Commissions, and Rewards.
-    - Address the Biometric login error in .
-    - Implement a security fix for deleted users being able to log in.
-    - Implement Push Notifications.
-    - Complete Google Analytics integration.
-    - Expand translations to all remaining pages.
+- **Upcoming Tasks:**
+    - **P1.1 (UI/UX)**: Apply the new professional design (gradient theme, modern components) consistently across **all** pages that haven't been updated yet.
+    - **P1.4 (Features)**: Add pagination (10 records per page) to the **Voucher history** page ().
+    - **P1.7 (Ads)**: Integrate AdMob + Unity Ads. This is a major task that will require using the  subagent.
+    - **P1.10 (Features)**: Further enhance the new notification system to be more robust and cover all critical user actions.
+- **Future Tasks:**
+    - Display a graphical representation of the monetary value for Total PRC Used.
+    - Update the processing time message for requests to minimum 3 to 7 days.
+    - Implement a Save PRC feature.
+    - Add an admin backup system.
+    - Build a comprehensive auditing service and activity log.
+    - Develop a liquidity management and P&L system.
+    - Implement a hierarchical reporting structure.
+    - Add Anti-hack security measures.
 
 **Completed work in this session**
-- **Critical Bug Fixes**:
-  - **P0 Delivery Charge Distribution**: Fixed the core business logic where PRC was not being credited to stockists. Resolved a double-credit race condition and corrected transaction logging. (RESOLVED)
-  - **Deployment Blockers (Round 1)**: Fixed an  error by implementing a sparse index for the  field and added a  endpoint to satisfy Kubernetes health checks. (RESOLVED)
-  - **Deployment Blockers (Round 2)**: Fixed  errors for all notification endpoints by moving the  call to the end of , ensuring all routes are registered before the router is included. (RESOLVED)
-- **Feature Implementation & Enhancement**:
-  - **PRC Burn Automation**: Installed  and configured backend jobs to run automatically on a schedule. (DONE)
-  - **VIP Access Control**: Restricted Shopping, Bill Pay, and Gift Voucher features to VIP members only, on both backend and frontend. (DONE)
-- **UI/UX & User-Reported Bug Fixes**:
-  - **Role-Based Dashboard Landing**: Fixed the login redirect logic in  to route users to their correct dashboards (e.g.,  for admins). (DONE)
-  - **Logout Button**: Fixed a race condition that prevented the logout button from working correctly. (DONE)
-  - **Admin Burn Dashboard Crash**: Fixed a crash by adding a missing  icon import. (DONE)
-  - **PRC Balance Display**: Fixed an issue where Available PRC Balance showed 0 by fetching fresh user data on the Bill Pay and Gift Voucher pages. (DONE)
-  - **Profile Contact Fields**: Changed District, Tahsil, and PIN fields from auto-filled dropdowns to manual text inputs in . (DONE)
-- **Code Refactoring & Cleanup**:
-  - **Quick Switch Menu Removal**: Removed the Quick Switch UI from the  page. (DONE)
-  - **Google AdSense Removal**: Completely removed all AdSense components, imports, and code from the entire frontend. (DONE)
-  - **Home Page Redesign**: Removed an old cashback card and redesigned the VIP section with pricing cards. (IN PROGRESS - Has a pending bug)
-- **Documentation**:
-  - **APK Build Guide**: Set up Capacitor for Android and created  with instructions. (DONE)
+- **Navigation & UI Redesign**:
+    - Fixed the  by adding a logo and a menu icon that opens a new, stylish .
+    - Redesigned the  and the main  PRC balance section with a purple-to-blue gradient theme to match the user's branding.
+- **Feature Implementation**:
+    - **Profile/KYC Completion Flow**: Implemented a full suite of features to guide users: a login popup, a dashboard banner with a progress bar, and a multi-step Quick KYC modal.
+    - **Dashboard Stats**: Added a PRC Used card to the dashboard, fetching data from an existing backend endpoint.
+    - **Admin Policy Editor**: Created a new page () for admins to edit T&C, Privacy, and Refund policies via a markdown editor, including new backend endpoints.
+    - **VIP Transactions**: Added a new section to the user profile page to display VIP membership purchase history.
+- **Bug Fixes & Refinements**:
+    - **Profile Data Not Saving**: Fixed a critical backend bug by adding , , , and address fields to the updatable fields list in the profile update API endpoint.
+    - **Duplicate Top Bar**: Removed a redundant, page-specific  component from over a dozen user-facing pages, resolving an issue where two navigation bars would appear on scroll.
+    - **Simplified Registration**: Removed the Register As dropdown from the registration page, defaulting all new sign-ups to the user role.
+    - **Profile Page Cleanup**: Removed the Emergency Contact and Bio/About Me sections from the  page.
 
 **Earlier issues found/mentioned but not fixed**
-- None in this session; the agent was diligent in addressing user-reported issues.
+- The frontend testing agent reported potential  or click interaction issues with the notification dropdown, which the main agent suspected was a tool limitation. This may require manual verification.
+- The agent added pagination code to history pages but had trouble verifying it with screenshots due to page redirects. The functionality on  and  needs confirmation.
 
 **Known issue recurrence from previous fork**
 - None.
@@ -91,68 +65,69 @@ The application is feature-rich and has undergone extensive bug fixing and enhan
 
 
 **Key Technical Concepts**
-- **Backend**: FastAPI, MongoDB, APScheduler for background jobs.
-- **Frontend**: React.js, Tailwind CSS, Capacitor for mobile app wrapping.
-- **Database**: Sparse indexes in MongoDB to handle unique constraints with optional fields.
-- **DevOps**: FastAPI application startup events, Kubernetes health checks ( endpoint).
+- **Frontend**: React (State management with /), role-based rendering, creating reusable layouts, modal/popup implementation, removing redundant components to enforce a single source of truth for navigation.
+- **Backend**: FastAPI (Adding new endpoints, fixing bugs in existing endpoints by correcting data models and logic).
+- **Full-Stack Debugging**: Tracing the profile not saving bug from the frontend UI to the specific missing fields in the backend API logic.
 
 **key DB schema**
-- **users**:  index was changed to  to prevent duplicate key errors on  values.
+- **users**: The profile update fix ensures that fields like , , , , , , , , , and  are now correctly saved to the user's document.
 
 **changes in tech stack**
-- **APScheduler**: Added to the backend for running scheduled tasks (PRC Burn).
-- **Capacitor**: Added to the frontend to enable building the web app into a native mobile APK.
+- None.
 
 **All files of reference**
-- : The monolithic backend file containing all fixes and new scheduler logic.
-- : The file with the redesigned home page and the current pending bug.
-- : Location of the main user-facing feature toggles.
-- : The main user profile page.
-- : Contains the core routing and redirect logic.
-- : The new guide for the user to build the APK.
+- : Core file for implementing the new role-based layouts.
+- : Directory containing the new , , and .
+- : Main user dashboard, heavily modified with new UI and features.
+- : Main user profile page, where the data-saving bug was fixed.
+- : Backend file containing the critical fix for the profile update endpoint.
+- : The simplified user registration page.
 
 **Areas that need refactoring**:
-- The  file remains extremely large and monolithic. A future refactor to split logic into FastAPI s is still highly recommended for maintainability.
+- The agent successfully removed the redundant  from many pages. However, a  should be run to ensure no instances are left in any active, user-facing page. Old, unused dashboard files (, ) could be deleted to reduce clutter.
 
 **key api endpoints**
-- ****: (NEW) A simple endpoint added to satisfy Kubernetes liveness/readiness probes.
-- **** & ****: (FIXED) These endpoints were returning 404s due to a route registration order issue, which has been resolved.
-- ****, ****, ****: (MODIFIED) Backend logic was updated to enforce VIP-only access.
+- : **(FIXED)** Now correctly saves a wide range of profile fields including gender, DOB, alternate mobile, and full address.
+- : **(NEW)** Saves updated policy content from the admin editor.
+- : **(NEW)** Fetches policy content for the admin editor.
 
 **Critical Info for New Agent**
-- **Priority #1 is the Home Page UI Bug**: The immediate task is to fix the incorrect price on the VIP membership card on . The user has provided a screenshot.
-- **Deployment Bugs are Fixed**: The agent has successfully resolved two sets of critical deployment-blocking issues. The application should now be deployable. Do not try to re-fix the  index or the  endpoint; the current solution is robust.
-- **Capacitor is Set Up**: The project is ready for APK generation. The user has been provided with . The agent should not try to re-run the build process unless making further code changes.
+- Your immediate task is to complete the role-based layout implementation in . You need to wrap the existing admin/manager/stockist routes with their new dedicated layout components to finalize the UI separation.
+- The user is highly focused on design and usability. Ensure all UI changes are polished and match the established gradient theme.
+- The critical bug preventing profile data from saving has been **FIXED** in the backend. Do not reinvestigate this.
+- The old, redundant  component has been removed from most pages. The application now uses a global  for navigation. Do not reintroduce the old .
 
-**documents created in this job**
-- 
+**documents and test reports created in this job**
+- None.
 
-**Last 10 User Messages and any pending user messages**
-1. **User**: Reported VIP membership card on home page shows old price 1000 and provided a screenshot. (Status: **Pending - This is the current P0 issue**).
-2. **User**: Asked to update the home page because it showed old membership fees. (Status: **In Progress - The fix was attempted but resulted in the current bug**).
-3. **User**: Reported available PRC balance not showing on Bill and Voucher pages, with screenshots. (Status: **Completed**).
-4. **User**: Asked to call the deployer agent. (Status: **Completed**).
-5. **User**: Requested a redesign of the home page and user dashboard for a better Android app experience. (Status: **In Progress - Home page was redesigned, but has a bug**).
-6. **User**: Corrected the VIP redirect behavior and requested removal of profile auto-fill. (Status: **Completed**).
-7. **User**: Asked to call the deployer agent. (Status: **Completed**).
-8. **User**: Provided deployment logs showing 404 errors for notification endpoints. (Status: **Completed**).
-9. **User**: Provided deployment logs showing a DB index error and a health check failure. (Status: **Completed**).
-10. **User**: Asked to call the deployer agent. (Status: **Completed**).
+**Last 10 User Messages and any pending HUMAN messages**
+1. **User**: Proceed - Gave the go-ahead to implement Option C for role-based dashboards. **(In Progress)**
+2. **User**: I think option C is best What you recommend Pros and cons - Asked for the agent's opinion on handling role-based UIs after the agent presented options.
+3. **User**: Now I am facing one problem...complexity to access other role like admin...what can we do to resolve this - Reported the core issue of mixed-up UIs for different user roles. **(Current Task)**
+4. **User**: When I update gender and additional phone number...not saving - Reported the critical bug with profile data not saving. **(Completed)**
+5. **User**: What process can we do for user to complete profile and kyc easily and quickly remind - Requested features to improve profile/KYC completion rates. **(Completed)**
+6. **User**: You recommended option c - Confirmed their choice for the profile/KYC completion feature.
+7. **User**: On home page Sign up.... remove this and directly ragistration do as a user - Requested to simplify the registration process. **(Completed)**
+8. **User**: Remove 1. Emergency contact card 2. About me / Bio card - Requested cleanup of the profile page. **(Completed)**
+9. **User**: I see duplicate top bar...Please find this and remove the same - Reported the duplicate navigation bar bug. **(Completed)**
+10. **User**: Do P1. 1, 4, 8, 9, 10 - Prioritized a list of 5 tasks from the upcoming features list. **(Partially Completed, rest are upcoming)**
 
 **Project Health Check:**
-- **Broken**:
-    - The VIP membership card on  displays an incorrect, hardcoded price.
+- **Broken**: None. The current work is a feature in progress.
 - **Mocked**: None.
 
 **3rd Party Integrations**
-- None added in this session.
+- **AdMob + Unity Ads**: Requested by the user but not yet implemented. This will require using the  subagent.
 
 **Testing status**
-- **Testing agent used after significant changes**: YES (Used to verify VIP access restrictions).
+- **Testing agent used after significant changes**: YES (after implementing the 5-task batch)
 - **Troubleshoot agent used after agent stuck in loop**: NO
-- **Test files created**: None persisted.
+- **Test files created**: None.
 - **Known regressions**: None.
 
 **Credentials to test flow:**
-- User credentials for a non-VIP user are needed to test feature restrictions.
-- Admin credentials are required to verify the admin dashboard changes.</analysis>
+- User ID  (email ) can be used for testing.
+- A test user  with password  was created during the session.
+
+**What agent forgot to execute**
+- The agent was tasked with adding pagination to both Bill Payments and Voucher history. While the code was added, the agent got stuck in screenshot loops and page redirects, and never fully verified that the pagination UI is correctly rendered and functional on the history tables of those specific pages. This needs re-verification.</analysis>
