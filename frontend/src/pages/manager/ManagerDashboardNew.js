@@ -74,25 +74,52 @@ const ManagerDashboardNew = ({ user, onLogout }) => {
   const recentActivities = dashboardData?.recent_activities || [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar user={user} onLogout={onLogout} />
+    <div className="min-h-screen bg-gray-50 p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Manager Dashboard</h1>
+        <p className="text-gray-600">Welcome back, {user?.name}! Here's what's happening today.</p>
+      </div>
       
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Manager Dashboard</h1>
-          <p className="text-gray-600">Welcome back, {user.name}! Here's what's happening today.</p>
+      {/* Tab Navigation */}
+      <div className="mb-6">
+        <div className="flex flex-wrap gap-2 bg-white p-2 rounded-lg shadow-sm">
+          {[
+            { id: 'overview', label: 'Overview' },
+            { id: 'users', label: 'Users' },
+            { id: 'orders', label: 'Orders' },
+            { id: 'kyc', label: 'KYC' },
+            { id: 'stockists', label: 'Stockists' },
+            { id: 'finance', label: 'Finance' },
+            { id: 'reports', label: 'Reports' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === tab.id
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <MetricCard
-            title="Total Active Users"
-            value={metrics.total_users || 0}
-            icon={Users}
-            color="blue"
-            subtitle={`+${metrics.new_users_week || 0} this week`}
-          />
+      {/* Tab Content */}
+      {activeTab === 'overview' && (
+        <div className="container mx-auto">
+          {/* Key Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <MetricCard
+              title="Total Active Users"
+              value={metrics.total_users || 0}
+              icon={Users}
+              color="blue"
+              subtitle={`+${metrics.new_users_week || 0} this week`}
+            />
           
           <MetricCard
             title="Total Orders"
