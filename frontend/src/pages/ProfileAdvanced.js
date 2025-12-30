@@ -489,6 +489,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     { id: 'personal', label: 'Personal Information', icon: User, color: 'blue' },
     { id: 'contact', label: 'Contact Details', icon: MapPin, color: 'green' },
     { id: 'kyc', label: 'KYC Documents', icon: FileText, color: 'orange' },
+    { id: 'vip-history', label: 'VIP Transactions', icon: CreditCard, color: 'yellow' },
     { id: 'security', label: 'Security Options', icon: Shield, color: 'red' },
     { id: 'password', label: 'Change Password', icon: Lock, color: 'indigo' }
   ];
