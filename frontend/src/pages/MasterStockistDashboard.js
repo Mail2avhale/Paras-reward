@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,11 +20,32 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const MasterStockistDashboard = ({ user, onLogout }) => {
+  const location = useLocation();
   const [walletData, setWalletData] = useState(null);
   const [securityDeposit, setSecurityDeposit] = useState(null);
   const [renewalStatus, setRenewalStatus] = useState(null);
   const [stockMovements, setStockMovements] = useState({ sent: [], received: [] });
   const [loading, setLoading] = useState(true);
+  
+  // Determine active tab from URL path
+  const getActiveTabFromPath = () => {
+    const path = location.pathname;
+    if (path.includes('/orders')) return 'orders';
+    if (path.includes('/inventory')) return 'inventory';
+    if (path.includes('/sub-stockists')) return 'sub-stockists';
+    if (path.includes('/outlets')) return 'outlets';
+    if (path.includes('/stock-requests')) return 'stock-requests';
+    if (path.includes('/deliveries')) return 'deliveries';
+    if (path.includes('/reports')) return 'reports';
+    if (path.includes('/wallet')) return 'wallet';
+    return 'overview';
+  };
+  
+  const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
+  
+  useEffect(() => {
+    setActiveTab(getActiveTabFromPath());
+  }, [location.pathname]);
 
   useEffect(() => {
     fetchDashboardData();
