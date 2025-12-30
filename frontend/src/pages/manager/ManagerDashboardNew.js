@@ -121,33 +121,33 @@ const ManagerDashboardNew = ({ user, onLogout }) => {
               subtitle={`+${metrics.new_users_week || 0} this week`}
             />
           
-          <MetricCard
-            title="Total Orders"
-            value={metrics.total_orders || 0}
-            icon={ShoppingCart}
-            color="green"
-            subtitle={`${metrics.orders_today || 0} today`}
-          />
+            <MetricCard
+              title="Total Orders"
+              value={metrics.total_orders || 0}
+              icon={ShoppingCart}
+              color="green"
+              subtitle={`${metrics.orders_today || 0} today`}
+            />
           
-          <MetricCard
-            title="Pending KYC"
-            value={metrics.pending_kyc || 0}
-            icon={FileCheck}
-            color="orange"
-            subtitle="Needs approval"
-          />
+            <MetricCard
+              title="Pending KYC"
+              value={metrics.pending_kyc || 0}
+              icon={FileCheck}
+              color="orange"
+              subtitle="Needs approval"
+            />
           
-          <MetricCard
-            title="Total Revenue"
-            value={`₹${metrics.total_revenue?.toLocaleString() || 0}`}
-            icon={DollarSign}
-            color="purple"
-            subtitle="From delivered orders"
-          />
-        </div>
+            <MetricCard
+              title="Total Revenue"
+              value={`₹${metrics.total_revenue?.toLocaleString() || 0}`}
+              icon={DollarSign}
+              color="purple"
+              subtitle="From delivered orders"
+            />
+          </div>
 
-        {/* Quick Actions */}
-        <Card className="p-6 mb-8">
+          {/* Quick Actions */}
+          <Card className="p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Link to="/manager/users">
