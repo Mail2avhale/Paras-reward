@@ -1,4 +1,12 @@
 @tailwind base;
+/* Professional Navigation Spacing */
+.page-content {
+  padding-top: 4rem;
+  padding-bottom: 5rem;
+  min-height: 100vh;
+}
+
+
 @tailwind components;
 @tailwind utilities;
 
