@@ -1296,6 +1296,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                     <div className="space-y-4">
                       {vipTransactions.map((tx) => (
                         <div key={tx.payment_id} className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-100">
+                          {/* Header with Plan Name and Status */}
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-3">
                               <div className="p-2 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg">
@@ -1303,7 +1304,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                               </div>
                               <div>
                                 <p className="font-bold text-gray-900">{tx.plan_name || 'VIP Membership'}</p>
-                                <p className="text-xs text-gray-500">{new Date(tx.created_at).toLocaleString()}</p>
+                                <p className="text-xs text-gray-500">{new Date(tx.created_at || tx.submitted_at).toLocaleString('en-IN')}</p>
                               </div>
                             </div>
                             <span className={`px-3 py-1 rounded-full text-xs font-bold ${
@@ -1316,22 +1317,110 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                             </span>
                           </div>
                           
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <p className="text-gray-500">Amount Paid</p>
+                          {/* Main Details Grid */}
+                          <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+                            <div className="bg-white/60 p-2 rounded-lg">
+                              <p className="text-gray-500 text-xs">Amount Paid</p>
                               <p className="font-bold text-gray-900">₹{tx.amount?.toLocaleString()}</p>
                             </div>
-                            <div>
-                              <p className="text-gray-500">Duration</p>
-                              <p className="font-semibold text-gray-900">{tx.duration || 30} Days</p>
+                            <div className="bg-white/60 p-2 rounded-lg">
+                              <p className="text-gray-500 text-xs">Duration</p>
+                              <p className="font-semibold text-gray-900">{tx.duration_days || 30} Days</p>
                             </div>
-                            {tx.transaction_id && (
-                              <div className="col-span-2">
-                                <p className="text-gray-500">Transaction ID</p>
-                                <p className="font-mono text-xs text-gray-700 bg-white px-2 py-1 rounded">{tx.transaction_id}</p>
-                              </div>
-                            )}
+                            <div className="bg-white/60 p-2 rounded-lg">
+                              <p className="text-gray-500 text-xs">Payment Method</p>
+                              <p className="font-semibold text-gray-900">{tx.payment_method || 'UPI'}</p>
+                            </div>
+                            <div className="bg-white/60 p-2 rounded-lg">
+                              <p className="text-gray-500 text-xs">UTR/Ref Number</p>
+                              <p className="font-mono text-xs text-gray-700">{tx.utr_number || 'N/A'}</p>
+                            </div>
                           </div>
+                          
+                          {/* Validity Period - Only for approved */}
+                          {tx.status === 'approved' && (tx.validity_start || tx.validity_end) && (
+                            <div className="bg-green-50 border border-green-200 p-3 rounded-lg mb-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Clock className="h-4 w-4 text-green-600" />
+                                <p className="font-semibold text-green-800 text-sm">Validity Period</p>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div>
+                                  <p className="text-green-600">Start Date</p>
+                                  <p className="font-semibold text-green-800">
+                                    {tx.validity_start ? new Date(tx.validity_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-green-600">End Date</p>
+                                  <p className="font-semibold text-green-800">
+                                    {tx.validity_end ? new Date(tx.validity_end).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Next Renewal Date */}
+                          {tx.status === 'approved' && tx.next_renewal_date && (
+                            <div className="flex items-center gap-2 bg-blue-50 p-2 rounded-lg mb-3 text-sm">
+                              <RotateCcw className="h-4 w-4 text-blue-600" />
+                              <span className="text-blue-700">Next Renewal: </span>
+                              <span className="font-semibold text-blue-800">
+                                {new Date(tx.next_renewal_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Auto Renew Status */}
+                          {tx.status === 'approved' && (
+                            <div className="flex items-center gap-2 bg-purple-50 p-2 rounded-lg mb-3 text-sm">
+                              <RefreshCw className="h-4 w-4 text-purple-600" />
+                              <span className="text-purple-700">Auto Renew: </span>
+                              <span className={`font-semibold ${tx.auto_renew ? 'text-green-600' : 'text-gray-500'}`}>
+                                {tx.auto_renew ? 'Enabled' : 'Disabled'}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Admin Notes - Show for rejected or if has notes */}
+                          {tx.admin_notes && (
+                            <div className={`p-2 rounded-lg mb-3 text-sm ${
+                              tx.status === 'rejected' ? 'bg-red-50 border border-red-200' : 'bg-gray-50 border border-gray-200'
+                            }`}>
+                              <p className={`font-semibold text-xs ${tx.status === 'rejected' ? 'text-red-600' : 'text-gray-600'}`}>
+                                Admin Notes:
+                              </p>
+                              <p className={`${tx.status === 'rejected' ? 'text-red-700' : 'text-gray-700'}`}>
+                                {tx.admin_notes}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {/* Invoice Download Button - Only for approved */}
+                          {tx.status === 'approved' && (
+                            <div className="flex justify-end">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-purple-600 border-purple-300 hover:bg-purple-50"
+                                onClick={() => {
+                                  window.open(`${API}/api/user/vip-invoice/${tx.payment_id}`, '_blank');
+                                  toast.success('Opening invoice...');
+                                }}
+                              >
+                                <Receipt className="h-4 w-4 mr-2" />
+                                View Invoice
+                              </Button>
+                            </div>
+                          )}
+                          
+                          {/* Invoice Number */}
+                          {tx.invoice_number && tx.status === 'approved' && (
+                            <p className="text-xs text-gray-400 text-right mt-2">
+                              Invoice: {tx.invoice_number}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>
