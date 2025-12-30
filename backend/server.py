@@ -1402,7 +1402,7 @@ async def login(
             {"mobile": identifier},
             {"uid": identifier}
         ]
-    })
+    }, {"_id": 0})  # Exclude _id to avoid serialization issues
     
     if not user:
         raise HTTPException(status_code=404, detail="User not registered. Please register to continue.")
