@@ -95,14 +95,28 @@ const ProfileCompletionBanner = ({ user, onDismiss, onQuickKYC }) => {
           )}
         </div>
 
-        {/* Action Button */}
-        <Button
-          onClick={() => navigate('/profile')}
-          className="w-full bg-white text-gray-900 hover:bg-white/90 font-semibold"
-          size="sm"
-        >
-          Complete Profile
-          <ChevronRight className="h-4 w-4 ml-1" />
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          {status.incomplete.some(i => i.key === 'kyc') && onQuickKYC && (
+            <Button
+              onClick={onQuickKYC}
+              variant="outline"
+              className="flex-1 bg-white/20 border-white/30 text-white hover:bg-white/30 font-semibold"
+              size="sm"
+            >
+              <FileText className="h-4 w-4 mr-1" />
+              Quick KYC
+            </Button>
+          )}
+          <Button
+            onClick={() => navigate('/profile')}
+            className={`${status.incomplete.some(i => i.key === 'kyc') && onQuickKYC ? 'flex-1' : 'w-full'} bg-white text-gray-900 hover:bg-white/90 font-semibold`}
+            size="sm"
+          >
+            Complete Profile
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
         </Button>
       </div>
     </div>
