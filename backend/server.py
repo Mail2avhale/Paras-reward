@@ -5001,20 +5001,40 @@ async def handle_payment_action(payment_id: str, request: Request):
             }}
         )
         
+        # Get plan duration from payment or default to plan type
+        plan_type = payment.get("plan_type", "yearly")
+        
+        # Duration mapping based on plan type
+        duration_mapping = {
+            "monthly": 30,
+            "quarterly": 90,
+            "half_yearly": 180,
+            "yearly": 365
+        }
+        
+        # Get duration days from payment or mapping
+        duration_days = payment.get("duration_days", duration_mapping.get(plan_type, 365))
+        
+        # Calculate expiry date based on plan duration
+        expiry_date = now + timedelta(days=duration_days)
+        
         # Update user membership
-        expiry_date = now + timedelta(days=365)  # 1 year
         await db.users.update_one(
             {"uid": payment["user_id"]},
             {"$set": {
                 "membership_type": "vip",
                 "membership_expiry": expiry_date.isoformat(),
+                "vip_plan_type": plan_type,
+                "vip_start_date": now.isoformat(),
                 "updated_at": now.isoformat()
             }}
         )
         
         return {
-            "message": "Payment approved. User upgraded to VIP.",
-            "membership_expiry": expiry_date.isoformat()
+            "message": f"Payment approved. User upgraded to VIP ({plan_type} plan - {duration_days} days).",
+            "membership_expiry": expiry_date.isoformat(),
+            "plan_type": plan_type,
+            "duration_days": duration_days
         }
     else:
         # Reject payment
