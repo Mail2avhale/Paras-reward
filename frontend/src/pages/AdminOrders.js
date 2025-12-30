@@ -28,7 +28,8 @@ const AdminOrders = ({ user }) => {
     try {
       setLoading(true);
       const response = await axios.get(`${API}/admin/orders/all`);
-      setOrders(response.data || []);
+      // API returns { orders: [], total: number, ... }
+      setOrders(response.data?.orders || []);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast.error('Failed to fetch orders');
