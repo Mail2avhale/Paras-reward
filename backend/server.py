@@ -2420,6 +2420,7 @@ async def claim_mining(uid: str):
     # Return success response
     return {
         "success": True,
+        "amount": round(mined_amount, 4),  # Frontend expects 'amount'
         "claimed_amount": round(mined_amount, 4),
         "new_balance": round(new_balance, 4),
         "total_mined": round(new_total_mined, 4),
