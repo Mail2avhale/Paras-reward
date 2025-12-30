@@ -117,7 +117,6 @@ const ProfileCompletionBanner = ({ user, onDismiss, onQuickKYC }) => {
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
-        </Button>
       </div>
     </div>
   );
