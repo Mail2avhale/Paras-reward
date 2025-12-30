@@ -4935,20 +4935,39 @@ async def submit_vip_payment(request: Request):
     
     # Create payment record with plan details
     payment_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+    
+    # Plan name mapping
+    plan_names = {
+        "monthly": "Monthly VIP Plan",
+        "quarterly": "Quarterly VIP Plan", 
+        "half_yearly": "Half-Yearly VIP Plan",
+        "yearly": "Yearly VIP Plan"
+    }
+    
     payment_record = {
         "payment_id": payment_id,
         "user_id": data["user_id"],
         "amount": float(data["amount"]),
         "plan_type": plan_type,
+        "plan_name": plan_names.get(plan_type, "VIP Membership"),
         "duration_days": duration_days,
         "date": data["date"],
         "time": data["time"],
         "utr_number": data["utr_number"],
         "screenshot_url": data.get("screenshot_url", ""),
+        "payment_method": data.get("payment_method", "UPI"),
         "status": "pending",
-        "submitted_at": datetime.now(timezone.utc).isoformat(),
+        "submitted_at": now.isoformat(),
+        "created_at": now.isoformat(),
         "approved_at": None,
-        "approved_by": None
+        "approved_by": None,
+        "admin_notes": None,
+        "validity_start": None,
+        "validity_end": None,
+        "auto_renew": data.get("auto_renew", False),
+        "next_renewal_date": None,
+        "invoice_number": f"INV-{now.strftime('%Y%m%d')}-{payment_id[:8].upper()}"
     }
     
     await db.vip_payments.insert_one(payment_record)
