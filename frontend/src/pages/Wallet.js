@@ -66,8 +66,7 @@ const Wallet = ({ user, onLogout }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-      <Navbar user={user} onLogout={onLogout} />
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 pt-20 pb-24">
       
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-8">Cashback Wallet</h1>
