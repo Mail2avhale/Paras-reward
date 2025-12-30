@@ -9606,6 +9606,16 @@ async def update_user_admin(uid: str, request: UserUpdateRequest):
         update_data["role"] = request.role
     if request.membership_type:
         update_data["membership_type"] = request.membership_type
+    if request.membership_expiry:
+        # Convert date string to ISO format datetime
+        try:
+            expiry_date = datetime.fromisoformat(request.membership_expiry.replace('Z', '+00:00'))
+            update_data["membership_expiry"] = expiry_date.isoformat()
+        except:
+            # If it's a date-only string (YYYY-MM-DD), add time
+            update_data["membership_expiry"] = f"{request.membership_expiry}T23:59:59+00:00"
+    if request.vip_plan_type:
+        update_data["vip_plan_type"] = request.vip_plan_type
     if request.kyc_status:
         update_data["kyc_status"] = request.kyc_status
     if request.is_active is not None:
