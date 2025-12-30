@@ -803,22 +803,6 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                     />
                   </div>
 
-                  {/* Bio */}
-                  <div className="md:col-span-2">
-                    <Label htmlFor="bio">Bio / About Me</Label>
-                    <textarea
-                      id="bio"
-                      value={personalInfo.bio}
-                      onChange={(e) => setPersonalInfo({ ...personalInfo, bio: e.target.value })}
-                      placeholder="Tell us about yourself..."
-                      rows={4}
-                      maxLength={500}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      {personalInfo.bio?.length || 0}/500 characters
-                    </p>
-                  </div>
                 </div>
 
                 <Button
