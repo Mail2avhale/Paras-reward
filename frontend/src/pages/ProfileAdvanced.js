@@ -6,7 +6,8 @@ import {
   User, Lock, MapPin, CreditCard, Shield, Eye, EyeOff, Camera, 
   Upload, Save, X, Check, AlertCircle, Phone, Mail, Home, 
   Building, Key, Fingerprint, Smartphone, FileText, Calendar,
-  ChevronRight, CheckCircle, Edit2, Trash2, RefreshCw, XCircle
+  ChevronRight, CheckCircle, Edit2, Trash2, RefreshCw, XCircle,
+  Download, Clock, RotateCcw, Receipt
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
