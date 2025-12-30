@@ -502,6 +502,24 @@ const DashboardModern = ({ user, onLogout }) => {
           />
         </div>
       </div>
+
+      {/* Profile Completion Popup */}
+      <ProfileCompletionPopup
+        user={userData}
+        isOpen={showProfilePopup}
+        onClose={() => setShowProfilePopup(false)}
+      />
+
+      {/* Quick KYC Modal */}
+      <QuickKYCModal
+        user={user}
+        isOpen={showKYCModal}
+        onClose={() => setShowKYCModal(false)}
+        onSuccess={() => {
+          fetchDashboardData();
+          setShowKYCModal(false);
+        }}
+      />
     </div>
   );
 };
