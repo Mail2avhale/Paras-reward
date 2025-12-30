@@ -34,6 +34,8 @@ const AdvancedUserManagement = () => {
     mobile: '',
     role: '',
     membership_type: '',
+    membership_expiry: '',
+    vip_plan_type: '',
     kyc_status: ''
   });
   
