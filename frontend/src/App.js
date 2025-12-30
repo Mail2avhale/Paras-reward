@@ -177,6 +177,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/outlet" element={user && user.role === "outlet" ? <OutletPanel user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
           </Routes>
         </Suspense>
+        {/* Show Bottom Navigation for logged-in users */}
+        {user && <BottomNav />}
       </BrowserRouter>
       <Toaster position="top-center" richColors />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
