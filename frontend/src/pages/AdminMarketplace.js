@@ -198,16 +198,17 @@ const AdminMarketplace = ({ user }) => {
           <p className="text-gray-500">No products found</p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredProducts.map((product) => (
-            <Card key={product.product_id} className="overflow-hidden">
-              <div className="aspect-square bg-gray-100 relative">
-                {product.image_url ? (
-                  <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <ImageIcon className="h-12 w-12 text-gray-300" />
-                  </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {paginatedProducts.map((product) => (
+              <Card key={product.product_id} className="overflow-hidden">
+                <div className="aspect-square bg-gray-100 relative">
+                  {product.image_url ? (
+                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <ImageIcon className="h-12 w-12 text-gray-300" />
+                    </div>
                 )}
                 <div className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-semibold ${
                   product.stock === 0 || product.stock === undefined ? 'bg-red-100 text-red-700' :
