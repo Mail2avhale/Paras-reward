@@ -169,15 +169,16 @@ const AdminOrders = ({ user }) => {
           <p className="text-gray-500">No orders found</p>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {filteredOrders.map((order) => (
-            <Card key={order.order_id} className="p-4">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-purple-100 rounded-lg">
-                    <Package className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <div>
+        <>
+          <div className="space-y-4">
+            {paginatedOrders.map((order) => (
+              <Card key={order.order_id} className="p-4">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-purple-100 rounded-lg">
+                      <Package className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <div>
                     <p className="font-semibold text-gray-900">#{order.order_id?.slice(-8)}</p>
                     <p className="text-sm text-gray-500">{order.user_name || order.user_id}</p>
                     <p className="text-xs text-gray-400 mt-1">
