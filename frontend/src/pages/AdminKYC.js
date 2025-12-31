@@ -73,6 +73,13 @@ const AdminKYC = ({ user }) => {
     return matchesSearch && matchesStatus;
   });
 
+  // Pagination
+  const totalPages = Math.ceil(filteredDocs.length / ITEMS_PER_PAGE);
+  const paginatedDocs = filteredDocs.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   const getStatusBadge = (status) => {
     switch (status) {
       case 'verified':
