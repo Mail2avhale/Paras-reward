@@ -198,7 +198,17 @@ const AdminKYC = ({ user }) => {
               </div>
             </Card>
           ))}
-        </div>
+          </div>
+          
+          {/* Pagination */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredDocs.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
+        </>
       )}
 
       {/* Document Detail Modal */}
