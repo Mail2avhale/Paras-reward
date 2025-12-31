@@ -41,7 +41,8 @@ const AdminMarketplace = ({ user }) => {
     try {
       setLoading(true);
       const response = await axios.get(`${API}/products`);
-      setProducts(response.data || []);
+      // API returns paginated response: { products: [], total: number, ... }
+      setProducts(response.data?.products || response.data || []);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast.error('Failed to fetch products');
