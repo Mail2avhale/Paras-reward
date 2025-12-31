@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import Pagination from '@/components/Pagination';
 import {
   Package, Search, Plus, Edit, Trash2, Eye, RefreshCw,
   Tag, DollarSign, Box, Image as ImageIcon
@@ -11,6 +12,7 @@ import {
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+const ITEMS_PER_PAGE = 12;
 
 const AdminMarketplace = ({ user }) => {
   const [products, setProducts] = useState([]);
@@ -20,6 +22,7 @@ const AdminMarketplace = ({ user }) => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -36,6 +39,11 @@ const AdminMarketplace = ({ user }) => {
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, categoryFilter]);
 
   const fetchProducts = async () => {
     try {
