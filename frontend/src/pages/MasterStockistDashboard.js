@@ -478,11 +478,11 @@ const MasterStockistDashboard = ({ user, onLogout }) => {
       )}
 
       {activeTab === 'sub-stockists' && (
-        <StockistHierarchy userId={user?.uid} roleFilter="sub_stockist" />
+        <StockistHierarchy user={user} userRole={user?.role} />
       )}
 
       {activeTab === 'outlets' && (
-        <StockistHierarchy userId={user?.uid} roleFilter="outlet" />
+        <StockistHierarchy user={user} userRole={user?.role} />
       )}
 
       {activeTab === 'stock-requests' && (
