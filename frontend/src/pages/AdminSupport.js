@@ -230,7 +230,17 @@ const AdminSupport = ({ user }) => {
               </div>
             </Card>
           ))}
-        </div>
+          </div>
+          
+          {/* Pagination */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredTickets.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
+        </>
       )}
 
       {/* Ticket Detail Modal */}
