@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://role-nav-repair.preview.emergentagent.com",
+    "url": "https://admin-dashboards.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
