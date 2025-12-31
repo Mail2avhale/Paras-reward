@@ -158,7 +158,7 @@ const AdminGiftVouchers = ({ user }) => {
 
         {/* Requests */}
         <div className="grid gap-4">
-          {filteredRequests.map((req) => (
+          {paginatedRequests.map((req) => (
             <Card key={req.request_id} className="p-6 hover:shadow-lg transition-shadow">
               <div className="flex items-start justify-between">
                 <div className="flex gap-4 flex-1">
