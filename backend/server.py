@@ -143,6 +143,10 @@ class User(BaseModel):
     # Membership
     membership_type: str = "free"  # free, vip
     membership_expiry: Optional[datetime] = None
+    vip_expiry: Optional[str] = None  # VIP expiry date as ISO string
+    vip_expired: Optional[bool] = None  # True if VIP membership is expired
+    vip_days_expired: Optional[int] = None  # Days since VIP expired
+    vip_expiry_message: Optional[str] = None  # Renewal message for expired VIP
     
     # Wallets
     prc_balance: float = 0.0
