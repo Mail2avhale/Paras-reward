@@ -20,6 +20,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/admin' },
     { id: 'users', label: 'Users', icon: Users, path: '/admin/users' },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
+    { id: 'prc-analytics', label: 'PRC Analytics', icon: Activity, path: '/admin/prc-analytics' },
     { id: 'kyc', label: 'KYC Verification', icon: FileText, path: '/admin/kyc' },
     { id: 'payments', label: 'VIP Payments', icon: CreditCard, path: '/admin/payments' },
     { id: 'bill-payments', label: 'Bill Payments', icon: CreditCard, path: '/admin/bill-payments' },
