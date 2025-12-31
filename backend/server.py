@@ -761,21 +761,20 @@ async def burn_expired_prc_for_free_users():
                 updated_history.append(entry)
             
             if burned_amount > 0:
-                # Update user balance and history
-                new_balance = max(0, prc_balance - burned_amount)
-                logging.info(f"[VIP BURN DEBUG] User {uid}: burning {burned_amount}, old_balance={prc_balance}, new_balance={new_balance}")
+                # Update mining history only (log_transaction will update balance)
+                logging.info(f"[FREE BURN DEBUG] User {uid}: burning {burned_amount}, old_balance={prc_balance}")
                 
+                # First update mining history
                 await db.users.update_one(
                     {"uid": uid},
                     {
                         "$set": {
-                            "prc_balance": new_balance,
                             "mining_history": updated_history
                         }
                     }
                 )
                 
-                # Log burn transaction
+                # Log burn transaction (this also updates balance)
                 await log_transaction(
                     user_id=uid,
                     wallet_type="prc",
