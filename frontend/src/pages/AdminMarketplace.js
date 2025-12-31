@@ -195,11 +195,11 @@ const AdminMarketplace = ({ user }) => {
                   </div>
                 )}
                 <div className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-semibold ${
-                  product.stock === 0 ? 'bg-red-100 text-red-700' :
+                  product.stock === 0 || product.stock === undefined ? 'bg-red-100 text-red-700' :
                   product.stock < 10 ? 'bg-orange-100 text-orange-700' :
                   'bg-green-100 text-green-700'
                 }`}>
-                  {product.stock === 0 ? 'Out of Stock' : `${product.stock} in stock`}
+                  {product.stock === 0 || product.stock === undefined ? 'Out of Stock' : `${product.stock} in stock`}
                 </div>
               </div>
               <div className="p-4">
