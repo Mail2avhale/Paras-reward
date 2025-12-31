@@ -870,6 +870,7 @@ async def burn_expired_vip_prc():
             if burned_amount > 0:
                 # Update user balance and history
                 new_balance = max(0, prc_balance - burned_amount)
+                logging.info(f"[VIP BURN DEBUG] User {uid}: burning {burned_amount}, old_balance={prc_balance}, new_balance={new_balance}")
                 
                 await db.users.update_one(
                     {"uid": uid},
