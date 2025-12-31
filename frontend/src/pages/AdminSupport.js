@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import Pagination from '@/components/Pagination';
 import {
   Ticket, Search, MessageCircle, CheckCircle, XCircle, Clock,
   Send, RefreshCw, User, AlertCircle
@@ -11,6 +12,7 @@ import {
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+const ITEMS_PER_PAGE = 10;
 
 const AdminSupport = ({ user }) => {
   const [tickets, setTickets] = useState([]);
@@ -20,10 +22,16 @@ const AdminSupport = ({ user }) => {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [replyMessage, setReplyMessage] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetchTickets();
   }, []);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
 
   const fetchTickets = async () => {
     try {
