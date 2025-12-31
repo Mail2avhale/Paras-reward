@@ -11515,6 +11515,217 @@ async def get_prc_analytics():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@api_router.get("/admin/prc-analytics/detailed")
+async def get_detailed_prc_analytics(period: str = "month"):
+    """Get detailed PRC analytics with burn data, profit/loss, and time-based breakdown"""
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Calculate date ranges based on period
+        if period == "day":
+            start_date = now - timedelta(days=1)
+            prev_start = now - timedelta(days=2)
+            prev_end = start_date
+        elif period == "week":
+            start_date = now - timedelta(weeks=1)
+            prev_start = now - timedelta(weeks=2)
+            prev_end = start_date
+        elif period == "year":
+            start_date = now - timedelta(days=365)
+            prev_start = now - timedelta(days=730)
+            prev_end = start_date
+        else:  # month (default)
+            start_date = now - timedelta(days=30)
+            prev_start = now - timedelta(days=60)
+            prev_end = start_date
+        
+        start_str = start_date.isoformat()
+        prev_start_str = prev_start.isoformat()
+        prev_end_str = prev_end.isoformat()
+        
+        # Get all transactions for current period
+        current_transactions = await db.transactions.find({
+            "timestamp": {"$gte": start_str}
+        }, {"_id": 0}).to_list(length=None)
+        
+        # Get all transactions for previous period (for comparison)
+        prev_transactions = await db.transactions.find({
+            "timestamp": {"$gte": prev_start_str, "$lt": prev_end_str}
+        }, {"_id": 0}).to_list(length=None)
+        
+        # Calculate PRC Created (mining, referral bonuses, cashback, admin credits)
+        credit_types = ["mining", "referral_bonus", "cashback", "admin_credit", "vip_bonus", "signup_bonus", "scratch_card_win", "treasure_hunt_win"]
+        
+        prc_created_current = sum(t.get("amount", 0) for t in current_transactions if t.get("transaction_type") in credit_types)
+        prc_created_prev = sum(t.get("amount", 0) for t in prev_transactions if t.get("transaction_type") in credit_types)
+        
+        # Calculate PRC Used (orders, games, services)
+        debit_types = ["order", "withdrawal", "scratch_card_purchase", "treasure_hunt_play", "bill_payment_request", "gift_voucher_request", "delivery_charge"]
+        
+        prc_used_current = sum(abs(t.get("amount", 0)) for t in current_transactions if t.get("transaction_type") in debit_types)
+        prc_used_prev = sum(abs(t.get("amount", 0)) for t in prev_transactions if t.get("transaction_type") in debit_types)
+        
+        # Calculate PRC Burned
+        prc_burned_current = sum(abs(t.get("amount", 0)) for t in current_transactions if t.get("transaction_type") == "prc_burn")
+        prc_burned_prev = sum(abs(t.get("amount", 0)) for t in prev_transactions if t.get("transaction_type") == "prc_burn")
+        
+        # Get all users for balance calculation
+        users = await db.users.find({}, {"_id": 0, "prc_balance": 1, "membership_type": 1}).to_list(length=None)
+        total_in_circulation = sum(u.get("prc_balance", 0) for u in users)
+        vip_user_count = len([u for u in users if u.get("membership_type") == "vip"])
+        
+        # Calculate Profit/Loss (Platform perspective)
+        # Profit = PRC Used + PRC Burned - PRC Created (ideally should be positive or balanced)
+        profit_loss_current = (prc_used_current + prc_burned_current) - prc_created_current
+        profit_loss_prev = (prc_used_prev + prc_burned_prev) - prc_created_prev
+        
+        # Get revenue from VIP memberships (actual money)
+        vip_payments = await db.vippayments.find({
+            "status": "approved",
+            "approved_at": {"$gte": start_str}
+        }, {"_id": 0, "amount": 1}).to_list(length=None)
+        vip_revenue_current = sum(p.get("amount", 0) for p in vip_payments)
+        
+        vip_payments_prev = await db.vippayments.find({
+            "status": "approved",
+            "approved_at": {"$gte": prev_start_str, "$lt": prev_end_str}
+        }, {"_id": 0, "amount": 1}).to_list(length=None)
+        vip_revenue_prev = sum(p.get("amount", 0) for p in vip_payments_prev)
+        
+        # Calculate percentage changes
+        def calc_change(current, prev):
+            if prev == 0:
+                return 100 if current > 0 else 0
+            return round(((current - prev) / prev) * 100, 1)
+        
+        # Build daily/weekly chart data based on period
+        chart_data = []
+        if period == "day":
+            # Hourly data for last 24 hours
+            for i in range(24):
+                hour_start = now - timedelta(hours=24-i)
+                hour_end = now - timedelta(hours=23-i)
+                hour_str_start = hour_start.isoformat()
+                hour_str_end = hour_end.isoformat()
+                
+                hour_created = sum(t.get("amount", 0) for t in current_transactions 
+                    if t.get("transaction_type") in credit_types and 
+                    hour_str_start <= t.get("timestamp", "") < hour_str_end)
+                hour_used = sum(abs(t.get("amount", 0)) for t in current_transactions 
+                    if t.get("transaction_type") in debit_types and 
+                    hour_str_start <= t.get("timestamp", "") < hour_str_end)
+                hour_burned = sum(abs(t.get("amount", 0)) for t in current_transactions 
+                    if t.get("transaction_type") == "prc_burn" and 
+                    hour_str_start <= t.get("timestamp", "") < hour_str_end)
+                
+                chart_data.append({
+                    "label": hour_start.strftime("%H:00"),
+                    "created": round(hour_created, 2),
+                    "used": round(hour_used, 2),
+                    "burned": round(hour_burned, 2)
+                })
+        else:
+            # Daily data
+            days_count = 7 if period == "week" else (365 if period == "year" else 30)
+            step = 1 if period in ["day", "week"] else (30 if period == "year" else 1)
+            
+            for i in range(0, days_count, step):
+                day_start = now - timedelta(days=days_count-i)
+                day_end = now - timedelta(days=days_count-i-step)
+                day_str_start = day_start.isoformat()[:10]
+                day_str_end = day_end.isoformat()[:10]
+                
+                day_created = sum(t.get("amount", 0) for t in current_transactions 
+                    if t.get("transaction_type") in credit_types and 
+                    t.get("timestamp", "")[:10] >= day_str_start and t.get("timestamp", "")[:10] < day_str_end)
+                day_used = sum(abs(t.get("amount", 0)) for t in current_transactions 
+                    if t.get("transaction_type") in debit_types and 
+                    t.get("timestamp", "")[:10] >= day_str_start and t.get("timestamp", "")[:10] < day_str_end)
+                day_burned = sum(abs(t.get("amount", 0)) for t in current_transactions 
+                    if t.get("transaction_type") == "prc_burn" and 
+                    t.get("timestamp", "")[:10] >= day_str_start and t.get("timestamp", "")[:10] < day_str_end)
+                
+                label = day_start.strftime("%d %b") if period != "year" else day_start.strftime("%b %Y")
+                chart_data.append({
+                    "label": label,
+                    "created": round(day_created, 2),
+                    "used": round(day_used, 2),
+                    "burned": round(day_burned, 2)
+                })
+        
+        # Usage breakdown by category
+        usage_breakdown = []
+        category_map = {
+            "order": "Marketplace Orders",
+            "scratch_card_purchase": "Scratch Cards",
+            "treasure_hunt_play": "Treasure Hunt",
+            "bill_payment_request": "Bill Payments",
+            "gift_voucher_request": "Gift Vouchers",
+            "withdrawal": "Withdrawals",
+            "delivery_charge": "Delivery Charges"
+        }
+        
+        for txn_type, label in category_map.items():
+            amount = sum(abs(t.get("amount", 0)) for t in current_transactions if t.get("transaction_type") == txn_type)
+            if amount > 0:
+                usage_breakdown.append({
+                    "category": label,
+                    "amount": round(amount, 2)
+                })
+        
+        # Source breakdown (where PRC comes from)
+        source_breakdown = []
+        source_map = {
+            "mining": "Mining",
+            "referral_bonus": "Referral Bonus",
+            "cashback": "Cashback",
+            "admin_credit": "Admin Credit",
+            "vip_bonus": "VIP Bonus",
+            "signup_bonus": "Signup Bonus",
+            "scratch_card_win": "Scratch Card Wins",
+            "treasure_hunt_win": "Treasure Hunt Wins"
+        }
+        
+        for txn_type, label in source_map.items():
+            amount = sum(t.get("amount", 0) for t in current_transactions if t.get("transaction_type") == txn_type)
+            if amount > 0:
+                source_breakdown.append({
+                    "source": label,
+                    "amount": round(amount, 2)
+                })
+        
+        return {
+            "period": period,
+            "summary": {
+                "prc_created": round(prc_created_current, 2),
+                "prc_created_change": calc_change(prc_created_current, prc_created_prev),
+                "prc_used": round(prc_used_current, 2),
+                "prc_used_change": calc_change(prc_used_current, prc_used_prev),
+                "prc_burned": round(prc_burned_current, 2),
+                "prc_burned_change": calc_change(prc_burned_current, prc_burned_prev),
+                "prc_in_circulation": round(total_in_circulation, 2),
+                "net_prc_flow": round(prc_created_current - prc_used_current - prc_burned_current, 2),
+                "profit_loss": round(profit_loss_current, 2),
+                "profit_loss_change": calc_change(profit_loss_current, profit_loss_prev),
+                "vip_revenue": round(vip_revenue_current, 2),
+                "vip_revenue_change": calc_change(vip_revenue_current, vip_revenue_prev)
+            },
+            "users": {
+                "total": len(users),
+                "vip": vip_user_count,
+                "free": len(users) - vip_user_count,
+                "avg_balance": round(total_in_circulation / len(users), 2) if users else 0
+            },
+            "chart_data": chart_data,
+            "usage_breakdown": sorted(usage_breakdown, key=lambda x: x["amount"], reverse=True),
+            "source_breakdown": sorted(source_breakdown, key=lambda x: x["amount"], reverse=True),
+            "health_score": min(100, max(0, int(50 + (prc_used_current / max(prc_created_current, 1)) * 30 + (prc_burned_current / max(prc_created_current, 1)) * 20)))
+        }
+        
+    except Exception as e:
+        logging.error(f"Error in detailed PRC analytics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ========== END ADMIN PRC ANALYTICS ENDPOINTS ==========
 
 # Registration Control Endpoints
