@@ -792,17 +792,16 @@ async def burn_expired_prc_for_free_users():
 
 async def burn_expired_vip_prc():
     """
-    Burn PRC for VIP users whose subscription expired more than 5 days ago
-    FIFO - First Mined First Burn
+    Burn PRC for expired VIP users - ONLY PRC mined AFTER expiry that is older than 5 days
+    Logic: When VIP expires, user can still mine but that PRC will be burned after 5 days
     """
     try:
         now = datetime.now(timezone.utc)
-        grace_period_end = now - timedelta(days=5)
         
-        # Find expired VIP users (expired more than 5 days ago)
+        # Find all expired VIP users (any expiry in the past)
         expired_vips = db.users.find({
             "membership_type": "vip",
-            "vip_expiry": {"$lt": grace_period_end.isoformat()},
+            "vip_expiry": {"$lt": now.isoformat()},
             "mining_history": {"$exists": True, "$ne": []}
         })
         
@@ -813,24 +812,50 @@ async def burn_expired_vip_prc():
             uid = user.get("uid")
             mining_history = user.get("mining_history", [])
             prc_balance = user.get("prc_balance", 0)
+            vip_expiry_str = user.get("vip_expiry")
             
-            if not mining_history or prc_balance <= 0:
+            if not mining_history or prc_balance <= 0 or not vip_expiry_str:
                 continue
             
-            # Burn ALL remaining PRC for expired VIPs (FIFO)
+            try:
+                vip_expiry = datetime.fromisoformat(vip_expiry_str.replace('Z', '+00:00'))
+            except:
+                continue
+            
+            # Burn ONLY PRC mined AFTER expiry AND older than 5 days
             burned_amount = 0.0
             updated_history = []
             
             for entry in mining_history:
                 amount = entry.get("amount", 0)
                 is_burned = entry.get("burned", False)
+                timestamp_str = entry.get("timestamp") or entry.get("mined_at")
                 
-                if not is_burned and amount > 0:
-                    # Burn this PRC
-                    burned_amount += amount
-                    entry["burned"] = True
-                    entry["burned_at"] = now.isoformat()
-                    entry["burn_reason"] = "vip_expired_5days"
+                if is_burned:
+                    updated_history.append(entry)
+                    continue
+                
+                # Parse mining timestamp
+                try:
+                    if isinstance(timestamp_str, str):
+                        mining_time = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                    else:
+                        updated_history.append(entry)
+                        continue
+                except:
+                    updated_history.append(entry)
+                    continue
+                
+                # Check if this PRC was mined AFTER VIP expiry
+                if mining_time > vip_expiry:
+                    # Check if 5 days have passed since mining
+                    burn_threshold = mining_time + timedelta(days=5)
+                    if now >= burn_threshold:
+                        # Burn this PRC (mined after expiry, 5 days old)
+                        burned_amount += amount
+                        entry["burned"] = True
+                        entry["burned_at"] = now.isoformat()
+                        entry["burn_reason"] = "mined_after_vip_expiry_5days"
                 
                 updated_history.append(entry)
             
@@ -843,8 +868,7 @@ async def burn_expired_vip_prc():
                     {
                         "$set": {
                             "prc_balance": new_balance,
-                            "mining_history": updated_history,
-                            "membership_type": "free"  # Downgrade to free
+                            "mining_history": updated_history
                         }
                     }
                 )
@@ -855,8 +879,8 @@ async def burn_expired_vip_prc():
                     wallet_type="prc",
                     transaction_type="prc_burn",
                     amount=burned_amount,
-                    description=f"Burned {burned_amount:.2f} PRC (VIP expired >5 days, downgraded to Free)",
-                    metadata={"burn_reason": "vip_expiry_5days", "downgraded": True}
+                    description=f"Burned {burned_amount:.2f} PRC (mined after VIP expiry, 5 days old)",
+                    metadata={"burn_reason": "mined_after_vip_expiry_5days", "vip_expiry": vip_expiry_str}
                 )
                 
                 burn_count += 1
