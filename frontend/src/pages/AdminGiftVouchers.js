@@ -209,6 +209,15 @@ const AdminGiftVouchers = ({ user }) => {
             </Card>
           ))}
         </div>
+        
+        {/* Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={filteredRequests.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
+        />
 
         {/* Process Modal */}
         {selectedRequest && (
