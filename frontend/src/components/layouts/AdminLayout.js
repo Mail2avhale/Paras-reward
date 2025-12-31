@@ -5,7 +5,7 @@ import {
   Gift, ShoppingCart, Video, Award, Activity, Package,
   Truck, Store, HeadphonesIcon, UserCog, DollarSign,
   ChevronLeft, ChevronRight, LogOut, Bell, Search,
-  Menu, X, Shield, Zap
+  Menu, X, Shield, Zap, Wallet, TrendingUp
 } from 'lucide-react';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
