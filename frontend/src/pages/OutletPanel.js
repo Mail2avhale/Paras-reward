@@ -468,8 +468,42 @@ const OutletPanel = ({ user, onLogout }) => {
               value={secretCode}
               onChange={(e) => setSecretCode(e.target.value)}
             />
-            <Button onClick={verifyOrder}>Verify</Button>
+            <Button onClick={verifyCode}>Verify</Button>
           </div>
+          
+          {verifiedOrder && (
+            <Card className="mt-6 p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-bold text-gray-900">Order Verified</h4>
+                <StatusBadge status={verifiedOrder.status} type="success" />
+              </div>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <p className="text-sm text-gray-600">Order ID</p>
+                  <p className="font-semibold">{verifiedOrder.order_id?.slice(-8)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">User</p>
+                  <p className="font-semibold">{verifiedOrder.user_name || verifiedOrder.user_id}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Total PRC</p>
+                  <p className="font-semibold">{verifiedOrder.total_prc?.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Delivery Charge</p>
+                  <p className="font-semibold">₹{verifiedOrder.delivery_charge || 0}</p>
+                </div>
+              </div>
+              <Button 
+                onClick={deliverOrder}
+                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Mark as Delivered
+              </Button>
+            </Card>
+          )}
         </Card>
       )}
 
