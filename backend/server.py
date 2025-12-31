@@ -11728,6 +11728,952 @@ async def get_detailed_prc_analytics(period: str = "month"):
 
 # ========== END ADMIN PRC ANALYTICS ENDPOINTS ==========
 
+# ========== ADVANCED ADMIN SYSTEMS ==========
+
+# ==================== 1. AUDITING SERVICE ====================
+
+@api_router.get("/admin/audit/comprehensive")
+async def get_comprehensive_audit_logs(
+    page: int = 1,
+    limit: int = 50,
+    action_type: str = None,
+    user_id: str = None,
+    admin_id: str = None,
+    severity: str = None,
+    start_date: str = None,
+    end_date: str = None,
+    search: str = None
+):
+    """Get comprehensive audit logs with advanced filtering"""
+    try:
+        query = {}
+        
+        if action_type:
+            query["action_type"] = action_type
+        if user_id:
+            query["$or"] = [{"user_id": user_id}, {"target_user_id": user_id}]
+        if admin_id:
+            query["admin_id"] = admin_id
+        if severity:
+            query["severity"] = severity
+        if start_date:
+            query["timestamp"] = {"$gte": start_date}
+        if end_date:
+            if "timestamp" in query:
+                query["timestamp"]["$lte"] = end_date
+            else:
+                query["timestamp"] = {"$lte": end_date}
+        if search:
+            query["$or"] = [
+                {"action_type": {"$regex": search, "$options": "i"}},
+                {"details": {"$regex": search, "$options": "i"}},
+                {"user_email": {"$regex": search, "$options": "i"}}
+            ]
+        
+        skip = (page - 1) * limit
+        total = await db.audit_logs.count_documents(query)
+        
+        logs = await db.audit_logs.find(query, {"_id": 0}).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
+        
+        # Get action type stats
+        action_stats = await db.audit_logs.aggregate([
+            {"$group": {"_id": "$action_type", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 10}
+        ]).to_list(100)
+        
+        # Get severity distribution
+        severity_stats = await db.audit_logs.aggregate([
+            {"$group": {"_id": "$severity", "count": {"$sum": 1}}}
+        ]).to_list(10)
+        
+        # Recent suspicious activities (high severity)
+        suspicious = await db.audit_logs.find(
+            {"severity": {"$in": ["high", "critical"]}},
+            {"_id": 0}
+        ).sort("timestamp", -1).limit(10).to_list(10)
+        
+        return {
+            "logs": logs,
+            "total": total,
+            "page": page,
+            "pages": (total + limit - 1) // limit,
+            "stats": {
+                "action_types": [{"type": s["_id"], "count": s["count"]} for s in action_stats],
+                "severity_distribution": [{"severity": s["_id"] or "normal", "count": s["count"]} for s in severity_stats]
+            },
+            "suspicious_activities": suspicious
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/audit/log-action")
+async def log_admin_action(request: Request):
+    """Log an admin action with full details"""
+    try:
+        data = await request.json()
+        
+        log_entry = {
+            "log_id": str(uuid4()),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "action_type": data.get("action_type"),
+            "admin_id": data.get("admin_id"),
+            "admin_email": data.get("admin_email"),
+            "target_user_id": data.get("target_user_id"),
+            "target_user_email": data.get("target_user_email"),
+            "entity_type": data.get("entity_type"),  # user, order, payment, etc.
+            "entity_id": data.get("entity_id"),
+            "old_value": data.get("old_value"),
+            "new_value": data.get("new_value"),
+            "details": data.get("details"),
+            "ip_address": data.get("ip_address"),
+            "user_agent": data.get("user_agent"),
+            "severity": data.get("severity", "normal"),  # low, normal, high, critical
+            "category": data.get("category", "admin_action")
+        }
+        
+        await db.audit_logs.insert_one(log_entry)
+        
+        # If critical, send alert
+        if log_entry["severity"] == "critical":
+            await db.admin_alerts.insert_one({
+                "alert_id": str(uuid4()),
+                "type": "critical_action",
+                "message": f"Critical action: {log_entry['action_type']} by {log_entry['admin_email']}",
+                "log_id": log_entry["log_id"],
+                "timestamp": log_entry["timestamp"],
+                "read": False
+            })
+        
+        return {"success": True, "log_id": log_entry["log_id"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/audit/user-timeline/{user_id}")
+async def get_user_audit_timeline(user_id: str, limit: int = 100):
+    """Get complete activity timeline for a specific user"""
+    try:
+        # Get all logs related to this user
+        logs = await db.audit_logs.find(
+            {"$or": [{"user_id": user_id}, {"target_user_id": user_id}]},
+            {"_id": 0}
+        ).sort("timestamp", -1).limit(limit).to_list(limit)
+        
+        # Get user's transactions
+        transactions = await db.transactions.find(
+            {"user_id": user_id},
+            {"_id": 0}
+        ).sort("timestamp", -1).limit(50).to_list(50)
+        
+        # Get user's login history
+        login_history = await db.login_history.find(
+            {"user_id": user_id},
+            {"_id": 0}
+        ).sort("timestamp", -1).limit(20).to_list(20)
+        
+        # Combine and sort by timestamp
+        timeline = []
+        
+        for log in logs:
+            timeline.append({
+                "type": "audit",
+                "timestamp": log.get("timestamp"),
+                "action": log.get("action_type"),
+                "details": log.get("details"),
+                "severity": log.get("severity", "normal")
+            })
+        
+        for txn in transactions:
+            timeline.append({
+                "type": "transaction",
+                "timestamp": txn.get("timestamp"),
+                "action": txn.get("transaction_type"),
+                "details": f"Amount: {txn.get('amount')} PRC",
+                "severity": "normal"
+            })
+        
+        for login in login_history:
+            timeline.append({
+                "type": "login",
+                "timestamp": login.get("timestamp"),
+                "action": "login",
+                "details": f"IP: {login.get('ip_address')}, Device: {login.get('device')}",
+                "severity": "normal"
+            })
+        
+        # Sort by timestamp
+        timeline.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+        
+        return {
+            "user_id": user_id,
+            "timeline": timeline[:limit],
+            "total_activities": len(timeline)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/audit/change-history/{entity_type}/{entity_id}")
+async def get_entity_change_history(entity_type: str, entity_id: str):
+    """Get change history for any entity (user, order, etc.)"""
+    try:
+        changes = await db.audit_logs.find(
+            {
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "old_value": {"$exists": True}
+            },
+            {"_id": 0}
+        ).sort("timestamp", -1).to_list(100)
+        
+        return {
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "changes": changes,
+            "total_changes": len(changes)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/audit/alerts")
+async def get_audit_alerts(unread_only: bool = True):
+    """Get audit alerts for admin"""
+    try:
+        query = {"read": False} if unread_only else {}
+        alerts = await db.admin_alerts.find(query, {"_id": 0}).sort("timestamp", -1).limit(50).to_list(50)
+        unread_count = await db.admin_alerts.count_documents({"read": False})
+        
+        return {
+            "alerts": alerts,
+            "unread_count": unread_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/audit/alerts/{alert_id}/read")
+async def mark_alert_read(alert_id: str):
+    """Mark an alert as read"""
+    try:
+        await db.admin_alerts.update_one(
+            {"alert_id": alert_id},
+            {"$set": {"read": True, "read_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== 2. PROFIT & LOSS + EXPENSE MANAGEMENT ====================
+
+@api_router.get("/admin/finance/profit-loss")
+async def get_profit_loss_statement(period: str = "month", year: int = None, month: int = None):
+    """Get comprehensive Profit & Loss statement"""
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Determine date range
+        if period == "day":
+            start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_date = now
+            period_label = now.strftime("%d %B %Y")
+        elif period == "week":
+            start_date = now - timedelta(days=now.weekday())
+            start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_date = now
+            period_label = f"Week of {start_date.strftime('%d %B %Y')}"
+        elif period == "year":
+            target_year = year or now.year
+            start_date = datetime(target_year, 1, 1, tzinfo=timezone.utc)
+            end_date = datetime(target_year, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
+            period_label = str(target_year)
+        else:  # month
+            target_year = year or now.year
+            target_month = month or now.month
+            start_date = datetime(target_year, target_month, 1, tzinfo=timezone.utc)
+            if target_month == 12:
+                end_date = datetime(target_year + 1, 1, 1, tzinfo=timezone.utc) - timedelta(seconds=1)
+            else:
+                end_date = datetime(target_year, target_month + 1, 1, tzinfo=timezone.utc) - timedelta(seconds=1)
+            period_label = start_date.strftime("%B %Y")
+        
+        start_str = start_date.isoformat()
+        end_str = end_date.isoformat()
+        
+        # ===== REVENUE CALCULATION =====
+        revenue = {
+            "vip_memberships": 0,
+            "service_charges": 0,
+            "delivery_charges": 0,
+            "platform_fees": 0,
+            "other_income": 0
+        }
+        
+        # VIP Membership Revenue
+        vip_payments = await db.vippayments.find({
+            "status": "approved",
+            "approved_at": {"$gte": start_str, "$lte": end_str}
+        }, {"_id": 0, "amount": 1, "plan_type": 1}).to_list(1000)
+        revenue["vip_memberships"] = sum(p.get("amount", 0) for p in vip_payments)
+        
+        # Service Charges from Bill Payments
+        bill_payments = await db.bill_payment_requests.find({
+            "status": "completed",
+            "completed_at": {"$gte": start_str, "$lte": end_str}
+        }, {"_id": 0, "service_charge": 1, "amount_inr": 1}).to_list(1000)
+        revenue["service_charges"] += sum(bp.get("service_charge", bp.get("amount_inr", 0) * 0.02) for bp in bill_payments)
+        
+        # Service Charges from Gift Vouchers
+        gift_vouchers = await db.gift_voucher_requests.find({
+            "status": "completed",
+            "completed_at": {"$gte": start_str, "$lte": end_str}
+        }, {"_id": 0, "service_charge": 1, "denomination": 1}).to_list(1000)
+        revenue["service_charges"] += sum(gv.get("service_charge", gv.get("denomination", 0) * 0.05) for gv in gift_vouchers)
+        
+        # Delivery Charges from Orders
+        orders = await db.orders.find({
+            "status": "delivered",
+            "delivered_at": {"$gte": start_str, "$lte": end_str}
+        }, {"_id": 0, "delivery_charge": 1}).to_list(1000)
+        revenue["delivery_charges"] = sum(o.get("delivery_charge", 0) for o in orders)
+        
+        # Platform fees (if any)
+        platform_fees = await db.platform_fees.find({
+            "created_at": {"$gte": start_str, "$lte": end_str}
+        }, {"_id": 0, "amount": 1}).to_list(1000)
+        revenue["platform_fees"] = sum(pf.get("amount", 0) for pf in platform_fees)
+        
+        # Other income
+        other_income = await db.other_income.find({
+            "date": {"$gte": start_str, "$lte": end_str}
+        }, {"_id": 0, "amount": 1}).to_list(1000)
+        revenue["other_income"] = sum(oi.get("amount", 0) for oi in other_income)
+        
+        total_revenue = sum(revenue.values())
+        
+        # ===== EXPENSE CALCULATION =====
+        expenses = {
+            "server_hosting": 0,
+            "payment_gateway_fees": 0,
+            "sms_email_services": 0,
+            "marketing": 0,
+            "product_cost": 0,
+            "gift_voucher_cost": 0,
+            "cashback_referral": 0,
+            "staff_salary": 0,
+            "office_rent": 0,
+            "utilities": 0,
+            "miscellaneous": 0
+        }
+        
+        # Get manual expenses
+        manual_expenses = await db.expenses.find({
+            "date": {"$gte": start_str, "$lte": end_str}
+        }, {"_id": 0}).to_list(1000)
+        
+        for exp in manual_expenses:
+            category = exp.get("category", "miscellaneous")
+            if category in expenses:
+                expenses[category] += exp.get("amount", 0)
+            else:
+                expenses["miscellaneous"] += exp.get("amount", 0)
+        
+        # Calculate payment gateway fees (2% of VIP revenue)
+        expenses["payment_gateway_fees"] = revenue["vip_memberships"] * 0.02
+        
+        # Calculate cashback/referral from transactions
+        referral_txns = await db.transactions.find({
+            "transaction_type": {"$in": ["referral_bonus", "cashback"]},
+            "timestamp": {"$gte": start_str, "$lte": end_str}
+        }, {"_id": 0, "amount": 1}).to_list(10000)
+        expenses["cashback_referral"] = sum(t.get("amount", 0) for t in referral_txns)
+        
+        total_expenses = sum(expenses.values())
+        
+        # ===== PROFIT/LOSS =====
+        net_profit = total_revenue - total_expenses
+        profit_margin = (net_profit / total_revenue * 100) if total_revenue > 0 else 0
+        
+        # ===== COMPARISON WITH PREVIOUS PERIOD =====
+        if period == "month":
+            if target_month == 1:
+                prev_start = datetime(target_year - 1, 12, 1, tzinfo=timezone.utc)
+                prev_end = datetime(target_year, 1, 1, tzinfo=timezone.utc) - timedelta(seconds=1)
+            else:
+                prev_start = datetime(target_year, target_month - 1, 1, tzinfo=timezone.utc)
+                prev_end = start_date - timedelta(seconds=1)
+        else:
+            duration = end_date - start_date
+            prev_end = start_date - timedelta(seconds=1)
+            prev_start = prev_end - duration
+        
+        prev_start_str = prev_start.isoformat()
+        prev_end_str = prev_end.isoformat()
+        
+        # Previous period VIP revenue
+        prev_vip = await db.vippayments.find({
+            "status": "approved",
+            "approved_at": {"$gte": prev_start_str, "$lte": prev_end_str}
+        }, {"_id": 0, "amount": 1}).to_list(1000)
+        prev_revenue = sum(p.get("amount", 0) for p in prev_vip)
+        
+        revenue_change = ((total_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
+        
+        # ===== MONTHLY TREND (for charts) =====
+        monthly_trend = []
+        for i in range(6, 0, -1):
+            trend_date = now - timedelta(days=30 * i)
+            trend_start = datetime(trend_date.year, trend_date.month, 1, tzinfo=timezone.utc)
+            if trend_date.month == 12:
+                trend_end = datetime(trend_date.year + 1, 1, 1, tzinfo=timezone.utc) - timedelta(seconds=1)
+            else:
+                trend_end = datetime(trend_date.year, trend_date.month + 1, 1, tzinfo=timezone.utc) - timedelta(seconds=1)
+            
+            month_vip = await db.vippayments.find({
+                "status": "approved",
+                "approved_at": {"$gte": trend_start.isoformat(), "$lte": trend_end.isoformat()}
+            }, {"_id": 0, "amount": 1}).to_list(1000)
+            
+            month_exp = await db.expenses.find({
+                "date": {"$gte": trend_start.isoformat(), "$lte": trend_end.isoformat()}
+            }, {"_id": 0, "amount": 1}).to_list(1000)
+            
+            month_revenue = sum(p.get("amount", 0) for p in month_vip)
+            month_expenses = sum(e.get("amount", 0) for e in month_exp)
+            
+            monthly_trend.append({
+                "month": trend_start.strftime("%b %Y"),
+                "revenue": round(month_revenue, 2),
+                "expenses": round(month_expenses, 2),
+                "profit": round(month_revenue - month_expenses, 2)
+            })
+        
+        return {
+            "period": period,
+            "period_label": period_label,
+            "start_date": start_str,
+            "end_date": end_str,
+            "revenue": {
+                "breakdown": revenue,
+                "total": round(total_revenue, 2)
+            },
+            "expenses": {
+                "breakdown": expenses,
+                "total": round(total_expenses, 2)
+            },
+            "summary": {
+                "gross_revenue": round(total_revenue, 2),
+                "total_expenses": round(total_expenses, 2),
+                "net_profit": round(net_profit, 2),
+                "profit_margin": round(profit_margin, 2),
+                "revenue_change": round(revenue_change, 2),
+                "status": "profit" if net_profit > 0 else ("loss" if net_profit < 0 else "breakeven")
+            },
+            "monthly_trend": monthly_trend,
+            "vip_breakdown": {
+                "total_payments": len(vip_payments),
+                "plans": {}  # Could add plan-wise breakdown
+            }
+        }
+    except Exception as e:
+        logging.error(f"Error in P&L statement: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/finance/expense")
+async def add_expense(request: Request):
+    """Add a new expense entry"""
+    try:
+        data = await request.json()
+        
+        expense = {
+            "expense_id": str(uuid4()),
+            "date": data.get("date", datetime.now(timezone.utc).isoformat()),
+            "category": data.get("category"),
+            "sub_category": data.get("sub_category"),
+            "amount": float(data.get("amount", 0)),
+            "description": data.get("description"),
+            "vendor": data.get("vendor"),
+            "payment_method": data.get("payment_method"),
+            "receipt_url": data.get("receipt_url"),
+            "recurring": data.get("recurring", False),
+            "recurring_frequency": data.get("recurring_frequency"),  # monthly, yearly
+            "added_by": data.get("admin_id"),
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.expenses.insert_one(expense)
+        
+        # Log the action
+        await db.audit_logs.insert_one({
+            "log_id": str(uuid4()),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "action_type": "expense_added",
+            "admin_id": data.get("admin_id"),
+            "entity_type": "expense",
+            "entity_id": expense["expense_id"],
+            "details": f"Added expense: {expense['category']} - ₹{expense['amount']}",
+            "severity": "normal"
+        })
+        
+        return {"success": True, "expense_id": expense["expense_id"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/finance/expenses")
+async def get_expenses(
+    page: int = 1,
+    limit: int = 20,
+    category: str = None,
+    start_date: str = None,
+    end_date: str = None
+):
+    """Get all expenses with filtering"""
+    try:
+        query = {}
+        if category:
+            query["category"] = category
+        if start_date:
+            query["date"] = {"$gte": start_date}
+        if end_date:
+            if "date" in query:
+                query["date"]["$lte"] = end_date
+            else:
+                query["date"] = {"$lte": end_date}
+        
+        skip = (page - 1) * limit
+        total = await db.expenses.count_documents(query)
+        expenses = await db.expenses.find(query, {"_id": 0}).sort("date", -1).skip(skip).limit(limit).to_list(limit)
+        
+        # Category-wise summary
+        category_summary = await db.expenses.aggregate([
+            {"$match": query},
+            {"$group": {"_id": "$category", "total": {"$sum": "$amount"}, "count": {"$sum": 1}}},
+            {"$sort": {"total": -1}}
+        ]).to_list(20)
+        
+        return {
+            "expenses": expenses,
+            "total": total,
+            "page": page,
+            "pages": (total + limit - 1) // limit,
+            "category_summary": [{"category": c["_id"], "total": c["total"], "count": c["count"]} for c in category_summary]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/admin/finance/expense/{expense_id}")
+async def update_expense(expense_id: str, request: Request):
+    """Update an expense entry"""
+    try:
+        data = await request.json()
+        
+        # Get old expense for audit log
+        old_expense = await db.expenses.find_one({"expense_id": expense_id}, {"_id": 0})
+        
+        update_data = {k: v for k, v in data.items() if k not in ["expense_id", "created_at"]}
+        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        
+        await db.expenses.update_one(
+            {"expense_id": expense_id},
+            {"$set": update_data}
+        )
+        
+        # Log the change
+        await db.audit_logs.insert_one({
+            "log_id": str(uuid4()),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "action_type": "expense_updated",
+            "admin_id": data.get("admin_id"),
+            "entity_type": "expense",
+            "entity_id": expense_id,
+            "old_value": old_expense,
+            "new_value": update_data,
+            "severity": "normal"
+        })
+        
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/admin/finance/expense/{expense_id}")
+async def delete_expense(expense_id: str, admin_id: str = None):
+    """Delete an expense entry"""
+    try:
+        expense = await db.expenses.find_one({"expense_id": expense_id}, {"_id": 0})
+        await db.expenses.delete_one({"expense_id": expense_id})
+        
+        # Log deletion
+        await db.audit_logs.insert_one({
+            "log_id": str(uuid4()),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "action_type": "expense_deleted",
+            "admin_id": admin_id,
+            "entity_type": "expense",
+            "entity_id": expense_id,
+            "old_value": expense,
+            "severity": "high"
+        })
+        
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/finance/other-income")
+async def add_other_income(request: Request):
+    """Add other income entry"""
+    try:
+        data = await request.json()
+        
+        income = {
+            "income_id": str(uuid4()),
+            "date": data.get("date", datetime.now(timezone.utc).isoformat()),
+            "source": data.get("source"),
+            "amount": float(data.get("amount", 0)),
+            "description": data.get("description"),
+            "added_by": data.get("admin_id"),
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.other_income.insert_one(income)
+        return {"success": True, "income_id": income["income_id"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== 3. LIQUIDITY MANAGEMENT ====================
+
+@api_router.get("/admin/liquidity/dashboard")
+async def get_liquidity_dashboard():
+    """Get comprehensive liquidity management dashboard"""
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # ===== PRC IN SYSTEM =====
+        users = await db.users.find({}, {"_id": 0, "prc_balance": 1, "membership_type": 1, "membership_expiry": 1}).to_list(None)
+        total_prc = sum(u.get("prc_balance", 0) for u in users)
+        
+        # PRC Value (assuming 1 PRC = ₹1 for simplicity, can be configured)
+        prc_inr_rate = 1.0  # This could come from settings
+        total_prc_value = total_prc * prc_inr_rate
+        
+        # ===== CASH RESERVES =====
+        # Get from settings or manual entry
+        reserves = await db.liquidity_reserves.find_one({}, {"_id": 0})
+        if not reserves:
+            reserves = {
+                "bank_balance": 0,
+                "cash_in_hand": 0,
+                "payment_gateway_balance": 0,
+                "last_updated": None
+            }
+        
+        total_cash = reserves.get("bank_balance", 0) + reserves.get("cash_in_hand", 0) + reserves.get("payment_gateway_balance", 0)
+        
+        # ===== PENDING LIABILITIES =====
+        # Pending withdrawals
+        pending_withdrawals = await db.withdrawals.find(
+            {"status": "pending"},
+            {"_id": 0, "amount": 1}
+        ).to_list(1000)
+        total_pending_withdrawals = sum(w.get("amount", 0) for w in pending_withdrawals)
+        
+        # Pending bill payments
+        pending_bills = await db.bill_payment_requests.find(
+            {"status": {"$in": ["pending", "processing"]}},
+            {"_id": 0, "amount_inr": 1}
+        ).to_list(1000)
+        total_pending_bills = sum(b.get("amount_inr", 0) for b in pending_bills)
+        
+        # Pending gift vouchers
+        pending_vouchers = await db.gift_voucher_requests.find(
+            {"status": {"$in": ["pending", "processing"]}},
+            {"_id": 0, "denomination": 1}
+        ).to_list(1000)
+        total_pending_vouchers = sum(v.get("denomination", 0) for v in pending_vouchers)
+        
+        total_liabilities = total_pending_withdrawals + total_pending_bills + total_pending_vouchers
+        
+        # ===== INCOMING REVENUE (Expected) =====
+        # Pending VIP payments
+        pending_vip = await db.vippayments.find(
+            {"status": "pending"},
+            {"_id": 0, "amount": 1}
+        ).to_list(1000)
+        expected_vip_revenue = sum(p.get("amount", 0) for p in pending_vip)
+        
+        # ===== RATIOS & HEALTH =====
+        reserve_ratio = (total_cash / total_prc_value * 100) if total_prc_value > 0 else 100
+        liquidity_ratio = (total_cash / total_liabilities) if total_liabilities > 0 else float('inf')
+        available_liquidity = total_cash - total_liabilities
+        
+        # Health status
+        if reserve_ratio >= 80:
+            health_status = "excellent"
+            health_message = "Excellent liquidity position"
+        elif reserve_ratio >= 50:
+            health_status = "good"
+            health_message = "Good liquidity, monitor closely"
+        elif reserve_ratio >= 30:
+            health_status = "warning"
+            health_message = "Low reserves, consider reducing PRC creation"
+        else:
+            health_status = "critical"
+            health_message = "Critical! Immediate action required"
+        
+        # ===== DAILY FLOW (Last 30 days) =====
+        thirty_days_ago = (now - timedelta(days=30)).isoformat()
+        
+        # Daily PRC creation
+        daily_creation = await db.transactions.aggregate([
+            {
+                "$match": {
+                    "transaction_type": {"$in": ["mining", "referral_bonus", "cashback", "signup_bonus"]},
+                    "timestamp": {"$gte": thirty_days_ago}
+                }
+            },
+            {
+                "$group": {
+                    "_id": {"$substr": ["$timestamp", 0, 10]},
+                    "total": {"$sum": "$amount"}
+                }
+            },
+            {"$sort": {"_id": 1}}
+        ]).to_list(31)
+        
+        # Daily cash inflow (VIP payments)
+        daily_inflow = await db.vippayments.aggregate([
+            {
+                "$match": {
+                    "status": "approved",
+                    "approved_at": {"$gte": thirty_days_ago}
+                }
+            },
+            {
+                "$group": {
+                    "_id": {"$substr": ["$approved_at", 0, 10]},
+                    "total": {"$sum": "$amount"}
+                }
+            },
+            {"$sort": {"_id": 1}}
+        ]).to_list(31)
+        
+        # Daily cash outflow (bill payments + vouchers completed)
+        daily_outflow = await db.bill_payment_requests.aggregate([
+            {
+                "$match": {
+                    "status": "completed",
+                    "completed_at": {"$gte": thirty_days_ago}
+                }
+            },
+            {
+                "$group": {
+                    "_id": {"$substr": ["$completed_at", 0, 10]},
+                    "total": {"$sum": "$amount_inr"}
+                }
+            },
+            {"$sort": {"_id": 1}}
+        ]).to_list(31)
+        
+        # Combine flow data
+        flow_data = []
+        for i in range(30, -1, -1):
+            date = (now - timedelta(days=i)).strftime("%Y-%m-%d")
+            date_short = (now - timedelta(days=i)).strftime("%d %b")
+            
+            creation = next((d["total"] for d in daily_creation if d["_id"] == date), 0)
+            inflow = next((d["total"] for d in daily_inflow if d["_id"] == date), 0)
+            outflow = next((d["total"] for d in daily_outflow if d["_id"] == date), 0)
+            
+            flow_data.append({
+                "date": date_short,
+                "prc_created": round(creation, 2),
+                "cash_inflow": round(inflow, 2),
+                "cash_outflow": round(outflow, 2),
+                "net_flow": round(inflow - outflow, 2)
+            })
+        
+        # ===== ALERTS =====
+        alerts = []
+        
+        if reserve_ratio < 50:
+            alerts.append({
+                "type": "warning",
+                "message": f"Reserve ratio is low ({reserve_ratio:.1f}%). Consider increasing cash reserves.",
+                "severity": "high"
+            })
+        
+        if total_pending_withdrawals > total_cash * 0.3:
+            alerts.append({
+                "type": "warning",
+                "message": f"Pending withdrawals (₹{total_pending_withdrawals:,.0f}) exceed 30% of cash reserves.",
+                "severity": "medium"
+            })
+        
+        # Large single pending withdrawal
+        large_withdrawal = await db.withdrawals.find_one(
+            {"status": "pending", "amount": {"$gte": total_cash * 0.1}},
+            {"_id": 0}
+        )
+        if large_withdrawal:
+            alerts.append({
+                "type": "info",
+                "message": f"Large withdrawal pending: ₹{large_withdrawal.get('amount', 0):,.0f}",
+                "severity": "medium"
+            })
+        
+        # Daily burn rate
+        avg_daily_creation = sum(d["total"] for d in daily_creation) / max(len(daily_creation), 1)
+        avg_daily_inflow = sum(d["total"] for d in daily_inflow) / max(len(daily_inflow), 1)
+        avg_daily_outflow = sum(d["total"] for d in daily_outflow) / max(len(daily_outflow), 1)
+        
+        if avg_daily_creation > avg_daily_inflow * 10:
+            alerts.append({
+                "type": "warning",
+                "message": "PRC creation rate is significantly higher than cash inflow. Review mining rates.",
+                "severity": "medium"
+            })
+        
+        # ===== RECOMMENDATIONS =====
+        recommendations = []
+        
+        if reserve_ratio < 50:
+            recommendations.append({
+                "title": "Increase VIP Pricing",
+                "description": "Consider increasing VIP membership prices by 10-20% to improve reserves.",
+                "impact": "high"
+            })
+            recommendations.append({
+                "title": "Reduce Mining Rewards",
+                "description": "Temporarily reduce mining rewards to slow PRC creation.",
+                "impact": "medium"
+            })
+        
+        if liquidity_ratio < 2:
+            recommendations.append({
+                "title": "Process Liabilities",
+                "description": "Prioritize processing pending withdrawals and payments.",
+                "impact": "high"
+            })
+        
+        return {
+            "summary": {
+                "total_prc_in_system": round(total_prc, 2),
+                "prc_inr_value": round(total_prc_value, 2),
+                "total_cash_reserves": round(total_cash, 2),
+                "total_liabilities": round(total_liabilities, 2),
+                "available_liquidity": round(available_liquidity, 2),
+                "expected_revenue": round(expected_vip_revenue, 2)
+            },
+            "reserves": {
+                "bank_balance": reserves.get("bank_balance", 0),
+                "cash_in_hand": reserves.get("cash_in_hand", 0),
+                "payment_gateway": reserves.get("payment_gateway_balance", 0),
+                "last_updated": reserves.get("last_updated")
+            },
+            "liabilities": {
+                "pending_withdrawals": round(total_pending_withdrawals, 2),
+                "pending_bill_payments": round(total_pending_bills, 2),
+                "pending_gift_vouchers": round(total_pending_vouchers, 2),
+                "withdrawal_count": len(pending_withdrawals),
+                "bill_count": len(pending_bills),
+                "voucher_count": len(pending_vouchers)
+            },
+            "ratios": {
+                "reserve_ratio": round(reserve_ratio, 2),
+                "liquidity_ratio": round(min(liquidity_ratio, 999), 2),
+                "prc_coverage": round((total_cash / total_prc_value * 100) if total_prc_value > 0 else 100, 2)
+            },
+            "health": {
+                "status": health_status,
+                "message": health_message,
+                "score": min(100, max(0, int(reserve_ratio)))
+            },
+            "daily_averages": {
+                "prc_creation": round(avg_daily_creation, 2),
+                "cash_inflow": round(avg_daily_inflow, 2),
+                "cash_outflow": round(avg_daily_outflow, 2),
+                "runway_days": int(total_cash / max(avg_daily_outflow, 1)) if avg_daily_outflow > 0 else 999
+            },
+            "flow_data": flow_data,
+            "alerts": alerts,
+            "recommendations": recommendations
+        }
+    except Exception as e:
+        logging.error(f"Error in liquidity dashboard: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/liquidity/update-reserves")
+async def update_liquidity_reserves(request: Request):
+    """Update cash reserves manually"""
+    try:
+        data = await request.json()
+        
+        # Get old values for audit
+        old_reserves = await db.liquidity_reserves.find_one({}, {"_id": 0})
+        
+        reserves = {
+            "bank_balance": float(data.get("bank_balance", 0)),
+            "cash_in_hand": float(data.get("cash_in_hand", 0)),
+            "payment_gateway_balance": float(data.get("payment_gateway_balance", 0)),
+            "notes": data.get("notes"),
+            "updated_by": data.get("admin_id"),
+            "last_updated": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.liquidity_reserves.update_one(
+            {},
+            {"$set": reserves},
+            upsert=True
+        )
+        
+        # Log the change
+        await db.audit_logs.insert_one({
+            "log_id": str(uuid4()),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "action_type": "liquidity_reserves_updated",
+            "admin_id": data.get("admin_id"),
+            "entity_type": "liquidity",
+            "old_value": old_reserves,
+            "new_value": reserves,
+            "details": f"Updated reserves: Bank ₹{reserves['bank_balance']}, Cash ₹{reserves['cash_in_hand']}, Gateway ₹{reserves['payment_gateway_balance']}",
+            "severity": "high"
+        })
+        
+        return {"success": True, "reserves": reserves}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/liquidity/alerts")
+async def get_liquidity_alerts():
+    """Get active liquidity alerts"""
+    try:
+        alerts = await db.liquidity_alerts.find(
+            {"resolved": False},
+            {"_id": 0}
+        ).sort("created_at", -1).to_list(50)
+        
+        return {"alerts": alerts}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/liquidity/alert/resolve/{alert_id}")
+async def resolve_liquidity_alert(alert_id: str, request: Request):
+    """Resolve a liquidity alert"""
+    try:
+        data = await request.json()
+        
+        await db.liquidity_alerts.update_one(
+            {"alert_id": alert_id},
+            {"$set": {
+                "resolved": True,
+                "resolved_at": datetime.now(timezone.utc).isoformat(),
+                "resolved_by": data.get("admin_id"),
+                "resolution_notes": data.get("notes")
+            }}
+        )
+        
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ========== END ADVANCED ADMIN SYSTEMS ==========
+
 # Registration Control Endpoints
 @api_router.get("/admin/registration-status")
 async def get_registration_status():
