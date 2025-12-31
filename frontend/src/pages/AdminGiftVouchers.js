@@ -5,9 +5,11 @@ import { toast } from 'sonner';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import Pagination from '@/components/Pagination';
 import { ArrowLeft, Gift, Clock, CheckCircle, XCircle, Search } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
+const ITEMS_PER_PAGE = 10;
 
 const AdminGiftVouchers = ({ user }) => {
   const navigate = useNavigate();
@@ -19,6 +21,7 @@ const AdminGiftVouchers = ({ user }) => {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [voucherCode, setVoucherCode] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -27,6 +30,11 @@ const AdminGiftVouchers = ({ user }) => {
     }
     fetchRequests();
   }, [user, navigate, filter]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, searchTerm]);
 
   const fetchRequests = async () => {
     try {
