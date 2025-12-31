@@ -206,7 +206,7 @@ const AdminBillPayments = ({ user }) => {
                 </tr>
               </thead>
               <tbody>
-                {filteredRequests.map((req) => (
+                {paginatedRequests.map((req) => (
                   <tr key={req.request_id} className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4">
                       <div>
@@ -244,6 +244,15 @@ const AdminBillPayments = ({ user }) => {
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredRequests.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
         </Card>
 
         {/* Detail Modal */}
