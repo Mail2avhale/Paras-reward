@@ -818,7 +818,10 @@ async def burn_expired_vip_prc():
             prc_balance = user.get("prc_balance", 0)
             vip_expiry_str = user.get("vip_expiry")
             
+            logging.info(f"[VIP BURN DEBUG] Processing user {uid}: prc_balance={prc_balance}, mining_entries={len(mining_history)}")
+            
             if not mining_history or prc_balance <= 0 or not vip_expiry_str:
+                logging.info(f"[VIP BURN DEBUG] Skipping user {uid}: mining_history={bool(mining_history)}, prc_balance={prc_balance}, vip_expiry={bool(vip_expiry_str)}")
                 continue
             
             try:
