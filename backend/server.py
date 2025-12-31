@@ -957,24 +957,33 @@ async def get_all_vip_plans():
         plans.append(plan_data)
     return plans
 
-async def check_vip_marketplace_access(uid: str) -> Dict:
+async def check_vip_service_access(uid: str, service_name: str = "service") -> Dict:
     """
-    Check if user can access marketplace
-    Expired VIP users are blocked from marketplace until renewal
+    Check if user can access VIP services (marketplace, gift vouchers, bill payments)
+    Requirements:
+    1. User must be VIP member
+    2. VIP membership must not be expired
+    Expired VIP users are blocked until renewal
     """
     user = await db.users.find_one({"uid": uid})
     if not user:
-        return {"allowed": False, "reason": "User not found"}
+        return {"allowed": False, "reason": "User not found", "requires_vip": True}
     
     membership_type = user.get("membership_type", "free")
     
-    # Free users can always access marketplace
+    # Free users cannot access these services
     if membership_type != "vip":
-        return {"allowed": True, "reason": ""}
+        return {
+            "allowed": False, 
+            "reason": f"VIP membership required to use {service_name}. Please upgrade to VIP.",
+            "requires_vip": True,
+            "is_expired": False
+        }
     
     # Check VIP expiry
     vip_expiry_str = user.get("vip_expiry")
     if not vip_expiry_str:
+        # VIP without expiry date - allow (legacy users)
         return {"allowed": True, "reason": ""}
     
     try:
@@ -982,18 +991,25 @@ async def check_vip_marketplace_access(uid: str) -> Dict:
         now = datetime.now(timezone.utc)
         
         if vip_expiry < now:
-            # VIP expired - block marketplace
+            # VIP expired - block service
             days_expired = (now - vip_expiry).days
             return {
                 "allowed": False,
-                "reason": f"Your VIP membership expired {days_expired} days ago. Please renew to access marketplace.",
+                "reason": f"Your VIP membership expired {days_expired} days ago. Please renew to access {service_name}.",
                 "days_expired": days_expired,
-                "requires_renewal": True
+                "requires_renewal": True,
+                "is_expired": True,
+                "expiry_date": vip_expiry_str
             }
         
         return {"allowed": True, "reason": ""}
     except:
         return {"allowed": True, "reason": ""}
+
+# Keep old function name for backward compatibility
+async def check_vip_marketplace_access(uid: str) -> Dict:
+    """Backward compatible wrapper"""
+    return await check_vip_service_access(uid, "marketplace")
 
 async def run_prc_burn_job():
     """
