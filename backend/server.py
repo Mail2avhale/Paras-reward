@@ -5336,6 +5336,11 @@ async def get_marketplace_products(user_id: str):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # Check VIP membership and expiry for marketplace access
+    access_check = await check_vip_service_access(user_id, "marketplace")
+    if not access_check["allowed"]:
+        raise HTTPException(status_code=403, detail=access_check["reason"])
+    
     now = datetime.now(timezone.utc)
     is_vip = user.get("membership_type") == "vip"
     user_state = user.get("state")
