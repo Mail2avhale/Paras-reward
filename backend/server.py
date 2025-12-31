@@ -1455,6 +1455,23 @@ async def login(
     if user.get("is_banned"):
         raise HTTPException(status_code=403, detail=f"Account suspended: {user.get('suspension_reason', 'Contact support')}")
     
+    # Check VIP membership expiry and add renewal message
+    vip_expiry_message = None
+    if user.get("membership_type") == "vip":
+        vip_expiry_str = user.get("vip_expiry")
+        if vip_expiry_str:
+            try:
+                vip_expiry = datetime.fromisoformat(vip_expiry_str.replace('Z', '+00:00'))
+                now = datetime.now(timezone.utc)
+                if vip_expiry < now:
+                    days_expired = (now - vip_expiry).days
+                    vip_expiry_message = f"⚠️ Your VIP membership expired {days_expired} days ago! Please renew to continue using marketplace, gift vouchers, and bill payment services. PRC mined after expiry will be burned after 5 days."
+                    user["vip_expired"] = True
+                    user["vip_days_expired"] = days_expired
+                    user["vip_expiry_message"] = vip_expiry_message
+            except:
+                pass
+    
     # Enforce PRC = 0 for free users (only VIP can have PRC)
     if user.get("membership_type") != "vip" and user.get("prc_balance", 0) > 0:
         await db.users.update_one(
