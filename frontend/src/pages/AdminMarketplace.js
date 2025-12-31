@@ -247,7 +247,17 @@ const AdminMarketplace = ({ user }) => {
               </div>
             </Card>
           ))}
-        </div>
+          </div>
+          
+          {/* Pagination */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredProducts.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
+        </>
       )}
 
       {/* Add Product Modal */}
