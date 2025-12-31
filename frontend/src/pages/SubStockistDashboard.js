@@ -436,7 +436,7 @@ const SubStockistDashboard = ({ user, onLogout }) => {
       )}
 
       {activeTab === 'outlets' && (
-        <StockistHierarchy userId={user?.uid} roleFilter="outlet" />
+        <StockistHierarchy user={user} userRole={user?.role} />
       )}
 
       {activeTab === 'stock-requests' && (
