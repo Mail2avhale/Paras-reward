@@ -77,6 +77,13 @@ const AdminBillPayments = ({ user }) => {
     req.request_id.includes(searchTerm)
   );
 
+  // Pagination
+  const totalPages = Math.ceil(filteredRequests.length / ITEMS_PER_PAGE);
+  const paginatedRequests = filteredRequests.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   const getTypeLabel = (type) => {
     const labels = {
       mobile_recharge: 'Mobile Recharge',
