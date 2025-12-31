@@ -202,17 +202,18 @@ const AdminSupport = ({ user }) => {
           <p className="text-gray-500">No support tickets found</p>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {filteredTickets.map((ticket) => (
-            <Card 
-              key={ticket.ticket_id} 
-              className={`p-4 cursor-pointer hover:shadow-md transition-shadow ${selectedTicket?.ticket_id === ticket.ticket_id ? 'ring-2 ring-purple-500' : ''}`}
-              onClick={() => setSelectedTicket(ticket)}
-            >
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-purple-100 rounded-lg">
-                    <Ticket className="h-6 w-6 text-purple-600" />
+        <>
+          <div className="space-y-4">
+            {paginatedTickets.map((ticket) => (
+              <Card 
+                key={ticket.ticket_id} 
+                className={`p-4 cursor-pointer hover:shadow-md transition-shadow ${selectedTicket?.ticket_id === ticket.ticket_id ? 'ring-2 ring-purple-500' : ''}`}
+                onClick={() => setSelectedTicket(ticket)}
+              >
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-purple-100 rounded-lg">
+                      <Ticket className="h-6 w-6 text-purple-600" />
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900">{ticket.subject}</p>
