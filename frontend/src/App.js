@@ -61,6 +61,7 @@ const AdminVideoAds = lazy(() => import("@/pages/AdminVideoAds"));
 const AdminKYC = lazy(() => import("@/pages/AdminKYC"));
 const AdminOrders = lazy(() => import("@/pages/AdminOrders"));
 const AdminSupport = lazy(() => import("@/pages/AdminSupport"));
+const AdminMarketplace = lazy(() => import("@/pages/AdminMarketplace"));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
 const AdminVIPPlans = lazy(() => import("@/pages/AdminVIPPlans"));
 const AdminBurnDashboard = lazy(() => import("@/pages/AdminBurnDashboard"));
