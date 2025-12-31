@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import Pagination from '@/components/Pagination';
 import {
   Package, Search, Truck, CheckCircle, XCircle, Clock,
   Eye, RefreshCw, Filter, MapPin, Phone, User
@@ -11,6 +12,7 @@ import {
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+const ITEMS_PER_PAGE = 10;
 
 const AdminOrders = ({ user }) => {
   const [orders, setOrders] = useState([]);
@@ -19,10 +21,16 @@ const AdminOrders = ({ user }) => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
 
   const fetchOrders = async () => {
     try {
