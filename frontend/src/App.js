@@ -57,6 +57,7 @@ const FlashSalesPage = lazy(() => import("@/pages/FlashSalesPage"));
 const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
 const AdminDashboardModern = lazy(() => import("@/pages/AdminDashboardModern"));
 const AdminAnalytics = lazy(() => import("@/pages/AdminAnalytics"));
+const AdminPRCAnalytics = lazy(() => import("@/pages/AdminPRCAnalytics"));
 const AdminVideoAds = lazy(() => import("@/pages/AdminVideoAds"));
 const AdminKYC = lazy(() => import("@/pages/AdminKYC"));
 const AdminOrders = lazy(() => import("@/pages/AdminOrders"));
