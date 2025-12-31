@@ -203,7 +203,17 @@ const AdminOrders = ({ user }) => {
               </div>
             </Card>
           ))}
-        </div>
+          </div>
+          
+          {/* Pagination */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredOrders.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
+        </>
       )}
 
       {/* Order Detail Modal */}
