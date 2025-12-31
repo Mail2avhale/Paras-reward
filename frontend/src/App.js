@@ -178,7 +178,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/kyc" element={user?.role === 'admin' ? <AdminLayout user={user} onLogout={handleLogout}><AdminKYC user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/payments" element={user?.role === 'admin' ? <AdminLayout user={user} onLogout={handleLogout}><AdminVIPPlans user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/orders" element={user?.role === 'admin' ? <AdminLayout user={user} onLogout={handleLogout}><AdminOrders user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/marketplace" element={user?.role === 'admin' ? <AdminLayout user={user} onLogout={handleLogout}><MarketplaceEnhanced user={user} onLogout={handleLogout} isAdmin={true} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/marketplace" element={user?.role === 'admin' ? <AdminLayout user={user} onLogout={handleLogout}><AdminMarketplace user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/stockists" element={user?.role === 'admin' ? <AdminLayout user={user} onLogout={handleLogout}><StockistManagementAdmin user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/support" element={user?.role === 'admin' ? <AdminLayout user={user} onLogout={handleLogout}><AdminSupport user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/bill-payments" element={user ? <BillPayments user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
