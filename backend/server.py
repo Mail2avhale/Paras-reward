@@ -13134,12 +13134,10 @@ async def create_gift_voucher_request(request: Request):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # VIP membership check
-    if user.get("membership_type") != "vip":
-        raise HTTPException(
-            status_code=403, 
-            detail="VIP membership required to redeem gift vouchers. Please upgrade to VIP."
-        )
+    # VIP membership and expiry check
+    access_check = await check_vip_service_access(user_id, "gift voucher redemption")
+    if not access_check["allowed"]:
+        raise HTTPException(status_code=403, detail=access_check["reason"])
     
     user_role = user.get("role", "user")
     
