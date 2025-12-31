@@ -12901,12 +12901,10 @@ async def create_bill_payment_request(request: Request):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # VIP membership check
-    if user.get("membership_type") != "vip":
-        raise HTTPException(
-            status_code=403, 
-            detail="VIP membership required to use bill payment services. Please upgrade to VIP."
-        )
+    # VIP membership and expiry check
+    access_check = await check_vip_service_access(user_id, "bill payment services")
+    if not access_check["allowed"]:
+        raise HTTPException(status_code=403, detail=access_check["reason"])
     
     # Calculate PRC required (100 INR = 1000 PRC)
     prc_required = await calculate_bill_payment_prc(amount_inr)
