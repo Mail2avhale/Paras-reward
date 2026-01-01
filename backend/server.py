@@ -14622,15 +14622,20 @@ async def update_prc_rain_settings(request: Request):
     
     rain_settings = {
         "enabled": bool(data.get("enabled", False)),
-        "max_rain_events_per_day": int(data.get("max_rain_events_per_day", 2)),
-        "min_gap_between_rains_hours": int(data.get("min_gap_between_rains_hours", 3)),
+        "max_rain_events_per_day": max(2, min(100, int(data.get("max_rain_events_per_day", 5)))),
+        "min_gap_between_rains_minutes": max(1, int(data.get("min_gap_between_rains_minutes", 60))),
         "rain_duration_seconds": int(data.get("rain_duration_seconds", 30)),
-        "max_taps_per_rain": int(data.get("max_taps_per_rain", 15)),
+        "max_taps_per_rain": max(1, min(50, int(data.get("max_taps_per_rain", 15)))),
         "max_prc_gain_per_day": float(data.get("max_prc_gain_per_day", 50)),
         "max_prc_loss_per_day": float(data.get("max_prc_loss_per_day", 20)),
         "enable_negative_drops": bool(data.get("enable_negative_drops", True)),
+        "negative_drop_probability": max(0, min(100, int(data.get("negative_drop_probability", 20)))),
         "emergency_stop": bool(data.get("emergency_stop", False)),
-        "drop_types": data.get("drop_types", {}),
+        "prc_range": {
+            "min": float(data.get("prc_range", {}).get("min", 1)),
+            "max": float(data.get("prc_range", {}).get("max", 25))
+        },
+        "drop_colors": data.get("drop_colors", ["#22c55e", "#3b82f6", "#eab308", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"]),
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     
