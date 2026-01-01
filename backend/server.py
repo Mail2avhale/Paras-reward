@@ -14425,6 +14425,60 @@ async def update_service_charge_config(request: Request):
     
     return {"message": "Service charge configuration updated successfully", "config": update_data}
 
+# ==================== REFERRAL BONUS SETTINGS ====================
+
+@api_router.get("/admin/referral-bonus-settings")
+async def get_referral_bonus_settings():
+    """Get referral bonus settings for all 5 levels (Admin only)"""
+    settings = await db.settings.find_one({}, {"_id": 0, "referral_bonus_settings": 1})
+    
+    # Default settings
+    default_settings = {
+        "level_1": 10,    # 10%
+        "level_2": 5,     # 5%
+        "level_3": 2.5,   # 2.5%
+        "level_4": 1.5,   # 1.5%
+        "level_5": 1      # 1%
+    }
+    
+    if settings and "referral_bonus_settings" in settings:
+        return {"referral_bonus_settings": settings["referral_bonus_settings"]}
+    
+    return {"referral_bonus_settings": default_settings}
+
+@api_router.post("/admin/referral-bonus-settings")
+async def update_referral_bonus_settings(request: Request):
+    """Update referral bonus settings for all 5 levels (Admin only)"""
+    data = await request.json()
+    
+    # Validate all levels are provided
+    required_levels = ["level_1", "level_2", "level_3", "level_4", "level_5"]
+    for level in required_levels:
+        if level not in data:
+            raise HTTPException(status_code=400, detail=f"Missing required field: {level}")
+        if not isinstance(data[level], (int, float)) or data[level] < 0 or data[level] > 100:
+            raise HTTPException(status_code=400, detail=f"Invalid value for {level}. Must be between 0 and 100")
+    
+    referral_settings = {
+        "level_1": float(data["level_1"]),
+        "level_2": float(data["level_2"]),
+        "level_3": float(data["level_3"]),
+        "level_4": float(data["level_4"]),
+        "level_5": float(data["level_5"]),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.settings.update_one(
+        {},
+        {"$set": {"referral_bonus_settings": referral_settings}},
+        upsert=True
+    )
+    
+    return {
+        "message": "Referral bonus settings updated successfully",
+        "referral_bonus_settings": referral_settings
+    }
+
 @api_router.get("/admin/users-at-risk")
 async def get_users_at_risk_of_burn():
     """Get users whose PRC is about to be burned (Admin only)"""
