@@ -14751,9 +14751,9 @@ async def check_rain_status(uid: str):
         if (now - last_rain_time).total_seconds() < min_gap_minutes * 60:
             return {"should_rain": False, "reason": "too_soon"}
     
-    # Random trigger logic - 5% chance on each check
+    # Random trigger logic - 30% chance on each check (increased for better engagement)
     import random
-    if random.random() > 0.05:  # 95% chance of no rain
+    if random.random() > 0.30:  # 70% chance of no rain, 30% chance to trigger
         return {"should_rain": False, "reason": "not_triggered"}
     
     # Create rain session
