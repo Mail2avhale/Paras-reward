@@ -99,6 +99,16 @@ const Referrals = ({ user, onLogout }) => {
     }
   };
 
+  const fetchMultiLevelStats = async () => {
+    try {
+      if (!user?.uid) return;
+      const response = await axios.get(`${API}/referral/multi-level-stats/${user.uid}`);
+      setMultiLevelStats(response.data);
+    } catch (error) {
+      console.error('Error fetching multi-level stats:', error);
+    }
+  };
+
   const copyReferralCode = () => {
     navigator.clipboard.writeText(referralCode);
     setCopiedCode(true);
