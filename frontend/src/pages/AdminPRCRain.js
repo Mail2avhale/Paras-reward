@@ -361,12 +361,13 @@ const AdminPRCRain = ({ user }) => {
                   </label>
                   <Input
                     type="number"
-                    min="0"
-                    max="100"
                     value={settings.negative_drop_probability}
-                    onChange={(e) => setSettings(prev => ({ ...prev, negative_drop_probability: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) }))}
+                    onChange={(e) => setSettings(prev => ({ ...prev, negative_drop_probability: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
                     className="bg-white/10 border-white/20 text-white"
+                    data-testid="negative-prob-input"
+                    placeholder="e.g. 10, 20, 30"
                   />
+                  <p className="text-xs text-gray-500 mt-1">किती % drops negative असतील (0-100)</p>
                 </div>
               )}
             </div>
