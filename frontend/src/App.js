@@ -72,6 +72,7 @@ const AdminSupport = lazy(() => import("@/pages/AdminSupport"));
 const AdminMarketplace = lazy(() => import("@/pages/AdminMarketplace"));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
 const AdminVIPPlans = lazy(() => import("@/pages/AdminVIPPlans"));
+const AdminVIPPaymentVerification = lazy(() => import("@/pages/AdminVIPPaymentVerification"));
 const AdminBurnDashboard = lazy(() => import("@/pages/AdminBurnDashboard"));
 const AdminBillPayments = lazy(() => import("@/pages/AdminBillPayments"));
 const AdminGiftVouchers = lazy(() => import("@/pages/AdminGiftVouchers"));
@@ -203,6 +204,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/marketplace" element={user?.role === 'admin' ? <AdminLayout user={user} onLogout={handleLogout}><AdminMarketplace user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/stockists" element={user?.role === 'admin' ? <AdminLayout user={user} onLogout={handleLogout}><StockistManagementAdmin user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/support" element={user?.role === 'admin' ? <AdminLayout user={user} onLogout={handleLogout}><AdminSupport user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/vip-verification" element={user?.role === "admin" ? <AdminLayout user={user} onLogout={handleLogout}><AdminVIPPaymentVerification user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/bill-payments" element={user ? <BillPayments user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/gift-vouchers" element={user ? <GiftVoucherRedemption user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/manager" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerDashboardNew user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
