@@ -6,7 +6,8 @@ import {
   Truck, Store, HeadphonesIcon, UserCog, DollarSign,
   ChevronLeft, ChevronRight, LogOut, Bell, Search,
   Menu, X, Shield, Zap, Wallet, TrendingUp, ChevronDown,
-  Globe, Phone, Mail, Image, Share2, Cpu, ToggleLeft
+  Globe, Phone, Mail, Image, Share2, Cpu, ToggleLeft,
+  AlertTriangle, Smartphone, Building
 } from 'lucide-react';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
@@ -18,7 +19,8 @@ const AdminLayout = ({ children, user, onLogout }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({
     settings: false,
-    payments: false
+    payments: false,
+    finance: false
   });
 
   // Regular menu items (not grouped)
@@ -26,20 +28,29 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/admin' },
     { id: 'users', label: 'Users', icon: Users, path: '/admin/users' },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
-    { id: 'prc-analytics', label: 'PRC Analytics', icon: Activity, path: '/admin/prc-analytics' },
-    { id: 'audit', label: 'Audit Service', icon: Shield, path: '/admin/audit' },
-    { id: 'profit-loss', label: 'Profit & Loss', icon: TrendingUp, path: '/admin/profit-loss' },
-    { id: 'liquidity', label: 'Liquidity', icon: Wallet, path: '/admin/liquidity' },
     { id: 'kyc', label: 'KYC Verification', icon: FileText, path: '/admin/kyc' },
     { id: 'orders', label: 'Orders', icon: ShoppingCart, path: '/admin/orders' },
     { id: 'marketplace', label: 'Marketplace', icon: Store, path: '/admin/marketplace' },
     { id: 'video-ads', label: 'Video Ads', icon: Video, path: '/admin/video-ads' },
     { id: 'stockists', label: 'Stockist Management', icon: UserCog, path: '/admin/stockists' },
     { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon, path: '/admin/support' },
+    { id: 'fraud-alerts', label: 'Fraud Alerts', icon: AlertTriangle, path: '/admin/fraud-alerts' },
   ];
 
   // Grouped menu items
   const menuGroups = {
+    finance: {
+      label: 'Finance',
+      icon: DollarSign,
+      subItems: [
+        { id: 'profit-loss', label: 'Profit & Loss', icon: TrendingUp, path: '/admin/profit-loss' },
+        { id: 'company-wallets', label: 'Company Wallets', icon: Wallet, path: '/admin/company-wallets' },
+        { id: 'ads-income', label: 'Ads Income', icon: Smartphone, path: '/admin/ads-income' },
+        { id: 'prc-analytics', label: 'PRC Analytics', icon: Activity, path: '/admin/prc-analytics' },
+        { id: 'liquidity', label: 'Liquidity', icon: Building, path: '/admin/liquidity' },
+        { id: 'audit', label: 'Audit Service', icon: Shield, path: '/admin/audit' },
+      ]
+    },
     settings: {
       label: 'Settings',
       icon: Settings,
