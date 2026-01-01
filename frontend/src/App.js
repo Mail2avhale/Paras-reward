@@ -65,6 +65,7 @@ const AdminCompanyWallets = lazy(() => import("@/pages/AdminCompanyWallets"));
 const AdminAdsIncome = lazy(() => import("@/pages/AdminAdsIncome"));
 const AdminFraudAlerts = lazy(() => import("@/pages/AdminFraudAlerts"));
 const AdminVideoAds = lazy(() => import("@/pages/AdminVideoAds"));
+const AdminFixedExpenses = lazy(() => import("@/pages/AdminFixedExpenses"));
 const AdminKYC = lazy(() => import("@/pages/AdminKYC"));
 const AdminOrders = lazy(() => import("@/pages/AdminOrders"));
 const AdminSupport = lazy(() => import("@/pages/AdminSupport"));
@@ -182,6 +183,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/ads-income" element={user?.role === "admin" ? <AdminLayout user={user} onLogout={handleLogout}><AdminAdsIncome user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/fraud-alerts" element={user?.role === "admin" ? <AdminLayout user={user} onLogout={handleLogout}><AdminFraudAlerts user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/audit" element={user && user.role === "admin" ? <AdminLayout user={user} onLogout={handleLogout}><AdminAuditService user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/fixed-expenses" element={user?.role === "admin" ? <AdminLayout user={user} onLogout={handleLogout}><AdminFixedExpenses user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/profit-loss" element={user && user.role === "admin" ? <AdminLayout user={user} onLogout={handleLogout}><AdminProfitLoss user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/liquidity" element={user && user.role === "admin" ? <AdminLayout user={user} onLogout={handleLogout}><AdminLiquidity user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/video-ads" element={user && user.role === "admin" ? <AdminLayout user={user} onLogout={handleLogout}><AdminVideoAds user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
