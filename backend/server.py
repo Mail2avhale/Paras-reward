@@ -17487,11 +17487,21 @@ async def startup_db():
             replace_existing=True
         )
         
+        # Schedule daily wallet reconciliation - runs at 3 AM
+        scheduler.add_job(
+            daily_wallet_reconciliation,
+            CronTrigger(hour=3, minute=0),  # Daily at 3 AM
+            id='daily_wallet_reconciliation',
+            name='Daily wallet reconciliation and profit calculation',
+            replace_existing=True
+        )
+        
         # Start the scheduler
         scheduler.start()
         print("✅ Scheduled tasks started:")
         print("   - Free user PRC burn: Every hour")
         print("   - Expired VIP PRC burn: Daily at 2 AM")
+        print("   - Wallet reconciliation: Daily at 3 AM")
     except Exception as e:
         print(f"⚠️ Error starting scheduler (non-critical): {e}")
 
