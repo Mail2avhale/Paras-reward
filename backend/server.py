@@ -12405,6 +12405,807 @@ async def add_other_income(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ==================== COMPANY MASTER WALLETS ====================
+
+@api_router.get("/admin/finance/company-wallets")
+async def get_company_wallets():
+    """Get all company master wallets"""
+    try:
+        # Define wallet types
+        wallet_types = [
+            {"type": "ads_revenue", "name": "Ads Revenue Wallet", "description": "Income from AdMob & Unity Ads"},
+            {"type": "subscription", "name": "Subscription Wallet", "description": "VIP Membership payments"},
+            {"type": "redeem_reserve", "name": "Redeem Reserve Wallet", "description": "Reserved for user redemptions"},
+            {"type": "charity", "name": "Charity Wallet", "description": "Social responsibility fund"},
+            {"type": "profit", "name": "Profit Wallet", "description": "Net company profit"}
+        ]
+        
+        wallets = []
+        for wt in wallet_types:
+            wallet = await db.company_wallets.find_one({"wallet_type": wt["type"]}, {"_id": 0})
+            if not wallet:
+                # Initialize wallet if not exists
+                wallet = {
+                    "wallet_id": str(uuid4()),
+                    "wallet_type": wt["type"],
+                    "wallet_name": wt["name"],
+                    "description": wt["description"],
+                    "balance": 0.0,
+                    "total_credit": 0.0,
+                    "total_debit": 0.0,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "last_updated": datetime.now(timezone.utc).isoformat()
+                }
+                await db.company_wallets.insert_one(wallet)
+            wallets.append(wallet)
+        
+        # Get recent transactions
+        recent_txns = await db.company_wallet_transactions.find(
+            {}, {"_id": 0}
+        ).sort("timestamp", -1).limit(20).to_list(20)
+        
+        return {
+            "wallets": wallets,
+            "recent_transactions": recent_txns,
+            "total_balance": sum(w.get("balance", 0) for w in wallets)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/finance/company-wallet/transfer")
+async def transfer_company_wallet(request: Request):
+    """Transfer amount between company wallets"""
+    try:
+        data = await request.json()
+        from_wallet = data.get("from_wallet")
+        to_wallet = data.get("to_wallet")
+        amount = float(data.get("amount", 0))
+        description = data.get("description", "Inter-wallet transfer")
+        admin_id = data.get("admin_id")
+        
+        if amount <= 0:
+            raise HTTPException(status_code=400, detail="Amount must be positive")
+        
+        # Get source wallet
+        source = await db.company_wallets.find_one({"wallet_type": from_wallet})
+        if not source or source.get("balance", 0) < amount:
+            raise HTTPException(status_code=400, detail="Insufficient balance in source wallet")
+        
+        now = datetime.now(timezone.utc).isoformat()
+        
+        # Debit from source
+        await db.company_wallets.update_one(
+            {"wallet_type": from_wallet},
+            {"$inc": {"balance": -amount, "total_debit": amount}, "$set": {"last_updated": now}}
+        )
+        
+        # Credit to destination
+        await db.company_wallets.update_one(
+            {"wallet_type": to_wallet},
+            {"$inc": {"balance": amount, "total_credit": amount}, "$set": {"last_updated": now}}
+        )
+        
+        # Log transaction
+        txn = {
+            "txn_id": str(uuid4()),
+            "from_wallet": from_wallet,
+            "to_wallet": to_wallet,
+            "amount": amount,
+            "description": description,
+            "admin_id": admin_id,
+            "timestamp": now
+        }
+        await db.company_wallet_transactions.insert_one(txn)
+        
+        return {"success": True, "transaction_id": txn["txn_id"]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/finance/company-wallet/adjust")
+async def adjust_company_wallet(request: Request):
+    """Manual credit/debit to company wallet"""
+    try:
+        data = await request.json()
+        wallet_type = data.get("wallet_type")
+        amount = float(data.get("amount", 0))
+        txn_type = data.get("type")  # credit or debit
+        description = data.get("description")
+        admin_id = data.get("admin_id")
+        
+        if txn_type == "debit":
+            wallet = await db.company_wallets.find_one({"wallet_type": wallet_type})
+            if wallet.get("balance", 0) < amount:
+                raise HTTPException(status_code=400, detail="Insufficient balance")
+            amount = -amount
+        
+        now = datetime.now(timezone.utc).isoformat()
+        
+        update_field = "total_credit" if txn_type == "credit" else "total_debit"
+        await db.company_wallets.update_one(
+            {"wallet_type": wallet_type},
+            {
+                "$inc": {"balance": amount, update_field: abs(amount)},
+                "$set": {"last_updated": now}
+            }
+        )
+        
+        # Log transaction
+        txn = {
+            "txn_id": str(uuid4()),
+            "wallet_type": wallet_type,
+            "amount": abs(amount),
+            "type": txn_type,
+            "description": description,
+            "admin_id": admin_id,
+            "timestamp": now
+        }
+        await db.company_wallet_transactions.insert_one(txn)
+        
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== ADS INCOME MODULE ====================
+
+@api_router.get("/admin/finance/ads-income")
+async def get_ads_income(page: int = 1, limit: int = 20):
+    """Get ads income entries"""
+    try:
+        skip = (page - 1) * limit
+        
+        total = await db.ads_income.count_documents({})
+        entries = await db.ads_income.find(
+            {}, {"_id": 0}
+        ).sort("date", -1).skip(skip).limit(limit).to_list(limit)
+        
+        # Get summary
+        pipeline = [
+            {"$group": {
+                "_id": "$ad_network",
+                "total_revenue": {"$sum": "$revenue_amount"},
+                "total_impressions": {"$sum": "$impressions"},
+                "total_clicks": {"$sum": "$clicks"},
+                "avg_ecpm": {"$avg": "$ecpm"}
+            }}
+        ]
+        summary = await db.ads_income.aggregate(pipeline).to_list(10)
+        
+        return {
+            "entries": entries,
+            "total": total,
+            "page": page,
+            "summary": summary
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/finance/ads-income")
+async def add_ads_income(request: Request):
+    """Add ads income entry (manual)"""
+    try:
+        data = await request.json()
+        
+        entry = {
+            "entry_id": str(uuid4()),
+            "date": data.get("date", datetime.now(timezone.utc).strftime("%Y-%m-%d")),
+            "ad_network": data.get("ad_network"),  # admob, unity
+            "impressions": int(data.get("impressions", 0)),
+            "clicks": int(data.get("clicks", 0)),
+            "ecpm": float(data.get("ecpm", 0)),
+            "revenue_amount": float(data.get("revenue_amount", 0)),
+            "notes": data.get("notes", ""),
+            "added_by": data.get("admin_id"),
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.ads_income.insert_one(entry)
+        
+        # Update ads revenue wallet
+        await db.company_wallets.update_one(
+            {"wallet_type": "ads_revenue"},
+            {
+                "$inc": {"balance": entry["revenue_amount"], "total_credit": entry["revenue_amount"]},
+                "$set": {"last_updated": datetime.now(timezone.utc).isoformat()}
+            },
+            upsert=True
+        )
+        
+        return {"success": True, "entry_id": entry["entry_id"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/admin/finance/ads-income/{entry_id}")
+async def delete_ads_income(entry_id: str):
+    """Delete ads income entry"""
+    try:
+        entry = await db.ads_income.find_one({"entry_id": entry_id})
+        if not entry:
+            raise HTTPException(status_code=404, detail="Entry not found")
+        
+        # Reverse wallet credit
+        await db.company_wallets.update_one(
+            {"wallet_type": "ads_revenue"},
+            {"$inc": {"balance": -entry.get("revenue_amount", 0)}}
+        )
+        
+        await db.ads_income.delete_one({"entry_id": entry_id})
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== FIXED EXPENSES MODULE ====================
+
+@api_router.get("/admin/finance/fixed-expenses")
+async def get_fixed_expenses(page: int = 1, limit: int = 20, month: str = None):
+    """Get fixed monthly expenses"""
+    try:
+        skip = (page - 1) * limit
+        query = {}
+        if month:
+            query["month"] = month
+        
+        total = await db.fixed_expenses.count_documents(query)
+        expenses = await db.fixed_expenses.find(
+            query, {"_id": 0}
+        ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        
+        # Get monthly totals
+        pipeline = [
+            {"$group": {
+                "_id": {"month": "$month", "category": "$expense_category"},
+                "total": {"$sum": "$amount"}
+            }},
+            {"$sort": {"_id.month": -1}}
+        ]
+        monthly_summary = await db.fixed_expenses.aggregate(pipeline).to_list(100)
+        
+        return {
+            "expenses": expenses,
+            "total": total,
+            "page": page,
+            "monthly_summary": monthly_summary
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/finance/fixed-expense")
+async def add_fixed_expense(request: Request):
+    """Add fixed expense entry"""
+    try:
+        data = await request.json()
+        now = datetime.now(timezone.utc)
+        
+        expense = {
+            "expense_id": str(uuid4()),
+            "expense_category": data.get("category"),  # server, salary, rent, legal, etc.
+            "description": data.get("description"),
+            "amount": float(data.get("amount", 0)),
+            "month": data.get("month", now.strftime("%Y-%m")),
+            "vendor": data.get("vendor", ""),
+            "paid_status": data.get("paid_status", "pending"),  # pending, paid
+            "payment_date": data.get("payment_date"),
+            "recurring": data.get("recurring", True),
+            "added_by": data.get("admin_id"),
+            "created_at": now.isoformat()
+        }
+        
+        await db.fixed_expenses.insert_one(expense)
+        return {"success": True, "expense_id": expense["expense_id"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/admin/finance/fixed-expense/{expense_id}")
+async def update_fixed_expense(expense_id: str, request: Request):
+    """Update fixed expense"""
+    try:
+        data = await request.json()
+        
+        update_data = {
+            "expense_category": data.get("category"),
+            "description": data.get("description"),
+            "amount": float(data.get("amount", 0)),
+            "vendor": data.get("vendor"),
+            "paid_status": data.get("paid_status"),
+            "payment_date": data.get("payment_date"),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.fixed_expenses.update_one(
+            {"expense_id": expense_id},
+            {"$set": {k: v for k, v in update_data.items() if v is not None}}
+        )
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== FRAUD DETECTION & RISK CONTROL ====================
+
+@api_router.get("/admin/fraud/alerts")
+async def get_fraud_alerts(page: int = 1, limit: int = 20, status: str = None):
+    """Get fraud alerts"""
+    try:
+        skip = (page - 1) * limit
+        query = {}
+        if status:
+            query["status"] = status
+        
+        total = await db.fraud_alerts.count_documents(query)
+        alerts = await db.fraud_alerts.find(
+            query, {"_id": 0}
+        ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        
+        # Get stats
+        stats = {
+            "total_alerts": total,
+            "pending": await db.fraud_alerts.count_documents({"status": "pending"}),
+            "investigating": await db.fraud_alerts.count_documents({"status": "investigating"}),
+            "resolved": await db.fraud_alerts.count_documents({"status": "resolved"}),
+            "false_positive": await db.fraud_alerts.count_documents({"status": "false_positive"})
+        }
+        
+        return {
+            "alerts": alerts,
+            "total": total,
+            "page": page,
+            "stats": stats
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/fraud/detect")
+async def run_fraud_detection():
+    """Run fraud detection algorithms"""
+    try:
+        now = datetime.now(timezone.utc)
+        alerts_created = []
+        
+        # 1. Multiple accounts detection (same device/IP)
+        pipeline = [
+            {"$match": {"last_login_ip": {"$exists": True, "$ne": None}}},
+            {"$group": {
+                "_id": "$last_login_ip",
+                "users": {"$push": {"uid": "$uid", "email": "$email", "name": "$name"}},
+                "count": {"$sum": 1}
+            }},
+            {"$match": {"count": {"$gt": 2}}}  # More than 2 accounts from same IP
+        ]
+        same_ip_users = await db.users.aggregate(pipeline).to_list(100)
+        
+        for group in same_ip_users:
+            existing = await db.fraud_alerts.find_one({
+                "alert_type": "multiple_accounts_ip",
+                "ip_address": group["_id"],
+                "status": {"$in": ["pending", "investigating"]}
+            })
+            if not existing:
+                alert = {
+                    "alert_id": str(uuid4()),
+                    "alert_type": "multiple_accounts_ip",
+                    "severity": "high",
+                    "ip_address": group["_id"],
+                    "affected_users": group["users"][:10],  # Limit to 10
+                    "user_count": group["count"],
+                    "description": f"{group['count']} accounts detected from same IP: {group['_id']}",
+                    "status": "pending",
+                    "created_at": now.isoformat()
+                }
+                await db.fraud_alerts.insert_one(alert)
+                alerts_created.append(alert["alert_id"])
+        
+        # 2. Abnormal earning speed detection
+        yesterday = (now - timedelta(days=1)).isoformat()
+        high_earners = await db.users.find({
+            "prc_balance": {"$gt": 5000},  # High balance
+            "created_at": {"$gte": yesterday}  # New account
+        }, {"_id": 0, "uid": 1, "email": 1, "prc_balance": 1, "created_at": 1}).to_list(50)
+        
+        for user in high_earners:
+            existing = await db.fraud_alerts.find_one({
+                "alert_type": "abnormal_earning",
+                "user_id": user["uid"],
+                "status": {"$in": ["pending", "investigating"]}
+            })
+            if not existing:
+                alert = {
+                    "alert_id": str(uuid4()),
+                    "alert_type": "abnormal_earning",
+                    "severity": "high",
+                    "user_id": user["uid"],
+                    "user_email": user.get("email"),
+                    "prc_balance": user.get("prc_balance"),
+                    "description": f"New user with unusually high PRC balance: {user.get('prc_balance')} PRC",
+                    "status": "pending",
+                    "created_at": now.isoformat()
+                }
+                await db.fraud_alerts.insert_one(alert)
+                alerts_created.append(alert["alert_id"])
+        
+        # 3. Same device ID detection
+        pipeline = [
+            {"$match": {"device_id": {"$exists": True, "$ne": None}}},
+            {"$group": {
+                "_id": "$device_id",
+                "users": {"$push": {"uid": "$uid", "email": "$email"}},
+                "count": {"$sum": 1}
+            }},
+            {"$match": {"count": {"$gt": 1}}}  # More than 1 account from same device
+        ]
+        same_device = await db.users.aggregate(pipeline).to_list(100)
+        
+        for group in same_device:
+            existing = await db.fraud_alerts.find_one({
+                "alert_type": "multiple_accounts_device",
+                "device_id": group["_id"],
+                "status": {"$in": ["pending", "investigating"]}
+            })
+            if not existing:
+                alert = {
+                    "alert_id": str(uuid4()),
+                    "alert_type": "multiple_accounts_device",
+                    "severity": "critical",
+                    "device_id": group["_id"],
+                    "affected_users": group["users"][:10],
+                    "user_count": group["count"],
+                    "description": f"{group['count']} accounts from same device",
+                    "status": "pending",
+                    "created_at": now.isoformat()
+                }
+                await db.fraud_alerts.insert_one(alert)
+                alerts_created.append(alert["alert_id"])
+        
+        return {
+            "success": True,
+            "alerts_created": len(alerts_created),
+            "alert_ids": alerts_created
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/admin/fraud/alert/{alert_id}")
+async def update_fraud_alert(alert_id: str, request: Request):
+    """Update fraud alert status"""
+    try:
+        data = await request.json()
+        
+        update_data = {
+            "status": data.get("status"),  # pending, investigating, resolved, false_positive
+            "admin_notes": data.get("notes"),
+            "resolved_by": data.get("admin_id"),
+            "resolved_at": datetime.now(timezone.utc).isoformat() if data.get("status") in ["resolved", "false_positive"] else None,
+            "action_taken": data.get("action_taken")  # freeze_wallet, ban_user, warning, none
+        }
+        
+        await db.fraud_alerts.update_one(
+            {"alert_id": alert_id},
+            {"$set": {k: v for k, v in update_data.items() if v is not None}}
+        )
+        
+        # Take action if specified
+        if data.get("action_taken") == "freeze_wallet":
+            alert = await db.fraud_alerts.find_one({"alert_id": alert_id})
+            if alert and alert.get("user_id"):
+                await db.users.update_one(
+                    {"uid": alert["user_id"]},
+                    {"$set": {"wallet_status": "frozen", "frozen_reason": "Fraud investigation"}}
+                )
+            elif alert and alert.get("affected_users"):
+                for user in alert["affected_users"]:
+                    await db.users.update_one(
+                        {"uid": user["uid"]},
+                        {"$set": {"wallet_status": "frozen", "frozen_reason": "Fraud investigation"}}
+                    )
+        
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/fraud/freeze-wallet/{uid}")
+async def freeze_user_wallet(uid: str, request: Request):
+    """Freeze user wallet for fraud"""
+    try:
+        data = await request.json()
+        reason = data.get("reason", "Suspected fraud")
+        admin_id = data.get("admin_id")
+        
+        await db.users.update_one(
+            {"uid": uid},
+            {
+                "$set": {
+                    "wallet_status": "frozen",
+                    "frozen_reason": reason,
+                    "frozen_by": admin_id,
+                    "frozen_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        # Log activity
+        await db.activity_logs.insert_one({
+            "log_id": str(uuid4()),
+            "action": "wallet_frozen",
+            "user_id": uid,
+            "admin_id": admin_id,
+            "reason": reason,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/fraud/unfreeze-wallet/{uid}")
+async def unfreeze_user_wallet(uid: str, request: Request):
+    """Unfreeze user wallet"""
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id")
+        
+        await db.users.update_one(
+            {"uid": uid},
+            {
+                "$set": {"wallet_status": "active"},
+                "$unset": {"frozen_reason": "", "frozen_by": "", "frozen_at": ""}
+            }
+        )
+        
+        # Log activity
+        await db.activity_logs.insert_one({
+            "log_id": str(uuid4()),
+            "action": "wallet_unfrozen",
+            "user_id": uid,
+            "admin_id": admin_id,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== EXPORT & REPORTING ====================
+
+@api_router.get("/admin/finance/export/profit-loss")
+async def export_profit_loss(year: int = None, month: int = None, format: str = "csv"):
+    """Export P&L statement as CSV"""
+    try:
+        now = datetime.now(timezone.utc)
+        target_year = year or now.year
+        target_month = month or now.month
+        
+        # Get P&L data
+        start_date = datetime(target_year, target_month, 1, tzinfo=timezone.utc)
+        if target_month == 12:
+            end_date = datetime(target_year + 1, 1, 1, tzinfo=timezone.utc)
+        else:
+            end_date = datetime(target_year, target_month + 1, 1, tzinfo=timezone.utc)
+        
+        start_str = start_date.isoformat()
+        end_str = end_date.isoformat()
+        
+        # Income
+        vip_total = await db.vippayments.count_documents({"status": "approved", "approved_at": {"$gte": start_str, "$lt": end_str}})
+        vip_revenue = 0
+        async for p in db.vippayments.find({"status": "approved", "approved_at": {"$gte": start_str, "$lt": end_str}}, {"amount": 1}):
+            vip_revenue += p.get("amount", 0)
+        
+        ads_revenue = 0
+        async for a in db.ads_income.find({"date": {"$gte": start_str[:10], "$lt": end_str[:10]}}, {"revenue_amount": 1}):
+            ads_revenue += a.get("revenue_amount", 0)
+        
+        # Expenses
+        fixed_expenses = 0
+        async for e in db.fixed_expenses.find({"month": f"{target_year}-{target_month:02d}"}, {"amount": 1}):
+            fixed_expenses += e.get("amount", 0)
+        
+        variable_expenses = 0
+        async for e in db.expenses.find({"date": {"$gte": start_str, "$lt": end_str}}, {"amount": 1}):
+            variable_expenses += e.get("amount", 0)
+        
+        # Build CSV
+        import io
+        output = io.StringIO()
+        output.write("PROFIT & LOSS STATEMENT\n")
+        output.write(f"Period: {start_date.strftime('%B %Y')}\n\n")
+        
+        output.write("INCOME\n")
+        output.write(f"VIP Memberships,{vip_revenue}\n")
+        output.write(f"Ads Revenue,{ads_revenue}\n")
+        output.write(f"Total Income,{vip_revenue + ads_revenue}\n\n")
+        
+        output.write("EXPENSES\n")
+        output.write(f"Fixed Expenses,{fixed_expenses}\n")
+        output.write(f"Variable Expenses,{variable_expenses}\n")
+        output.write(f"Total Expenses,{fixed_expenses + variable_expenses}\n\n")
+        
+        net = (vip_revenue + ads_revenue) - (fixed_expenses + variable_expenses)
+        output.write(f"NET PROFIT/LOSS,{net}\n")
+        
+        from fastapi.responses import StreamingResponse
+        output.seek(0)
+        
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=PL_{target_year}_{target_month:02d}.csv"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/finance/export/user-ledger/{uid}")
+async def export_user_ledger(uid: str, format: str = "csv"):
+    """Export user transaction ledger as CSV"""
+    try:
+        user = await db.users.find_one({"uid": uid}, {"_id": 0, "name": 1, "email": 1})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        transactions = await db.transactions.find(
+            {"user_id": uid}, {"_id": 0}
+        ).sort("timestamp", -1).to_list(1000)
+        
+        import io
+        output = io.StringIO()
+        output.write(f"USER LEDGER - {user.get('name')} ({user.get('email')})\n")
+        output.write(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+        
+        output.write("Date,Type,Amount,Wallet,Description,Balance After\n")
+        for txn in transactions:
+            date = txn.get("timestamp", "")[:19].replace("T", " ")
+            output.write(f"{date},{txn.get('transaction_type')},{txn.get('amount')},{txn.get('wallet_type')},{txn.get('description', '')},{txn.get('balance_after', '')}\n")
+        
+        from fastapi.responses import StreamingResponse
+        output.seek(0)
+        
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=ledger_{uid}.csv"}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/finance/export/company-wallets")
+async def export_company_wallets(format: str = "csv"):
+    """Export company wallet statements as CSV"""
+    try:
+        wallets = await db.company_wallets.find({}, {"_id": 0}).to_list(10)
+        transactions = await db.company_wallet_transactions.find(
+            {}, {"_id": 0}
+        ).sort("timestamp", -1).to_list(500)
+        
+        import io
+        output = io.StringIO()
+        output.write("COMPANY WALLET STATEMENTS\n")
+        output.write(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+        
+        output.write("WALLET BALANCES\n")
+        output.write("Wallet,Balance,Total Credit,Total Debit\n")
+        for w in wallets:
+            output.write(f"{w.get('wallet_name')},{w.get('balance')},{w.get('total_credit')},{w.get('total_debit')}\n")
+        
+        output.write("\nTRANSACTIONS\n")
+        output.write("Date,From,To,Amount,Description\n")
+        for txn in transactions:
+            date = txn.get("timestamp", "")[:19].replace("T", " ")
+            from_w = txn.get("from_wallet") or txn.get("wallet_type") or "-"
+            to_w = txn.get("to_wallet") or "-"
+            output.write(f"{date},{from_w},{to_w},{txn.get('amount')},{txn.get('description', '')}\n")
+        
+        from fastapi.responses import StreamingResponse
+        output.seek(0)
+        
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=company_wallets.csv"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== MONTHLY P&L SNAPSHOT ====================
+
+@api_router.post("/admin/finance/snapshot/monthly")
+async def create_monthly_pl_snapshot():
+    """Create monthly P&L snapshot for historical records"""
+    try:
+        now = datetime.now(timezone.utc)
+        # Create snapshot for previous month
+        if now.month == 1:
+            target_year = now.year - 1
+            target_month = 12
+        else:
+            target_year = now.year
+            target_month = now.month - 1
+        
+        month_key = f"{target_year}-{target_month:02d}"
+        
+        # Check if snapshot already exists
+        existing = await db.pl_snapshots.find_one({"month": month_key})
+        if existing:
+            return {"success": False, "message": "Snapshot already exists for this month"}
+        
+        # Calculate totals
+        start_date = datetime(target_year, target_month, 1, tzinfo=timezone.utc)
+        if target_month == 12:
+            end_date = datetime(target_year + 1, 1, 1, tzinfo=timezone.utc)
+        else:
+            end_date = datetime(target_year, target_month + 1, 1, tzinfo=timezone.utc)
+        
+        start_str = start_date.isoformat()
+        end_str = end_date.isoformat()
+        
+        # Income
+        vip_income = 0
+        async for p in db.vippayments.find({"status": "approved", "approved_at": {"$gte": start_str, "$lt": end_str}}, {"amount": 1}):
+            vip_income += p.get("amount", 0)
+        
+        ads_income = 0
+        async for a in db.ads_income.find({"date": {"$gte": start_str[:10], "$lt": end_str[:10]}}, {"revenue_amount": 1}):
+            ads_income += a.get("revenue_amount", 0)
+        
+        other_income = 0
+        async for o in db.other_income.find({"date": {"$gte": start_str, "$lt": end_str}}, {"amount": 1}):
+            other_income += o.get("amount", 0)
+        
+        total_income = vip_income + ads_income + other_income
+        
+        # Expenses
+        fixed_expenses = 0
+        async for e in db.fixed_expenses.find({"month": month_key}, {"amount": 1}):
+            fixed_expenses += e.get("amount", 0)
+        
+        variable_expenses = 0
+        async for e in db.expenses.find({"date": {"$gte": start_str, "$lt": end_str}}, {"amount": 1}):
+            variable_expenses += e.get("amount", 0)
+        
+        total_expenses = fixed_expenses + variable_expenses
+        net_pl = total_income - total_expenses
+        
+        snapshot = {
+            "snapshot_id": str(uuid4()),
+            "month": month_key,
+            "year": target_year,
+            "month_num": target_month,
+            "income": {
+                "vip_memberships": vip_income,
+                "ads_revenue": ads_income,
+                "other": other_income,
+                "total": total_income
+            },
+            "expenses": {
+                "fixed": fixed_expenses,
+                "variable": variable_expenses,
+                "total": total_expenses
+            },
+            "net_profit_loss": net_pl,
+            "created_at": now.isoformat()
+        }
+        
+        await db.pl_snapshots.insert_one(snapshot)
+        
+        return {"success": True, "snapshot": snapshot}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/finance/snapshots")
+async def get_pl_snapshots(limit: int = 12):
+    """Get historical P&L snapshots"""
+    try:
+        snapshots = await db.pl_snapshots.find(
+            {}, {"_id": 0}
+        ).sort("month", -1).limit(limit).to_list(limit)
+        
+        return {"snapshots": snapshots}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ==================== 3. LIQUIDITY MANAGEMENT ====================
 
 @api_router.get("/admin/liquidity/dashboard")
