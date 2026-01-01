@@ -25,6 +25,8 @@ const Referrals = ({ user, onLogout }) => {
     active_referrals: 0,
     vip_referrals: 0
   });
+  const [multiLevelStats, setMultiLevelStats] = useState(null);
+  const [showLevelDetails, setShowLevelDetails] = useState(false);
   
   // Check if user is admin
   const isAdmin = user?.role === 'admin';
