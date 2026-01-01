@@ -1241,14 +1241,25 @@ async def calculate_mining_rate(uid: str):
     # Get multi-level active referrals
     active_referrals_by_level = await count_active_referrals_by_level(uid)
     
-    # Calculate referral bonuses for each level
-    referral_bonus_percentages = {
-        'level_1': 0.10,  # 10%
-        'level_2': 0.05,  # 5%
-        'level_3': 0.025, # 2.5%
-        'level_4': 0.015, # 1.5%
-        'level_5': 0.01   # 1.0%
-    }
+    # Get referral bonus settings from database (or use defaults)
+    settings = await db.settings.find_one({}, {"_id": 0, "referral_bonus_settings": 1})
+    if settings and "referral_bonus_settings" in settings:
+        referral_bonus_percentages = {
+            'level_1': settings["referral_bonus_settings"].get("level_1", 10) / 100,
+            'level_2': settings["referral_bonus_settings"].get("level_2", 5) / 100,
+            'level_3': settings["referral_bonus_settings"].get("level_3", 2.5) / 100,
+            'level_4': settings["referral_bonus_settings"].get("level_4", 1.5) / 100,
+            'level_5': settings["referral_bonus_settings"].get("level_5", 1) / 100,
+        }
+    else:
+        # Default referral bonuses
+        referral_bonus_percentages = {
+            'level_1': 0.10,  # 10%
+            'level_2': 0.05,  # 5%
+            'level_3': 0.025, # 2.5%
+            'level_4': 0.015, # 1.5%
+            'level_5': 0.01   # 1.0%
+        }
     
     total_referral_bonus = 0
     referral_breakdown = {}
