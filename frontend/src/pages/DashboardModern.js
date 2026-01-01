@@ -41,6 +41,18 @@ const DashboardModern = ({ user, onLogout }) => {
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const [showKYCModal, setShowKYCModal] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  // Check if should show tutorial for first-time users
+  useEffect(() => {
+    const tutorialCompleted = localStorage.getItem('tutorial_completed');
+    if (!tutorialCompleted && user?.uid) {
+      // Show tutorial for first-time users after a short delay
+      setTimeout(() => {
+        setShowTutorial(true);
+      }, 1000);
+    }
+  }, [user]);
 
   // Check if should show profile completion popup
   useEffect(() => {
