@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://finance-tracker-1627.preview.emergentagent.com",
+    "url": "https://prc-rain-manager.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
