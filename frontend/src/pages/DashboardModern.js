@@ -43,18 +43,18 @@ const DashboardModern = ({ user, onLogout }) => {
   const [userData, setUserData] = useState(null);
   const [showTutorial, setShowTutorial] = useState(false);
 
-  // Check if should show tutorial for first-time users
+  // Check if should show tutorial for first-time users - HIGHEST PRIORITY
   useEffect(() => {
     const tutorialCompleted = localStorage.getItem('tutorial_completed');
     if (!tutorialCompleted && user?.uid) {
-      // Show tutorial for first-time users after a short delay
-      setTimeout(() => {
-        setShowTutorial(true);
-      }, 1000);
+      // Show tutorial immediately for first-time users
+      setShowTutorial(true);
+      // Don't show profile popup during tutorial
+      setShowProfilePopup(false);
     }
   }, [user]);
 
-  // Check if should show profile completion popup
+  // Check if should show profile completion popup (only after tutorial)
   useEffect(() => {
     if (user?.uid) {
       const lastSkipped = localStorage.getItem('profile_popup_skipped');
