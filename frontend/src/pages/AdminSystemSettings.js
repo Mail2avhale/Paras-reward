@@ -278,18 +278,6 @@ const AdminSystemSettings = ({ user }) => {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                  <Percent className="h-4 w-4" />
-                  Referral Bonus (%)
-                </label>
-                <input
-                  type="number"
-                  value={miningSettings.referral_bonus_percent}
-                  onChange={(e) => setMiningSettings(prev => ({ ...prev, referral_bonus_percent: Number(e.target.value) }))}
-                  className="w-full px-3 py-2 border rounded-lg mt-1"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                   <Award className="h-4 w-4" />
                   VIP Multiplier
                 </label>
@@ -328,7 +316,10 @@ const AdminSystemSettings = ({ user }) => {
             </div>
             <div className="mt-6 p-4 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-800">
-                <strong>Mining Formula:</strong> Rate = Base Rate × (1 + Referral Bonus × Active Referrals) × VIP Multiplier
+                <strong>Mining Formula:</strong> Rate = Base Rate × (1 + Level Bonus × Active Referrals) × VIP Multiplier
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                Configure referral bonus percentages in the "Referral Bonus" tab
               </p>
             </div>
             <div className="mt-6 flex justify-end">
