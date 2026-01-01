@@ -42,7 +42,14 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 
 ## What's Been Implemented
 
-### January 1, 2026 (Latest Session)
+### January 1, 2026 (Current Session - Part 2)
+- ✅ **Admin PRC Rain Input Fields Fix**
+  - Removed `Math.min/max` constraints from `onChange` handlers
+  - Added validation only on save (in `handleSave` function)
+  - Admin can now freely type any value like "40", "100", "120"
+  - Values are validated and constrained to valid ranges when saving
+
+### January 1, 2026 (Earlier Session)
 - ✅ **User Wallet Ledger System (Admin-Only)**
   - Non-editable, append-only transaction ledger
   - Filter by user, wallet type, transaction type, date range
