@@ -42,8 +42,36 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 
 ## What's Been Implemented
 
-### January 1, 2026
-- ✅ **Financial Management System**
+### January 1, 2026 (Latest Session)
+- ✅ **User Wallet Ledger System (Admin-Only)**
+  - Non-editable, append-only transaction ledger
+  - Filter by user, wallet type, transaction type, date range
+  - Summary statistics (credits, debits, unique users)
+  - Export to CSV functionality
+  - New page: `/admin/user-ledger`
+
+- ✅ **Redemption Safety Settings**
+  - Configurable daily limits per user and global
+  - Manual approval thresholds
+  - Suspicious amount flagging
+  - Max transactions per day
+  - Minimum KYC and VIP tenure requirements
+  - Cool-off period between redemptions
+  - New page: `/admin/settings/redeem`
+
+- ✅ **Monthly P&L Snapshots**
+  - Detailed monthly P&L reports (income, expenses, profit)
+  - Save historical snapshots
+  - New API: `/api/admin/finance/profit-loss/monthly`
+
+- ✅ **Automatic Wallet Reconciliation**
+  - Daily scheduled job at 3 AM
+  - Compares actual vs expected wallet balances
+  - Auto-transfers net profit to profit wallet
+  - Manual trigger available
+  - Fixed ObjectId serialization bug
+
+- ✅ **Financial Management System (Foundation)**
   - Company Master Wallets (5 wallets with transfer/adjust)
   - Ads Income Module (manual AdMob/Unity tracking)
   - Fixed Expenses Module (categories, paid/pending status)
@@ -51,11 +79,6 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
   - Fraud Detection System (IP/Device tracking, auto-freeze)
   - Export system (CSV for P&L, Ledger, Wallets)
   - Admin sidebar reorganized: Finance, Settings, Payments groups
-
-- ✅ **Admin Sidebar Reorganization**
-  - Created collapsible Settings group (System, Web, Social Media)
-  - Created collapsible Payments group (VIP Membership, Bill Payments, Gift Vouchers)
-  - New pages: AdminSystemSettings.js, AdminWebSettings.js, AdminSocialMediaSettings.js
 
 ### December 31, 2025
 - ✅ **VIP Membership Expiry Feature**
@@ -67,14 +90,12 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
   - Fixed double deduction bug in PRC burn
 
 ### Previous Sessions
-- ✅ Admin panel with 16 working routes
+- ✅ Admin panel with 16+ working routes
 - ✅ Pagination on all admin list pages
 - ✅ PRC Analytics Dashboard
 - ✅ Auditing Service Dashboard
 - ✅ Profit & Loss Dashboard
 - ✅ Liquidity Management Dashboard
-- ✅ Fixed navigation blank pages
-- ✅ Fixed critical JSX syntax errors
 
 ## Test Credentials
 - **Admin**: admin@paras.com / admin
@@ -88,7 +109,7 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 - [ ] Verify pagination on Bill Payments History page
 
 ### P2 - Medium Priority
-- [ ] AdMob + Unity Ads Integration
+- [ ] AdMob + Unity Ads Integration (automation for ads income)
 
 ### P3 - Future/Backlog
 - [ ] Hierarchical Reporting Structure
@@ -100,7 +121,17 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 
 ## Key API Endpoints
 
-### VIP Expiry Related
+### Finance APIs (New)
+- `GET /api/admin/finance/user-ledger` - Paginated user transactions
+- `GET /api/admin/finance/user-ledger/{uid}` - Specific user's ledger
+- `GET /api/admin/finance/redeem-settings` - Get redemption settings
+- `PUT /api/admin/finance/redeem-settings` - Update redemption settings
+- `GET /api/admin/finance/profit-loss/monthly` - Monthly P&L report
+- `POST /api/admin/finance/profit-loss/snapshot` - Save P&L snapshot
+- `POST /api/admin/finance/reconciliation/run` - Manual reconciliation
+- `GET /api/admin/finance/reconciliation/status` - Wallet status
+
+### VIP & Service APIs
 - `POST /api/auth/login` - Returns vip_expired, vip_days_expired, vip_expiry_message
 - `GET /api/marketplace/products` - 403 for expired VIP
 - `POST /api/gift-voucher/request` - 403 for expired VIP
@@ -122,10 +153,26 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
     └── src/
         ├── App.js (Routes)
         ├── components/
+        │   └── layouts/
+        │       └── AdminLayout.js (Sidebar with Finance, Settings, Payments groups)
         └── pages/
+            ├── AdminUserLedger.js (NEW - User Wallet Ledger)
+            ├── AdminRedeemSettings.js (NEW - Redemption Safety Settings)
+            ├── AdminCompanyWallets.js
+            ├── AdminAdsIncome.js
+            ├── AdminFixedExpenses.js
+            └── ... (other admin pages)
 ```
 
 ## Key Functions
 - `check_vip_service_access(uid, service_name)` - Checks VIP status and expiry
 - `burn_expired_vip_prc()` - Burns PRC mined after VIP expiry (5+ days old)
 - `burn_expired_prc_for_free_users()` - Burns free user PRC (48hrs expiry)
+- `check_redeem_safety(user_id, amount_inr)` - Validates redemption against safety rules
+- `daily_wallet_reconciliation()` - Scheduled daily reconciliation job
+- `log_transaction()` - Central function for all balance updates (prevents double deduction)
+
+## Scheduled Jobs (APScheduler)
+1. **Free User PRC Burn**: Every hour - Burns PRC older than 48 hours
+2. **Expired VIP PRC Burn**: Daily at 2 AM - Burns PRC mined after VIP expiry (5+ days old)
+3. **Wallet Reconciliation**: Daily at 3 AM - Reconciles company wallets and calculates profit
