@@ -16586,6 +16586,436 @@ async def get_reconciliation_status():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ==================== USER WALLET LEDGER (Admin Only) ====================
+
+@api_router.get("/admin/finance/user-ledger")
+async def get_all_user_ledger(
+    page: int = 1, 
+    limit: int = 50, 
+    user_id: str = None,
+    wallet_type: str = None,
+    transaction_type: str = None,
+    date_from: str = None,
+    date_to: str = None
+):
+    """
+    Get comprehensive user wallet ledger for all users (Admin only)
+    This is an append-only, non-editable ledger showing all user transactions
+    """
+    try:
+        query = {}
+        
+        if user_id:
+            query["user_id"] = user_id
+        if wallet_type:
+            query["wallet_type"] = wallet_type
+        if transaction_type:
+            query["type"] = transaction_type
+        if date_from:
+            query["created_at"] = {"$gte": date_from}
+        if date_to:
+            if "created_at" in query:
+                query["created_at"]["$lte"] = date_to
+            else:
+                query["created_at"] = {"$lte": date_to}
+        
+        total = await db.transactions.count_documents(query)
+        skip = (page - 1) * limit
+        
+        transactions = await db.transactions.find(
+            query, {"_id": 0}
+        ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        
+        # Enrich with user data
+        enriched = []
+        for txn in transactions:
+            user = await db.users.find_one({"uid": txn.get("user_id")}, {"_id": 0, "name": 1, "email": 1})
+            txn["user_name"] = user.get("name", "Unknown") if user else "Unknown"
+            txn["user_email"] = user.get("email", "N/A") if user else "N/A"
+            enriched.append(txn)
+        
+        # Calculate summary stats
+        summary_pipeline = [
+            {"$match": query},
+            {"$group": {
+                "_id": "$type",
+                "total_amount": {"$sum": "$amount"},
+                "count": {"$sum": 1}
+            }}
+        ]
+        summary_data = await db.transactions.aggregate(summary_pipeline).to_list(50)
+        summary = {item["_id"]: {"amount": item["total_amount"], "count": item["count"]} for item in summary_data}
+        
+        return {
+            "transactions": enriched,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": (total + limit - 1) // limit,
+            "summary": summary
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/finance/user-ledger/{uid}")
+async def get_user_wallet_ledger(uid: str, page: int = 1, limit: int = 50):
+    """Get complete wallet ledger for a specific user (Admin view)"""
+    try:
+        user = await db.users.find_one({"uid": uid}, {"_id": 0, "name": 1, "email": 1, "prc_balance": 1, "cash_wallet_balance": 1})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        total = await db.transactions.count_documents({"user_id": uid})
+        skip = (page - 1) * limit
+        
+        transactions = await db.transactions.find(
+            {"user_id": uid}, {"_id": 0}
+        ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        
+        # Calculate totals
+        pipeline = [
+            {"$match": {"user_id": uid}},
+            {"$group": {
+                "_id": "$wallet_type",
+                "total_credit": {
+                    "$sum": {
+                        "$cond": [
+                            {"$in": ["$type", ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share"]]},
+                            "$amount", 0
+                        ]
+                    }
+                },
+                "total_debit": {
+                    "$sum": {
+                        "$cond": [
+                            {"$in": ["$type", ["order", "withdrawal", "admin_debit", "prc_burn", "bill_payment_request", "gift_voucher_request"]]},
+                            "$amount", 0
+                        ]
+                    }
+                }
+            }}
+        ]
+        wallet_stats = await db.transactions.aggregate(pipeline).to_list(10)
+        
+        return {
+            "user": user,
+            "transactions": transactions,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": (total + limit - 1) // limit,
+            "wallet_stats": {s["_id"]: {"credit": s["total_credit"], "debit": s["total_debit"]} for s in wallet_stats}
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== REDEEM SAFETY SETTINGS ====================
+
+@api_router.get("/admin/finance/redeem-settings")
+async def get_redeem_settings():
+    """Get current redemption safety settings"""
+    try:
+        settings = await db.settings.find_one({}, {"_id": 0, "redeem_settings": 1})
+        
+        # Default settings if not configured
+        default_settings = {
+            "daily_limit_per_user": 5000,  # Max INR per user per day
+            "daily_limit_global": 100000,  # Max INR total per day
+            "manual_approval_threshold": 1000,  # Auto-approve below this, manual above
+            "cool_off_period_hours": 24,  # Hours between redemptions
+            "min_kyc_status": "verified",  # KYC requirement
+            "min_vip_days": 7,  # Minimum VIP tenure for redemptions
+            "max_redemptions_per_day": 3,  # Max transactions per user per day
+            "suspicious_amount_threshold": 2000,  # Flag for review above this
+            "enabled": True
+        }
+        
+        if settings and "redeem_settings" in settings:
+            return {"settings": settings["redeem_settings"]}
+        return {"settings": default_settings}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/admin/finance/redeem-settings")
+async def update_redeem_settings(request: Request):
+    """Update redemption safety settings (Admin only)"""
+    try:
+        data = await request.json()
+        
+        # Validate required fields
+        required_fields = ["daily_limit_per_user", "manual_approval_threshold"]
+        for field in required_fields:
+            if field not in data:
+                raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
+        
+        # Update settings
+        await db.settings.update_one(
+            {},
+            {
+                "$set": {
+                    "redeem_settings": {
+                        "daily_limit_per_user": float(data.get("daily_limit_per_user", 5000)),
+                        "daily_limit_global": float(data.get("daily_limit_global", 100000)),
+                        "manual_approval_threshold": float(data.get("manual_approval_threshold", 1000)),
+                        "cool_off_period_hours": int(data.get("cool_off_period_hours", 24)),
+                        "min_kyc_status": data.get("min_kyc_status", "verified"),
+                        "min_vip_days": int(data.get("min_vip_days", 7)),
+                        "max_redemptions_per_day": int(data.get("max_redemptions_per_day", 3)),
+                        "suspicious_amount_threshold": float(data.get("suspicious_amount_threshold", 2000)),
+                        "enabled": bool(data.get("enabled", True)),
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }
+                }
+            },
+            upsert=True
+        )
+        
+        return {"success": True, "message": "Redeem settings updated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def check_redeem_safety(user_id: str, amount_inr: float) -> Dict:
+    """
+    Check if a redemption request passes all safety rules
+    Returns: {allowed: bool, reason: str, requires_manual_approval: bool}
+    """
+    try:
+        settings = await db.settings.find_one({}, {"_id": 0, "redeem_settings": 1})
+        rs = settings.get("redeem_settings", {}) if settings else {}
+        
+        # Default values
+        daily_limit_per_user = rs.get("daily_limit_per_user", 5000)
+        daily_limit_global = rs.get("daily_limit_global", 100000)
+        manual_threshold = rs.get("manual_approval_threshold", 1000)
+        max_per_day = rs.get("max_redemptions_per_day", 3)
+        min_vip_days = rs.get("min_vip_days", 7)
+        suspicious_threshold = rs.get("suspicious_amount_threshold", 2000)
+        
+        user = await db.users.find_one({"uid": user_id})
+        if not user:
+            return {"allowed": False, "reason": "User not found", "requires_manual_approval": False}
+        
+        # Check KYC
+        if user.get("kyc_status") != "verified":
+            return {"allowed": False, "reason": "KYC not verified", "requires_manual_approval": False}
+        
+        # Check VIP tenure
+        vip_expiry_str = user.get("vip_expiry")
+        if vip_expiry_str:
+            try:
+                now = datetime.now(timezone.utc)
+                # Calculate how long user has been VIP (rough estimate)
+                vip_start = now - timedelta(days=30)  # Assume monthly plan minimum
+                if user.get("membership_type") != "vip":
+                    return {"allowed": False, "reason": "VIP membership required", "requires_manual_approval": False}
+            except:
+                pass
+        
+        # Check user's daily redemption total
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        
+        user_today_redemptions = await db.gift_voucher_requests.find({
+            "user_id": user_id,
+            "created_at": {"$gte": today_start},
+            "status": {"$ne": "rejected"}
+        }).to_list(100)
+        
+        user_today_bills = await db.bill_payment_requests.find({
+            "user_id": user_id,
+            "created_at": {"$gte": today_start},
+            "status": {"$ne": "rejected"}
+        }).to_list(100)
+        
+        user_today_total = sum(r.get("denomination", 0) for r in user_today_redemptions) + \
+                          sum(b.get("amount_inr", 0) for b in user_today_bills)
+        user_today_count = len(user_today_redemptions) + len(user_today_bills)
+        
+        if user_today_count >= max_per_day:
+            return {"allowed": False, "reason": f"Daily transaction limit ({max_per_day}) reached", "requires_manual_approval": False}
+        
+        if user_today_total + amount_inr > daily_limit_per_user:
+            return {"allowed": False, "reason": f"Would exceed daily limit of ₹{daily_limit_per_user}", "requires_manual_approval": False}
+        
+        # Check global daily limit
+        global_today_redemptions = await db.gift_voucher_requests.find({
+            "created_at": {"$gte": today_start},
+            "status": {"$ne": "rejected"}
+        }).to_list(10000)
+        
+        global_today_bills = await db.bill_payment_requests.find({
+            "created_at": {"$gte": today_start},
+            "status": {"$ne": "rejected"}
+        }).to_list(10000)
+        
+        global_today_total = sum(r.get("denomination", 0) for r in global_today_redemptions) + \
+                            sum(b.get("amount_inr", 0) for b in global_today_bills)
+        
+        if global_today_total + amount_inr > daily_limit_global:
+            return {"allowed": False, "reason": "Global daily redemption limit reached", "requires_manual_approval": False}
+        
+        # Determine if manual approval needed
+        requires_manual = amount_inr >= manual_threshold or amount_inr >= suspicious_threshold
+        
+        return {
+            "allowed": True, 
+            "reason": "All safety checks passed",
+            "requires_manual_approval": requires_manual,
+            "auto_approve": not requires_manual
+        }
+        
+    except Exception as e:
+        logging.error(f"Error checking redeem safety: {e}")
+        return {"allowed": False, "reason": "Error checking safety rules", "requires_manual_approval": True}
+
+# ==================== P&L MONTHLY SNAPSHOTS ====================
+
+@api_router.get("/admin/finance/profit-loss/monthly")
+async def get_monthly_pl_report(year: int = None, month: int = None):
+    """Get monthly P&L report with detailed breakdown"""
+    try:
+        now = datetime.now(timezone.utc)
+        year = year or now.year
+        month = month or now.month
+        
+        month_start = datetime(year, month, 1, tzinfo=timezone.utc)
+        if month == 12:
+            month_end = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+        else:
+            month_end = datetime(year, month + 1, 1, tzinfo=timezone.utc)
+        
+        month_start_str = month_start.isoformat()
+        month_end_str = month_end.isoformat()
+        
+        # INCOME
+        # 1. VIP Subscriptions
+        vip_payments = await db.vip_payments.find({
+            "status": "approved",
+            "approved_at": {"$gte": month_start_str, "$lt": month_end_str}
+        }).to_list(10000)
+        vip_income = sum(p.get("amount", 0) for p in vip_payments)
+        
+        # 2. Ads Revenue
+        ads_income_entries = await db.ads_income.find({
+            "created_at": {"$gte": month_start_str, "$lt": month_end_str}
+        }).to_list(1000)
+        ads_income = sum(a.get("revenue_amount", 0) for a in ads_income_entries)
+        
+        # 3. Other Income (service charges from transactions)
+        service_charges = await db.transactions.find({
+            "type": {"$in": ["service_charge", "transaction_fee"]},
+            "created_at": {"$gte": month_start_str, "$lt": month_end_str}
+        }).to_list(10000)
+        service_income = sum(s.get("amount", 0) for s in service_charges)
+        
+        total_income = vip_income + ads_income + service_income
+        
+        # EXPENSES
+        # 1. Fixed Expenses
+        month_key = f"{year}-{month:02d}"
+        fixed_expenses = await db.fixed_expenses.find({
+            "month": month_key,
+            "paid_status": "paid"
+        }).to_list(100)
+        fixed_expense_total = sum(e.get("amount", 0) for e in fixed_expenses)
+        
+        # 2. Redemption Payouts (gift vouchers + bill payments)
+        gift_vouchers = await db.gift_voucher_requests.find({
+            "status": "completed",
+            "completed_at": {"$gte": month_start_str, "$lt": month_end_str}
+        }).to_list(10000)
+        gift_voucher_cost = sum(g.get("denomination", 0) for g in gift_vouchers)
+        
+        bill_payments = await db.bill_payment_requests.find({
+            "status": "completed",
+            "completed_at": {"$gte": month_start_str, "$lt": month_end_str}
+        }).to_list(10000)
+        bill_payment_cost = sum(b.get("amount_inr", 0) for b in bill_payments)
+        
+        total_expenses = fixed_expense_total + gift_voucher_cost + bill_payment_cost
+        
+        # Calculate P&L
+        gross_profit = total_income - gift_voucher_cost - bill_payment_cost
+        net_profit = total_income - total_expenses
+        profit_margin = (net_profit / total_income * 100) if total_income > 0 else 0
+        
+        report = {
+            "period": {
+                "year": year,
+                "month": month,
+                "month_name": month_start.strftime("%B"),
+                "start_date": month_start_str,
+                "end_date": month_end_str
+            },
+            "income": {
+                "vip_subscriptions": vip_income,
+                "vip_count": len(vip_payments),
+                "ads_revenue": ads_income,
+                "service_charges": service_income,
+                "total": total_income
+            },
+            "expenses": {
+                "fixed_expenses": fixed_expense_total,
+                "gift_voucher_payouts": gift_voucher_cost,
+                "gift_voucher_count": len(gift_vouchers),
+                "bill_payment_payouts": bill_payment_cost,
+                "bill_payment_count": len(bill_payments),
+                "total": total_expenses
+            },
+            "summary": {
+                "gross_profit": gross_profit,
+                "net_profit": net_profit,
+                "profit_margin_percent": round(profit_margin, 2)
+            },
+            "generated_at": now.isoformat()
+        }
+        
+        return report
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/finance/profit-loss/snapshot")
+async def save_monthly_pl_snapshot(year: int, month: int):
+    """Save a monthly P&L snapshot for historical records"""
+    try:
+        # Get the report
+        report = await get_monthly_pl_report(year, month)
+        
+        # Check if snapshot already exists
+        existing = await db.pl_snapshots.find_one({
+            "period.year": year,
+            "period.month": month
+        })
+        
+        if existing:
+            # Update existing
+            await db.pl_snapshots.update_one(
+                {"period.year": year, "period.month": month},
+                {"$set": {**report, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+            return {"success": True, "message": "Snapshot updated", "report": report}
+        else:
+            # Create new
+            report["snapshot_id"] = str(uuid.uuid4())
+            report["created_at"] = datetime.now(timezone.utc).isoformat()
+            await db.pl_snapshots.insert_one(report)
+            # Remove _id before returning
+            report.pop("_id", None)
+            return {"success": True, "message": "Snapshot created", "report": report}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/finance/profit-loss/snapshots")
+async def get_pl_snapshots(limit: int = 12):
+    """Get historical P&L snapshots"""
+    try:
+        snapshots = await db.pl_snapshots.find(
+            {}, {"_id": 0}
+        ).sort([("period.year", -1), ("period.month", -1)]).limit(limit).to_list(limit)
+        
+        return {"snapshots": snapshots}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Get treasure hunt leaderboard
 @app.get("/api/treasure-hunts/leaderboard")
 async def get_treasure_leaderboard(uid: str):
