@@ -14784,13 +14784,13 @@ async def check_rain_status(uid: str):
 
 @api_router.post("/prc-rain/tap")
 async def tap_rain_drop(request: Request):
-    """Record a tap on a rain drop"""
+    """Record a tap on a rain drop - RANDOM PRC, user doesn't know outcome"""
     data = await request.json()
     session_id = data.get("session_id")
     user_id = data.get("user_id")
-    drop_type = data.get("drop_type")
+    drop_color = data.get("drop_color")  # Just color, no type info
     
-    if not all([session_id, user_id, drop_type]):
+    if not all([session_id, user_id]):
         raise HTTPException(status_code=400, detail="Missing required fields")
     
     # Get session
@@ -14805,21 +14805,22 @@ async def tap_rain_drop(request: Request):
     if session.get("taps_count", 0) >= session.get("max_taps", 15):
         return {"success": False, "reason": "max_taps_reached", "prc_change": 0}
     
-    # Get settings for drop config
+    # Get settings
     settings = await db.settings.find_one({}, {"_id": 0, "prc_rain_settings": 1})
     rain_config = settings.get("prc_rain_settings", {}) if settings else {}
-    drop_config = rain_config.get("drop_types", {}).get(drop_type, {})
     
-    if not drop_config:
-        raise HTTPException(status_code=400, detail="Invalid drop type")
-    
-    # Calculate PRC change
+    # RANDOM PRC calculation - user doesn't know which is positive/negative!
     import random
-    prc_min = drop_config.get("prc_min", 1)
-    prc_max = drop_config.get("prc_max", 5)
+    prc_range = rain_config.get("prc_range", {"min": 1, "max": 25})
+    prc_min = prc_range.get("min", 1)
+    prc_max = prc_range.get("max", 25)
     prc_amount = round(random.uniform(prc_min, prc_max), 2)
     
-    is_negative = drop_config.get("is_negative", False)
+    # Random positive/negative based on probability
+    negative_prob = rain_config.get("negative_drop_probability", 20) / 100
+    enable_negative = rain_config.get("enable_negative_drops", True)
+    
+    is_negative = enable_negative and random.random() < negative_prob
     prc_change = -prc_amount if is_negative else prc_amount
     
     # Check daily limits
