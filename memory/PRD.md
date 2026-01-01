@@ -46,9 +46,11 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 - ✅ **Financial Management System**
   - Company Master Wallets (5 wallets with transfer/adjust)
   - Ads Income Module (manual AdMob/Unity tracking)
+  - Fixed Expenses Module (categories, paid/pending status)
+  - VIP Payment Verification (approve/reject with wallet credit)
   - Fraud Detection System (IP/Device tracking, auto-freeze)
   - Export system (CSV for P&L, Ledger, Wallets)
-  - Admin sidebar Finance group added
+  - Admin sidebar reorganized: Finance, Settings, Payments groups
 
 - ✅ **Admin Sidebar Reorganization**
   - Created collapsible Settings group (System, Web, Social Media)
