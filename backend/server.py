@@ -14859,7 +14859,7 @@ async def tap_rain_drop(request: Request):
             user_id=user_id,
             transaction_type="prc_rain_gain" if prc_change > 0 else "prc_rain_loss",
             amount=abs(prc_change),
-            description=f"PRC Rain Drop - {drop_config.get('name', drop_type)}",
+            description=f"PRC Rain Drop",
             wallet_type="prc"
         )
     
@@ -14869,7 +14869,7 @@ async def tap_rain_drop(request: Request):
         "user_id": user_id,
         "session_id": session_id,
         "event_type": "PRC_RAIN",
-        "drop_type": drop_type,
+        "drop_color": drop_color,
         "prc_change": prc_change,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
@@ -14878,7 +14878,7 @@ async def tap_rain_drop(request: Request):
     # Update session
     update_data = {
         "$inc": {"taps_count": 1},
-        "$push": {"drops_tapped": drop_type}
+        "$push": {"drops_tapped": drop_color}
     }
     if prc_change > 0:
         update_data["$inc"]["prc_gained"] = prc_change
@@ -14892,7 +14892,6 @@ async def tap_rain_drop(request: Request):
     
     return {
         "success": True,
-        "drop_type": drop_type,
         "prc_change": prc_change,
         "is_negative": is_negative,
         "taps_remaining": session.get("max_taps", 15) - session.get("taps_count", 0) - 1
