@@ -158,10 +158,10 @@ const PRCRain = ({ user, onComplete }) => {
     };
   }, [isActive]);
 
-  // Check for rain every 2 minutes
+  // Check for rain every 30 seconds (more responsive)
   useEffect(() => {
     checkRainTrigger(); // Initial check
-    checkIntervalRef.current = setInterval(checkRainTrigger, 120000); // Every 2 minutes
+    checkIntervalRef.current = setInterval(checkRainTrigger, 30000); // Every 30 seconds
 
     return () => {
       if (checkIntervalRef.current) clearInterval(checkIntervalRef.current);
