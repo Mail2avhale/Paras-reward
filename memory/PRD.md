@@ -115,8 +115,9 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 - [ ] Verify pagination on Voucher History page
 - [ ] Verify pagination on Bill Payments History page
 
-### P2 - Medium Priority
+### P1.1 - Upcoming
 - [ ] AdMob + Unity Ads Integration (automation for ads income)
+- [ ] PWA Setup (Add to Home Screen functionality)
 
 ### P3 - Future/Backlog
 - [ ] Hierarchical Reporting Structure
