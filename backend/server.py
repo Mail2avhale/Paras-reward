@@ -16492,8 +16492,9 @@ async def daily_wallet_reconciliation():
             
             reconciliation_report["profit_transfer"] = net_profit
         
-        # 6. Save reconciliation report
-        await db.wallet_reconciliations.insert_one(reconciliation_report)
+        # 6. Save reconciliation report (make a copy to avoid _id being added to response)
+        report_to_save = {**reconciliation_report}
+        await db.wallet_reconciliations.insert_one(report_to_save)
         
         logging.info(f"Wallet reconciliation complete for {yesterday.strftime('%Y-%m-%d')}: Income=₹{total_income}, Expense=₹{total_expense}, Net=₹{net_profit}")
         
