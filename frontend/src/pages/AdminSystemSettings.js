@@ -331,6 +331,191 @@ const AdminSystemSettings = ({ user }) => {
           </Card>
         )}
 
+        {/* Referral Bonus Tab - 5 Levels */}
+        {activeTab === 'referral' && (
+          <Card className="p-6">
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Users className="h-5 w-5 text-purple-600" />
+              Multi-Level Referral Bonus Settings
+            </h2>
+            <p className="text-sm text-gray-500 mb-6">
+              प्रत्येक लेव्हलसाठी रेफरल बोनस टक्केवारी सेट करा. Active referral असल्यास हा बोनस mining rate मध्ये add होतो.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Level 1 */}
+              <div className="border rounded-lg p-4 bg-gradient-to-br from-purple-50 to-purple-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold">1</div>
+                  <div>
+                    <h3 className="font-semibold text-purple-900">Level 1</h3>
+                    <p className="text-xs text-purple-600">Direct Referrals</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    max="100"
+                    value={referralBonusSettings.level_1}
+                    onChange={(e) => setReferralBonusSettings(prev => ({ ...prev, level_1: Number(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    data-testid="referral-level-1"
+                  />
+                  <span className="text-purple-700 font-bold">%</span>
+                </div>
+              </div>
+
+              {/* Level 2 */}
+              <div className="border rounded-lg p-4 bg-gradient-to-br from-blue-50 to-blue-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">2</div>
+                  <div>
+                    <h3 className="font-semibold text-blue-900">Level 2</h3>
+                    <p className="text-xs text-blue-600">Indirect Referrals</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    max="100"
+                    value={referralBonusSettings.level_2}
+                    onChange={(e) => setReferralBonusSettings(prev => ({ ...prev, level_2: Number(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    data-testid="referral-level-2"
+                  />
+                  <span className="text-blue-700 font-bold">%</span>
+                </div>
+              </div>
+
+              {/* Level 3 */}
+              <div className="border rounded-lg p-4 bg-gradient-to-br from-green-50 to-green-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center font-bold">3</div>
+                  <div>
+                    <h3 className="font-semibold text-green-900">Level 3</h3>
+                    <p className="text-xs text-green-600">3rd Level</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    max="100"
+                    value={referralBonusSettings.level_3}
+                    onChange={(e) => setReferralBonusSettings(prev => ({ ...prev, level_3: Number(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    data-testid="referral-level-3"
+                  />
+                  <span className="text-green-700 font-bold">%</span>
+                </div>
+              </div>
+
+              {/* Level 4 */}
+              <div className="border rounded-lg p-4 bg-gradient-to-br from-orange-50 to-orange-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold">4</div>
+                  <div>
+                    <h3 className="font-semibold text-orange-900">Level 4</h3>
+                    <p className="text-xs text-orange-600">4th Level</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    max="100"
+                    value={referralBonusSettings.level_4}
+                    onChange={(e) => setReferralBonusSettings(prev => ({ ...prev, level_4: Number(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    data-testid="referral-level-4"
+                  />
+                  <span className="text-orange-700 font-bold">%</span>
+                </div>
+              </div>
+
+              {/* Level 5 */}
+              <div className="border rounded-lg p-4 bg-gradient-to-br from-pink-50 to-pink-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-pink-600 text-white flex items-center justify-center font-bold">5</div>
+                  <div>
+                    <h3 className="font-semibold text-pink-900">Level 5</h3>
+                    <p className="text-xs text-pink-600">5th Level</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    max="100"
+                    value={referralBonusSettings.level_5}
+                    onChange={(e) => setReferralBonusSettings(prev => ({ ...prev, level_5: Number(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    data-testid="referral-level-5"
+                  />
+                  <span className="text-pink-700 font-bold">%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Summary */}
+            <div className="mt-6 p-4 bg-gray-100 rounded-lg">
+              <h4 className="font-semibold mb-2">Bonus Summary</h4>
+              <div className="grid grid-cols-5 gap-2 text-center text-sm">
+                <div className="bg-purple-100 p-2 rounded">
+                  <div className="font-bold text-purple-700">L1: {referralBonusSettings.level_1}%</div>
+                </div>
+                <div className="bg-blue-100 p-2 rounded">
+                  <div className="font-bold text-blue-700">L2: {referralBonusSettings.level_2}%</div>
+                </div>
+                <div className="bg-green-100 p-2 rounded">
+                  <div className="font-bold text-green-700">L3: {referralBonusSettings.level_3}%</div>
+                </div>
+                <div className="bg-orange-100 p-2 rounded">
+                  <div className="font-bold text-orange-700">L4: {referralBonusSettings.level_4}%</div>
+                </div>
+                <div className="bg-pink-100 p-2 rounded">
+                  <div className="font-bold text-pink-700">L5: {referralBonusSettings.level_5}%</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>कसे काम करते:</strong> जर एखाद्या युजरचे Level 1 वर 5 active referrals असतील आणि Level 1 बोनस 10% असेल, 
+                तर त्याच्या mining rate मध्ये (5 × 10% × Base Rate) बोनस add होतो.
+              </p>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <Button 
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    await axios.post(`${API}/api/admin/referral-bonus-settings`, referralBonusSettings);
+                    toast.success('Referral bonus settings saved successfully!');
+                  } catch (error) {
+                    toast.error('Failed to save referral settings');
+                  } finally {
+                    setLoading(false);
+                  }
+                }} 
+                disabled={loading}
+                data-testid="save-referral-btn"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Save Referral Settings
+              </Button>
+            </div>
+          </Card>
+        )}
+
         {/* Registration Control Tab */}
         {activeTab === 'registration' && (
           <Card className="p-6">
