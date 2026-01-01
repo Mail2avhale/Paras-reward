@@ -8,10 +8,13 @@ import { Input } from '../components/ui/input';
 import {
   CloudRain, Save, RefreshCw, AlertTriangle, Power, PowerOff,
   Droplets, Clock, Target, TrendingUp, TrendingDown, Users,
-  Settings, Zap, Shield, BarChart3
+  Settings, Zap, Shield, Palette, Percent
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
+
+// Default colors for drops
+const DEFAULT_COLORS = ['#22c55e', '#3b82f6', '#eab308', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
 const AdminPRCRain = ({ user }) => {
   const navigate = useNavigate();
@@ -20,21 +23,17 @@ const AdminPRCRain = ({ user }) => {
   const [stats, setStats] = useState(null);
   const [settings, setSettings] = useState({
     enabled: false,
-    max_rain_events_per_day: 2,
-    min_gap_between_rains_hours: 3,
+    max_rain_events_per_day: 5,
+    min_gap_between_rains_minutes: 60,
     rain_duration_seconds: 30,
     max_taps_per_rain: 15,
     max_prc_gain_per_day: 50,
     max_prc_loss_per_day: 20,
     enable_negative_drops: true,
+    negative_drop_probability: 20,
     emergency_stop: false,
-    drop_types: {
-      green: { name: 'Green Drop', color: '#22c55e', prc_min: 1, prc_max: 5, probability: 40, is_negative: false },
-      blue: { name: 'Blue Drop', color: '#3b82f6', prc_min: 3, prc_max: 10, probability: 30, is_negative: false },
-      gold: { name: 'Gold Drop', color: '#eab308', prc_min: 10, prc_max: 25, probability: 10, is_negative: false },
-      red: { name: 'Red Drop', color: '#ef4444', prc_min: 2, prc_max: 8, probability: 15, is_negative: true },
-      black: { name: 'Black Drop', color: '#1f2937', prc_min: 10, prc_max: 20, probability: 5, is_negative: true }
-    }
+    prc_range: { min: 1, max: 25 },
+    drop_colors: DEFAULT_COLORS
   });
 
   useEffect(() => {
@@ -94,27 +93,32 @@ const AdminPRCRain = ({ user }) => {
     }
   };
 
-  const updateDropType = (type, field, value) => {
+  const addColor = () => {
+    const newColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
     setSettings(prev => ({
       ...prev,
-      drop_types: {
-        ...prev.drop_types,
-        [type]: {
-          ...prev.drop_types[type],
-          [field]: value
-        }
-      }
+      drop_colors: [...(prev.drop_colors || []), newColor]
     }));
   };
 
-  const getTotalProbability = () => {
-    return Object.values(settings.drop_types).reduce((sum, drop) => sum + (drop.probability || 0), 0);
+  const removeColor = (index) => {
+    setSettings(prev => ({
+      ...prev,
+      drop_colors: prev.drop_colors.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateColor = (index, color) => {
+    setSettings(prev => ({
+      ...prev,
+      drop_colors: prev.drop_colors.map((c, i) => i === index ? color : c)
+    }));
   };
 
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-screen">
-        <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
+      <div className="p-6 flex items-center justify-center min-h-screen bg-gray-900">
+        <RefreshCw className="h-8 w-8 animate-spin text-blue-400" />
       </div>
     );
   }
@@ -128,7 +132,7 @@ const AdminPRCRain = ({ user }) => {
             <CloudRain className="h-7 w-7 text-blue-400" />
             PRC Rain Drop Settings
           </h1>
-          <p className="text-blue-200 mt-1">Configure the dopamine-inducing rain drop feature</p>
+          <p className="text-blue-200 mt-1">Random drops, random PRC - pure surprise!</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -232,25 +236,24 @@ const AdminPRCRain = ({ user }) => {
           </h3>
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-gray-300 mb-1 block">Max Rain Events Per Day</label>
+              <label className="text-sm text-gray-300 mb-1 block">Max Rain Events Per Day (2-100)</label>
               <Input
                 type="number"
-                min="1"
-                max="10"
+                min="2"
+                max="100"
                 value={settings.max_rain_events_per_day}
-                onChange={(e) => setSettings(prev => ({ ...prev, max_rain_events_per_day: parseInt(e.target.value) || 1 }))}
+                onChange={(e) => setSettings(prev => ({ ...prev, max_rain_events_per_day: Math.max(2, Math.min(100, parseInt(e.target.value) || 2)) }))}
                 className="bg-white/10 border-white/20 text-white"
                 data-testid="max-events-input"
               />
             </div>
             <div>
-              <label className="text-sm text-gray-300 mb-1 block">Min Gap Between Rains (Hours)</label>
+              <label className="text-sm text-gray-300 mb-1 block">Min Gap Between Rains (Minutes)</label>
               <Input
                 type="number"
                 min="1"
-                max="12"
-                value={settings.min_gap_between_rains_hours}
-                onChange={(e) => setSettings(prev => ({ ...prev, min_gap_between_rains_hours: parseInt(e.target.value) || 1 }))}
+                value={settings.min_gap_between_rains_minutes}
+                onChange={(e) => setSettings(prev => ({ ...prev, min_gap_between_rains_minutes: Math.max(1, parseInt(e.target.value) || 1) }))}
                 className="bg-white/10 border-white/20 text-white"
                 data-testid="min-gap-input"
               />
@@ -268,13 +271,13 @@ const AdminPRCRain = ({ user }) => {
               />
             </div>
             <div>
-              <label className="text-sm text-gray-300 mb-1 block">Max Taps Per Rain</label>
+              <label className="text-sm text-gray-300 mb-1 block">Max Taps Per Rain (1-50)</label>
               <Input
                 type="number"
-                min="5"
+                min="1"
                 max="50"
                 value={settings.max_taps_per_rain}
-                onChange={(e) => setSettings(prev => ({ ...prev, max_taps_per_rain: parseInt(e.target.value) || 15 }))}
+                onChange={(e) => setSettings(prev => ({ ...prev, max_taps_per_rain: Math.max(1, Math.min(50, parseInt(e.target.value) || 1)) }))}
                 className="bg-white/10 border-white/20 text-white"
                 data-testid="max-taps-input"
               />
@@ -282,13 +285,35 @@ const AdminPRCRain = ({ user }) => {
           </div>
         </Card>
 
-        {/* Safety Limits */}
+        {/* PRC & Negative Settings */}
         <Card className="p-6 bg-white/10 backdrop-blur border-white/20">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Shield className="h-5 w-5 text-green-400" />
-            Daily PRC Safety Limits
+            <Zap className="h-5 w-5 text-yellow-400" />
+            PRC Settings (Random!)
           </h3>
           <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm text-gray-300 mb-1 block">Min PRC per Drop</label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={settings.prc_range?.min || 1}
+                  onChange={(e) => setSettings(prev => ({ ...prev, prc_range: { ...prev.prc_range, min: parseFloat(e.target.value) || 1 } }))}
+                  className="bg-white/10 border-white/20 text-white"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-300 mb-1 block">Max PRC per Drop</label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={settings.prc_range?.max || 25}
+                  onChange={(e) => setSettings(prev => ({ ...prev, prc_range: { ...prev.prc_range, max: parseFloat(e.target.value) || 25 } }))}
+                  className="bg-white/10 border-white/20 text-white"
+                />
+              </div>
+            </div>
             <div>
               <label className="text-sm text-gray-300 mb-1 block">Max PRC Gain Per Day (per user)</label>
               <Input
@@ -297,7 +322,6 @@ const AdminPRCRain = ({ user }) => {
                 value={settings.max_prc_gain_per_day}
                 onChange={(e) => setSettings(prev => ({ ...prev, max_prc_gain_per_day: parseFloat(e.target.value) || 0 }))}
                 className="bg-white/10 border-white/20 text-white"
-                data-testid="max-gain-input"
               />
             </div>
             <div>
@@ -308,110 +332,106 @@ const AdminPRCRain = ({ user }) => {
                 value={settings.max_prc_loss_per_day}
                 onChange={(e) => setSettings(prev => ({ ...prev, max_prc_loss_per_day: parseFloat(e.target.value) || 0 }))}
                 className="bg-white/10 border-white/20 text-white"
-                data-testid="max-loss-input"
               />
             </div>
-            <div className="flex items-center justify-between p-3 bg-red-500/10 rounded-lg">
-              <div>
-                <div className="text-white font-medium">Enable Negative Drops</div>
-                <div className="text-xs text-gray-400">Red & Black drops that reduce PRC</div>
+            <div className="p-3 bg-red-500/10 rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-white font-medium">Enable Negative Drops</div>
+                  <div className="text-xs text-gray-400">Some drops will reduce PRC</div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.enable_negative_drops}
+                    onChange={(e) => setSettings(prev => ({ ...prev, enable_negative_drops: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                </label>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.enable_negative_drops}
-                  onChange={(e) => setSettings(prev => ({ ...prev, enable_negative_drops: e.target.checked }))}
-                  className="sr-only peer"
-                  data-testid="toggle-negative"
-                />
-                <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
-              </label>
+              {settings.enable_negative_drops && (
+                <div>
+                  <label className="text-sm text-gray-300 mb-1 block flex items-center gap-1">
+                    <Percent className="h-4 w-4" />
+                    Negative Drop Probability (%)
+                  </label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={settings.negative_drop_probability}
+                    onChange={(e) => setSettings(prev => ({ ...prev, negative_drop_probability: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) }))}
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+              )}
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Drop Types Configuration */}
+      {/* Drop Colors */}
       <Card className="p-6 bg-white/10 backdrop-blur border-white/20">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Droplets className="h-5 w-5 text-blue-400" />
-          Drop Types Configuration
-          <span className={`ml-auto text-sm ${getTotalProbability() === 100 ? 'text-green-400' : 'text-yellow-400'}`}>
-            Total Probability: {getTotalProbability()}%
-          </span>
+          <Palette className="h-5 w-5 text-pink-400" />
+          Drop Colors (Random Selection)
         </h3>
+        <p className="text-sm text-gray-400 mb-4">
+          User ला कळणार नाही कोणत्या color मध्ये किती PRC आहे - सर्व random आहे! 🎲
+        </p>
         
-        {getTotalProbability() !== 100 && (
-          <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500 rounded-lg text-yellow-300 text-sm">
-            ⚠️ Total probability should equal 100%. Current: {getTotalProbability()}%
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {Object.entries(settings.drop_types).map(([type, config]) => (
-            <div
-              key={type}
-              className="p-4 rounded-xl border-2"
-              style={{ 
-                backgroundColor: `${config.color}20`,
-                borderColor: config.color
-              }}
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <div 
-                  className="w-8 h-8 rounded-full shadow-lg"
-                  style={{ backgroundColor: config.color }}
-                />
-                <div>
-                  <div className="font-semibold text-white">{config.name}</div>
-                  <div className="text-xs" style={{ color: config.color }}>
-                    {config.is_negative ? '📉 Negative' : '📈 Positive'}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-2 text-sm">
-                <div>
-                  <label className="text-gray-400 text-xs">PRC Range</label>
-                  <div className="flex gap-1 items-center">
-                    <Input
-                      type="number"
-                      min="0"
-                      value={config.prc_min}
-                      onChange={(e) => updateDropType(type, 'prc_min', parseFloat(e.target.value) || 0)}
-                      className="h-8 bg-white/10 border-white/20 text-white text-center"
-                    />
-                    <span className="text-gray-400">-</span>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={config.prc_max}
-                      onChange={(e) => updateDropType(type, 'prc_max', parseFloat(e.target.value) || 0)}
-                      className="h-8 bg-white/10 border-white/20 text-white text-center"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-gray-400 text-xs">Probability (%)</label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={config.probability}
-                    onChange={(e) => updateDropType(type, 'probability', parseInt(e.target.value) || 0)}
-                    className="h-8 bg-white/10 border-white/20 text-white"
-                  />
-                </div>
-              </div>
+        <div className="flex flex-wrap gap-3 mb-4">
+          {(settings.drop_colors || DEFAULT_COLORS).map((color, index) => (
+            <div key={index} className="flex items-center gap-2 bg-white/5 p-2 rounded-lg">
+              <input
+                type="color"
+                value={color}
+                onChange={(e) => updateColor(index, e.target.value)}
+                className="w-10 h-10 rounded cursor-pointer border-0"
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => removeColor(index)}
+                className="text-red-400 hover:text-red-300 hover:bg-red-500/20 h-8 w-8 p-0"
+              >
+                ×
+              </Button>
             </div>
           ))}
+          <Button
+            variant="outline"
+            onClick={addColor}
+            className="border-dashed border-white/30 text-white hover:bg-white/10"
+          >
+            + Add Color
+          </Button>
+        </div>
+        
+        {/* Preview */}
+        <div className="p-4 bg-black/30 rounded-lg">
+          <div className="text-xs text-gray-400 mb-2">Preview - Random colors will look like:</div>
+          <div className="flex gap-2">
+            {(settings.drop_colors || DEFAULT_COLORS).slice(0, 8).map((color, i) => (
+              <div
+                key={i}
+                className="w-8 h-10 rounded-full"
+                style={{
+                  background: `radial-gradient(ellipse at 30% 30%, ${color}dd, ${color})`,
+                  clipPath: 'polygon(50% 0%, 100% 55%, 85% 100%, 15% 100%, 0% 55%)',
+                }}
+              />
+            ))}
+          </div>
         </div>
       </Card>
 
       {/* Info Box */}
-      <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-200 text-sm">
-        <strong className="text-white">कसे काम करते:</strong> User dashboard वर random वेळी rain drops पडतात. 
-        User drops वर tap करून PRC कमावू किंवा गमावू शकतो. सर्व settings real-time apply होतात - app update लागत नाही!
+      <div className="mt-6 p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg text-purple-200 text-sm">
+        <strong className="text-white">🎮 Gameplay:</strong> User ला फक्त colorful drops दिसतील. 
+        प्रत्येक tap वर random PRC (+/-) मिळेल. कोणताही drop positive किंवा negative असू शकतो - 
+        user ला माहिती नसेल! Pure dopamine experience! 🎯
       </div>
     </div>
   );
