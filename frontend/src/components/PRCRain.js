@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-// Rain Drop Component
+// Rain Drop Component - RANDOM COLORS, NO TYPE HINTS
 const RainDrop = ({ drop, onTap, disabled }) => {
   const [tapped, setTapped] = useState(false);
   const [showResult, setShowResult] = useState(null);
@@ -30,28 +30,32 @@ const RainDrop = ({ drop, onTap, disabled }) => {
       }}
       onClick={handleTap}
     >
-      {/* Drop Visual */}
+      {/* Drop Visual - Just color, no type indication */}
       <div
-        className="w-10 h-14 rounded-full relative"
+        className="w-12 h-16 rounded-full relative"
         style={{
           background: `radial-gradient(ellipse at 30% 30%, ${drop.color}dd, ${drop.color})`,
-          boxShadow: `0 4px 15px ${drop.color}80, inset 0 -3px 10px rgba(0,0,0,0.3), inset 0 3px 10px rgba(255,255,255,0.3)`,
-          clipPath: 'polygon(50% 0%, 100% 60%, 80% 100%, 20% 100%, 0% 60%)',
+          boxShadow: `0 4px 20px ${drop.color}80, inset 0 -4px 12px rgba(0,0,0,0.3), inset 0 4px 12px rgba(255,255,255,0.4)`,
+          clipPath: 'polygon(50% 0%, 100% 55%, 85% 100%, 15% 100%, 0% 55%)',
         }}
       >
         {/* Shine effect */}
-        <div className="absolute top-2 left-2 w-3 h-3 bg-white/50 rounded-full blur-sm" />
+        <div className="absolute top-2 left-3 w-3 h-3 bg-white/60 rounded-full blur-sm" />
+        <div className="absolute top-4 left-2 w-2 h-2 bg-white/40 rounded-full" />
       </div>
 
-      {/* Result popup */}
+      {/* Result popup - SURPRISE! */}
       {showResult && (
         <div
-          className={`absolute -top-8 left-1/2 -translate-x-1/2 font-bold text-lg whitespace-nowrap animate-bounce ${
+          className={`absolute -top-10 left-1/2 -translate-x-1/2 font-bold text-xl whitespace-nowrap ${
             showResult.prc_change >= 0 ? 'text-green-400' : 'text-red-400'
           }`}
-          style={{ textShadow: '0 0 10px currentColor' }}
+          style={{ 
+            textShadow: '0 0 15px currentColor, 0 0 30px currentColor',
+            animation: 'popUp 0.5s ease-out'
+          }}
         >
-          {showResult.prc_change >= 0 ? '+' : ''}{showResult.prc_change.toFixed(1)} PRC
+          {showResult.prc_change >= 0 ? '🎉 +' : '💔 '}{showResult.prc_change.toFixed(1)} PRC
         </div>
       )}
     </div>
@@ -66,7 +70,7 @@ const PRCRain = ({ user, onComplete }) => {
   const [tapsRemaining, setTapsRemaining] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [summary, setSummary] = useState(null);
-  const [dropTypes, setDropTypes] = useState({});
+  const [dropColors, setDropColors] = useState([]);
   const dropIdRef = useRef(0);
   const timerRef = useRef(null);
   const spawnRef = useRef(null);
@@ -90,7 +94,7 @@ const PRCRain = ({ user, onComplete }) => {
   const startRain = (data) => {
     setIsActive(true);
     setSession({ id: data.session_id });
-    setDropTypes(data.drop_types || {});
+    setDropColors(data.drop_colors || ['#22c55e', '#3b82f6', '#eab308', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316']);
     setTapsRemaining(data.max_taps || 15);
     setTimeRemaining(data.duration_seconds || 30);
     setSummary(null);
@@ -101,53 +105,39 @@ const PRCRain = ({ user, onComplete }) => {
     
     // Vibrate
     if (navigator.vibrate) {
-      navigator.vibrate([100, 50, 100]);
+      navigator.vibrate([100, 50, 100, 50, 100]);
     }
 
-    toast.success('🌧️ PRC Rain Started! Tap the drops!', { duration: 3000 });
+    toast.success('🌧️ PRC Rain Started! Tap drops to win!', { duration: 3000 });
   };
 
-  // Spawn drops
+  // Spawn drops with RANDOM colors
   useEffect(() => {
-    if (!isActive || !dropTypes || Object.keys(dropTypes).length === 0) return;
+    if (!isActive || dropColors.length === 0) return;
 
     const spawnDrop = () => {
-      // Calculate which drop type based on probability
-      const rand = Math.random() * 100;
-      let cumulative = 0;
-      let selectedType = 'green';
-      
-      for (const [type, config] of Object.entries(dropTypes)) {
-        cumulative += config.probability || 0;
-        if (rand <= cumulative) {
-          selectedType = type;
-          break;
-        }
-      }
-
-      const config = dropTypes[selectedType] || dropTypes.green;
+      // Random color from available colors
+      const randomColor = dropColors[Math.floor(Math.random() * dropColors.length)];
       
       const newDrop = {
         id: dropIdRef.current++,
-        type: selectedType,
-        color: config.color,
+        color: randomColor,
         x: Math.random() * 85 + 5, // 5-90% horizontal
         y: -10,
         z: Math.random() * 50 + 10,
-        scale: 0.7 + Math.random() * 0.6,
-        duration: 3 + Math.random() * 2,
-        is_negative: config.is_negative,
+        scale: 0.7 + Math.random() * 0.5,
+        duration: 2.5 + Math.random() * 2,
       };
 
-      setDrops(prev => [...prev.slice(-20), newDrop]); // Keep max 20 drops
+      setDrops(prev => [...prev.slice(-25), newDrop]); // Keep max 25 drops
     };
 
-    spawnRef.current = setInterval(spawnDrop, 400); // Spawn every 400ms
+    spawnRef.current = setInterval(spawnDrop, 350); // Spawn every 350ms
 
     return () => {
       if (spawnRef.current) clearInterval(spawnRef.current);
     };
-  }, [isActive, dropTypes]);
+  }, [isActive, dropColors]);
 
   // Timer countdown
   useEffect(() => {
@@ -178,7 +168,7 @@ const PRCRain = ({ user, onComplete }) => {
     };
   }, [checkRainTrigger]);
 
-  // Handle drop tap
+  // Handle drop tap - RANDOM PRC, SURPRISE!
   const handleTap = async (drop, callback) => {
     if (!session?.id || tapsRemaining <= 0) return;
 
@@ -186,7 +176,7 @@ const PRCRain = ({ user, onComplete }) => {
       const response = await axios.post(`${API}/api/prc-rain/tap`, {
         session_id: session.id,
         user_id: user.uid,
-        drop_type: drop.type
+        drop_color: drop.color
       });
 
       const result = response.data;
@@ -195,13 +185,13 @@ const PRCRain = ({ user, onComplete }) => {
       // Update taps remaining
       setTapsRemaining(result.taps_remaining);
 
-      // Play sound based on result
+      // Play sound based on result - SURPRISE MOMENT!
       if (result.prc_change >= 0) {
         playSound('positive');
         if (navigator.vibrate) navigator.vibrate(50);
       } else {
         playSound('negative');
-        if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+        if (navigator.vibrate) navigator.vibrate([50, 30, 50, 30, 50]);
       }
 
       // Remove tapped drop
@@ -232,7 +222,7 @@ const PRCRain = ({ user, onComplete }) => {
       setSummary(response.data.summary);
       playSound('end');
 
-      // Show summary for 3 seconds
+      // Show summary for 4 seconds
       setTimeout(() => {
         setIsActive(false);
         setSession(null);
@@ -246,7 +236,7 @@ const PRCRain = ({ user, onComplete }) => {
     }
   };
 
-  // Simple sound effects using Web Audio API
+  // Sound effects using Web Audio API
   const playSound = (type) => {
     try {
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -265,17 +255,17 @@ const PRCRain = ({ user, onComplete }) => {
           gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
           break;
         case 'positive':
-          oscillator.frequency.value = 800;
+          oscillator.frequency.value = 880;
           oscillator.type = 'sine';
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
           break;
         case 'negative':
-          oscillator.frequency.value = 200;
-          oscillator.type = 'square';
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+          oscillator.frequency.value = 150;
+          oscillator.type = 'sawtooth';
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.25);
           break;
         case 'end':
-          oscillator.frequency.value = 500;
+          oscillator.frequency.value = 520;
           oscillator.type = 'triangle';
           gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
           break;
@@ -298,27 +288,46 @@ const PRCRain = ({ user, onComplete }) => {
       <div 
         className="fixed inset-0 z-50 overflow-hidden"
         style={{ 
-          background: 'rgba(0, 0, 30, 0.7)',
-          backdropFilter: 'blur(4px)'
+          background: 'linear-gradient(180deg, rgba(0,0,30,0.85) 0%, rgba(20,0,50,0.9) 100%)',
+          backdropFilter: 'blur(8px)'
         }}
         data-testid="prc-rain-overlay"
       >
+        {/* Animated Background Stars */}
+        <div className="absolute inset-0 opacity-30">
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 2}s`
+              }}
+            />
+          ))}
+        </div>
+
         {/* Header Info */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-6 text-white z-10">
-          <div className="bg-black/50 px-4 py-2 rounded-full flex items-center gap-2">
-            <span className="text-yellow-400">⏱️</span>
-            <span className="font-bold text-xl">{timeRemaining}s</span>
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-4 z-10">
+          <div className="bg-black/60 backdrop-blur px-5 py-2.5 rounded-full flex items-center gap-2 border border-white/20">
+            <span className="text-yellow-400 text-lg">⏱️</span>
+            <span className="font-bold text-2xl text-white">{timeRemaining}s</span>
           </div>
-          <div className="bg-black/50 px-4 py-2 rounded-full flex items-center gap-2">
-            <span className="text-blue-400">👆</span>
-            <span className="font-bold text-xl">{tapsRemaining} taps</span>
+          <div className="bg-black/60 backdrop-blur px-5 py-2.5 rounded-full flex items-center gap-2 border border-white/20">
+            <span className="text-blue-400 text-lg">👆</span>
+            <span className="font-bold text-2xl text-white">{tapsRemaining}</span>
           </div>
         </div>
 
-        {/* Instruction */}
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 text-white text-center">
-          <div className="text-2xl font-bold animate-pulse">🌧️ TAP THE DROPS! 🌧️</div>
-          <div className="text-sm text-gray-300 mt-1">Green/Blue/Gold = +PRC | Red/Black = -PRC</div>
+        {/* Main Title - NO COLOR HINTS! */}
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 text-center">
+          <div className="text-3xl font-bold text-white animate-pulse" style={{ textShadow: '0 0 20px rgba(255,255,255,0.5)' }}>
+            🌧️ TAP THE DROPS! 🌧️
+          </div>
+          <div className="text-sm text-gray-300 mt-2 opacity-80">
+            Every drop is a surprise! Good luck! 🍀
+          </div>
         </div>
 
         {/* Rain Drops */}
@@ -336,42 +345,57 @@ const PRCRain = ({ user, onComplete }) => {
         {/* Summary Modal */}
         {summary && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="bg-gradient-to-br from-purple-900 to-blue-900 p-8 rounded-3xl border-2 border-white/30 text-white text-center animate-scale-in">
-              <h2 className="text-3xl font-bold mb-4">🌧️ Rain Complete!</h2>
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <div className="bg-white/10 p-3 rounded-xl">
+            <div 
+              className="p-8 rounded-3xl text-white text-center animate-scale-in"
+              style={{
+                background: 'linear-gradient(135deg, rgba(124,58,237,0.95) 0%, rgba(99,102,241,0.95) 50%, rgba(59,130,246,0.95) 100%)',
+                boxShadow: '0 0 60px rgba(124,58,237,0.5)',
+                border: '2px solid rgba(255,255,255,0.3)'
+              }}
+            >
+              <h2 className="text-4xl font-bold mb-6">🌧️ Rain Complete!</h2>
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="bg-white/10 p-4 rounded-xl backdrop-blur">
                   <div className="text-sm text-gray-300">Taps</div>
-                  <div className="text-2xl font-bold">{summary.taps}</div>
+                  <div className="text-3xl font-bold">{summary.taps}</div>
                 </div>
-                <div className="bg-green-500/20 p-3 rounded-xl">
-                  <div className="text-sm text-green-300">Gained</div>
-                  <div className="text-2xl font-bold text-green-400">+{summary.prc_gained?.toFixed(1)}</div>
+                <div className="bg-green-500/30 p-4 rounded-xl backdrop-blur">
+                  <div className="text-sm text-green-200">Won</div>
+                  <div className="text-3xl font-bold text-green-300">+{summary.prc_gained?.toFixed(1)}</div>
                 </div>
-                <div className="bg-red-500/20 p-3 rounded-xl">
-                  <div className="text-sm text-red-300">Lost</div>
-                  <div className="text-2xl font-bold text-red-400">-{summary.prc_lost?.toFixed(1)}</div>
+                <div className="bg-red-500/30 p-4 rounded-xl backdrop-blur">
+                  <div className="text-sm text-red-200">Lost</div>
+                  <div className="text-3xl font-bold text-red-300">-{summary.prc_lost?.toFixed(1)}</div>
                 </div>
               </div>
-              <div className={`text-3xl font-bold ${summary.net_prc >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                Net: {summary.net_prc >= 0 ? '+' : ''}{summary.net_prc?.toFixed(1)} PRC
+              <div className={`text-4xl font-bold ${summary.net_prc >= 0 ? 'text-green-300' : 'text-red-300'}`}
+                   style={{ textShadow: '0 0 20px currentColor' }}>
+                Net: {summary.net_prc >= 0 ? '🎉 +' : '💔 '}{summary.net_prc?.toFixed(1)} PRC
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* CSS Animation */}
+      {/* CSS Animations */}
       <style>{`
         @keyframes fall {
-          0% { transform: translateY(-50px) rotate(0deg); }
-          100% { transform: translateY(100vh) rotate(360deg); }
+          0% { transform: translateY(-50px) rotate(0deg); opacity: 1; }
+          90% { opacity: 1; }
+          100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
         }
         @keyframes scale-in {
-          0% { transform: scale(0.5); opacity: 0; }
+          0% { transform: scale(0.3); opacity: 0; }
+          50% { transform: scale(1.1); }
           100% { transform: scale(1); opacity: 1; }
         }
+        @keyframes popUp {
+          0% { transform: translateX(-50%) translateY(0) scale(0.5); opacity: 0; }
+          50% { transform: translateX(-50%) translateY(-20px) scale(1.2); }
+          100% { transform: translateX(-50%) translateY(-10px) scale(1); opacity: 1; }
+        }
         .animate-scale-in {
-          animation: scale-in 0.3s ease-out forwards;
+          animation: scale-in 0.4s ease-out forwards;
         }
       `}</style>
     </>
