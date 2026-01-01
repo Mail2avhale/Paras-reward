@@ -16381,6 +16381,210 @@ async def find_treasure(request: FindTreasureRequest, uid: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ==================== AUTOMATIC WALLET RECONCILIATION ====================
+
+async def daily_wallet_reconciliation():
+    """
+    Daily automatic wallet reconciliation
+    Runs at 3 AM to reconcile all company wallets based on transactions
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        yesterday = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        yesterday_str = yesterday.isoformat()
+        today_str = today.isoformat()
+        
+        reconciliation_report = {
+            "reconciliation_id": str(uuid.uuid4()),
+            "date": yesterday.strftime("%Y-%m-%d"),
+            "created_at": now.isoformat(),
+            "wallets": {}
+        }
+        
+        # 1. SUBSCRIPTION WALLET - VIP Payments approved yesterday
+        vip_payments = await db.vip_payments.find({
+            "status": "approved",
+            "approved_at": {"$gte": yesterday_str, "$lt": today_str}
+        }).to_list(1000)
+        
+        vip_total = sum(p.get("amount", 0) for p in vip_payments)
+        reconciliation_report["wallets"]["subscription"] = {
+            "expected_credit": vip_total,
+            "transactions": len(vip_payments),
+            "source": "VIP Payments"
+        }
+        
+        # 2. ADS REVENUE WALLET - Ads income added yesterday
+        ads_income = await db.ads_income.find({
+            "created_at": {"$gte": yesterday_str, "$lt": today_str}
+        }).to_list(1000)
+        
+        ads_total = sum(a.get("revenue_amount", 0) for a in ads_income)
+        reconciliation_report["wallets"]["ads_revenue"] = {
+            "expected_credit": ads_total,
+            "transactions": len(ads_income),
+            "source": "Ads Income"
+        }
+        
+        # 3. REDEEM RESERVE WALLET - Redemptions processed yesterday
+        redemptions = await db.gift_voucher_requests.find({
+            "status": "completed",
+            "completed_at": {"$gte": yesterday_str, "$lt": today_str}
+        }).to_list(1000)
+        
+        bill_payments = await db.bill_payment_requests.find({
+            "status": "completed",
+            "completed_at": {"$gte": yesterday_str, "$lt": today_str}
+        }).to_list(1000)
+        
+        redeem_total = sum(r.get("amount_inr", 0) for r in redemptions) + sum(b.get("amount_inr", 0) for b in bill_payments)
+        reconciliation_report["wallets"]["redeem_reserve"] = {
+            "expected_debit": redeem_total,
+            "transactions": len(redemptions) + len(bill_payments),
+            "source": "Redemptions & Bill Payments"
+        }
+        
+        # 4. Calculate net profit for the day
+        total_income = vip_total + ads_total
+        total_expense = redeem_total
+        
+        # Get fixed expenses for the month
+        current_month = now.strftime("%Y-%m")
+        fixed_expenses = await db.fixed_expenses.find({
+            "month": current_month,
+            "paid_status": "paid"
+        }).to_list(100)
+        monthly_fixed = sum(e.get("amount", 0) for e in fixed_expenses)
+        daily_fixed_expense = monthly_fixed / 30  # Approximate daily
+        
+        net_profit = total_income - total_expense - daily_fixed_expense
+        
+        reconciliation_report["summary"] = {
+            "total_income": total_income,
+            "total_expense": total_expense + daily_fixed_expense,
+            "net_profit_loss": net_profit,
+            "daily_fixed_expense": daily_fixed_expense
+        }
+        
+        # 5. Auto-transfer net profit to profit wallet if positive
+        if net_profit > 0:
+            await db.company_wallets.update_one(
+                {"wallet_type": "profit"},
+                {
+                    "$inc": {"balance": net_profit, "total_credit": net_profit},
+                    "$set": {"last_updated": now.isoformat()}
+                },
+                upsert=True
+            )
+            
+            # Log the transfer
+            await db.company_wallet_transactions.insert_one({
+                "txn_id": str(uuid.uuid4()),
+                "wallet_type": "profit",
+                "amount": net_profit,
+                "type": "credit",
+                "description": f"Daily profit reconciliation for {yesterday.strftime('%Y-%m-%d')}",
+                "timestamp": now.isoformat(),
+                "auto_reconciliation": True
+            })
+            
+            reconciliation_report["profit_transfer"] = net_profit
+        
+        # 6. Save reconciliation report
+        await db.wallet_reconciliations.insert_one(reconciliation_report)
+        
+        logging.info(f"Wallet reconciliation complete for {yesterday.strftime('%Y-%m-%d')}: Income=₹{total_income}, Expense=₹{total_expense}, Net=₹{net_profit}")
+        
+        return reconciliation_report
+        
+    except Exception as e:
+        logging.error(f"Error in daily wallet reconciliation: {e}")
+        return {"error": str(e)}
+
+@api_router.get("/admin/finance/reconciliation/history")
+async def get_reconciliation_history(limit: int = 30):
+    """Get wallet reconciliation history"""
+    try:
+        reports = await db.wallet_reconciliations.find(
+            {}, {"_id": 0}
+        ).sort("created_at", -1).limit(limit).to_list(limit)
+        
+        return {"reports": reports}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/finance/reconciliation/run")
+async def run_manual_reconciliation():
+    """Manually trigger wallet reconciliation"""
+    try:
+        report = await daily_wallet_reconciliation()
+        return {"success": True, "report": report}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/finance/reconciliation/status")
+async def get_reconciliation_status():
+    """Get current wallet status with expected vs actual balances"""
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Get all company wallets
+        wallets = await db.company_wallets.find({}, {"_id": 0}).to_list(10)
+        
+        # Calculate expected balances based on all transactions
+        status = []
+        
+        for wallet in wallets:
+            wallet_type = wallet.get("wallet_type")
+            actual_balance = wallet.get("balance", 0)
+            
+            # Calculate expected from transactions
+            expected_credit = 0
+            expected_debit = 0
+            
+            if wallet_type == "subscription":
+                # Sum all approved VIP payments
+                async for p in db.vip_payments.find({"status": "approved"}, {"amount": 1}):
+                    expected_credit += p.get("amount", 0)
+                    
+            elif wallet_type == "ads_revenue":
+                # Sum all ads income
+                async for a in db.ads_income.find({}, {"revenue_amount": 1}):
+                    expected_credit += a.get("revenue_amount", 0)
+            
+            # Get wallet transactions
+            async for txn in db.company_wallet_transactions.find({"wallet_type": wallet_type}):
+                if txn.get("type") == "credit":
+                    expected_credit += txn.get("amount", 0)
+                else:
+                    expected_debit += txn.get("amount", 0)
+            
+            expected_balance = expected_credit - expected_debit
+            discrepancy = actual_balance - expected_balance
+            
+            status.append({
+                "wallet_name": wallet.get("wallet_name"),
+                "wallet_type": wallet_type,
+                "actual_balance": actual_balance,
+                "expected_balance": expected_balance,
+                "discrepancy": discrepancy,
+                "is_reconciled": abs(discrepancy) < 0.01,  # Allow for floating point
+                "total_credit": expected_credit,
+                "total_debit": expected_debit
+            })
+        
+        all_reconciled = all(s["is_reconciled"] for s in status)
+        
+        return {
+            "status": status,
+            "all_reconciled": all_reconciled,
+            "checked_at": now.isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Get treasure hunt leaderboard
 @app.get("/api/treasure-hunts/leaderboard")
 async def get_treasure_leaderboard(uid: str):
