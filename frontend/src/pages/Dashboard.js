@@ -73,6 +73,9 @@ const Dashboard = ({ user, onLogout }) => {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       <Navbar user={user} onLogout={onLogout} />
       
+      {/* PRC Rain Drop Component */}
+      <PRCRain user={user} onComplete={() => fetchUserData()} />
+      
       <div className="container mx-auto px-4 py-8">
         {/* Welcome Section */}
         <div data-testid="dashboard-header" className="mb-8">
