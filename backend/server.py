@@ -2728,6 +2728,110 @@ async def get_referral_stats(uid: str):
         "vip_referrals": vip_count
     }
 
+@api_router.get("/referral/multi-level-stats/{uid}")
+async def get_multi_level_referral_stats(uid: str):
+    """
+    Get detailed multi-level referral statistics for a user
+    Shows: total, active, inactive count for each level + mining speed bonus
+    """
+    now = datetime.now(timezone.utc)
+    yesterday = now - timedelta(hours=24)
+    
+    # Get multi-level referrals
+    referrals_by_level = await get_multi_level_referrals(uid, max_levels=5)
+    
+    # Get referral bonus settings
+    settings = await db.settings.find_one({}, {"_id": 0, "referral_bonus_settings": 1})
+    if settings and "referral_bonus_settings" in settings:
+        bonus_percentages = {
+            'level_1': settings["referral_bonus_settings"].get("level_1", 10),
+            'level_2': settings["referral_bonus_settings"].get("level_2", 5),
+            'level_3': settings["referral_bonus_settings"].get("level_3", 2.5),
+            'level_4': settings["referral_bonus_settings"].get("level_4", 1.5),
+            'level_5': settings["referral_bonus_settings"].get("level_5", 1),
+        }
+    else:
+        bonus_percentages = {
+            'level_1': 10,
+            'level_2': 5,
+            'level_3': 2.5,
+            'level_4': 1.5,
+            'level_5': 1,
+        }
+    
+    # Get base rate for calculating mining speed bonus
+    base_rate = await get_base_rate()
+    
+    level_stats = []
+    total_all_levels = 0
+    total_active_all = 0
+    total_inactive_all = 0
+    total_mining_bonus = 0.0
+    
+    for level_num in range(1, 6):
+        level_key = f"level_{level_num}"
+        level_users = referrals_by_level.get(level_key, [])
+        
+        total_count = len(level_users)
+        active_count = 0
+        inactive_count = 0
+        
+        for user in level_users:
+            last_login = user.get("last_login")
+            is_active = False
+            
+            if last_login:
+                try:
+                    if isinstance(last_login, str):
+                        last_login_dt = datetime.fromisoformat(last_login.replace('Z', '+00:00'))
+                    else:
+                        last_login_dt = last_login
+                    is_active = last_login_dt >= yesterday
+                except:
+                    pass
+            
+            if is_active:
+                active_count += 1
+            else:
+                inactive_count += 1
+        
+        # Calculate mining speed bonus for this level
+        bonus_percentage = bonus_percentages.get(level_key, 0)
+        level_mining_bonus = active_count * (bonus_percentage / 100) * base_rate
+        
+        level_stats.append({
+            "level": level_num,
+            "level_name": f"Level {level_num}",
+            "total": total_count,
+            "active": active_count,
+            "inactive": inactive_count,
+            "bonus_percentage": bonus_percentage,
+            "mining_speed_bonus": round(level_mining_bonus, 4),
+            "mining_speed_bonus_display": f"+{round(level_mining_bonus, 2)} PRC/day"
+        })
+        
+        total_all_levels += total_count
+        total_active_all += active_count
+        total_inactive_all += inactive_count
+        total_mining_bonus += level_mining_bonus
+    
+    return {
+        "user_id": uid,
+        "base_mining_rate": base_rate,
+        "levels": level_stats,
+        "summary": {
+            "total_referrals": total_all_levels,
+            "total_active": total_active_all,
+            "total_inactive": total_inactive_all,
+            "total_mining_bonus": round(total_mining_bonus, 4),
+            "total_mining_bonus_display": f"+{round(total_mining_bonus, 2)} PRC/day",
+            "effective_mining_rate": round(base_rate + total_mining_bonus, 4),
+            "effective_mining_rate_display": f"{round(base_rate + total_mining_bonus, 2)} PRC/day"
+        },
+        "bonus_percentages": bonus_percentages,
+        "generated_at": now.isoformat()
+    }
+
 # ========== VIP MEMBERSHIP ROUTES ==========
 @api_router.post("/membership/payment/{uid}", response_model=VIPPayment)
 async def submit_vip_payment(uid: str, payment: VIPPaymentCreate):
