@@ -2745,6 +2745,170 @@ async def get_vip_payments():
             payment['created_at'] = datetime.fromisoformat(payment['created_at'])
     return payments
 
+# ==================== ADMIN VIP PAYMENT VERIFICATION ====================
+
+@api_router.get("/admin/vip-payments")
+async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int = 20):
+    """Get VIP payments for admin verification"""
+    try:
+        query = {}
+        if status:
+            query["status"] = status
+        
+        skip = (page - 1) * limit
+        
+        total = await db.vip_payments.count_documents(query)
+        payments = await db.vip_payments.find(
+            query, {"_id": 0}
+        ).sort("submitted_at", -1).skip(skip).limit(limit).to_list(limit)
+        
+        # Enrich with user data
+        for payment in payments:
+            user = await db.users.find_one({"uid": payment.get("user_id")}, {"_id": 0, "name": 1, "email": 1})
+            if user:
+                payment["user_name"] = user.get("name", "Unknown")
+                payment["user_email"] = user.get("email", "")
+        
+        return {
+            "payments": payments,
+            "total": total,
+            "page": page,
+            "pages": (total + limit - 1) // limit
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/vip-payment/{payment_id}/approve")
+async def approve_vip_payment(payment_id: str, request: Request):
+    """Approve VIP payment and activate membership"""
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id")
+        notes = data.get("notes", "")
+        
+        # Get payment
+        payment = await db.vip_payments.find_one({"payment_id": payment_id})
+        if not payment:
+            raise HTTPException(status_code=404, detail="Payment not found")
+        
+        if payment.get("status") != "pending":
+            raise HTTPException(status_code=400, detail="Payment already processed")
+        
+        user_id = payment.get("user_id")
+        plan_type = payment.get("plan_type")
+        
+        # Calculate VIP expiry
+        now = datetime.now(timezone.utc)
+        duration_days = {
+            "monthly": 30,
+            "quarterly": 90,
+            "half_yearly": 180,
+            "yearly": 365
+        }.get(plan_type, 30)
+        
+        vip_expiry = (now + timedelta(days=duration_days)).isoformat()
+        
+        # Update user to VIP
+        await db.users.update_one(
+            {"uid": user_id},
+            {
+                "$set": {
+                    "membership_type": "vip",
+                    "vip_expiry": vip_expiry,
+                    "vip_activated_at": now.isoformat()
+                }
+            }
+        )
+        
+        # Update payment status
+        await db.vip_payments.update_one(
+            {"payment_id": payment_id},
+            {
+                "$set": {
+                    "status": "approved",
+                    "approved_at": now.isoformat(),
+                    "approved_by": admin_id,
+                    "admin_notes": notes
+                }
+            }
+        )
+        
+        # Credit to subscription wallet
+        await db.company_wallets.update_one(
+            {"wallet_type": "subscription"},
+            {
+                "$inc": {"balance": payment.get("amount", 0), "total_credit": payment.get("amount", 0)},
+                "$set": {"last_updated": now.isoformat()}
+            },
+            upsert=True
+        )
+        
+        # Log activity
+        await db.activity_logs.insert_one({
+            "log_id": str(uuid.uuid4()),
+            "action": "vip_payment_approved",
+            "user_id": user_id,
+            "admin_id": admin_id,
+            "payment_id": payment_id,
+            "amount": payment.get("amount"),
+            "plan_type": plan_type,
+            "timestamp": now.isoformat()
+        })
+        
+        return {"success": True, "message": "Payment approved, VIP membership activated"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/vip-payment/{payment_id}/reject")
+async def reject_vip_payment(payment_id: str, request: Request):
+    """Reject VIP payment"""
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id")
+        reason = data.get("reason", "")
+        
+        # Get payment
+        payment = await db.vip_payments.find_one({"payment_id": payment_id})
+        if not payment:
+            raise HTTPException(status_code=404, detail="Payment not found")
+        
+        if payment.get("status") != "pending":
+            raise HTTPException(status_code=400, detail="Payment already processed")
+        
+        now = datetime.now(timezone.utc)
+        
+        # Update payment status
+        await db.vip_payments.update_one(
+            {"payment_id": payment_id},
+            {
+                "$set": {
+                    "status": "rejected",
+                    "rejected_at": now.isoformat(),
+                    "rejected_by": admin_id,
+                    "rejection_reason": reason
+                }
+            }
+        )
+        
+        # Log activity
+        await db.activity_logs.insert_one({
+            "log_id": str(uuid.uuid4()),
+            "action": "vip_payment_rejected",
+            "user_id": payment.get("user_id"),
+            "admin_id": admin_id,
+            "payment_id": payment_id,
+            "reason": reason,
+            "timestamp": now.isoformat()
+        })
+        
+        return {"success": True, "message": "Payment rejected"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ========== KYC ROUTES ==========
 @api_router.post("/kyc/submit/{uid}", response_model=KYCDocument)
 async def submit_kyc(uid: str, kyc_data: KYCSubmit):
