@@ -39,6 +39,7 @@ const Referrals = ({ user, onLogout }) => {
       fetchReferralCode();
       fetchReferrals();
       fetchReferralStats();
+      fetchMultiLevelStats();
     } else {
       setError('User information not available. Please try logging out and logging back in.');
       setLoading(false);
