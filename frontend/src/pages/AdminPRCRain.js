@@ -71,7 +71,23 @@ const AdminPRCRain = ({ user }) => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      await axios.post(`${API}/api/admin/prc-rain/settings`, settings);
+      // Validate and constrain values before saving
+      const validatedSettings = {
+        ...settings,
+        max_rain_events_per_day: Math.max(2, Math.min(100, parseInt(settings.max_rain_events_per_day) || 5)),
+        min_gap_between_rains_minutes: Math.max(0, parseInt(settings.min_gap_between_rains_minutes) || 60),
+        rain_duration_seconds: Math.max(5, Math.min(300, parseInt(settings.rain_duration_seconds) || 30)),
+        max_taps_per_rain: Math.max(1, Math.min(50, parseInt(settings.max_taps_per_rain) || 15)),
+        max_prc_gain_per_day: Math.max(1, parseFloat(settings.max_prc_gain_per_day) || 50),
+        max_prc_loss_per_day: Math.max(0, parseFloat(settings.max_prc_loss_per_day) || 20),
+        negative_drop_probability: Math.max(0, Math.min(100, parseInt(settings.negative_drop_probability) || 20)),
+        prc_range: {
+          min: Math.max(0.1, parseFloat(settings.prc_range?.min) || 1),
+          max: Math.max(1, parseFloat(settings.prc_range?.max) || 25)
+        }
+      };
+      await axios.post(`${API}/api/admin/prc-rain/settings`, validatedSettings);
+      setSettings(validatedSettings); // Update local state with validated values
       toast.success('PRC Rain settings saved!');
     } catch (error) {
       toast.error('Failed to save settings');
