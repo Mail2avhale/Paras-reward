@@ -285,9 +285,6 @@ const AdminPRCRain = ({ user }) => {
             </div>
           </div>
         </Card>
-            </div>
-          </div>
-        </Card>
 
         {/* PRC & Negative Settings */}
         <Card className="p-6 bg-white/10 backdrop-blur border-white/20">
