@@ -14593,57 +14593,21 @@ async def get_prc_rain_settings():
     # Default settings
     default_settings = {
         "enabled": False,
-        "max_rain_events_per_day": 2,
-        "min_gap_between_rains_hours": 3,
+        "max_rain_events_per_day": 5,
+        "min_gap_between_rains_minutes": 60,
         "rain_duration_seconds": 30,
         "max_taps_per_rain": 15,
         "max_prc_gain_per_day": 50,
         "max_prc_loss_per_day": 20,
         "enable_negative_drops": True,
+        "negative_drop_probability": 20,
         "emergency_stop": False,
-        "drop_types": {
-            "green": {
-                "name": "Green Drop",
-                "color": "#22c55e",
-                "prc_min": 1,
-                "prc_max": 5,
-                "probability": 40,
-                "is_negative": False
-            },
-            "blue": {
-                "name": "Blue Drop",
-                "color": "#3b82f6",
-                "prc_min": 3,
-                "prc_max": 10,
-                "probability": 30,
-                "is_negative": False
-            },
-            "gold": {
-                "name": "Gold Drop",
-                "color": "#eab308",
-                "prc_min": 10,
-                "prc_max": 25,
-                "probability": 10,
-                "is_negative": False
-            },
-            "red": {
-                "name": "Red Drop",
-                "color": "#ef4444",
-                "prc_min": 2,
-                "prc_max": 8,
-                "probability": 15,
-                "is_negative": True
-            },
-            "black": {
-                "name": "Black Drop",
-                "color": "#1f2937",
-                "prc_min": 10,
-                "prc_max": 20,
-                "probability": 5,
-                "is_negative": True
-            }
+        "prc_range": {
+            "min": 1,
+            "max": 25
         },
-        "rain_schedule": []  # Stores today's scheduled rain times
+        "drop_colors": ["#22c55e", "#3b82f6", "#eab308", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"],
+        "rain_schedule": []
     }
     
     if settings and "prc_rain_settings" in settings:
