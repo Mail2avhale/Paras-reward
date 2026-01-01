@@ -45,6 +45,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
       subItems: [
         { id: 'profit-loss', label: 'Profit & Loss', icon: TrendingUp, path: '/admin/profit-loss' },
         { id: 'company-wallets', label: 'Company Wallets', icon: Wallet, path: '/admin/company-wallets' },
+        { id: 'user-ledger', label: 'User Ledger', icon: FileText, path: '/admin/user-ledger' },
         { id: 'ads-income', label: 'Ads Income', icon: Smartphone, path: '/admin/ads-income' },
         { id: 'fixed-expenses', label: 'Fixed Expenses', icon: Building, path: '/admin/fixed-expenses' },
         { id: 'prc-analytics', label: 'PRC Analytics', icon: Activity, path: '/admin/prc-analytics' },
@@ -76,6 +77,13 @@ const AdminLayout = ({ children, user, onLogout }) => {
           icon: Share2, 
           path: '/admin/settings/social',
           description: 'Social Media Links & Integrations'
+        },
+        { 
+          id: 'redeem-settings', 
+          label: 'Redeem Safety', 
+          icon: Shield, 
+          path: '/admin/settings/redeem',
+          description: 'Daily Limits, Approval Thresholds'
         },
       ]
     },
