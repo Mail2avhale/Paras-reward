@@ -14735,12 +14735,12 @@ async def check_rain_status(uid: str):
         "created_at": {"$gte": today_iso}
     })
     
-    max_events = rain_config.get("max_rain_events_per_day", 2)
+    max_events = rain_config.get("max_rain_events_per_day", 5)
     if user_rain_today >= max_events:
         return {"should_rain": False, "reason": "max_events_reached"}
     
-    # Check minimum gap between rains
-    min_gap_hours = rain_config.get("min_gap_between_rains_hours", 3)
+    # Check minimum gap between rains (in MINUTES)
+    min_gap_minutes = rain_config.get("min_gap_between_rains_minutes", 60)
     last_rain = await db.prc_rain_sessions.find_one(
         {"user_id": uid},
         sort=[("created_at", -1)]
@@ -14748,7 +14748,7 @@ async def check_rain_status(uid: str):
     
     if last_rain:
         last_rain_time = datetime.fromisoformat(last_rain["created_at"].replace('Z', '+00:00'))
-        if (now - last_rain_time).total_seconds() < min_gap_hours * 3600:
+        if (now - last_rain_time).total_seconds() < min_gap_minutes * 60:
             return {"should_rain": False, "reason": "too_soon"}
     
     # Random trigger logic - 5% chance on each check (adjustable)
@@ -14773,17 +14773,13 @@ async def check_rain_status(uid: str):
     
     await db.prc_rain_sessions.insert_one(rain_session)
     
-    # Prepare drop types (exclude disabled negatives if needed)
-    drop_types = rain_config.get("drop_types", {})
-    if not rain_config.get("enable_negative_drops", True):
-        drop_types = {k: v for k, v in drop_types.items() if not v.get("is_negative", False)}
-    
+    # Send random config - USER SHOULD NOT KNOW WHICH DROP IS POSITIVE/NEGATIVE
     return {
         "should_rain": True,
         "session_id": session_id,
         "duration_seconds": rain_config.get("rain_duration_seconds", 30),
         "max_taps": rain_config.get("max_taps_per_rain", 15),
-        "drop_types": drop_types
+        "drop_colors": rain_config.get("drop_colors", ["#22c55e", "#3b82f6", "#eab308", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"])
     }
 
 @api_router.post("/prc-rain/tap")
