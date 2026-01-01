@@ -284,6 +284,9 @@ const AdminLayout = ({ children, user, onLogout }) => {
           {/* Divider */}
           <div className="my-2 mx-4 border-t border-slate-700"></div>
           
+          {/* Finance Group */}
+          {renderMenuGroup('finance')}
+          
           {/* Settings Group */}
           {renderMenuGroup('settings')}
           
