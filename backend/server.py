@@ -14583,6 +14583,380 @@ async def update_referral_bonus_settings(request: Request):
         "referral_bonus_settings": referral_settings
     }
 
+# ==================== PRC RAIN DROP SETTINGS ====================
+
+@api_router.get("/admin/prc-rain/settings")
+async def get_prc_rain_settings():
+    """Get PRC Rain Drop configuration (Admin only)"""
+    settings = await db.settings.find_one({}, {"_id": 0, "prc_rain_settings": 1})
+    
+    # Default settings
+    default_settings = {
+        "enabled": False,
+        "max_rain_events_per_day": 2,
+        "min_gap_between_rains_hours": 3,
+        "rain_duration_seconds": 30,
+        "max_taps_per_rain": 15,
+        "max_prc_gain_per_day": 50,
+        "max_prc_loss_per_day": 20,
+        "enable_negative_drops": True,
+        "emergency_stop": False,
+        "drop_types": {
+            "green": {
+                "name": "Green Drop",
+                "color": "#22c55e",
+                "prc_min": 1,
+                "prc_max": 5,
+                "probability": 40,
+                "is_negative": False
+            },
+            "blue": {
+                "name": "Blue Drop",
+                "color": "#3b82f6",
+                "prc_min": 3,
+                "prc_max": 10,
+                "probability": 30,
+                "is_negative": False
+            },
+            "gold": {
+                "name": "Gold Drop",
+                "color": "#eab308",
+                "prc_min": 10,
+                "prc_max": 25,
+                "probability": 10,
+                "is_negative": False
+            },
+            "red": {
+                "name": "Red Drop",
+                "color": "#ef4444",
+                "prc_min": 2,
+                "prc_max": 8,
+                "probability": 15,
+                "is_negative": True
+            },
+            "black": {
+                "name": "Black Drop",
+                "color": "#1f2937",
+                "prc_min": 10,
+                "prc_max": 20,
+                "probability": 5,
+                "is_negative": True
+            }
+        },
+        "rain_schedule": []  # Stores today's scheduled rain times
+    }
+    
+    if settings and "prc_rain_settings" in settings:
+        return {"prc_rain_settings": settings["prc_rain_settings"]}
+    
+    return {"prc_rain_settings": default_settings}
+
+@api_router.post("/admin/prc-rain/settings")
+async def update_prc_rain_settings(request: Request):
+    """Update PRC Rain Drop configuration (Admin only)"""
+    data = await request.json()
+    
+    rain_settings = {
+        "enabled": bool(data.get("enabled", False)),
+        "max_rain_events_per_day": int(data.get("max_rain_events_per_day", 2)),
+        "min_gap_between_rains_hours": int(data.get("min_gap_between_rains_hours", 3)),
+        "rain_duration_seconds": int(data.get("rain_duration_seconds", 30)),
+        "max_taps_per_rain": int(data.get("max_taps_per_rain", 15)),
+        "max_prc_gain_per_day": float(data.get("max_prc_gain_per_day", 50)),
+        "max_prc_loss_per_day": float(data.get("max_prc_loss_per_day", 20)),
+        "enable_negative_drops": bool(data.get("enable_negative_drops", True)),
+        "emergency_stop": bool(data.get("emergency_stop", False)),
+        "drop_types": data.get("drop_types", {}),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.settings.update_one(
+        {},
+        {"$set": {"prc_rain_settings": rain_settings}},
+        upsert=True
+    )
+    
+    return {
+        "success": True,
+        "message": "PRC Rain settings updated",
+        "prc_rain_settings": rain_settings
+    }
+
+@api_router.post("/admin/prc-rain/emergency-stop")
+async def emergency_stop_rain():
+    """Emergency stop all PRC Rain events (Admin only)"""
+    await db.settings.update_one(
+        {},
+        {"$set": {
+            "prc_rain_settings.emergency_stop": True,
+            "prc_rain_settings.enabled": False
+        }},
+        upsert=True
+    )
+    
+    # Cancel any active rain sessions
+    await db.prc_rain_sessions.update_many(
+        {"status": "active"},
+        {"$set": {"status": "cancelled", "cancelled_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"success": True, "message": "Emergency stop activated. All rain events cancelled."}
+
+@api_router.get("/admin/prc-rain/stats")
+async def get_prc_rain_stats():
+    """Get PRC Rain statistics (Admin only)"""
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_iso = today_start.isoformat()
+    
+    # Today's rain events
+    today_events = await db.prc_rain_sessions.count_documents({
+        "created_at": {"$gte": today_iso}
+    })
+    
+    # Total PRC distributed today
+    pipeline = [
+        {"$match": {"event_type": "PRC_RAIN", "created_at": {"$gte": today_iso}}},
+        {"$group": {
+            "_id": None,
+            "total_positive": {"$sum": {"$cond": [{"$gt": ["$prc_change", 0]}, "$prc_change", 0]}},
+            "total_negative": {"$sum": {"$cond": [{"$lt": ["$prc_change", 0]}, {"$abs": "$prc_change"}, 0]}},
+            "total_taps": {"$sum": 1},
+            "unique_users": {"$addToSet": "$user_id"}
+        }}
+    ]
+    
+    stats_result = await db.prc_rain_ledger.aggregate(pipeline).to_list(1)
+    stats = stats_result[0] if stats_result else {
+        "total_positive": 0,
+        "total_negative": 0,
+        "total_taps": 0,
+        "unique_users": []
+    }
+    
+    return {
+        "today": {
+            "rain_events": today_events,
+            "total_prc_given": stats.get("total_positive", 0),
+            "total_prc_taken": stats.get("total_negative", 0),
+            "net_prc": stats.get("total_positive", 0) - stats.get("total_negative", 0),
+            "total_taps": stats.get("total_taps", 0),
+            "unique_users": len(stats.get("unique_users", []))
+        }
+    }
+
+# ==================== PRC RAIN USER ENDPOINTS ====================
+
+@api_router.get("/prc-rain/check/{uid}")
+async def check_rain_status(uid: str):
+    """Check if rain should start for user (called every 2-3 minutes by client)"""
+    settings = await db.settings.find_one({}, {"_id": 0, "prc_rain_settings": 1})
+    rain_config = settings.get("prc_rain_settings", {}) if settings else {}
+    
+    # Check if rain is enabled and not emergency stopped
+    if not rain_config.get("enabled", False) or rain_config.get("emergency_stop", False):
+        return {"should_rain": False, "reason": "disabled"}
+    
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_iso = today_start.isoformat()
+    
+    # Check if user already had max rain events today
+    user_rain_today = await db.prc_rain_sessions.count_documents({
+        "user_id": uid,
+        "created_at": {"$gte": today_iso}
+    })
+    
+    max_events = rain_config.get("max_rain_events_per_day", 2)
+    if user_rain_today >= max_events:
+        return {"should_rain": False, "reason": "max_events_reached"}
+    
+    # Check minimum gap between rains
+    min_gap_hours = rain_config.get("min_gap_between_rains_hours", 3)
+    last_rain = await db.prc_rain_sessions.find_one(
+        {"user_id": uid},
+        sort=[("created_at", -1)]
+    )
+    
+    if last_rain:
+        last_rain_time = datetime.fromisoformat(last_rain["created_at"].replace('Z', '+00:00'))
+        if (now - last_rain_time).total_seconds() < min_gap_hours * 3600:
+            return {"should_rain": False, "reason": "too_soon"}
+    
+    # Random trigger logic - 5% chance on each check (adjustable)
+    import random
+    if random.random() > 0.05:  # 95% chance of no rain
+        return {"should_rain": False, "reason": "not_triggered"}
+    
+    # Create rain session
+    session_id = str(uuid.uuid4())
+    rain_session = {
+        "session_id": session_id,
+        "user_id": uid,
+        "status": "active",
+        "taps_count": 0,
+        "prc_gained": 0,
+        "prc_lost": 0,
+        "drops_tapped": [],
+        "created_at": now.isoformat(),
+        "duration_seconds": rain_config.get("rain_duration_seconds", 30),
+        "max_taps": rain_config.get("max_taps_per_rain", 15)
+    }
+    
+    await db.prc_rain_sessions.insert_one(rain_session)
+    
+    # Prepare drop types (exclude disabled negatives if needed)
+    drop_types = rain_config.get("drop_types", {})
+    if not rain_config.get("enable_negative_drops", True):
+        drop_types = {k: v for k, v in drop_types.items() if not v.get("is_negative", False)}
+    
+    return {
+        "should_rain": True,
+        "session_id": session_id,
+        "duration_seconds": rain_config.get("rain_duration_seconds", 30),
+        "max_taps": rain_config.get("max_taps_per_rain", 15),
+        "drop_types": drop_types
+    }
+
+@api_router.post("/prc-rain/tap")
+async def tap_rain_drop(request: Request):
+    """Record a tap on a rain drop"""
+    data = await request.json()
+    session_id = data.get("session_id")
+    user_id = data.get("user_id")
+    drop_type = data.get("drop_type")
+    
+    if not all([session_id, user_id, drop_type]):
+        raise HTTPException(status_code=400, detail="Missing required fields")
+    
+    # Get session
+    session = await db.prc_rain_sessions.find_one({"session_id": session_id, "user_id": user_id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if session.get("status") != "active":
+        raise HTTPException(status_code=400, detail="Session is not active")
+    
+    # Check tap limit
+    if session.get("taps_count", 0) >= session.get("max_taps", 15):
+        return {"success": False, "reason": "max_taps_reached", "prc_change": 0}
+    
+    # Get settings for drop config
+    settings = await db.settings.find_one({}, {"_id": 0, "prc_rain_settings": 1})
+    rain_config = settings.get("prc_rain_settings", {}) if settings else {}
+    drop_config = rain_config.get("drop_types", {}).get(drop_type, {})
+    
+    if not drop_config:
+        raise HTTPException(status_code=400, detail="Invalid drop type")
+    
+    # Calculate PRC change
+    import random
+    prc_min = drop_config.get("prc_min", 1)
+    prc_max = drop_config.get("prc_max", 5)
+    prc_amount = round(random.uniform(prc_min, prc_max), 2)
+    
+    is_negative = drop_config.get("is_negative", False)
+    prc_change = -prc_amount if is_negative else prc_amount
+    
+    # Check daily limits
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    
+    user_today_stats = await db.prc_rain_ledger.aggregate([
+        {"$match": {"user_id": user_id, "created_at": {"$gte": today_start}}},
+        {"$group": {
+            "_id": None,
+            "total_gain": {"$sum": {"$cond": [{"$gt": ["$prc_change", 0]}, "$prc_change", 0]}},
+            "total_loss": {"$sum": {"$cond": [{"$lt": ["$prc_change", 0]}, {"$abs": "$prc_change"}, 0]}}
+        }}
+    ]).to_list(1)
+    
+    today_gain = user_today_stats[0]["total_gain"] if user_today_stats else 0
+    today_loss = user_today_stats[0]["total_loss"] if user_today_stats else 0
+    
+    max_gain = rain_config.get("max_prc_gain_per_day", 50)
+    max_loss = rain_config.get("max_prc_loss_per_day", 20)
+    
+    # Apply daily cap
+    if prc_change > 0 and today_gain + prc_change > max_gain:
+        prc_change = max(0, max_gain - today_gain)
+    elif prc_change < 0 and today_loss + abs(prc_change) > max_loss:
+        prc_change = -max(0, max_loss - today_loss)
+    
+    # Check user's current balance for negative drops
+    if prc_change < 0:
+        user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1})
+        if user and user.get("prc_balance", 0) < abs(prc_change):
+            prc_change = 0  # Don't make balance negative
+    
+    # Update user balance if there's a change
+    if prc_change != 0:
+        await log_transaction(
+            user_id=user_id,
+            transaction_type="prc_rain_gain" if prc_change > 0 else "prc_rain_loss",
+            amount=abs(prc_change),
+            description=f"PRC Rain Drop - {drop_config.get('name', drop_type)}",
+            wallet_type="prc"
+        )
+    
+    # Create ledger entry
+    ledger_entry = {
+        "ledger_id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "session_id": session_id,
+        "event_type": "PRC_RAIN",
+        "drop_type": drop_type,
+        "prc_change": prc_change,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.prc_rain_ledger.insert_one(ledger_entry)
+    
+    # Update session
+    update_data = {
+        "$inc": {"taps_count": 1},
+        "$push": {"drops_tapped": drop_type}
+    }
+    if prc_change > 0:
+        update_data["$inc"]["prc_gained"] = prc_change
+    else:
+        update_data["$inc"]["prc_lost"] = abs(prc_change)
+    
+    await db.prc_rain_sessions.update_one(
+        {"session_id": session_id},
+        update_data
+    )
+    
+    return {
+        "success": True,
+        "drop_type": drop_type,
+        "prc_change": prc_change,
+        "is_negative": is_negative,
+        "taps_remaining": session.get("max_taps", 15) - session.get("taps_count", 0) - 1
+    }
+
+@api_router.post("/prc-rain/end-session")
+async def end_rain_session(request: Request):
+    """End a rain session"""
+    data = await request.json()
+    session_id = data.get("session_id")
+    user_id = data.get("user_id")
+    
+    result = await db.prc_rain_sessions.update_one(
+        {"session_id": session_id, "user_id": user_id, "status": "active"},
+        {"$set": {"status": "completed", "ended_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Get session summary
+    session = await db.prc_rain_sessions.find_one({"session_id": session_id})
+    
+    return {
+        "success": True,
+        "summary": {
+            "taps": session.get("taps_count", 0) if session else 0,
+            "prc_gained": session.get("prc_gained", 0) if session else 0,
+            "prc_lost": session.get("prc_lost", 0) if session else 0,
+            "net_prc": (session.get("prc_gained", 0) - session.get("prc_lost", 0)) if session else 0
+        }
+    }
+
 @api_router.get("/admin/users-at-risk")
 async def get_users_at_risk_of_burn():
     """Get users whose PRC is about to be burned (Admin only)"""
