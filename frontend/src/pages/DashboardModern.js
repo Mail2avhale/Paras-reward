@@ -5,13 +5,14 @@ import { toast } from 'sonner';
 import { 
   TrendingUp, Users, ShoppingBag, User, Coins, 
   Zap, Gift, ArrowUpRight, Clock, CheckCircle,
-  Home, Store, UserPlus, Gamepad2, CreditCard
+  Home, Store, UserPlus, Gamepad2, CreditCard, HelpCircle
 } from 'lucide-react';
 import PRCExpiryTimer from '@/components/PRCExpiryTimer';
 import ProfileCompletionBanner from '@/components/ProfileCompletionBanner';
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
 import QuickKYCModal from '@/components/QuickKYCModal';
 import PRCRain from '@/components/PRCRain';
+import AppTutorial from '@/components/AppTutorial';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
