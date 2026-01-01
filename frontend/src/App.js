@@ -83,6 +83,7 @@ const AdminWebSettings = lazy(() => import("@/pages/AdminWebSettings"));
 const AdminSocialMediaSettings = lazy(() => import("@/pages/AdminSocialMediaSettings"));
 const AdminUserLedger = lazy(() => import("@/pages/AdminUserLedger"));
 const AdminRedeemSettings = lazy(() => import("@/pages/AdminRedeemSettings"));
+const AdminPRCRain = lazy(() => import("@/pages/AdminPRCRain"));
 const AdvancedUserManagement = lazy(() => import("@/pages/AdvancedUserManagement"));
 const BillPayments = lazy(() => import("@/pages/BillPayments"));
 const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption"));
