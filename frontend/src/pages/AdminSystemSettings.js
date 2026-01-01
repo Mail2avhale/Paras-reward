@@ -150,7 +150,8 @@ const AdminSystemSettings = ({ user }) => {
   const tabs = [
     { id: 'vip-plans', label: 'VIP Plans', icon: Award },
     { id: 'mining', label: 'Mining Formula', icon: Cpu },
-    { id: 'registration', label: 'Registration Control', icon: Users },
+    { id: 'referral', label: 'Referral Bonus', icon: Users },
+    { id: 'registration', label: 'Registration Control', icon: ToggleLeft },
     { id: 'service-charges', label: 'Service Charges', icon: DollarSign },
   ];
 
