@@ -33,10 +33,18 @@ const AdminSystemSettings = ({ user }) => {
   // Mining Formula State
   const [miningSettings, setMiningSettings] = useState({
     base_rate: 0.5,
-    referral_bonus_percent: 10,
     vip_multiplier: 2,
     max_daily_mining_hours: 24,
     prc_to_inr_ratio: 10
+  });
+
+  // Referral Bonus Settings State (5 levels)
+  const [referralBonusSettings, setReferralBonusSettings] = useState({
+    level_1: 10,    // 10%
+    level_2: 5,     // 5%
+    level_3: 2.5,   // 2.5%
+    level_4: 1.5,   // 1.5%
+    level_5: 1      // 1%
   });
 
   // Service Charges State
