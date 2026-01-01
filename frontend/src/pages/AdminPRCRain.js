@@ -298,20 +298,20 @@ const AdminPRCRain = ({ user }) => {
                 <label className="text-sm text-gray-300 mb-1 block">Min PRC per Drop</label>
                 <Input
                   type="number"
-                  min="1"
-                  value={settings.prc_range?.min || 1}
-                  onChange={(e) => setSettings(prev => ({ ...prev, prc_range: { ...prev.prc_range, min: parseFloat(e.target.value) || 1 } }))}
+                  value={settings.prc_range?.min ?? 1}
+                  onChange={(e) => setSettings(prev => ({ ...prev, prc_range: { ...prev.prc_range, min: e.target.value === '' ? '' : parseFloat(e.target.value) } }))}
                   className="bg-white/10 border-white/20 text-white"
+                  placeholder="e.g. 1, 5"
                 />
               </div>
               <div>
                 <label className="text-sm text-gray-300 mb-1 block">Max PRC per Drop</label>
                 <Input
                   type="number"
-                  min="1"
-                  value={settings.prc_range?.max || 25}
-                  onChange={(e) => setSettings(prev => ({ ...prev, prc_range: { ...prev.prc_range, max: parseFloat(e.target.value) || 25 } }))}
+                  value={settings.prc_range?.max ?? 25}
+                  onChange={(e) => setSettings(prev => ({ ...prev, prc_range: { ...prev.prc_range, max: e.target.value === '' ? '' : parseFloat(e.target.value) } }))}
                   className="bg-white/10 border-white/20 text-white"
+                  placeholder="e.g. 10, 25, 50"
                 />
               </div>
             </div>
@@ -319,21 +319,23 @@ const AdminPRCRain = ({ user }) => {
               <label className="text-sm text-gray-300 mb-1 block">Max PRC Gain Per Day (per user)</label>
               <Input
                 type="number"
-                min="0"
-                value={settings.max_prc_gain_per_day}
-                onChange={(e) => setSettings(prev => ({ ...prev, max_prc_gain_per_day: parseFloat(e.target.value) || 0 }))}
+                value={settings.max_prc_gain_per_day ?? 50}
+                onChange={(e) => setSettings(prev => ({ ...prev, max_prc_gain_per_day: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                 className="bg-white/10 border-white/20 text-white"
+                placeholder="e.g. 50, 100"
               />
+              <p className="text-xs text-gray-500 mt-1">User दररोज maximum किती PRC gain करू शकतो</p>
             </div>
             <div>
               <label className="text-sm text-gray-300 mb-1 block">Max PRC Loss Per Day (per user)</label>
               <Input
                 type="number"
-                min="0"
-                value={settings.max_prc_loss_per_day}
-                onChange={(e) => setSettings(prev => ({ ...prev, max_prc_loss_per_day: parseFloat(e.target.value) || 0 }))}
+                value={settings.max_prc_loss_per_day ?? 20}
+                onChange={(e) => setSettings(prev => ({ ...prev, max_prc_loss_per_day: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
                 className="bg-white/10 border-white/20 text-white"
+                placeholder="e.g. 20, 30"
               />
+              <p className="text-xs text-gray-500 mt-1">User दररोज maximum किती PRC lose करू शकतो</p>
             </div>
             <div className="p-3 bg-red-500/10 rounded-lg space-y-3">
               <div className="flex items-center justify-between">
