@@ -63,6 +63,10 @@ const AdminRedeemSettings = ({ user }) => {
   };
 
   const handleChange = (field, value) => {
+    // Handle empty values for number fields to prevent NaN
+    if (typeof value === 'number' && isNaN(value)) {
+      value = 0;
+    }
     setSettings(prev => ({ ...prev, [field]: value }));
   };
 
