@@ -14812,16 +14812,24 @@ async def tap_rain_drop(request: Request):
     # RANDOM PRC calculation - user doesn't know which is positive/negative!
     import random
     prc_range = rain_config.get("prc_range", {"min": 1, "max": 25})
-    prc_min = prc_range.get("min", 1)
-    prc_max = prc_range.get("max", 25)
+    prc_min = float(prc_range.get("min", 1) or 1)  # Handle empty/None values
+    prc_max = float(prc_range.get("max", 25) or 25)
+    
+    # Ensure min <= max
+    if prc_min > prc_max:
+        prc_min, prc_max = prc_max, prc_min
+    if prc_min <= 0:
+        prc_min = 0.1
+    
     prc_amount = round(random.uniform(prc_min, prc_max), 2)
     
     # Random positive/negative based on probability
-    negative_prob = rain_config.get("negative_drop_probability", 20) / 100
+    negative_prob = float(rain_config.get("negative_drop_probability", 20) or 20) / 100
     enable_negative = rain_config.get("enable_negative_drops", True)
     
     is_negative = enable_negative and random.random() < negative_prob
     prc_change = -prc_amount if is_negative else prc_amount
+    original_prc_change = prc_change  # Store original for logging
     
     # Check daily limits
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
@@ -14838,20 +14846,24 @@ async def tap_rain_drop(request: Request):
     today_gain = user_today_stats[0]["total_gain"] if user_today_stats else 0
     today_loss = user_today_stats[0]["total_loss"] if user_today_stats else 0
     
-    max_gain = rain_config.get("max_prc_gain_per_day", 50)
-    max_loss = rain_config.get("max_prc_loss_per_day", 20)
+    max_gain = float(rain_config.get("max_prc_gain_per_day", 50) or 50)
+    max_loss = float(rain_config.get("max_prc_loss_per_day", 20) or 20)
     
-    # Apply daily cap
+    # Apply daily cap - but keep at least minimum amount
     if prc_change > 0 and today_gain + prc_change > max_gain:
-        prc_change = max(0, max_gain - today_gain)
+        remaining_gain = max_gain - today_gain
+        prc_change = max(0, remaining_gain)
     elif prc_change < 0 and today_loss + abs(prc_change) > max_loss:
-        prc_change = -max(0, max_loss - today_loss)
+        remaining_loss = max_loss - today_loss
+        prc_change = -max(0, remaining_loss) if remaining_loss > 0 else 0
     
-    # Check user's current balance for negative drops
+    # Check user's current balance for negative drops - allow small negatives
     if prc_change < 0:
         user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1})
-        if user and user.get("prc_balance", 0) < abs(prc_change):
-            prc_change = 0  # Don't make balance negative
+        user_balance = user.get("prc_balance", 0) if user else 0
+        if user_balance < abs(prc_change):
+            # Reduce the loss to not exceed balance
+            prc_change = -user_balance if user_balance > 0 else 0
     
     # Update user balance if there's a change
     if prc_change != 0:
