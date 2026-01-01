@@ -200,6 +200,14 @@ const DashboardModern = ({ user, onLogout }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 pb-24">
+      {/* App Tutorial - Shows for first-time users */}
+      {showTutorial && (
+        <AppTutorial 
+          onComplete={() => setShowTutorial(false)} 
+          showSkip={true}
+        />
+      )}
+      
       {/* PRC Rain Drop Component */}
       <PRCRain user={user} onComplete={() => fetchDashboardData()} />
       
