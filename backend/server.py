@@ -11883,7 +11883,7 @@ async def log_admin_action(request: Request):
         data = await request.json()
         
         log_entry = {
-            "log_id": str(uuid4()),
+            "log_id": str(uuid.uuid4()),
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "action_type": data.get("action_type"),
             "admin_id": data.get("admin_id"),
@@ -11906,7 +11906,7 @@ async def log_admin_action(request: Request):
         # If critical, send alert
         if log_entry["severity"] == "critical":
             await db.admin_alerts.insert_one({
-                "alert_id": str(uuid4()),
+                "alert_id": str(uuid.uuid4()),
                 "type": "critical_action",
                 "message": f"Critical action: {log_entry['action_type']} by {log_entry['admin_email']}",
                 "log_id": log_entry["log_id"],
@@ -12252,7 +12252,7 @@ async def add_expense(request: Request):
         data = await request.json()
         
         expense = {
-            "expense_id": str(uuid4()),
+            "expense_id": str(uuid.uuid4()),
             "date": data.get("date", datetime.now(timezone.utc).isoformat()),
             "category": data.get("category"),
             "sub_category": data.get("sub_category"),
@@ -12271,7 +12271,7 @@ async def add_expense(request: Request):
         
         # Log the action
         await db.audit_logs.insert_one({
-            "log_id": str(uuid4()),
+            "log_id": str(uuid.uuid4()),
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "action_type": "expense_added",
             "admin_id": data.get("admin_id"),
@@ -12346,7 +12346,7 @@ async def update_expense(expense_id: str, request: Request):
         
         # Log the change
         await db.audit_logs.insert_one({
-            "log_id": str(uuid4()),
+            "log_id": str(uuid.uuid4()),
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "action_type": "expense_updated",
             "admin_id": data.get("admin_id"),
@@ -12370,7 +12370,7 @@ async def delete_expense(expense_id: str, admin_id: str = None):
         
         # Log deletion
         await db.audit_logs.insert_one({
-            "log_id": str(uuid4()),
+            "log_id": str(uuid.uuid4()),
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "action_type": "expense_deleted",
             "admin_id": admin_id,
@@ -12391,7 +12391,7 @@ async def add_other_income(request: Request):
         data = await request.json()
         
         income = {
-            "income_id": str(uuid4()),
+            "income_id": str(uuid.uuid4()),
             "date": data.get("date", datetime.now(timezone.utc).isoformat()),
             "source": data.get("source"),
             "amount": float(data.get("amount", 0)),
@@ -12426,7 +12426,7 @@ async def get_company_wallets():
             if not wallet:
                 # Initialize wallet if not exists
                 wallet = {
-                    "wallet_id": str(uuid4()),
+                    "wallet_id": str(uuid.uuid4()),
                     "wallet_type": wt["type"],
                     "wallet_name": wt["name"],
                     "description": wt["description"],
@@ -12487,7 +12487,7 @@ async def transfer_company_wallet(request: Request):
         
         # Log transaction
         txn = {
-            "txn_id": str(uuid4()),
+            "txn_id": str(uuid.uuid4()),
             "from_wallet": from_wallet,
             "to_wallet": to_wallet,
             "amount": amount,
@@ -12533,7 +12533,7 @@ async def adjust_company_wallet(request: Request):
         
         # Log transaction
         txn = {
-            "txn_id": str(uuid4()),
+            "txn_id": str(uuid.uuid4()),
             "wallet_type": wallet_type,
             "amount": abs(amount),
             "type": txn_type,
@@ -12590,7 +12590,7 @@ async def add_ads_income(request: Request):
         data = await request.json()
         
         entry = {
-            "entry_id": str(uuid4()),
+            "entry_id": str(uuid.uuid4()),
             "date": data.get("date", datetime.now(timezone.utc).strftime("%Y-%m-%d")),
             "ad_network": data.get("ad_network"),  # admob, unity
             "impressions": int(data.get("impressions", 0)),
@@ -12682,7 +12682,7 @@ async def add_fixed_expense(request: Request):
         now = datetime.now(timezone.utc)
         
         expense = {
-            "expense_id": str(uuid4()),
+            "expense_id": str(uuid.uuid4()),
             "expense_category": data.get("category"),  # server, salary, rent, legal, etc.
             "description": data.get("description"),
             "amount": float(data.get("amount", 0)),
@@ -12785,7 +12785,7 @@ async def run_fraud_detection():
             })
             if not existing:
                 alert = {
-                    "alert_id": str(uuid4()),
+                    "alert_id": str(uuid.uuid4()),
                     "alert_type": "multiple_accounts_ip",
                     "severity": "high",
                     "ip_address": group["_id"],
@@ -12813,7 +12813,7 @@ async def run_fraud_detection():
             })
             if not existing:
                 alert = {
-                    "alert_id": str(uuid4()),
+                    "alert_id": str(uuid.uuid4()),
                     "alert_type": "abnormal_earning",
                     "severity": "high",
                     "user_id": user["uid"],
@@ -12846,7 +12846,7 @@ async def run_fraud_detection():
             })
             if not existing:
                 alert = {
-                    "alert_id": str(uuid4()),
+                    "alert_id": str(uuid.uuid4()),
                     "alert_type": "multiple_accounts_device",
                     "severity": "critical",
                     "device_id": group["_id"],
@@ -12927,7 +12927,7 @@ async def freeze_user_wallet(uid: str, request: Request):
         
         # Log activity
         await db.activity_logs.insert_one({
-            "log_id": str(uuid4()),
+            "log_id": str(uuid.uuid4()),
             "action": "wallet_frozen",
             "user_id": uid,
             "admin_id": admin_id,
@@ -12956,7 +12956,7 @@ async def unfreeze_user_wallet(uid: str, request: Request):
         
         # Log activity
         await db.activity_logs.insert_one({
-            "log_id": str(uuid4()),
+            "log_id": str(uuid.uuid4()),
             "action": "wallet_unfrozen",
             "user_id": uid,
             "admin_id": admin_id,
@@ -13169,7 +13169,7 @@ async def create_monthly_pl_snapshot():
         net_pl = total_income - total_expenses
         
         snapshot = {
-            "snapshot_id": str(uuid4()),
+            "snapshot_id": str(uuid.uuid4()),
             "month": month_key,
             "year": target_year,
             "month_num": target_month,
@@ -13494,7 +13494,7 @@ async def update_liquidity_reserves(request: Request):
         
         # Log the change
         await db.audit_logs.insert_one({
-            "log_id": str(uuid4()),
+            "log_id": str(uuid.uuid4()),
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "action_type": "liquidity_reserves_updated",
             "admin_id": data.get("admin_id"),
