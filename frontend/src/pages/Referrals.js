@@ -196,6 +196,138 @@ const Referrals = ({ user, onLogout }) => {
           </Card>
         </div>
 
+        {/* Multi-Level Referral Stats */}
+        {multiLevelStats && (
+          <Card className="p-6 mb-8 bg-gradient-to-br from-gray-900 to-gray-800 text-white" data-testid="multi-level-stats">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <TrendingUp className="h-6 w-6 text-green-400" />
+                  Level-wise Referral & Mining Bonus
+                </h2>
+                <p className="text-gray-400 text-sm mt-1">
+                  तुमच्या referrals मुळे किती mining speed वाढली आहे ते बघा
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-white/30 text-white hover:bg-white/10"
+                onClick={() => setShowLevelDetails(!showLevelDetails)}
+              >
+                {showLevelDetails ? 'Hide Details' : 'Show Details'}
+              </Button>
+            </div>
+
+            {/* Mining Speed Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-white/10 rounded-xl p-4">
+                <div className="text-gray-400 text-sm">Base Mining Rate</div>
+                <div className="text-2xl font-bold text-white">
+                  {multiLevelStats.base_mining_rate?.toFixed(2)} PRC/day
+                </div>
+              </div>
+              <div className="bg-green-500/20 rounded-xl p-4">
+                <div className="text-green-300 text-sm">Total Referral Bonus</div>
+                <div className="text-2xl font-bold text-green-400">
+                  {multiLevelStats.summary?.total_mining_bonus_display}
+                </div>
+              </div>
+              <div className="bg-purple-500/20 rounded-xl p-4">
+                <div className="text-purple-300 text-sm">Effective Mining Rate</div>
+                <div className="text-2xl font-bold text-purple-400">
+                  {multiLevelStats.summary?.effective_mining_rate_display}
+                </div>
+              </div>
+            </div>
+
+            {/* Level-wise Breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+              {multiLevelStats.levels?.map((level) => {
+                const levelColors = {
+                  1: { bg: 'from-purple-600 to-purple-700', text: 'text-purple-200', accent: 'text-purple-100' },
+                  2: { bg: 'from-blue-600 to-blue-700', text: 'text-blue-200', accent: 'text-blue-100' },
+                  3: { bg: 'from-green-600 to-green-700', text: 'text-green-200', accent: 'text-green-100' },
+                  4: { bg: 'from-orange-600 to-orange-700', text: 'text-orange-200', accent: 'text-orange-100' },
+                  5: { bg: 'from-pink-600 to-pink-700', text: 'text-pink-200', accent: 'text-pink-100' },
+                };
+                const colors = levelColors[level.level] || levelColors[1];
+                
+                return (
+                  <div 
+                    key={level.level} 
+                    className={`bg-gradient-to-br ${colors.bg} rounded-xl p-4`}
+                    data-testid={`level-${level.level}-stats`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center font-bold">
+                        {level.level}
+                      </div>
+                      <div className={`text-xs ${colors.text}`}>
+                        {level.bonus_percentage}% bonus
+                      </div>
+                    </div>
+                    <div className={`text-lg font-bold ${colors.accent}`}>
+                      {level.total} Referrals
+                    </div>
+                    <div className="flex justify-between text-xs mt-2">
+                      <span className="text-green-300">✓ {level.active} Active</span>
+                      <span className="text-red-300">✗ {level.inactive} Inactive</span>
+                    </div>
+                    <div className={`text-sm mt-2 pt-2 border-t border-white/20 ${colors.accent}`}>
+                      {level.mining_speed_bonus_display}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Detailed Table - Show/Hide */}
+            {showLevelDetails && (
+              <div className="mt-6 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/20">
+                      <th className="py-2 text-left text-gray-400">Level</th>
+                      <th className="py-2 text-center text-gray-400">Total</th>
+                      <th className="py-2 text-center text-green-400">Active</th>
+                      <th className="py-2 text-center text-red-400">Inactive</th>
+                      <th className="py-2 text-center text-gray-400">Bonus %</th>
+                      <th className="py-2 text-right text-green-400">Mining Bonus</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {multiLevelStats.levels?.map((level) => (
+                      <tr key={level.level} className="border-b border-white/10">
+                        <td className="py-3 font-semibold">Level {level.level}</td>
+                        <td className="py-3 text-center">{level.total}</td>
+                        <td className="py-3 text-center text-green-400">{level.active}</td>
+                        <td className="py-3 text-center text-red-400">{level.inactive}</td>
+                        <td className="py-3 text-center">{level.bonus_percentage}%</td>
+                        <td className="py-3 text-right text-green-400">{level.mining_speed_bonus_display}</td>
+                      </tr>
+                    ))}
+                    <tr className="font-bold bg-white/5">
+                      <td className="py-3">Total</td>
+                      <td className="py-3 text-center">{multiLevelStats.summary?.total_referrals}</td>
+                      <td className="py-3 text-center text-green-400">{multiLevelStats.summary?.total_active}</td>
+                      <td className="py-3 text-center text-red-400">{multiLevelStats.summary?.total_inactive}</td>
+                      <td className="py-3 text-center">-</td>
+                      <td className="py-3 text-right text-green-400">{multiLevelStats.summary?.total_mining_bonus_display}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Info Box */}
+            <div className="mt-4 p-3 bg-white/5 rounded-lg text-xs text-gray-400">
+              <strong className="text-white">कसे काम करते:</strong> Active referrals (last 24 hours login) वरून mining bonus मिळतो. 
+              जितके जास्त active referrals, तितकी जास्त mining speed!
+            </div>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Your Referral Code & Link */}
           <Card data-testid="referral-code-card" className="bg-gradient-to-br from-purple-600 to-pink-600 text-white p-8 rounded-3xl shadow-2xl">
