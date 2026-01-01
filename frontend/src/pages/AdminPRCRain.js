@@ -239,48 +239,52 @@ const AdminPRCRain = ({ user }) => {
               <label className="text-sm text-gray-300 mb-1 block">Max Rain Events Per Day (2-100)</label>
               <Input
                 type="number"
-                min="2"
-                max="100"
                 value={settings.max_rain_events_per_day}
-                onChange={(e) => setSettings(prev => ({ ...prev, max_rain_events_per_day: Math.max(2, Math.min(100, parseInt(e.target.value) || 2)) }))}
+                onChange={(e) => setSettings(prev => ({ ...prev, max_rain_events_per_day: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
                 className="bg-white/10 border-white/20 text-white"
                 data-testid="max-events-input"
+                placeholder="e.g. 10, 30, 50"
               />
+              <p className="text-xs text-gray-500 mt-1">User दररोज किती वेळा rain बघू शकतो</p>
             </div>
             <div>
               <label className="text-sm text-gray-300 mb-1 block">Min Gap Between Rains (Minutes)</label>
               <Input
                 type="number"
-                min="1"
                 value={settings.min_gap_between_rains_minutes}
-                onChange={(e) => setSettings(prev => ({ ...prev, min_gap_between_rains_minutes: Math.max(1, parseInt(e.target.value) || 1) }))}
+                onChange={(e) => setSettings(prev => ({ ...prev, min_gap_between_rains_minutes: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
                 className="bg-white/10 border-white/20 text-white"
                 data-testid="min-gap-input"
+                placeholder="e.g. 30, 60, 120"
               />
+              <p className="text-xs text-gray-500 mt-1">दोन rain events मधला minimum gap</p>
             </div>
             <div>
               <label className="text-sm text-gray-300 mb-1 block">Rain Duration (Seconds)</label>
               <Input
                 type="number"
-                min="10"
-                max="120"
                 value={settings.rain_duration_seconds}
-                onChange={(e) => setSettings(prev => ({ ...prev, rain_duration_seconds: parseInt(e.target.value) || 30 }))}
+                onChange={(e) => setSettings(prev => ({ ...prev, rain_duration_seconds: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
                 className="bg-white/10 border-white/20 text-white"
                 data-testid="duration-input"
+                placeholder="e.g. 20, 30, 60"
               />
+              <p className="text-xs text-gray-500 mt-1">Rain किती seconds चालेल</p>
             </div>
             <div>
               <label className="text-sm text-gray-300 mb-1 block">Max Taps Per Rain (1-50)</label>
               <Input
                 type="number"
-                min="1"
-                max="50"
                 value={settings.max_taps_per_rain}
-                onChange={(e) => setSettings(prev => ({ ...prev, max_taps_per_rain: Math.max(1, Math.min(50, parseInt(e.target.value) || 1)) }))}
+                onChange={(e) => setSettings(prev => ({ ...prev, max_taps_per_rain: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
                 className="bg-white/10 border-white/20 text-white"
                 data-testid="max-taps-input"
+                placeholder="e.g. 10, 20, 30"
               />
+              <p className="text-xs text-gray-500 mt-1">User किती drops tap करू शकतो</p>
+            </div>
+          </div>
+        </Card>
             </div>
           </div>
         </Card>
