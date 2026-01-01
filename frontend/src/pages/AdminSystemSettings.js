@@ -92,6 +92,14 @@ const AdminSystemSettings = ({ user }) => {
         }
       } catch (e) { console.log('Service charges not found, using defaults'); }
 
+      // Fetch referral bonus settings
+      try {
+        const referralResponse = await axios.get(`${API}/api/admin/referral-bonus-settings`);
+        if (referralResponse.data?.referral_bonus_settings) {
+          setReferralBonusSettings(referralResponse.data.referral_bonus_settings);
+        }
+      } catch (e) { console.log('Referral settings not found, using defaults'); }
+
     } catch (error) {
       console.error('Error fetching settings:', error);
     } finally {
