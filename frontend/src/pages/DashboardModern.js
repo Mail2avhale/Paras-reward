@@ -225,6 +225,17 @@ const DashboardModern = ({ user, onLogout }) => {
               {user?.name || 'User'}
             </h1>
             <div className="flex items-center gap-2">
+              {/* Help Button to replay tutorial */}
+              <button
+                onClick={() => {
+                  localStorage.removeItem('tutorial_completed');
+                  setShowTutorial(true);
+                }}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                title="App Guide"
+              >
+                <HelpCircle className="w-5 h-5 text-white/80" />
+              </button>
               {stats.membershipType === 'vip' && (
                 <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-1 shadow-lg">
                   <Zap className="w-4 h-4" />
