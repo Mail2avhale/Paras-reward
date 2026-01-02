@@ -103,13 +103,13 @@ const RewardsHome = () => {
               <Button variant="outline" onClick={() => navigate('/login')} className="border-blue-600 text-blue-600 hover:bg-blue-50">
                 Login
               </Button>
-              <Button onClick={() => navigate('/signup')} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button onClick={() => navigate('/register')} className="bg-blue-600 hover:bg-blue-700 text-white">
                 Sign Up Free
               </Button>
             </div>
             <div className="md:hidden flex gap-2">
               <Button size="sm" variant="outline" onClick={() => navigate('/login')}>Login</Button>
-              <Button size="sm" onClick={() => navigate('/signup')} className="bg-blue-600">Sign Up</Button>
+              <Button size="sm" onClick={() => navigate('/register')} className="bg-blue-600">Sign Up</Button>
             </div>
           </div>
         </div>
@@ -140,7 +140,7 @@ const RewardsHome = () => {
               <div className="flex flex-wrap gap-4">
                 <Button 
                   size="lg" 
-                  onClick={() => navigate('/signup')}
+                  onClick={() => navigate('/register')}
                   className="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-semibold px-8 py-6 text-lg"
                 >
                   Start Earning Now
@@ -312,7 +312,7 @@ const RewardsHome = () => {
           <div className="text-center mt-12">
             <Button 
               size="lg" 
-              onClick={() => navigate('/signup')}
+              onClick={() => navigate('/register')}
               className="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-semibold px-8"
             >
               Create Free Account
@@ -413,7 +413,7 @@ const RewardsHome = () => {
           <div className="flex flex-wrap justify-center gap-4">
             <Button 
               size="lg" 
-              onClick={() => navigate('/signup')}
+              onClick={() => navigate('/register')}
               className="bg-white text-blue-600 hover:bg-gray-100 font-semibold px-8"
             >
               Sign Up Free
