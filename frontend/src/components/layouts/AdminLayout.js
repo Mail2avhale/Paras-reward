@@ -46,6 +46,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
       subItems: [
         { id: 'profit-loss', label: 'Profit & Loss', icon: TrendingUp, path: '/admin/profit-loss' },
         { id: 'company-wallets', label: 'Company Wallets', icon: Wallet, path: '/admin/company-wallets' },
+        { id: 'capital', label: 'Capital & Liabilities', icon: Building, path: '/admin/capital' },
         { id: 'user-ledger', label: 'User Ledger', icon: FileText, path: '/admin/user-ledger' },
         { id: 'ads-income', label: 'Ads Income', icon: Smartphone, path: '/admin/ads-income' },
         { id: 'fixed-expenses', label: 'Fixed Expenses', icon: Building, path: '/admin/fixed-expenses' },
