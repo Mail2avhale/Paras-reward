@@ -699,6 +699,23 @@ const AdvancedUserManagement = () => {
           </Card>
         </div>
       )}
+
+      {/* Manager Permissions Modal */}
+      {showPermissionsModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+            <ManagerPermissions
+              userId={selectedUser.uid}
+              userName={selectedUser.name || selectedUser.email}
+              onClose={() => setShowPermissionsModal(false)}
+              onSave={() => {
+                setShowPermissionsModal(false);
+                toast.success('Manager permissions updated!');
+              }}
+            />
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
