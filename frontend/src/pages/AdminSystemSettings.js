@@ -299,13 +299,17 @@ const AdminSystemSettings = ({ user }) => {
               <div>
                 <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  Max Daily Mining Hours
+                  Max Daily Mining Hours (1-24)
                 </label>
                 <input
                   type="number"
+                  min="1"
+                  max="24"
+                  placeholder="e.g. 8, 12, 24"
                   value={miningSettings.max_daily_mining_hours}
-                  onChange={(e) => setMiningSettings(prev => ({ ...prev, max_daily_mining_hours: Number(e.target.value) }))}
+                  onChange={(e) => setMiningSettings(prev => ({ ...prev, max_daily_mining_hours: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
                   className="w-full px-3 py-2 border rounded-lg mt-1"
+                  data-testid="max-hours-input"
                 />
               </div>
               <div>
@@ -315,9 +319,12 @@ const AdminSystemSettings = ({ user }) => {
                 </label>
                 <input
                   type="number"
+                  min="1"
+                  placeholder="e.g. 10, 20"
                   value={miningSettings.prc_to_inr_ratio}
-                  onChange={(e) => setMiningSettings(prev => ({ ...prev, prc_to_inr_ratio: Number(e.target.value) }))}
+                  onChange={(e) => setMiningSettings(prev => ({ ...prev, prc_to_inr_ratio: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
                   className="w-full px-3 py-2 border rounded-lg mt-1"
+                  data-testid="prc-ratio-input"
                 />
               </div>
             </div>
