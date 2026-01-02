@@ -60,7 +60,7 @@ const PrivacyPolicy = () => {
           <li>Create and manage your account</li>
           <li>Process PRC mining, referrals, and redemptions</li>
           <li>Verify identity through KYC process</li>
-          <li>Process payments and withdrawals</li>
+          <li>Process payments and redemptions</li>
           <li>Deliver gift vouchers and bill payments</li>
         </ul>
         
