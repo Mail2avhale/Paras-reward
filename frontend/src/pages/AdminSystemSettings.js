@@ -279,14 +279,18 @@ const AdminSystemSettings = ({ user }) => {
               <div>
                 <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                   <Award className="h-4 w-4" />
-                  VIP Multiplier
+                  VIP Multiplier (0-10)
                 </label>
                 <input
                   type="number"
-                  step="0.5"
+                  min="0"
+                  max="10"
+                  step="0.1"
+                  placeholder="e.g. 0, 1, 2, 3, 5"
                   value={miningSettings.vip_multiplier}
-                  onChange={(e) => setMiningSettings(prev => ({ ...prev, vip_multiplier: Number(e.target.value) }))}
+                  onChange={(e) => setMiningSettings(prev => ({ ...prev, vip_multiplier: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 }))}
                   className="w-full px-3 py-2 border rounded-lg mt-1"
+                  data-testid="vip-multiplier-input"
                 />
               </div>
               <div>
