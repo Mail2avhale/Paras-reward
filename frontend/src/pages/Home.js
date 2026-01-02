@@ -257,7 +257,7 @@ const Home = ({ user, onLogout }) => {
                 step: 3,
                 icon: Gift,
                 title: 'Redeem Rewards',
-                description: 'Exchange PRC for products, cash, or exclusive offers',
+                description: 'Exchange PRC for products, vouchers, or exclusive offers',
                 gradient: 'from-orange-500 to-purple-500'
               }
             ].map((item) => (
