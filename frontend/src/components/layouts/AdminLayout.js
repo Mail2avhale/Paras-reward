@@ -206,6 +206,14 @@ const AdminLayout = ({ children, user, onLogout }) => {
     setMobileMenuOpen(false);
   };
 
+  // Filter menu items based on permissions
+  const filteredMenuItems = menuItems.filter(item => hasPermission(item.id));
+  
+  // Filter grouped menu items based on permissions
+  const getFilteredSubItems = (groupKey) => {
+    return menuGroups[groupKey].subItems.filter(item => hasPermission(item.id));
+  };
+
   // Render a single menu item
   const renderMenuItem = (item, isSubItem = false) => {
     const Icon = item.icon;
