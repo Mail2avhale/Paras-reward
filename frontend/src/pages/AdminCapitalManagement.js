@@ -93,11 +93,18 @@ const AdminCapitalManagement = ({ user }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Convert amount to number before sending
+      const payload = {
+        ...formData,
+        amount: parseFloat(formData.amount) || 0,
+        interest_rate: formData.interest_rate ? parseFloat(formData.interest_rate) : 0
+      };
+      
       if (editingEntry) {
-        await axios.put(`${API}/api/admin/capital/entries/${editingEntry.entry_id}`, formData);
+        await axios.put(`${API}/api/admin/capital/entries/${editingEntry.entry_id}`, payload);
         toast.success('Entry updated successfully');
       } else {
-        await axios.post(`${API}/api/admin/capital/entries`, formData);
+        await axios.post(`${API}/api/admin/capital/entries`, payload);
         toast.success('Entry created successfully');
       }
       setShowModal(false);
