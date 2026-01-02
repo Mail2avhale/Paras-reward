@@ -109,11 +109,11 @@ const TermsConditions = () => {
           <li>Gift Vouchers: 24-48 hours</li>
           <li>Recharges: Instant to 30 minutes</li>
           <li>Bill Payments: 1-3 business days</li>
-          <li>Withdrawals: 3-7 business days after approval</li>
+          <li>Redemptions: 3-7 business days after approval</li>
         </ul>
         
         <h4 class="font-semibold mb-2 mt-4">5.4 KYC Requirement</h4>
-        <p>All withdrawals and high-value redemptions require completed KYC verification.</p>
+        <p>All redemptions and high-value transactions require completed KYC verification.</p>
         
         <h4 class="font-semibold mb-2 mt-4">5.5 Service Charges</h4>
         <p>Certain redemptions may attract service charges. These will be clearly displayed before confirmation.</p>
