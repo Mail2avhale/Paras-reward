@@ -105,7 +105,12 @@ const AdminCapitalManagement = ({ user }) => {
       fetchEntries();
       fetchSummary();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to save entry');
+      const errDetail = error.response?.data?.detail;
+      const errMsg = typeof errDetail === 'string' ? errDetail : 
+                     Array.isArray(errDetail) ? errDetail.map(e => e.msg || e).join(', ') :
+                     typeof errDetail === 'object' ? (errDetail.msg || JSON.stringify(errDetail)) :
+                     'Failed to save entry';
+      toast.error(errMsg);
     }
   };
 
