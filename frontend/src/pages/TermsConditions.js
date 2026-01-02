@@ -90,7 +90,7 @@ const TermsConditions = () => {
     },
     {
       id: 'redemption',
-      title: '5. Redemption & Withdrawal',
+      title: '5. Redemption & Rewards',
       icon: Gift,
       content: `
         <h4 class="font-semibold mb-2">5.1 Redemption Options</h4>
