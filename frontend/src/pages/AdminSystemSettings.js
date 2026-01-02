@@ -271,9 +271,12 @@ const AdminSystemSettings = ({ user }) => {
                 <input
                   type="number"
                   step="0.1"
+                  min="0"
+                  placeholder="e.g. 0.5, 1, 2"
                   value={miningSettings.base_rate}
-                  onChange={(e) => setMiningSettings(prev => ({ ...prev, base_rate: Number(e.target.value) }))}
+                  onChange={(e) => setMiningSettings(prev => ({ ...prev, base_rate: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 }))}
                   className="w-full px-3 py-2 border rounded-lg mt-1"
+                  data-testid="base-rate-input"
                 />
               </div>
               <div>
