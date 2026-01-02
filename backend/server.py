@@ -11967,10 +11967,10 @@ async def get_detailed_prc_analytics(period: str = "month"):
                     hour_str_start <= t.get("timestamp", "") < hour_str_end)
                 hour_used = sum(abs(t.get("amount", 0)) for t in current_transactions 
                     if t.get("transaction_type") in debit_types and 
-                    hour_str_start <= t.get("timestamp", "") < hour_str_end)
+                    hour_str_start <= t.get("timestamp", t.get("created_at", "")) < hour_str_end)
                 hour_burned = sum(abs(t.get("amount", 0)) for t in current_transactions 
-                    if t.get("transaction_type") == "prc_burn" and 
-                    hour_str_start <= t.get("timestamp", "") < hour_str_end)
+                    if t.get("type") == "prc_burn" and 
+                    hour_str_start <= t.get("timestamp", t.get("created_at", "")) < hour_str_end)
                 
                 chart_data.append({
                     "label": hour_start.strftime("%H:00"),
@@ -11990,14 +11990,14 @@ async def get_detailed_prc_analytics(period: str = "month"):
                 day_str_end = day_end.isoformat()[:10]
                 
                 day_created = sum(t.get("amount", 0) for t in current_transactions 
-                    if t.get("transaction_type") in credit_types and 
-                    t.get("timestamp", "")[:10] >= day_str_start and t.get("timestamp", "")[:10] < day_str_end)
+                    if t.get("type") in credit_types and 
+                    t.get("timestamp", t.get("created_at", ""))[:10] >= day_str_start and t.get("timestamp", t.get("created_at", ""))[:10] < day_str_end)
                 day_used = sum(abs(t.get("amount", 0)) for t in current_transactions 
-                    if t.get("transaction_type") in debit_types and 
-                    t.get("timestamp", "")[:10] >= day_str_start and t.get("timestamp", "")[:10] < day_str_end)
+                    if t.get("type") in debit_types and 
+                    t.get("timestamp", t.get("created_at", ""))[:10] >= day_str_start and t.get("timestamp", t.get("created_at", ""))[:10] < day_str_end)
                 day_burned = sum(abs(t.get("amount", 0)) for t in current_transactions 
-                    if t.get("transaction_type") == "prc_burn" and 
-                    t.get("timestamp", "")[:10] >= day_str_start and t.get("timestamp", "")[:10] < day_str_end)
+                    if t.get("type") == "prc_burn" and 
+                    t.get("timestamp", t.get("created_at", ""))[:10] >= day_str_start and t.get("timestamp", t.get("created_at", ""))[:10] < day_str_end)
                 
                 label = day_start.strftime("%d %b") if period != "year" else day_start.strftime("%b %Y")
                 chart_data.append({
@@ -12016,11 +12016,12 @@ async def get_detailed_prc_analytics(period: str = "month"):
             "bill_payment_request": "Bill Payments",
             "gift_voucher_request": "Gift Vouchers",
             "withdrawal": "Withdrawals",
-            "delivery_charge": "Delivery Charges"
+            "delivery_charge": "Delivery Charges",
+            "prc_rain_loss": "PRC Rain Loss"
         }
         
         for txn_type, label in category_map.items():
-            amount = sum(abs(t.get("amount", 0)) for t in current_transactions if t.get("transaction_type") == txn_type)
+            amount = sum(abs(t.get("amount", 0)) for t in current_transactions if t.get("type") == txn_type)
             if amount > 0:
                 usage_breakdown.append({
                     "category": label,
@@ -12037,11 +12038,12 @@ async def get_detailed_prc_analytics(period: str = "month"):
             "vip_bonus": "VIP Bonus",
             "signup_bonus": "Signup Bonus",
             "scratch_card_win": "Scratch Card Wins",
-            "treasure_hunt_win": "Treasure Hunt Wins"
+            "treasure_hunt_win": "Treasure Hunt Wins",
+            "prc_rain_gain": "PRC Rain Gain"
         }
         
         for txn_type, label in source_map.items():
-            amount = sum(t.get("amount", 0) for t in current_transactions if t.get("transaction_type") == txn_type)
+            amount = sum(t.get("amount", 0) for t in current_transactions if t.get("type") == txn_type)
             if amount > 0:
                 source_breakdown.append({
                     "source": label,
