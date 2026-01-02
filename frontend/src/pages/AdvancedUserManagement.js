@@ -446,6 +446,7 @@ const AdvancedUserManagement = () => {
                     onChange={(e) => setEditForm({...editForm, role: e.target.value})}
                   >
                     <option value="user">User</option>
+                    <option value="manager">Manager</option>
                     <option value="admin">Admin</option>
                     <option value="master_stockist">Master Stockist</option>
                     <option value="sub_stockist">Sub Stockist</option>
