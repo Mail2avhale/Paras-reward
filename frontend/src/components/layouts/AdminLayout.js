@@ -372,8 +372,8 @@ const AdminLayout = ({ children, user, onLogout }) => {
 
         {/* Menu */}
         <nav className="flex-1 overflow-y-auto py-4">
-          {/* Regular menu items */}
-          {menuItems.map((item) => renderMenuItem(item))}
+          {/* Regular menu items - filtered by permissions */}
+          {filteredMenuItems.map((item) => renderMenuItem(item))}
           
           {/* Divider */}
           <div className="my-2 mx-4 border-t border-slate-700"></div>
