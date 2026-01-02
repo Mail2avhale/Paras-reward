@@ -385,7 +385,7 @@ const RewardsHome = () => {
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>Priority Withdrawals</span>
+                    <span>Priority Redemptions</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-green-500" />
