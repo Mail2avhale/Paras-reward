@@ -39,7 +39,7 @@ export const blogArticles = [
       </ul>
 
       <h2>✅ Is Paras Reward Free?</h2>
-      <p>Yes — joining and earning is 100% free. VIP Membership is optional and required only for redemption to cash.</p>
+      <p>Yes — joining and earning is 100% free. VIP Membership is optional and required only for redemption to rewards.</p>
 
       <h2>✅ Is It Legal and Safe?</h2>
       <p>Yes. Paras Reward is a compliant, India-based rewards platform, not a crypto trading or investment app. Coins earned in the app reflect your activity and can be redeemed legally through supported channels.</p>
@@ -124,14 +124,14 @@ export const blogArticles = [
     id: 4,
     slug: "vip-membership-benefits-guide",
     title: "VIP Membership in Paras Reward – Benefits, Fees & Full Guide",
-    excerpt: "Convert your earned PRC coins into real money via UPI. Discover what VIP Membership unlocks and whether it's worth it.",
+    excerpt: "Convert your earned PRC coins into rewards via UPI. Discover what VIP Membership unlocks and whether it's worth it.",
     author: "PARAS REWARD Team",
     date: "November 2, 2024",
     readTime: "5 min read",
     category: "VIP",
     image: "https://images.unsplash.com/photo-1620121692029-d088224ddc74?w=800&h=400&fit=crop",
     content: `
-      <p class="lead">What if you could convert your earned PRC coins into real money via UPI? That's what the VIP Membership unlocks!</p>
+      <p class="lead">What if you could convert your earned PRC coins into rewards via UPI? That's what the VIP Membership unlocks!</p>
 
       <h2>💎 What Is VIP Membership?</h2>
       <p>A paid subscription inside the Paras Reward app that activates:</p>
@@ -167,7 +167,7 @@ export const blogArticles = [
     id: 5,
     slug: "how-to-redeem-coins",
     title: "How to Redeem Coins in Paras Reward (With Steps)",
-    excerpt: "Ready to convert your time into money? Follow these simple steps to redeem your PRC coins for real cash via UPI.",
+    excerpt: "Ready to convert your time into money? Follow these simple steps to redeem your PRC coins for gift vouchers via UPI.",
     author: "PARAS REWARD Team",
     date: "November 2, 2024",
     readTime: "4 min read",
@@ -179,7 +179,7 @@ export const blogArticles = [
       <h2>🔄 Step-by-Step Redeem Process:</h2>
       <ol>
         <li>Go to "Wallet" section (VIP only)</li>
-        <li>Click on "Withdraw" from Cashback Wallet</li>
+        <li>Click on "Withdraw" from Bonus Points Wallet</li>
         <li>Enter UPI ID or Bank Account details</li>
         <li>Select the amount based on balance</li>
         <li>Confirm redemption</li>
@@ -310,7 +310,7 @@ export const blogArticles = [
       <p><strong>✔️ Solution:</strong> Even 5 active referrals can significantly boost your rate! Don't skip this crucial earning multiplier.</p>
 
       <h2>❌ Mistake #3: Skipping VIP Benefits</h2>
-      <p><strong>✔️ Solution:</strong> Without VIP, coins cannot be redeemed to cash — consider upgrading if you are serious about earnings.</p>
+      <p><strong>✔️ Solution:</strong> Without VIP, coins cannot be redeemed to rewards — consider upgrading if you are serious about earnings.</p>
 
       <h2>❌ Mistake #4: Using Fake Accounts</h2>
       <p><strong>✔️ Solution:</strong> Paras Reward has strict device checks. Fraudulent activity leads to permanent bans. One genuine account is better than multiple fake ones.</p>
@@ -334,15 +334,15 @@ export const blogArticles = [
   {
     id: 9,
     slug: "prc-treasure-hunt-game-guide",
-    title: "PRC Treasure Hunt: Play, Find Treasures & Earn 50% Cashback!",
-    excerpt: "Discover the exciting new Treasure Hunt game in Paras Reward! Play with PRC, find hidden treasures, and earn up to 100% cashback. Complete guide with tips and strategies.",
+    title: "PRC Treasure Hunt: Play, Find Treasures & Earn 50% Bonus Points!",
+    excerpt: "Discover the exciting new Treasure Hunt game in Paras Reward! Play with PRC, find hidden treasures, and earn up to 100% bonus points. Complete guide with tips and strategies.",
     author: "PARAS REWARD Team",
     date: "November 7, 2024",
     readTime: "6 min read",
     category: "Games",
     image: "https://images.unsplash.com/photo-1506012787146-f92b2d7d6d96?w=800&h=400&fit=crop",
     content: `
-      <p class="lead">Get ready for the most exciting feature in Paras Reward! The PRC Treasure Hunt game combines adventure, strategy, and real rewards. Spend your PRC coins to hunt for hidden treasures on an interactive map and earn up to 100% cashback!</p>
+      <p class="lead">Get ready for the most exciting feature in Paras Reward! The PRC Treasure Hunt game combines adventure, strategy, and real rewards. Spend your PRC coins to hunt for hidden treasures on an interactive map and earn up to 100% bonus points!</p>
 
       <h2>🎮 What Is PRC Treasure Hunt?</h2>
       <p>PRC Treasure Hunt is an interactive map-based game where you:</p>
@@ -350,8 +350,8 @@ export const blogArticles = [
         <li><strong>Spend PRC</strong> to start treasure hunts</li>
         <li><strong>Buy clues</strong> to narrow down treasure locations</li>
         <li><strong>Click on the map</strong> to search for hidden treasures</li>
-        <li><strong>Earn instant 50% cashback</strong> on all PRC spent when you find the treasure</li>
-        <li><strong>Compete for daily top hunter</strong> and win 100% cashback bonus</li>
+        <li><strong>Earn instant 50% bonus points</strong> on all PRC spent when you find the treasure</li>
+        <li><strong>Compete for daily top hunter</strong> and win 100% bonus points bonus</li>
       </ul>
 
       <h2>💎 Three Exciting Treasure Hunts Available:</h2>
@@ -359,7 +359,7 @@ export const blogArticles = [
       <h3>🌿 1. Beginner's Fortune (Easy)</h3>
       <ul>
         <li><strong>Cost:</strong> 10 PRC to start</li>
-        <li><strong>Cashback:</strong> ₹0.50 (50% of ₹1 INR value)</li>
+        <li><strong>Bonus Points:</strong> ₹0.50 (50% of ₹1 INR value)</li>
         <li><strong>Clues:</strong> 3 available (5 PRC each)</li>
         <li><strong>Time Limit:</strong> 30 minutes</li>
         <li><strong>Difficulty:</strong> Perfect for beginners</li>
@@ -369,7 +369,7 @@ export const blogArticles = [
       <h3>⚔️ 2. Mystic Cave Challenge (Medium)</h3>
       <ul>
         <li><strong>Cost:</strong> 25 PRC to start</li>
-        <li><strong>Cashback:</strong> ₹1.25 (50% of ₹2.50 INR value)</li>
+        <li><strong>Bonus Points:</strong> ₹1.25 (50% of ₹2.50 INR value)</li>
         <li><strong>Clues:</strong> 4 available (5 PRC each)</li>
         <li><strong>Time Limit:</strong> 45 minutes</li>
         <li><strong>Difficulty:</strong> For experienced hunters</li>
@@ -379,7 +379,7 @@ export const blogArticles = [
       <h3>🐉 3. Dragon's Lair Expedition (Hard)</h3>
       <ul>
         <li><strong>Cost:</strong> 50 PRC to start</li>
-        <li><strong>Cashback:</strong> ₹2.50 (50% of ₹5 INR value)</li>
+        <li><strong>Bonus Points:</strong> ₹2.50 (50% of ₹5 INR value)</li>
         <li><strong>Clues:</strong> 5 available (5 PRC each)</li>
         <li><strong>Time Limit:</strong> 60 minutes</li>
         <li><strong>Difficulty:</strong> For brave treasure hunters only</li>
@@ -394,26 +394,26 @@ export const blogArticles = [
         <li><strong>View the Map</strong> → You'll see an authentic treasure map with X marks at potential treasure locations</li>
         <li><strong>Buy Clues (Optional)</strong> → Spend 5 PRC per clue to get hints about the treasure location</li>
         <li><strong>Search Locations</strong> → Click on X marks on the map to search for treasure</li>
-        <li><strong>Find the Treasure</strong> → When you click the correct location, you win! Instant cashback credited to your cashback wallet</li>
+        <li><strong>Find the Treasure</strong> → When you click the correct location, you win! Instant bonus points credited to your bonus points wallet</li>
       </ol>
 
-      <h2>💰 Understanding the Cashback System:</h2>
+      <h2>💰 Understanding the Bonus Points System:</h2>
       
-      <h3>Regular 50% Cashback:</h3>
-      <p>Every PRC you spend in treasure hunts earns you 50% back in INR cashback:</p>
+      <h3>Regular 50% Bonus Points:</h3>
+      <p>Every PRC you spend in treasure hunts earns you 50% back in INR bonus points:</p>
       <ul>
-        <li><strong>Formula:</strong> (Total PRC Spent ÷ 10) × 50% = Cashback in INR</li>
-        <li><strong>Example 1:</strong> Spend 10 PRC → ₹1 value → ₹0.50 cashback</li>
-        <li><strong>Example 2:</strong> Spend 30 PRC (25 hunt + 5 clue) → ₹3 value → ₹1.50 cashback</li>
-        <li><strong>Example 3:</strong> Spend 100 PRC in a day → ₹10 value → ₹5 cashback</li>
+        <li><strong>Formula:</strong> (Total PRC Spent ÷ 10) × 50% = Bonus Points in INR</li>
+        <li><strong>Example 1:</strong> Spend 10 PRC → ₹1 value → ₹0.50 bonus points</li>
+        <li><strong>Example 2:</strong> Spend 30 PRC (25 hunt + 5 clue) → ₹3 value → ₹1.50 bonus points</li>
+        <li><strong>Example 3:</strong> Spend 100 PRC in a day → ₹10 value → ₹5 bonus points</li>
       </ul>
 
-      <h3>🏆 Daily Top Hunter 100% Cashback Bonus:</h3>
-      <p>Be the #1 treasure hunter of the day and earn an additional 50% cashback bonus!</p>
+      <h3>🏆 Daily Top Hunter 100% Bonus Points Bonus:</h3>
+      <p>Be the #1 treasure hunter of the day and earn an additional 50% bonus points bonus!</p>
       <ul>
         <li><strong>Ranking:</strong> Based on treasures found, then PRC spent</li>
-        <li><strong>Bonus:</strong> Additional 50% cashback on top of the regular 50%</li>
-        <li><strong>Total:</strong> 100% cashback = get all your PRC spending back as INR!</li>
+        <li><strong>Bonus:</strong> Additional 50% bonus points on top of the regular 50%</li>
+        <li><strong>Total:</strong> 100% bonus points = get all your PRC spending back as INR!</li>
         <li><strong>Example:</strong> Top hunter spends 100 PRC → Gets ₹5 during hunts + ₹5 bonus = ₹10 total (100%)</li>
       </ul>
 
@@ -454,7 +454,7 @@ export const blogArticles = [
         <li>See who's finding the most treasures</li>
         <li>Check total PRC spent by top hunters</li>
         <li>Compete for the #1 spot daily</li>
-        <li>Win 100% cashback as daily champion</li>
+        <li>Win 100% bonus points as daily champion</li>
       </ul>
 
       <h2>📊 Track Your Stats:</h2>
@@ -462,7 +462,7 @@ export const blogArticles = [
       <ul>
         <li><strong>Treasures Found:</strong> Total successful hunts</li>
         <li><strong>Active Hunts:</strong> Current hunts in progress</li>
-        <li><strong>Total Cashback:</strong> All cashback earned from treasure hunts</li>
+        <li><strong>Total Bonus Points:</strong> All bonus points earned from treasure hunts</li>
         <li><strong>PRC Spent:</strong> Total PRC invested in hunting</li>
         <li><strong>Last 10 Completed Hunts:</strong> Your recent hunt history</li>
       </ul>
@@ -480,31 +480,31 @@ export const blogArticles = [
 
       <h3>4. Balance Risk vs. Reward:</h3>
       <ul>
-        <li><strong>Easy Hunt:</strong> Low cost (10 PRC), lower cashback (₹0.50), higher success rate</li>
-        <li><strong>Hard Hunt:</strong> High cost (50 PRC), higher cashback (₹2.50), more challenge</li>
+        <li><strong>Easy Hunt:</strong> Low cost (10 PRC), lower bonus points (₹0.50), higher success rate</li>
+        <li><strong>Hard Hunt:</strong> High cost (50 PRC), higher bonus points (₹2.50), more challenge</li>
       </ul>
 
       <h3>5. Play Multiple Times Daily:</h3>
       <p>Since treasure locations are randomized, you can replay the same hunt multiple times and have a different experience each time!</p>
 
       <h3>6. Compete for Top Hunter:</h3>
-      <p>If you're serious about maximizing earnings, compete for daily top hunter position to double your cashback!</p>
+      <p>If you're serious about maximizing earnings, compete for daily top hunter position to double your bonus points!</p>
 
       <h2>🎉 Benefits of Playing Treasure Hunt:</h2>
       <ul>
-        <li>✅ <strong>Instant 50% Cashback</strong> on all PRC spent</li>
+        <li>✅ <strong>Instant 50% Bonus Points</strong> on all PRC spent</li>
         <li>✅ <strong>Fun & Engaging</strong> gameplay experience</li>
-        <li>✅ <strong>Up to 100% Cashback</strong> for top hunters</li>
-        <li>✅ <strong>No losing</strong> – you always get cashback back</li>
+        <li>✅ <strong>Up to 100% Bonus Points</strong> for top hunters</li>
+        <li>✅ <strong>No losing</strong> – you always get bonus points back</li>
         <li>✅ <strong>Unlimited replays</strong> – randomized treasures</li>
-        <li>✅ <strong>KYC not required</strong> – cashback auto-credited</li>
+        <li>✅ <strong>KYC not required</strong> – bonus points auto-credited</li>
         <li>✅ <strong>Quick games</strong> – 5-10 minutes per hunt</li>
-        <li>✅ <strong>Perfect for VIP users</strong> – convert PRC to cash via cashback</li>
+        <li>✅ <strong>Perfect for VIP users</strong> – convert PRC to cash via bonus points</li>
       </ul>
 
       <h2>🎮 Example Success Story:</h2>
       <blockquote class="bg-amber-50 border-l-4 border-amber-500 p-4 my-4">
-        <p class="italic">"I started playing PRC Treasure Hunt with my daily earnings. On my first day, I completed 5 Easy hunts spending 50 PRC (₹5 value) and earned ₹2.50 cashback instantly! The next day, I became the top hunter by completing 10 hunts and earned an additional ₹5 bonus. Total earnings: ₹7.50 for spending time playing a fun game!"</p>
+        <p class="italic">"I started playing PRC Treasure Hunt with my daily earnings. On my first day, I completed 5 Easy hunts spending 50 PRC (₹5 value) and earned ₹2.50 bonus points instantly! The next day, I became the top hunter by completing 10 hunts and earned an additional ₹5 bonus. Total earnings: ₹7.50 for spending time playing a fun game!"</p>
         <footer class="text-sm mt-2">— Rahul M., VIP Member</footer>
       </blockquote>
 
@@ -519,10 +519,10 @@ export const blogArticles = [
       <h2>❓ Frequently Asked Questions:</h2>
 
       <h3>Q: What happens if I don't find the treasure in time?</h3>
-      <p>A: If the time limit expires, the hunt ends. You don't get cashback, but you can start a new hunt immediately.</p>
+      <p>A: If the time limit expires, the hunt ends. You don't get bonus points, but you can start a new hunt immediately.</p>
 
       <h3>Q: Can I play if I'm not a VIP member?</h3>
-      <p>A: Yes! All users can play treasure hunt. However, VIP members can withdraw their cashback earnings.</p>
+      <p>A: Yes! All users can play treasure hunt. However, VIP members can withdraw their bonus points earnings.</p>
 
       <h3>Q: Is the treasure location really random?</h3>
       <p>A: Yes! Each hunt has multiple possible treasure locations, and one is randomly selected when you start. This ensures fair gameplay.</p>
@@ -530,20 +530,20 @@ export const blogArticles = [
       <h3>Q: How many times can I play per day?</h3>
       <p>A: Unlimited! As long as you have PRC balance, you can play as many treasure hunts as you want.</p>
 
-      <h3>Q: When is the cashback credited?</h3>
-      <p>A: Instantly! The moment you find the treasure, 50% cashback is credited to your cashback wallet.</p>
+      <h3>Q: When is the bonus points credited?</h3>
+      <p>A: Instantly! The moment you find the treasure, 50% bonus points is credited to your bonus points wallet.</p>
 
       <h3>Q: When is the daily top hunter bonus awarded?</h3>
       <p>A: The daily top hunter is determined at the end of each day, and the bonus is awarded within 24 hours.</p>
 
       <h2>🚀 Ready to Start Your Treasure Hunting Adventure?</h2>
-      <p>PRC Treasure Hunt is the perfect way to make your PRC earnings even more rewarding. With 50% guaranteed cashback and the chance to win 100% as the top hunter, every game is an opportunity to boost your wallet.</p>
+      <p>PRC Treasure Hunt is the perfect way to make your PRC earnings even more rewarding. With 50% guaranteed bonus points and the chance to win 100% as the top hunter, every game is an opportunity to boost your wallet.</p>
 
       <p class="font-bold">Login now, choose your adventure, and start hunting for treasures! May the odds be ever in your favor! 🎯💰</p>
 
       <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 mt-6">
         <p class="text-center font-semibold text-purple-900">🎮 Access Treasure Hunt Now!</p>
-        <p class="text-center text-sm text-purple-700 mt-2">Dashboard → Treasure Hunt → Choose Your Adventure → Find Treasures → Earn Cashback!</p>
+        <p class="text-center text-sm text-purple-700 mt-2">Dashboard → Treasure Hunt → Choose Your Adventure → Find Treasures → Earn Bonus Points!</p>
       </div>
     `
   }

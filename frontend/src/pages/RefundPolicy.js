@@ -46,7 +46,7 @@ const RefundPolicy = () => {
             </div>
 
             <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
-              <li><strong>Earned PRC:</strong> Points earned through platform activities (mining, games) cannot be refunded or exchanged for cash.</li>
+              <li><strong>Earned PRC:</strong> Points earned through platform activities (mining, games) cannot be refunded or exchanged for money.</li>
               <li><strong>Expiry Policy:</strong> Free users' PRC may expire as per platform terms. VIP users' PRC does not expire.</li>
               <li><strong>No Cash Value:</strong> PRC points have no monetary value outside the PARAS REWARD platform and can only be redeemed for products/services listed in our marketplace.</li>
               <li><strong>Account Termination:</strong> If your account is terminated due to violation of terms, all accumulated PRC will be forfeited without refund.</li>
@@ -165,8 +165,8 @@ const RefundPolicy = () => {
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">3.3 Refund Method for Product Orders</h3>
                 <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
                   <li><strong>PRC Points:</strong> Refunded to your PRC wallet within 2-3 business days</li>
-                  <li><strong>Cashback Wallet:</strong> If cashback was earned on the order, it will be reversed</li>
-                  <li><strong>Delivery Charges:</strong> Refunded to your cashback wallet or original payment method (if paid separately)</li>
+                  <li><strong>Bonus Wallet:</strong> If bonus was earned on the order, it will be reversed</li>
+                  <li><strong>Delivery Charges:</strong> Refunded to your bonus wallet or original payment method (if paid separately)</li>
                 </ul>
               </div>
             </div>
@@ -183,7 +183,7 @@ const RefundPolicy = () => {
                   Once a withdrawal request is submitted and approved by admin, it <strong>cannot be cancelled or reversed</strong>.
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4 mt-2">
-                  <li>Minimum withdrawal amount: ₹10 for cashback wallet, ₹50 for PRC balance</li>
+                  <li>Minimum withdrawal amount: ₹10 for bonus wallet, ₹50 for PRC balance</li>
                   <li>Withdrawal fees apply as per platform terms</li>
                   <li>Processing time: 3-7 business days after admin approval</li>
                 </ul>

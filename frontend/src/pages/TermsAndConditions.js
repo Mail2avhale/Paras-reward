@@ -87,7 +87,7 @@ const TermsAndConditions = () => {
               <ul className="space-y-3">
                 <li className="flex items-start gap-3">
                   <span className="text-red-600 font-black text-2xl">✗</span>
-                  <span>These points <strong>cannot be exchanged, traded, or converted</strong> into real money or cryptocurrency.</span>
+                  <span>These points <strong>cannot be exchanged, traded, or converted</strong> into rewards or cryptocurrency.</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-green-600 font-black text-2xl">✓</span>
