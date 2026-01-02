@@ -1563,7 +1563,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                       <div>
                         <h3 className="font-semibold text-gray-900">Transaction Alerts</h3>
                         <p className="text-sm text-gray-600 mt-1">
-                          Get notified about wallet transactions and withdrawals
+                          Get notified about wallet transactions and Redemptions
                         </p>
                       </div>
                     </div>

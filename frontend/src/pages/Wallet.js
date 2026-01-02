@@ -13,7 +13,7 @@ const API = `${BACKEND_URL}/api`;
 const Wallet = ({ user, onLogout }) => {
   const [walletData, setWalletData] = useState(null);
   const [userData, setUserData] = useState(null);
-  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [RedeemAmount, setRedeemAmount] = useState('');
   const [upiId, setUpiId] = useState('');
 
   useEffect(() => {
@@ -39,9 +39,9 @@ const Wallet = ({ user, onLogout }) => {
     }
   };
 
-  const handleWithdraw = async () => {
-    if (!withdrawAmount || parseFloat(withdrawAmount) < 100) {
-      toast.error('Minimum withdrawal amount is ₹100');
+  const handleRedeem = async () => {
+    if (!RedeemAmount || parseFloat(RedeemAmount) < 100) {
+      toast.error('Minimum Redemption amount is ₹100');
       return;
     }
 
@@ -51,17 +51,17 @@ const Wallet = ({ user, onLogout }) => {
     }
 
     try {
-      await axios.post(`${API}/wallet/${user.uid}/withdraw`, {
-        amount: parseFloat(withdrawAmount),
+      await axios.post(`${API}/wallet/${user.uid}/Redeem`, {
+        amount: parseFloat(RedeemAmount),
         upi_id: upiId
       });
-      toast.success(`Withdrawal of ₹${withdrawAmount} processed successfully!`);
-      setWithdrawAmount('');
+      toast.success(`Redemption of ₹${RedeemAmount} processed successfully!`);
+      setRedeemAmount('');
       setUpiId('');
       fetchWalletData();
     } catch (error) {
-      console.error('Error withdrawing:', error);
-      toast.error(error.response?.data?.detail || 'Withdrawal failed');
+      console.error('Error Redeeming:', error);
+      toast.error(error.response?.data?.detail || 'Redemption failed');
     }
   };
 
@@ -107,26 +107,26 @@ const Wallet = ({ user, onLogout }) => {
               <div>
                 <h3 className="font-bold text-yellow-900 mb-1">KYC Required</h3>
                 <p className="text-sm text-yellow-700">
-                  Complete KYC verification to enable wallet withdrawals.
+                  Complete KYC verification to enable wallet Redemptions.
                 </p>
               </div>
             </div>
           </Card>
         )}
 
-        {/* Withdrawal Form */}
-        <Card data-testid="withdrawal-form" className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Withdraw Funds</h2>
+        {/* Redemption Form */}
+        <Card data-testid="Redemption-form" className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Redeem Funds</h2>
           
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Amount (₹)</label>
               <Input
-                data-testid="withdraw-amount-input"
+                data-testid="Redeem-amount-input"
                 type="number"
                 placeholder="Minimum ₹100"
-                value={withdrawAmount}
-                onChange={(e) => setWithdrawAmount(e.target.value)}
+                value={RedeemAmount}
+                onChange={(e) => setRedeemAmount(e.target.value)}
                 className="py-6 text-lg rounded-xl"
                 disabled={walletData?.status !== 'active' || userData?.kyc_status !== 'verified'}
               />
@@ -147,20 +147,20 @@ const Wallet = ({ user, onLogout }) => {
 
             <div className="bg-gray-50 p-4 rounded-xl">
               <p className="text-sm text-gray-700">
-                <strong>Withdrawal Fee:</strong> ₹5 per transaction
+                <strong>Redemption Fee:</strong> ₹5 per transaction
                 <br />
-                <strong>You will receive:</strong> ₹{(parseFloat(withdrawAmount) || 0).toFixed(2)}
+                <strong>You will receive:</strong> ₹{(parseFloat(RedeemAmount) || 0).toFixed(2)}
               </p>
             </div>
 
             <Button
-              data-testid="withdraw-btn"
-              onClick={handleWithdraw}
+              data-testid="Redeem-btn"
+              onClick={handleRedeem}
               disabled={walletData?.status !== 'active' || userData?.kyc_status !== 'verified'}
               className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-6 rounded-xl text-lg font-semibold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ArrowDownToLine className="mr-2 h-5 w-5" />
-              Withdraw to UPI
+              Redeem to UPI
             </Button>
           </div>
         </Card>
@@ -179,7 +179,7 @@ const Wallet = ({ user, onLogout }) => {
             </li>
             <li className="flex items-start">
               <span className="inline-block w-6 h-6 bg-purple-100 rounded-full flex-shrink-0 mr-3 flex items-center justify-center text-purple-600 font-semibold text-sm">3</span>
-              <span>Minimum withdrawal: ₹100 | Withdrawal fee: ₹5</span>
+              <span>Minimum Redemption: ₹100 | Redemption fee: ₹5</span>
             </li>
             <li className="flex items-start">
               <span className="inline-block w-6 h-6 bg-purple-100 rounded-full flex-shrink-0 mr-3 flex items-center justify-center text-purple-600 font-semibold text-sm">4</span>

@@ -75,8 +75,8 @@ const BankingWallet = ({ user, walletBalance = 0 }) => {
       referral: <Users className="w-5 h-5 text-blue-600" />,
       order: <ShoppingCart className="w-5 h-5 text-orange-600" />,
       cashback: <ArrowDownCircle className="w-5 h-5 text-green-600" />,
-      withdrawal: <ArrowUpCircle className="w-5 h-5 text-red-600" />,
-      withdrawal_rejected: <AlertCircle className="w-5 h-5 text-yellow-600" />,
+      Redemption: <ArrowUpCircle className="w-5 h-5 text-red-600" />,
+      Redemption_rejected: <AlertCircle className="w-5 h-5 text-yellow-600" />,
       admin_credit: <CheckCircle className="w-5 h-5 text-green-600" />,
       admin_debit: <AlertCircle className="w-5 h-5 text-red-600" />,
       delivery_charge: <TrendingDown className="w-5 h-5 text-gray-600" />,
@@ -94,8 +94,8 @@ const BankingWallet = ({ user, walletBalance = 0 }) => {
       referral: 'Referral Bonus',
       order: 'Product Order',
       cashback: 'Cashback Credit',
-      withdrawal: 'Withdrawal',
-      withdrawal_rejected: 'Withdrawal Refund',
+      Redemption: 'Redemption',
+      Redemption_rejected: 'Redemption Refund',
       admin_credit: 'Admin Credit',
       admin_debit: 'Admin Debit',
       delivery_charge: 'Delivery Charge',
@@ -107,7 +107,7 @@ const BankingWallet = ({ user, walletBalance = 0 }) => {
   };
 
   const isCredit = (type) => {
-    return ['mining', 'tap_game', 'referral', 'cashback', 'withdrawal_rejected', 'admin_credit', 'PRC_share', 'scratch_card_reward', 'treasure_hunt_reward'].includes(type);
+    return ['mining', 'tap_game', 'referral', 'cashback', 'Redemption_rejected', 'admin_credit', 'PRC_share', 'scratch_card_reward', 'treasure_hunt_reward'].includes(type);
   };
 
   const formatDate = (dateString) => {
@@ -231,8 +231,8 @@ const BankingWallet = ({ user, walletBalance = 0 }) => {
               <option value="referral">Referral</option>
               <option value="order">Order</option>
               <option value="cashback">Cashback</option>
-              <option value="withdrawal">Withdrawal</option>
-              <option value="withdrawal_rejected">Refund</option>
+              <option value="Redemption">Redemption</option>
+              <option value="Redemption_rejected">Refund</option>
             </select>
 
             <Button

@@ -453,7 +453,7 @@ const Mining = ({ user, onLogout }) => {
                   </li>
                   <li className="flex items-start">
                     <span className="text-orange-500 mr-2">💳</span>
-                    <span>Min withdrawal: <strong>₹1000</strong></span>
+                    <span>Min Redemption: <strong>₹1000</strong></span>
                   </li>
                 </ul>
               </div>
@@ -481,7 +481,7 @@ const Mining = ({ user, onLogout }) => {
                   </li>
                   <li className="flex items-start">
                     <span className="text-yellow-300 mr-2">💸</span>
-                    <span>Min withdrawal: <strong>₹10</strong></span>
+                    <span>Min Redemption: <strong>₹10</strong></span>
                   </li>
                 </ul>
                 <Link to="/vip">

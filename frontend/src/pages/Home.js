@@ -371,7 +371,7 @@ const Home = ({ user, onLogout }) => {
                 Choose Your Plan
               </h2>
               <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                Unlock unlimited rewards, instant withdrawals & exclusive benefits
+                Unlock unlimited rewards, instant Redemptions & exclusive benefits
               </p>
             </div>
 
@@ -478,11 +478,11 @@ const Home = ({ user, onLogout }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
                   { icon: CheckCircle2, text: 'Unlimited PRC validity' },
-                  { icon: Zap, text: 'Instant UPI withdrawals' },
+                  { icon: Zap, text: 'Instant UPI Redemptions' },
                   { icon: Shield, text: 'Priority customer support' },
                   { icon: Gift, text: 'Exclusive product access' },
                   { icon: TrendingUp, text: 'Higher reward rates' },
-                  { icon: Target, text: 'No withdrawal limits' }
+                  { icon: Target, text: 'No Redemption limits' }
                 ].map((benefit, index) => (
                   <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-purple-50 hover:bg-purple-100 transition-colors">
                     <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center flex-shrink-0">

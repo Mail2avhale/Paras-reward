@@ -9,7 +9,7 @@ const FAQ = () => {
   const faqs = [
     {
       question: "What is Paras Reward?",
-      answer: "PARAS REWARD is India's first mining-based rewards platform where users earn PRC (Paras Reward Coins) through daily activities like mining, tap games, and referrals. These coins can be redeemed for real products or cash withdrawals."
+      answer: "PARAS REWARD is India's first mining-based rewards platform where users earn PRC (Paras Reward Coins) through daily activities like mining, tap games, and referrals. These coins can be redeemed for real products or cash Redemptions."
     },
     {
       question: "How do I earn PRC coins?",
@@ -25,7 +25,7 @@ const FAQ = () => {
     },
     {
       question: "How to redeem PRC to cash?",
-      answer: "Only VIP members can redeem PRC for cash. Go to Wallet section, select withdrawal amount, provide your UPI details, and submit the request. Withdrawals are processed within 48-72 hours."
+      answer: "Only VIP members can redeem PRC for cash. Go to Wallet section, select Redemption amount, provide your UPI details, and submit the request. Redemptions are processed within 48-72 hours."
     },
     {
       question: "What is the PRC to INR conversion rate?",
@@ -41,27 +41,27 @@ const FAQ = () => {
     },
     {
       question: "Can free users redeem products?",
-      answer: "No, only VIP members can redeem products and withdraw cash. Free users can earn and accumulate PRC but must upgrade to VIP to access redemption features."
+      answer: "No, only VIP members can redeem products and Redeem cash. Free users can earn and accumulate PRC but must upgrade to VIP to access redemption features."
     },
     {
       question: "What is KYC and why is it required?",
-      answer: "KYC (Know Your Customer) verification is mandatory for all withdrawal requests. It ensures security and compliance. You need to upload valid government ID proof (Aadhar, PAN, or Driver's License) for verification."
+      answer: "KYC (Know Your Customer) verification is mandatory for all Redemption requests. It ensures security and compliance. You need to upload valid government ID proof (Aadhar, PAN, or Driver's License) for verification."
     },
     {
       question: "How long does KYC verification take?",
-      answer: "KYC verification typically takes 24-48 hours. You'll receive a notification once your documents are verified. After approval, you can proceed with withdrawals."
+      answer: "KYC verification typically takes 24-48 hours. You'll receive a notification once your documents are verified. After approval, you can proceed with Redemptions."
     },
     {
-      question: "What payment methods are supported for withdrawal?",
-      answer: "We support multiple UPI payment methods including PhonePe, Google Pay, Paytm, and direct bank transfer. Select your preferred method during withdrawal."
+      question: "What payment methods are supported for Redemption?",
+      answer: "We support multiple UPI payment methods including PhonePe, Google Pay, Paytm, and direct bank transfer. Select your preferred method during Redemption."
     },
     {
-      question: "What is the minimum withdrawal amount?",
-      answer: "The minimum withdrawal amount from the Cashback Wallet is ₹10. A withdrawal fee of ₹5 applies to each transaction."
+      question: "What is the minimum Redemption amount?",
+      answer: "The minimum Redemption amount from the Cashback Wallet is ₹10. A Redemption fee of ₹5 applies to each transaction."
     },
     {
       question: "What is the Cashback Wallet?",
-      answer: "The Cashback Wallet stores your redemption cashback (25% of product value) in INR. It has a monthly maintenance fee of ₹99 and allows withdrawals of minimum ₹10 with a ₹5 processing fee."
+      answer: "The Cashback Wallet stores your redemption cashback (25% of product value) in INR. It has a monthly maintenance fee of ₹99 and allows Redemptions of minimum ₹10 with a ₹5 processing fee."
     },
     {
       question: "How does the referral system work?",
@@ -92,8 +92,8 @@ const FAQ = () => {
       answer: "We use industry-standard encryption and security measures to protect your data. Your information is never sold to third parties. Read our Privacy Policy for complete details."
     },
     {
-      question: "Can I cancel a withdrawal request?",
-      answer: "Once a withdrawal request is submitted, it cannot be cancelled as the amount is immediately deducted from your wallet. If the request is rejected by admin, the amount will be re-credited."
+      question: "Can I cancel a Redemption request?",
+      answer: "Once a Redemption request is submitted, it cannot be cancelled as the amount is immediately deducted from your wallet. If the request is rejected by admin, the amount will be re-credited."
     },
     {
       question: "What if I forget my password?",
@@ -105,7 +105,7 @@ const FAQ = () => {
     },
     {
       question: "Are there any hidden charges?",
-      answer: "No hidden charges! All fees are clearly mentioned: VIP membership (₹1,000/year), Cashback Wallet maintenance (₹99/month), Withdrawal fee (₹5 per transaction), and Delivery charges on product orders."
+      answer: "No hidden charges! All fees are clearly mentioned: VIP membership (₹1,000/year), Cashback Wallet maintenance (₹99/month), Redemption fee (₹5 per transaction), and Delivery charges on product orders."
     }
   ];
 

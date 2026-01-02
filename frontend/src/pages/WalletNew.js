@@ -30,15 +30,15 @@ const API = `${BACKEND_URL}/api`;
 
 const WalletNew = ({ user, onLogout }) => {
   const [walletData, setWalletData] = useState(null);
-  const [withdrawals, setWithdrawals] = useState({ cashback_withdrawals: [], prc_withdrawals: [] });
+  const [Redemptions, setRedemptions] = useState({ cashback_Redemptions: [], prc_Redemptions: [] });
   const [loading, setLoading] = useState(false);
   
-  // Determine minimum withdrawal based on membership
+  // Determine minimum Redemption based on membership
   const isFreeUser = user?.membership_type !== 'vip';
-  const minCashbackWithdrawal = isFreeUser ? 1000 : 10;
-  const minprcWithdrawal = 50;
+  const minCashbackRedemption = isFreeUser ? 1000 : 10;
+  const minprcRedemption = 50;
   
-  // Cashback withdrawal form
+  // Cashback Redemption form
   const [cashbackAmount, setCashbackAmount] = useState('');
   const [cashbackPaymentMode, setCashbackPaymentMode] = useState('phonepe');
   const [cashbackUpiId, setCashbackUpiId] = useState('');
@@ -47,7 +47,7 @@ const WalletNew = ({ user, onLogout }) => {
   const [cashbackAccountHolderName, setCashbackAccountHolderName] = useState('');
   const [cashbackIfsc, setCashbackIfsc] = useState('');
   
-  // prc withdrawal form
+  // prc Redemption form
   const [prcAmount, setprcAmount] = useState('');
   const [prcPaymentMode, setprcPaymentMode] = useState('phonepe');
   const [prcUpiId, setprcUpiId] = useState('');
@@ -58,7 +58,7 @@ const WalletNew = ({ user, onLogout }) => {
 
   useEffect(() => {
     fetchWalletData();
-    fetchWithdrawals();
+    fetchRedemptions();
     
     // Auto-load banking details from user profile
     if (user) {
@@ -91,20 +91,20 @@ const WalletNew = ({ user, onLogout }) => {
     }
   };
 
-  const fetchWithdrawals = async () => {
+  const fetchRedemptions = async () => {
     try {
-      const response = await axios.get(`${API}/wallet/withdrawals/${user.uid}`);
-      setWithdrawals(response.data);
+      const response = await axios.get(`${API}/wallet/Redemptions/${user.uid}`);
+      setRedemptions(response.data);
     } catch (error) {
-      console.error('Error fetching withdrawals:', error);
+      console.error('Error fetching Redemptions:', error);
     }
   };
 
-  const handleCashbackWithdraw = async () => {
-    if (!cashbackAmount || parseFloat(cashbackAmount) < minCashbackWithdrawal) {
+  const handleCashbackRedeem = async () => {
+    if (!cashbackAmount || parseFloat(cashbackAmount) < minCashbackRedemption) {
       notifications.warning(
         'Minimum Amount Required',
-        `Minimum withdrawal is ₹${minCashbackWithdrawal}. ${isFreeUser ? 'Upgrade to VIP membership for lower minimum withdrawal of just ₹10!' : ''}`
+        `Minimum Redemption is ₹${minCashbackRedemption}. ${isFreeUser ? 'Upgrade to VIP membership for lower minimum Redemption of just ₹10!' : ''}`
       );
       return;
     }
@@ -122,10 +122,10 @@ const WalletNew = ({ user, onLogout }) => {
     }
 
     setLoading(true);
-    const loadingId = notifications.loading('Processing Withdrawal', 'Please wait while we process your withdrawal request...');
+    const loadingId = notifications.loading('Processing Redemption', 'Please wait while we process your Redemption request...');
     
     try {
-      const response = await axios.post(`${API}/wallet/cashback/withdraw`, {
+      const response = await axios.post(`${API}/wallet/cashback/Redeem`, {
         user_id: user.uid,
         amount: parseFloat(cashbackAmount),
         payment_mode: cashbackPaymentMode,
@@ -140,8 +140,8 @@ const WalletNew = ({ user, onLogout }) => {
       
       const data = response.data;
       notifications.celebrate(
-        '💰 Withdrawal Request Submitted!',
-        `Your withdrawal of ₹${data.wallet_debited} has been initiated. You'll receive ₹${data.amount_to_receive} after deducting ₹${data.withdrawal_fee} processing fee. Funds will be transferred within 1-3 business days.`
+        '💰 Redemption Request Submitted!',
+        `Your Redemption of ₹${data.wallet_debited} has been initiated. You'll receive ₹${data.amount_to_receive} after deducting ₹${data.Redemption_fee} processing fee. Funds will be transferred within 1-3 business days.`
       );
       
       setCashbackAmount('');
@@ -150,23 +150,23 @@ const WalletNew = ({ user, onLogout }) => {
       setCashbackAccountHolderName('');
       setCashbackIfsc('');
       fetchWalletData();
-      fetchWithdrawals();
+      fetchRedemptions();
     } catch (error) {
-      console.error('Error withdrawing:', error);
+      console.error('Error Redeeming:', error);
       toast.dismiss(loadingId);
       
       notifications.error(
-        'Withdrawal Failed',
-        error.response?.data?.detail || 'Unable to process withdrawal. Please check your details and try again.'
+        'Redemption Failed',
+        error.response?.data?.detail || 'Unable to process Redemption. Please check your details and try again.'
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleprcWithdraw = async () => {
+  const handleprcRedeem = async () => {
     if (!prcAmount || parseFloat(prcAmount) < 50) {
-      toast.error('Minimum withdrawal amount is ₹50');
+      toast.error('Minimum Redemption amount is ₹50');
       return;
     }
 
@@ -184,7 +184,7 @@ const WalletNew = ({ user, onLogout }) => {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API}/wallet/prc/withdraw`, {
+      const response = await axios.post(`${API}/wallet/prc/Redeem`, {
         user_id: user.uid,
         amount: parseFloat(prcAmount),
         payment_mode: prcPaymentMode,
@@ -198,7 +198,7 @@ const WalletNew = ({ user, onLogout }) => {
       // Show enhanced success message with new fee breakdown
       const data = response.data;
       toast.success(
-        `Withdrawal request submitted! ₹${data.wallet_debited} debited. You'll receive ₹${data.amount_to_receive} (₹${data.withdrawal_fee} processing fee)`,
+        `Redemption request submitted! ₹${data.wallet_debited} debited. You'll receive ₹${data.amount_to_receive} (₹${data.Redemption_fee} processing fee)`,
         { duration: 5000 }
       );
       
@@ -208,10 +208,10 @@ const WalletNew = ({ user, onLogout }) => {
       setprcAccountHolderName('');
       setprcIfsc('');
       fetchWalletData();
-      fetchWithdrawals();
+      fetchRedemptions();
     } catch (error) {
-      console.error('Error withdrawing:', error);
-      toast.error(error.response?.data?.detail || 'Withdrawal failed');
+      console.error('Error Redeeming:', error);
+      toast.error(error.response?.data?.detail || 'Redemption failed');
     } finally {
       setLoading(false);
     }
@@ -363,8 +363,8 @@ const WalletNew = ({ user, onLogout }) => {
           )}
         </div>
 
-        {/* Tabs for Withdrawal and History - Gradient Style */}
-        <Tabs defaultValue="cashback-withdraw" className="space-y-6">
+        {/* Tabs for Redemption and History - Gradient Style */}
+        <Tabs defaultValue="cashback-Redeem" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 bg-white/80 backdrop-blur-sm border border-gray-200 p-1.5 rounded-2xl shadow-lg">
             <TabsTrigger 
               value="transactions"
@@ -374,17 +374,17 @@ const WalletNew = ({ user, onLogout }) => {
               Transactions
             </TabsTrigger>
             <TabsTrigger 
-              value="cashback-withdraw"
+              value="cashback-Redeem"
               className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 font-medium transition-all rounded-xl"
             >
-              Cashback Withdraw
+              Cashback Redeem
             </TabsTrigger>
             {isStockistOrOutlet && (
               <TabsTrigger 
-                value="prc-withdraw"
+                value="prc-Redeem"
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white data-[state=active]:shadow-md text-gray-600 font-medium transition-all rounded-xl"
               >
-                prc Withdraw
+                prc Redeem
               </TabsTrigger>
             )}
             <TabsTrigger 
@@ -408,15 +408,15 @@ const WalletNew = ({ user, onLogout }) => {
             <BankingWallet user={user} walletBalance={walletData?.cashback_balance || 0} />
           </TabsContent>
 
-          {/* Cashback Withdrawal */}
-          <TabsContent value="cashback-withdraw">
+          {/* Cashback Redemption */}
+          <TabsContent value="cashback-Redeem">
             <Card className="bg-white/80 backdrop-blur-sm border-2 border-gray-200 p-8 rounded-3xl shadow-xl">
               <div className="flex items-center gap-3 mb-6">
                 <div className="bg-gradient-to-br from-blue-500 to-purple-500 p-3 rounded-2xl">
                   <ArrowDownToLine className="h-6 w-6 text-white" />
                 </div>
                 <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Withdraw Cashback
+                  Redeem Cashback
                 </h3>
               </div>
               
@@ -426,16 +426,16 @@ const WalletNew = ({ user, onLogout }) => {
                     <Info className="h-5 w-5 text-white" />
                   </div>
                   <div className="text-sm text-gray-700">
-                    <p className="font-semibold mb-2 text-blue-900">Withdrawal Guidelines:</p>
+                    <p className="font-semibold mb-2 text-blue-900">Redemption Guidelines:</p>
                     <ul className="space-y-1.5 text-xs text-gray-600">
                       <li className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-                        Minimum withdrawal: ₹{minCashbackWithdrawal}
+                        Minimum Redemption: ₹{minCashbackRedemption}
                         {isFreeUser && <span className="text-orange-600 font-semibold ml-1">(Free User - VIP: ₹10)</span>}
                       </li>
                       <li className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-                        Withdrawal fee: ₹5 per transaction
+                        Redemption fee: ₹5 per transaction
                       </li>
                       <li className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
@@ -447,7 +447,7 @@ const WalletNew = ({ user, onLogout }) => {
                       </li>
                       <li className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-                        Cannot withdraw if pending maintenance lien exists
+                        Cannot Redeem if pending maintenance lien exists
                       </li>
                     </ul>
                   </div>
@@ -459,7 +459,7 @@ const WalletNew = ({ user, onLogout }) => {
                   <label className="block text-sm font-semibold mb-3 text-gray-700">Amount (₹)</label>
                   <Input
                     type="number"
-                    placeholder={`Minimum ₹${minCashbackWithdrawal}`}
+                    placeholder={`Minimum ₹${minCashbackRedemption}`}
                     value={cashbackAmount}
                     onChange={(e) => setCashbackAmount(e.target.value)}
                     className="border-2 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-xl text-lg"
@@ -467,7 +467,7 @@ const WalletNew = ({ user, onLogout }) => {
                   {isFreeUser && (
                     <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
                       <p className="text-xs text-orange-700">
-                        ⚠️ <strong>Free User:</strong> Minimum ₹1000 withdrawal. Upgrade to VIP for ₹10 minimum!
+                        ⚠️ <strong>Free User:</strong> Minimum ₹1000 Redemption. Upgrade to VIP for ₹10 minimum!
                       </p>
                     </div>
                   )}
@@ -552,31 +552,31 @@ const WalletNew = ({ user, onLogout }) => {
                 )}
 
                 <Button
-                  onClick={handleCashbackWithdraw}
+                  onClick={handleCashbackRedeem}
                   disabled={loading}
                   className="w-full bg-emerald-600 hover:bg-emerald-700"
                 >
                   <ArrowDownToLine className="mr-2 h-5 w-5" />
-                  {loading ? 'Processing...' : 'Request Withdrawal'}
+                  {loading ? 'Processing...' : 'Request Redemption'}
                 </Button>
               </div>
             </Card>
           </TabsContent>
 
-          {/* prc Withdrawal */}
+          {/* prc Redemption */}
           {isStockistOrOutlet && (
-            <TabsContent value="prc-withdraw">
+            <TabsContent value="prc-Redeem">
               <Card className="p-6">
-                <h3 className="text-2xl font-bold mb-4">Withdraw from prc Wallet</h3>
+                <h3 className="text-2xl font-bold mb-4">Redeem from prc Wallet</h3>
                 
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
                   <div className="flex items-start gap-3">
                     <Info className="h-5 w-5 text-purple-600 mt-0.5" />
                     <div className="text-sm text-purple-900">
-                      <p className="font-semibold mb-1">Withdrawal Guidelines:</p>
+                      <p className="font-semibold mb-1">Redemption Guidelines:</p>
                       <ul className="space-y-1 text-xs">
-                        <li>• Minimum withdrawal: ₹50</li>
-                        <li>• Withdrawal fee: ₹5 per transaction</li>
+                        <li>• Minimum Redemption: ₹50</li>
+                        <li>• Redemption fee: ₹5 per transaction</li>
                         <li>• Processing time: 1-3 business days</li>
                         <li>• Admin approval required</li>
                       </ul>
@@ -674,19 +674,19 @@ const WalletNew = ({ user, onLogout }) => {
                   )}
 
                   <Button
-                    onClick={handleprcWithdraw}
+                    onClick={handleprcRedeem}
                     disabled={loading}
                     className="w-full bg-purple-600 hover:bg-purple-700"
                   >
                     <ArrowDownToLine className="mr-2 h-5 w-5" />
-                    {loading ? 'Processing...' : 'Request Withdrawal'}
+                    {loading ? 'Processing...' : 'Request Redemption'}
                   </Button>
                 </div>
               </Card>
             </TabsContent>
           )}
 
-          {/* Cashback Withdrawal History */}
+          {/* Cashback Redemption History */}
           <TabsContent value="cashback-history">
             <Card className="bg-white/80 backdrop-blur-sm border-2 border-gray-200 p-8 rounded-3xl shadow-xl">
               <div className="flex items-center gap-3 mb-6">
@@ -694,57 +694,57 @@ const WalletNew = ({ user, onLogout }) => {
                   <FileText className="h-6 w-6 text-white" />
                 </div>
                 <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Withdrawal History
+                  Redemption History
                 </h3>
               </div>
               
-              {withdrawals.cashback_withdrawals.length === 0 ? (
+              {Redemptions.cashback_Redemptions.length === 0 ? (
                 <div className="text-center py-16">
                   <div className="bg-gradient-to-br from-blue-100 to-purple-100 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center border-4 border-white shadow-lg">
                     <WalletIcon className="h-12 w-12 text-blue-600" />
                   </div>
-                  <p className="text-gray-500 text-lg">No withdrawal history yet</p>
-                  <p className="text-gray-400 text-sm mt-2">Your withdrawals will appear here</p>
+                  <p className="text-gray-500 text-lg">No Redemption history yet</p>
+                  <p className="text-gray-400 text-sm mt-2">Your Redemptions will appear here</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {withdrawals.cashback_withdrawals.map((withdrawal) => (
-                    <Card key={withdrawal.withdrawal_id} className="bg-gradient-to-r from-white to-gray-50 border-2 border-gray-200 p-6 rounded-2xl hover:border-blue-300 hover:shadow-lg transition-all duration-300">
+                  {Redemptions.cashback_Redemptions.map((Redemption) => (
+                    <Card key={Redemption.Redemption_id} className="bg-gradient-to-r from-white to-gray-50 border-2 border-gray-200 p-6 rounded-2xl hover:border-blue-300 hover:shadow-lg transition-all duration-300">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-3">
                             <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                              ₹{withdrawal.amount_requested?.toFixed(2) || '0.00'}
+                              ₹{Redemption.amount_requested?.toFixed(2) || '0.00'}
                             </span>
-                            {getStatusBadge(withdrawal.status)}
+                            {getStatusBadge(Redemption.status)}
                           </div>
                           <div className="text-sm text-gray-600 space-y-2">
                             <p className="flex items-center gap-2">
                               <span className="text-gray-500">Net Amount:</span> 
-                              <span className="font-semibold text-gray-900">₹{withdrawal.amount_to_receive?.toFixed(2) || '0.00'}</span>
-                              <span className="text-gray-400">• Fee: ₹{withdrawal.fee?.toFixed(2) || '0.00'}</span>
+                              <span className="font-semibold text-gray-900">₹{Redemption.amount_to_receive?.toFixed(2) || '0.00'}</span>
+                              <span className="text-gray-400">• Fee: ₹{Redemption.fee?.toFixed(2) || '0.00'}</span>
                             </p>
                             <p className="flex items-center gap-2">
-                              {getPaymentMethodIcon(withdrawal.payment_mode)}
-                              <span>Payment: {getPaymentMethodName(withdrawal.payment_mode)} - {withdrawal.upi_id || withdrawal.bank_account}</span>
+                              {getPaymentMethodIcon(Redemption.payment_mode)}
+                              <span>Payment: {getPaymentMethodName(Redemption.payment_mode)} - {Redemption.upi_id || Redemption.bank_account}</span>
                             </p>
-                            {withdrawal.account_holder_name && (
-                              <p>Account Holder: {withdrawal.account_holder_name}</p>
+                            {Redemption.account_holder_name && (
+                              <p>Account Holder: {Redemption.account_holder_name}</p>
                             )}
-                            {withdrawal.bank_name && (
+                            {Redemption.bank_name && (
                               <p className="flex items-center gap-2">
-                                <span className={`inline-flex items-center justify-center w-6 h-6 rounded text-sm ${getBankColor(withdrawal.bank_name)}`}>
-                                  {getBankLogo(withdrawal.bank_name)}
+                                <span className={`inline-flex items-center justify-center w-6 h-6 rounded text-sm ${getBankColor(Redemption.bank_name)}`}>
+                                  {getBankLogo(Redemption.bank_name)}
                                 </span>
-                                <span>Bank: {getBankByName(withdrawal.bank_name)?.name || withdrawal.bank_name}</span>
+                                <span>Bank: {getBankByName(Redemption.bank_name)?.name || Redemption.bank_name}</span>
                               </p>
                             )}
-                            <p>Requested: {new Date(withdrawal.created_at).toLocaleString()}</p>
-                            {withdrawal.utr_number && (
-                              <p className="text-green-600 font-medium">UTR: {withdrawal.utr_number}</p>
+                            <p>Requested: {new Date(Redemption.created_at).toLocaleString()}</p>
+                            {Redemption.utr_number && (
+                              <p className="text-green-600 font-medium">UTR: {Redemption.utr_number}</p>
                             )}
-                            {withdrawal.admin_notes && (
-                              <p className="text-sm italic">Note: {withdrawal.admin_notes}</p>
+                            {Redemption.admin_notes && (
+                              <p className="text-sm italic">Note: {Redemption.admin_notes}</p>
                             )}
                           </div>
                         </div>
@@ -756,50 +756,50 @@ const WalletNew = ({ user, onLogout }) => {
             </Card>
           </TabsContent>
 
-          {/* prc Withdrawal History */}
+          {/* prc Redemption History */}
           {isStockistOrOutlet && (
             <TabsContent value="prc-history">
               <Card className="p-6">
-                <h3 className="text-2xl font-bold mb-4">prc Withdrawal History</h3>
+                <h3 className="text-2xl font-bold mb-4">prc Redemption History</h3>
                 
-                {withdrawals.prc_withdrawals.length === 0 ? (
+                {Redemptions.prc_Redemptions.length === 0 ? (
                   <div className="text-center py-12 text-gray-500">
                     <TrendingUp className="h-16 w-16 mx-auto mb-4 opacity-30" />
-                    <p>No withdrawal history yet</p>
+                    <p>No Redemption history yet</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {withdrawals.prc_withdrawals.map((withdrawal) => (
-                      <Card key={withdrawal.withdrawal_id} className="p-4 border">
+                    {Redemptions.prc_Redemptions.map((Redemption) => (
+                      <Card key={Redemption.Redemption_id} className="p-4 border">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
-                              <span className="text-lg font-bold">₹{withdrawal.amount_requested?.toFixed(2) || '0.00'}</span>
-                              {getStatusBadge(withdrawal.status)}
+                              <span className="text-lg font-bold">₹{Redemption.amount_requested?.toFixed(2) || '0.00'}</span>
+                              {getStatusBadge(Redemption.status)}
                             </div>
                             <div className="text-sm text-gray-600 space-y-1">
-                              <p>Net Amount: ₹{withdrawal.amount_to_receive?.toFixed(2) || '0.00'} (Fee: ₹{withdrawal.fee?.toFixed(2) || '0.00'})</p>
+                              <p>Net Amount: ₹{Redemption.amount_to_receive?.toFixed(2) || '0.00'} (Fee: ₹{Redemption.fee?.toFixed(2) || '0.00'})</p>
                               <p className="flex items-center gap-2">
-                                {getPaymentMethodIcon(withdrawal.payment_mode)}
-                                <span>Payment: {getPaymentMethodName(withdrawal.payment_mode)} - {withdrawal.upi_id || withdrawal.bank_account}</span>
+                                {getPaymentMethodIcon(Redemption.payment_mode)}
+                                <span>Payment: {getPaymentMethodName(Redemption.payment_mode)} - {Redemption.upi_id || Redemption.bank_account}</span>
                               </p>
-                              {withdrawal.account_holder_name && (
-                                <p>Account Holder: {withdrawal.account_holder_name}</p>
+                              {Redemption.account_holder_name && (
+                                <p>Account Holder: {Redemption.account_holder_name}</p>
                               )}
-                              {withdrawal.bank_name && (
+                              {Redemption.bank_name && (
                                 <p className="flex items-center gap-2">
-                                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded text-sm ${getBankColor(withdrawal.bank_name)}`}>
-                                    {getBankLogo(withdrawal.bank_name)}
+                                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded text-sm ${getBankColor(Redemption.bank_name)}`}>
+                                    {getBankLogo(Redemption.bank_name)}
                                   </span>
-                                  <span>Bank: {getBankByName(withdrawal.bank_name)?.name || withdrawal.bank_name}</span>
+                                  <span>Bank: {getBankByName(Redemption.bank_name)?.name || Redemption.bank_name}</span>
                                 </p>
                               )}
-                              <p>Requested: {new Date(withdrawal.created_at).toLocaleString()}</p>
-                              {withdrawal.utr_number && (
-                                <p className="text-green-600 font-medium">UTR: {withdrawal.utr_number}</p>
+                              <p>Requested: {new Date(Redemption.created_at).toLocaleString()}</p>
+                              {Redemption.utr_number && (
+                                <p className="text-green-600 font-medium">UTR: {Redemption.utr_number}</p>
                               )}
-                              {withdrawal.admin_notes && (
-                                <p className="text-sm italic">Note: {withdrawal.admin_notes}</p>
+                              {Redemption.admin_notes && (
+                                <p className="text-sm italic">Note: {Redemption.admin_notes}</p>
                               )}
                             </div>
                           </div>

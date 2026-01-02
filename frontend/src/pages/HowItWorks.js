@@ -71,7 +71,7 @@ const HowItWorks = () => {
               <Gift className="h-12 w-12 text-orange-600 mx-auto mb-4" />
               <h3 className="text-2xl font-bold text-gray-900 mb-4">Redeem Rewards</h3>
               <p className="text-gray-600 leading-relaxed">
-                Exchange your PRC points for real products, cash withdrawals, or exclusive offers.
+                Exchange your PRC points for real products, cash Redemptions, or exclusive offers.
               </p>
             </Card>
           </div>
@@ -150,11 +150,11 @@ const HowItWorks = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
                 'Unlimited PRC validity - Never expire',
-                'Instant UPI withdrawals',
+                'Instant UPI Redemptions',
                 'Higher earning rates',
                 'Priority customer support',
                 'Exclusive product access',
-                'No withdrawal limits'
+                'No Redemption limits'
               ].map((benefit, index) => (
                 <div key={index} className="flex items-center gap-3 bg-white/10 backdrop-blur-xl rounded-lg p-4">
                   <CheckCircle2 className="h-6 w-6 text-yellow-300 flex-shrink-0" />
