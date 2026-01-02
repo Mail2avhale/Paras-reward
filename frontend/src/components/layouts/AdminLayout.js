@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 import {
   Home, Users, CreditCard, FileText, Settings, BarChart3,
   Gift, ShoppingCart, Video, Award, Activity, Package,
@@ -11,6 +12,39 @@ import {
 } from 'lucide-react';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
+const API = process.env.REACT_APP_BACKEND_URL;
+
+// Mapping of menu item IDs to permission IDs
+const MENU_TO_PERMISSION = {
+  'dashboard': 'dashboard',
+  'users': 'users',
+  'analytics': 'analytics',
+  'kyc': 'kyc',
+  'orders': 'orders',
+  'marketplace': 'marketplace',
+  'video-ads': 'video_ads',
+  'prc-rain': 'prc_rain',
+  'stockists': 'stockist',
+  'support': 'support',
+  'fraud-alerts': 'fraud',
+  'profit-loss': 'profit_loss',
+  'company-wallets': 'company_wallets',
+  'capital': 'capital',
+  'user-ledger': 'user_ledger',
+  'ads-income': 'ads_income',
+  'fixed-expenses': 'fixed_expenses',
+  'prc-analytics': 'prc_analytics',
+  'liquidity': 'liquidity',
+  'audit': 'audit',
+  'vip-payment': 'vip_payment',
+  'withdrawals': 'withdrawals',
+  'gift-voucher': 'gift_voucher',
+  'bill-payment': 'bill_payment',
+  'system-settings': 'system_settings',
+  'web-settings': 'system_settings',
+  'social-settings': 'system_settings',
+  'redeem-settings': 'redeem_settings'
+};
 
 const AdminLayout = ({ children, user, onLogout }) => {
   const navigate = useNavigate();
@@ -22,6 +56,36 @@ const AdminLayout = ({ children, user, onLogout }) => {
     payments: false,
     finance: false
   });
+  const [userPermissions, setUserPermissions] = useState([]);
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
+
+  // Fetch manager permissions on mount
+  useEffect(() => {
+    const fetchPermissions = async () => {
+      if (user?.role === 'manager' && user?.uid) {
+        try {
+          const response = await axios.get(`${API}/api/admin/user/${user.uid}/permissions`);
+          setUserPermissions(response.data.permissions || []);
+        } catch (error) {
+          console.error('Error fetching permissions:', error);
+          setUserPermissions(['users', 'vip_payment', 'kyc']); // Default permissions
+        }
+      } else if (user?.role === 'admin') {
+        // Admin has all permissions
+        setUserPermissions(['all']);
+      }
+      setPermissionsLoaded(true);
+    };
+    fetchPermissions();
+  }, [user]);
+
+  // Check if user has permission for a menu item
+  const hasPermission = (menuId) => {
+    if (user?.role === 'admin') return true;
+    if (!permissionsLoaded) return false;
+    const permissionId = MENU_TO_PERMISSION[menuId] || menuId;
+    return userPermissions.includes(permissionId) || userPermissions.includes('all');
+  };
 
   // Regular menu items (not grouped)
   const menuItems = [
