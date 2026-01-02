@@ -222,7 +222,7 @@ const AdminCapitalManagement = ({ user }) => {
               <TrendingUp className="h-8 w-8 opacity-80" />
               <div>
                 <p className="text-blue-100 text-sm">Total Capital (भांडवल)</p>
-                <p className="text-2xl font-bold">₹{(summary.capital?.total || 0).toLocaleString()}</p>
+                <p className="text-2xl font-bold">₹{(summary.capital?.total || summary.total_capital || 0).toLocaleString()}</p>
               </div>
             </div>
           </Card>
@@ -232,7 +232,7 @@ const AdminCapitalManagement = ({ user }) => {
               <TrendingDown className="h-8 w-8 opacity-80" />
               <div>
                 <p className="text-orange-100 text-sm">Total Liabilities (कर्ज)</p>
-                <p className="text-2xl font-bold">₹{(summary.liabilities?.total || 0).toLocaleString()}</p>
+                <p className="text-2xl font-bold">₹{(summary.liabilities?.total || summary.total_liabilities || 0).toLocaleString()}</p>
               </div>
             </div>
           </Card>
@@ -242,7 +242,7 @@ const AdminCapitalManagement = ({ user }) => {
               <CheckCircle className="h-8 w-8 opacity-80" />
               <div>
                 <p className="text-green-100 text-sm">Repaid (परत केले)</p>
-                <p className="text-2xl font-bold">₹{(summary.liabilities?.repaid || 0).toLocaleString()}</p>
+                <p className="text-2xl font-bold">₹{(summary.liabilities?.repaid || summary.total_repaid || 0).toLocaleString()}</p>
               </div>
             </div>
           </Card>
