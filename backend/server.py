@@ -11902,20 +11902,20 @@ async def get_detailed_prc_analytics(period: str = "month"):
         }, {"_id": 0}).to_list(length=None)
         
         # Calculate PRC Created (mining, referral bonuses, cashback, admin credits)
-        credit_types = ["mining", "referral_bonus", "cashback", "admin_credit", "vip_bonus", "signup_bonus", "scratch_card_win", "treasure_hunt_win"]
+        credit_types = ["mining", "referral_bonus", "cashback", "admin_credit", "vip_bonus", "signup_bonus", "scratch_card_win", "treasure_hunt_win", "prc_rain_gain"]
         
-        prc_created_current = sum(t.get("amount", 0) for t in current_transactions if t.get("transaction_type") in credit_types)
-        prc_created_prev = sum(t.get("amount", 0) for t in prev_transactions if t.get("transaction_type") in credit_types)
+        prc_created_current = sum(t.get("amount", 0) for t in current_transactions if t.get("type") in credit_types)
+        prc_created_prev = sum(t.get("amount", 0) for t in prev_transactions if t.get("type") in credit_types)
         
         # Calculate PRC Used (orders, games, services)
-        debit_types = ["order", "withdrawal", "scratch_card_purchase", "treasure_hunt_play", "bill_payment_request", "gift_voucher_request", "delivery_charge"]
+        debit_types = ["order", "withdrawal", "scratch_card_purchase", "treasure_hunt_play", "bill_payment_request", "gift_voucher_request", "delivery_charge", "prc_rain_loss", "prc_burn"]
         
-        prc_used_current = sum(abs(t.get("amount", 0)) for t in current_transactions if t.get("transaction_type") in debit_types)
-        prc_used_prev = sum(abs(t.get("amount", 0)) for t in prev_transactions if t.get("transaction_type") in debit_types)
+        prc_used_current = sum(abs(t.get("amount", 0)) for t in current_transactions if t.get("type") in debit_types)
+        prc_used_prev = sum(abs(t.get("amount", 0)) for t in prev_transactions if t.get("type") in debit_types)
         
         # Calculate PRC Burned
-        prc_burned_current = sum(abs(t.get("amount", 0)) for t in current_transactions if t.get("transaction_type") == "prc_burn")
-        prc_burned_prev = sum(abs(t.get("amount", 0)) for t in prev_transactions if t.get("transaction_type") == "prc_burn")
+        prc_burned_current = sum(abs(t.get("amount", 0)) for t in current_transactions if t.get("type") == "prc_burn")
+        prc_burned_prev = sum(abs(t.get("amount", 0)) for t in prev_transactions if t.get("type") == "prc_burn")
         
         # Get all users for balance calculation
         users = await db.users.find({}, {"_id": 0, "prc_balance": 1, "membership_type": 1}).to_list(length=None)
