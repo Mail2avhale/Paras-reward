@@ -243,6 +243,10 @@ const AdminLayout = ({ children, user, onLogout }) => {
     const Icon = group.icon;
     const isExpanded = expandedGroups[groupKey];
     const groupActive = isGroupActive(groupKey);
+    const filteredSubItems = getFilteredSubItems(groupKey);
+    
+    // Don't render group if no items are accessible
+    if (filteredSubItems.length === 0) return null;
 
     return (
       <div key={groupKey}>
@@ -269,7 +273,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         {/* Sub-items */}
         {!sidebarCollapsed && isExpanded && (
           <div className="bg-slate-950/50">
-            {getFilteredSubItems(groupKey).map((subItem) => {
+            {filteredSubItems.map((subItem) => {
               const SubIcon = subItem.icon;
               const active = isActive(subItem.path);
               return (
