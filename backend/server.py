@@ -11942,15 +11942,24 @@ async def get_detailed_prc_analytics(period: str = "month"):
         profit_loss_prev = (prc_used_prev + prc_burned_prev) - prc_created_prev
         
         # Get revenue from VIP memberships (actual money)
+        # Check both approved_at and created_at fields for date filtering
         vip_payments = await db.vip_payments.find({
             "status": "approved",
-            "approved_at": {"$gte": start_str}
+            "$or": [
+                {"approved_at": {"$gte": start_str}},
+                {"created_at": {"$gte": start_str}},
+                {"updated_at": {"$gte": start_str}}
+            ]
         }, {"_id": 0, "amount": 1}).to_list(length=None)
         vip_revenue_current = sum(p.get("amount", 0) for p in vip_payments)
         
         vip_payments_prev = await db.vip_payments.find({
             "status": "approved",
-            "approved_at": {"$gte": prev_start_str, "$lt": prev_end_str}
+            "$or": [
+                {"approved_at": {"$gte": prev_start_str, "$lt": prev_end_str}},
+                {"created_at": {"$gte": prev_start_str, "$lt": prev_end_str}},
+                {"updated_at": {"$gte": prev_start_str, "$lt": prev_end_str}}
+            ]
         }, {"_id": 0, "amount": 1}).to_list(length=None)
         vip_revenue_prev = sum(p.get("amount", 0) for p in vip_payments_prev)
         
