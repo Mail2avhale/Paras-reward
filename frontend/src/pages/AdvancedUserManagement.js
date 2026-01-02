@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { 
   Users, Search, Edit, Trash2, DollarSign, Award, 
-  ChevronLeft, ChevronRight, X, Plus, Minus, Settings
+  ChevronLeft, ChevronRight, X, Plus, Minus, Settings, Shield
 } from 'lucide-react';
+import ManagerPermissions from '@/components/ManagerPermissions';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
