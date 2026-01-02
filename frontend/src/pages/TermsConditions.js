@@ -312,7 +312,7 @@ const TermsConditions = () => {
             By using Paras Reward Platform, you acknowledge that you have read, understood, and agree to these Terms & Conditions.
           </p>
           <Button 
-            onClick={() => navigate('/signup')}
+            onClick={() => navigate('/register')}
             className="mt-4 bg-blue-600 hover:bg-blue-700"
           >
             I Accept - Create Account
