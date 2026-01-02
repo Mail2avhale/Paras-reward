@@ -14,6 +14,11 @@ import AdminLayout from "@/components/layouts/AdminLayout";
 import ManagerLayout from "@/components/layouts/ManagerLayout";
 import StockistLayout from "@/components/layouts/StockistLayout";
 
+// Helper function to check if user can access admin pages
+const canAccessAdmin = (user) => {
+  return user && (user.role === "admin" || user.role === "manager");
+};
+
 // Loading component
 const LoadingFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
