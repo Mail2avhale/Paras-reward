@@ -165,7 +165,7 @@ const RewardsHome = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-green-400" />
-                  <span className="text-sm text-blue-200">Instant Withdrawal</span>
+                  <span className="text-sm text-blue-200">Fast Redemption</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Star className="h-5 w-5 text-yellow-400" />
