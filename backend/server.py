@@ -11891,14 +11891,20 @@ async def get_detailed_prc_analytics(period: str = "month"):
         prev_start_str = prev_start.isoformat()
         prev_end_str = prev_end.isoformat()
         
-        # Get all transactions for current period
+        # Get all transactions for current period (check both timestamp and created_at fields)
         current_transactions = await db.transactions.find({
-            "timestamp": {"$gte": start_str}
+            "$or": [
+                {"timestamp": {"$gte": start_str}},
+                {"created_at": {"$gte": start_str}}
+            ]
         }, {"_id": 0}).to_list(length=None)
         
         # Get all transactions for previous period (for comparison)
         prev_transactions = await db.transactions.find({
-            "timestamp": {"$gte": prev_start_str, "$lt": prev_end_str}
+            "$or": [
+                {"timestamp": {"$gte": prev_start_str, "$lt": prev_end_str}},
+                {"created_at": {"$gte": prev_start_str, "$lt": prev_end_str}}
+            ]
         }, {"_id": 0}).to_list(length=None)
         
         # Calculate PRC Created (mining, referral bonuses, cashback, admin credits)
