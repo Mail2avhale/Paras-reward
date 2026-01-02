@@ -32,7 +32,7 @@ const PrivacyPolicy = () => {
           <li><strong>Identity Information:</strong> Full name, date of birth, gender</li>
           <li><strong>Contact Information:</strong> Mobile number, email address, postal address</li>
           <li><strong>KYC Documents:</strong> Aadhaar Card, PAN Card, Voter ID (for verification)</li>
-          <li><strong>Financial Information:</strong> Bank account details, UPI ID (for withdrawals)</li>
+          <li><strong>Financial Information:</strong> Bank account details, UPI ID (for redemptions)</li>
           <li><strong>Profile Information:</strong> Profile photo, username, referral code</li>
         </ul>
         
