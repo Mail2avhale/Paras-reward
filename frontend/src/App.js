@@ -149,7 +149,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
       <BrowserRouter>
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
-            <Route path="/" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <Home user={user} onLogout={handleLogout} />} />
+            <Route path="/" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <RewardsHome />} />
+            <Route path="/home-old" element={<Home user={user} onLogout={handleLogout} />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/faq" element={<FAQ />} />
             <Route path="/blog" element={<Blog />} />
