@@ -27,6 +27,7 @@ const AdvancedUserManagement = () => {
   
   const [showEditModal, setShowEditModal] = useState(false);
   const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   
   const [editForm, setEditForm] = useState({
