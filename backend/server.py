@@ -17897,6 +17897,339 @@ async def award_daily_top_hunter_bonus(uid: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== CAPITAL & LIABILITY MANAGEMENT ====================
+
+class CapitalEntryRequest(BaseModel):
+    """Capital/Liability entry request"""
+    entry_type: str  # director_capital, partner_capital, personal_loan, bank_loan
+    amount: float
+    person_name: Optional[str] = None
+    bank_name: Optional[str] = None
+    interest_rate: Optional[float] = 0
+    entry_date: str
+    repayment_date: Optional[str] = None
+    description: Optional[str] = None
+    status: str = "active"  # active, partially_paid, fully_paid
+
+class RepaymentRequest(BaseModel):
+    """Repayment entry request"""
+    entry_id: str
+    amount: float
+    payment_date: str
+    payment_method: Optional[str] = None
+    description: Optional[str] = None
+
+@api_router.get("/admin/capital/entries")
+async def get_capital_entries(
+    entry_type: str = None,
+    status: str = None,
+    page: int = 1,
+    limit: int = 10
+):
+    """Get all capital/liability entries with filters"""
+    try:
+        query = {}
+        if entry_type:
+            query["entry_type"] = entry_type
+        if status:
+            query["status"] = status
+        
+        skip = (page - 1) * limit
+        total = await db.capital_entries.count_documents(query)
+        
+        entries = await db.capital_entries.find(query, {"_id": 0}).sort("entry_date", -1).skip(skip).limit(limit).to_list(None)
+        
+        # Calculate summary
+        all_entries = await db.capital_entries.find({}, {"_id": 0}).to_list(None)
+        
+        total_capital = sum(e.get("amount", 0) for e in all_entries if e.get("entry_type") in ["director_capital", "partner_capital"])
+        total_liabilities = sum(e.get("amount", 0) for e in all_entries if e.get("entry_type") in ["personal_loan", "bank_loan"])
+        total_repaid = sum(e.get("total_repaid", 0) for e in all_entries)
+        pending_liabilities = total_liabilities - total_repaid
+        
+        return {
+            "entries": entries,
+            "total": total,
+            "pages": (total + limit - 1) // limit,
+            "current_page": page,
+            "summary": {
+                "total_capital": total_capital,
+                "total_liabilities": total_liabilities,
+                "total_repaid": total_repaid,
+                "pending_liabilities": pending_liabilities,
+                "net_position": total_capital - pending_liabilities
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/capital/entries")
+async def create_capital_entry(entry: CapitalEntryRequest):
+    """Create a new capital/liability entry"""
+    try:
+        entry_doc = {
+            "entry_id": f"CAP-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}",
+            "entry_type": entry.entry_type,
+            "amount": entry.amount,
+            "person_name": entry.person_name,
+            "bank_name": entry.bank_name,
+            "interest_rate": entry.interest_rate or 0,
+            "entry_date": entry.entry_date,
+            "repayment_date": entry.repayment_date,
+            "description": entry.description,
+            "status": entry.status,
+            "total_repaid": 0,
+            "repayments": [],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.capital_entries.insert_one(entry_doc)
+        
+        return {"success": True, "entry_id": entry_doc["entry_id"], "message": "Entry created successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/admin/capital/entries/{entry_id}")
+async def update_capital_entry(entry_id: str, entry: CapitalEntryRequest):
+    """Update a capital/liability entry"""
+    try:
+        existing = await db.capital_entries.find_one({"entry_id": entry_id})
+        if not existing:
+            raise HTTPException(status_code=404, detail="Entry not found")
+        
+        update_data = {
+            "entry_type": entry.entry_type,
+            "amount": entry.amount,
+            "person_name": entry.person_name,
+            "bank_name": entry.bank_name,
+            "interest_rate": entry.interest_rate or 0,
+            "entry_date": entry.entry_date,
+            "repayment_date": entry.repayment_date,
+            "description": entry.description,
+            "status": entry.status,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.capital_entries.update_one({"entry_id": entry_id}, {"$set": update_data})
+        
+        return {"success": True, "message": "Entry updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/admin/capital/entries/{entry_id}")
+async def delete_capital_entry(entry_id: str):
+    """Delete a capital/liability entry"""
+    try:
+        result = await db.capital_entries.delete_one({"entry_id": entry_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Entry not found")
+        
+        return {"success": True, "message": "Entry deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/capital/repayment")
+async def record_repayment(repayment: RepaymentRequest):
+    """Record a repayment against a loan/liability"""
+    try:
+        entry = await db.capital_entries.find_one({"entry_id": repayment.entry_id})
+        if not entry:
+            raise HTTPException(status_code=404, detail="Entry not found")
+        
+        if entry.get("entry_type") not in ["personal_loan", "bank_loan"]:
+            raise HTTPException(status_code=400, detail="Repayments can only be made against loans")
+        
+        repayment_doc = {
+            "repayment_id": f"REP-{str(uuid.uuid4())[:8].upper()}",
+            "amount": repayment.amount,
+            "payment_date": repayment.payment_date,
+            "payment_method": repayment.payment_method,
+            "description": repayment.description,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        new_total_repaid = entry.get("total_repaid", 0) + repayment.amount
+        new_status = "fully_paid" if new_total_repaid >= entry.get("amount", 0) else "partially_paid"
+        
+        await db.capital_entries.update_one(
+            {"entry_id": repayment.entry_id},
+            {
+                "$push": {"repayments": repayment_doc},
+                "$set": {
+                    "total_repaid": new_total_repaid,
+                    "status": new_status,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        return {
+            "success": True,
+            "repayment_id": repayment_doc["repayment_id"],
+            "new_status": new_status,
+            "total_repaid": new_total_repaid,
+            "remaining": max(0, entry.get("amount", 0) - new_total_repaid)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/capital/summary")
+async def get_capital_summary():
+    """Get capital and liability summary for dashboard"""
+    try:
+        entries = await db.capital_entries.find({}, {"_id": 0}).to_list(None)
+        
+        # Group by type
+        director_capital = sum(e.get("amount", 0) for e in entries if e.get("entry_type") == "director_capital")
+        partner_capital = sum(e.get("amount", 0) for e in entries if e.get("entry_type") == "partner_capital")
+        personal_loans = sum(e.get("amount", 0) for e in entries if e.get("entry_type") == "personal_loan")
+        bank_loans = sum(e.get("amount", 0) for e in entries if e.get("entry_type") == "bank_loan")
+        
+        total_repaid = sum(e.get("total_repaid", 0) for e in entries if e.get("entry_type") in ["personal_loan", "bank_loan"])
+        
+        # Pending amounts by person/bank
+        pending_by_source = []
+        for entry in entries:
+            if entry.get("entry_type") in ["personal_loan", "bank_loan"]:
+                remaining = entry.get("amount", 0) - entry.get("total_repaid", 0)
+                if remaining > 0:
+                    pending_by_source.append({
+                        "entry_id": entry.get("entry_id"),
+                        "type": entry.get("entry_type"),
+                        "source": entry.get("person_name") or entry.get("bank_name") or "Unknown",
+                        "total_amount": entry.get("amount", 0),
+                        "repaid": entry.get("total_repaid", 0),
+                        "remaining": remaining,
+                        "interest_rate": entry.get("interest_rate", 0),
+                        "repayment_date": entry.get("repayment_date")
+                    })
+        
+        return {
+            "capital": {
+                "director": director_capital,
+                "partner": partner_capital,
+                "total": director_capital + partner_capital
+            },
+            "liabilities": {
+                "personal_loans": personal_loans,
+                "bank_loans": bank_loans,
+                "total": personal_loans + bank_loans,
+                "repaid": total_repaid,
+                "pending": (personal_loans + bank_loans) - total_repaid
+            },
+            "net_position": (director_capital + partner_capital) - ((personal_loans + bank_loans) - total_repaid),
+            "pending_by_source": sorted(pending_by_source, key=lambda x: x["remaining"], reverse=True)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== MANAGER ROLE ACCESS CONTROL ====================
+
+# Default permissions for manager role
+DEFAULT_MANAGER_PERMISSIONS = ["users", "vip_payment", "kyc"]
+
+# All available admin pages/permissions
+ALL_ADMIN_PERMISSIONS = [
+    {"id": "dashboard", "label": "Dashboard", "category": "General"},
+    {"id": "users", "label": "Users Management", "category": "General"},
+    {"id": "analytics", "label": "Analytics", "category": "General"},
+    {"id": "kyc", "label": "KYC Verification", "category": "General"},
+    {"id": "orders", "label": "Orders", "category": "Operations"},
+    {"id": "marketplace", "label": "Marketplace", "category": "Operations"},
+    {"id": "video_ads", "label": "Video Ads", "category": "Operations"},
+    {"id": "prc_rain", "label": "PRC Rain Drop", "category": "Operations"},
+    {"id": "stockist", "label": "Stockist Management", "category": "Operations"},
+    {"id": "support", "label": "Support Tickets", "category": "Operations"},
+    {"id": "fraud", "label": "Fraud Alerts", "category": "Security"},
+    {"id": "company_wallets", "label": "Company Wallets", "category": "Finance"},
+    {"id": "ads_income", "label": "Ads Income", "category": "Finance"},
+    {"id": "fixed_expenses", "label": "Fixed Expenses", "category": "Finance"},
+    {"id": "user_ledger", "label": "User Ledger", "category": "Finance"},
+    {"id": "redeem_settings", "label": "Redeem Settings", "category": "Finance"},
+    {"id": "capital", "label": "Capital & Liabilities", "category": "Finance"},
+    {"id": "vip_payment", "label": "VIP Payment Verification", "category": "Payments"},
+    {"id": "withdrawals", "label": "Withdrawals", "category": "Payments"},
+    {"id": "gift_voucher", "label": "Gift Voucher Requests", "category": "Payments"},
+    {"id": "bill_payment", "label": "Bill Payment Requests", "category": "Payments"},
+    {"id": "system_settings", "label": "System Settings", "category": "Settings"},
+    {"id": "audit", "label": "Audit Service", "category": "Settings"},
+    {"id": "prc_analytics", "label": "PRC Analytics", "category": "Analytics"},
+    {"id": "profit_loss", "label": "Profit & Loss", "category": "Analytics"},
+    {"id": "liquidity", "label": "Liquidity Status", "category": "Analytics"}
+]
+
+@api_router.get("/admin/permissions/list")
+async def get_all_permissions():
+    """Get list of all available permissions for manager role"""
+    return {
+        "permissions": ALL_ADMIN_PERMISSIONS,
+        "default_manager": DEFAULT_MANAGER_PERMISSIONS
+    }
+
+@api_router.get("/admin/user/{uid}/permissions")
+async def get_user_permissions(uid: str):
+    """Get permissions for a specific user (manager)"""
+    try:
+        user = await db.users.find_one({"uid": uid}, {"_id": 0, "role": 1, "allowed_pages": 1, "name": 1, "email": 1})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Admin has all permissions
+        if user.get("role") == "admin":
+            return {
+                "user": user,
+                "permissions": [p["id"] for p in ALL_ADMIN_PERMISSIONS],
+                "is_admin": True
+            }
+        
+        # Manager has restricted permissions
+        return {
+            "user": user,
+            "permissions": user.get("allowed_pages", DEFAULT_MANAGER_PERMISSIONS),
+            "is_admin": False
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/admin/user/{uid}/permissions")
+async def update_user_permissions(uid: str, request: Request):
+    """Update permissions for a manager"""
+    try:
+        data = await request.json()
+        permissions = data.get("permissions", [])
+        
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        if user.get("role") == "admin":
+            raise HTTPException(status_code=400, detail="Cannot modify admin permissions")
+        
+        # Validate permissions
+        valid_permissions = [p["id"] for p in ALL_ADMIN_PERMISSIONS]
+        permissions = [p for p in permissions if p in valid_permissions]
+        
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"allowed_pages": permissions, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        return {"success": True, "permissions": permissions, "message": "Permissions updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # ========== VIDEO ADS ENDPOINTS ==========
 
