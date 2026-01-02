@@ -7,7 +7,7 @@ import { useLocation } from 'react-router-dom';
  */
 const SEO = ({ 
   title = 'PARAS REWARD - India\'s No.1 Mining-Based Reward Platform',
-  description = 'India\'s No.1 mining-based reward platform. Mine PRC daily, play treasure hunt games, refer & earn 10% bonus, redeem 5000+ products. Join 10,000+ users earning real rewards! Free mining | VIP benefits | Instant cashback.',
+  description = 'India\'s No.1 mining-based reward platform. Mine PRC daily, play treasure hunt games, refer & earn 10% bonus, redeem 5000+ products. Join 10,000+ users earning real rewards! Free mining | VIP benefits | Instant rewards.',
   keywords = 'paras reward, india mining platform, prc coins mining, earn daily rewards, treasure hunt game, refer and earn india, crypto mining app, reward platform india, online earning app',
   author = 'PARAS REWARD Team',
   image = 'https://parasreward.com/paras-logo.jpg',
@@ -144,7 +144,7 @@ export const SEOConfigs = {
   home: {
     title: 'PARAS REWARD - India\'s No.1 Mining-Based Reward Platform | Earn PRC Daily',
     description: '🏆 India\'s No.1 Mining-Based Reward Platform ⚡ Mine PRC Daily | 🎮 Play Treasure Hunt (50% Cashback) | 💰 Refer & Earn 10% | 🛒 5000+ Products | 👥 10,000+ Active Users | Free Mining, VIP Benefits, Instant Withdrawals',
-    keywords: 'paras reward india, mining based reward platform, prc coins mining, daily mining rewards, treasure hunt cashback game, refer earn 10 percent india, free mining app, vip membership benefits, online earning platform india',
+    keywords: 'paras reward india, mining based reward platform, prc coins mining, daily mining rewards, treasure hunt rewards game, refer earn 10 percent india, free mining app, vip membership benefits, online earning platform india',
   },
   login: {
     title: 'Login - PARAS REWARD | Access Your Reward Account',
@@ -163,13 +163,13 @@ export const SEOConfigs = {
   },
   treasureHunt: {
     title: 'PRC Treasure Hunt - PARAS REWARD | Play & Earn 50% Cashback',
-    description: 'Play the exciting PRC Treasure Hunt game! Find hidden treasures on interactive maps, earn 50% cashback, compete for 100% daily bonus. Multiple difficulty levels.',
-    keywords: 'treasure hunt, prc game, earn cashback, treasure game, play and earn, reward games',
+    description: 'Play the exciting PRC Treasure Hunt game! Find hidden treasures on interactive maps, earn 50% rewards, compete for 100% daily bonus. Multiple difficulty levels.',
+    keywords: 'treasure hunt, prc game, earn rewards, treasure game, play and earn, reward games',
   },
   marketplace: {
     title: 'Marketplace - PARAS REWARD | 5000+ Products with PRC & Cashback',
-    description: 'Shop from 5000+ products using PRC coins. Get 25% cashback on purchases, flash sales, and free delivery. Redeem your earned rewards!',
-    keywords: 'marketplace, shop with prc, redeem rewards, cashback shopping, reward marketplace',
+    description: 'Shop from 5000+ products using PRC coins. Get 25% rewards on purchases, flash sales, and free delivery. Redeem your earned rewards!',
+    keywords: 'marketplace, shop with prc, redeem rewards, rewards shopping, reward marketplace',
   },
   blog: {
     title: 'Blog - PARAS REWARD | Guides, Tips & Updates',
@@ -188,8 +188,8 @@ export const SEOConfigs = {
   },
   wallet: {
     title: 'Wallet - PARAS REWARD | Manage PRC, Cashback & Profits',
-    description: 'Manage your multi-wallet system. Check PRC balance, cashback wallet, profit wallet. Withdraw to bank, track transactions, view history.',
-    keywords: 'wallet, prc balance, cashback wallet, withdraw money, transaction history',
+    description: 'Manage your multi-wallet system. Check PRC balance, rewards wallet, profit wallet. Withdraw to bank, track transactions, view history.',
+    keywords: 'wallet, prc balance, rewards wallet, withdraw money, transaction history',
   },
   leaderboard: {
     title: 'Leaderboard - PARAS REWARD | Top Earners & Rankings',

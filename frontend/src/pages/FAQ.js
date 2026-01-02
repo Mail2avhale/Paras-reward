@@ -9,7 +9,7 @@ const FAQ = () => {
   const faqs = [
     {
       question: "What is Paras Reward?",
-      answer: "PARAS REWARD is India's first mining-based rewards platform where users earn PRC (Paras Reward Coins) through daily activities like mining, tap games, and referrals. These coins can be redeemed for real products or cash Redemptions."
+      answer: "PARAS REWARD is India's first mining-based rewards platform where users earn PRC (Paras Reward Coins) through daily activities like mining, tap games, and referrals. These coins can be redeemed for real products or gift vouchers."
     },
     {
       question: "How do I earn PRC coins?",
@@ -41,7 +41,7 @@ const FAQ = () => {
     },
     {
       question: "Can free users redeem products?",
-      answer: "No, only VIP members can redeem products and Redeem cash. Free users can earn and accumulate PRC but must upgrade to VIP to access redemption features."
+      answer: "No, only VIP members can redeem products and redeem rewards. Free users can earn and accumulate PRC but must upgrade to VIP to access redemption features."
     },
     {
       question: "What is KYC and why is it required?",
