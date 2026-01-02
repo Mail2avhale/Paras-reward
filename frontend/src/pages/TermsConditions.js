@@ -57,7 +57,7 @@ const TermsConditions = () => {
         <p>You are responsible for maintaining the confidentiality of your account credentials and for all activities under your account. Notify us immediately of any unauthorized use.</p>
         
         <h4 class="font-semibold mb-2 mt-4">3.4 KYC Verification</h4>
-        <p>For withdrawals and certain transactions, you must complete KYC verification by submitting valid government-issued identification documents (Aadhaar Card, PAN Card, etc.).</p>
+        <p>For redemptions and certain transactions, you must complete KYC verification by submitting valid government-issued identification documents (Aadhaar Card, PAN Card, etc.).</p>
       `
     },
     {
