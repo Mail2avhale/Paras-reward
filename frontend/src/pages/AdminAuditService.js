@@ -46,7 +46,7 @@ const AdminAuditService = ({ user }) => {
       setLoading(true);
       const params = new URLSearchParams({
         page: currentPage,
-        limit: 20,
+        limit: 10,
         ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v))
       });
       
