@@ -354,6 +354,17 @@ const AdvancedUserManagement = () => {
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
+                  {user.role === 'manager' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => { setSelectedUser(user); setShowPermissionsModal(true); }}
+                      title="Manage Permissions"
+                      className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                    >
+                      <Shield className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"
