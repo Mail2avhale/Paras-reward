@@ -11963,10 +11963,10 @@ async def get_detailed_prc_analytics(period: str = "month"):
                 hour_str_end = hour_end.isoformat()
                 
                 hour_created = sum(t.get("amount", 0) for t in current_transactions 
-                    if t.get("transaction_type") in credit_types and 
-                    hour_str_start <= t.get("timestamp", "") < hour_str_end)
+                    if t.get("type") in credit_types and 
+                    hour_str_start <= t.get("timestamp", t.get("created_at", "")) < hour_str_end)
                 hour_used = sum(abs(t.get("amount", 0)) for t in current_transactions 
-                    if t.get("transaction_type") in debit_types and 
+                    if t.get("type") in debit_types and 
                     hour_str_start <= t.get("timestamp", t.get("created_at", "")) < hour_str_end)
                 hour_burned = sum(abs(t.get("amount", 0)) for t in current_transactions 
                     if t.get("type") == "prc_burn" and 
