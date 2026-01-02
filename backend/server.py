@@ -4640,6 +4640,13 @@ async def get_admin_stats():
     vip_users = await db.users.count_documents({"membership_type": "vip"})
     free_users = await db.users.count_documents({"membership_type": {"$ne": "vip"}})
     
+    # Calculate Total PRC in circulation (sum of all user balances)
+    prc_pipeline = [
+        {"$group": {"_id": None, "total_prc": {"$sum": "$prc_balance"}}}
+    ]
+    prc_result = await db.users.aggregate(prc_pipeline).to_list(1)
+    total_prc_in_circulation = prc_result[0]["total_prc"] if prc_result else 0
+    
     # Staff & Stockist Statistics
     managers = await db.users.count_documents({"role": "manager"})
     master_stockists = await db.users.count_documents({"role": "master_stockist"})
