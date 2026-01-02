@@ -162,9 +162,11 @@ function AppContent({ user, handleLogin, handleLogout }) {
             {/* Static Pages */}
             <Route path="/about" element={<AboutUs />} />
             <Route path="/contact" element={<ContactUs />} />
-            <Route path="/terms" element={<TermsAndConditions />} />
+            <Route path="/terms" element={<TermsConditions />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
+            <Route path="/refund" element={<RefundPolicy />} />
+            <Route path="/rewards-home" element={<RewardsHome />} />
             
             {/* Protected Routes */}
             <Route path="/dashboard" element={user ? <DashboardModern user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
