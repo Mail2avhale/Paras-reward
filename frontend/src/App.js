@@ -128,9 +128,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
     switch (user.role) {
       case 'admin':
       case 'sub_admin':
+      case 'manager':  // Manager now goes to admin dashboard with restricted access
         return "/admin";
-      case 'manager':
-        return "/manager";
       case 'master_stockist':
         return "/master-stockist";
       case 'sub_stockist':
