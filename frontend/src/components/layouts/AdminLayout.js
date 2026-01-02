@@ -449,8 +449,8 @@ const AdminLayout = ({ children, user, onLogout }) => {
 
             {/* Mobile Menu */}
             <nav className="py-4">
-              {/* Regular menu items */}
-              {menuItems.map((item) => {
+              {/* Regular menu items - filtered by permissions */}
+              {filteredMenuItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.path);
                 return (
