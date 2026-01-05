@@ -5,18 +5,43 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Hand, Zap, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Tap Game translations
+const tapGameTranslations = {
+  tapToEarn: { mr: "टॅप करा आणि कमवा", hi: "टैप करें और कमाएं", en: "Tap to Earn" },
+  tapsToday: { mr: "आजचे टॅप्स", hi: "आज के टैप", en: "Taps Today" },
+  remaining: { mr: "बाकी", hi: "शेष", en: "Remaining" },
+  tapTheButton: { mr: "बटण टॅप करा!", hi: "बटन टैप करें!", en: "Tap the Button!" },
+  tapFast: { mr: "वेगाने टॅप करा आणि PRC कमवा", hi: "तेजी से टैप करें और PRC कमाएं", en: "Tap fast and earn PRC" },
+  howToPlay: { mr: "कसे खेळायचे", hi: "कैसे खेलें", en: "How to Play" },
+  tapButtonBelow: { mr: "खालील बटणावर टॅप करा", hi: "नीचे बटन पर टैप करें", en: "Tap the button below" },
+  earnPRCPerTap: { mr: "प्रत्येक टॅपवर PRC मिळवा", hi: "हर टैप पर PRC पाएं", en: "Earn PRC per tap" },
+  dailyLimit: { mr: "दररोज 100 टॅप्स", hi: "रोज 100 टैप", en: "100 taps per day" },
+  dailyLimitReached: { mr: "दैनिक टॅप मर्यादा पूर्ण!", hi: "दैनिक टैप सीमा पूर्ण!", en: "Daily tap limit reached!" },
+  prcAdded: { mr: "PRC जोडले!", hi: "PRC जोड़ा गया!", en: "PRC added!" }
+};
+
 const TapGame = ({ user, onLogout }) => {
+  const { language } = useLanguage();
+  
+  // Local translation function
+  const t = (key) => {
+    const translation = tapGameTranslations[key];
+    if (!translation) return key;
+    return translation[language] || translation['en'] || key;
+  };
+  
   const [taps, setTaps] = useState(0);
   const [remainingTaps, setRemainingTaps] = useState(100);
   const [animating, setAnimating] = useState(false);
 
   const handleTap = async () => {
     if (remainingTaps <= 0) {
-      toast.error('Daily tap limit reached!');
+      toast.error(t('dailyLimitReached'));
       return;
     }
 
@@ -34,9 +59,9 @@ const TapGame = ({ user, onLogout }) => {
           taps: tapsToSend
         });
         setRemainingTaps(response.data.remaining_taps);
-        toast.success(`+${response.data.prc_earned} PRC added!`);
+        toast.success(`+${response.data.prc_earned} ${t('prcAdded')}`);
         if (response.data.remaining_taps === 0) {
-          toast.success(`🎉 Completed! You earned ${response.data.prc_earned} PRC today!`, { duration: 5000 });
+          toast.success(`🎉 ${language === 'mr' ? 'पूर्ण! आज तुम्ही' : language === 'hi' ? 'पूर्ण! आज आपने' : 'Completed! You earned'} ${response.data.prc_earned} PRC ${language === 'mr' ? 'कमावले!' : language === 'hi' ? 'कमाया!' : 'today!'}`, { duration: 5000 });
         }
         setTaps(0); // Reset local counter
       } catch (error) {
@@ -50,13 +75,13 @@ const TapGame = ({ user, onLogout }) => {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 pt-20 pb-24">
       
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-8 text-center">Tap to Earn</h1>
+        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-8 text-center">{t('tapToEarn')}</h1>
 
         {/* Tap Counter */}
         <Card data-testid="tap-counter-card" className="bg-gradient-to-br from-blue-600 to-purple-600 text-white p-8 rounded-3xl shadow-2xl mb-8">
           <div className="text-center">
             <Trophy className="h-12 w-12 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Taps Today</h2>
+            <h2 className="text-2xl font-bold mb-2">{t('tapsToday')}</h2>
             <p className="text-6xl font-bold mb-4">{100 - remainingTaps}</p>
             <p className="text-lg opacity-90">Remaining: {remainingTaps}/100</p>
           </div>
