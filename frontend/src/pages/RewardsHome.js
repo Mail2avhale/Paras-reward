@@ -223,32 +223,35 @@ const RewardsHome = () => {
     }
   };
 
-  const features = [
+  // Features with translations - computed based on current language
+  const getFeatures = () => [
     {
       icon: Coins,
-      title: 'Daily Mining',
-      description: 'Earn PRC coins daily through our automated mining system. VIP members earn up to 5x faster!',
+      title: t('dailyMining'),
+      description: t('dailyMiningDesc'),
       color: 'from-yellow-500 to-amber-600'
     },
     {
       icon: Users,
-      title: 'Referral Rewards',
-      description: 'Invite friends and earn bonus PRC on 5 levels. Build your network and maximize earnings.',
+      title: t('referralRewards'),
+      description: t('referralRewardsDesc'),
       color: 'from-blue-500 to-blue-600'
     },
     {
       icon: Gift,
-      title: 'Gift Vouchers',
-      description: 'Redeem your PRC for gift vouchers from top brands like Amazon, Flipkart, and more.',
+      title: t('giftVouchers'),
+      description: t('giftVouchersDesc'),
       color: 'from-purple-500 to-purple-600'
     },
     {
       icon: CreditCard,
-      title: 'Bill Payments',
-      description: 'Pay your mobile, DTH, electricity bills directly using your earned PRC coins.',
+      title: t('billPayments'),
+      description: t('billPaymentsDesc'),
       color: 'from-green-500 to-green-600'
     }
   ];
+
+  const features = getFeatures();
 
   const vipBenefits = [
     { icon: Zap, text: 'Up to 5x Mining Speed' },
