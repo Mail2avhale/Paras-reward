@@ -282,8 +282,57 @@ const AdminBillPayments = ({ user }) => {
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm font-semibold mb-2">Details</p>
-                  <pre className="text-xs">{JSON.stringify(selectedRequest.details, null, 2)}</pre>
+                  <p className="text-sm font-semibold mb-3">Request Details</p>
+                  
+                  {/* Loan/EMI specific formatted display */}
+                  {selectedRequest.request_type === 'loan_emi' ? (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white p-3 rounded border">
+                          <p className="text-xs text-gray-500">Loan Account Number</p>
+                          <p className="font-semibold">{selectedRequest.details?.loan_account || '-'}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded border">
+                          <p className="text-xs text-gray-500">Bank/NBFC Name</p>
+                          <p className="font-semibold">{selectedRequest.details?.bank_name || '-'}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded border">
+                          <p className="text-xs text-gray-500">IFSC Code</p>
+                          <p className="font-semibold font-mono">{selectedRequest.details?.ifsc_code || '-'}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded border">
+                          <p className="text-xs text-gray-500">Customer ID</p>
+                          <p className="font-semibold">{selectedRequest.details?.customer_id || '-'}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded border">
+                          <p className="text-xs text-gray-500">Borrower Name</p>
+                          <p className="font-semibold">{selectedRequest.details?.borrower_name || '-'}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded border">
+                          <p className="text-xs text-gray-500">Registered Mobile</p>
+                          <p className="font-semibold">{selectedRequest.details?.registered_mobile || '-'}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded border">
+                          <p className="text-xs text-gray-500">Loan Type</p>
+                          <p className="font-semibold capitalize">{selectedRequest.details?.loan_type?.replace('_', ' ') || '-'}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded border">
+                          <p className="text-xs text-gray-500">Remaining Tenure</p>
+                          <p className="font-semibold">{selectedRequest.details?.loan_tenure || '-'}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded border">
+                          <p className="text-xs text-gray-500">EMI Due Date</p>
+                          <p className="font-semibold">{selectedRequest.details?.emi_due_date || '-'}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded border">
+                          <p className="text-xs text-gray-500">Monthly EMI Amount</p>
+                          <p className="font-semibold">₹{selectedRequest.details?.emi_amount || '-'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <pre className="text-xs bg-white p-3 rounded border overflow-x-auto">{JSON.stringify(selectedRequest.details, null, 2)}</pre>
+                  )}
                 </div>
 
                 {selectedRequest.status === 'pending' && (
