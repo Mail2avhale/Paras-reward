@@ -8,12 +8,50 @@ import { toast } from 'sonner';
 import { Link, useNavigate } from 'react-router-dom';
 import notifications from '@/utils/notifications';
 import AnimatedFeedback from '@/components/AnimatedFeedback';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Mining page translations
+const miningTranslations = {
+  mining: { mr: "माइनिंग", hi: "माइनिंग", en: "Mining" },
+  startMining: { mr: "माइनिंग सुरू करा", hi: "माइनिंग शुरू करें", en: "Start Mining" },
+  miningActive: { mr: "माइनिंग सक्रिय", hi: "माइनिंग सक्रिय", en: "Mining Active" },
+  sessionComplete: { mr: "सत्र पूर्ण", hi: "सत्र पूर्ण", en: "Session Complete" },
+  currentSession: { mr: "वर्तमान सत्र", hi: "वर्तमान सत्र", en: "Current Session" },
+  todayMined: { mr: "आज माइन केलेले", hi: "आज माइन किया", en: "Today Mined" },
+  totalMined: { mr: "एकूण माइन", hi: "कुल माइन", en: "Total Mined" },
+  prcBalance: { mr: "PRC शिल्लक", hi: "PRC बैलेंस", en: "PRC Balance" },
+  timeRemaining: { mr: "उर्वरित वेळ", hi: "शेष समय", en: "Time Remaining" },
+  sessionsToday: { mr: "आज सत्रे", hi: "आज सत्र", en: "Sessions Today" },
+  miningRate: { mr: "माइनिंग दर", hi: "माइनिंग दर", en: "Mining Rate" },
+  perHour: { mr: "/तास", hi: "/घंटा", en: "/hour" },
+  freeUserWarning: { 
+    mr: "तुम्ही फ्री युजर आहात. तुमचा PRC 2 दिवसांत एक्सपायर होईल!",
+    hi: "आप फ्री यूजर हैं। आपका PRC 2 दिनों में एक्सपायर होगा!",
+    en: "You're a free user. Your PRC will expire in 2 days!"
+  },
+  upgradeToVip: { mr: "VIP बना", hi: "VIP बनें", en: "Upgrade to VIP" },
+  miningComplete: { mr: "माइनिंग पूर्ण!", hi: "माइनिंग पूर्ण!", en: "Mining Complete!" },
+  earned: { mr: "कमावले", hi: "कमाया", en: "Earned" },
+  goBack: { mr: "मागे जा", hi: "वापस जाएं", en: "Go Back" },
+  referralBonus: { mr: "रेफरल बोनस", hi: "रेफरल बोनस", en: "Referral Bonus" },
+  inviteFriends: { mr: "मित्रांना आमंत्रित करा", hi: "दोस्तों को आमंत्रित करें", en: "Invite Friends" },
+  stats: { mr: "आकडेवारी", hi: "आंकड़े", en: "Stats" }
+};
+
 const Mining = ({ user, onLogout }) => {
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  
+  // Local translation function
+  const t = (key) => {
+    const translation = miningTranslations[key];
+    if (!translation) return key;
+    return translation[language] || translation['en'] || key;
+  };
+  
   const [miningStatus, setMiningStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showValidityWarning, setShowValidityWarning] = useState(false);
