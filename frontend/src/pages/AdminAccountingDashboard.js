@@ -667,7 +667,7 @@ const AdminAccountingDashboard = ({ user }) => {
               </h3>
               <Button onClick={handleGenerateDailySummary} disabled={refreshing}>
                 {refreshing ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Activity className="h-4 w-4 mr-2" />}
-                Generate Today's Summary
+                Generate Today&apos;s Summary
               </Button>
             </div>
             {dailySummaries ? (
