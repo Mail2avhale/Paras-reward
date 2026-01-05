@@ -100,6 +100,14 @@ const AdminSystemSettings = ({ user }) => {
         }
       } catch (e) { console.log('Referral settings not found, using defaults'); }
 
+      // Fetch mining settings
+      try {
+        const miningResponse = await axios.get(`${API}/api/admin/mining-settings`);
+        if (miningResponse.data) {
+          setMiningSettings(prev => ({ ...prev, ...miningResponse.data }));
+        }
+      } catch (e) { console.log('Mining settings not found, using defaults'); }
+
     } catch (error) {
       console.error('Error fetching settings:', error);
     } finally {
