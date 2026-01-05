@@ -489,39 +489,138 @@ const RewardsHome = () => {
         </div>
       </section>
 
-      {/* How It Works */}
-      <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-900 to-blue-800 text-white">
+      {/* App Demo Section with Lottie Animations */}
+      <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 text-white overflow-hidden">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-yellow-500/20 text-yellow-300 px-4 py-2 rounded-full text-sm font-medium mb-4">
+              <Play className="h-4 w-4" />
+              {language === 'mr' ? 'अँप डेमो' : language === 'hi' ? 'ऐप डेमो' : 'App Demo'}
+            </div>
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              Get Started in <span className="text-yellow-400">4 Simple Steps</span>
+              {language === 'mr' ? 'कसे काम करते ते पहा' : language === 'hi' ? 'देखें कैसे काम करता है' : 'See How It Works'}
             </h2>
             <p className="text-xl text-blue-200 max-w-2xl mx-auto">
-              Join our platform and start earning rewards in minutes
+              {language === 'mr' ? 'आमच्या अँपचे वैशिष्ट्ये अनुभवा' : language === 'hi' ? 'हमारे ऐप की विशेषताएं अनुभव करें' : 'Experience our app features'}
             </p>
           </div>
           
-          <div className="grid md:grid-cols-4 gap-8">
-            {howItWorks.map((item, idx) => {
-              const Icon = item.icon;
-              return (
-                <div key={idx} className="text-center relative">
-                  {idx < 3 && (
-                    <div className="hidden md:block absolute top-10 left-1/2 w-full h-0.5 bg-blue-600"></div>
-                  )}
-                  <div className="relative z-10">
-                    <div className="w-20 h-20 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                      <Icon className="h-10 w-10 text-blue-900" />
+          {/* Interactive Demo Cards */}
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Mining Demo */}
+            <div className="group">
+              <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-6 border border-white/20 hover:border-yellow-400/50 transition-all duration-300 hover:transform hover:scale-105">
+                <div className="h-48 flex items-center justify-center mb-6 relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-500/20 to-orange-500/20">
+                  {/* Animated Mining Icon */}
+                  <div className="relative">
+                    <div className="w-24 h-24 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center animate-bounce shadow-2xl">
+                      <Coins className="h-12 w-12 text-white" />
                     </div>
-                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm border-2 border-white">
-                      {item.step}
-                    </div>
+                    {/* Floating coins animation */}
+                    <div className="absolute -top-4 -left-4 w-8 h-8 bg-yellow-400 rounded-full animate-ping opacity-75"></div>
+                    <div className="absolute -bottom-2 -right-4 w-6 h-6 bg-orange-400 rounded-full animate-pulse"></div>
+                    <div className="absolute top-0 right-0 w-4 h-4 bg-yellow-300 rounded-full animate-bounce delay-100"></div>
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
-                  <p className="text-blue-200">{item.description}</p>
                 </div>
-              );
-            })}
+                <h3 className="text-xl font-bold mb-2 text-yellow-400">
+                  {language === 'mr' ? '⛏️ माइनिंग' : language === 'hi' ? '⛏️ माइनिंग' : '⛏️ Mining'}
+                </h3>
+                <p className="text-blue-200 text-sm mb-4">
+                  {language === 'mr' ? 'दररोज माइन करा आणि PRC कमवा. VIP 5x वेगाने कमवतात!' 
+                   : language === 'hi' ? 'रोज माइन करें और PRC कमाएं। VIP 5x तेजी से कमाते हैं!'
+                   : 'Mine daily and earn PRC. VIP members earn 5x faster!'}
+                </p>
+                <div className="flex items-center gap-2 text-green-400 text-sm font-medium">
+                  <TrendingUp className="h-4 w-4" />
+                  <span>+12.5 PRC/day</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tap Game Demo */}
+            <div className="group">
+              <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-6 border border-white/20 hover:border-pink-400/50 transition-all duration-300 hover:transform hover:scale-105">
+                <div className="h-48 flex items-center justify-center mb-6 relative overflow-hidden rounded-2xl bg-gradient-to-br from-pink-500/20 to-purple-500/20">
+                  {/* Animated Tap Game */}
+                  <div className="relative">
+                    <div className="w-24 h-24 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center shadow-2xl cursor-pointer hover:scale-110 transition-transform">
+                      <Smartphone className="h-12 w-12 text-white" />
+                    </div>
+                    {/* Tap ripple effect */}
+                    <div className="absolute inset-0 w-24 h-24 bg-pink-400 rounded-full animate-ping opacity-30"></div>
+                    <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-2xl animate-bounce">👆</div>
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold mb-2 text-pink-400">
+                  {language === 'mr' ? '🎮 टॅप गेम' : language === 'hi' ? '🎮 टैप गेम' : '🎮 Tap Game'}
+                </h3>
+                <p className="text-blue-200 text-sm mb-4">
+                  {language === 'mr' ? 'टॅप करा आणि PRC जिंका! मजेशीर आणि सोपे.'
+                   : language === 'hi' ? 'टैप करें और PRC जीतें! मजेदार और आसान।'
+                   : 'Tap and win PRC! Fun and easy gameplay.'}
+                </p>
+                <div className="flex items-center gap-2 text-pink-400 text-sm font-medium">
+                  <Zap className="h-4 w-4" />
+                  <span>{language === 'mr' ? 'झटपट बक्षीस' : language === 'hi' ? 'तुरंत इनाम' : 'Instant Rewards'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Redeem Demo */}
+            <div className="group">
+              <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-6 border border-white/20 hover:border-green-400/50 transition-all duration-300 hover:transform hover:scale-105">
+                <div className="h-48 flex items-center justify-center mb-6 relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500/20 to-teal-500/20">
+                  {/* Animated Redeem */}
+                  <div className="relative">
+                    <div className="w-24 h-24 bg-gradient-to-br from-green-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-2xl">
+                      <Gift className="h-12 w-12 text-white animate-pulse" />
+                    </div>
+                    {/* Gift sparkles */}
+                    <div className="absolute -top-2 -right-2 text-2xl animate-spin" style={{animationDuration: '3s'}}>✨</div>
+                    <div className="absolute -bottom-2 -left-2 text-xl animate-bounce delay-150">🎁</div>
+                    <div className="absolute top-1/2 -right-6 text-lg animate-pulse">💎</div>
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold mb-2 text-green-400">
+                  {language === 'mr' ? '🎁 रिडीम करा' : language === 'hi' ? '🎁 रिडीम करें' : '🎁 Redeem'}
+                </h3>
+                <p className="text-blue-200 text-sm mb-4">
+                  {language === 'mr' ? 'Amazon, Flipkart व्हाउचर किंवा बिल पेमेंटसाठी रिडीम करा.'
+                   : language === 'hi' ? 'Amazon, Flipkart वाउचर या बिल पेमेंट के लिए रिडीम करें।'
+                   : 'Redeem for Amazon, Flipkart vouchers or bill payments.'}
+                </p>
+                <div className="flex items-center gap-2 text-green-400 text-sm font-medium">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>{language === 'mr' ? 'झटपट वितरण' : language === 'hi' ? 'तुरंत डिलीवरी' : 'Instant Delivery'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* App Flow Animation */}
+          <div className="mt-16 relative">
+            <div className="flex items-center justify-center gap-4 flex-wrap">
+              <div className="flex items-center gap-3 bg-white/10 backdrop-blur px-6 py-3 rounded-full border border-white/20">
+                <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center">
+                  <span className="font-bold text-blue-900">1</span>
+                </div>
+                <span className="text-white font-medium">{language === 'mr' ? 'साइन अप करा' : language === 'hi' ? 'साइन अप करें' : 'Sign Up'}</span>
+              </div>
+              <ArrowRight className="h-6 w-6 text-yellow-400 hidden sm:block" />
+              <div className="flex items-center gap-3 bg-white/10 backdrop-blur px-6 py-3 rounded-full border border-white/20">
+                <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center">
+                  <span className="font-bold text-blue-900">2</span>
+                </div>
+                <span className="text-white font-medium">{language === 'mr' ? 'माइन करा' : language === 'hi' ? 'माइन करें' : 'Mine PRC'}</span>
+              </div>
+              <ArrowRight className="h-6 w-6 text-yellow-400 hidden sm:block" />
+              <div className="flex items-center gap-3 bg-white/10 backdrop-blur px-6 py-3 rounded-full border border-white/20">
+                <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center">
+                  <span className="font-bold text-blue-900">3</span>
+                </div>
+                <span className="text-white font-medium">{language === 'mr' ? 'रिडीम करा' : language === 'hi' ? 'रिडीम करें' : 'Redeem'}</span>
+              </div>
+            </div>
           </div>
           
           <div className="text-center mt-12">
@@ -530,7 +629,7 @@ const RewardsHome = () => {
               onClick={() => navigate('/register')}
               className="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-semibold px-8"
             >
-              Create Free Account
+              {t('getStarted')}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
