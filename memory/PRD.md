@@ -52,6 +52,17 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
     - Third-party ad network links (Google AdMob, Unity Ads)
     - PRC earnings through ads disclosure
 
+- ✅ **Homepage Multi-Language Support & AdMob Compliance**
+  - **Language Selector** in navigation bar with EN/HI/MR options
+  - **Full Homepage Translation**: Hero section, Features, Footer - all text translates
+  - **Privacy Notice Banner**: Prominent banner in footer for AdMob compliance
+  - **Advertising Policy Link**: Dedicated link in Legal section (highlighted in blue)
+  - **Pages Updated**:
+    - `/app/frontend/src/pages/RewardsHome.js` - Full translations with 30+ strings
+    - `/app/frontend/src/pages/Mining.js` - Added language support
+    - `/app/frontend/src/pages/Referrals.js` - Added language support  
+    - `/app/frontend/src/pages/ProfileAdvanced.js` - Added language support
+
 ### January 5, 2026 (Current Session - Part 3)
 - ✅ **User Dashboard Language Selector & Today Stats (TESTED - 9/9 Backend + All Frontend Tests Passed)**
   - **Multi-Language Support** in User Dashboard (`DashboardModern.js`):
