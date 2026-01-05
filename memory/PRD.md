@@ -175,6 +175,23 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 - `POST /api/bill-payment/request` - 403 for expired VIP
 - `POST /api/admin/burn-prc-now` - Manual PRC burn trigger
 
+### Accounting APIs (Added Jan 5, 2026)
+- `GET /api/admin/accounting/master-dashboard` - Complete accounting overview
+- `GET /api/admin/accounting/prc-mint-ledger` - PRC inflow ledger
+- `GET /api/admin/accounting/prc-burn-ledger` - PRC outflow ledger
+- `GET /api/admin/accounting/liability-ledger` - INR liability with ageing
+- `GET /api/admin/accounting/reserve-fund` - Reserve fund status
+- `POST /api/admin/accounting/reserve-fund/add` - Add to reserve fund
+- `POST /api/admin/accounting/reserve-fund/settings` - Update reserve %
+- `GET /api/admin/accounting/conversion-rate` - Get conversion rate history
+- `POST /api/admin/accounting/conversion-rate` - Update conversion rate
+- `GET /api/admin/accounting/daily-summary` - Get daily summaries
+- `POST /api/admin/accounting/daily-summary/generate` - Trigger summary generation
+- `GET /api/admin/accounting/user-cost-analysis` - Loss-making users analysis
+- `GET /api/admin/accounting/settings` - Get accounting settings
+- `POST /api/admin/accounting/settings` - Update accounting settings
+- `POST /api/admin/accounting/burn-inactive-prc` - Trigger 180-day burn
+
 ### Analytics Dashboards
 - `GET /api/admin/prc-analytics-v2`
 - `GET /api/admin/audit-logs`
