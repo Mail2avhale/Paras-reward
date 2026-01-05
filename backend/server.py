@@ -19240,6 +19240,7 @@ ALL_ADMIN_PERMISSIONS = [
     {"id": "user_ledger", "label": "User Ledger", "category": "Finance"},
     {"id": "redeem_settings", "label": "Redeem Settings", "category": "Finance"},
     {"id": "capital", "label": "Capital & Liabilities", "category": "Finance"},
+    {"id": "accounting", "label": "Accounting Dashboard", "category": "Finance"},
     {"id": "vip_payment", "label": "VIP Payment Verification", "category": "Payments"},
     {"id": "withdrawals", "label": "Withdrawals", "category": "Payments"},
     {"id": "gift_voucher", "label": "Gift Voucher Requests", "category": "Payments"},
