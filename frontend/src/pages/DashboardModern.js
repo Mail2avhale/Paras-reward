@@ -20,6 +20,8 @@ const API = process.env.REACT_APP_BACKEND_URL || '';
 
 const DashboardModern = ({ user, onLogout }) => {
   const navigate = useNavigate();
+  const { t, language, changeLanguage, currentLanguage, languages } = useLanguage();
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [stats, setStats] = useState({
     prcBalance: 0,
     totalMined: 0,
@@ -27,6 +29,11 @@ const DashboardModern = ({ user, onLogout }) => {
     membershipType: 'free',
     totalPrcUsed: 0,
     totalPrcUsedValue: 0
+  });
+  const [todayStats, setTodayStats] = useState({
+    today_prc_earned: 0,
+    today_prc_spent: 0,
+    today_net: 0
   });
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [miningHistory, setMiningHistory] = useState([]);
