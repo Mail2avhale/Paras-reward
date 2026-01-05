@@ -362,7 +362,7 @@ const AdminSystemSettings = ({ user }) => {
               </p>
             </div>
             <div className="mt-6 flex justify-end">
-              <Button onClick={() => toast.success('Mining settings saved!')} disabled={loading}>
+              <Button onClick={handleSaveMiningSettings} disabled={loading}>
                 <Save className="h-4 w-4 mr-2" />
                 Save Mining Settings
               </Button>
