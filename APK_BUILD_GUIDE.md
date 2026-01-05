@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://dashboard-admin-9.preview.emergentagent.com",
+    "url": "https://emi-payment.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
