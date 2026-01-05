@@ -14601,15 +14601,18 @@ async def get_contact_settings():
     settings = await db.settings.find_one({}, {"_id": 0, "contact_settings": 1})
     
     default_settings = {
+        "company_name": "PARAS REWARD",
         "address_line1": "",
         "address_line2": "",
         "city": "",
         "state": "",
         "pincode": "",
+        "country": "India",
         "phone_primary": "",
         "phone_secondary": "",
         "email_support": "",
-        "email_info": ""
+        "email_business": "",
+        "working_hours": "9:00 AM - 6:00 PM (Mon-Sat)"
     }
     
     if settings and settings.get("contact_settings"):
@@ -14622,15 +14625,18 @@ async def update_contact_settings(request: Request):
     data = await request.json()
     
     contact_settings = {
+        "company_name": data.get("company_name", "PARAS REWARD"),
         "address_line1": data.get("address_line1", ""),
         "address_line2": data.get("address_line2", ""),
         "city": data.get("city", ""),
         "state": data.get("state", ""),
         "pincode": data.get("pincode", ""),
+        "country": data.get("country", "India"),
         "phone_primary": data.get("phone_primary", ""),
         "phone_secondary": data.get("phone_secondary", ""),
         "email_support": data.get("email_support", ""),
-        "email_info": data.get("email_info", ""),
+        "email_business": data.get("email_business", ""),
+        "working_hours": data.get("working_hours", "9:00 AM - 6:00 PM (Mon-Sat)"),
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -14649,9 +14655,10 @@ async def get_logo_settings():
     
     default_settings = {
         "logo_url": "",
+        "footer_logo_url": "",
         "favicon_url": "",
-        "app_name": "Paras Reward",
-        "tagline": ""
+        "app_name": "PARAS REWARD",
+        "tagline": "Earn Rewards, Live Better"
     }
     
     if settings and settings.get("logo_settings"):
@@ -14665,9 +14672,10 @@ async def update_logo_settings(request: Request):
     
     logo_settings = {
         "logo_url": data.get("logo_url", ""),
+        "footer_logo_url": data.get("footer_logo_url", ""),
         "favicon_url": data.get("favicon_url", ""),
-        "app_name": data.get("app_name", "Paras Reward"),
-        "tagline": data.get("tagline", ""),
+        "app_name": data.get("app_name", "PARAS REWARD"),
+        "tagline": data.get("tagline", "Earn Rewards, Live Better"),
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     
