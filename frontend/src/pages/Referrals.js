@@ -209,28 +209,28 @@ const Referrals = ({ user, onLogout }) => {
           className="flex items-center gap-2 text-purple-600 hover:text-purple-700 mb-4 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
-          <span className="font-medium">Back to Dashboard</span>
+          <span className="font-medium">{t('goBack')}</span>
         </button>
         
-        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-8">Referral Program</h1>
+        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-8">{t('referrals')}</h1>
 
         {/* Referral Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100">
             <Users className="h-8 w-8 text-purple-600 mb-2" />
-            <div className="text-sm font-medium text-purple-600 mb-1">Total Referrals</div>
+            <div className="text-sm font-medium text-purple-600 mb-1">{t('totalReferrals')}</div>
             <div className="text-3xl font-bold text-purple-900">{stats.total_referrals}</div>
           </Card>
 
           <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100">
             <TrendingUp className="h-8 w-8 text-green-600 mb-2" />
-            <div className="text-sm font-medium text-green-600 mb-1">Active Users</div>
+            <div className="text-sm font-medium text-green-600 mb-1">{t('activeReferrals')}</div>
             <div className="text-3xl font-bold text-green-900">{stats.active_referrals}</div>
           </Card>
 
           <Card className="p-6 bg-gradient-to-br from-amber-50 to-amber-100">
             <UserPlus className="h-8 w-8 text-amber-600 mb-2" />
-            <div className="text-sm font-medium text-amber-600 mb-1">VIP Members</div>
+            <div className="text-sm font-medium text-amber-600 mb-1">{t('vipReferrals')}</div>
             <div className="text-3xl font-bold text-amber-900">{stats.vip_referrals}</div>
           </Card>
         </div>
@@ -242,10 +242,12 @@ const Referrals = ({ user, onLogout }) => {
               <div>
                 <h2 className="text-xl font-bold flex items-center gap-2">
                   <TrendingUp className="h-6 w-6 text-green-400" />
-                  Level-wise Referral & Mining Bonus
+                  {language === 'mr' ? 'स्तर-निहाय रेफरल आणि माइनिंग बोनस' : language === 'hi' ? 'स्तर-वार रेफरल और माइनिंग बोनस' : 'Level-wise Referral & Mining Bonus'}
                 </h2>
                 <p className="text-gray-400 text-sm mt-1">
-                  तुमच्या referrals मुळे किती mining speed वाढली आहे ते बघा
+                  {language === 'mr' ? 'तुमच्या referrals मुळे किती mining speed वाढली आहे ते बघा' 
+                   : language === 'hi' ? 'आपके referrals से कितनी mining speed बढ़ी है देखें'
+                   : 'See how your referrals boost your mining speed'}
                 </p>
               </div>
               <Button
@@ -254,26 +256,28 @@ const Referrals = ({ user, onLogout }) => {
                 className="border-white/30 text-white hover:bg-white/10"
                 onClick={() => setShowLevelDetails(!showLevelDetails)}
               >
-                {showLevelDetails ? 'Hide Details' : 'Show Details'}
+                {showLevelDetails 
+                  ? (language === 'mr' ? 'तपशील लपवा' : language === 'hi' ? 'विवरण छुपाएं' : 'Hide Details')
+                  : (language === 'mr' ? 'तपशील दाखवा' : language === 'hi' ? 'विवरण दिखाएं' : 'Show Details')}
               </Button>
             </div>
 
             {/* Mining Speed Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-white/10 rounded-xl p-4">
-                <div className="text-gray-400 text-sm">Base Mining Rate</div>
+                <div className="text-gray-400 text-sm">{language === 'mr' ? 'बेस माइनिंग दर' : language === 'hi' ? 'बेस माइनिंग दर' : 'Base Mining Rate'}</div>
                 <div className="text-2xl font-bold text-white">
-                  {multiLevelStats.base_mining_rate?.toFixed(2)} PRC/day
+                  {multiLevelStats.base_mining_rate?.toFixed(2)} PRC/{language === 'mr' ? 'दिवस' : language === 'hi' ? 'दिन' : 'day'}
                 </div>
               </div>
               <div className="bg-green-500/20 rounded-xl p-4">
-                <div className="text-green-300 text-sm">Total Referral Bonus</div>
+                <div className="text-green-300 text-sm">{language === 'mr' ? 'एकूण रेफरल बोनस' : language === 'hi' ? 'कुल रेफरल बोनस' : 'Total Referral Bonus'}</div>
                 <div className="text-2xl font-bold text-green-400">
                   {multiLevelStats.summary?.total_mining_bonus_display}
                 </div>
               </div>
               <div className="bg-purple-500/20 rounded-xl p-4">
-                <div className="text-purple-300 text-sm">Effective Mining Rate</div>
+                <div className="text-purple-300 text-sm">{language === 'mr' ? 'प्रभावी माइनिंग दर' : language === 'hi' ? 'प्रभावी माइनिंग दर' : 'Effective Mining Rate'}</div>
                 <div className="text-2xl font-bold text-purple-400">
                   {multiLevelStats.summary?.effective_mining_rate_display}
                 </div>
