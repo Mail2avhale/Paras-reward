@@ -365,8 +365,10 @@ const Referrals = ({ user, onLogout }) => {
 
             {/* Info Box */}
             <div className="mt-4 p-3 bg-white/5 rounded-lg text-xs text-gray-400">
-              <strong className="text-white">कसे काम करते:</strong> Active referrals (last 24 hours login) वरून mining bonus मिळतो. 
-              जितके जास्त active referrals, तितकी जास्त mining speed!
+              <strong className="text-white">{language === 'mr' ? 'कसे काम करते:' : language === 'hi' ? 'कैसे काम करता है:' : 'How it works:'}</strong> 
+              {language === 'mr' ? ' Active referrals (last 24 hours login) वरून mining bonus मिळतो. जितके जास्त active referrals, तितकी जास्त mining speed!'
+               : language === 'hi' ? ' Active referrals (last 24 hours login) से mining bonus मिलता है। जितने ज्यादा active referrals, उतनी ज्यादा mining speed!'
+               : ' Active referrals (last 24 hours login) give you mining bonus. More active referrals = faster mining!'}
             </div>
           </Card>
         )}
@@ -376,14 +378,14 @@ const Referrals = ({ user, onLogout }) => {
           <Card data-testid="referral-code-card" className="bg-gradient-to-br from-purple-600 to-pink-600 text-white p-8 rounded-3xl shadow-2xl">
             <h2 className="text-2xl font-bold mb-6 flex items-center">
               <Users className="h-7 w-7 mr-2" />
-              Your Referral Code
+              {t('yourReferralCode')}
             </h2>
             
             <div className="bg-white/20 backdrop-blur-sm p-6 rounded-2xl mb-4">
               {loading ? (
                 <div className="text-center py-4">
                   <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-white border-r-transparent"></div>
-                  <p className="mt-2 text-white/70">Loading referral code...</p>
+                  <p className="mt-2 text-white/70">{language === 'mr' ? 'लोड होत आहे...' : language === 'hi' ? 'लोड हो रहा है...' : 'Loading...'}</p>
                 </div>
               ) : error ? (
                 <div className="text-center py-4">
@@ -393,13 +395,13 @@ const Referrals = ({ user, onLogout }) => {
                     size="sm"
                     className="bg-white text-purple-600 hover:bg-gray-100"
                   >
-                    Retry
+                    {language === 'mr' ? 'पुन्हा प्रयत्न करा' : language === 'hi' ? 'फिर से कोशिश करें' : 'Retry'}
                   </Button>
                 </div>
               ) : referralCode ? (
                 <p className="text-4xl font-bold text-center tracking-wider">{referralCode}</p>
               ) : (
-                <p className="text-2xl text-center text-white/70">No code available</p>
+                <p className="text-2xl text-center text-white/70">{language === 'mr' ? 'कोड उपलब्ध नाही' : language === 'hi' ? 'कोड उपलब्ध नहीं' : 'No code available'}</p>
               )}
             </div>
             
@@ -412,12 +414,12 @@ const Referrals = ({ user, onLogout }) => {
               {copiedCode ? (
                 <>
                   <Check className="mr-2 h-5 w-5" />
-                  Code Copied!
+                  {t('copied')}
                 </>
               ) : (
                 <>
                   <Copy className="mr-2 h-5 w-5" />
-                  Copy Code
+                  {t('copyCode')}
                 </>
               )}
             </Button>
