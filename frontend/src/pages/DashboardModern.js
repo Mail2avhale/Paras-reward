@@ -401,7 +401,7 @@ const DashboardModern = ({ user, onLogout }) => {
               <TrendingUp className="w-5 h-5 text-green-500" />
             </div>
             <div className="text-lg font-bold text-gray-900 text-center">{stats.totalMined.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
-            <div className="text-xs text-gray-500 text-center mt-1">Total Mined</div>
+            <div className="text-xs text-gray-500 text-center mt-1">{t('totalMined')}</div>
           </div>
 
           {/* Total PRC Used */}
@@ -410,7 +410,7 @@ const DashboardModern = ({ user, onLogout }) => {
               <Coins className="w-5 h-5 text-purple-500" />
             </div>
             <div className="text-lg font-bold text-gray-900 text-center">{stats.totalPrcUsed.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
-            <div className="text-xs text-gray-500 text-center mt-1">PRC Used</div>
+            <div className="text-xs text-gray-500 text-center mt-1">{t('prcUsed')}</div>
             <div className="text-xs text-purple-600 text-center font-medium">≈ ₹{stats.totalPrcUsedValue}</div>
           </div>
 
@@ -420,29 +420,29 @@ const DashboardModern = ({ user, onLogout }) => {
               <Users className="w-5 h-5 text-blue-500" />
             </div>
             <div className="text-lg font-bold text-gray-900 text-center">{stats.referralCount}</div>
-            <div className="text-xs text-gray-500 text-center mt-1">Referrals</div>
+            <div className="text-xs text-gray-500 text-center mt-1">{t('referrals')}</div>
           </div>
         </div>
 
         {/* Quick Actions */}
         <div className="bg-white rounded-2xl p-6 shadow-lg mb-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">{t('quickActions')}</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <QuickActionButton 
               icon={Zap} 
-              label="Mine" 
+              label={t('mine')} 
               onClick={() => navigate('/mining')}
               color="purple"
             />
             <QuickActionButton 
               icon={Gamepad2} 
-              label="Tap Game" 
+              label={t('tapGame')} 
               onClick={() => navigate('/game')}
               color="pink"
             />
             <QuickActionButton 
               icon={Store} 
-              label="Shop" 
+              label={t('shop')} 
               onClick={() => {
                 if (stats.membershipType !== 'vip') {
                   alert('VIP membership required to shop in marketplace');
@@ -454,13 +454,13 @@ const DashboardModern = ({ user, onLogout }) => {
             />
             <QuickActionButton 
               icon={UserPlus} 
-              label="Refer" 
+              label={t('refer')} 
               onClick={() => navigate('/referrals')}
               color="green"
             />
             <QuickActionButton 
               icon={CreditCard} 
-              label="Bill Pay" 
+              label={t('billPay')} 
               onClick={() => {
                 if (stats.membershipType !== 'vip') {
                   alert('VIP membership required to use bill payment services');
@@ -468,11 +468,11 @@ const DashboardModern = ({ user, onLogout }) => {
                   navigate('/bill-payments');
                 }
               }}
-              color="cyan"
+              color="teal"
             />
             <QuickActionButton 
               icon={Gift} 
-              label="Vouchers" 
+              label={t('vouchers')} 
               onClick={() => {
                 if (stats.membershipType !== 'vip') {
                   alert('VIP membership required to redeem gift vouchers');
@@ -488,7 +488,7 @@ const DashboardModern = ({ user, onLogout }) => {
         {/* Recent Activity */}
         <div className="bg-white rounded-2xl p-6 shadow-lg mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-900">Recent Activity</h2>
+            <h2 className="text-lg font-bold text-gray-900">{t('recentActivity')}</h2>
             <button 
               onClick={() => navigate('/transactions')}
               className="text-sm text-purple-600 hover:text-purple-700 font-medium"
