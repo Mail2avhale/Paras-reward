@@ -493,7 +493,7 @@ const DashboardModern = ({ user, onLogout }) => {
               onClick={() => navigate('/transactions')}
               className="text-sm text-purple-600 hover:text-purple-700 font-medium"
             >
-              View All
+              {t('viewAll')}
             </button>
           </div>
           
