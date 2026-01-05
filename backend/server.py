@@ -14593,6 +14593,152 @@ async def update_mining_settings(request: Request):
     
     return {"success": True, "message": "Mining settings updated successfully", "settings": mining_settings}
 
+# ==================== CONTACT & LOGO SETTINGS ====================
+
+@api_router.get("/admin/contact-settings")
+async def get_contact_settings():
+    """Get contact information settings"""
+    settings = await db.settings.find_one({}, {"_id": 0, "contact_settings": 1})
+    
+    default_settings = {
+        "address_line1": "",
+        "address_line2": "",
+        "city": "",
+        "state": "",
+        "pincode": "",
+        "phone_primary": "",
+        "phone_secondary": "",
+        "email_support": "",
+        "email_info": ""
+    }
+    
+    if settings and settings.get("contact_settings"):
+        return {**default_settings, **settings["contact_settings"]}
+    return default_settings
+
+@api_router.post("/admin/contact-settings/update")
+async def update_contact_settings(request: Request):
+    """Update contact information settings"""
+    data = await request.json()
+    
+    contact_settings = {
+        "address_line1": data.get("address_line1", ""),
+        "address_line2": data.get("address_line2", ""),
+        "city": data.get("city", ""),
+        "state": data.get("state", ""),
+        "pincode": data.get("pincode", ""),
+        "phone_primary": data.get("phone_primary", ""),
+        "phone_secondary": data.get("phone_secondary", ""),
+        "email_support": data.get("email_support", ""),
+        "email_info": data.get("email_info", ""),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.settings.update_one(
+        {},
+        {"$set": {"contact_settings": contact_settings}},
+        upsert=True
+    )
+    
+    return {"success": True, "message": "Contact settings updated successfully"}
+
+@api_router.get("/admin/logo-settings")
+async def get_logo_settings():
+    """Get logo and branding settings"""
+    settings = await db.settings.find_one({}, {"_id": 0, "logo_settings": 1})
+    
+    default_settings = {
+        "logo_url": "",
+        "favicon_url": "",
+        "app_name": "Paras Reward",
+        "tagline": ""
+    }
+    
+    if settings and settings.get("logo_settings"):
+        return {**default_settings, **settings["logo_settings"]}
+    return default_settings
+
+@api_router.post("/admin/logo-settings/update")
+async def update_logo_settings(request: Request):
+    """Update logo and branding settings"""
+    data = await request.json()
+    
+    logo_settings = {
+        "logo_url": data.get("logo_url", ""),
+        "favicon_url": data.get("favicon_url", ""),
+        "app_name": data.get("app_name", "Paras Reward"),
+        "tagline": data.get("tagline", ""),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.settings.update_one(
+        {},
+        {"$set": {"logo_settings": logo_settings}},
+        upsert=True
+    )
+    
+    return {"success": True, "message": "Logo settings updated successfully"}
+
+@api_router.post("/admin/logo-upload")
+async def upload_logo(file: UploadFile = File(...), logo_type: str = Form("logo")):
+    """Upload logo or favicon image with auto-resize"""
+    import io
+    from PIL import Image
+    
+    # Read file
+    contents = await file.read()
+    
+    # Open and process image
+    try:
+        img = Image.open(io.BytesIO(contents))
+        
+        # Auto-resize based on type
+        if logo_type == "favicon":
+            img = img.resize((64, 64), Image.Resampling.LANCZOS)
+        else:  # logo
+            # Maintain aspect ratio, max width 400px
+            max_width = 400
+            if img.width > max_width:
+                ratio = max_width / img.width
+                new_height = int(img.height * ratio)
+                img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+        
+        # Convert to RGB if necessary
+        if img.mode in ('RGBA', 'P'):
+            img = img.convert('RGB')
+        
+        # Save to bytes
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, format='PNG', optimize=True)
+        img_byte_arr = img_byte_arr.getvalue()
+        
+        # Generate filename
+        import uuid
+        filename = f"{logo_type}_{uuid.uuid4().hex[:8]}.png"
+        filepath = f"/app/frontend/public/uploads/{filename}"
+        
+        # Ensure directory exists
+        import os
+        os.makedirs("/app/frontend/public/uploads", exist_ok=True)
+        
+        # Save file
+        with open(filepath, "wb") as f:
+            f.write(img_byte_arr)
+        
+        # Return URL
+        image_url = f"/uploads/{filename}"
+        
+        # Update settings
+        if logo_type == "favicon":
+            await db.settings.update_one({}, {"$set": {"logo_settings.favicon_url": image_url}}, upsert=True)
+        else:
+            await db.settings.update_one({}, {"$set": {"logo_settings.logo_url": image_url}}, upsert=True)
+        
+        return {"success": True, "url": image_url, "message": f"{logo_type.capitalize()} uploaded successfully"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Image processing failed: {str(e)}")
+
 # ==================== REFERRAL BONUS SETTINGS ====================
 
 @api_router.get("/admin/referral-bonus-settings")
