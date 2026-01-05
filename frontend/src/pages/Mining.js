@@ -314,24 +314,24 @@ const Mining = ({ user, onLogout }) => {
                 }`}></div>
                 <div>
                   <h3 className="text-2xl font-bold">
-                    {miningStatus.session_active ? 'Mining Active' : 'Mining Paused'}
+                    {miningStatus.session_active ? t('miningActive') : t('miningPaused')}
                   </h3>
                   <p className="text-white/90">
                     {miningStatus.session_active 
-                      ? `${formatTime(miningStatus.remaining_hours)} remaining in this session`
-                      : 'Start a 24-hour reward session to earn PRC points'
+                      ? `${formatTime(miningStatus.remaining_hours)} ${t('remainingInSession')}`
+                      : t('start24hSession')
                     }
                   </p>
                   {isFreeUser && (
                     <p className="text-xs text-white/75 mt-1">
-                      ⏰ Free User: PRC valid for 2 days | VIP: Lifetime validity
+                      ⏰ {t('freeUserWarning')} | VIP: {t('lifetimeValidity')}
                     </p>
                   )}
                 </div>
               </div>
               {miningStatus.session_active && (
                 <div className="text-right">
-                  <p className="text-sm text-white/90">Session Ends</p>
+                  <p className="text-sm text-white/90">{t('sessionEnds')}</p>
                   <p className="text-lg font-bold">
                     {new Date(miningStatus.session_end).toLocaleString()}
                   </p>
@@ -345,14 +345,14 @@ const Mining = ({ user, onLogout }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="p-6 bg-white">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm font-medium">PRC Balance</span>
+              <span className="text-gray-600 text-sm font-medium">{t('prcBalance')}</span>
               <Coins className="h-5 w-5 text-purple-600" />
             </div>
             <div className="text-3xl font-bold text-gray-900">
               {miningStatus?.current_balance?.toFixed(2) || '0.00'}
             </div>
             <p className="text-sm text-gray-500 mt-1">
-              {isFreeUser ? 'Valid for 2 days' : 'Lifetime validity'}
+              {isFreeUser ? t('validFor2Days') : t('lifetimeValidity')}
             </p>
             {isFreeUser && prcExpiryInfo && prcExpiryInfo.valid_prc > 0 && (
               <div className="mt-2">
