@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 
@@ -159,6 +159,47 @@ const RainDrop = ({ drop, onTap, disabled }) => {
   );
 };
 
+// Generate random positions once
+const generateRandomPositions = (count, seed = 1) => {
+  const positions = [];
+  let rand = seed;
+  const pseudoRandom = () => {
+    rand = (rand * 9301 + 49297) % 233280;
+    return rand / 233280;
+  };
+  
+  for (let i = 0; i < count; i++) {
+    positions.push({
+      left: pseudoRandom() * 100,
+      height: 20 + pseudoRandom() * 30,
+      top: pseudoRandom() * 100,
+      duration: 1 + pseudoRandom(),
+      delay: pseudoRandom() * 2,
+      opacity: 0.3 + pseudoRandom() * 0.4
+    });
+  }
+  return positions;
+};
+
+const generateStarPositions = (count, seed = 2) => {
+  const positions = [];
+  let rand = seed;
+  const pseudoRandom = () => {
+    rand = (rand * 9301 + 49297) % 233280;
+    return rand / 233280;
+  };
+  
+  for (let i = 0; i < count; i++) {
+    positions.push({
+      left: pseudoRandom() * 100,
+      top: pseudoRandom() * 100,
+      duration: 2 + pseudoRandom() * 2,
+      delay: pseudoRandom() * 2
+    });
+  }
+  return positions;
+};
+
 // Main PRC Rain Component
 const PRCRain = ({ user, onComplete }) => {
   const [isActive, setIsActive] = useState(false);
@@ -174,181 +215,15 @@ const PRCRain = ({ user, onComplete }) => {
   const timerRef = useRef(null);
   const spawnRef = useRef(null);
   const checkIntervalRef = useRef(null);
+  const isActiveRef = useRef(false);
+  const sessionRef = useRef(null);
 
-  // Check for rain trigger
-  const checkRainTrigger = useCallback(async () => {
-    if (isActive || !user?.uid) return;
-    
-    try {
-      const response = await axios.get(`${API}/api/prc-rain/check/${user.uid}`);
-      if (response.data.should_rain) {
-        startRain(response.data);
-      }
-    } catch (error) {
-      console.error('Error checking rain:', error);
-    }
-  }, [isActive, user?.uid]);
-
-  // Start rain session
-  const startRain = (data) => {
-    setIsActive(true);
-    setSession({ id: data.session_id });
-    setDropColors(data.drop_colors || ['#22c55e', '#3b82f6', '#eab308', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316']);
-    setTapsRemaining(data.max_taps || 15);
-    setTimeRemaining(data.duration_seconds || 30);
-    setSummary(null);
-    setDrops([]);
-    setTotalGained(0);
-    setTotalLost(0);
-
-    // Play start sound
-    playSound('start');
-    
-    // Vibrate
-    if (navigator.vibrate) {
-      navigator.vibrate([100, 50, 100, 50, 100]);
-    }
-
-    toast.success('🌧️ PRC Rain Started! Tap drops to win!', { duration: 3000 });
-  };
-
-  // Spawn drops with realistic rain effect
-  useEffect(() => {
-    if (!isActive || dropColors.length === 0) return;
-
-    const spawnDrop = () => {
-      // Random color from available colors
-      const randomColor = dropColors[Math.floor(Math.random() * dropColors.length)];
-      
-      const newDrop = {
-        id: dropIdRef.current++,
-        color: randomColor,
-        x: Math.random() * 80 + 10, // 10-90% horizontal
-        y: -15,
-        z: Math.random() * 50 + 10,
-        scale: 0.6 + Math.random() * 0.6, // 0.6 to 1.2
-        duration: 3 + Math.random() * 2, // 3-5 seconds fall time
-        wobble: Math.random() * 10 - 5, // -5 to 5 degrees
-      };
-
-      setDrops(prev => [...prev.slice(-30), newDrop]); // Keep max 30 drops
-    };
-
-    // Spawn drops at varying intervals for realistic rain effect
-    const spawnWithVariation = () => {
-      spawnDrop();
-      // Random interval between 200-500ms for more natural feel
-      spawnRef.current = setTimeout(spawnWithVariation, 200 + Math.random() * 300);
-    };
-
-    spawnWithVariation();
-
-    return () => {
-      if (spawnRef.current) clearTimeout(spawnRef.current);
-    };
-  }, [isActive, dropColors]);
-
-  // Timer countdown
-  useEffect(() => {
-    if (!isActive || timeRemaining <= 0) return;
-
-    timerRef.current = setInterval(() => {
-      setTimeRemaining(prev => {
-        if (prev <= 1) {
-          endRain();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isActive]);
-
-  // Check for rain every 30 seconds
-  useEffect(() => {
-    checkRainTrigger(); // Initial check
-    checkIntervalRef.current = setInterval(checkRainTrigger, 30000);
-
-    return () => {
-      if (checkIntervalRef.current) clearInterval(checkIntervalRef.current);
-    };
-  }, [checkRainTrigger]);
-
-  // Handle drop tap
-  const handleTap = async (drop, callback) => {
-    if (!session?.id || tapsRemaining <= 0) return;
-
-    try {
-      const response = await axios.post(`${API}/api/prc-rain/tap`, {
-        session_id: session.id,
-        user_id: user.uid,
-        drop_color: drop.color
-      });
-
-      const result = response.data;
-      callback(result);
-
-      // Update taps remaining
-      setTapsRemaining(result.taps_remaining);
-
-      // Update running totals
-      if (result.prc_change >= 0) {
-        setTotalGained(prev => prev + result.prc_change);
-        playSound('positive');
-        if (navigator.vibrate) navigator.vibrate(50);
-      } else {
-        setTotalLost(prev => prev + Math.abs(result.prc_change));
-        playSound('negative');
-        if (navigator.vibrate) navigator.vibrate([50, 30, 50, 30, 50]);
-      }
-
-      // Remove tapped drop
-      setDrops(prev => prev.filter(d => d.id !== drop.id));
-
-      // End if no taps remaining
-      if (result.taps_remaining <= 0) {
-        setTimeout(endRain, 500);
-      }
-    } catch (error) {
-      console.error('Error tapping drop:', error);
-    }
-  };
-
-  // End rain session
-  const endRain = async () => {
-    if (!session?.id) return;
-
-    if (spawnRef.current) clearTimeout(spawnRef.current);
-    if (timerRef.current) clearInterval(timerRef.current);
-
-    try {
-      const response = await axios.post(`${API}/api/prc-rain/end-session`, {
-        session_id: session.id,
-        user_id: user.uid
-      });
-
-      setSummary(response.data.summary);
-      playSound('end');
-
-      // Show summary for 5 seconds
-      setTimeout(() => {
-        setIsActive(false);
-        setSession(null);
-        setDrops([]);
-        setSummary(null);
-        if (onComplete) onComplete();
-      }, 5000);
-    } catch (error) {
-      console.error('Error ending session:', error);
-      setIsActive(false);
-    }
-  };
+  // Pre-generate random positions for background elements
+  const bgRainPositions = useMemo(() => generateRandomPositions(50, 1), []);
+  const starPositions = useMemo(() => generateStarPositions(30, 2), []);
 
   // Sound effects
-  const playSound = (type) => {
+  const playSound = useCallback((type) => {
     try {
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
@@ -366,14 +241,12 @@ const PRCRain = ({ user, onComplete }) => {
           gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
           break;
         case 'positive':
-          // Happy sound - ascending tone
           oscillator.frequency.value = 880;
           oscillator.type = 'sine';
           oscillator.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.1);
           gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
           break;
         case 'negative':
-          // Sad sound - descending tone
           oscillator.frequency.value = 400;
           oscillator.type = 'sawtooth';
           oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.2);
@@ -393,7 +266,174 @@ const PRCRain = ({ user, onComplete }) => {
     } catch (e) {
       // Audio not supported
     }
-  };
+  }, []);
+
+  // End rain session
+  const endRain = useCallback(async () => {
+    if (!sessionRef.current) return;
+
+    if (spawnRef.current) clearTimeout(spawnRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
+
+    try {
+      const response = await axios.post(`${API}/api/prc-rain/end-session`, {
+        session_id: sessionRef.current,
+        user_id: user.uid
+      });
+
+      setSummary(response.data.summary);
+      playSound('end');
+
+      setTimeout(() => {
+        setIsActive(false);
+        isActiveRef.current = false;
+        setSession(null);
+        sessionRef.current = null;
+        setDrops([]);
+        setSummary(null);
+        if (onComplete) onComplete();
+      }, 5000);
+    } catch (error) {
+      console.error('Error ending session:', error);
+      setIsActive(false);
+      isActiveRef.current = false;
+    }
+  }, [user?.uid, onComplete, playSound]);
+
+  // Start rain session
+  const startRain = useCallback((data) => {
+    setIsActive(true);
+    isActiveRef.current = true;
+    setSession({ id: data.session_id });
+    sessionRef.current = data.session_id;
+    setDropColors(data.drop_colors || ['#22c55e', '#3b82f6', '#eab308', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316']);
+    setTapsRemaining(data.max_taps || 15);
+    setTimeRemaining(data.duration_seconds || 30);
+    setSummary(null);
+    setDrops([]);
+    setTotalGained(0);
+    setTotalLost(0);
+
+    playSound('start');
+    
+    if (navigator.vibrate) {
+      navigator.vibrate([100, 50, 100, 50, 100]);
+    }
+
+    toast.success('🌧️ PRC Rain Started! Tap drops to win!', { duration: 3000 });
+  }, [playSound]);
+
+  // Check for rain trigger
+  const checkRainTrigger = useCallback(async () => {
+    if (isActiveRef.current || !user?.uid) return;
+    
+    try {
+      const response = await axios.get(`${API}/api/prc-rain/check/${user.uid}`);
+      if (response.data.should_rain) {
+        startRain(response.data);
+      }
+    } catch (error) {
+      console.error('Error checking rain:', error);
+    }
+  }, [user?.uid, startRain]);
+
+  // Spawn drops with realistic rain effect
+  useEffect(() => {
+    if (!isActive || dropColors.length === 0) return;
+
+    const spawnDrop = () => {
+      const randomColor = dropColors[Math.floor(Math.random() * dropColors.length)];
+      
+      const newDrop = {
+        id: dropIdRef.current++,
+        color: randomColor,
+        x: Math.random() * 80 + 10,
+        y: -15,
+        z: Math.random() * 50 + 10,
+        scale: 0.6 + Math.random() * 0.6,
+        duration: 3 + Math.random() * 2,
+        wobble: Math.random() * 10 - 5,
+      };
+
+      setDrops(prev => [...prev.slice(-30), newDrop]);
+    };
+
+    const spawnWithVariation = () => {
+      spawnDrop();
+      spawnRef.current = setTimeout(spawnWithVariation, 200 + Math.random() * 300);
+    };
+
+    spawnWithVariation();
+
+    return () => {
+      if (spawnRef.current) clearTimeout(spawnRef.current);
+    };
+  }, [isActive, dropColors]);
+
+  // Timer countdown
+  useEffect(() => {
+    if (!isActive) return;
+
+    timerRef.current = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 1) {
+          endRain();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isActive, endRain]);
+
+  // Check for rain every 30 seconds
+  useEffect(() => {
+    checkRainTrigger();
+    checkIntervalRef.current = setInterval(checkRainTrigger, 30000);
+
+    return () => {
+      if (checkIntervalRef.current) clearInterval(checkIntervalRef.current);
+    };
+  }, [checkRainTrigger]);
+
+  // Handle drop tap
+  const handleTap = useCallback(async (drop, callback) => {
+    if (!sessionRef.current || tapsRemaining <= 0) return;
+
+    try {
+      const response = await axios.post(`${API}/api/prc-rain/tap`, {
+        session_id: sessionRef.current,
+        user_id: user.uid,
+        drop_color: drop.color
+      });
+
+      const result = response.data;
+      callback(result);
+
+      setTapsRemaining(result.taps_remaining);
+
+      if (result.prc_change >= 0) {
+        setTotalGained(prev => prev + result.prc_change);
+        playSound('positive');
+        if (navigator.vibrate) navigator.vibrate(50);
+      } else {
+        setTotalLost(prev => prev + Math.abs(result.prc_change));
+        playSound('negative');
+        if (navigator.vibrate) navigator.vibrate([50, 30, 50, 30, 50]);
+      }
+
+      setDrops(prev => prev.filter(d => d.id !== drop.id));
+
+      if (result.taps_remaining <= 0) {
+        setTimeout(endRain, 500);
+      }
+    } catch (error) {
+      console.error('Error tapping drop:', error);
+    }
+  }, [user?.uid, tapsRemaining, playSound, endRain]);
 
   if (!isActive) return null;
 
@@ -411,18 +451,17 @@ const PRCRain = ({ user, onComplete }) => {
       >
         {/* Animated Rain Background Effect */}
         <div className="absolute inset-0 overflow-hidden opacity-30">
-          {/* Background Rain Lines */}
-          {[...Array(50)].map((_, i) => (
+          {bgRainPositions.map((pos, i) => (
             <div
               key={i}
               className="absolute w-0.5 bg-gradient-to-b from-transparent via-blue-400 to-transparent"
               style={{
-                left: `${Math.random() * 100}%`,
-                height: `${20 + Math.random() * 30}px`,
-                top: `${Math.random() * 100}%`,
-                animation: `bgRainFall ${1 + Math.random()}s linear infinite`,
-                animationDelay: `${Math.random() * 2}s`,
-                opacity: 0.3 + Math.random() * 0.4
+                left: `${pos.left}%`,
+                height: `${pos.height}px`,
+                top: `${pos.top}%`,
+                animation: `bgRainFall ${pos.duration}s linear infinite`,
+                animationDelay: `${pos.delay}s`,
+                opacity: pos.opacity
               }}
             />
           ))}
@@ -430,15 +469,15 @@ const PRCRain = ({ user, onComplete }) => {
 
         {/* Stars */}
         <div className="absolute inset-0 opacity-40">
-          {[...Array(30)].map((_, i) => (
+          {starPositions.map((pos, i) => (
             <div
               key={i}
               className="absolute w-1 h-1 bg-white rounded-full"
               style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animation: `twinkle ${2 + Math.random() * 2}s ease-in-out infinite`,
-                animationDelay: `${Math.random() * 2}s`
+                left: `${pos.left}%`,
+                top: `${pos.top}%`,
+                animation: `twinkle ${pos.duration}s ease-in-out infinite`,
+                animationDelay: `${pos.delay}s`
               }}
             />
           ))}
@@ -446,14 +485,12 @@ const PRCRain = ({ user, onComplete }) => {
 
         {/* Header Info - Timer and Taps */}
         <div className="absolute top-4 left-0 right-0 flex justify-center gap-4 z-20 px-4">
-          {/* Timer */}
           <div className="bg-black/70 backdrop-blur-md px-6 py-3 rounded-2xl flex items-center gap-3 border border-blue-500/30 shadow-lg shadow-blue-500/20">
             <span className="text-2xl">⏱️</span>
             <span className="font-black text-3xl text-white">{timeRemaining}</span>
             <span className="text-white/60 text-sm">sec</span>
           </div>
           
-          {/* Taps */}
           <div className="bg-black/70 backdrop-blur-md px-6 py-3 rounded-2xl flex items-center gap-3 border border-purple-500/30 shadow-lg shadow-purple-500/20">
             <span className="text-2xl">👆</span>
             <span className="font-black text-3xl text-white">{tapsRemaining}</span>
