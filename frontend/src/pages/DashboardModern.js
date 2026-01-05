@@ -359,7 +359,7 @@ const DashboardModern = ({ user, onLogout }) => {
                     </div>
                     {/* Label */}
                     <div className="text-sm font-semibold text-purple-500 mt-1">
-                      PRC Balance
+                      {t('prcBalance')}
                     </div>
                   </div>
                 </div>
