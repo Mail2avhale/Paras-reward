@@ -18,6 +18,7 @@ const miningTranslations = {
   mining: { mr: "माइनिंग", hi: "माइनिंग", en: "Mining" },
   startMining: { mr: "माइनिंग सुरू करा", hi: "माइनिंग शुरू करें", en: "Start Mining" },
   miningActive: { mr: "माइनिंग सक्रिय", hi: "माइनिंग सक्रिय", en: "Mining Active" },
+  miningPaused: { mr: "माइनिंग थांबवले", hi: "माइनिंग रुका हुआ", en: "Mining Paused" },
   sessionComplete: { mr: "सत्र पूर्ण", hi: "सत्र पूर्ण", en: "Session Complete" },
   currentSession: { mr: "वर्तमान सत्र", hi: "वर्तमान सत्र", en: "Current Session" },
   todayMined: { mr: "आज माइन केलेले", hi: "आज माइन किया", en: "Today Mined" },
@@ -28,9 +29,9 @@ const miningTranslations = {
   miningRate: { mr: "माइनिंग दर", hi: "माइनिंग दर", en: "Mining Rate" },
   perHour: { mr: "/तास", hi: "/घंटा", en: "/hour" },
   freeUserWarning: { 
-    mr: "तुम्ही फ्री युजर आहात. तुमचा PRC 2 दिवसांत एक्सपायर होईल!",
-    hi: "आप फ्री यूजर हैं। आपका PRC 2 दिनों में एक्सपायर होगा!",
-    en: "You're a free user. Your PRC will expire in 2 days!"
+    mr: "फ्री युजर: PRC 2 दिवसांसाठी वैध",
+    hi: "फ्री यूजर: PRC 2 दिनों के लिए वैध",
+    en: "Free User: PRC valid for 2 days"
   },
   upgradeToVip: { mr: "VIP बना", hi: "VIP बनें", en: "Upgrade to VIP" },
   miningComplete: { mr: "माइनिंग पूर्ण!", hi: "माइनिंग पूर्ण!", en: "Mining Complete!" },
@@ -38,7 +39,18 @@ const miningTranslations = {
   goBack: { mr: "मागे जा", hi: "वापस जाएं", en: "Go Back" },
   referralBonus: { mr: "रेफरल बोनस", hi: "रेफरल बोनस", en: "Referral Bonus" },
   inviteFriends: { mr: "मित्रांना आमंत्रित करा", hi: "दोस्तों को आमंत्रित करें", en: "Invite Friends" },
-  stats: { mr: "आकडेवारी", hi: "आंकड़े", en: "Stats" }
+  stats: { mr: "आकडेवारी", hi: "आंकड़े", en: "Stats" },
+  sessionEnds: { mr: "सत्र संपते", hi: "सत्र समाप्त", en: "Session Ends" },
+  sessionEarned: { mr: "सत्रात कमावले", hi: "सत्र में कमाया", en: "Session Earned" },
+  baseMiningRate: { mr: "बेस माइनिंग दर", hi: "बेस माइनिंग दर", en: "Base Mining Rate" },
+  totalReferralBonus: { mr: "एकूण रेफरल बोनस", hi: "कुल रेफरल बोनस", en: "Total Referral Bonus" },
+  vipBonus: { mr: "VIP बोनस", hi: "VIP बोनस", en: "VIP Bonus" },
+  claimRewards: { mr: "बक्षीस मिळवा", hi: "इनाम प्राप्त करें", en: "Claim Rewards" },
+  start24hSession: { mr: "24 तासांचे सत्र सुरू करा", hi: "24 घंटे का सत्र शुरू करें", en: "Start 24h Session" },
+  remainingInSession: { mr: "या सत्रात उर्वरित", hi: "इस सत्र में शेष", en: "remaining in this session" },
+  lifetimeValidity: { mr: "आजीवन वैधता", hi: "आजीवन वैधता", en: "Lifetime validity" },
+  validFor2Days: { mr: "2 दिवसांसाठी वैध", hi: "2 दिनों के लिए वैध", en: "Valid for 2 days" },
+  startMiningSession: { mr: "माइनिंग सत्र सुरू करा", hi: "माइनिंग सत्र शुरू करें", en: "Start Mining Session" }
 };
 
 const Mining = ({ user, onLogout }) => {
