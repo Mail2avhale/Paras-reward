@@ -42,6 +42,28 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 
 ## What's Been Implemented
 
+### January 5, 2026 (Current Session - Part 3)
+- ✅ **User Dashboard Language Selector & Today Stats (TESTED - 9/9 Backend + All Frontend Tests Passed)**
+  - **Multi-Language Support** in User Dashboard (`DashboardModern.js`):
+    - Language selector dropdown in header (Globe icon)
+    - Supports English, Hindi (हिंदी), Marathi (मराठी)
+    - Language preference persists in localStorage
+    - Default language: Marathi (mr)
+  - **Today's Summary Strip** in Dashboard:
+    - Shows "Today Earned" PRC with green up arrow
+    - Shows "Today Spent" PRC with red down arrow
+    - Labels translate based on selected language
+  - **New Backend API**: `/api/user/stats/today/{uid}`
+    - Returns today_prc_earned, today_prc_spent, today_net
+    - Includes earning_breakdown and spending_breakdown by transaction type
+    - Returns date in YYYY-MM-DD format
+  - **Files Modified**:
+    - Backend: `/app/backend/server.py` - New endpoint
+    - Frontend: `/app/frontend/src/pages/DashboardModern.js`
+    - Frontend: `/app/frontend/src/contexts/LanguageContext.js` (existing)
+    - Frontend: `/app/frontend/src/locales/translations.js` (existing)
+  - Test file: `/app/tests/test_dashboard_language_today_stats.py`
+
 ### January 5, 2026 (Current Session - Part 2)
 - ✅ **Fintech Accounting System (TESTED - 15/15 Backend + 8/8 Frontend Tests Passed)**
   - **Master Accounting Dashboard** (`/admin/accounting`):
