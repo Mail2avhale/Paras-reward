@@ -18351,6 +18351,871 @@ async def get_capital_summary():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== FINTECH ACCOUNTING SYSTEM ====================
+
+# ========== PRC MINT LEDGER (All PRC Inflows) ==========
+
+@api_router.get("/admin/accounting/prc-mint-ledger")
+async def get_prc_mint_ledger(
+    page: int = 1,
+    limit: int = 50,
+    source_type: str = None,
+    user_id: str = None,
+    start_date: str = None,
+    end_date: str = None
+):
+    """Get PRC mint (inflow) ledger with filters"""
+    try:
+        query = {"type": {"$in": ["mining", "tap_game", "referral", "cashback", "admin_credit", "profit_share", "scratch_card_reward", "treasure_hunt_reward", "delivery_commission", "prc_rain_gain"]}}
+        
+        if source_type:
+            query["type"] = source_type
+        if user_id:
+            query["user_id"] = user_id
+        if start_date:
+            query["created_at"] = {"$gte": start_date}
+        if end_date:
+            query.setdefault("created_at", {})["$lte"] = end_date
+        
+        skip = (page - 1) * limit
+        total = await db.transactions.count_documents(query)
+        
+        entries = await db.transactions.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        
+        # Calculate summary
+        summary_pipeline = [
+            {"$match": query},
+            {"$group": {
+                "_id": "$type",
+                "total_prc": {"$sum": "$amount"},
+                "count": {"$sum": 1}
+            }}
+        ]
+        summary = await db.transactions.aggregate(summary_pipeline).to_list(20)
+        
+        total_minted = sum(s.get("total_prc", 0) for s in summary)
+        
+        return {
+            "entries": entries,
+            "pagination": {"page": page, "limit": limit, "total": total, "pages": (total + limit - 1) // limit},
+            "summary": {
+                "by_source": {s["_id"]: {"prc": round(s["total_prc"], 2), "count": s["count"]} for s in summary},
+                "total_minted": round(total_minted, 2)
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========== PRC BURN LEDGER (All PRC Outflows) ==========
+
+@api_router.get("/admin/accounting/prc-burn-ledger")
+async def get_prc_burn_ledger(
+    page: int = 1,
+    limit: int = 50,
+    use_type: str = None,
+    user_id: str = None,
+    start_date: str = None,
+    end_date: str = None
+):
+    """Get PRC burn (outflow) ledger with filters"""
+    try:
+        query = {"type": {"$in": ["order", "withdrawal", "admin_debit", "delivery_charge", "scratch_card_purchase", "treasure_hunt_play", "prc_burn", "bill_payment_request", "gift_voucher_request", "prc_rain_loss"]}}
+        
+        if use_type:
+            query["type"] = use_type
+        if user_id:
+            query["user_id"] = user_id
+        if start_date:
+            query["created_at"] = {"$gte": start_date}
+        if end_date:
+            query.setdefault("created_at", {})["$lte"] = end_date
+        
+        skip = (page - 1) * limit
+        total = await db.transactions.count_documents(query)
+        
+        entries = await db.transactions.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        
+        # Calculate summary
+        summary_pipeline = [
+            {"$match": query},
+            {"$group": {
+                "_id": "$type",
+                "total_prc": {"$sum": {"$abs": "$amount"}},
+                "count": {"$sum": 1}
+            }}
+        ]
+        summary = await db.transactions.aggregate(summary_pipeline).to_list(20)
+        
+        total_burned = sum(s.get("total_prc", 0) for s in summary)
+        
+        return {
+            "entries": entries,
+            "pagination": {"page": page, "limit": limit, "total": total, "pages": (total + limit - 1) // limit},
+            "summary": {
+                "by_use_type": {s["_id"]: {"prc": round(s["total_prc"], 2), "count": s["count"]} for s in summary},
+                "total_burned": round(total_burned, 2)
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========== LIABILITY LEDGER (INR Redemption Tracking) ==========
+
+@api_router.get("/admin/accounting/liability-ledger")
+async def get_liability_ledger(page: int = 1, limit: int = 50):
+    """Get liability ledger - tracks INR owed for PRC redemptions"""
+    try:
+        # Get all redemption-type transactions (bill payments, gift vouchers, orders)
+        query = {"type": {"$in": ["bill_payment_request", "gift_voucher_request", "order"]}}
+        
+        skip = (page - 1) * limit
+        total = await db.transactions.count_documents(query)
+        
+        entries = await db.transactions.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        
+        # Get conversion rate
+        settings = await db.settings.find_one({}, {"_id": 0, "accounting_settings": 1})
+        prc_per_inr = settings.get("accounting_settings", {}).get("prc_per_inr", 10) if settings else 10
+        
+        # Calculate liability summary
+        pipeline = [
+            {"$match": query},
+            {"$group": {
+                "_id": None,
+                "total_prc_redeemed": {"$sum": {"$abs": "$amount"}},
+                "total_count": {"$sum": 1}
+            }}
+        ]
+        summary = await db.transactions.aggregate(pipeline).to_list(1)
+        
+        total_prc_redeemed = summary[0].get("total_prc_redeemed", 0) if summary else 0
+        total_inr_liability = total_prc_redeemed / prc_per_inr
+        
+        # Get paid liabilities from company wallets
+        paid_pipeline = [
+            {"$match": {"wallet_type": "redeem_reserve"}},
+            {"$project": {"balance": 1}}
+        ]
+        redeem_wallet = await db.company_wallets.find_one({"wallet_type": "redeem_reserve"}, {"_id": 0, "balance": 1})
+        inr_paid = redeem_wallet.get("balance", 0) if redeem_wallet else 0
+        
+        # Liability ageing
+        now = datetime.now(timezone.utc)
+        ageing = {"safe": 0, "warning": 0, "critical": 0}
+        
+        for entry in entries:
+            created_at_str = entry.get("created_at", "")
+            try:
+                if isinstance(created_at_str, str):
+                    created_at = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
+                else:
+                    created_at = created_at_str
+                days_old = (now - created_at).days
+                prc_amount = abs(entry.get("amount", 0))
+                inr_value = prc_amount / prc_per_inr
+                
+                if days_old <= 7:
+                    ageing["safe"] += inr_value
+                elif days_old <= 30:
+                    ageing["warning"] += inr_value
+                else:
+                    ageing["critical"] += inr_value
+            except:
+                pass
+        
+        return {
+            "entries": entries,
+            "pagination": {"page": page, "limit": limit, "total": total, "pages": (total + limit - 1) // limit},
+            "summary": {
+                "total_prc_redeemed": round(total_prc_redeemed, 2),
+                "total_inr_liability": round(total_inr_liability, 2),
+                "inr_paid": round(inr_paid, 2),
+                "inr_pending": round(total_inr_liability - inr_paid, 2),
+                "conversion_rate": prc_per_inr
+            },
+            "ageing": {
+                "safe_0_7_days": round(ageing["safe"], 2),
+                "warning_8_30_days": round(ageing["warning"], 2),
+                "critical_31_plus_days": round(ageing["critical"], 2)
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========== CONVERSION RATE MANAGEMENT ==========
+
+@api_router.get("/admin/accounting/conversion-rate")
+async def get_conversion_rate():
+    """Get current conversion rate and history"""
+    try:
+        settings = await db.settings.find_one({}, {"_id": 0, "accounting_settings": 1})
+        current_rate = settings.get("accounting_settings", {}).get("prc_per_inr", 10) if settings else 10
+        
+        # Get rate history
+        history = await db.conversion_rate_history.find({}, {"_id": 0}).sort("effective_from", -1).limit(20).to_list(20)
+        
+        return {
+            "current_rate": current_rate,
+            "description": f"1 INR = {current_rate} PRC",
+            "history": history
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/accounting/conversion-rate")
+async def update_conversion_rate(request: Request):
+    """Update conversion rate (Admin only) - maintains history"""
+    try:
+        data = await request.json()
+        new_rate = data.get("prc_per_inr")
+        reason = data.get("reason", "Admin update")
+        
+        if not new_rate or new_rate <= 0:
+            raise HTTPException(status_code=400, detail="Invalid conversion rate")
+        
+        # Get current rate
+        settings = await db.settings.find_one({}, {"_id": 0, "accounting_settings": 1})
+        old_rate = settings.get("accounting_settings", {}).get("prc_per_inr", 10) if settings else 10
+        
+        now = datetime.now(timezone.utc)
+        
+        # Close previous rate's effective_to
+        await db.conversion_rate_history.update_one(
+            {"effective_to": None},
+            {"$set": {"effective_to": now.isoformat()}}
+        )
+        
+        # Insert new rate history
+        await db.conversion_rate_history.insert_one({
+            "rate_id": str(uuid.uuid4()),
+            "prc_per_inr": new_rate,
+            "old_rate": old_rate,
+            "reason": reason,
+            "effective_from": now.isoformat(),
+            "effective_to": None,
+            "created_by": data.get("admin_id", "system")
+        })
+        
+        # Update settings
+        await db.settings.update_one(
+            {},
+            {"$set": {"accounting_settings.prc_per_inr": new_rate}},
+            upsert=True
+        )
+        
+        return {
+            "success": True,
+            "message": f"Conversion rate updated from {old_rate} to {new_rate} PRC per INR",
+            "new_rate": new_rate
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========== RESERVE FUND MANAGEMENT ==========
+
+@api_router.get("/admin/accounting/reserve-fund")
+async def get_reserve_fund():
+    """Get reserve fund status and history"""
+    try:
+        # Get reserve fund settings
+        settings = await db.settings.find_one({}, {"_id": 0, "accounting_settings": 1})
+        accounting = settings.get("accounting_settings", {}) if settings else {}
+        
+        reserve_percentage = accounting.get("reserve_fund_percentage", 10)  # Default 10%
+        
+        # Get reserve fund balance from company wallets
+        reserve_wallet = await db.company_wallets.find_one({"wallet_type": "reserve_fund"}, {"_id": 0})
+        
+        if not reserve_wallet:
+            # Create reserve fund wallet if not exists
+            reserve_wallet = {
+                "wallet_type": "reserve_fund",
+                "name": "Reserve Fund",
+                "balance": 0,
+                "description": "Emergency reserve for liability protection",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.company_wallets.insert_one(reserve_wallet)
+        
+        # Get reserve fund history
+        history = await db.reserve_fund_ledger.find({}, {"_id": 0}).sort("created_at", -1).limit(50).to_list(50)
+        
+        # Calculate total liability for comparison
+        prc_per_inr = accounting.get("prc_per_inr", 10)
+        liability_pipeline = [
+            {"$match": {"type": {"$in": ["bill_payment_request", "gift_voucher_request", "order"]}}},
+            {"$group": {"_id": None, "total_prc": {"$sum": {"$abs": "$amount"}}}}
+        ]
+        liability_result = await db.transactions.aggregate(liability_pipeline).to_list(1)
+        total_liability_prc = liability_result[0].get("total_prc", 0) if liability_result else 0
+        total_liability_inr = total_liability_prc / prc_per_inr
+        
+        reserve_balance = reserve_wallet.get("balance", 0)
+        backing_ratio = reserve_balance / total_liability_inr if total_liability_inr > 0 else float('inf')
+        
+        return {
+            "balance": round(reserve_balance, 2),
+            "percentage": reserve_percentage,
+            "total_liability_inr": round(total_liability_inr, 2),
+            "backing_ratio": round(backing_ratio, 4) if backing_ratio != float('inf') else "∞",
+            "status": "SAFE" if backing_ratio >= 1 else "AT RISK",
+            "history": history
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/accounting/reserve-fund/add")
+async def add_to_reserve_fund(request: Request):
+    """Add funds to reserve fund"""
+    try:
+        data = await request.json()
+        amount = data.get("amount", 0)
+        reason = data.get("reason", "Manual addition")
+        
+        if amount <= 0:
+            raise HTTPException(status_code=400, detail="Amount must be positive")
+        
+        # Update reserve fund wallet
+        await db.company_wallets.update_one(
+            {"wallet_type": "reserve_fund"},
+            {"$inc": {"balance": amount}},
+            upsert=True
+        )
+        
+        # Log to reserve fund ledger
+        await db.reserve_fund_ledger.insert_one({
+            "ledger_id": str(uuid.uuid4()),
+            "type": "credit",
+            "amount": amount,
+            "reason": reason,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_by": data.get("admin_id", "system")
+        })
+        
+        return {"success": True, "message": f"₹{amount} added to reserve fund"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/accounting/reserve-fund/settings")
+async def update_reserve_fund_settings(request: Request):
+    """Update reserve fund settings (percentage allocation from profit)"""
+    try:
+        data = await request.json()
+        percentage = data.get("percentage", 10)
+        
+        if percentage < 0 or percentage > 100:
+            raise HTTPException(status_code=400, detail="Percentage must be between 0 and 100")
+        
+        await db.settings.update_one(
+            {},
+            {"$set": {"accounting_settings.reserve_fund_percentage": percentage}},
+            upsert=True
+        )
+        
+        return {"success": True, "message": f"Reserve fund percentage set to {percentage}%"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========== DAILY SYSTEM SUMMARY (Auto-calculated) ==========
+
+async def generate_daily_summary(target_date: str = None):
+    """Generate daily system summary - can be called manually or by scheduler"""
+    try:
+        if target_date:
+            date_obj = datetime.fromisoformat(target_date)
+        else:
+            date_obj = datetime.now(timezone.utc) - timedelta(days=1)
+        
+        date_str = date_obj.strftime("%Y-%m-%d")
+        start_of_day = date_str + "T00:00:00"
+        end_of_day = date_str + "T23:59:59"
+        
+        # Get accounting settings
+        settings = await db.settings.find_one({}, {"_id": 0, "accounting_settings": 1})
+        prc_per_inr = settings.get("accounting_settings", {}).get("prc_per_inr", 10) if settings else 10
+        reserve_percentage = settings.get("accounting_settings", {}).get("reserve_fund_percentage", 10) if settings else 10
+        
+        # Active users (logged in today)
+        active_users = await db.users.count_documents({
+            "last_login": {"$gte": start_of_day, "$lte": end_of_day}
+        })
+        
+        # PRC Minted
+        mint_types = ["mining", "tap_game", "referral", "cashback", "admin_credit", "profit_share", "scratch_card_reward", "treasure_hunt_reward", "delivery_commission", "prc_rain_gain"]
+        mint_result = await db.transactions.aggregate([
+            {"$match": {"type": {"$in": mint_types}, "created_at": {"$gte": start_of_day, "$lte": end_of_day}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        prc_minted = mint_result[0].get("total", 0) if mint_result else 0
+        
+        # PRC Burned
+        burn_types = ["order", "withdrawal", "admin_debit", "delivery_charge", "scratch_card_purchase", "treasure_hunt_play", "prc_burn", "bill_payment_request", "gift_voucher_request", "prc_rain_loss"]
+        burn_result = await db.transactions.aggregate([
+            {"$match": {"type": {"$in": burn_types}, "created_at": {"$gte": start_of_day, "$lte": end_of_day}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+        ]).to_list(1)
+        prc_burned = burn_result[0].get("total", 0) if burn_result else 0
+        
+        # Net PRC in system (all time)
+        all_mint = await db.transactions.aggregate([
+            {"$match": {"type": {"$in": mint_types}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        all_burn = await db.transactions.aggregate([
+            {"$match": {"type": {"$in": burn_types}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+        ]).to_list(1)
+        total_minted = all_mint[0].get("total", 0) if all_mint else 0
+        total_burned = all_burn[0].get("total", 0) if all_burn else 0
+        net_prc_in_system = total_minted - total_burned
+        
+        # Liability INR
+        liability_types = ["bill_payment_request", "gift_voucher_request", "order"]
+        liability_result = await db.transactions.aggregate([
+            {"$match": {"type": {"$in": liability_types}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+        ]).to_list(1)
+        total_liability_prc = liability_result[0].get("total", 0) if liability_result else 0
+        liability_inr = total_liability_prc / prc_per_inr
+        
+        # Revenue INR (ads + VIP subscriptions)
+        ads_revenue = await db.ads_income.aggregate([
+            {"$match": {"date": {"$gte": start_of_day[:10], "$lte": end_of_day[:10]}}},
+            {"$group": {"_id": None, "total": {"$sum": "$revenue_amount"}}}
+        ]).to_list(1)
+        ads_inr = ads_revenue[0].get("total", 0) if ads_revenue else 0
+        
+        vip_revenue = await db.vip_payments.aggregate([
+            {"$match": {"status": "approved", "created_at": {"$gte": start_of_day, "$lte": end_of_day}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        vip_inr = vip_revenue[0].get("total", 0) if vip_revenue else 0
+        
+        revenue_inr = ads_inr + vip_inr
+        
+        # Expenses INR
+        month_str = date_obj.strftime("%Y-%m")
+        expenses_result = await db.fixed_expenses.aggregate([
+            {"$match": {"month": month_str}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        # Prorate daily
+        days_in_month = 30
+        expense_inr = (expenses_result[0].get("total", 0) / days_in_month) if expenses_result else 0
+        
+        # Reserve Fund
+        reserve_wallet = await db.company_wallets.find_one({"wallet_type": "reserve_fund"}, {"_id": 0, "balance": 1})
+        reserve_fund = reserve_wallet.get("balance", 0) if reserve_wallet else 0
+        
+        # Net Profit/Loss
+        net_profit_loss = revenue_inr - expense_inr - (liability_inr * 0.1)  # Assume 10% of liability as daily cost
+        
+        # Risk Score (0-100)
+        backing_ratio = reserve_fund / liability_inr if liability_inr > 0 else 10
+        risk_score = min(100, max(0, int(
+            (backing_ratio * 30) +  # Backing ratio weight
+            ((revenue_inr / max(expense_inr, 1)) * 20) +  # Revenue vs expense ratio
+            ((prc_burned / max(prc_minted, 1)) * 30) +  # Burn vs mint ratio
+            (20 if net_profit_loss > 0 else 0)  # Profitability bonus
+        )))
+        
+        # Create summary
+        summary = {
+            "date": date_str,
+            "active_users": active_users,
+            "prc_minted": round(prc_minted, 2),
+            "prc_burned": round(prc_burned, 2),
+            "net_prc_in_system": round(net_prc_in_system, 2),
+            "liability_inr": round(liability_inr, 2),
+            "revenue_inr": round(revenue_inr, 2),
+            "expense_inr": round(expense_inr, 2),
+            "reserve_fund": round(reserve_fund, 2),
+            "net_profit_loss": round(net_profit_loss, 2),
+            "risk_score": risk_score,
+            "risk_status": "SAFE" if risk_score >= 70 else "WARNING" if risk_score >= 40 else "CRITICAL",
+            "backing_ratio": round(backing_ratio, 4),
+            "conversion_rate": prc_per_inr,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Upsert daily summary
+        await db.daily_system_summary.update_one(
+            {"date": date_str},
+            {"$set": summary},
+            upsert=True
+        )
+        
+        return summary
+    except Exception as e:
+        logging.error(f"Error generating daily summary: {e}")
+        raise
+
+
+@api_router.get("/admin/accounting/daily-summary")
+async def get_daily_summaries(days: int = 30):
+    """Get daily system summaries for the past N days"""
+    try:
+        summaries = await db.daily_system_summary.find({}, {"_id": 0}).sort("date", -1).limit(days).to_list(days)
+        
+        # Calculate trends
+        if len(summaries) >= 2:
+            latest = summaries[0]
+            previous = summaries[1]
+            trends = {
+                "prc_minted_change": round(latest.get("prc_minted", 0) - previous.get("prc_minted", 0), 2),
+                "prc_burned_change": round(latest.get("prc_burned", 0) - previous.get("prc_burned", 0), 2),
+                "revenue_change": round(latest.get("revenue_inr", 0) - previous.get("revenue_inr", 0), 2),
+                "risk_score_change": latest.get("risk_score", 0) - previous.get("risk_score", 0)
+            }
+        else:
+            trends = None
+        
+        return {
+            "summaries": summaries,
+            "trends": trends,
+            "latest": summaries[0] if summaries else None
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/accounting/daily-summary/generate")
+async def trigger_daily_summary(request: Request):
+    """Manually trigger daily summary generation"""
+    try:
+        data = await request.json()
+        target_date = data.get("date")  # Optional specific date
+        
+        summary = await generate_daily_summary(target_date)
+        return {"success": True, "summary": summary}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========== USER COST ANALYSIS (Loss-making Users) ==========
+
+@api_router.get("/admin/accounting/user-cost-analysis")
+async def get_user_cost_analysis(page: int = 1, limit: int = 50, filter_type: str = "loss"):
+    """Analyze user cost vs revenue - identify loss-making users"""
+    try:
+        settings = await db.settings.find_one({}, {"_id": 0, "accounting_settings": 1})
+        prc_per_inr = settings.get("accounting_settings", {}).get("prc_per_inr", 10) if settings else 10
+        
+        # Get all users with their PRC stats
+        pipeline = [
+            {"$group": {
+                "_id": "$user_id",
+                "total_earned": {"$sum": {"$cond": [
+                    {"$in": ["$type", ["mining", "tap_game", "referral", "cashback", "admin_credit", "prc_rain_gain"]]},
+                    "$amount",
+                    0
+                ]}},
+                "total_spent": {"$sum": {"$cond": [
+                    {"$in": ["$type", ["order", "bill_payment_request", "gift_voucher_request"]]},
+                    {"$abs": "$amount"},
+                    0
+                ]}}
+            }},
+            {"$addFields": {
+                "earned_inr_value": {"$divide": ["$total_earned", prc_per_inr]},
+                "spent_inr_value": {"$divide": ["$total_spent", prc_per_inr]},
+                "net_cost": {"$subtract": [
+                    {"$divide": ["$total_earned", prc_per_inr]},
+                    {"$divide": ["$total_spent", prc_per_inr]}
+                ]}
+            }},
+            {"$sort": {"net_cost": -1 if filter_type == "loss" else 1}},
+            {"$skip": (page - 1) * limit},
+            {"$limit": limit}
+        ]
+        
+        user_analysis = await db.transactions.aggregate(pipeline).to_list(limit)
+        
+        # Enrich with user details
+        for analysis in user_analysis:
+            user = await db.users.find_one({"uid": analysis["_id"]}, {"_id": 0, "email": 1, "name": 1, "membership_type": 1})
+            if user:
+                analysis["email"] = user.get("email")
+                analysis["name"] = user.get("name")
+                analysis["membership_type"] = user.get("membership_type", "free")
+            analysis["status"] = "LOSS" if analysis["net_cost"] > 0 else "PROFIT"
+            analysis["net_cost"] = round(analysis["net_cost"], 2)
+            analysis["earned_inr_value"] = round(analysis["earned_inr_value"], 2)
+            analysis["spent_inr_value"] = round(analysis["spent_inr_value"], 2)
+        
+        # Summary stats
+        total_pipeline = [
+            {"$group": {
+                "_id": None,
+                "total_earned": {"$sum": {"$cond": [
+                    {"$in": ["$type", ["mining", "tap_game", "referral", "cashback", "admin_credit", "prc_rain_gain"]]},
+                    "$amount",
+                    0
+                ]}},
+                "total_spent": {"$sum": {"$cond": [
+                    {"$in": ["$type", ["order", "bill_payment_request", "gift_voucher_request"]]},
+                    {"$abs": "$amount"},
+                    0
+                ]}}
+            }}
+        ]
+        total_result = await db.transactions.aggregate(total_pipeline).to_list(1)
+        
+        if total_result:
+            total_earned_inr = total_result[0].get("total_earned", 0) / prc_per_inr
+            total_spent_inr = total_result[0].get("total_spent", 0) / prc_per_inr
+        else:
+            total_earned_inr = 0
+            total_spent_inr = 0
+        
+        return {
+            "users": user_analysis,
+            "pagination": {"page": page, "limit": limit},
+            "summary": {
+                "total_prc_distributed_value_inr": round(total_earned_inr, 2),
+                "total_prc_redeemed_value_inr": round(total_spent_inr, 2),
+                "net_system_cost": round(total_earned_inr - total_spent_inr, 2)
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========== 180-DAY PRC EXPIRY FOR INACTIVE USERS ==========
+
+async def burn_inactive_user_prc():
+    """Burn PRC for users inactive for 180+ days"""
+    try:
+        now = datetime.now(timezone.utc)
+        inactive_threshold = now - timedelta(days=180)
+        
+        # Find inactive users with positive PRC balance
+        inactive_users = db.users.find({
+            "last_login": {"$lt": inactive_threshold.isoformat()},
+            "prc_balance": {"$gt": 0}
+        })
+        
+        burn_count = 0
+        total_burned = 0.0
+        
+        async for user in inactive_users:
+            uid = user.get("uid")
+            prc_balance = user.get("prc_balance", 0)
+            
+            if prc_balance > 0:
+                # Burn all PRC
+                await log_transaction(
+                    user_id=uid,
+                    wallet_type="prc",
+                    transaction_type="prc_burn",
+                    amount=prc_balance,
+                    description=f"Burned {prc_balance:.2f} PRC (inactive for 180+ days)",
+                    metadata={"burn_reason": "inactive_180_days", "last_login": user.get("last_login")}
+                )
+                
+                burn_count += 1
+                total_burned += prc_balance
+        
+        logging.info(f"Inactive user PRC burn: {burn_count} users, {total_burned:.2f} PRC burned")
+        return {"users_affected": burn_count, "total_burned": total_burned}
+    except Exception as e:
+        logging.error(f"Error burning inactive user PRC: {e}")
+        return {"users_affected": 0, "total_burned": 0.0}
+
+
+@api_router.post("/admin/accounting/burn-inactive-prc")
+async def trigger_inactive_prc_burn():
+    """Manually trigger inactive user PRC burn (180 days)"""
+    try:
+        result = await burn_inactive_user_prc()
+        return {"success": True, "result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========== MASTER ACCOUNTING DASHBOARD ==========
+
+@api_router.get("/admin/accounting/master-dashboard")
+async def get_master_accounting_dashboard():
+    """Get comprehensive accounting dashboard data"""
+    try:
+        settings = await db.settings.find_one({}, {"_id": 0, "accounting_settings": 1})
+        prc_per_inr = settings.get("accounting_settings", {}).get("prc_per_inr", 10) if settings else 10
+        
+        now = datetime.now(timezone.utc)
+        today_str = now.strftime("%Y-%m-%d")
+        
+        # Get latest daily summary
+        latest_summary = await db.daily_system_summary.find_one({"date": {"$lt": today_str}}, {"_id": 0}, sort=[("date", -1)])
+        
+        # Total users
+        total_users = await db.users.count_documents({})
+        vip_users = await db.users.count_documents({"membership_type": "vip"})
+        
+        # PRC Supply
+        mint_types = ["mining", "tap_game", "referral", "cashback", "admin_credit", "profit_share", "scratch_card_reward", "treasure_hunt_reward", "delivery_commission", "prc_rain_gain"]
+        burn_types = ["order", "withdrawal", "admin_debit", "delivery_charge", "scratch_card_purchase", "treasure_hunt_play", "prc_burn", "bill_payment_request", "gift_voucher_request", "prc_rain_loss"]
+        
+        total_minted_result = await db.transactions.aggregate([
+            {"$match": {"type": {"$in": mint_types}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        total_minted = total_minted_result[0].get("total", 0) if total_minted_result else 0
+        
+        total_burned_result = await db.transactions.aggregate([
+            {"$match": {"type": {"$in": burn_types}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+        ]).to_list(1)
+        total_burned = total_burned_result[0].get("total", 0) if total_burned_result else 0
+        
+        circulating_prc = total_minted - total_burned
+        
+        # Liability
+        liability_types = ["bill_payment_request", "gift_voucher_request", "order"]
+        liability_result = await db.transactions.aggregate([
+            {"$match": {"type": {"$in": liability_types}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+        ]).to_list(1)
+        total_liability_prc = liability_result[0].get("total", 0) if liability_result else 0
+        total_liability_inr = total_liability_prc / prc_per_inr
+        
+        # Reserve Fund & Backing Ratio
+        reserve_wallet = await db.company_wallets.find_one({"wallet_type": "reserve_fund"}, {"_id": 0, "balance": 1})
+        reserve_fund = reserve_wallet.get("balance", 0) if reserve_wallet else 0
+        backing_ratio = reserve_fund / total_liability_inr if total_liability_inr > 0 else float('inf')
+        
+        # Company Wallets Summary
+        wallets = await db.company_wallets.find({}, {"_id": 0}).to_list(10)
+        total_cash = sum(w.get("balance", 0) for w in wallets)
+        
+        # Monthly Revenue & Expense
+        month_str = now.strftime("%Y-%m")
+        ads_revenue = await db.ads_income.aggregate([
+            {"$match": {"date": {"$regex": f"^{month_str}"}}},
+            {"$group": {"_id": None, "total": {"$sum": "$revenue_amount"}}}
+        ]).to_list(1)
+        monthly_ads = ads_revenue[0].get("total", 0) if ads_revenue else 0
+        
+        vip_revenue = await db.vip_payments.aggregate([
+            {"$match": {"status": "approved", "created_at": {"$regex": f"^{month_str}"}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        monthly_vip = vip_revenue[0].get("total", 0) if vip_revenue else 0
+        
+        expenses = await db.fixed_expenses.aggregate([
+            {"$match": {"month": month_str}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        monthly_expenses = expenses[0].get("total", 0) if expenses else 0
+        
+        monthly_revenue = monthly_ads + monthly_vip
+        monthly_profit = monthly_revenue - monthly_expenses
+        
+        # Risk Assessment
+        risk_score = latest_summary.get("risk_score", 50) if latest_summary else 50
+        
+        # Alerts
+        alerts = []
+        if backing_ratio < 1:
+            alerts.append({"type": "CRITICAL", "message": "PRC Backing Ratio below 1.0 - Liability exceeds reserves"})
+        if total_liability_inr > monthly_revenue * 3:
+            alerts.append({"type": "WARNING", "message": "Liability exceeds 3x monthly revenue"})
+        if monthly_profit < 0:
+            alerts.append({"type": "WARNING", "message": f"Monthly loss: ₹{abs(monthly_profit):,.2f}"})
+        
+        return {
+            "overview": {
+                "total_users": total_users,
+                "vip_users": vip_users,
+                "conversion_rate": f"1 INR = {prc_per_inr} PRC"
+            },
+            "prc_supply": {
+                "total_minted": round(total_minted, 2),
+                "total_burned": round(total_burned, 2),
+                "circulating": round(circulating_prc, 2),
+                "circulating_inr_value": round(circulating_prc / prc_per_inr, 2)
+            },
+            "liability": {
+                "total_prc_redeemed": round(total_liability_prc, 2),
+                "total_inr_liability": round(total_liability_inr, 2),
+                "reserve_fund": round(reserve_fund, 2),
+                "backing_ratio": round(backing_ratio, 4) if backing_ratio != float('inf') else "∞",
+                "backing_status": "SAFE" if backing_ratio >= 1 else "AT RISK"
+            },
+            "financials": {
+                "total_cash_available": round(total_cash, 2),
+                "monthly_revenue": round(monthly_revenue, 2),
+                "monthly_expenses": round(monthly_expenses, 2),
+                "monthly_profit_loss": round(monthly_profit, 2),
+                "profit_status": "PROFIT" if monthly_profit >= 0 else "LOSS"
+            },
+            "risk": {
+                "score": risk_score,
+                "status": "SAFE" if risk_score >= 70 else "WARNING" if risk_score >= 40 else "CRITICAL"
+            },
+            "alerts": alerts,
+            "wallets": wallets,
+            "latest_summary": latest_summary
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========== ACCOUNTING SETTINGS ==========
+
+@api_router.get("/admin/accounting/settings")
+async def get_accounting_settings():
+    """Get all accounting settings"""
+    try:
+        settings = await db.settings.find_one({}, {"_id": 0, "accounting_settings": 1})
+        
+        default_settings = {
+            "prc_per_inr": 10,
+            "reserve_fund_percentage": 10,
+            "inactive_expiry_days": 180,
+            "liability_warning_threshold": 0.8,
+            "liability_critical_threshold": 1.0,
+            "auto_daily_summary": True,
+            "auto_reserve_allocation": True
+        }
+        
+        if settings and settings.get("accounting_settings"):
+            return {**default_settings, **settings["accounting_settings"]}
+        return default_settings
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/accounting/settings")
+async def update_accounting_settings(request: Request):
+    """Update accounting settings"""
+    try:
+        data = await request.json()
+        
+        allowed_fields = [
+            "prc_per_inr", "reserve_fund_percentage", "inactive_expiry_days",
+            "liability_warning_threshold", "liability_critical_threshold",
+            "auto_daily_summary", "auto_reserve_allocation"
+        ]
+        
+        update_data = {f"accounting_settings.{k}": v for k, v in data.items() if k in allowed_fields}
+        
+        if update_data:
+            await db.settings.update_one({}, {"$set": update_data}, upsert=True)
+        
+        return {"success": True, "message": "Accounting settings updated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== MANAGER ROLE ACCESS CONTROL ====================
 
 # Default permissions for manager role
