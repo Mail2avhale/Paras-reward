@@ -500,7 +500,7 @@ const DashboardModern = ({ user, onLogout }) => {
           {recentTransactions.length === 0 ? (
             <div className="text-center py-8 text-gray-400">
               <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No recent transactions</p>
+              <p className="text-sm">{t('noActivity')}</p>
             </div>
           ) : (
             <div className="space-y-3">
