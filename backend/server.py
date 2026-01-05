@@ -19865,12 +19865,32 @@ async def startup_db():
             replace_existing=True
         )
         
+        # Schedule daily system summary generation - runs at 12:05 AM
+        scheduler.add_job(
+            generate_daily_summary,
+            CronTrigger(hour=0, minute=5),  # Daily at 12:05 AM
+            id='daily_system_summary',
+            name='Generate daily accounting summary',
+            replace_existing=True
+        )
+        
+        # Schedule inactive user PRC burn - runs weekly on Sunday at 4 AM
+        scheduler.add_job(
+            burn_inactive_user_prc,
+            CronTrigger(day_of_week='sun', hour=4, minute=0),  # Weekly on Sunday at 4 AM
+            id='inactive_user_prc_burn',
+            name='Burn PRC for 180+ day inactive users',
+            replace_existing=True
+        )
+        
         # Start the scheduler
         scheduler.start()
         print("✅ Scheduled tasks started:")
         print("   - Free user PRC burn: Every hour")
         print("   - Expired VIP PRC burn: Daily at 2 AM")
         print("   - Wallet reconciliation: Daily at 3 AM")
+        print("   - Daily system summary: Daily at 12:05 AM")
+        print("   - Inactive user PRC burn: Weekly Sunday at 4 AM")
     except Exception as e:
         print(f"⚠️ Error starting scheduler (non-critical): {e}")
 
