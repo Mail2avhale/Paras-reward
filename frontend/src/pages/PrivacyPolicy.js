@@ -178,7 +178,7 @@ const PrivacyPolicy = () => {
     },
     {
       id: 'children',
-      title: '9. Children\'s Privacy',
+      title: '10. Children\'s Privacy',
       icon: Users,
       content: `
         <p>Our Platform is not intended for individuals under 18 years of age. We do not knowingly collect personal information from children.</p>
@@ -186,8 +186,52 @@ const PrivacyPolicy = () => {
       `
     },
     {
+      id: 'advertising',
+      title: '9. Advertising & Third-Party Services',
+      icon: Globe,
+      content: `
+        <h4 class="font-semibold mb-2">9.1 Mobile Advertising</h4>
+        <p>We display advertisements from third-party advertising networks including Google AdMob and Unity Ads. These services may:</p>
+        <ul class="list-disc pl-5 space-y-1 mt-2">
+          <li>Collect and use your device advertising identifier (IDFA/GAID)</li>
+          <li>Track your interactions with advertisements</li>
+          <li>Use cookies and similar technologies to serve relevant ads</li>
+          <li>Share data with their advertising partners</li>
+        </ul>
+        
+        <h4 class="font-semibold mb-2 mt-4">9.2 Personalized Advertising</h4>
+        <p>By default, we may serve personalized advertisements based on:</p>
+        <ul class="list-disc pl-5 space-y-1 mt-2">
+          <li>Your device information and location</li>
+          <li>Your app usage patterns</li>
+          <li>Your interests inferred from activity</li>
+        </ul>
+        <p class="mt-3">You can opt-out of personalized ads by adjusting your device settings:</p>
+        <ul class="list-disc pl-5 space-y-1 mt-2">
+          <li><strong>Android:</strong> Settings > Google > Ads > Opt out of Ads Personalization</li>
+          <li><strong>iOS:</strong> Settings > Privacy > Tracking > Toggle off "Allow Apps to Request to Track"</li>
+        </ul>
+        
+        <h4 class="font-semibold mb-2 mt-4">9.3 Third-Party Ad Networks</h4>
+        <p>Our advertising partners include:</p>
+        <ul class="list-disc pl-5 space-y-1 mt-2">
+          <li><strong>Google AdMob:</strong> <a href="https://policies.google.com/privacy" class="text-blue-600 hover:underline" target="_blank">Privacy Policy</a></li>
+          <li><strong>Unity Ads:</strong> <a href="https://unity3d.com/legal/privacy-policy" class="text-blue-600 hover:underline" target="_blank">Privacy Policy</a></li>
+        </ul>
+        <p class="mt-3">These partners may collect information independently and have their own privacy policies governing their data practices.</p>
+        
+        <h4 class="font-semibold mb-2 mt-4">9.4 Earning PRC Through Ads</h4>
+        <p>Users can earn PRC (Platform Reward Currency) by watching video advertisements. When you interact with ads:</p>
+        <ul class="list-disc pl-5 space-y-1 mt-2">
+          <li>Your ad interaction is tracked to verify completion</li>
+          <li>PRC rewards are credited upon successful ad completion</li>
+          <li>Daily limits may apply to ad-based earnings</li>
+        </ul>
+      `
+    },
+    {
       id: 'contact',
-      title: '10. Contact Us',
+      title: '11. Contact Us',
       icon: Bell,
       content: `
         <p>For privacy-related questions or requests:</p>
