@@ -302,6 +302,18 @@ const translations = {
     en: "Select Language"
   },
   
+  // ==================== BOTTOM NAVIGATION ====================
+  home: {
+    mr: "होम",
+    hi: "होम",
+    en: "Home"
+  },
+  profile: {
+    mr: "प्रोफाइल",
+    hi: "प्रोफ़ाइल",
+    en: "Profile"
+  },
+  
   // ==================== TRANSACTION TYPES ====================
   txMining: {
     mr: "माइनिंग बक्षीस",
