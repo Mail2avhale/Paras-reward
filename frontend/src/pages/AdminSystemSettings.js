@@ -147,6 +147,23 @@ const AdminSystemSettings = ({ user }) => {
     }
   };
 
+  const handleSaveMiningSettings = async () => {
+    setLoading(true);
+    try {
+      await axios.post(`${API}/api/admin/mining-settings`, {
+        base_rate: parseFloat(miningSettings.base_rate) || 0.5,
+        vip_multiplier: parseFloat(miningSettings.vip_multiplier) || 2,
+        max_daily_mining_hours: parseInt(miningSettings.max_daily_mining_hours) || 24,
+        prc_to_inr_ratio: parseInt(miningSettings.prc_to_inr_ratio) || 10
+      });
+      toast.success('Mining settings updated successfully!');
+    } catch (error) {
+      toast.error('Failed to save mining settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const tabs = [
     { id: 'vip-plans', label: 'VIP Plans', icon: Award },
     { id: 'mining', label: 'Mining Formula', icon: Cpu },
