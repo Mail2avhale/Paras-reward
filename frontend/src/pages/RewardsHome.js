@@ -5,16 +5,196 @@ import {
   Coins, Gift, Users, TrendingUp, Shield, Smartphone, 
   ChevronRight, Star, Zap, Award, CreditCard, ShoppingBag,
   FileText, Phone, Mail, MapPin, ArrowRight, CheckCircle,
-  Play, Crown, Percent, Clock, Target, Sparkles
+  Play, Crown, Percent, Clock, Target, Sparkles, Globe, ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useLanguage, LANGUAGES } from '@/contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
 
+// Homepage translations
+const homeTranslations = {
+  heroTitle: {
+    mr: "PRC कमवा आणि बक्षिसे मिळवा!",
+    hi: "PRC कमाएं और इनाम पाएं!",
+    en: "Earn PRC & Get Rewarded!"
+  },
+  heroSubtitle: {
+    mr: "आमच्या प्लॅटफॉर्मवर माइन करा, खेळा आणि तुमचे बक्षीस रिडीम करा",
+    hi: "हमारे प्लेटफॉर्म पर माइन करें, खेलें और अपने इनाम रिडीम करें",
+    en: "Mine, Play & Redeem Your Rewards on Our Platform"
+  },
+  getStarted: {
+    mr: "सुरू करा",
+    hi: "शुरू करें",
+    en: "Get Started"
+  },
+  login: {
+    mr: "लॉगिन",
+    hi: "लॉगिन",
+    en: "Login"
+  },
+  features: {
+    mr: "वैशिष्ट्ये",
+    hi: "विशेषताएं",
+    en: "Features"
+  },
+  dailyMining: {
+    mr: "दैनिक माइनिंग",
+    hi: "दैनिक माइनिंग",
+    en: "Daily Mining"
+  },
+  dailyMiningDesc: {
+    mr: "आमच्या स्वयंचलित माइनिंग सिस्टमद्वारे दररोज PRC कॉइन्स कमवा. VIP सदस्य 5 पट वेगाने कमवतात!",
+    hi: "हमारी स्वचालित माइनिंग प्रणाली से रोज PRC सिक्के कमाएं। VIP सदस्य 5 गुना तेजी से कमाते हैं!",
+    en: "Earn PRC coins daily through our automated mining system. VIP members earn up to 5x faster!"
+  },
+  referralRewards: {
+    mr: "रेफरल बक्षीस",
+    hi: "रेफरल इनाम",
+    en: "Referral Rewards"
+  },
+  referralRewardsDesc: {
+    mr: "मित्रांना आमंत्रित करा आणि 5 स्तरांवर बोनस PRC कमवा. तुमचे नेटवर्क वाढवा आणि कमाई वाढवा.",
+    hi: "दोस्तों को आमंत्रित करें और 5 स्तरों पर बोनस PRC कमाएं। अपना नेटवर्क बढ़ाएं और कमाई बढ़ाएं।",
+    en: "Invite friends and earn bonus PRC on 5 levels. Build your network and maximize earnings."
+  },
+  giftVouchers: {
+    mr: "गिफ्ट व्हाउचर",
+    hi: "गिफ्ट वाउचर",
+    en: "Gift Vouchers"
+  },
+  giftVouchersDesc: {
+    mr: "Amazon, Flipkart आणि इतर टॉप ब्रँड्सच्या गिफ्ट व्हाउचरसाठी तुमचे PRC रिडीम करा.",
+    hi: "Amazon, Flipkart और अन्य टॉप ब्रांड्स के गिफ्ट वाउचर के लिए अपने PRC रिडीम करें।",
+    en: "Redeem your PRC for gift vouchers from top brands like Amazon, Flipkart, and more."
+  },
+  billPayments: {
+    mr: "बिल पेमेंट",
+    hi: "बिल पेमेंट",
+    en: "Bill Payments"
+  },
+  billPaymentsDesc: {
+    mr: "तुमचे मोबाइल, DTH, वीज बिल थेट तुमच्या कमावलेल्या PRC कॉइन्सद्वारे भरा.",
+    hi: "अपने मोबाइल, DTH, बिजली बिल सीधे अपने कमाए PRC सिक्कों से भरें।",
+    en: "Pay your mobile, DTH, electricity bills directly using your earned PRC coins."
+  },
+  howItWorks: {
+    mr: "कसे काम करते",
+    hi: "कैसे काम करता है",
+    en: "How It Works"
+  },
+  step1Title: {
+    mr: "खाते तयार करा",
+    hi: "खाता बनाएं",
+    en: "Create Account"
+  },
+  step1Desc: {
+    mr: "विनामूल्य साइन अप करा आणि आमच्या प्लॅटफॉर्मवर सामील व्हा",
+    hi: "मुफ्त साइन अप करें और हमारे प्लेटफॉर्म से जुड़ें",
+    en: "Sign up for free and join our platform"
+  },
+  step2Title: {
+    mr: "PRC कमवा",
+    hi: "PRC कमाएं",
+    en: "Earn PRC"
+  },
+  step2Desc: {
+    mr: "दररोज माइनिंग करा, गेम खेळा, आणि रेफर करा",
+    hi: "रोज माइनिंग करें, गेम खेलें, और रेफर करें",
+    en: "Mine daily, play games, and refer friends"
+  },
+  step3Title: {
+    mr: "बक्षीस मिळवा",
+    hi: "इनाम पाएं",
+    en: "Get Rewards"
+  },
+  step3Desc: {
+    mr: "व्हाउचर, बिल पेमेंट किंवा मार्केटप्लेससाठी रिडीम करा",
+    hi: "वाउचर, बिल पेमेंट या मार्केटप्लेस के लिए रिडीम करें",
+    en: "Redeem for vouchers, bill payments, or marketplace"
+  },
+  vipMembership: {
+    mr: "VIP सदस्यत्व",
+    hi: "VIP सदस्यता",
+    en: "VIP Membership"
+  },
+  vipDesc: {
+    mr: "VIP बना आणि विशेष फायदे मिळवा",
+    hi: "VIP बनें और विशेष लाभ पाएं",
+    en: "Become VIP and unlock exclusive benefits"
+  },
+  joinNow: {
+    mr: "आता सामील व्हा",
+    hi: "अभी शामिल हों",
+    en: "Join Now"
+  },
+  totalUsers: {
+    mr: "एकूण वापरकर्ते",
+    hi: "कुल उपयोगकर्ता",
+    en: "Total Users"
+  },
+  totalPRC: {
+    mr: "एकूण PRC",
+    hi: "कुल PRC",
+    en: "Total PRC"
+  },
+  vipMembers: {
+    mr: "VIP सदस्य",
+    hi: "VIP सदस्य",
+    en: "VIP Members"
+  },
+  quickLinks: {
+    mr: "द्रुत लिंक्स",
+    hi: "त्वरित लिंक",
+    en: "Quick Links"
+  },
+  legal: {
+    mr: "कायदेशीर",
+    hi: "कानूनी",
+    en: "Legal"
+  },
+  termsConditions: {
+    mr: "नियम आणि अटी",
+    hi: "नियम और शर्तें",
+    en: "Terms & Conditions"
+  },
+  privacyPolicy: {
+    mr: "गोपनीयता धोरण",
+    hi: "गोपनीयता नीति",
+    en: "Privacy Policy"
+  },
+  refundPolicy: {
+    mr: "परतावा धोरण",
+    hi: "रिफंड नीति",
+    en: "Refund Policy"
+  },
+  contactUs: {
+    mr: "संपर्क करा",
+    hi: "संपर्क करें",
+    en: "Contact Us"
+  },
+  allRightsReserved: {
+    mr: "सर्व हक्क राखीव",
+    hi: "सर्वाधिकार सुरक्षित",
+    en: "All rights reserved"
+  }
+};
+
 const RewardsHome = () => {
   const navigate = useNavigate();
+  const { language, changeLanguage, currentLanguage, languages } = useLanguage();
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
+  
+  // Local translation function for homepage
+  const t = (key) => {
+    const translation = homeTranslations[key];
+    if (!translation) return key;
+    return translation[language] || translation['en'] || key;
+  };
+  
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalPRC: 0,
