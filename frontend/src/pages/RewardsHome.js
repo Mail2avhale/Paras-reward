@@ -280,19 +280,53 @@ const RewardsHome = () => {
               <span className="font-bold text-xl text-blue-900">Paras Reward</span>
             </div>
             <div className="hidden md:flex items-center gap-6">
-              <a href="#features" className="text-gray-600 hover:text-blue-600 transition">Features</a>
-              <a href="#how-it-works" className="text-gray-600 hover:text-blue-600 transition">How It Works</a>
-              <a href="#vip" className="text-gray-600 hover:text-blue-600 transition">VIP Benefits</a>
+              <a href="#features" className="text-gray-600 hover:text-blue-600 transition">{t('features')}</a>
+              <a href="#how-it-works" className="text-gray-600 hover:text-blue-600 transition">{t('howItWorks')}</a>
+              <a href="#vip" className="text-gray-600 hover:text-blue-600 transition">{t('vipMembership')}</a>
+              
+              {/* Language Selector */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowLangDropdown(!showLangDropdown)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-300 hover:bg-gray-50 transition-colors"
+                  data-testid="home-language-selector"
+                >
+                  <Globe className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm text-gray-700">{currentLanguage?.name?.slice(0, 3) || 'EN'}</span>
+                  <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${showLangDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {showLangDropdown && (
+                  <div className="absolute top-full right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 min-w-[140px]">
+                    {languages.map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => {
+                          changeLanguage(lang.code);
+                          setShowLangDropdown(false);
+                        }}
+                        className={`w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-blue-50 transition-colors ${
+                          language === lang.code ? 'bg-blue-100 text-blue-700' : 'text-gray-700'
+                        }`}
+                      >
+                        <span className="text-lg">{lang.flag}</span>
+                        <span className="text-sm font-medium">{lang.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
               <Button variant="outline" onClick={() => navigate('/login')} className="border-blue-600 text-blue-600 hover:bg-blue-50">
-                Login
+                {t('login')}
               </Button>
               <Button onClick={() => navigate('/register')} className="bg-blue-600 hover:bg-blue-700 text-white">
-                Sign Up Free
+                {t('getStarted')}
               </Button>
             </div>
             <div className="md:hidden flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => navigate('/login')}>Login</Button>
-              <Button size="sm" onClick={() => navigate('/register')} className="bg-blue-600">Sign Up</Button>
+              <Button size="sm" variant="outline" onClick={() => navigate('/login')}>{t('login')}</Button>
+              <Button size="sm" onClick={() => navigate('/register')} className="bg-blue-600">{t('getStarted')}</Button>
             </div>
           </div>
         </div>
@@ -310,15 +344,13 @@ const RewardsHome = () => {
             <div>
               <div className="inline-flex items-center gap-2 bg-yellow-500/20 text-yellow-300 px-4 py-2 rounded-full text-sm font-medium mb-6">
                 <Sparkles className="h-4 w-4" />
-                India's Most Rewarding Platform
+                {language === 'mr' ? "भारतातील सर्वात फायदेशीर प्लॅटफॉर्म" : language === 'hi' ? "भारत का सबसे फायदेमंद प्लेटफॉर्म" : "India's Most Rewarding Platform"}
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
-                Earn Rewards
-                <span className="text-yellow-400"> Every Day</span>
+                {t('heroTitle')}
               </h1>
               <p className="text-xl text-blue-100 mb-8 leading-relaxed">
-                Join thousands of users earning PRC coins through mining, referrals, and activities. 
-                Redeem for gift vouchers, bill payments, and exclusive offers.
+                {t('heroSubtitle')}
               </p>
               <div className="flex flex-wrap gap-4">
                 <Button 
@@ -326,7 +358,7 @@ const RewardsHome = () => {
                   onClick={() => navigate('/register')}
                   className="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-semibold px-8 py-6 text-lg"
                 >
-                  Start Earning Now
+                  {t('getStarted')}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
                 <Button 
@@ -336,7 +368,7 @@ const RewardsHome = () => {
                   className="border-white/30 text-white hover:bg-white/10 px-8 py-6 text-lg"
                 >
                   <Play className="mr-2 h-5 w-5" />
-                  Watch Demo
+                  {t('login')}
                 </Button>
               </div>
               
@@ -344,7 +376,7 @@ const RewardsHome = () => {
               <div className="flex items-center gap-6 mt-10 pt-6 border-t border-white/20">
                 <div className="flex items-center gap-2">
                   <Shield className="h-5 w-5 text-green-400" />
-                  <span className="text-sm text-blue-200">100% Secure</span>
+                  <span className="text-sm text-blue-200">{language === 'mr' ? "१००% सुरक्षित" : language === 'hi' ? "100% सुरक्षित" : "100% Secure"}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-green-400" />
