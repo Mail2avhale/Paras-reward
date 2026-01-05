@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -6,7 +6,7 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { 
   ArrowLeft, Save, Globe, FileText, MapPin, Phone, Mail, Image,
-  Building, User, Clock, ExternalLink
+  Building, Clock, Upload, Loader2, Trash2
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
@@ -14,7 +14,13 @@ const API = process.env.REACT_APP_BACKEND_URL || '';
 const AdminWebSettings = ({ user }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(null);
   const [activeTab, setActiveTab] = useState('policies');
+
+  // File input refs
+  const logoInputRef = useRef(null);
+  const footerLogoInputRef = useRef(null);
+  const faviconInputRef = useRef(null);
 
   // Policy State
   const [policies, setPolicies] = useState({
@@ -43,6 +49,7 @@ const AdminWebSettings = ({ user }) => {
   // Logo State
   const [logoSettings, setLogoSettings] = useState({
     logo_url: '',
+    footer_logo_url: '',
     favicon_url: '',
     app_name: 'PARAS REWARD',
     tagline: 'Earn Rewards, Live Better'
@@ -126,12 +133,125 @@ const AdminWebSettings = ({ user }) => {
     }
   };
 
+  const handleFileUpload = async (file, logoType) => {
+    if (!file) return;
+    
+    // Validate file type
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp', 'image/x-icon', 'image/vnd.microsoft.icon'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please upload a valid image file (PNG, JPG, GIF, WEBP, ICO)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size should be less than 5MB');
+      return;
+    }
+
+    setUploadingLogo(logoType);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('logo_type', logoType);
+
+      const response = await axios.post(`${API}/api/admin/logo-upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      if (response.data.success) {
+        // Update local state with new URL
+        const urlKey = logoType === 'favicon' ? 'favicon_url' : 
+                      logoType === 'footer_logo' ? 'footer_logo_url' : 'logo_url';
+        setLogoSettings(prev => ({ ...prev, [urlKey]: response.data.url }));
+        toast.success(response.data.message);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload image. Please try again.');
+    } finally {
+      setUploadingLogo(null);
+    }
+  };
+
+  const handleRemoveLogo = async (logoType) => {
+    const urlKey = logoType === 'favicon' ? 'favicon_url' : 
+                  logoType === 'footer_logo' ? 'footer_logo_url' : 'logo_url';
+    
+    setLogoSettings(prev => ({ ...prev, [urlKey]: '' }));
+    toast.success(`${logoType.replace('_', ' ')} removed. Click "Save Branding" to confirm.`);
+  };
+
   const tabs = [
     { id: 'policies', label: 'Policy Editor', icon: FileText },
     { id: 'address', label: 'Address Settings', icon: MapPin },
     { id: 'contact', label: 'Phone & Email', icon: Phone },
     { id: 'logo', label: 'Logo & Branding', icon: Image },
   ];
+
+  const LogoUploadCard = ({ title, description, logoType, currentUrl, inputRef }) => (
+    <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 hover:border-purple-300 transition-colors">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+          <Image className="h-5 w-5 text-purple-600" />
+        </div>
+        <div>
+          <h4 className="font-semibold text-gray-900">{title}</h4>
+          <p className="text-xs text-gray-500">{description}</p>
+        </div>
+      </div>
+      
+      {/* Preview */}
+      {currentUrl && (
+        <div className="mb-4 p-4 bg-gray-50 rounded-lg flex items-center justify-between">
+          <img 
+            src={currentUrl.startsWith('/') ? currentUrl : currentUrl} 
+            alt={title} 
+            className="h-16 object-contain"
+            onError={(e) => { e.target.style.display = 'none'; }}
+          />
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+            onClick={() => handleRemoveLogo(logoType)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+      
+      {/* Upload Button */}
+      <input
+        type="file"
+        ref={inputRef}
+        className="hidden"
+        accept="image/*"
+        onChange={(e) => handleFileUpload(e.target.files[0], logoType)}
+      />
+      <Button
+        variant="outline"
+        className="w-full"
+        onClick={() => inputRef.current?.click()}
+        disabled={uploadingLogo === logoType}
+      >
+        {uploadingLogo === logoType ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Uploading...
+          </>
+        ) : (
+          <>
+            <Upload className="h-4 w-4 mr-2" />
+            {currentUrl ? 'Change Image' : 'Upload Image'}
+          </>
+        )}
+      </Button>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -164,6 +284,7 @@ const AdminWebSettings = ({ user }) => {
                     ? 'bg-blue-600 text-white'
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
+                data-testid={`tab-${tab.id}`}
               >
                 <Icon className="h-4 w-4" />
                 {tab.label}
@@ -196,12 +317,13 @@ const AdminWebSettings = ({ user }) => {
                     rows={6}
                     className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
                     placeholder={`Enter ${policy.label} content (supports HTML)...`}
+                    data-testid={`policy-${policy.key}`}
                   />
                 </div>
               ))}
             </div>
             <div className="mt-6 flex justify-end">
-              <Button onClick={handleSavePolicies} disabled={loading}>
+              <Button onClick={handleSavePolicies} disabled={loading} data-testid="save-policies-btn">
                 <Save className="h-4 w-4 mr-2" />
                 Save Policies
               </Button>
@@ -227,6 +349,7 @@ const AdminWebSettings = ({ user }) => {
                   value={contactInfo.company_name}
                   onChange={(e) => setContactInfo(prev => ({ ...prev, company_name: e.target.value }))}
                   className="w-full px-3 py-2 border rounded-lg"
+                  data-testid="company-name-input"
                 />
               </div>
               <div className="md:col-span-2">
@@ -237,6 +360,7 @@ const AdminWebSettings = ({ user }) => {
                   onChange={(e) => setContactInfo(prev => ({ ...prev, address_line1: e.target.value }))}
                   className="w-full px-3 py-2 border rounded-lg"
                   placeholder="Building name, Street address"
+                  data-testid="address-line1-input"
                 />
               </div>
               <div className="md:col-span-2">
@@ -247,6 +371,7 @@ const AdminWebSettings = ({ user }) => {
                   onChange={(e) => setContactInfo(prev => ({ ...prev, address_line2: e.target.value }))}
                   className="w-full px-3 py-2 border rounded-lg"
                   placeholder="Area, Landmark"
+                  data-testid="address-line2-input"
                 />
               </div>
               <div>
@@ -256,6 +381,7 @@ const AdminWebSettings = ({ user }) => {
                   value={contactInfo.city}
                   onChange={(e) => setContactInfo(prev => ({ ...prev, city: e.target.value }))}
                   className="w-full px-3 py-2 border rounded-lg"
+                  data-testid="city-input"
                 />
               </div>
               <div>
@@ -265,6 +391,7 @@ const AdminWebSettings = ({ user }) => {
                   value={contactInfo.state}
                   onChange={(e) => setContactInfo(prev => ({ ...prev, state: e.target.value }))}
                   className="w-full px-3 py-2 border rounded-lg"
+                  data-testid="state-input"
                 />
               </div>
               <div>
@@ -274,6 +401,7 @@ const AdminWebSettings = ({ user }) => {
                   value={contactInfo.pincode}
                   onChange={(e) => setContactInfo(prev => ({ ...prev, pincode: e.target.value }))}
                   className="w-full px-3 py-2 border rounded-lg"
+                  data-testid="pincode-input"
                 />
               </div>
               <div>
@@ -283,11 +411,12 @@ const AdminWebSettings = ({ user }) => {
                   value={contactInfo.country}
                   onChange={(e) => setContactInfo(prev => ({ ...prev, country: e.target.value }))}
                   className="w-full px-3 py-2 border rounded-lg"
+                  data-testid="country-input"
                 />
               </div>
             </div>
             <div className="mt-6 flex justify-end">
-              <Button onClick={handleSaveContactInfo} disabled={loading}>
+              <Button onClick={handleSaveContactInfo} disabled={loading} data-testid="save-address-btn">
                 <Save className="h-4 w-4 mr-2" />
                 Save Address
               </Button>
@@ -314,6 +443,7 @@ const AdminWebSettings = ({ user }) => {
                   onChange={(e) => setContactInfo(prev => ({ ...prev, phone_primary: e.target.value }))}
                   className="w-full px-3 py-2 border rounded-lg"
                   placeholder="+91 9876543210"
+                  data-testid="phone-primary-input"
                 />
               </div>
               <div>
@@ -327,6 +457,7 @@ const AdminWebSettings = ({ user }) => {
                   onChange={(e) => setContactInfo(prev => ({ ...prev, phone_secondary: e.target.value }))}
                   className="w-full px-3 py-2 border rounded-lg"
                   placeholder="+91 9876543211"
+                  data-testid="phone-secondary-input"
                 />
               </div>
               <div>
@@ -340,6 +471,7 @@ const AdminWebSettings = ({ user }) => {
                   onChange={(e) => setContactInfo(prev => ({ ...prev, email_support: e.target.value }))}
                   className="w-full px-3 py-2 border rounded-lg"
                   placeholder="support@paras.com"
+                  data-testid="email-support-input"
                 />
               </div>
               <div>
@@ -353,6 +485,7 @@ const AdminWebSettings = ({ user }) => {
                   onChange={(e) => setContactInfo(prev => ({ ...prev, email_business: e.target.value }))}
                   className="w-full px-3 py-2 border rounded-lg"
                   placeholder="business@paras.com"
+                  data-testid="email-business-input"
                 />
               </div>
               <div className="md:col-span-2">
@@ -366,11 +499,12 @@ const AdminWebSettings = ({ user }) => {
                   onChange={(e) => setContactInfo(prev => ({ ...prev, working_hours: e.target.value }))}
                   className="w-full px-3 py-2 border rounded-lg"
                   placeholder="9:00 AM - 6:00 PM (Mon-Sat)"
+                  data-testid="working-hours-input"
                 />
               </div>
             </div>
             <div className="mt-6 flex justify-end">
-              <Button onClick={handleSaveContactInfo} disabled={loading}>
+              <Button onClick={handleSaveContactInfo} disabled={loading} data-testid="save-contact-btn">
                 <Save className="h-4 w-4 mr-2" />
                 Save Contact Info
               </Button>
@@ -385,58 +519,66 @@ const AdminWebSettings = ({ user }) => {
               <Image className="h-5 w-5 text-purple-600" />
               Logo & Branding
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
+            
+            {/* App Name & Tagline */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div>
                 <label className="text-sm font-medium text-gray-700 mb-2 block">App Name</label>
                 <input
                   type="text"
                   value={logoSettings.app_name}
                   onChange={(e) => setLogoSettings(prev => ({ ...prev, app_name: e.target.value }))}
                   className="w-full px-3 py-2 border rounded-lg"
+                  data-testid="app-name-input"
                 />
               </div>
-              <div className="md:col-span-2">
+              <div>
                 <label className="text-sm font-medium text-gray-700 mb-2 block">Tagline</label>
                 <input
                   type="text"
                   value={logoSettings.tagline}
                   onChange={(e) => setLogoSettings(prev => ({ ...prev, tagline: e.target.value }))}
                   className="w-full px-3 py-2 border rounded-lg"
+                  data-testid="tagline-input"
                 />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Logo URL</label>
-                <input
-                  type="url"
-                  value={logoSettings.logo_url}
-                  onChange={(e) => setLogoSettings(prev => ({ ...prev, logo_url: e.target.value }))}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="https://example.com/logo.png"
-                />
-                {logoSettings.logo_url && (
-                  <div className="mt-2 p-4 bg-gray-100 rounded-lg">
-                    <img src={logoSettings.logo_url} alt="Logo Preview" className="h-16 object-contain" />
-                  </div>
-                )}
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Favicon URL</label>
-                <input
-                  type="url"
-                  value={logoSettings.favicon_url}
-                  onChange={(e) => setLogoSettings(prev => ({ ...prev, favicon_url: e.target.value }))}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="https://example.com/favicon.ico"
-                />
-                {logoSettings.favicon_url && (
-                  <div className="mt-2 p-4 bg-gray-100 rounded-lg">
-                    <img src={logoSettings.favicon_url} alt="Favicon Preview" className="h-8 object-contain" />
-                  </div>
-                )}
               </div>
             </div>
-            <div className="mt-6 flex justify-end">
-              <Button onClick={handleSaveLogoSettings} disabled={loading}>
+
+            {/* Logo Upload Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <LogoUploadCard
+                title="Main Logo"
+                description="Recommended: 400x100px, PNG"
+                logoType="logo"
+                currentUrl={logoSettings.logo_url}
+                inputRef={logoInputRef}
+              />
+              <LogoUploadCard
+                title="Footer Logo"
+                description="Recommended: 200x50px, PNG"
+                logoType="footer_logo"
+                currentUrl={logoSettings.footer_logo_url}
+                inputRef={footerLogoInputRef}
+              />
+              <LogoUploadCard
+                title="Favicon"
+                description="Recommended: 64x64px, ICO/PNG"
+                logoType="favicon"
+                currentUrl={logoSettings.favicon_url}
+                inputRef={faviconInputRef}
+              />
+            </div>
+
+            {/* Info Box */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-blue-800">
+                <strong>Tips:</strong> Upload high-quality images for best results. Images will be automatically resized. 
+                Supported formats: PNG, JPG, GIF, WEBP, ICO. Maximum file size: 5MB.
+              </p>
+            </div>
+
+            <div className="flex justify-end">
+              <Button onClick={handleSaveLogoSettings} disabled={loading} data-testid="save-branding-btn">
                 <Save className="h-4 w-4 mr-2" />
                 Save Branding
               </Button>
