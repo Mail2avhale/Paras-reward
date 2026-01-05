@@ -159,15 +159,16 @@ const DashboardModern = ({ user, onLogout }) => {
     pink: 'bg-gradient-to-br from-pink-500 to-pink-600',
     blue: 'bg-gradient-to-br from-blue-500 to-blue-600',
     green: 'bg-gradient-to-br from-green-500 to-green-600',
-    teal: 'bg-gradient-to-br from-teal-500 to-teal-600',
+    teal: 'bg-gradient-to-br from-teal-500 to-emerald-600',
     orange: 'bg-gradient-to-br from-orange-500 to-orange-600',
     indigo: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
   };
 
-  const QuickActionButton = ({ icon: Icon, label, onClick, color = 'purple' }) => (
+  const QuickActionButton = ({ icon: Icon, label, onClick, color = 'purple', customStyle }) => (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center justify-center p-4 ${colorStyles[color] || colorStyles.purple} rounded-2xl text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200`}
+      className={`flex flex-col items-center justify-center p-4 rounded-2xl text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 ${!customStyle ? (colorStyles[color] || colorStyles.purple) : ''}`}
+      style={customStyle}
     >
       <Icon className="w-8 h-8 mb-2" />
       <span className="text-sm font-semibold">{label}</span>
