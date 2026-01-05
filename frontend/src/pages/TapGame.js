@@ -83,7 +83,7 @@ const TapGame = ({ user, onLogout }) => {
             <Trophy className="h-12 w-12 mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-2">{t('tapsToday')}</h2>
             <p className="text-6xl font-bold mb-4">{100 - remainingTaps}</p>
-            <p className="text-lg opacity-90">Remaining: {remainingTaps}/100</p>
+            <p className="text-lg opacity-90">{t('remaining')}: {remainingTaps}/100</p>
           </div>
         </Card>
 
@@ -101,32 +101,32 @@ const TapGame = ({ user, onLogout }) => {
             <Hand className="h-32 w-32 text-white relative z-10" />
           </button>
           
-          <p className="text-2xl font-bold text-gray-900 mt-6">Tap the Button!</p>
-          <p className="text-gray-600 mt-2">Each tap = 1 PRC</p>
+          <p className="text-2xl font-bold text-gray-900 mt-6">{t('tapTheButton')}</p>
+          <p className="text-gray-600 mt-2">{language === 'mr' ? 'प्रत्येक टॅप = 1 PRC' : language === 'hi' ? 'हर टैप = 1 PRC' : 'Each tap = 1 PRC'}</p>
         </div>
 
         {/* Game Info */}
         <Card data-testid="game-info" className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg">
           <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
             <Zap className="h-6 w-6 text-purple-600 mr-2" />
-            How to Play
+            {t('howToPlay')}
           </h3>
           <ul className="space-y-3 text-gray-700">
             <li className="flex items-start">
               <span className="inline-block w-6 h-6 bg-purple-100 rounded-full flex-shrink-0 mr-3 flex items-center justify-center text-purple-600 font-semibold text-sm">1</span>
-              <span>Tap the button above to earn PRC coins instantly</span>
+              <span>{language === 'mr' ? 'वरील बटणावर टॅप करून PRC कमवा' : language === 'hi' ? 'ऊपर बटन पर टैप करके PRC कमाएं' : 'Tap the button above to earn PRC coins instantly'}</span>
             </li>
             <li className="flex items-start">
               <span className="inline-block w-6 h-6 bg-purple-100 rounded-full flex-shrink-0 mr-3 flex items-center justify-center text-purple-600 font-semibold text-sm">2</span>
-              <span>You can tap up to 100 times per day</span>
+              <span>{language === 'mr' ? 'दररोज 100 वेळा टॅप करता येते' : language === 'hi' ? 'रोज 100 बार टैप कर सकते हैं' : 'You can tap up to 100 times per day'}</span>
             </li>
             <li className="flex items-start">
               <span className="inline-block w-6 h-6 bg-purple-100 rounded-full flex-shrink-0 mr-3 flex items-center justify-center text-purple-600 font-semibold text-sm">3</span>
-              <span>Each tap gives you 1 PRC (1 PRC = ₹0.10)</span>
+              <span>{language === 'mr' ? 'प्रत्येक टॅपवर 1 PRC मिळतो (1 PRC = ₹0.10)' : language === 'hi' ? 'हर टैप पर 1 PRC मिलता है (1 PRC = ₹0.10)' : 'Each tap gives you 1 PRC (1 PRC = ₹0.10)'}</span>
             </li>
             <li className="flex items-start">
               <span className="inline-block w-6 h-6 bg-purple-100 rounded-full flex-shrink-0 mr-3 flex items-center justify-center text-purple-600 font-semibold text-sm">4</span>
-              <span>Come back daily to earn more PRC through tapping</span>
+              <span>{language === 'mr' ? 'दररोज येऊन टॅप करून अधिक PRC कमवा' : language === 'hi' ? 'रोज आकर टैप करके ज्यादा PRC कमाएं' : 'Come back daily to earn more PRC through tapping'}</span>
             </li>
           </ul>
         </Card>
