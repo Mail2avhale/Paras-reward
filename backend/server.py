@@ -2507,6 +2507,69 @@ async def claim_mining(uid: str):
         "message": f"Successfully claimed {round(mined_amount, 2)} PRC!"
     }
 
+@api_router.get("/user/stats/today/{uid}")
+async def get_user_today_stats(uid: str):
+    """Get today's PRC earned and spent for a user"""
+    try:
+        from datetime import datetime, timezone, timedelta
+        
+        # Get start of today (UTC)
+        now = datetime.now(timezone.utc)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start_iso = today_start.isoformat()
+        
+        # Define earning transaction types
+        earning_types = ["mining", "tap_game", "referral", "cashback", "admin_credit", 
+                         "profit_share", "scratch_card_reward", "treasure_hunt_reward", 
+                         "delivery_commission", "prc_rain_gain"]
+        
+        # Define spending transaction types
+        spending_types = ["order", "withdrawal", "admin_debit", "delivery_charge", 
+                          "scratch_card_purchase", "treasure_hunt_play", "prc_burn", 
+                          "bill_payment_request", "gift_voucher_request", "prc_rain_loss"]
+        
+        # Get today's earning transactions
+        earning_txns = await db.transactions.find({
+            "user_id": uid,
+            "type": {"$in": earning_types},
+            "timestamp": {"$gte": today_start_iso}
+        }, {"_id": 0, "amount": 1, "type": 1}).to_list(1000)
+        
+        # Get today's spending transactions
+        spending_txns = await db.transactions.find({
+            "user_id": uid,
+            "type": {"$in": spending_types},
+            "timestamp": {"$gte": today_start_iso}
+        }, {"_id": 0, "amount": 1, "type": 1}).to_list(1000)
+        
+        # Calculate totals
+        today_earned = sum(txn.get("amount", 0) for txn in earning_txns)
+        today_spent = sum(abs(txn.get("amount", 0)) for txn in spending_txns)
+        
+        # Breakdown by type
+        earning_breakdown = {}
+        for txn in earning_txns:
+            txn_type = txn.get("type", "other")
+            earning_breakdown[txn_type] = earning_breakdown.get(txn_type, 0) + txn.get("amount", 0)
+        
+        spending_breakdown = {}
+        for txn in spending_txns:
+            txn_type = txn.get("type", "other")
+            spending_breakdown[txn_type] = spending_breakdown.get(txn_type, 0) + abs(txn.get("amount", 0))
+        
+        return {
+            "today_prc_earned": round(today_earned, 2),
+            "today_prc_spent": round(today_spent, 2),
+            "today_net": round(today_earned - today_spent, 2),
+            "earning_breakdown": earning_breakdown,
+            "spending_breakdown": spending_breakdown,
+            "date": today_start.strftime("%Y-%m-%d")
+        }
+    except Exception as e:
+        print(f"Error getting today stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.get("/user/stats/redeemed/{uid}")
 async def get_user_redeemed_stats(uid: str):
     """Get total PRC redeemed and its rupee value for a user"""
