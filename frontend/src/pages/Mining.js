@@ -375,35 +375,35 @@ const Mining = ({ user, onLogout }) => {
 
           <Card className="p-6 bg-white">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm font-medium">Reward Rate</span>
+              <span className="text-gray-600 text-sm font-medium">{t('miningRate')}</span>
               <TrendingUp className="h-5 w-5 text-green-600" />
             </div>
             <div className="text-3xl font-bold text-gray-900">
               {miningStatus?.mining_rate_per_hour?.toFixed(2) || '0.00'}
             </div>
-            <p className="text-sm text-gray-500 mt-1">PRC/hour</p>
+            <p className="text-sm text-gray-500 mt-1">PRC{t('perHour')}</p>
           </Card>
 
           <Card className="p-6 bg-white">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm font-medium">Session Earned</span>
+              <span className="text-gray-600 text-sm font-medium">{t('sessionEarned')}</span>
               <Zap className="h-5 w-5 text-yellow-600" />
             </div>
             <div className="text-3xl font-bold text-gray-900">
               {miningStatus?.mined_this_session?.toFixed(2) || '0.00'}
             </div>
-            <p className="text-sm text-gray-500 mt-1">This session</p>
+            <p className="text-sm text-gray-500 mt-1">{t('currentSession')}</p>
           </Card>
 
           <Card className="p-6 bg-white">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm font-medium">Active Referrals</span>
+              <span className="text-gray-600 text-sm font-medium">{t('referralBonus')}</span>
               <Users className="h-5 w-5 text-blue-600" />
             </div>
             <div className="text-3xl font-bold text-gray-900">
               {miningStatus?.active_referrals || 0}
             </div>
-            <p className="text-sm text-gray-500 mt-1">Mining now</p>
+            <p className="text-sm text-gray-500 mt-1">{t('miningActive')}</p>
           </Card>
         </div>
 
@@ -416,14 +416,15 @@ const Mining = ({ user, onLogout }) => {
                   <div className="w-32 h-32 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
                     <Play className="h-16 w-16 text-white" />
                   </div>
-                  <h2 className="text-3xl font-bold text-gray-900 mb-3">Start Mining Session</h2>
+                  <h2 className="text-3xl font-bold text-gray-900 mb-3">{t('startMiningSession')}</h2>
                   <p className="text-gray-600 max-w-2xl mx-auto mb-4">
-                    Click the button below to start your 24-hour mining session. 
-                    You'll earn PRC coins based on your mining rate and active referrals.
+                    {language === 'mr' ? '24 तासांचे माइनिंग सत्र सुरू करण्यासाठी खालील बटणावर क्लिक करा. तुम्ही तुमच्या माइनिंग रेट आणि रेफरल्सवर आधारित PRC कमवाल.' 
+                     : language === 'hi' ? '24 घंटे का माइनिंग सत्र शुरू करने के लिए नीचे बटन क्लिक करें। आप अपनी माइनिंग दर और रेफरल के आधार पर PRC कमाएंगे।'
+                     : 'Click the button below to start your 24-hour mining session. You\'ll earn PRC coins based on your mining rate and active referrals.'}
                   </p>
                   {isFreeUser && (
                     <p className="text-orange-600 font-medium text-sm">
-                      ⏰ Free User: Your PRC will be valid for 2 days
+                      ⏰ {t('freeUserWarning')}
                     </p>
                   )}
                 </div>
