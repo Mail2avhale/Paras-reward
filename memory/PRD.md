@@ -42,6 +42,23 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 
 ## What's Been Implemented
 
+### January 5, 2026 (Current Session)
+- ✅ **Admin Settings Page Fixes (TESTED - 10/10 Tests Passed)**
+  - **Mining Formula Settings**: Fixed save functionality
+    - GET/POST `/api/admin/mining-settings` now works correctly
+    - Settings persist after page refresh (base_rate, vip_multiplier, max_daily_mining_hours, prc_to_inr_ratio)
+  - **Contact Settings**: Fixed save functionality  
+    - GET `/api/admin/contact-settings` and POST `/api/admin/contact-settings/update` now work correctly
+    - Added missing fields: company_name, country, email_business, working_hours
+    - Settings persist after page refresh
+  - **Logo & Branding**: Implemented file upload feature (replaced URL input)
+    - New file upload UI for Main Logo, Footer Logo, and Favicon
+    - POST `/api/admin/logo-upload` accepts file + logo_type (logo/footer_logo/favicon)
+    - Auto-resizes images (logo: max 400px width, favicon: 64x64px)
+    - Uploads saved to `/app/frontend/public/uploads/`
+    - Automatically updates logo_settings in database
+  - Test file: `/app/tests/test_admin_settings.py`
+
 ### January 1, 2026 (Current Session - Part 2)
 - ✅ **Admin PRC Rain Input Fields Fix**
   - Removed `Math.min/max` constraints from `onChange` handlers
@@ -111,7 +128,7 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 
 ## Pending/In-Progress
 
-### P1 - High Priority
+### P2 - Medium Priority
 - [ ] Verify pagination on Voucher History page
 - [ ] Verify pagination on Bill Payments History page
 
@@ -151,6 +168,15 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 - `GET /api/admin/audit-logs`
 - `GET /api/admin/profit-loss`
 - `GET /api/admin/liquidity-status`
+
+### Admin Settings APIs (Fixed Jan 5, 2026)
+- `GET /api/admin/mining-settings` - Get mining formula settings
+- `POST /api/admin/mining-settings` - Update mining formula settings
+- `GET /api/admin/contact-settings` - Get contact information
+- `POST /api/admin/contact-settings/update` - Update contact information
+- `GET /api/admin/logo-settings` - Get logo/branding settings
+- `POST /api/admin/logo-settings/update` - Update logo/branding settings
+- `POST /api/admin/logo-upload` - Upload logo/favicon files (multipart/form-data)
 
 ## Architecture
 ```
