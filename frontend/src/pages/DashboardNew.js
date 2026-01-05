@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { 
   Coins, Zap, Users, Gift, Trophy, Wallet, Crown, ShieldCheck, Package, 
-  TrendingUp, Star, Target, Award, ArrowRight, Sparkles, Play, ShoppingBag,
-  Clock, CheckCircle2, Activity, Map
+  TrendingUp, TrendingDown, Star, Target, Award, ArrowRight, Sparkles, Play, ShoppingBag,
+  Clock, CheckCircle2, Activity, Map, CreditCard, Smartphone, Gamepad2,
+  Shield, AlertCircle, ChevronRight, Pickaxe, Receipt, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -19,9 +20,11 @@ const DashboardNew = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
   const [stats, setStats] = useState(null);
+  const [todayStats, setTodayStats] = useState({ earned: 0, spent: 0 });
+  const [prcSources, setPrcSources] = useState({ mining: 0, games: 0, referral: 0, bonus: 0 });
+  const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  const isAdmin = user?.role === 'admin';
   const isVIP = userData?.membership_type === 'vip';
 
   useEffect(() => {
@@ -44,12 +47,56 @@ const DashboardNew = ({ user, onLogout }) => {
 
   const fetchData = async () => {
     try {
-      const [userRes, statsRes] = await Promise.all([
+      const [userRes, statsRes, transactionsRes] = await Promise.all([
         axios.get(`${API}/auth/user/${user.uid}`),
-        axios.get(`${API}/mining/status/${user.uid}`)
+        axios.get(`${API}/mining/status/${user.uid}`),
+        axios.get(`${API}/transactions/${user.uid}?limit=50`)
       ]);
+      
       setUserData(userRes.data);
       setStats(statsRes.data);
+      
+      // Process transactions for today stats and PRC sources
+      const transactions = transactionsRes.data.transactions || [];
+      const today = new Date().toISOString().split('T')[0];
+      
+      let todayEarned = 0;
+      let todaySpent = 0;
+      let sources = { mining: 0, games: 0, referral: 0, bonus: 0 };
+      
+      transactions.forEach(tx => {
+        const txDate = tx.created_at?.split('T')[0];
+        const amount = Math.abs(tx.amount || 0);
+        
+        // Calculate today's earnings/spending
+        if (txDate === today) {
+          if (tx.amount > 0) {
+            todayEarned += tx.amount;
+          } else {
+            todaySpent += amount;
+          }
+        }
+        
+        // Calculate PRC sources (all time)
+        if (tx.amount > 0) {
+          if (tx.type === 'mining') {
+            sources.mining += tx.amount;
+          } else if (['tap_game', 'scratch_card_reward', 'treasure_hunt_reward'].includes(tx.type)) {
+            sources.games += tx.amount;
+          } else if (['referral', 'delivery_commission'].includes(tx.type)) {
+            sources.referral += tx.amount;
+          } else if (['cashback', 'admin_credit', 'prc_rain_gain', 'profit_share'].includes(tx.type)) {
+            sources.bonus += tx.amount;
+          }
+        }
+      });
+      
+      setTodayStats({ earned: todayEarned, spent: todaySpent });
+      setPrcSources(sources);
+      
+      // Get recent activity (last 10)
+      setRecentActivity(transactions.slice(0, 10));
+      
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -57,107 +104,92 @@ const DashboardNew = ({ user, onLogout }) => {
     }
   };
 
-  // Calculate level progress
+  // PRC Values
   const prcBalance = userData?.prc_balance || 0;
-  const level = Math.floor(prcBalance / 1000) + 1;
-  const nextLevel = level * 1000;
-  const currentLevelProgress = prcBalance % 1000;
-  const progressPercent = (currentLevelProgress / 1000) * 100;
+  const conversionRate = 10; // 10 PRC = ₹1
+  const approxINR = prcBalance / conversionRate;
+  
+  // Goal calculation (next milestone)
+  const milestones = [100, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000];
+  const nextGoal = milestones.find(m => m > prcBalance) || milestones[milestones.length - 1];
+  const goalProgress = (prcBalance / nextGoal) * 100;
+  const remainingForGoal = nextGoal - prcBalance;
+  
+  // PRC Sources Total for donut
+  const totalSourcePRC = prcSources.mining + prcSources.games + prcSources.referral + prcSources.bonus;
+  
+  // Account health status
+  const accountStatus = userData?.is_blocked ? 'restricted' : 
+                        userData?.redeem_enabled === false ? 'action_needed' : 'safe';
 
-  // Primary Quick Actions - Most used features
-  const primaryActions = [
+  // Activity icon and color mapping
+  const getActivityStyle = (type, amount) => {
+    if (amount < 0 || ['order', 'withdrawal', 'prc_burn', 'bill_payment_request', 'gift_voucher_request'].includes(type)) {
+      return { icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-100', label: 'खर्च' };
+    }
+    
+    const styles = {
+      mining: { icon: Pickaxe, color: 'text-blue-500', bg: 'bg-blue-100', label: 'Mining' },
+      tap_game: { icon: Gamepad2, color: 'text-purple-500', bg: 'bg-purple-100', label: 'Game' },
+      scratch_card_reward: { icon: Sparkles, color: 'text-purple-500', bg: 'bg-purple-100', label: 'Scratch' },
+      treasure_hunt_reward: { icon: Map, color: 'text-amber-500', bg: 'bg-amber-100', label: 'Treasure' },
+      referral: { icon: Users, color: 'text-indigo-500', bg: 'bg-indigo-100', label: 'Referral' },
+      cashback: { icon: Gift, color: 'text-green-500', bg: 'bg-green-100', label: 'Bonus' },
+      admin_credit: { icon: Gift, color: 'text-green-500', bg: 'bg-green-100', label: 'Bonus' },
+      prc_rain_gain: { icon: Gift, color: 'text-green-500', bg: 'bg-green-100', label: 'Rain' },
+    };
+    
+    return styles[type] || { icon: Coins, color: 'text-gray-500', bg: 'bg-gray-100', label: 'PRC' };
+  };
+
+  // Quick Actions with explanations
+  const quickActions = [
     { 
-      name: 'Mining', 
-      icon: Play, 
+      name: 'Mine', 
+      subtext: 'Hourly PRC मिळवा',
+      icon: Pickaxe, 
       link: '/mining', 
       gradient: 'from-green-500 to-emerald-600',
-      badge: stats?.is_mining ? 'Active' : null,
-      priority: true
-    },
-    { 
-      name: 'Treasure', 
-      icon: Map, 
-      link: '/treasure-hunt', 
-      gradient: 'from-amber-500 to-orange-600',
-      badge: '50%',
-      priority: true
-    },
-    { 
-      name: 'Scratch', 
-      icon: Sparkles, 
-      link: '/scratch-card', 
-      gradient: 'from-pink-500 to-rose-600',
-      badge: isVIP ? '50%' : '10%',
-      priority: true
-    },
-    { 
-      name: 'Shop', 
-      icon: ShoppingBag, 
-      link: '/marketplace', 
-      gradient: 'from-blue-500 to-indigo-600',
-      badge: null,
-      priority: true
-    },
-  ];
-
-  // Secondary Quick Actions
-  const secondaryActions = [
-    { 
-      name: 'Wallet', 
-      icon: Wallet, 
-      link: '/wallet', 
-      gradient: 'from-cyan-500 to-blue-600',
-      badge: null
+      active: stats?.is_mining
     },
     { 
       name: 'Tap Game', 
-      icon: Zap, 
+      subtext: 'खेळा आणि PRC कमवा',
+      icon: Gamepad2, 
       link: '/game', 
-      gradient: 'from-yellow-500 to-orange-600',
-      badge: null
+      gradient: 'from-purple-500 to-violet-600',
     },
     { 
-      name: 'Referrals', 
+      name: 'Shop', 
+      subtext: 'PRC वापरून वस्तू घ्या',
+      icon: ShoppingBag, 
+      link: '/marketplace', 
+      gradient: 'from-blue-500 to-indigo-600',
+    },
+    { 
+      name: 'Bill Pay', 
+      subtext: 'खऱ्या बिलावर बचत',
+      icon: Receipt, 
+      link: isVIP ? '/bill-payments' : '/vip',
+      gradient: 'from-orange-500 to-red-600',
+      vipOnly: true
+    },
+    { 
+      name: 'Refer', 
+      subtext: 'Earning speed वाढवा',
       icon: Users, 
       link: '/referrals', 
-      gradient: 'from-purple-500 to-pink-600',
-      badge: userData?.referral_count > 0 ? `${userData.referral_count}` : null
-    },
-    { 
-      name: 'Orders', 
-      icon: Package, 
-      link: '/orders', 
-      gradient: 'from-orange-500 to-red-600',
-      badge: null
-    },
-    { 
-      name: 'Ranks', 
-      icon: Trophy, 
-      link: '/leaderboard', 
       gradient: 'from-pink-500 to-rose-600',
-      badge: null
     },
-    { 
-      name: 'VIP', 
-      icon: Crown, 
-      link: '/vip', 
-      gradient: 'from-amber-500 to-yellow-600',
-      badge: isVIP ? '✓' : '★'
-    }
-  ];
-
-  // Achievement badges
-  const achievements = [
-    { name: 'First Login', earned: true, icon: Star },
-    { name: '100 PRC', earned: prcBalance >= 100, icon: Target },
-    { name: 'VIP Member', earned: isVIP, icon: Crown },
-    { name: '5 Referrals', earned: (userData?.referral_count || 0) >= 5, icon: Users },
   ];
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="text-white text-2xl">Loading...</div>
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-lg">Loading Dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -167,447 +199,443 @@ const DashboardNew = ({ user, onLogout }) => {
       <Navbar user={user} onLogout={onLogout} />
       <PWAInstallPrompt />
       
-      <div className="container mx-auto px-3 py-4 max-w-full lg:max-w-7xl xl:max-w-[90%]">
+      <div className="container mx-auto px-3 py-4 max-w-lg lg:max-w-4xl">
         
-        {/* MODERN HERO SECTION - Mobile First Design */}
-        <div className="relative mb-4 overflow-hidden rounded-3xl shadow-2xl">
-          {/* Animated Background with Mesh Gradient */}
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-fuchsia-600 to-purple-700">
-            {/* Animated Blobs */}
-            <div className="absolute -top-24 -right-24 w-96 h-96 bg-pink-400/30 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-400/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1.5s' }}></div>
-            <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-purple-300/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '0.75s' }}></div>
-          </div>
+        {/* ================================================================
+            SECTION 1: PRC WALLET HERO CIRCLE
+            ================================================================ */}
+        <div className="relative mb-4">
+          {/* Background Effects */}
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-600/30 via-fuchsia-600/30 to-purple-700/30 rounded-3xl blur-xl"></div>
           
-          {/* Hero Content - Compact Mobile-First */}
-          <div className="relative z-10 p-4 md:p-6">
-            {/* User Profile Row */}
-            <div className="flex items-center justify-between mb-4">
+          <Card className="relative bg-gradient-to-br from-violet-600 via-fuchsia-600 to-purple-700 rounded-3xl p-5 overflow-hidden border-0">
+            {/* Decorative Elements */}
+            <div className="absolute -top-20 -right-20 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+            <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-400/20 rounded-full blur-2xl"></div>
+            
+            {/* User Info Row */}
+            <div className="flex items-center justify-between mb-4 relative z-10">
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-400 rounded-full blur-sm opacity-75 animate-pulse"></div>
                   <img
                     src={user.profile_picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=9333ea&color=fff&size=128`}
                     alt={user.name}
-                    className="relative w-16 h-16 md:w-20 md:h-20 rounded-full border-3 border-white shadow-xl"
+                    className="w-12 h-12 rounded-full border-2 border-white/50"
                   />
                   {isVIP && (
-                    <div className="absolute -bottom-1 -right-1 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full p-1.5 shadow-lg animate-bounce">
-                      <Crown className="h-3 w-3 md:h-4 md:w-4 text-white" />
+                    <div className="absolute -bottom-1 -right-1 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full p-1">
+                      <Crown className="h-3 w-3 text-white" />
                     </div>
                   )}
                 </div>
                 <div>
-                  <h1 className="text-xl md:text-2xl font-black text-white mb-0.5">
-                    {userData?.first_name || user.name}
-                  </h1>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 bg-white/20 backdrop-blur-xl rounded-full text-xs font-bold text-white">
-                      Lvl {level}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 ${
-                      isVIP 
-                        ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-lg' 
-                        : 'bg-white/20 backdrop-blur-xl text-white'
-                    }`}>
-                      {isVIP && <Crown className="h-2.5 w-2.5" />}
-                      {isVIP ? 'VIP' : 'Free'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Notification Bell */}
-              <button className="bg-white/10 backdrop-blur-xl p-2.5 rounded-full border border-white/20 hover:bg-white/20 transition-all">
-                <Sparkles className="h-5 w-5 text-white" />
-              </button>
-            </div>
-            
-            {/* Balance Card - Prominent */}
-            <div className="bg-white/15 backdrop-blur-2xl rounded-2xl p-4 md:p-5 border border-white/30 shadow-2xl mb-4">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="text-white/80 text-xs font-medium mb-1">Total Balance</p>
-                  <div className="flex items-baseline gap-2">
-                    <h2 className="text-4xl md:text-5xl font-black text-white">
-                      {prcBalance.toFixed(0)}
-                    </h2>
-                    <span className="text-lg font-bold text-white/80">PRC</span>
-                  </div>
-                  <p className="text-sm text-white/90 font-semibold mt-1">
-                    ≈ ₹{(prcBalance / 10).toFixed(2)}
-                  </p>
-                </div>
-                <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-4 rounded-2xl shadow-lg">
-                  <Coins className="h-8 w-8 text-white" />
-                </div>
-              </div>
-              
-              {/* Mini Progress Bar */}
-              <div className="pt-3 border-t border-white/20">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-bold text-white flex items-center gap-1">
-                    <Target className="h-3 w-3" />
-                    Level {level} → {level + 1}
+                  <h1 className="text-lg font-bold text-white">{userData?.first_name || user.name}</h1>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                    isVIP ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' : 'bg-white/20 text-white'
+                  }`}>
+                    {isVIP ? '👑 VIP Member' : 'Free User'}
                   </span>
-                  <span className="text-xs text-white/70">{progressPercent.toFixed(0)}%</span>
                 </div>
-                <div className="relative h-2 bg-white/20 rounded-full overflow-hidden">
-                  <div 
-                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full transition-all duration-500 shadow-lg"
-                    style={{ width: `${progressPercent}%` }}
-                  ></div>
-                </div>
+              </div>
+              
+              {/* Account Status Badge */}
+              <div className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 ${
+                accountStatus === 'safe' ? 'bg-green-500/20 text-green-300' :
+                accountStatus === 'action_needed' ? 'bg-yellow-500/20 text-yellow-300' :
+                'bg-red-500/20 text-red-300'
+              }`}>
+                {accountStatus === 'safe' ? <ShieldCheck className="h-3 w-3" /> :
+                 accountStatus === 'action_needed' ? <AlertCircle className="h-3 w-3" /> :
+                 <Shield className="h-3 w-3" />}
+                {accountStatus === 'safe' ? 'Safe' : accountStatus === 'action_needed' ? 'Action' : 'Limited'}
               </div>
             </div>
             
-            {/* Quick Stats Row - 4 Compact Cards */}
-            <div className="grid grid-cols-4 gap-2">
-              <div className="bg-white/10 backdrop-blur-xl rounded-xl p-2.5 border border-white/20 text-center">
-                <div className="bg-green-500/30 w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-1">
-                  <Zap className="h-4 w-4 text-green-300" />
+            {/* PRC Hero Circle */}
+            <div className="flex flex-col items-center py-4 relative z-10">
+              {/* Circular Progress Ring */}
+              <div className="relative w-44 h-44 mb-3">
+                {/* Background Circle */}
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle
+                    cx="88"
+                    cy="88"
+                    r="80"
+                    stroke="rgba(255,255,255,0.2)"
+                    strokeWidth="12"
+                    fill="transparent"
+                  />
+                  {/* Progress Circle */}
+                  <circle
+                    cx="88"
+                    cy="88"
+                    r="80"
+                    stroke="url(#gradient)"
+                    strokeWidth="12"
+                    fill="transparent"
+                    strokeLinecap="round"
+                    strokeDasharray={`${goalProgress * 5.02} 502`}
+                  />
+                  <defs>
+                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#34d399" />
+                      <stop offset="100%" stopColor="#22c55e" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                
+                {/* Center Content */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <Coins className="h-6 w-6 text-yellow-400 mb-1" />
+                  <span className="text-4xl font-black text-white">{prcBalance.toFixed(0)}</span>
+                  <span className="text-sm text-white/80 font-semibold">PRC</span>
+                  <span className="text-xs text-green-300 mt-1">≈ ₹{approxINR.toFixed(2)}</span>
                 </div>
-                <p className="text-lg font-black text-white">{stats?.total_mined?.toFixed(0) || '0'}</p>
-                <p className="text-[9px] text-white/70 font-medium">Mined</p>
               </div>
               
-              <div className="bg-white/10 backdrop-blur-xl rounded-xl p-2.5 border border-white/20 text-center">
-                <div className="bg-blue-500/30 w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-1">
-                  <Users className="h-4 w-4 text-blue-300" />
-                </div>
-                <p className="text-lg font-black text-white">{stats?.total_referrals || '0'}</p>
-                <p className="text-[9px] text-white/70 font-medium">Referrals</p>
-              </div>
-              
-              <div className="bg-white/10 backdrop-blur-xl rounded-xl p-2.5 border border-white/20 text-center">
-                <div className="bg-purple-500/30 w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-1">
-                  <Package className="h-4 w-4 text-purple-300" />
-                </div>
-                <p className="text-lg font-black text-white">{stats?.total_orders || '0'}</p>
-                <p className="text-[9px] text-white/70 font-medium">Orders</p>
-              </div>
-              
-              <div className="bg-white/10 backdrop-blur-xl rounded-xl p-2.5 border border-white/20 text-center">
-                <div className="bg-pink-500/30 w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-1">
-                  <Trophy className="h-4 w-4 text-pink-300" />
-                </div>
-                <p className="text-lg font-black text-white">{achievements.filter(a => a.earned).length}</p>
-                <p className="text-[9px] text-white/70 font-medium">Badges</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* QUICK ACCESS MENU - App-Style Grid */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-black text-white flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-yellow-400" />
-              Quick Access
-            </h3>
-            <button className="text-xs text-purple-300 font-semibold hover:text-white transition-colors">
-              View All →
-            </button>
-          </div>
-          
-          {/* Main Grid - 4 columns on mobile, 5 on tablet, 6 on desktop */}
-          <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-            {/* Mining */}
-            <Link to="/mining">
-              <div className="relative bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group">
-                {stats?.is_mining && (
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse ring-2 ring-white"></div>
-                )}
-                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                  <Play className="h-6 w-6 text-white" />
-                </div>
-                <h4 className="text-white font-bold text-sm mb-0.5">Mining</h4>
-                <p className="text-white/80 text-xs">Earn PRC</p>
-              </div>
-            </Link>
-
-            {/* Treasure Hunt */}
-            <Link to="/treasure-hunt">
-              <div className="relative bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group">
-                <div className="absolute -top-1 -right-1 bg-yellow-400 text-amber-900 text-[8px] font-black px-1.5 py-0.5 rounded-full">
-                  50%
-                </div>
-                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                  <Map className="h-6 w-6 text-white" />
-                </div>
-                <h4 className="text-white font-bold text-sm mb-0.5">Treasure</h4>
-                <p className="text-white/80 text-xs">Hunt Now</p>
-              </div>
-            </Link>
-
-            {/* Scratch Card */}
-            <Link to="/scratch-card">
-              <div className="relative bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group">
-                <div className="absolute -top-1 -right-1 bg-yellow-400 text-pink-900 text-[8px] font-black px-1.5 py-0.5 rounded-full">
-                  {isVIP ? '50%' : '10%'}
-                </div>
-                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                  <Sparkles className="h-6 w-6 text-white" />
-                </div>
-                <h4 className="text-white font-bold text-sm mb-0.5">Scratch</h4>
-                <p className="text-white/80 text-xs">Win Big</p>
-              </div>
-            </Link>
-
-            {/* Marketplace */}
-            <Link to="/marketplace">
-              <div className="relative bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group">
-                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                  <ShoppingBag className="h-6 w-6 text-white" />
-                </div>
-                <h4 className="text-white font-bold text-sm mb-0.5">Shop</h4>
-                <p className="text-white/80 text-xs">Browse</p>
-              </div>
-            </Link>
-
-            {/* Wallet */}
-            <Link to="/wallet">
-              <div className="relative bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group">
-                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                  <Wallet className="h-6 w-6 text-white" />
-                </div>
-                <h4 className="text-white font-bold text-sm mb-0.5">Wallet</h4>
-                <p className="text-white/80 text-xs">Manage</p>
-              </div>
-            </Link>
-
-            {/* Tap Game */}
-            <Link to="/game">
-              <div className="relative bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group">
-                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                  <Zap className="h-6 w-6 text-white" />
-                </div>
-                <h4 className="text-white font-bold text-sm mb-0.5">Tap Game</h4>
-                <p className="text-white/80 text-xs">Play</p>
-              </div>
-            </Link>
-
-            {/* Referrals */}
-            <Link to="/referrals">
-              <div className="relative bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group">
-                {userData?.referral_count > 0 && (
-                  <div className="absolute -top-1 -right-1 bg-green-400 text-green-900 text-[8px] font-black px-1.5 py-0.5 rounded-full">
-                    {userData.referral_count}
+              {/* Static Explainer - Always Visible */}
+              <div className="bg-white/10 backdrop-blur rounded-xl p-3 w-full">
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="flex flex-col items-center">
+                    <div className="w-8 h-8 bg-green-500/30 rounded-lg flex items-center justify-center mb-1">
+                      <Pickaxe className="h-4 w-4 text-green-300" />
+                    </div>
+                    <span className="text-[10px] text-white/80 font-medium">Earn: Mining</span>
                   </div>
-                )}
-                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                  <Users className="h-6 w-6 text-white" />
+                  <div className="flex flex-col items-center">
+                    <div className="w-8 h-8 bg-red-500/30 rounded-lg flex items-center justify-center mb-1">
+                      <ShoppingBag className="h-4 w-4 text-red-300" />
+                    </div>
+                    <span className="text-[10px] text-white/80 font-medium">Use: Shop</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <div className="w-8 h-8 bg-blue-500/30 rounded-lg flex items-center justify-center mb-1">
+                      <ArrowRight className="h-4 w-4 text-blue-300" />
+                    </div>
+                    <span className="text-[10px] text-white/80 font-medium">10 PRC = ₹1</span>
+                  </div>
                 </div>
-                <h4 className="text-white font-bold text-sm mb-0.5">Referrals</h4>
-                <p className="text-white/80 text-xs">Invite</p>
               </div>
-            </Link>
+            </div>
+          </Card>
+        </div>
 
-            {/* Orders */}
-            <Link to="/orders">
-              <div className="relative bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group">
-                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                  <Package className="h-6 w-6 text-white" />
-                </div>
-                <h4 className="text-white font-bold text-sm mb-0.5">Orders</h4>
-                <p className="text-white/80 text-xs">Track</p>
+        {/* ================================================================
+            SECTION 2: TODAY SUMMARY STRIP
+            ================================================================ */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {/* Today Earned */}
+          <Card className="bg-gradient-to-br from-green-500/20 to-emerald-600/20 border border-green-500/30 rounded-2xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-green-500/30 rounded-xl flex items-center justify-center">
+                <ArrowUpRight className="h-6 w-6 text-green-400" />
               </div>
-            </Link>
+              <div>
+                <p className="text-green-300 text-xs font-medium">आजची कमाई</p>
+                <p className="text-2xl font-black text-white">+{todayStats.earned.toFixed(1)}</p>
+                <p className="text-xs text-green-400">PRC</p>
+              </div>
+            </div>
+          </Card>
+          
+          {/* Today Spent */}
+          <Card className="bg-gradient-to-br from-red-500/20 to-rose-600/20 border border-red-500/30 rounded-2xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-red-500/30 rounded-xl flex items-center justify-center">
+                <ArrowDownRight className="h-6 w-6 text-red-400" />
+              </div>
+              <div>
+                <p className="text-red-300 text-xs font-medium">आजचा खर्च</p>
+                <p className="text-2xl font-black text-white">-{todayStats.spent.toFixed(1)}</p>
+                <p className="text-xs text-red-400">PRC</p>
+              </div>
+            </div>
+          </Card>
+        </div>
 
-            {/* Leaderboard */}
-            <Link to="/leaderboard">
-              <div className="relative bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group">
-                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                  <Trophy className="h-6 w-6 text-white" />
-                </div>
-                <h4 className="text-white font-bold text-sm mb-0.5">Ranks</h4>
-                <p className="text-white/80 text-xs">Compete</p>
-              </div>
-            </Link>
-
-            {/* VIP */}
-            <Link to="/vip">
-              <div className={`relative rounded-2xl p-4 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-200 group ${
-                isVIP 
-                  ? 'bg-gradient-to-br from-yellow-400 to-orange-500' 
-                  : 'bg-gradient-to-br from-amber-500 to-yellow-600'
-              }`}>
-                <div className="bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                  <Crown className="h-6 w-6 text-white" />
-                </div>
-                <h4 className="text-white font-bold text-sm mb-0.5">{isVIP ? 'VIP' : 'Upgrade'}</h4>
-                <p className="text-white/80 text-xs">{isVIP ? 'Active' : 'Go VIP'}</p>
-              </div>
-            </Link>
+        {/* ================================================================
+            SECTION 3: QUICK ACTIONS WITH MEANING
+            ================================================================ */}
+        <div className="mb-4">
+          <h3 className="text-sm font-bold text-white/70 mb-3 flex items-center gap-2">
+            <Zap className="h-4 w-4 text-yellow-400" />
+            Quick Actions
+          </h3>
+          
+          <div className="grid grid-cols-5 gap-2">
+            {quickActions.map((action, idx) => {
+              const Icon = action.icon;
+              return (
+                <Link key={idx} to={action.link}>
+                  <div className={`relative bg-gradient-to-br ${action.gradient} rounded-2xl p-3 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 text-center`}>
+                    {action.active && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse ring-2 ring-white"></div>
+                    )}
+                    {action.vipOnly && !isVIP && (
+                      <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full p-0.5">
+                        <Crown className="h-2.5 w-2.5 text-yellow-800" />
+                      </div>
+                    )}
+                    <div className="bg-white/20 w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-1.5">
+                      <Icon className="h-5 w-5 text-white" />
+                    </div>
+                    <h4 className="text-white font-bold text-xs">{action.name}</h4>
+                    <p className="text-white/60 text-[8px] leading-tight mt-0.5 hidden sm:block">{action.subtext}</p>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <Card className="bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-2xl">
-            <div className="flex items-center gap-3">
-              <div className="bg-green-500/20 p-3 rounded-xl">
-                <TrendingUp className="h-5 w-5 text-green-400" />
+        {/* ================================================================
+            SECTION 4: NEXT GOAL / REDEEM PROGRESS
+            ================================================================ */}
+        <Card className="bg-gradient-to-br from-indigo-500/20 to-purple-600/20 border border-indigo-500/30 rounded-2xl p-4 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 bg-indigo-500/30 rounded-xl flex items-center justify-center">
+                <Target className="h-5 w-5 text-indigo-300" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">{stats?.total_mined?.toFixed(0) || '0'}</p>
-                <p className="text-xs text-gray-300">Total Mined</p>
+                <p className="text-indigo-300 text-xs font-medium">Next Goal</p>
+                <p className="text-lg font-bold text-white">{nextGoal.toLocaleString()} PRC</p>
               </div>
             </div>
-          </Card>
+            <div className="text-right">
+              <p className="text-2xl font-black text-white">{goalProgress.toFixed(0)}%</p>
+              <p className="text-xs text-indigo-300">Complete</p>
+            </div>
+          </div>
           
-          <Card className="bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-2xl">
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-500/20 p-3 rounded-xl">
-                <Users className="h-5 w-5 text-blue-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-white">{userData?.referral_count || '0'}</p>
-                <p className="text-xs text-gray-300">Referrals</p>
-              </div>
-            </div>
-          </Card>
+          {/* Progress Bar */}
+          <div className="relative h-3 bg-white/10 rounded-full overflow-hidden mb-2">
+            <div 
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-400 to-purple-500 rounded-full transition-all duration-500"
+              style={{ width: `${Math.min(goalProgress, 100)}%` }}
+            ></div>
+          </div>
           
-          <Card className="bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-2xl">
-            <div className="flex items-center gap-3">
-              <div className="bg-purple-500/20 p-3 rounded-xl">
-                <Trophy className="h-5 w-5 text-purple-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-white">{level}</p>
-                <p className="text-xs text-gray-300">Current Level</p>
-              </div>
-            </div>
-          </Card>
-        </div>
+          <p className="text-center text-sm text-white/80">
+            <span className="text-yellow-400 font-bold">{remainingForGoal.toFixed(0)} PRC</span> अजून कमवा 🚀
+          </p>
+        </Card>
 
-        {/* Achievement Badges */}
-        <Card className="bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-2xl mb-6">
-          <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <Award className="h-5 w-5 text-yellow-400" />
-            Achievements
+        {/* ================================================================
+            SECTION 5: PRC SOURCE BREAKDOWN (DONUT)
+            ================================================================ */}
+        <Card className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
+          <h3 className="text-sm font-bold text-white/70 mb-3 flex items-center gap-2">
+            <Activity className="h-4 w-4 text-purple-400" />
+            PRC कुठून आले?
           </h3>
-          <div className="grid grid-cols-4 gap-4">
-            {achievements.map((achievement, idx) => (
-              <div key={idx} className="text-center">
-                <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-2 ${
-                  achievement.earned 
-                    ? 'bg-gradient-to-br from-yellow-400 to-orange-500' 
-                    : 'bg-white/10'
-                }`}>
-                  <achievement.icon className={`h-8 w-8 ${achievement.earned ? 'text-white' : 'text-gray-400'}`} />
-                </div>
-                <p className={`text-xs ${achievement.earned ? 'text-white font-medium' : 'text-gray-400'}`}>
-                  {achievement.name}
-                </p>
+          
+          <div className="flex items-center gap-4">
+            {/* Simple Donut Chart */}
+            <div className="relative w-24 h-24 flex-shrink-0">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                {/* Mining - Green */}
+                <circle
+                  cx="50" cy="50" r="40"
+                  stroke="#22c55e"
+                  strokeWidth="15"
+                  fill="transparent"
+                  strokeDasharray={`${totalSourcePRC > 0 ? (prcSources.mining / totalSourcePRC) * 251 : 0} 251`}
+                  strokeDashoffset="0"
+                />
+                {/* Games - Purple */}
+                <circle
+                  cx="50" cy="50" r="40"
+                  stroke="#a855f7"
+                  strokeWidth="15"
+                  fill="transparent"
+                  strokeDasharray={`${totalSourcePRC > 0 ? (prcSources.games / totalSourcePRC) * 251 : 0} 251`}
+                  strokeDashoffset={`${totalSourcePRC > 0 ? -(prcSources.mining / totalSourcePRC) * 251 : 0}`}
+                />
+                {/* Referral - Blue */}
+                <circle
+                  cx="50" cy="50" r="40"
+                  stroke="#3b82f6"
+                  strokeWidth="15"
+                  fill="transparent"
+                  strokeDasharray={`${totalSourcePRC > 0 ? (prcSources.referral / totalSourcePRC) * 251 : 0} 251`}
+                  strokeDashoffset={`${totalSourcePRC > 0 ? -((prcSources.mining + prcSources.games) / totalSourcePRC) * 251 : 0}`}
+                />
+                {/* Bonus - Orange */}
+                <circle
+                  cx="50" cy="50" r="40"
+                  stroke="#f97316"
+                  strokeWidth="15"
+                  fill="transparent"
+                  strokeDasharray={`${totalSourcePRC > 0 ? (prcSources.bonus / totalSourcePRC) * 251 : 0} 251`}
+                  strokeDashoffset={`${totalSourcePRC > 0 ? -((prcSources.mining + prcSources.games + prcSources.referral) / totalSourcePRC) * 251 : 0}`}
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-xs text-white/60 font-semibold">Total</span>
               </div>
-            ))}
+            </div>
+            
+            {/* Legend */}
+            <div className="flex-1 grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <div>
+                  <p className="text-xs text-white/60">Mining</p>
+                  <p className="text-sm font-bold text-white">{prcSources.mining.toFixed(0)}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                <div>
+                  <p className="text-xs text-white/60">Games</p>
+                  <p className="text-sm font-bold text-white">{prcSources.games.toFixed(0)}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <div>
+                  <p className="text-xs text-white/60">Referral</p>
+                  <p className="text-sm font-bold text-white">{prcSources.referral.toFixed(0)}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                <div>
+                  <p className="text-xs text-white/60">Bonus</p>
+                  <p className="text-sm font-bold text-white">{prcSources.bonus.toFixed(0)}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </Card>
 
-        {/* Feature Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          {/* Wallet Card - Cashback Only */}
-          <Link to="/wallet">
-            <Card className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-2xl hover:scale-105 transition-all duration-300 cursor-pointer group">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-2xl font-bold text-white mb-2">My Wallet</h3>
-                  <p className="text-blue-100">Manage your earnings</p>
-                </div>
-                <div className="bg-white/20 p-3 rounded-xl group-hover:scale-110 transition-transform">
-                  <Wallet className="h-8 w-8 text-white" />
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-blue-100 mb-1">Cashback Balance</p>
-                  <p className="text-3xl font-bold text-white">
-                    ₹{((userData?.cashback_wallet_balance || 0)).toFixed(2)}
-                  </p>
-                  <p className="text-xs text-blue-200 mt-2">Available to withdraw</p>
-                </div>
-                <ArrowRight className="h-8 w-8 text-white opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-              </div>
-            </Card>
-          </Link>
-
-          {/* VIP Upgrade Card */}
-          <Link to={isVIP ? "/vip" : "/vip"}>
-            <Card className="bg-gradient-to-br from-yellow-500 to-orange-600 p-6 rounded-2xl hover:scale-105 transition-all duration-300 cursor-pointer group">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-2xl font-bold text-white mb-2">
-                    {isVIP ? 'VIP Status' : 'Upgrade to VIP'}
-                  </h3>
-                  <p className="text-orange-100">
-                    {isVIP ? 'Enjoy premium benefits' : 'Unlock unlimited earning'}
-                  </p>
-                </div>
-                <div className="bg-white/20 p-3 rounded-xl group-hover:scale-110 transition-transform">
-                  <Crown className="h-8 w-8 text-white" />
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                {isVIP ? (
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-6 w-6 text-white" />
-                    <p className="text-white font-semibold">Active Member</p>
+        {/* ================================================================
+            SECTION 6: RECENT ACTIVITY TIMELINE
+            ================================================================ */}
+        <Card className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-white/70 flex items-center gap-2">
+              <Clock className="h-4 w-4 text-blue-400" />
+              Recent Activity
+            </h3>
+            <Link to="/wallet" className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1">
+              View All <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+          
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {recentActivity.length > 0 ? (
+              recentActivity.map((activity, idx) => {
+                const style = getActivityStyle(activity.type, activity.amount);
+                const Icon = style.icon;
+                const isPositive = activity.amount > 0;
+                
+                return (
+                  <div key={idx} className="flex items-center gap-3 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
+                    <div className={`w-10 h-10 ${style.bg} rounded-xl flex items-center justify-center`}>
+                      <Icon className={`h-5 w-5 ${style.color}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate capitalize">
+                        {activity.type?.replace(/_/g, ' ') || 'Transaction'}
+                      </p>
+                      <p className="text-xs text-white/50">
+                        {new Date(activity.created_at).toLocaleDateString('en-IN', { 
+                          day: 'numeric', 
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+                    <div className={`text-right ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                      <p className="text-sm font-bold">
+                        {isPositive ? '+' : ''}{activity.amount?.toFixed(2)}
+                      </p>
+                      <p className="text-xs opacity-70">PRC</p>
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-white font-semibold">₹1000/year</p>
-                )}
-                <ArrowRight className="h-6 w-6 text-white" />
-              </div>
-            </Card>
-          </Link>
-        </div>
-
-        {/* Recent Activity */}
-        <Card className="bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-2xl">
-          <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <Clock className="h-5 w-5 text-purple-400" />
-            Recent Activity
-          </h3>
-          <div className="space-y-3">
-            {stats?.mining_active ? (
-              <div className="flex items-center gap-3 p-3 bg-green-500/10 rounded-xl">
-                <div className="bg-green-500/20 p-2 rounded-lg">
-                  <Play className="h-4 w-4 text-green-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-white font-medium">Mining Active</p>
-                  <p className="text-xs text-gray-300">Earning PRC now...</p>
-                </div>
-              </div>
+                );
+              })
             ) : (
-              <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
-                <div className="bg-white/10 p-2 rounded-lg">
-                  <Zap className="h-4 w-4 text-gray-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-white font-medium">Start mining to earn rewards</p>
-                  <p className="text-xs text-gray-300">Tap to begin earning</p>
-                </div>
-                <Link to="/mining">
-                  <Button size="sm" className="bg-purple-600 hover:bg-purple-700">
-                    Start
-                  </Button>
-                </Link>
+              <div className="text-center py-8">
+                <Activity className="h-8 w-8 text-white/30 mx-auto mb-2" />
+                <p className="text-white/50 text-sm">कोणतीही activity नाही</p>
+                <p className="text-white/30 text-xs">Mining सुरू करा!</p>
               </div>
             )}
-            
-            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
-              <div className="bg-white/10 p-2 rounded-lg">
-                <Star className="h-4 w-4 text-yellow-400" />
-              </div>
-              <div className="flex-1">
-                <p className="text-white font-medium">Level {level} Achieved</p>
-                <p className="text-xs text-gray-300">Keep earning to level up!</p>
+          </div>
+        </Card>
+
+        {/* ================================================================
+            SECTION 7: TRUST & ACCOUNT HEALTH BADGE
+            ================================================================ */}
+        <Card className={`rounded-2xl p-4 ${
+          accountStatus === 'safe' ? 'bg-green-500/20 border border-green-500/30' :
+          accountStatus === 'action_needed' ? 'bg-yellow-500/20 border border-yellow-500/30' :
+          'bg-red-500/20 border border-red-500/30'
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+              accountStatus === 'safe' ? 'bg-green-500/30' :
+              accountStatus === 'action_needed' ? 'bg-yellow-500/30' :
+              'bg-red-500/30'
+            }`}>
+              {accountStatus === 'safe' ? <ShieldCheck className="h-6 w-6 text-green-400" /> :
+               accountStatus === 'action_needed' ? <AlertCircle className="h-6 w-6 text-yellow-400" /> :
+               <Shield className="h-6 w-6 text-red-400" />}
+            </div>
+            <div className="flex-1">
+              <p className={`text-sm font-bold ${
+                accountStatus === 'safe' ? 'text-green-300' :
+                accountStatus === 'action_needed' ? 'text-yellow-300' :
+                'text-red-300'
+              }`}>
+                {accountStatus === 'safe' ? '🟢 Account Status: Safe & Active' :
+                 accountStatus === 'action_needed' ? '🟡 Action Needed' :
+                 '🔴 Account Restricted'}
+              </p>
+              <div className="flex gap-3 mt-1">
+                <span className={`text-xs flex items-center gap-1 ${
+                  accountStatus === 'safe' ? 'text-green-400' : 'text-white/50'
+                }`}>
+                  {accountStatus === 'safe' ? <CheckCircle2 className="h-3 w-3" /> : null}
+                  PRC Protected
+                </span>
+                <span className={`text-xs flex items-center gap-1 ${
+                  accountStatus !== 'restricted' ? 'text-green-400' : 'text-red-400'
+                }`}>
+                  {accountStatus !== 'restricted' ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+                  Redeem {accountStatus !== 'restricted' ? 'Enabled' : 'Disabled'}
+                </span>
               </div>
             </div>
           </div>
         </Card>
+
+        {/* More Options Button */}
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <Link to="/leaderboard">
+            <Card className="bg-white/5 border border-white/10 rounded-xl p-3 text-center hover:bg-white/10 transition-colors">
+              <Trophy className="h-5 w-5 text-yellow-400 mx-auto mb-1" />
+              <p className="text-xs text-white/70">Ranks</p>
+            </Card>
+          </Link>
+          <Link to="/scratch-card">
+            <Card className="bg-white/5 border border-white/10 rounded-xl p-3 text-center hover:bg-white/10 transition-colors">
+              <Sparkles className="h-5 w-5 text-pink-400 mx-auto mb-1" />
+              <p className="text-xs text-white/70">Scratch</p>
+            </Card>
+          </Link>
+          <Link to={isVIP ? '/vip' : '/vip-membership'}>
+            <Card className="bg-white/5 border border-white/10 rounded-xl p-3 text-center hover:bg-white/10 transition-colors">
+              <Crown className="h-5 w-5 text-amber-400 mx-auto mb-1" />
+              <p className="text-xs text-white/70">{isVIP ? 'VIP' : 'Go VIP'}</p>
+            </Card>
+          </Link>
+        </div>
+        
       </div>
     </div>
   );
