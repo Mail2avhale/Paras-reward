@@ -300,9 +300,11 @@ function App() {
   }
 
   return (
-    <NotificationProvider userId={user?.uid}>
-      <AppContent user={user} handleLogin={handleLogin} handleLogout={handleLogout} />
-    </NotificationProvider>
+    <LanguageProvider>
+      <NotificationProvider userId={user?.uid}>
+        <AppContent user={user} handleLogin={handleLogin} handleLogout={handleLogout} />
+      </NotificationProvider>
+    </LanguageProvider>
   );
 }
 
