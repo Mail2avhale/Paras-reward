@@ -236,12 +236,46 @@ const DashboardModern = ({ user, onLogout }) => {
         }}
       >
         <div className="max-w-md mx-auto">
-          {/* User Name - Prominent Display */}
-          <div className="flex items-center justify-between mb-8">
+          {/* User Name & Language Selector Row */}
+          <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-semibold text-white tracking-wide">
               {user?.name || 'User'}
             </h1>
             <div className="flex items-center gap-2">
+              {/* Language Selector */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowLangDropdown(!showLangDropdown)}
+                  className="flex items-center gap-1.5 bg-white/15 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/25 transition-colors"
+                  data-testid="language-selector-btn"
+                >
+                  <Globe className="w-4 h-4 text-white/90" />
+                  <span className="text-sm text-white/90">{currentLanguage?.name?.slice(0, 3) || 'EN'}</span>
+                  <ChevronDown className={`w-3 h-3 text-white/70 transition-transform ${showLangDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {showLangDropdown && (
+                  <div className="absolute top-full right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 min-w-[140px]">
+                    {languages.map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => {
+                          changeLanguage(lang.code);
+                          setShowLangDropdown(false);
+                        }}
+                        className={`w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-purple-50 transition-colors ${
+                          language === lang.code ? 'bg-purple-100 text-purple-700' : 'text-gray-700'
+                        }`}
+                        data-testid={`lang-option-${lang.code}`}
+                      >
+                        <span className="text-lg">{lang.flag}</span>
+                        <span className="text-sm font-medium">{lang.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
               {/* Help Button to replay tutorial */}
               <button
                 onClick={() => {
@@ -259,6 +293,36 @@ const DashboardModern = ({ user, onLogout }) => {
                   VIP
                 </div>
               )}
+            </div>
+          </div>
+          
+          {/* Today's Summary Strip */}
+          <div className="bg-white/15 backdrop-blur-md rounded-2xl p-3 mb-6 border border-white/20" data-testid="today-summary-strip">
+            <div className="flex items-center justify-around">
+              {/* Today Earned */}
+              <div className="flex items-center gap-2">
+                <div className="bg-green-400/30 p-1.5 rounded-full">
+                  <ArrowUp className="w-4 h-4 text-green-200" />
+                </div>
+                <div>
+                  <p className="text-xs text-white/70">{t('todayEarned')}</p>
+                  <p className="text-base font-bold text-green-300">+{todayStats.today_prc_earned.toLocaleString(undefined, {maximumFractionDigits: 2})} PRC</p>
+                </div>
+              </div>
+              
+              {/* Divider */}
+              <div className="h-10 w-px bg-white/20"></div>
+              
+              {/* Today Spent */}
+              <div className="flex items-center gap-2">
+                <div className="bg-red-400/30 p-1.5 rounded-full">
+                  <ArrowDown className="w-4 h-4 text-red-200" />
+                </div>
+                <div>
+                  <p className="text-xs text-white/70">{t('todaySpent')}</p>
+                  <p className="text-base font-bold text-red-300">-{todayStats.today_prc_spent.toLocaleString(undefined, {maximumFractionDigits: 2})} PRC</p>
+                </div>
+              </div>
             </div>
           </div>
 
