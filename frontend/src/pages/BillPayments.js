@@ -147,7 +147,13 @@ const BillPayments = ({ user, onLogout }) => {
         borrower_name: '',
         loan_type: '',
         bank_name: '',
-        biller_name: ''
+        biller_name: '',
+        ifsc_code: '',
+        registered_mobile: '',
+        emi_due_date: '',
+        customer_id: '',
+        loan_tenure: '',
+        emi_amount: ''
       });
 
       fetchRequests();
