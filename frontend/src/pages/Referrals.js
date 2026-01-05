@@ -7,12 +7,51 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Users, Copy, Check, UserPlus, Link2, Share2, TrendingUp, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Referral page translations
+const referralTranslations = {
+  referrals: { mr: "रेफरल्स", hi: "रेफरल्स", en: "Referrals" },
+  yourReferralCode: { mr: "तुमचा रेफरल कोड", hi: "आपका रेफरल कोड", en: "Your Referral Code" },
+  shareAndEarn: { mr: "शेअर करा आणि कमवा", hi: "शेयर करें और कमाएं", en: "Share & Earn" },
+  inviteFriends: { mr: "मित्रांना आमंत्रित करा", hi: "दोस्तों को आमंत्रित करें", en: "Invite Friends" },
+  totalReferrals: { mr: "एकूण रेफरल्स", hi: "कुल रेफरल्स", en: "Total Referrals" },
+  activeReferrals: { mr: "सक्रिय रेफरल्स", hi: "सक्रिय रेफरल्स", en: "Active Referrals" },
+  vipReferrals: { mr: "VIP रेफरल्स", hi: "VIP रेफरल्स", en: "VIP Referrals" },
+  copyCode: { mr: "कोड कॉपी करा", hi: "कोड कॉपी करें", en: "Copy Code" },
+  copyLink: { mr: "लिंक कॉपी करा", hi: "लिंक कॉपी करें", en: "Copy Link" },
+  copied: { mr: "कॉपी केले!", hi: "कॉपी हो गया!", en: "Copied!" },
+  referralLink: { mr: "रेफरल लिंक", hi: "रेफरल लिंक", en: "Referral Link" },
+  shareOnWhatsapp: { mr: "WhatsApp वर शेअर करा", hi: "WhatsApp पर शेयर करें", en: "Share on WhatsApp" },
+  yourNetwork: { mr: "तुमचे नेटवर्क", hi: "आपका नेटवर्क", en: "Your Network" },
+  level: { mr: "स्तर", hi: "स्तर", en: "Level" },
+  users: { mr: "वापरकर्ते", hi: "उपयोगकर्ता", en: "Users" },
+  earnedPRC: { mr: "कमावलेले PRC", hi: "कमाया PRC", en: "Earned PRC" },
+  goBack: { mr: "मागे जा", hi: "वापस जाएं", en: "Go Back" },
+  applyReferralCode: { mr: "रेफरल कोड लागू करा", hi: "रेफरल कोड लागू करें", en: "Apply Referral Code" },
+  enterCode: { mr: "कोड एंटर करा", hi: "कोड दर्ज करें", en: "Enter Code" },
+  apply: { mr: "लागू करा", hi: "लागू करें", en: "Apply" },
+  referralDesc: { 
+    mr: "मित्रांना आमंत्रित करा आणि 5 स्तरांवर कमाई करा! प्रत्येक रेफरलवर बोनस PRC मिळवा.",
+    hi: "दोस्तों को आमंत्रित करें और 5 स्तरों पर कमाई करें! हर रेफरल पर बोनस PRC पाएं।",
+    en: "Invite friends and earn on 5 levels! Get bonus PRC on every referral."
+  }
+};
+
 const Referrals = ({ user, onLogout }) => {
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  
+  // Local translation function
+  const t = (key) => {
+    const translation = referralTranslations[key];
+    if (!translation) return key;
+    return translation[language] || translation['en'] || key;
+  };
+  
   const [referralCode, setReferralCode] = useState(user?.referral_code || '');
   const [referrals, setReferrals] = useState([]);
   const [copiedCode, setCopiedCode] = useState(false);
