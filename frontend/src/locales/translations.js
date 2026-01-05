@@ -45,8 +45,40 @@ const translations = {
     hi: "खर्च",
     en: "Spending"
   },
+  
+  // ==================== STATS CARDS ====================
+  totalMined: {
+    mr: "एकूण माइन",
+    hi: "कुल माइन",
+    en: "Total Mined"
+  },
+  prcUsed: {
+    mr: "PRC वापरले",
+    hi: "PRC उपयोग",
+    en: "PRC Used"
+  },
+  referrals: {
+    mr: "रेफरल्स",
+    hi: "रेफरल्स",
+    en: "Referrals"
+  },
+  prcBalance: {
+    mr: "PRC शिल्लक",
+    hi: "PRC बैलेंस",
+    en: "PRC Balance"
+  },
 
   // ==================== QUICK ACTIONS ====================
+  quickActions: {
+    mr: "त्वरित क्रिया",
+    hi: "त्वरित कार्य",
+    en: "Quick Actions"
+  },
+  vouchers: {
+    mr: "व्हाउचर्स",
+    hi: "वाउचर्स",
+    en: "Vouchers"
+  },
   mine: {
     mr: "माइन करा",
     hi: "माइन करें",
