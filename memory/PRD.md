@@ -159,6 +159,7 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 - **Admin**: admin@paras.com / admin
 - **Manager**: manager_txn_1762416719@test.com / testpassword
 - **Test Expired VIP**: final_test_vip@test.com / testpass123
+- **Dashboard Test User**: dashboard_test@test.com / test123
 
 ## Pending/In-Progress
 
