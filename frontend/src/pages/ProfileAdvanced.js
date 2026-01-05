@@ -15,12 +15,51 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ImageCropUpload from '@/components/ImageCropUpload';
 import { locationData } from '@/data/locationData';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
+
+// Profile page translations
+const profileTranslations = {
+  profile: { mr: "प्रोफाइल", hi: "प्रोफ़ाइल", en: "Profile" },
+  personalInfo: { mr: "वैयक्तिक माहिती", hi: "व्यक्तिगत जानकारी", en: "Personal Information" },
+  contactDetails: { mr: "संपर्क तपशील", hi: "संपर्क विवरण", en: "Contact Details" },
+  bankDetails: { mr: "बँक तपशील", hi: "बैंक विवरण", en: "Bank Details" },
+  kycVerification: { mr: "KYC सत्यापन", hi: "KYC सत्यापन", en: "KYC Verification" },
+  security: { mr: "सुरक्षा", hi: "सुरक्षा", en: "Security" },
+  changePassword: { mr: "पासवर्ड बदला", hi: "पासवर्ड बदलें", en: "Change Password" },
+  save: { mr: "जतन करा", hi: "सहेजें", en: "Save" },
+  cancel: { mr: "रद्द करा", hi: "रद्द करें", en: "Cancel" },
+  firstName: { mr: "पहिले नाव", hi: "पहला नाम", en: "First Name" },
+  lastName: { mr: "आडनाव", hi: "अंतिम नाम", en: "Last Name" },
+  email: { mr: "ईमेल", hi: "ईमेल", en: "Email" },
+  mobile: { mr: "मोबाइल", hi: "मोबाइल", en: "Mobile" },
+  gender: { mr: "लिंग", hi: "लिंग", en: "Gender" },
+  dateOfBirth: { mr: "जन्मतारीख", hi: "जन्म तिथि", en: "Date of Birth" },
+  address: { mr: "पत्ता", hi: "पता", en: "Address" },
+  city: { mr: "शहर", hi: "शहर", en: "City" },
+  state: { mr: "राज्य", hi: "राज्य", en: "State" },
+  pincode: { mr: "पिनकोड", hi: "पिनकोड", en: "Pincode" },
+  accountNumber: { mr: "खाते क्रमांक", hi: "खाता नंबर", en: "Account Number" },
+  ifscCode: { mr: "IFSC कोड", hi: "IFSC कोड", en: "IFSC Code" },
+  bankName: { mr: "बँकेचे नाव", hi: "बैंक का नाम", en: "Bank Name" },
+  panCard: { mr: "पॅन कार्ड", hi: "पैन कार्ड", en: "PAN Card" },
+  aadhaarCard: { mr: "आधार कार्ड", hi: "आधार कार्ड", en: "Aadhaar Card" },
+  logout: { mr: "लॉगआउट", hi: "लॉग आउट", en: "Logout" },
+  transactions: { mr: "व्यवहार", hi: "लेनदेन", en: "Transactions" }
+};
 
 const ProfileAdvanced = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const { language } = useLanguage();
+  
+  // Local translation function
+  const t = (key) => {
+    const translation = profileTranslations[key];
+    if (!translation) return key;
+    return translation[language] || translation['en'] || key;
+  };
   
   const [activeSection, setActiveSection] = useState('profile');
   const [loading, setLoading] = useState(false);
