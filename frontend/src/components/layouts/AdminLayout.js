@@ -27,6 +27,7 @@ const MENU_TO_PERMISSION = {
   'stockists': 'stockist',
   'support': 'support',
   'fraud-alerts': 'fraud',
+  'accounting': 'accounting',
   'profit-loss': 'profit_loss',
   'company-wallets': 'company_wallets',
   'capital': 'capital',
