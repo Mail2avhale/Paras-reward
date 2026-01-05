@@ -250,9 +250,19 @@ const translations = {
     en: "Free User"
   },
   upgradeToVip: {
-    mr: "VIP बना",
-    hi: "VIP बनें",
-    en: "Upgrade to VIP"
+    mr: "VIP बना!",
+    hi: "VIP बनें!",
+    en: "Upgrade to VIP!"
+  },
+  upgradeNow: {
+    mr: "आता अपग्रेड करा",
+    hi: "अभी अपग्रेड करें",
+    en: "Upgrade Now"
+  },
+  vipBenefitsDesc: {
+    mr: "अमर्याद माइनिंग, उच्च दर, आणि विशेष वैशिष्ट्ये",
+    hi: "असीमित माइनिंग, उच्च दर, और विशेष सुविधाएं",
+    en: "Unlimited mining, higher rates, and exclusive features"
   },
   vipBenefits: {
     mr: "VIP फायदे",
