@@ -108,6 +108,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
       label: 'Finance',
       icon: DollarSign,
       subItems: [
+        { id: 'accounting', label: 'Accounting Dashboard', icon: BarChart2, path: '/admin/accounting' },
         { id: 'profit-loss', label: 'Profit & Loss', icon: TrendingUp, path: '/admin/profit-loss' },
         { id: 'company-wallets', label: 'Company Wallets', icon: Wallet, path: '/admin/company-wallets' },
         { id: 'capital', label: 'Capital & Liabilities', icon: Building, path: '/admin/capital' },
