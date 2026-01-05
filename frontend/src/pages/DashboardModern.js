@@ -575,9 +575,9 @@ const DashboardModern = ({ user, onLogout }) => {
           <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-6 shadow-lg mb-6 text-white">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-xl font-bold mb-2">Upgrade to VIP!</h3>
+                <h3 className="text-xl font-bold mb-2">{t('upgradeToVip')}</h3>
                 <p className="text-sm text-yellow-50 mb-4">
-                  Unlimited mining, higher rates, and exclusive features
+                  {t('vipBenefitsDesc')}
                 </p>
                 <div className="flex items-center gap-2 mb-4">
                   <CheckCircle className="w-5 h-5" />
@@ -587,7 +587,7 @@ const DashboardModern = ({ user, onLogout }) => {
                   onClick={() => navigate('/vip')}
                   className="bg-white text-orange-600 px-6 py-2 rounded-full font-bold hover:bg-yellow-50 transition-colors flex items-center gap-2"
                 >
-                  Upgrade Now
+                  {t('upgradeNow')}
                   <ArrowUpRight className="w-4 h-4" />
                 </button>
               </div>
@@ -602,13 +602,13 @@ const DashboardModern = ({ user, onLogout }) => {
         <div className="max-w-md mx-auto flex items-center justify-around">
           <BottomNavItem 
             icon={Home} 
-            label="Home" 
+            label={t('home')} 
             tabName="home" 
             isActive={activeTab === 'home'} 
           />
           <BottomNavItem 
             icon={Zap} 
-            label="Mine" 
+            label={t('mine')} 
             tabName="mine" 
             isActive={activeTab === 'mine'} 
           />
@@ -621,13 +621,13 @@ const DashboardModern = ({ user, onLogout }) => {
           />
           <BottomNavItem 
             icon={ShoppingBag} 
-            label="Shop" 
+            label={t('shop')} 
             tabName="shop" 
             isActive={activeTab === 'shop'} 
           />
           <BottomNavItem 
             icon={User} 
-            label="Profile" 
+            label={t('profile')} 
             tabName="profile" 
             isActive={activeTab === 'profile'} 
           />
