@@ -469,7 +469,7 @@ const DashboardModern = ({ user, onLogout }) => {
                   navigate('/bill-payments');
                 }
               }}
-              color="teal"
+              customStyle={{ background: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)' }}
             />
             <QuickActionButton 
               icon={Gift} 
