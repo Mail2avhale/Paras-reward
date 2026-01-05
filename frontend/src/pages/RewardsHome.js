@@ -649,6 +649,27 @@ const RewardsHome = () => {
       {/* Footer */}
       <footer className="bg-gray-900 text-gray-300 py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
+          {/* Privacy Notice Banner for AdMob Compliance */}
+          <div className="bg-blue-900/50 border border-blue-700/50 rounded-xl p-4 mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Shield className="h-6 w-6 text-blue-400" />
+              <p className="text-sm text-blue-200">
+                {language === 'mr' 
+                  ? "आम्ही तुमच्या गोपनीयतेचे संरक्षण करतो. आमचे जाहिरात धोरण वाचा." 
+                  : language === 'hi' 
+                  ? "हम आपकी गोपनीयता की रक्षा करते हैं। हमारी विज्ञापन नीति पढ़ें।"
+                  : "We protect your privacy. Read our advertising policy."}
+              </p>
+            </div>
+            <a 
+              href="/privacy#advertising" 
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
+            >
+              <FileText className="h-4 w-4" />
+              {t('privacyPolicy')}
+            </a>
+          </div>
+          
           <div className="grid md:grid-cols-4 gap-8 mb-12">
             <div>
               <div className="flex items-center gap-3 mb-4">
@@ -656,7 +677,11 @@ const RewardsHome = () => {
                 <span className="font-bold text-xl text-white">Paras Reward</span>
               </div>
               <p className="text-gray-400 mb-4">
-                India's most rewarding loyalty platform for earning and redeeming PRC coins.
+                {language === 'mr' 
+                  ? "PRC कॉइन्स कमवण्यासाठी आणि रिडीम करण्यासाठी भारतातील सर्वात फायदेशीर लॉयल्टी प्लॅटफॉर्म."
+                  : language === 'hi' 
+                  ? "PRC सिक्के कमाने और रिडीम करने के लिए भारत का सबसे फायदेमंद लॉयल्टी प्लेटफॉर्म।"
+                  : "India's most rewarding loyalty platform for earning and redeeming PRC coins."}
               </p>
               <div className="flex gap-4">
                 <a href="#" className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-blue-600 transition">
@@ -675,27 +700,33 @@ const RewardsHome = () => {
             </div>
             
             <div>
-              <h4 className="font-semibold text-white mb-4">Quick Links</h4>
+              <h4 className="font-semibold text-white mb-4">{t('quickLinks')}</h4>
               <ul className="space-y-2">
-                <li><a href="#features" className="hover:text-white transition">Features</a></li>
-                <li><a href="#how-it-works" className="hover:text-white transition">How It Works</a></li>
-                <li><a href="#vip" className="hover:text-white transition">VIP Plans</a></li>
-                <li><a href="/marketplace" className="hover:text-white transition">Marketplace</a></li>
+                <li><a href="#features" className="hover:text-white transition">{t('features')}</a></li>
+                <li><a href="#how-it-works" className="hover:text-white transition">{t('howItWorks')}</a></li>
+                <li><a href="#vip" className="hover:text-white transition">{t('vipMembership')}</a></li>
+                <li><a href="/marketplace" className="hover:text-white transition">{language === 'mr' ? 'मार्केटप्लेस' : language === 'hi' ? 'मार्केटप्लेस' : 'Marketplace'}</a></li>
               </ul>
             </div>
             
             <div>
-              <h4 className="font-semibold text-white mb-4">Legal</h4>
+              <h4 className="font-semibold text-white mb-4">{t('legal')}</h4>
               <ul className="space-y-2">
-                <li><a href="/terms" className="hover:text-white transition">Terms & Conditions</a></li>
-                <li><a href="/privacy" className="hover:text-white transition">Privacy Policy</a></li>
-                <li><a href="/refund" className="hover:text-white transition">Refund Policy</a></li>
-                <li><a href="/contact" className="hover:text-white transition">Contact Us</a></li>
+                <li><a href="/terms" className="hover:text-white transition">{t('termsConditions')}</a></li>
+                <li><a href="/privacy" className="hover:text-white transition flex items-center gap-1">
+                  <Shield className="h-3 w-3 text-green-400" />
+                  {t('privacyPolicy')}
+                </a></li>
+                <li><a href="/privacy#advertising" className="hover:text-white transition text-blue-400">
+                  {language === 'mr' ? '→ जाहिरात धोरण' : language === 'hi' ? '→ विज्ञापन नीति' : '→ Advertising Policy'}
+                </a></li>
+                <li><a href="/refund" className="hover:text-white transition">{t('refundPolicy')}</a></li>
+                <li><a href="/contact" className="hover:text-white transition">{t('contactUs')}</a></li>
               </ul>
             </div>
             
             <div>
-              <h4 className="font-semibold text-white mb-4">Contact</h4>
+              <h4 className="font-semibold text-white mb-4">{t('contactUs')}</h4>
               <ul className="space-y-3">
                 <li className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-blue-400" />
@@ -715,9 +746,12 @@ const RewardsHome = () => {
           
           <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-500 text-sm">
-              © 2026 Paras Reward Platform. All rights reserved.
+              © 2026 Paras Reward Platform. {t('allRightsReserved')}
             </p>
             <div className="flex items-center gap-4">
+              <a href="/privacy" className="text-xs text-gray-500 hover:text-white transition">{t('privacyPolicy')}</a>
+              <span className="text-gray-700">|</span>
+              <a href="/terms" className="text-xs text-gray-500 hover:text-white transition">{t('termsConditions')}</a>
               <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Google_Play_2022_logo.svg/100px-Google_Play_2022_logo.svg.png" alt="Play Store" className="h-8 opacity-70 hover:opacity-100 transition cursor-pointer" />
             </div>
           </div>
