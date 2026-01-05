@@ -102,6 +102,14 @@ const DashboardModern = ({ user, onLogout }) => {
         console.error('Error fetching redeemed stats:', error);
       }
       
+      // Fetch today's stats
+      try {
+        const todayResponse = await axios.get(`${API}/api/user/stats/today/${user.uid}`);
+        setTodayStats(todayResponse.data);
+      } catch (error) {
+        console.error('Error fetching today stats:', error);
+      }
+      
       setStats({
         prcBalance: fetchedUserData.prc_balance || 0,
         totalMined: fetchedUserData.total_mined || 0,
