@@ -173,7 +173,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/rewards-home" element={<RewardsHome />} />
             
             {/* Protected Routes */}
-            <Route path="/dashboard" element={user ? <DashboardPremium user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/dashboard" element={user ? <DashboardModern user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/support" element={user ? <SupportTickets user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/mining" element={user ? <Mining user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/game" element={user ? <TapGame user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
