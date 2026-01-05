@@ -218,11 +218,15 @@ const Mining = ({ user, onLogout }) => {
           className="flex items-center gap-2 text-purple-600 hover:text-purple-700 mb-4 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
-          <span className="font-medium">Back to Dashboard</span>
+          <span className="font-medium">{t('goBack')}</span>
         </button>
         
-        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">Rewards Center</h1>
-        <p className="text-lg text-gray-600 mb-8">Earn PRC reward points through daily engagement activities (non-cryptocurrency reward system)</p>
+        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">{t('mining')}</h1>
+        <p className="text-lg text-gray-600 mb-8">
+          {language === 'mr' ? 'दैनिक माइनिंग कृतींद्वारे PRC रिवॉर्ड पॉइंट्स कमवा' 
+           : language === 'hi' ? 'दैनिक माइनिंग गतिविधियों द्वारे PRC रिवॉर्ड पॉइंट्स कमाएं'
+           : 'Earn PRC reward points through daily mining activities'}
+        </p>
 
         {/* PRC Expiry Alert for Free Users */}
         {isFreeUser && validityStatus && (
