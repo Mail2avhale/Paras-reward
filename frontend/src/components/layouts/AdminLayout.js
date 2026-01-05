@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import {
-  Home, Users, CreditCard, FileText, Settings, BarChart3,
+  Home, Users, CreditCard, FileText, Settings, BarChart3, BarChart2,
   Gift, ShoppingCart, Video, Award, Activity, Package,
   Truck, Store, HeadphonesIcon, UserCog, DollarSign,
   ChevronLeft, ChevronRight, LogOut, Bell, Search,
