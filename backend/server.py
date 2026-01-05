@@ -14689,7 +14689,7 @@ async def update_logo_settings(request: Request):
 
 @api_router.post("/admin/logo-upload")
 async def upload_logo(file: UploadFile = File(...), logo_type: str = Form("logo")):
-    """Upload logo or favicon image with auto-resize"""
+    """Upload logo, footer logo, or favicon image with auto-resize"""
     import io
     from PIL import Image
     
@@ -14703,7 +14703,7 @@ async def upload_logo(file: UploadFile = File(...), logo_type: str = Form("logo"
         # Auto-resize based on type
         if logo_type == "favicon":
             img = img.resize((64, 64), Image.Resampling.LANCZOS)
-        else:  # logo
+        else:  # logo or footer_logo
             # Maintain aspect ratio, max width 400px
             max_width = 400
             if img.width > max_width:
@@ -14736,13 +14736,15 @@ async def upload_logo(file: UploadFile = File(...), logo_type: str = Form("logo"
         # Return URL
         image_url = f"/uploads/{filename}"
         
-        # Update settings
+        # Update settings based on logo type
         if logo_type == "favicon":
             await db.settings.update_one({}, {"$set": {"logo_settings.favicon_url": image_url}}, upsert=True)
+        elif logo_type == "footer_logo":
+            await db.settings.update_one({}, {"$set": {"logo_settings.footer_logo_url": image_url}}, upsert=True)
         else:
             await db.settings.update_one({}, {"$set": {"logo_settings.logo_url": image_url}}, upsert=True)
         
-        return {"success": True, "url": image_url, "message": f"{logo_type.capitalize()} uploaded successfully"}
+        return {"success": True, "url": image_url, "message": f"{logo_type.replace('_', ' ').capitalize()} uploaded successfully"}
         
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Image processing failed: {str(e)}")
