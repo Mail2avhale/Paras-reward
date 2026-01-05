@@ -14554,6 +14554,45 @@ async def update_service_charge_config(request: Request):
     
     return {"message": "Service charge configuration updated successfully", "config": update_data}
 
+# ==================== MINING SETTINGS ====================
+
+@api_router.get("/admin/mining-settings")
+async def get_mining_settings():
+    """Get mining formula settings"""
+    settings = await db.settings.find_one({}, {"_id": 0, "mining_settings": 1})
+    
+    default_settings = {
+        "base_rate": 0.5,
+        "vip_multiplier": 2,
+        "max_daily_mining_hours": 24,
+        "prc_to_inr_ratio": 10
+    }
+    
+    if settings and settings.get("mining_settings"):
+        return {**default_settings, **settings["mining_settings"]}
+    return default_settings
+
+@api_router.post("/admin/mining-settings")
+async def update_mining_settings(request: Request):
+    """Update mining formula settings"""
+    data = await request.json()
+    
+    mining_settings = {
+        "base_rate": float(data.get("base_rate", 0.5)),
+        "vip_multiplier": float(data.get("vip_multiplier", 2)),
+        "max_daily_mining_hours": int(data.get("max_daily_mining_hours", 24)),
+        "prc_to_inr_ratio": int(data.get("prc_to_inr_ratio", 10)),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.settings.update_one(
+        {},
+        {"$set": {"mining_settings": mining_settings}},
+        upsert=True
+    )
+    
+    return {"success": True, "message": "Mining settings updated successfully", "settings": mining_settings}
+
 # ==================== REFERRAL BONUS SETTINGS ====================
 
 @api_router.get("/admin/referral-bonus-settings")
