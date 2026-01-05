@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://prc-rain-manager.preview.emergentagent.com/setup
+   https://dashboard-admin-9.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

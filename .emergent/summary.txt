@@ -1,0 +1,207 @@
+<analysis>**original_problem_statement:** The user's requests in this session were extensive, covering bug fixes, new features, and UI/UX enhancements.
+
+1.  **PRC Rain Feature Bugs:**
+    *   The PRC Rain feature was not appearing for users even after being enabled.
+    *   When it did appear, tapping the drops resulted in a PRC change of 0.
+2.  **Admin Settings Bugs:**
+    *   The VIP Multiplier input in the Mining Formula settings was unchangeable.
+    *   Pagination on the Audit Services page was not set to 10.
+    *   Mining Formula settings were not saving at all.
+    *   Web settings (Address, Phone, Email) were not updating.
+    *   The logo update feature required a URL instead of a direct file upload.
+3.  **New Feature: Capital & Liability Management:** The user requested a detailed system to track capital infusions (from directors, partners) and liabilities (loans), including repayment tracking.
+4.  **New Feature: Manager Role Permissions:** The user wanted to create a Manager role and assign specific admin pages to them, with default access to User Management, VIP Payments, and KYC.
+5.  **Dashboard & Analytics Bugs:**
+    *   The Total PRC card on the main Admin Dashboard was not showing a value.
+    *   The VIP Revenue card on the PRC Analytics dashboard was not showing a value.
+    *   Most data cards on the PRC Analytics page were showing 0, even when transactions had occurred.
+    *   The Capital & Liability page was crashing with a React rendering error.
+6.  **Homepage Redesign & Policy Compliance:**
+    *   The user requested a new homepage inspired by the SBI Rewardz website.
+    *   The user mandated the removal of all policy-violating words like cash, withdrawal, and earn money to comply with AdMob/Google policies.
+    *   The Sign Up button on the new homepage was not working.
+
+**User's preferred language**: The user communicates in a mix of English and Marathi. The next agent must continue to respond in English for technical clarity but understand and address requests in Marathi.
+
+**what currently exists?**
+The application has been significantly enhanced with new features and bug fixes.
+- **PRC Rain Feature:** The feature is now fully functional. The trigger probability and polling interval issues have been resolved. The logic for PRC calculation on tap has been fixed by increasing the daily gain/loss limits and adding debug logging.
+- **Capital & Liability Management:** A comprehensive backend and frontend system has been implemented. Admins can now add capital/loan entries, track sources, record partial/full repayments, and view a financial summary on the  page. The initial React rendering error on this page has been fixed.
+- **Manager Role-Based Access Control (RBAC):** A Manager role can now be assigned to users. The system dynamically filters admin routes and sidebar menu items based on the permissions assigned to that manager via a new Permissions button in the User Management page. Managers are correctly redirected to the admin dashboard upon login.
+- **Homepage & Policy Compliance:** The application's default landing page is now a new, professionally designed homepage inspired by the SBI Rewardz website. All user-facing text across the application has been audited and updated to remove non-compliant terms like cash and withdrawal, replacing them with terms like redeem and rewards. The Sign Up button on the new homepage is now functional.
+- **Dashboards & Analytics:** All major data visibility bugs have been fixed. The Admin Dashboard now correctly displays Total PRC. The PRC Analytics page correctly calculates and displays VIP Revenue and all other data cards (PRC Created, Used, Burned, etc.) by fixing incorrect database field names ( vs ) in the backend queries.
+
+**Last working item**:
+- **Last item agent was working**: The agent was working on a set of three related bug fixes reported by the user for the admin settings pages. The primary focus was on implementing the missing backend APIs required to save the Mining Formula and Web Contact settings.
+    - **Issue 1**: Mining formula settings were not saving.
+    - **Issue 2**: Web settings (Address, Phone, Email) were not updating.
+    - **Issue 3**: The logo branding section needed a file upload feature instead of a URL input.
+- **Status**: IN PROGRESS
+- **Agent Testing Done**: N (Backend APIs were just created but not fully integrated or tested end-to-end with the frontend).
+- **Which testing method agent to use?**: both
+    - **Backend**: Use  to test the newly created  and  endpoints directly.
+    - **Frontend**: Use the  to verify that changes made on the  and  pages are saved and persist after a page refresh.
+- **User Testing Done**: N
+
+**All Pending/In progress Issue list**:
+- **Issue 1: Admin Settings Not Saving & Logo Upload (P0 - HIGHEST)**
+  - **Description**: This is a group of three issues preventing admins from configuring the application.
+  - **Status**: IN PROGRESS
+  - **Issues Detail**:
+    - **Sub-Issue 1.1: Mining Formula Settings Not Saving**
+      - **Attempted fixes**: An  handler was added to the frontend (), connected to the save button. Missing backend GET/POST endpoints at  were created in .
+      - **Next debug checklist**:
+        1.  Restart the backend service to load the new APIs.
+        2.  Test the backend by sending a POST request with  to .
+        3.  On the frontend (), change a value (e.g., VIP Multiplier), click Save, refresh the page, and verify the new value persists.
+      - **Status**: IN PROGRESS
+    - **Sub-Issue 1.2: Web Contact Settings Not Updating**
+      - **Attempted fixes**: Missing backend GET/POST endpoints at  were created in .
+      - **Next debug checklist**:
+        1.  Restart the backend service.
+        2.  Test the backend by sending a POST request with  to .
+        3.  On the frontend (), change the Primary Phone, click Save, refresh, and verify the new value persists.
+      - **Status**: IN PROGRESS
+    - **Sub-Issue 1.3: Logo/Branding Requires File Upload**
+      - **Description**: The user wants to upload logo images directly instead of pasting URLs.
+      - **Next debug checklist**:
+        1.  Modify : Change the text inputs for logos to .
+        2.  Update the  function to use  to prepare the image file for upload.
+        3.  In , create a new endpoint (e.g., ) that accepts an .
+        4.  The endpoint should save the uploaded file to a public static directory (e.g., ) and update the path in the  collection.
+      - **Status**: NOT STARTED
+
+- **Issue 2: Pagination Verification on History Pages (P2 - Low)**
+  - **Description**: A task from a previous session to verify that pagination works correctly on the **Voucher history** () and **Bill Payments history** () pages is still pending.
+  - **Status**: NOT STARTED
+  - **Is recurring issue?**: Y
+  - **Should Test frontend/backend/both after fix?**: frontend
+
+**In progress Task List**:
+- None.
+
+**Upcoming and Future Tasks**
+- **Upcoming Tasks:**
+    - **P1.1 (Integration)**: Integrate AdMob + Unity Ads to automate income tracking, replacing the current manual entry system. This will require using the  subagent.
+    - **P1.2 (PWA)**: The user expressed interest in sharing the app. The agent suggested setting up Progressive Web App (PWA) functionality (Add to Home Screen).
+- **Future Tasks:**
+    - Build the Hierarchical Reporting Structure for user referrals/teams.
+    - Display a graphical representation of the monetary value for Total PRC Used.
+    - Implement a Save PRC feature.
+    - Add an admin backup system.
+    - Add Anti-hack security measures.
+    - Implement automatic interest calculation for the Capital & Liability feature.
+
+**Completed work in this session**
+- **PRC Rain Feature (FIXED)**: Fixed bugs preventing the feature from triggering and correctly updating user PRC balances.
+- **Capital & Liability System (DONE)**: Implemented a new end-to-end feature for tracking capital and loan entries with repayment management.
+- **Manager Role-Based Access Control (DONE)**: Implemented a full RBAC system for a new Manager role, including dynamic sidebar filtering and route protection.
+- **Homepage Redesign & Policy Compliance (DONE)**:
+  - Created a new SBI-style homepage and set it as the default.
+  - Audited and replaced all non-compliant text (e.g., cash, withdrawal) across the application.
+  - Fixed the Sign Up button navigation on the new homepage.
+- **Admin Dashboards & Settings (FIXED)**:
+  - Fixed multiple data visibility bugs on the Admin Dashboard and PRC Analytics page (Total PRC, VIP Revenue, etc.).
+  - Fixed the uneditable VIP Multiplier input.
+  - Set Audit Services pagination to 10 per page.
+  - Fixed a React rendering crash on the Capital Management page.
+
+**Earlier issues found/mentioned but not fixed**
+- **Issue 1: Pagination Verification on History Pages**
+  - **Debug checklist**:
+    1.  Navigate to  and .
+    2.  Check if there's enough data to trigger pagination. If not, add more test data.
+    3.  Verify that the pagination controls render and that clicking Next, Previous, or page numbers correctly fetches and displays the next set of data.
+  - **Why to solve this issue and what will be achieved with this?**: Ensures admins can view all historical transaction records.
+  - **Should Test frontend/backend/both after fix?**: frontend
+  - **Is recurring issue?**: Y
+
+**Known issue recurrence from previous fork**
+- None.
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+- **Role-Based Access Control (RBAC):** Implemented a frontend RBAC system by creating a route guard helper () in  and adding logic to  to dynamically filter sidebar menu items based on a user's  array.
+- **API-Driven Settings:** Refactored multiple admin settings pages to fetch their state from and save it to dedicated backend endpoints, moving away from a single, monolithic settings object.
+- **Data Discrepancy Debugging:** Resolved several data not showing bugs by meticulously comparing frontend API calls, backend endpoint logic, and database field names (e.g.,  vs. ,  vs. ).
+- **Policy Compliance Text Audit:** Performed a global search-and-replace operation across the entire frontend codebase to align user-facing language with AdMob/Google Play Store policies, replacing sensitive financial terms.
+
+**key DB schema**
+- **New Collections**:
+  - : { , , , , , , : [...] }
+- **Modified Collections**:
+  - : Added :  to store accessible admin page keys for managers.
+  - : Now contains new top-level keys for  and .
+  - : The  field is now correctly used by the analytics queries.
+
+**changes in tech stack**
+- None.
+
+**All files of reference**
+- 
+-  (Currently being fixed)
+-  (Currently being fixed)
+- 
+- 
+- 
+- 
+- 
+
+**key api endpoints**
+- : (GET/POST) Manages capital and liability entries.
+- : (POST) Records a repayment for a liability.
+- : (GET) Lists all available admin permissions.
+- : (GET/POST) Manages permissions for a specific manager.
+- : (GET/POST) Manages the mining formula parameters. (Newly added)
+- : (GET/POST) Manages website contact information. (Newly added)
+- : (GET) (Modified to include )
+- : (GET) (Modified to fix multiple data calculation bugs)
+
+**Critical Info for New Agent**
+- **Admin Settings require Backend & Frontend work:** The pattern for fixing the settings pages involves creating a dedicated GET/POST API endpoint in  and then ensuring the corresponding frontend page in React correctly calls these endpoints to fetch initial state and save changes.
+- **Manager RBAC Logic:** The logic for manager permissions is split.  uses a  helper to protect routes, while  contains the logic () to render the correct sidebar items based on the  array.
+- **Policy Compliance is Critical:** The user is very sensitive to AdMob/Google Play policies. Avoid re-introducing words like cash, money, withdrawal, or earn cash in any user-facing UI. Use rewards, redeem, points, etc., instead.
+
+**documents and test reports created in this job**
+-  (Updated)
+
+**Last 10 User Messages and any pending HUMAN messages**
+1.  **User**: Reports a React crash on the Capital/Liability page. - **(Resolved)**
+2.  **Agent**: Fixes the React rendering error by correcting how summary data is handled from two different API responses. Verifies the page works. - **(Completed)**
+3.  **User**: Reports that the Manager role isn't working; they see the old dashboard. - **(New Issue)**
+4.  **Agent**: Implements a full RBAC fix: updates login redirection, adds route guards in , and filters the  sidebar based on manager permissions. - **(Completed)**
+5.  **User**: Reports that the Total PRC card on the Admin Dashboard is blank. - **(New Issue)**
+6.  **Agent**: Fixes the issue by adding the  calculation to the  backend endpoint. Verifies with a screenshot. - **(Completed)**
+7.  **User**: Reports that the VIP Revenue card on the PRC Analytics page is blank. - **(New Issue)**
+8.  **Agent**: Fixes the issue by correcting a typo in the database collection name ( -> ) in the backend query. Verifies the fix. - **(Completed)**
+9.  **User**: Asks to redesign the homepage based on . - **(New Feature Request)**
+10. **Agent**: Implements a new homepage, new legal pages, audits the entire app for policy-compliant language, and fixes the Sign Up button navigation. - **(Completed)**
+11. **User**: Reports that Mining Formula settings don't save, Web settings don't update, and the Logo section needs a file upload feature. - **(New Bug Report - In Progress)**
+
+**Project Health Check:**
+- **Broken**:
+  - The save functionality in  (Mining Formula).
+  - The save functionality in  (Contact Info).
+  - The logo update functionality is not what the user wants (URL vs. File Upload).
+- **Mocked**: AdMob/Unity Ads income is still entered manually.
+
+**3rd Party Integrations**
+- **apscheduler**: Active in the backend for scheduled jobs.
+- **framer-motion**: Used in the frontend for animations.
+- **AdMob + Unity Ads**: Requested, but not yet implemented.
+
+**Testing status**
+- **Testing agent used after significant changes**: NO.
+- **Troubleshoot agent used after agent stuck in loop**: NO.
+- **Test files created**: None. All testing in this session was performed manually via , , and the .
+- **Known regressions**: None.
+
+**Credentials to test flow:**
+- **Admin**:  / 
+- **VIP User**:  / 
+
+**What agent forgot to execute**
+- The user's request to change the logo input from a URL to a file upload has been noted but **not started**. This is part of the current high-priority issue.
+- The recurring low-priority task to verify pagination on the  and  history pages remains outstanding.</analysis>
