@@ -187,12 +187,12 @@ const SmartUserInsights = ({ userId, userStats = {}, translations = {} }) => {
 
   const getColorClasses = (color) => {
     const colors = {
-      green: 'from-green-500/20 to-emerald-500/20 border-green-400/30 text-green-200',
-      orange: 'from-orange-500/20 to-amber-500/20 border-orange-400/30 text-orange-200',
-      blue: 'from-blue-500/20 to-cyan-500/20 border-blue-400/30 text-blue-200',
-      yellow: 'from-yellow-500/20 to-amber-500/20 border-yellow-400/30 text-yellow-200',
-      purple: 'from-purple-500/20 to-indigo-500/20 border-purple-400/30 text-purple-200',
-      pink: 'from-pink-500/20 to-rose-500/20 border-pink-400/30 text-pink-200'
+      green: 'from-green-500/30 to-emerald-500/30 border-green-400/50 text-green-900',
+      orange: 'from-orange-500/30 to-amber-500/30 border-orange-400/50 text-orange-900',
+      blue: 'from-blue-500/30 to-cyan-500/30 border-blue-400/50 text-blue-900',
+      yellow: 'from-yellow-500/30 to-amber-500/30 border-yellow-400/50 text-yellow-900',
+      purple: 'from-purple-500/30 to-indigo-500/30 border-purple-400/50 text-purple-900',
+      pink: 'from-pink-500/30 to-rose-500/30 border-pink-400/50 text-pink-900'
     };
     return colors[color] || colors.purple;
   };
