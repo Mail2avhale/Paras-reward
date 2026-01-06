@@ -216,6 +216,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/user-ledger" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminUserLedger user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/capital" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminCapitalManagement user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/accounting" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminAccountingDashboard user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/cash-bank-book" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminCashBankBook user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/prc-economy" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><PRCEmergencyControls user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/user-controls" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminUserControls user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/vip-plans" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminVIPPlans user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
