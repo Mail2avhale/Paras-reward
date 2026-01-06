@@ -23054,6 +23054,820 @@ async def get_category_suggestions():
         ]
     }
 
+# ==================== PHASE 2: ACCOUNTS RECEIVABLE (AR) ====================
+
+@api_router.get("/admin/accounting/receivables")
+async def get_accounts_receivable(status: str = "all", page: int = 1, limit: int = 50):
+    """Get Accounts Receivable - Money owed TO the company"""
+    try:
+        skip = (page - 1) * limit
+        
+        # Build query based on status
+        query = {}
+        if status == "pending":
+            query["status"] = "pending"
+        elif status == "overdue":
+            query["status"] = "overdue"
+        elif status == "paid":
+            query["status"] = "paid"
+        
+        receivables = await db.accounts_receivable.find(query).sort("due_date", 1).skip(skip).limit(limit).to_list(limit)
+        total = await db.accounts_receivable.count_documents(query)
+        
+        # Calculate totals
+        all_receivables = await db.accounts_receivable.find({}).to_list(length=None)
+        total_pending = sum(r.get("amount", 0) for r in all_receivables if r.get("status") == "pending")
+        total_overdue = sum(r.get("amount", 0) for r in all_receivables if r.get("status") == "overdue")
+        total_collected = sum(r.get("amount", 0) for r in all_receivables if r.get("status") == "paid")
+        
+        return {
+            "summary": {
+                "total_pending": round(total_pending, 2),
+                "total_overdue": round(total_overdue, 2),
+                "total_collected": round(total_collected, 2),
+                "total_outstanding": round(total_pending + total_overdue, 2)
+            },
+            "receivables": [{
+                "id": str(r.get("_id", "")),
+                "invoice_id": r.get("invoice_id", ""),
+                "customer_name": r.get("customer_name", ""),
+                "customer_id": r.get("customer_id", ""),
+                "description": r.get("description", ""),
+                "amount": r.get("amount", 0),
+                "due_date": r.get("due_date", ""),
+                "status": r.get("status", "pending"),
+                "days_overdue": r.get("days_overdue", 0),
+                "category": r.get("category", ""),
+                "created_at": r.get("created_at", "")
+            } for r in receivables],
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "total_pages": (total + limit - 1) // limit
+            }
+        }
+    except Exception as e:
+        logging.error(f"Error getting accounts receivable: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/accounting/receivables")
+async def create_receivable(
+    customer_name: str,
+    customer_id: str = "",
+    description: str = "",
+    amount: float = 0,
+    due_date: str = None,
+    category: str = "vip_fee",
+    admin_id: str = ""
+):
+    """Create a new accounts receivable entry"""
+    try:
+        if amount <= 0:
+            raise HTTPException(status_code=400, detail="Amount must be positive")
+        
+        now = datetime.utcnow()
+        due = datetime.fromisoformat(due_date) if due_date else now + timedelta(days=30)
+        
+        receivable = {
+            "invoice_id": f"INV-{now.strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}",
+            "customer_name": customer_name,
+            "customer_id": customer_id,
+            "description": description,
+            "amount": amount,
+            "due_date": due.isoformat(),
+            "status": "pending",
+            "days_overdue": 0,
+            "category": category,
+            "created_at": now.isoformat(),
+            "created_by": admin_id
+        }
+        
+        await db.accounts_receivable.insert_one(receivable)
+        
+        return {
+            "success": True,
+            "message": "Receivable created successfully",
+            "invoice_id": receivable["invoice_id"]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error creating receivable: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/admin/accounting/receivables/{invoice_id}/status")
+async def update_receivable_status(invoice_id: str, status: str, admin_id: str = ""):
+    """Update receivable status (pending, paid, overdue)"""
+    try:
+        if status not in ["pending", "paid", "overdue", "cancelled"]:
+            raise HTTPException(status_code=400, detail="Invalid status")
+        
+        result = await db.accounts_receivable.update_one(
+            {"invoice_id": invoice_id},
+            {"$set": {"status": status, "updated_at": datetime.utcnow().isoformat(), "updated_by": admin_id}}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Receivable not found")
+        
+        # If marked as paid, add to cash book
+        if status == "paid":
+            receivable = await db.accounts_receivable.find_one({"invoice_id": invoice_id})
+            if receivable:
+                await db.cash_book.insert_one({
+                    "entry_id": str(uuid.uuid4()),
+                    "entry_type": "income",
+                    "amount": receivable.get("amount", 0),
+                    "description": f"AR Collection: {receivable.get('description', invoice_id)}",
+                    "category": receivable.get("category", "ar_collection"),
+                    "reference_no": invoice_id,
+                    "date": datetime.utcnow().strftime("%Y-%m-%d"),
+                    "created_at": datetime.utcnow().isoformat(),
+                    "created_by": admin_id
+                })
+                
+                await db.company_accounts.update_one(
+                    {"account_type": "cash"},
+                    {"$inc": {"current_balance": receivable.get("amount", 0)}},
+                    upsert=True
+                )
+        
+        return {"success": True, "message": f"Receivable marked as {status}"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error updating receivable: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== PHASE 2: ACCOUNTS PAYABLE (AP) ====================
+
+@api_router.get("/admin/accounting/payables")
+async def get_accounts_payable(status: str = "all", page: int = 1, limit: int = 50):
+    """Get Accounts Payable - Money owed BY the company"""
+    try:
+        skip = (page - 1) * limit
+        
+        query = {}
+        if status == "pending":
+            query["status"] = "pending"
+        elif status == "overdue":
+            query["status"] = "overdue"
+        elif status == "paid":
+            query["status"] = "paid"
+        
+        payables = await db.accounts_payable.find(query).sort("due_date", 1).skip(skip).limit(limit).to_list(limit)
+        total = await db.accounts_payable.count_documents(query)
+        
+        # Calculate totals
+        all_payables = await db.accounts_payable.find({}).to_list(length=None)
+        total_pending = sum(p.get("amount", 0) for p in all_payables if p.get("status") == "pending")
+        total_overdue = sum(p.get("amount", 0) for p in all_payables if p.get("status") == "overdue")
+        total_paid = sum(p.get("amount", 0) for p in all_payables if p.get("status") == "paid")
+        
+        # Add PRC redemption liability
+        prc_liability = await db.users.aggregate([
+            {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
+        ]).to_list(length=1)
+        prc_redemption_liability = (prc_liability[0]["total"] if prc_liability else 0) * PRC_TO_INR_RATE
+        
+        return {
+            "summary": {
+                "total_pending": round(total_pending, 2),
+                "total_overdue": round(total_overdue, 2),
+                "total_paid": round(total_paid, 2),
+                "total_outstanding": round(total_pending + total_overdue, 2),
+                "prc_redemption_liability": round(prc_redemption_liability, 2)
+            },
+            "payables": [{
+                "id": str(p.get("_id", "")),
+                "bill_id": p.get("bill_id", ""),
+                "vendor_name": p.get("vendor_name", ""),
+                "vendor_id": p.get("vendor_id", ""),
+                "description": p.get("description", ""),
+                "amount": p.get("amount", 0),
+                "due_date": p.get("due_date", ""),
+                "status": p.get("status", "pending"),
+                "days_overdue": p.get("days_overdue", 0),
+                "category": p.get("category", ""),
+                "created_at": p.get("created_at", "")
+            } for p in payables],
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "total_pages": (total + limit - 1) // limit
+            }
+        }
+    except Exception as e:
+        logging.error(f"Error getting accounts payable: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/accounting/payables")
+async def create_payable(
+    vendor_name: str,
+    vendor_id: str = "",
+    description: str = "",
+    amount: float = 0,
+    due_date: str = None,
+    category: str = "vendor_payment",
+    admin_id: str = ""
+):
+    """Create a new accounts payable entry"""
+    try:
+        if amount <= 0:
+            raise HTTPException(status_code=400, detail="Amount must be positive")
+        
+        now = datetime.utcnow()
+        due = datetime.fromisoformat(due_date) if due_date else now + timedelta(days=30)
+        
+        payable = {
+            "bill_id": f"BILL-{now.strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}",
+            "vendor_name": vendor_name,
+            "vendor_id": vendor_id,
+            "description": description,
+            "amount": amount,
+            "due_date": due.isoformat(),
+            "status": "pending",
+            "days_overdue": 0,
+            "category": category,
+            "created_at": now.isoformat(),
+            "created_by": admin_id
+        }
+        
+        await db.accounts_payable.insert_one(payable)
+        
+        return {
+            "success": True,
+            "message": "Payable created successfully",
+            "bill_id": payable["bill_id"]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error creating payable: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/admin/accounting/payables/{bill_id}/status")
+async def update_payable_status(bill_id: str, status: str, payment_method: str = "cash", admin_id: str = ""):
+    """Update payable status (pending, paid, overdue)"""
+    try:
+        if status not in ["pending", "paid", "overdue", "cancelled"]:
+            raise HTTPException(status_code=400, detail="Invalid status")
+        
+        result = await db.accounts_payable.update_one(
+            {"bill_id": bill_id},
+            {"$set": {"status": status, "updated_at": datetime.utcnow().isoformat(), "updated_by": admin_id}}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Payable not found")
+        
+        # If marked as paid, add to cash/bank book as expense
+        if status == "paid":
+            payable = await db.accounts_payable.find_one({"bill_id": bill_id})
+            if payable:
+                collection = db.cash_book if payment_method == "cash" else db.bank_book
+                account_type = "cash" if payment_method == "cash" else "bank"
+                
+                await collection.insert_one({
+                    "entry_id": str(uuid.uuid4()),
+                    "entry_type": "expense",
+                    "amount": payable.get("amount", 0),
+                    "description": f"AP Payment: {payable.get('description', bill_id)}",
+                    "category": payable.get("category", "ap_payment"),
+                    "reference_no": bill_id,
+                    "date": datetime.utcnow().strftime("%Y-%m-%d"),
+                    "created_at": datetime.utcnow().isoformat(),
+                    "created_by": admin_id
+                })
+                
+                await db.company_accounts.update_one(
+                    {"account_type": account_type},
+                    {"$inc": {"current_balance": -payable.get("amount", 0)}},
+                    upsert=True
+                )
+        
+        return {"success": True, "message": f"Payable marked as {status}"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error updating payable: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== PHASE 2: BANK RECONCILIATION ====================
+
+@api_router.get("/admin/accounting/bank-reconciliation")
+async def get_bank_reconciliation(month: int = None, year: int = None):
+    """Get bank reconciliation data"""
+    try:
+        now = datetime.utcnow()
+        target_month = month or now.month
+        target_year = year or now.year
+        
+        start_date = datetime(target_year, target_month, 1)
+        if target_month == 12:
+            end_date = datetime(target_year + 1, 1, 1)
+        else:
+            end_date = datetime(target_year, target_month + 1, 1)
+        
+        start_str = start_date.isoformat()
+        end_str = end_date.isoformat()
+        
+        # Get bank book entries for the month
+        bank_entries = await db.bank_book.find({
+            "created_at": {"$gte": start_str, "$lt": end_str}
+        }).sort("created_at", 1).to_list(length=None)
+        
+        # Get bank statements (uploaded/imported)
+        bank_statements = await db.bank_statements.find({
+            "transaction_date": {"$gte": start_str, "$lt": end_str}
+        }).sort("transaction_date", 1).to_list(length=None)
+        
+        # Get bank account balance
+        bank_account = await db.company_accounts.find_one({"account_type": "bank"})
+        book_balance = bank_account.get("current_balance", 0) if bank_account else 0
+        
+        # Calculate totals from entries
+        total_deposits = sum(e.get("amount", 0) for e in bank_entries if e.get("entry_type") in ["income", "capital", "transfer_in"])
+        total_withdrawals = sum(e.get("amount", 0) for e in bank_entries if e.get("entry_type") in ["expense", "transfer_out"])
+        
+        # Unreconciled items
+        reconciled_refs = set(s.get("reference_no") for s in bank_statements if s.get("reconciled"))
+        unreconciled_entries = [e for e in bank_entries if e.get("reference_no") not in reconciled_refs]
+        
+        return {
+            "period": f"{start_date.strftime('%B %Y')}",
+            "month": target_month,
+            "year": target_year,
+            "book_balance": round(book_balance, 2),
+            "bank_statement_balance": 0,  # Would come from imported statements
+            "difference": round(book_balance, 2),
+            "is_reconciled": len(unreconciled_entries) == 0,
+            "summary": {
+                "total_deposits": round(total_deposits, 2),
+                "total_withdrawals": round(total_withdrawals, 2),
+                "entries_count": len(bank_entries),
+                "unreconciled_count": len(unreconciled_entries)
+            },
+            "entries": [{
+                "id": str(e.get("_id", "")),
+                "entry_id": e.get("entry_id", ""),
+                "date": e.get("date", ""),
+                "description": e.get("description", ""),
+                "amount": e.get("amount", 0),
+                "entry_type": e.get("entry_type", ""),
+                "reference_no": e.get("reference_no", ""),
+                "reconciled": e.get("reference_no") in reconciled_refs
+            } for e in bank_entries[:50]]
+        }
+    except Exception as e:
+        logging.error(f"Error getting bank reconciliation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/accounting/bank-reconciliation/reconcile")
+async def reconcile_entry(entry_id: str, bank_ref: str = "", admin_id: str = ""):
+    """Mark a bank entry as reconciled"""
+    try:
+        result = await db.bank_book.update_one(
+            {"entry_id": entry_id},
+            {"$set": {"reconciled": True, "bank_reference": bank_ref, "reconciled_at": datetime.utcnow().isoformat(), "reconciled_by": admin_id}}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Entry not found")
+        
+        return {"success": True, "message": "Entry reconciled successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error reconciling entry: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== PHASE 2: GST/TAX TRACKING ====================
+
+GST_RATES = {
+    "0": 0,
+    "5": 5,
+    "12": 12,
+    "18": 18,
+    "28": 28
+}
+
+@api_router.get("/admin/accounting/gst-summary")
+async def get_gst_summary(month: int = None, year: int = None):
+    """Get GST summary for a month"""
+    try:
+        now = datetime.utcnow()
+        target_month = month or now.month
+        target_year = year or now.year
+        
+        start_date = datetime(target_year, target_month, 1)
+        if target_month == 12:
+            end_date = datetime(target_year + 1, 1, 1)
+        else:
+            end_date = datetime(target_year, target_month + 1, 1)
+        
+        start_str = start_date.isoformat()
+        end_str = end_date.isoformat()
+        
+        # Get GST entries
+        gst_entries = await db.gst_entries.find({
+            "created_at": {"$gte": start_str, "$lt": end_str}
+        }).to_list(length=None)
+        
+        # Calculate input and output GST
+        input_gst = sum(e.get("gst_amount", 0) for e in gst_entries if e.get("gst_type") == "input")
+        output_gst = sum(e.get("gst_amount", 0) for e in gst_entries if e.get("gst_type") == "output")
+        
+        # GST by rate
+        gst_by_rate = {"0": 0, "5": 0, "12": 0, "18": 0, "28": 0}
+        for entry in gst_entries:
+            rate = str(entry.get("gst_rate", "18"))
+            if rate in gst_by_rate:
+                gst_by_rate[rate] += entry.get("gst_amount", 0)
+        
+        net_gst = output_gst - input_gst
+        
+        return {
+            "period": f"{start_date.strftime('%B %Y')}",
+            "month": target_month,
+            "year": target_year,
+            "summary": {
+                "input_gst": round(input_gst, 2),
+                "output_gst": round(output_gst, 2),
+                "net_gst_payable": round(max(net_gst, 0), 2),
+                "net_gst_credit": round(max(-net_gst, 0), 2)
+            },
+            "gst_by_rate": {k: round(v, 2) for k, v in gst_by_rate.items()},
+            "entries_count": len(gst_entries),
+            "recent_entries": [{
+                "id": str(e.get("_id", "")),
+                "date": e.get("date", ""),
+                "description": e.get("description", ""),
+                "gst_type": e.get("gst_type", ""),
+                "gst_rate": e.get("gst_rate", 0),
+                "base_amount": e.get("base_amount", 0),
+                "gst_amount": e.get("gst_amount", 0)
+            } for e in gst_entries[-20:]]
+        }
+    except Exception as e:
+        logging.error(f"Error getting GST summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/accounting/gst-entry")
+async def add_gst_entry(
+    gst_type: str,  # input or output
+    base_amount: float,
+    gst_rate: int = 18,
+    description: str = "",
+    invoice_no: str = "",
+    party_name: str = "",
+    date: str = None,
+    admin_id: str = ""
+):
+    """Add a GST entry"""
+    try:
+        if gst_type not in ["input", "output"]:
+            raise HTTPException(status_code=400, detail="GST type must be 'input' or 'output'")
+        
+        if gst_rate not in [0, 5, 12, 18, 28]:
+            raise HTTPException(status_code=400, detail="Invalid GST rate. Use 0, 5, 12, 18, or 28")
+        
+        gst_amount = base_amount * (gst_rate / 100)
+        now = datetime.utcnow()
+        
+        entry = {
+            "entry_id": str(uuid.uuid4()),
+            "gst_type": gst_type,
+            "base_amount": base_amount,
+            "gst_rate": gst_rate,
+            "gst_amount": round(gst_amount, 2),
+            "total_amount": round(base_amount + gst_amount, 2),
+            "description": description,
+            "invoice_no": invoice_no,
+            "party_name": party_name,
+            "date": date or now.strftime("%Y-%m-%d"),
+            "created_at": now.isoformat(),
+            "created_by": admin_id
+        }
+        
+        await db.gst_entries.insert_one(entry)
+        
+        return {
+            "success": True,
+            "message": f"{gst_type.upper()} GST entry added",
+            "entry_id": entry["entry_id"],
+            "gst_amount": entry["gst_amount"]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error adding GST entry: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== PHASE 2: BUDGET VS ACTUAL ====================
+
+@api_router.get("/admin/accounting/budget")
+async def get_budget_vs_actual(month: int = None, year: int = None):
+    """Get budget vs actual comparison"""
+    try:
+        now = datetime.utcnow()
+        target_month = month or now.month
+        target_year = year or now.year
+        
+        # Get budget for the month
+        budget = await db.budgets.find_one({
+            "month": target_month,
+            "year": target_year
+        })
+        
+        if not budget:
+            budget = {"categories": {}}
+        
+        # Get actual expenses
+        start_date = datetime(target_year, target_month, 1)
+        if target_month == 12:
+            end_date = datetime(target_year + 1, 1, 1)
+        else:
+            end_date = datetime(target_year, target_month + 1, 1)
+        
+        start_str = start_date.isoformat()
+        end_str = end_date.isoformat()
+        
+        cash_expenses = await db.cash_book.find({
+            "entry_type": "expense",
+            "created_at": {"$gte": start_str, "$lt": end_str}
+        }).to_list(length=None)
+        
+        bank_expenses = await db.bank_book.find({
+            "entry_type": "expense",
+            "created_at": {"$gte": start_str, "$lt": end_str}
+        }).to_list(length=None)
+        
+        all_expenses = cash_expenses + bank_expenses
+        
+        # Group by category
+        actual_by_category = {}
+        for exp in all_expenses:
+            cat = exp.get("category", "other")
+            if cat not in actual_by_category:
+                actual_by_category[cat] = 0
+            actual_by_category[cat] += exp.get("amount", 0)
+        
+        # Compare with budget
+        budget_categories = budget.get("categories", {})
+        comparison = []
+        
+        all_categories = set(list(budget_categories.keys()) + list(actual_by_category.keys()))
+        
+        for cat in all_categories:
+            budgeted = budget_categories.get(cat, 0)
+            actual = actual_by_category.get(cat, 0)
+            variance = budgeted - actual
+            variance_percent = (variance / budgeted * 100) if budgeted > 0 else 0
+            
+            comparison.append({
+                "category": cat,
+                "budgeted": round(budgeted, 2),
+                "actual": round(actual, 2),
+                "variance": round(variance, 2),
+                "variance_percent": round(variance_percent, 2),
+                "status": "under" if variance > 0 else "over" if variance < 0 else "on_track"
+            })
+        
+        total_budgeted = sum(c["budgeted"] for c in comparison)
+        total_actual = sum(c["actual"] for c in comparison)
+        
+        return {
+            "period": f"{start_date.strftime('%B %Y')}",
+            "month": target_month,
+            "year": target_year,
+            "summary": {
+                "total_budgeted": round(total_budgeted, 2),
+                "total_actual": round(total_actual, 2),
+                "total_variance": round(total_budgeted - total_actual, 2),
+                "budget_utilization": round((total_actual / total_budgeted * 100) if total_budgeted > 0 else 0, 2)
+            },
+            "comparison": sorted(comparison, key=lambda x: x["actual"], reverse=True)
+        }
+    except Exception as e:
+        logging.error(f"Error getting budget vs actual: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/accounting/budget")
+async def set_budget(
+    month: int,
+    year: int,
+    categories: dict,
+    admin_id: str = ""
+):
+    """Set budget for a month"""
+    try:
+        now = datetime.utcnow()
+        
+        await db.budgets.update_one(
+            {"month": month, "year": year},
+            {"$set": {
+                "categories": categories,
+                "updated_at": now.isoformat(),
+                "updated_by": admin_id
+            }},
+            upsert=True
+        )
+        
+        return {
+            "success": True,
+            "message": f"Budget set for {month}/{year}",
+            "categories_count": len(categories)
+        }
+    except Exception as e:
+        logging.error(f"Error setting budget: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== PHASE 2: FINANCIAL RATIOS ====================
+
+@api_router.get("/admin/accounting/financial-ratios")
+async def get_financial_ratios():
+    """Get key financial ratios"""
+    try:
+        # Get balances
+        cash_account = await db.company_accounts.find_one({"account_type": "cash"})
+        bank_account = await db.company_accounts.find_one({"account_type": "bank"})
+        
+        cash_balance = cash_account.get("current_balance", 0) if cash_account else 0
+        bank_balance = bank_account.get("current_balance", 0) if bank_account else 0
+        total_cash = cash_balance + bank_balance
+        
+        # Current liabilities (PRC + AP)
+        prc_total = await db.users.aggregate([
+            {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
+        ]).to_list(length=1)
+        prc_liability = (prc_total[0]["total"] if prc_total else 0) * PRC_TO_INR_RATE
+        
+        ap_pending = await db.accounts_payable.find({"status": {"$in": ["pending", "overdue"]}}).to_list(length=None)
+        total_ap = sum(p.get("amount", 0) for p in ap_pending)
+        
+        total_current_liabilities = prc_liability + total_ap
+        
+        # Income and expenses (last 30 days for simplicity)
+        thirty_days_ago = (datetime.utcnow() - timedelta(days=30)).isoformat()
+        
+        recent_income = await db.cash_book.find({
+            "entry_type": "income",
+            "created_at": {"$gte": thirty_days_ago}
+        }).to_list(length=None)
+        recent_income += await db.bank_book.find({
+            "entry_type": "income",
+            "created_at": {"$gte": thirty_days_ago}
+        }).to_list(length=None)
+        
+        recent_expenses = await db.cash_book.find({
+            "entry_type": "expense",
+            "created_at": {"$gte": thirty_days_ago}
+        }).to_list(length=None)
+        recent_expenses += await db.bank_book.find({
+            "entry_type": "expense",
+            "created_at": {"$gte": thirty_days_ago}
+        }).to_list(length=None)
+        
+        total_income = sum(i.get("amount", 0) for i in recent_income)
+        total_expenses = sum(e.get("amount", 0) for e in recent_expenses)
+        net_profit = total_income - total_expenses
+        
+        # Calculate ratios
+        current_ratio = total_cash / total_current_liabilities if total_current_liabilities > 0 else float('inf')
+        quick_ratio = total_cash / total_current_liabilities if total_current_liabilities > 0 else float('inf')
+        profit_margin = (net_profit / total_income * 100) if total_income > 0 else 0
+        expense_ratio = (total_expenses / total_income * 100) if total_income > 0 else 0
+        
+        # Health score (0-100)
+        health_score = 50
+        if current_ratio >= 2:
+            health_score += 15
+        elif current_ratio >= 1:
+            health_score += 8
+        if profit_margin >= 20:
+            health_score += 20
+        elif profit_margin >= 10:
+            health_score += 10
+        elif profit_margin >= 0:
+            health_score += 5
+        if expense_ratio <= 70:
+            health_score += 15
+        elif expense_ratio <= 85:
+            health_score += 8
+        
+        return {
+            "ratios": {
+                "current_ratio": {
+                    "value": round(min(current_ratio, 999), 2),
+                    "benchmark": 2.0,
+                    "status": "good" if current_ratio >= 2 else "fair" if current_ratio >= 1 else "poor",
+                    "description": "Current Assets / Current Liabilities"
+                },
+                "quick_ratio": {
+                    "value": round(min(quick_ratio, 999), 2),
+                    "benchmark": 1.0,
+                    "status": "good" if quick_ratio >= 1 else "poor",
+                    "description": "Quick Assets / Current Liabilities"
+                },
+                "profit_margin": {
+                    "value": round(profit_margin, 2),
+                    "benchmark": 15.0,
+                    "status": "good" if profit_margin >= 15 else "fair" if profit_margin >= 5 else "poor",
+                    "description": "Net Profit / Revenue × 100"
+                },
+                "expense_ratio": {
+                    "value": round(expense_ratio, 2),
+                    "benchmark": 70.0,
+                    "status": "good" if expense_ratio <= 70 else "fair" if expense_ratio <= 85 else "poor",
+                    "description": "Total Expenses / Revenue × 100"
+                }
+            },
+            "health_score": min(health_score, 100),
+            "health_status": "excellent" if health_score >= 80 else "good" if health_score >= 60 else "fair" if health_score >= 40 else "needs_attention",
+            "period": "Last 30 days",
+            "underlying_data": {
+                "total_cash": round(total_cash, 2),
+                "total_current_liabilities": round(total_current_liabilities, 2),
+                "total_income": round(total_income, 2),
+                "total_expenses": round(total_expenses, 2),
+                "net_profit": round(net_profit, 2)
+            }
+        }
+    except Exception as e:
+        logging.error(f"Error calculating financial ratios: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== PHASE 2: AUDIT TRAIL ====================
+
+@api_router.get("/admin/accounting/audit-trail")
+async def get_audit_trail(page: int = 1, limit: int = 50, action_type: str = "all"):
+    """Get audit trail of all accounting actions"""
+    try:
+        skip = (page - 1) * limit
+        
+        query = {}
+        if action_type != "all":
+            query["action_type"] = action_type
+        
+        audit_logs = await db.audit_trail.find(query).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
+        total = await db.audit_trail.count_documents(query)
+        
+        return {
+            "audit_logs": [{
+                "id": str(log.get("_id", "")),
+                "timestamp": log.get("timestamp", ""),
+                "user_id": log.get("user_id", ""),
+                "user_email": log.get("user_email", ""),
+                "action_type": log.get("action_type", ""),
+                "entity_type": log.get("entity_type", ""),
+                "entity_id": log.get("entity_id", ""),
+                "description": log.get("description", ""),
+                "old_value": log.get("old_value"),
+                "new_value": log.get("new_value"),
+                "ip_address": log.get("ip_address", "")
+            } for log in audit_logs],
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "total_pages": (total + limit - 1) // limit
+            }
+        }
+    except Exception as e:
+        logging.error(f"Error getting audit trail: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def log_audit_event(
+    user_id: str,
+    user_email: str,
+    action_type: str,
+    entity_type: str,
+    entity_id: str,
+    description: str,
+    old_value: dict = None,
+    new_value: dict = None,
+    ip_address: str = ""
+):
+    """Log an audit event"""
+    try:
+        await db.audit_trail.insert_one({
+            "timestamp": datetime.utcnow().isoformat(),
+            "user_id": user_id,
+            "user_email": user_email,
+            "action_type": action_type,
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "description": description,
+            "old_value": old_value,
+            "new_value": new_value,
+            "ip_address": ip_address
+        })
+    except Exception as e:
+        logging.error(f"Error logging audit event: {e}")
+
 
 # Include all API routes (must be after all route definitions)
 app.include_router(api_router)
