@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronRight, ChevronLeft, X, Coins, Users, ShoppingBag, 
@@ -6,6 +6,7 @@ import {
   Sparkles, Star, Heart, Rocket
 } from 'lucide-react';
 import { Button } from './ui/button';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // Cute Mascot Character - Paras Buddy
 const ParasBuddy = ({ emotion = 'happy', message = '' }) => {
