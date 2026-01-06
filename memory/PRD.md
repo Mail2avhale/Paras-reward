@@ -242,6 +242,28 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 - `POST /api/bill-payment/request` - 403 for expired VIP
 - `POST /api/admin/burn-prc-now` - Manual PRC burn trigger
 
+### Comprehensive Ledger APIs (Added Jan 6, 2026)
+- `GET /api/admin/ledger/master-summary` - Overall financial summary (income, expense, P&L, PRC stats)
+- `GET/POST /api/admin/ledger/cash` - Cash ledger entries with running balance
+- `GET/POST /api/admin/ledger/bank` - Bank ledger entries with running balance
+- `GET/POST /api/admin/ledger/subscription-income` - VIP/Premium subscription income
+- `GET/POST /api/admin/ledger/commission-income` - Commission from recharges, bills, products
+- `GET/POST /api/admin/ledger/penalty-income` - Penalty/forfeit PRC income
+- `GET/POST /api/admin/ledger/interest-income` - Interest income from capital
+- `GET/POST /api/admin/ledger/ad-revenue` - AdMob/Unity ad revenue
+- `GET/POST/PUT /api/admin/ledger/redeem-payout` - Redemption payouts with status
+- `GET/POST /api/admin/ledger/expenses` - Operational expenses (server, SMS, salary, etc.)
+- `GET/POST /api/admin/ledger/deposits` - Stockist deposits (received, renewed, refunded)
+- `POST /api/admin/ledger/deposits/{id}/refund` - Process deposit refund
+- `GET/POST /api/admin/ledger/renewal-fees` - Renewal fee income
+- `GET /api/admin/ledger/mobile-recharge` - Mobile recharge ledger (auto-populated)
+- `GET/POST /api/admin/ledger/product-purchase` - Product purchase ledger
+- `GET /api/admin/ledger/daily-cash-bank-summary` - Daily cash/bank reconciliation
+- `POST /api/admin/ledger/daily-cash-bank-summary/generate` - Generate daily summary
+- `GET /api/admin/ledger/profit-loss-summary` - P&L summaries
+- `POST /api/admin/ledger/profit-loss-summary/generate` - Generate P&L summary
+- `GET /api/admin/ledger/balance-sheet` - Balance sheet with assets, liabilities, equity
+
 ### Accounting APIs (Added Jan 5, 2026)
 - `GET /api/admin/accounting/master-dashboard` - Complete accounting overview
 - `GET /api/admin/accounting/prc-mint-ledger` - PRC inflow ledger
