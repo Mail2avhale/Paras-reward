@@ -310,6 +310,14 @@ const DashboardModern = ({ user, onLogout }) => {
             </div>
           </div>
           
+          {/* Live Mining Indicator */}
+          <div className="flex justify-center mb-4">
+            <LiveMiningIndicator 
+              isMining={userData?.mining_active || false}
+              miningEndTime={userData?.mining_session_end}
+            />
+          </div>
+          
           {/* Today's Summary Strip */}
           <div className="bg-white/15 backdrop-blur-md rounded-2xl p-3 mb-6 border border-white/20" data-testid="today-summary-strip">
             <div className="flex items-center justify-around">
