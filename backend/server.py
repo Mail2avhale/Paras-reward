@@ -2456,12 +2456,12 @@ async def claim_mining(uid: str):
     await db.transactions.insert_one({
         "transaction_id": transaction_id,
         "user_id": uid,
-        "transaction_type": "mining",
-        "prc_amount": mined_amount,
+        "type": "mining",  # Changed from transaction_type to type for consistency
+        "amount": mined_amount,  # Changed from prc_amount to amount for consistency
         "inr_amount": 0,
         "description": "Mining rewards claimed",
         "timestamp": now.isoformat(),
-        "expires_at": expiry_date,  # NEW: Track expiry
+        "expires_at": expiry_date,  # Track expiry
         "expired": False,
         "balance_after": new_balance,
         "metadata": {
