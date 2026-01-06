@@ -12911,7 +12911,7 @@ async def get_comprehensive_audit_logs(
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post("/admin/audit/log-action")
-async def log_admin_action(request: Request):
+async def log_admin_action_endpoint(request: Request):
     """Log an admin action with full details"""
     try:
         data = await request.json()
