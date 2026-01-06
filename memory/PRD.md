@@ -65,6 +65,23 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
     - `/api/admin/ledger/profit-loss-summary` - P&L summaries
     - `/api/admin/ledger/balance-sheet` - Balance sheet with assets/liabilities
 
+- ✅ **Quick View Mode for Admin Accounting Dashboard (TESTED - 15/15 Backend + 100% Frontend)**
+  - **New Feature**: Added simplified "Quick View" mode toggle to Admin Accounting Dashboard
+  - **View Mode Toggle**: Two buttons in header - "Quick View" (default) and "Detailed"
+  - **5 Key Metric Cards**:
+    - Total Income (green gradient)
+    - Total Expense (red gradient)
+    - Net P&L (green if profit, orange if loss)
+    - Cash Balance (blue gradient)
+    - Bank Balance (purple gradient)
+  - **Income Breakdown Section**: 5 categories (Ad Revenue, Subscription, Commission, Interest, Penalty/Forfeit)
+  - **Expense Breakdown Section**: 2 categories (Operational Expenses, Redemption Payouts)
+  - **PRC Statistics Section**: 3 metrics (Total PRC in System, INR Liability, Conversion Rate)
+  - **Quick Actions**: Buttons to switch to Detailed View or navigate to Finance Section
+  - **Files Modified**:
+    - Frontend: `/app/frontend/src/pages/AdminAccountingDashboard.js`
+  - Test file: `/app/tests/test_quick_view_ledger_apis.py`
+
 ### January 5, 2026 (Current Session - Part 4)
 - ✅ **Dashboard Bug Fixes & Enhancements**
   - **Bill Pay button color**: Fixed from faded cyan to proper teal gradient
