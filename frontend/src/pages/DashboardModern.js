@@ -317,36 +317,6 @@ const DashboardModern = ({ user, onLogout }) => {
               miningEndTime={userData?.mining_session_end}
             />
           </div>
-          
-          {/* Today's Summary Strip */}
-          <div className="bg-white/15 backdrop-blur-md rounded-2xl p-3 mb-6 border border-white/20" data-testid="today-summary-strip">
-            <div className="flex items-center justify-around">
-              {/* Today Earned */}
-              <div className="flex items-center gap-2">
-                <div className="bg-green-400/30 p-1.5 rounded-full">
-                  <ArrowUp className="w-4 h-4 text-green-200" />
-                </div>
-                <div>
-                  <p className="text-xs text-white/70">{t('todayEarned')}</p>
-                  <p className="text-base font-bold text-green-300">+{todayStats.today_prc_earned.toLocaleString(undefined, {maximumFractionDigits: 2})} PRC</p>
-                </div>
-              </div>
-              
-              {/* Divider */}
-              <div className="h-10 w-px bg-white/20"></div>
-              
-              {/* Today Spent */}
-              <div className="flex items-center gap-2">
-                <div className="bg-red-400/30 p-1.5 rounded-full">
-                  <ArrowDown className="w-4 h-4 text-red-200" />
-                </div>
-                <div>
-                  <p className="text-xs text-white/70">{t('todaySpent')}</p>
-                  <p className="text-base font-bold text-red-300">-{todayStats.today_prc_spent.toLocaleString(undefined, {maximumFractionDigits: 2})} PRC</p>
-                </div>
-              </div>
-            </div>
-          </div>
 
           {/* PRC Balance - Clean Circular Design */}
           <div className="flex flex-col items-center justify-center">
