@@ -22737,16 +22737,21 @@ async def get_balance_sheet():
         prc_liability = total_prc[0]["total"] if total_prc else 0
         prc_liability_inr = round(prc_liability * PRC_TO_INR_RATE, 2)
         
-        # Get capital entries
-        capital_entries = await db.cash_book.find({"category": "capital"}).to_list(length=None)
-        capital_entries += await db.bank_book.find({"category": "capital"}).to_list(length=None)
-        total_capital = sum(e.get("amount", 0) for e in capital_entries)
+        # Get capital entries from dedicated collection
+        opening_capital_entries = await db.capital_entries.find({"entry_type": "opening_capital"}).to_list(length=None)
+        additional_capital_entries = await db.capital_entries.find({"entry_type": "additional_capital"}).to_list(length=None)
+        drawings_entries = await db.capital_entries.find({"entry_type": "drawings"}).to_list(length=None)
         
-        # Calculate retained earnings (simplified)
-        all_income = await db.cash_book.find({"entry_type": "income"}).to_list(length=None)
-        all_income += await db.bank_book.find({"entry_type": "income"}).to_list(length=None)
-        all_expenses = await db.cash_book.find({"entry_type": "expense"}).to_list(length=None)
-        all_expenses += await db.bank_book.find({"entry_type": "expense"}).to_list(length=None)
+        opening_capital = sum(e.get("amount", 0) for e in opening_capital_entries)
+        additional_capital = sum(e.get("amount", 0) for e in additional_capital_entries)
+        total_capital = opening_capital + additional_capital
+        total_drawings = sum(e.get("amount", 0) for e in drawings_entries)
+        
+        # Calculate retained earnings (income - expenses, excluding capital movements)
+        all_income = await db.cash_book.find({"entry_type": "income", "category": {"$ne": "capital"}}).to_list(length=None)
+        all_income += await db.bank_book.find({"entry_type": "income", "category": {"$ne": "capital"}}).to_list(length=None)
+        all_expenses = await db.cash_book.find({"entry_type": "expense", "category": {"$ne": "drawings"}}).to_list(length=None)
+        all_expenses += await db.bank_book.find({"entry_type": "expense", "category": {"$ne": "drawings"}}).to_list(length=None)
         
         total_income = sum(e.get("amount", 0) for e in all_income)
         total_expense = sum(e.get("amount", 0) for e in all_expenses)
@@ -22754,7 +22759,7 @@ async def get_balance_sheet():
         
         total_assets = cash_balance + bank_balance
         total_liabilities = prc_liability_inr
-        total_equity = total_capital + retained_earnings
+        total_equity = total_capital - total_drawings + retained_earnings
         
         return {
             "report_type": "Balance Sheet",
@@ -22774,7 +22779,10 @@ async def get_balance_sheet():
                 "total_liabilities": round(total_liabilities, 2)
             },
             "equity": {
-                "capital": round(total_capital, 2),
+                "opening_capital": round(opening_capital, 2),
+                "additional_capital": round(additional_capital, 2),
+                "total_capital": round(total_capital, 2),
+                "less_drawings": round(total_drawings, 2),
                 "retained_earnings": round(retained_earnings, 2),
                 "total_equity": round(total_equity, 2)
             },
@@ -22782,7 +22790,8 @@ async def get_balance_sheet():
                 "assets": round(total_assets, 2),
                 "liabilities_plus_equity": round(total_liabilities + total_equity, 2),
                 "is_balanced": abs(total_assets - (total_liabilities + total_equity)) < 0.01
-            }
+            },
+            "note": "Add Opening Capital to balance the books" if total_capital == 0 and total_assets > 0 else None
         }
     except Exception as e:
         logging.error(f"Error generating balance sheet: {e}")
