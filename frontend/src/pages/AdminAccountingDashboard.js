@@ -18,6 +18,7 @@ const AdminAccountingDashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [viewMode, setViewMode] = useState('quick'); // 'quick' or 'detailed'
   
   const [dashboardData, setDashboardData] = useState(null);
   const [mintLedger, setMintLedger] = useState(null);
@@ -28,6 +29,9 @@ const AdminAccountingDashboard = ({ user }) => {
   const [userCostAnalysis, setUserCostAnalysis] = useState(null);
   const [accountingSettings, setAccountingSettings] = useState(null);
   const [conversionRate, setConversionRate] = useState(null);
+  
+  // Quick View data from new ledger endpoints
+  const [quickViewData, setQuickViewData] = useState(null);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
