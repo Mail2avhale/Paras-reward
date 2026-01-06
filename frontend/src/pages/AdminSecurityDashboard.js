@@ -7,7 +7,8 @@ import { toast } from 'sonner';
 import { 
   Shield, ShieldAlert, ShieldCheck, Lock, Unlock, 
   Users, Activity, Globe, AlertTriangle, Clock,
-  LogOut, Eye, Plus, Trash2, RefreshCw, History
+  LogOut, Eye, Plus, Trash2, RefreshCw, History,
+  Bell, BellRing, CheckCircle, XCircle, AlertOctagon
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -22,7 +23,14 @@ const AdminSecurityDashboard = ({ user }) => {
   const [auditTotal, setAuditTotal] = useState(0);
   const [lockdownReason, setLockdownReason] = useState('');
   const [selectedFeatures, setSelectedFeatures] = useState(['withdrawals', 'registrations']);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('alerts');
+  
+  // Security Alerts State
+  const [alerts, setAlerts] = useState([]);
+  const [alertsPage, setAlertsPage] = useState(1);
+  const [alertsTotal, setAlertsTotal] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [alertFilter, setAlertFilter] = useState('all'); // all, unread, critical, high
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -53,19 +61,78 @@ const AdminSecurityDashboard = ({ user }) => {
     }
   }, [user.uid]);
 
+  const fetchAlerts = useCallback(async (page = 1) => {
+    try {
+      let url = `${API}/admin/security/alerts?admin_uid=${user.uid}&page=${page}&limit=15`;
+      if (alertFilter === 'unread') url += '&unread_only=true';
+      if (alertFilter === 'critical') url += '&severity=critical';
+      if (alertFilter === 'high') url += '&severity=high';
+      
+      const response = await axios.get(url);
+      setAlerts(response.data.alerts);
+      setAlertsTotal(response.data.total);
+      setUnreadCount(response.data.unread_count);
+      setAlertsPage(page);
+    } catch (error) {
+      console.error('Error fetching alerts:', error);
+    }
+  }, [user.uid, alertFilter]);
+
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/admin/security/alerts/unread-count?admin_uid=${user.uid}`);
+      setUnreadCount(response.data.unread_count);
+      
+      // Show toast for critical alerts
+      if (response.data.critical_count > 0) {
+        toast.error(`🚨 ${response.data.critical_count} Critical Security Alert(s)!`, {
+          duration: 5000
+        });
+      } else if (response.data.high_count > 0) {
+        toast.warning(`⚠️ ${response.data.high_count} High Priority Alert(s)`, {
+          duration: 4000
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+    }
+  }, [user.uid]);
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchDashboard(), fetchIpWhitelist(), fetchAuditLogs()]);
+      await Promise.all([fetchDashboard(), fetchIpWhitelist(), fetchAuditLogs(), fetchAlerts()]);
       setLoading(false);
     };
     loadData();
-  }, [fetchDashboard, fetchIpWhitelist, fetchAuditLogs]);
+    
+    // Poll for new alerts every 30 seconds
+    const alertInterval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(alertInterval);
+  }, [fetchDashboard, fetchIpWhitelist, fetchAuditLogs, fetchAlerts, fetchUnreadCount]);
+
+  useEffect(() => {
+    fetchAlerts(1);
+  }, [alertFilter, fetchAlerts]);
+
+  const handleMarkAlertsRead = async (alertIds = null, markAll = false) => {
+    try {
+      const params = new URLSearchParams();
+      params.append('admin_uid', user.uid);
+      if (markAll) params.append('mark_all', 'true');
+      if (alertIds) alertIds.forEach(id => params.append('alert_ids', id));
+      
+      await axios.post(`${API}/admin/security/alerts/mark-read?${params.toString()}`);
+      toast.success(markAll ? 'All alerts marked as read' : 'Alerts marked as read');
+      fetchAlerts(alertsPage);
+    } catch (error) {
+      toast.error('Failed to mark alerts as read');
+    }
+  };
 
   const handleAddIp = () => {
     if (!newIp.trim()) return;
     
-    // Basic IP validation
     const ipRegex = /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/;
     if (!ipRegex.test(newIp.trim())) {
       toast.error('Invalid IP format. Use: 192.168.1.1 or 192.168.1.0/24');
@@ -144,6 +211,7 @@ const AdminSecurityDashboard = ({ user }) => {
       });
       toast.success(`${type === 'full' ? 'Full' : 'Partial'} lockdown activated`);
       fetchDashboard();
+      fetchAlerts();
       setLockdownReason('');
     } catch (error) {
       toast.error('Failed to activate lockdown');
@@ -169,6 +237,40 @@ const AdminSecurityDashboard = ({ user }) => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const getTimeAgo = (dateStr) => {
+    if (!dateStr) return '';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) return `${days}d ago`;
+    if (hours > 0) return `${hours}h ago`;
+    if (minutes > 0) return `${minutes}m ago`;
+    return 'Just now';
+  };
+
+  const getSeverityConfig = (severity) => {
+    const configs = {
+      critical: { bg: 'bg-red-100', border: 'border-red-500', text: 'text-red-800', icon: AlertOctagon, label: '🔴 CRITICAL' },
+      high: { bg: 'bg-orange-100', border: 'border-orange-500', text: 'text-orange-800', icon: AlertTriangle, label: '🟠 HIGH' },
+      medium: { bg: 'bg-yellow-100', border: 'border-yellow-500', text: 'text-yellow-800', icon: AlertTriangle, label: '🟡 MEDIUM' },
+      low: { bg: 'bg-blue-100', border: 'border-blue-500', text: 'text-blue-800', icon: Shield, label: '🔵 LOW' }
+    };
+    return configs[severity] || configs.low;
+  };
+
+  const getAlertTypeIcon = (type) => {
+    const icons = {
+      failed_login: '🔐',
+      brute_force: '🚨',
+      ip_blocked: '🚫',
+      lockdown_activated: '🔒',
+      suspicious_activity: '👀'
+    };
+    return icons[type] || '⚠️';
   };
 
   const getActionColor = (action) => {
@@ -203,15 +305,31 @@ const AdminSecurityDashboard = ({ user }) => {
           </h1>
           <p className="text-gray-600 mt-1">Admin सुरक्षा व्यवस्थापन</p>
         </div>
-        <Button onClick={() => { fetchDashboard(); fetchAuditLogs(); }} variant="outline">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* Alert Badge */}
+          {unreadCount > 0 && (
+            <div className="relative">
+              <Button 
+                variant="outline" 
+                className="border-red-300 text-red-600"
+                onClick={() => setActiveTab('alerts')}
+              >
+                <BellRing className="w-5 h-5 mr-2 animate-pulse" />
+                {unreadCount} Unread
+              </Button>
+            </div>
+          )}
+          <Button onClick={() => { fetchDashboard(); fetchAlerts(); fetchAuditLogs(); }} variant="outline">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b pb-2">
+      <div className="flex gap-2 border-b pb-2 flex-wrap">
         {[
+          { id: 'alerts', label: `🔔 Alerts ${unreadCount > 0 ? `(${unreadCount})` : ''}`, icon: Bell },
           { id: 'overview', label: 'Overview', icon: Activity },
           { id: 'lockdown', label: 'Emergency Lockdown', icon: Lock },
           { id: 'ip-whitelist', label: 'IP Whitelist', icon: Globe },
@@ -221,13 +339,126 @@ const AdminSecurityDashboard = ({ user }) => {
             key={tab.id}
             variant={activeTab === tab.id ? 'default' : 'ghost'}
             onClick={() => setActiveTab(tab.id)}
-            className={activeTab === tab.id ? 'bg-purple-600' : ''}
+            className={`${activeTab === tab.id ? 'bg-purple-600' : ''} ${tab.id === 'alerts' && unreadCount > 0 ? 'animate-pulse' : ''}`}
           >
             <tab.icon className="w-4 h-4 mr-2" />
             {tab.label}
           </Button>
         ))}
       </div>
+
+      {/* Alerts Tab */}
+      {activeTab === 'alerts' && (
+        <div className="space-y-4">
+          {/* Alert Filters */}
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2">
+              {[
+                { id: 'all', label: 'All Alerts' },
+                { id: 'unread', label: 'Unread' },
+                { id: 'critical', label: '🔴 Critical' },
+                { id: 'high', label: '🟠 High' }
+              ].map(filter => (
+                <Button
+                  key={filter.id}
+                  variant={alertFilter === filter.id ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setAlertFilter(filter.id)}
+                  className={alertFilter === filter.id ? 'bg-purple-600' : ''}
+                >
+                  {filter.label}
+                </Button>
+              ))}
+            </div>
+            {unreadCount > 0 && (
+              <Button variant="outline" size="sm" onClick={() => handleMarkAlertsRead(null, true)}>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Mark All Read
+              </Button>
+            )}
+          </div>
+
+          {/* Alert List */}
+          <div className="space-y-3">
+            {alerts.length === 0 ? (
+              <Card className="p-8 text-center">
+                <ShieldCheck className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                <p className="text-gray-600">No security alerts</p>
+                <p className="text-sm text-gray-400">System is secure ✓</p>
+              </Card>
+            ) : (
+              alerts.map(alert => {
+                const config = getSeverityConfig(alert.severity);
+                return (
+                  <Card 
+                    key={alert.alert_id} 
+                    className={`p-4 border-l-4 ${config.border} ${!alert.is_read ? config.bg : 'bg-white'}`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-lg">{getAlertTypeIcon(alert.alert_type)}</span>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded ${config.bg} ${config.text}`}>
+                            {config.label}
+                          </span>
+                          {!alert.is_read && (
+                            <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-medium">
+                              NEW
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="font-bold text-gray-900">{alert.title}</h3>
+                        <p className="text-sm text-gray-600 mt-1">{alert.message}</p>
+                        <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                          <span>📍 IP: {alert.ip_address || 'N/A'}</span>
+                          <span>⏰ {getTimeAgo(alert.created_at)}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <span className="text-xs text-gray-400">{formatDate(alert.created_at)}</span>
+                        {!alert.is_read && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleMarkAlertsRead([alert.alert_id])}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })
+            )}
+          </div>
+
+          {/* Pagination */}
+          {alertsTotal > 15 && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600">Total: {alertsTotal} alerts</p>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  disabled={alertsPage <= 1}
+                  onClick={() => fetchAlerts(alertsPage - 1)}
+                >
+                  Previous
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  disabled={alertsPage * 15 >= alertsTotal}
+                  onClick={() => fetchAlerts(alertsPage + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Overview Tab */}
       {activeTab === 'overview' && dashboard && (
@@ -257,10 +488,10 @@ const AdminSecurityDashboard = ({ user }) => {
             <Card className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-orange-600 font-medium">Failed Attempts</p>
-                  <p className="text-3xl font-bold text-orange-900">{dashboard.failed_login_attempts_active}</p>
+                  <p className="text-sm text-orange-600 font-medium">Unread Alerts</p>
+                  <p className="text-3xl font-bold text-orange-900">{unreadCount}</p>
                 </div>
-                <AlertTriangle className="w-10 h-10 text-orange-400" />
+                <Bell className="w-10 h-10 text-orange-400" />
               </div>
             </Card>
 
@@ -311,36 +542,12 @@ const AdminSecurityDashboard = ({ user }) => {
               </div>
             </div>
           </Card>
-
-          {/* Recent Security Events */}
-          {dashboard.recent_security_events?.length > 0 && (
-            <Card className="p-6">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-orange-500" />
-                Recent Security Events
-              </h2>
-              <div className="space-y-2">
-                {dashboard.recent_security_events.map((event, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                    <div>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${getActionColor(event.action)}`}>
-                        {event.action}
-                      </span>
-                      <span className="ml-2 text-sm text-gray-600">{event.details?.reason || event.entity_type}</span>
-                    </div>
-                    <span className="text-xs text-gray-500">{formatDate(event.timestamp)}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
         </div>
       )}
 
       {/* Emergency Lockdown Tab */}
       {activeTab === 'lockdown' && (
         <div className="space-y-6">
-          {/* Current Status */}
           <Card className={`p-6 ${dashboard?.lockdown_status?.lockdown_active 
             ? 'bg-gradient-to-r from-red-500 to-red-600 text-white' 
             : 'bg-gradient-to-r from-green-500 to-green-600 text-white'}`}>
@@ -373,7 +580,6 @@ const AdminSecurityDashboard = ({ user }) => {
             </div>
           </Card>
 
-          {/* Activate Lockdown */}
           {!dashboard?.lockdown_status?.lockdown_active && (
             <Card className="p-6">
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
@@ -447,7 +653,6 @@ const AdminSecurityDashboard = ({ user }) => {
           </h2>
 
           <div className="space-y-4">
-            {/* Enable Toggle */}
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <div>
                 <p className="font-medium">Enable IP Whitelist</p>
@@ -462,7 +667,6 @@ const AdminSecurityDashboard = ({ user }) => {
               </Button>
             </div>
 
-            {/* Add IP */}
             <div className="flex gap-2">
               <Input
                 placeholder="Enter IP address (e.g., 192.168.1.1 or 192.168.1.0/24)"
@@ -476,7 +680,6 @@ const AdminSecurityDashboard = ({ user }) => {
               </Button>
             </div>
 
-            {/* IP List */}
             <div className="border rounded-lg divide-y">
               {ipWhitelist.whitelist.length === 0 ? (
                 <p className="p-4 text-center text-gray-500">No IPs whitelisted</p>
@@ -538,7 +741,6 @@ const AdminSecurityDashboard = ({ user }) => {
             </table>
           </div>
 
-          {/* Pagination */}
           <div className="flex items-center justify-between mt-4">
             <p className="text-sm text-gray-600">Total: {auditTotal} logs</p>
             <div className="flex gap-2">
