@@ -45,26 +45,26 @@ const SortableCard = ({ id, children, isEditMode, isLocked }) => {
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.8 }}
-          className={`absolute -left-2 top-1/2 -translate-y-1/2 z-10 ${
+          className={`absolute left-2 top-2 z-20 ${
             isLocked ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'
           }`}
           {...(isLocked ? {} : { ...attributes, ...listeners })}
         >
-          <div className={`p-2 rounded-lg shadow-lg ${
+          <div className={`p-2.5 rounded-xl shadow-lg ${
             isLocked 
               ? 'bg-gray-400' 
-              : 'bg-purple-600 hover:bg-purple-700'
+              : 'bg-gradient-to-br from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700'
           }`}>
             {isLocked ? (
-              <Lock className="w-4 h-4 text-white" />
+              <Lock className="w-5 h-5 text-white" />
             ) : (
-              <GripVertical className="w-4 h-4 text-white" />
+              <GripVertical className="w-5 h-5 text-white" />
             )}
           </div>
         </motion.div>
       )}
       <div className={`transition-all duration-200 ${
-        isEditMode ? 'ml-6 ring-2 ring-purple-200 ring-offset-2 rounded-2xl' : ''
+        isEditMode ? 'pt-2 ring-2 ring-purple-300 ring-offset-2 rounded-2xl bg-purple-50/50' : ''
       }`}>
         {children}
       </div>
