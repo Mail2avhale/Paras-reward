@@ -21011,6 +21011,181 @@ async def get_user_insights(uid: str):
         return {"insights": [], "stats": {}}
 
 
+@api_router.get("/user/security/{uid}")
+async def get_user_security_info(uid: str):
+    """
+    Get user security and trust information
+    """
+    try:
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Calculate trust score
+        trust_score = 50  # Base score
+        if user.get("kyc_status") == "verified":
+            trust_score += 20
+        if user.get("email"):
+            trust_score += 10
+        if user.get("phone"):
+            trust_score += 10
+        if user.get("membership_type") == "vip":
+            trust_score += 10
+        
+        return {
+            "accountVerified": True,
+            "prcProtected": True,
+            "kycStatus": user.get("kyc_status", "pending"),
+            "emailVerified": bool(user.get("email")),
+            "phoneVerified": bool(user.get("phone")),
+            "lastLogin": user.get("last_login"),
+            "lastDevice": user.get("last_device", "Mobile Device"),
+            "loginLocation": user.get("last_location", "India"),
+            "trustScore": min(trust_score, 100)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error fetching security info: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.put("/user/settings/{uid}")
+async def update_user_settings(uid: str, request: Request):
+    """
+    Update user control settings
+    """
+    try:
+        data = await request.json()
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        update_data = {}
+        
+        # Handle mining pause
+        if "miningPaused" in data:
+            update_data["mining_active"] = not data["miningPaused"]
+        
+        # Handle daily cap
+        if "dailyPrcCap" in data:
+            update_data["daily_prc_cap"] = data["dailyPrcCap"]
+        
+        # Handle utility only mode
+        if "utilityOnlyMode" in data:
+            update_data["utility_only_mode"] = data["utilityOnlyMode"]
+        
+        # Handle notifications
+        if "notificationsEnabled" in data:
+            update_data["notifications_enabled"] = data["notificationsEnabled"]
+        
+        if update_data:
+            update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+            await db.users.update_one({"uid": uid}, {"$set": update_data})
+        
+        return {"success": True, "updated": list(update_data.keys())}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error updating user settings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/user/statement/{uid}")
+async def get_user_statement(uid: str, format: str = "csv", period: str = "month"):
+    """
+    Generate PRC statement for user
+    Google Play Compliant - Header includes disclaimer
+    """
+    try:
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Calculate date range
+        now = datetime.now(timezone.utc)
+        if period == "week":
+            start_date = now - timedelta(days=7)
+        elif period == "month":
+            start_date = now - timedelta(days=30)
+        elif period == "quarter":
+            start_date = now - timedelta(days=90)
+        else:  # year
+            start_date = now - timedelta(days=365)
+        
+        # Get transactions
+        transactions = await db.transactions.find({
+            "user_id": uid,
+            "created_at": {"$gte": start_date.isoformat()}
+        }).sort("created_at", -1).to_list(1000)
+        
+        # Also check mining history
+        mining_history = user.get("mining_history", [])
+        
+        if format == "csv":
+            # Generate CSV
+            lines = [
+                "Reward Points Statement – Not a Financial Investment",
+                "",
+                f"User: {user.get('name', 'User')}",
+                f"Email: {user.get('email', 'N/A')}",
+                f"Period: {start_date.strftime('%Y-%m-%d')} to {now.strftime('%Y-%m-%d')}",
+                f"Current Balance: {user.get('prc_balance', 0)} PRC",
+                "",
+                "Date,Type,Description,PRC Amount"
+            ]
+            
+            for txn in transactions:
+                date = txn.get("created_at", "")[:10]
+                txn_type = txn.get("transaction_type", "unknown")
+                desc = txn.get("description", txn_type)
+                amount = txn.get("amount", 0)
+                lines.append(f"{date},{txn_type},{desc},{amount}")
+            
+            for entry in mining_history:
+                try:
+                    entry_date = datetime.fromisoformat(entry.get("timestamp", "").replace('Z', '+00:00'))
+                    if entry_date >= start_date:
+                        date = entry_date.strftime("%Y-%m-%d")
+                        amount = entry.get("amount", 0)
+                        lines.append(f"{date},mining,Mining Reward,{amount}")
+                except:
+                    pass
+            
+            content = "\n".join(lines)
+            
+            from fastapi.responses import Response
+            return Response(
+                content=content,
+                media_type="text/csv",
+                headers={"Content-Disposition": f"attachment; filename=prc_statement_{period}.csv"}
+            )
+        else:
+            # Return JSON for PDF generation on frontend
+            return {
+                "user_name": user.get("name", "User"),
+                "email": user.get("email", "N/A"),
+                "period_start": start_date.isoformat(),
+                "period_end": now.isoformat(),
+                "current_balance": user.get("prc_balance", 0),
+                "transactions": [
+                    {
+                        "date": txn.get("created_at", "")[:10],
+                        "type": txn.get("transaction_type", "unknown"),
+                        "description": txn.get("description", ""),
+                        "amount": txn.get("amount", 0)
+                    }
+                    for txn in transactions
+                ],
+                "disclaimer": "Reward Points Statement – Not a Financial Investment"
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error generating statement: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Include all API routes (must be after all route definitions)
 app.include_router(api_router)
 
