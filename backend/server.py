@@ -20844,6 +20844,173 @@ def _get_time_ago(timestamp_str):
         return "recently"
 
 
+@api_router.get("/user/insights/{uid}")
+async def get_user_insights(uid: str):
+    """
+    Get personalized smart insights for user
+    Google Play Compliant - No income predictions or money advice
+    
+    Returns contextual insights like:
+    - "आज तुम्ही कालपेक्षा जास्त PRC कमावले"
+    - "Recharge goal साठी फक्त 120 PRC बाकी"
+    """
+    try:
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            return {"insights": []}
+        
+        insights = []
+        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        yesterday = today - timedelta(days=1)
+        
+        prc_balance = user.get("prc_balance", 0)
+        total_mined = user.get("total_mined", 0)
+        is_vip = user.get("membership_type") == "vip"
+        mining_active = user.get("mining_active", False)
+        
+        # Calculate today's and yesterday's earnings from mining history
+        mining_history = user.get("mining_history", [])
+        today_earned = 0
+        yesterday_earned = 0
+        
+        for entry in mining_history:
+            try:
+                entry_date = datetime.fromisoformat(entry.get("timestamp", "").replace('Z', '+00:00'))
+                if entry_date >= today:
+                    today_earned += entry.get("amount", 0)
+                elif entry_date >= yesterday and entry_date < today:
+                    yesterday_earned += entry.get("amount", 0)
+            except:
+                pass
+        
+        # Calculate mining streak
+        mining_streak = 0
+        if mining_history:
+            sorted_history = sorted(mining_history, key=lambda x: x.get("timestamp", ""), reverse=True)
+            current_date = today
+            for entry in sorted_history:
+                try:
+                    entry_date = datetime.fromisoformat(entry.get("timestamp", "").replace('Z', '+00:00')).replace(hour=0, minute=0, second=0, microsecond=0)
+                    if entry_date == current_date or entry_date == current_date - timedelta(days=1):
+                        if entry_date != current_date:
+                            current_date = entry_date
+                        mining_streak += 1
+                    else:
+                        break
+                except:
+                    pass
+        
+        # Get referral count
+        referral_count = await db.users.count_documents({"referred_by": user.get("referral_code")})
+        
+        # Generate insights based on user data
+        
+        # 1. Comparison insight (today vs yesterday)
+        if today_earned > yesterday_earned and today_earned > 0:
+            insights.append({
+                "type": "positive",
+                "icon": "trending",
+                "message": "आज तुम्ही कालपेक्षा जास्त PRC कमावले! 🎉",
+                "message_en": "You earned more PRC than yesterday! 🎉",
+                "color": "green"
+            })
+        elif not mining_active and yesterday_earned > 0:
+            insights.append({
+                "type": "motivational",
+                "icon": "zap",
+                "message": "Mining सुरू करा, काल पेक्षा कमी PRC आहे! ⚡",
+                "message_en": "Start mining, you have less PRC than yesterday! ⚡",
+                "color": "orange"
+            })
+        
+        # 2. Goal progress insight
+        recharge_goal = 500  # PRC needed for basic recharge
+        if prc_balance > 0 and prc_balance < recharge_goal:
+            remaining = recharge_goal - prc_balance
+            insights.append({
+                "type": "goal",
+                "icon": "target",
+                "message": f"Recharge goal साठी फक्त {remaining:.0f} PRC बाकी! 🎯",
+                "message_en": f"Only {remaining:.0f} PRC left for recharge goal! 🎯",
+                "color": "blue"
+            })
+        
+        # 3. Streak insight
+        if mining_streak >= 3:
+            insights.append({
+                "type": "streak",
+                "icon": "flame",
+                "message": f"{mining_streak} दिवस सतत mining! Keep going! 🔥",
+                "message_en": f"{mining_streak} day mining streak! Keep going! 🔥",
+                "color": "orange"
+            })
+        
+        # 4. VIP benefit insight
+        if is_vip:
+            insights.append({
+                "type": "vip",
+                "icon": "award",
+                "message": "VIP म्हणून तुम्ही 2x PRC कमावत आहात! 👑",
+                "message_en": "As VIP you are earning 2x PRC! 👑",
+                "color": "yellow"
+            })
+        
+        # 5. Referral tip
+        if referral_count < 5:
+            insights.append({
+                "type": "tip",
+                "icon": "sparkles",
+                "message": "आणखी 1 referral = Mining speed boost! 👥",
+                "message_en": "1 more referral = Mining speed boost! 👥",
+                "color": "purple"
+            })
+        
+        # 6. Close to voucher redemption
+        voucher_threshold = 1000
+        if prc_balance >= voucher_threshold - 200 and prc_balance < voucher_threshold:
+            remaining = voucher_threshold - prc_balance
+            insights.append({
+                "type": "redeem",
+                "icon": "gift",
+                "message": f"अजून {remaining:.0f} PRC = ₹100 voucher! 💰",
+                "message_en": f"{remaining:.0f} more PRC = ₹100 voucher! 💰",
+                "color": "pink"
+            })
+        
+        # 7. High performer insight
+        if total_mined > 10000:
+            insights.append({
+                "type": "achievement",
+                "icon": "award",
+                "message": "तुम्ही top miners मध्ये आहात! ⭐",
+                "message_en": "You are among top miners! ⭐",
+                "color": "yellow"
+            })
+        
+        # Default insight if none generated
+        if not insights:
+            insights.append({
+                "type": "default",
+                "icon": "zap",
+                "message": "Mining सुरू करा आणि rewards मिळवा! ⚡",
+                "message_en": "Start mining and earn rewards! ⚡",
+                "color": "purple"
+            })
+        
+        return {
+            "insights": insights[:5],  # Return max 5 insights
+            "stats": {
+                "today_earned": round(today_earned, 2),
+                "yesterday_earned": round(yesterday_earned, 2),
+                "mining_streak": mining_streak,
+                "referral_count": referral_count
+            }
+        }
+    except Exception as e:
+        logging.error(f"Error generating user insights: {e}")
+        return {"insights": [], "stats": {}}
+
+
 # Include all API routes (must be after all route definitions)
 app.include_router(api_router)
 
