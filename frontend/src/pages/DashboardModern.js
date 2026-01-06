@@ -418,268 +418,299 @@ const DashboardModern = ({ user, onLogout }) => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-md mx-auto px-4 -mt-20">
-        {/* Profile Completion Banner */}
+      <div className="max-w-md mx-auto px-4 -mt-20 pb-24">
+        {/* Profile Completion Banner - Not draggable */}
         <ProfileCompletionBanner 
           user={userData} 
           onQuickKYC={() => setShowKYCModal(true)}
         />
 
-        {/* PRC Expiry Warning (Free Users Only) */}
+        {/* PRC Expiry Warning (Free Users Only) - Not draggable */}
         <PRCExpiryTimer 
           miningHistory={miningHistory}
           isFreeUser={stats.membershipType !== 'vip'}
         />
         
-        {/* Stats Cards - 3 columns */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          {/* Total Mined */}
-          <div className="bg-white rounded-2xl p-3 shadow-lg">
-            <div className="flex items-center justify-center mb-2">
-              <TrendingUp className="w-5 h-5 text-green-500" />
-            </div>
-            <div className="text-lg font-bold text-gray-900 text-center">{stats.totalMined.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
-            <div className="text-xs text-gray-500 text-center mt-1">{t('totalMined')}</div>
-          </div>
-
-          {/* Total PRC Used */}
-          <div className="bg-white rounded-2xl p-3 shadow-lg">
-            <div className="flex items-center justify-center mb-2">
-              <Coins className="w-5 h-5 text-purple-500" />
-            </div>
-            <div className="text-lg font-bold text-gray-900 text-center">{stats.totalPrcUsed.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
-            <div className="text-xs text-gray-500 text-center mt-1">{t('prcUsed')}</div>
-            <div className="text-xs text-purple-600 text-center font-medium">≈ ₹{stats.totalPrcUsedValue}</div>
-          </div>
-
-          {/* Referrals */}
-          <div className="bg-white rounded-2xl p-3 shadow-lg">
-            <div className="flex items-center justify-center mb-2">
-              <Users className="w-5 h-5 text-blue-500" />
-            </div>
-            <div className="text-lg font-bold text-gray-900 text-center">{stats.referralCount}</div>
-            <div className="text-xs text-gray-500 text-center mt-1">{t('referrals')}</div>
-          </div>
-        </div>
-
-        {/* Smart User Insights */}
-        <SmartUserInsights 
-          userId={user?.uid}
-          userStats={{
-            prc_balance: stats.prcBalance,
-            today_earned: todayStats.today_prc_earned,
-            yesterday_earned: 0,
-            mining_streak: userData?.mining_streak || 0,
-            is_vip: stats.membershipType === 'vip',
-            referral_count: stats.referralCount,
-            total_mined: stats.totalMined
-          }}
-          translations={{}}
-        />
-
-        {/* Quick Actions */}
-        <div className="bg-white rounded-2xl p-6 shadow-lg mb-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">{t('quickActions')}</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            <QuickActionButton 
-              icon={Zap} 
-              label={t('mine')} 
-              onClick={() => navigate('/mining')}
-              color="purple"
-            />
-            <QuickActionButton 
-              icon={Gamepad2} 
-              label={t('tapGame')} 
-              onClick={() => navigate('/game')}
-              color="pink"
-            />
-            <QuickActionButton 
-              icon={Store} 
-              label={t('shop')} 
-              onClick={() => {
-                if (stats.membershipType !== 'vip') {
-                  alert('VIP membership required to shop in marketplace');
-                } else {
-                  navigate('/marketplace');
-                }
-              }}
-              color="blue"
-            />
-            <QuickActionButton 
-              icon={UserPlus} 
-              label={t('refer')} 
-              onClick={() => navigate('/referrals')}
-              color="green"
-            />
-            <QuickActionButton 
-              icon={CreditCard} 
-              label={t('billPay')} 
-              onClick={() => {
-                if (stats.membershipType !== 'vip') {
-                  alert('VIP membership required to use bill payment services');
-                } else {
-                  navigate('/bill-payments');
-                }
-              }}
-              customStyle={{ background: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)' }}
-            />
-            <QuickActionButton 
-              icon={Gift} 
-              label={t('vouchers')} 
-              onClick={() => {
-                if (stats.membershipType !== 'vip') {
-                  alert('VIP membership required to redeem gift vouchers');
-                } else {
-                  navigate('/gift-vouchers');
-                }
-              }}
-              color="orange"
-            />
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="bg-white rounded-2xl p-6 shadow-lg mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-900">{t('recentActivity')}</h2>
-            <button 
-              onClick={() => navigate('/transactions')}
-              className="text-sm text-purple-600 hover:text-purple-700 font-medium"
-            >
-              {t('viewAll')}
-            </button>
-          </div>
-          
-          {recentTransactions.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
-              <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">{t('noActivity')}</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {recentTransactions.map((transaction, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      transaction.type === 'mining_reward' ? 'bg-green-100' :
-                      transaction.type === 'marketplace_purchase' ? 'bg-blue-100' :
-                      transaction.type === 'referral_bonus' ? 'bg-purple-100' :
-                      'bg-gray-100'
-                    }`}>
-                      {transaction.type === 'mining_reward' && <Zap className="w-5 h-5 text-green-600" />}
-                      {transaction.type === 'marketplace_purchase' && <ShoppingBag className="w-5 h-5 text-blue-600" />}
-                      {transaction.type === 'referral_bonus' && <Gift className="w-5 h-5 text-purple-600" />}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">
-                        {transaction.description || transaction.type}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(transaction.timestamp).toLocaleDateString()} {new Date(transaction.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className={`text-sm font-bold ${
-                      transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {transaction.amount > 0 ? '+' : ''}{transaction.amount?.toFixed(2) || 0} PRC
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Pagination Controls */}
-          {recentTransactions.length > 0 && pagination.total_pages > 1 && (
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-              <button
-                onClick={() => handlePageChange(pagination.page - 1)}
-                disabled={!pagination.has_prev}
-                className={`px-4 py-2 text-sm font-medium rounded-lg ${
-                  pagination.has_prev
-                    ? 'bg-purple-600 text-white hover:bg-purple-700'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                Previous
-              </button>
-              <div className="text-sm text-gray-600">
-                Page {pagination.page} of {pagination.total_pages}
-              </div>
-              <button
-                onClick={() => handlePageChange(pagination.page + 1)}
-                disabled={!pagination.has_next}
-                className={`px-4 py-2 text-sm font-medium rounded-lg ${
-                  pagination.has_next
-                    ? 'bg-purple-600 text-white hover:bg-purple-700'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Phase 3: Security & Trust Center */}
-        <SecurityTrustCenter 
-          userId={user?.uid}
-          user={userData}
-          translations={{}}
-        />
-
-        {/* Phase 3: User Control Settings */}
-        <UserControlSettings 
-          userId={user?.uid}
-          userSettings={{
-            miningPaused: !userData?.mining_active,
-            dailyPrcCap: userData?.daily_prc_cap || 0,
-            notificationsEnabled: true
-          }}
-          translations={{}}
-        />
-
-        {/* Phase 3: Live Statement Export */}
-        <LiveStatementExport 
-          userId={user?.uid}
-          translations={{}}
-        />
-
-        {/* Live Activity Feed - Moved to Bottom */}
-        <LiveActivityFeed 
+        {/* Draggable Dashboard Cards */}
+        <DraggableDashboard
+          cardIds={cardOrder}
+          onOrderChange={handleCardOrderChange}
+          lockedCards={['vip-banner']}
           translations={{
-            liveActivity: t('liveActivity') || 'लाइव Activity',
-            userFrom: t('userFrom') || 'User from'
+            customizeDashboard: t('customizeDashboard'),
+            dragToReorder: t('dragToReorder'),
+            saveLayout: t('saveLayout'),
+            resetLayout: t('resetLayout')
           }}
-        />
-
-        {/* Upgrade to VIP Banner */}
-        {stats.membershipType !== 'vip' && (
-          <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-6 shadow-lg mb-6 text-white">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-xl font-bold mb-2">{t('upgradeToVip')}</h3>
-                <p className="text-sm text-yellow-50 mb-4">
-                  {t('vipBenefitsDesc')}
-                </p>
-                <div className="flex items-center gap-2 mb-4">
-                  <CheckCircle className="w-5 h-5" />
-                  <span className="text-sm">Only ₹299/month</span>
+        >
+          {/* Stats Cards - 3 columns */}
+          <DashboardCard cardId="stats-cards">
+            <div className="grid grid-cols-3 gap-3">
+              {/* Total Mined */}
+              <div className="bg-white rounded-2xl p-3 shadow-lg">
+                <div className="flex items-center justify-center mb-2">
+                  <TrendingUp className="w-5 h-5 text-green-500" />
                 </div>
+                <div className="text-lg font-bold text-gray-900 text-center">{stats.totalMined.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
+                <div className="text-xs text-gray-500 text-center mt-1">{t('totalMined')}</div>
+              </div>
+
+              {/* Total PRC Used */}
+              <div className="bg-white rounded-2xl p-3 shadow-lg">
+                <div className="flex items-center justify-center mb-2">
+                  <Coins className="w-5 h-5 text-purple-500" />
+                </div>
+                <div className="text-lg font-bold text-gray-900 text-center">{stats.totalPrcUsed.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
+                <div className="text-xs text-gray-500 text-center mt-1">{t('prcUsed')}</div>
+                <div className="text-xs text-purple-600 text-center font-medium">≈ ₹{stats.totalPrcUsedValue}</div>
+              </div>
+
+              {/* Referrals */}
+              <div className="bg-white rounded-2xl p-3 shadow-lg">
+                <div className="flex items-center justify-center mb-2">
+                  <Users className="w-5 h-5 text-blue-500" />
+                </div>
+                <div className="text-lg font-bold text-gray-900 text-center">{stats.referralCount}</div>
+                <div className="text-xs text-gray-500 text-center mt-1">{t('referrals')}</div>
+              </div>
+            </div>
+          </DashboardCard>
+
+          {/* Smart User Insights */}
+          <DashboardCard cardId="smart-insights">
+            <SmartUserInsights 
+              userId={user?.uid}
+              userStats={{
+                prc_balance: stats.prcBalance,
+                today_earned: todayStats.today_prc_earned,
+                yesterday_earned: 0,
+                mining_streak: userData?.mining_streak || 0,
+                is_vip: stats.membershipType === 'vip',
+                referral_count: stats.referralCount,
+                total_mined: stats.totalMined
+              }}
+              translations={{}}
+            />
+          </DashboardCard>
+
+          {/* Quick Actions */}
+          <DashboardCard cardId="quick-actions">
+            <div className="bg-white rounded-2xl p-6 shadow-lg">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">{t('quickActions')}</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                <QuickActionButton 
+                  icon={Zap} 
+                  label={t('mine')} 
+                  onClick={() => navigate('/mining')}
+                  color="purple"
+                />
+                <QuickActionButton 
+                  icon={Gamepad2} 
+                  label={t('tapGame')} 
+                  onClick={() => navigate('/game')}
+                  color="pink"
+                />
+                <QuickActionButton 
+                  icon={Store} 
+                  label={t('shop')} 
+                  onClick={() => {
+                    if (stats.membershipType !== 'vip') {
+                      alert('VIP membership required to shop in marketplace');
+                    } else {
+                      navigate('/marketplace');
+                    }
+                  }}
+                  color="blue"
+                />
+                <QuickActionButton 
+                  icon={UserPlus} 
+                  label={t('refer')} 
+                  onClick={() => navigate('/referrals')}
+                  color="green"
+                />
+                <QuickActionButton 
+                  icon={CreditCard} 
+                  label={t('billPay')} 
+                  onClick={() => {
+                    if (stats.membershipType !== 'vip') {
+                      alert('VIP membership required to use bill payment services');
+                    } else {
+                      navigate('/bill-payments');
+                    }
+                  }}
+                  customStyle={{ background: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)' }}
+                />
+                <QuickActionButton 
+                  icon={Gift} 
+                  label={t('vouchers')} 
+                  onClick={() => {
+                    if (stats.membershipType !== 'vip') {
+                      alert('VIP membership required to redeem gift vouchers');
+                    } else {
+                      navigate('/gift-vouchers');
+                    }
+                  }}
+                  color="orange"
+                />
+              </div>
+            </div>
+          </DashboardCard>
+
+          {/* Recent Activity */}
+          <DashboardCard cardId="recent-activity">
+            <div className="bg-white rounded-2xl p-6 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900">{t('recentActivity')}</h2>
                 <button 
-                  onClick={() => navigate('/vip')}
-                  className="bg-white text-orange-600 px-6 py-2 rounded-full font-bold hover:bg-yellow-50 transition-colors flex items-center gap-2"
+                  onClick={() => navigate('/transactions')}
+                  className="text-sm text-purple-600 hover:text-purple-700 font-medium"
                 >
-                  {t('upgradeNow')}
-                  <ArrowUpRight className="w-4 h-4" />
+                  {t('viewAll')}
                 </button>
               </div>
-              <Zap className="w-16 h-16 opacity-20" />
+              
+              {recentTransactions.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">{t('noActivity')}</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentTransactions.map((transaction, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          transaction.type === 'mining_reward' ? 'bg-green-100' :
+                          transaction.type === 'marketplace_purchase' ? 'bg-blue-100' :
+                          transaction.type === 'referral_bonus' ? 'bg-purple-100' :
+                          'bg-gray-100'
+                        }`}>
+                          {transaction.type === 'mining_reward' && <Zap className="w-5 h-5 text-green-600" />}
+                          {transaction.type === 'marketplace_purchase' && <ShoppingBag className="w-5 h-5 text-blue-600" />}
+                          {transaction.type === 'referral_bonus' && <Gift className="w-5 h-5 text-purple-600" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {transaction.description || transaction.type}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(transaction.timestamp).toLocaleDateString()} {new Date(transaction.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-bold ${
+                          transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {transaction.amount > 0 ? '+' : ''}{transaction.amount?.toFixed(2) || 0} PRC
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Pagination Controls */}
+              {recentTransactions.length > 0 && pagination.total_pages > 1 && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => handlePageChange(pagination.page - 1)}
+                    disabled={!pagination.has_prev}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg ${
+                      pagination.has_prev
+                        ? 'bg-purple-600 text-white hover:bg-purple-700'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    Previous
+                  </button>
+                  <div className="text-sm text-gray-600">
+                    Page {pagination.page} of {pagination.total_pages}
+                  </div>
+                  <button
+                    onClick={() => handlePageChange(pagination.page + 1)}
+                    disabled={!pagination.has_next}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg ${
+                      pagination.has_next
+                        ? 'bg-purple-600 text-white hover:bg-purple-700'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          </DashboardCard>
+
+          {/* Phase 3: Security & Trust Center */}
+          <DashboardCard cardId="security-trust">
+            <SecurityTrustCenter 
+              userId={user?.uid}
+              user={userData}
+              translations={{}}
+            />
+          </DashboardCard>
+
+          {/* Phase 3: User Control Settings */}
+          <DashboardCard cardId="user-controls">
+            <UserControlSettings 
+              userId={user?.uid}
+              userSettings={{
+                miningPaused: !userData?.mining_active,
+                dailyPrcCap: userData?.daily_prc_cap || 0,
+                notificationsEnabled: true
+              }}
+              translations={{}}
+            />
+          </DashboardCard>
+
+          {/* Phase 3: Live Statement Export */}
+          <DashboardCard cardId="statement-export">
+            <LiveStatementExport 
+              userId={user?.uid}
+              translations={{}}
+            />
+          </DashboardCard>
+
+          {/* Live Activity Feed */}
+          <DashboardCard cardId="activity-feed">
+            <LiveActivityFeed 
+              translations={{
+                liveActivity: t('liveActivity') || 'लाइव Activity',
+                userFrom: t('userFrom') || 'User from'
+              }}
+            />
+          </DashboardCard>
+
+          {/* Upgrade to VIP Banner */}
+          <DashboardCard cardId="vip-banner">
+            {stats.membershipType !== 'vip' && (
+              <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-6 shadow-lg text-white">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold mb-2">{t('upgradeToVip')}</h3>
+                    <p className="text-sm text-yellow-50 mb-4">
+                      {t('vipBenefitsDesc')}
+                    </p>
+                    <div className="flex items-center gap-2 mb-4">
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="text-sm">Only ₹299/month</span>
+                    </div>
+                    <button 
+                      onClick={() => navigate('/vip')}
+                      className="bg-white text-orange-600 px-6 py-2 rounded-full font-bold hover:bg-yellow-50 transition-colors flex items-center gap-2"
+                    >
+                      {t('upgradeNow')}
+                      <ArrowUpRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <Zap className="w-16 h-16 opacity-20" />
+                </div>
+              </div>
+            )}
+          </DashboardCard>
+        </DraggableDashboard>
       </div>
 
       {/* Bottom Navigation Bar */}
