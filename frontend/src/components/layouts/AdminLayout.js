@@ -118,6 +118,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'ads-income', label: 'Ads Income', icon: Smartphone, path: '/admin/ads-income' },
         { id: 'fixed-expenses', label: 'Fixed Expenses', icon: Building, path: '/admin/fixed-expenses' },
         { id: 'prc-analytics', label: 'PRC Analytics', icon: Activity, path: '/admin/prc-analytics' },
+        { id: 'prc-economy', label: 'PRC Emergency Controls', icon: AlertOctagon, path: '/admin/prc-economy' },
         { id: 'liquidity', label: 'Liquidity', icon: DollarSign, path: '/admin/liquidity' },
         { id: 'audit', label: 'Audit Service', icon: Shield, path: '/admin/audit' },
       ]
