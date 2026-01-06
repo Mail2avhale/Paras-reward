@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://ledgerpro-28.preview.emergentagent.com/setup
+   https://fintech-control-6.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
