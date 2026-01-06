@@ -20654,6 +20654,143 @@ async def get_master_ledger_summary():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ========== LIVE PLATFORM STATS (PUBLIC - Google Policy Compliant) ==========
+
+@api_router.get("/public/live-stats")
+async def get_live_platform_stats():
+    """
+    Get live platform statistics for transparency panel
+    Google Play Compliant - Shows activity stats, not revenue
+    
+    Returns:
+    - Today PRC Earned (platform-wide)
+    - Today PRC Burned (platform-wide)
+    - Redeems Completed Today (count only)
+    - Active Users (approximate)
+    """
+    try:
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Today's PRC earned from transactions
+        earned_pipeline = [
+            {
+                "$match": {
+                    "transaction_type": {"$in": ["mining", "tap_game", "referral_bonus", "cashback", "prc_rain", "signup_bonus"]},
+                    "created_at": {"$gte": today_start.isoformat()}
+                }
+            },
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]
+        earned_result = await db.transactions.aggregate(earned_pipeline).to_list(1)
+        today_prc_earned = round(earned_result[0].get("total", 0), 2) if earned_result else 0
+        
+        # Today's PRC burned/spent from transactions
+        burned_pipeline = [
+            {
+                "$match": {
+                    "transaction_type": {"$in": ["order", "redeem", "gift_voucher", "bill_payment", "burn", "expired"]},
+                    "created_at": {"$gte": today_start.isoformat()}
+                }
+            },
+            {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+        ]
+        burned_result = await db.transactions.aggregate(burned_pipeline).to_list(1)
+        today_prc_burned = round(burned_result[0].get("total", 0), 2) if burned_result else 0
+        
+        # Redeems completed today (count only - no amounts for compliance)
+        redeems_today = await db.transactions.count_documents({
+            "transaction_type": {"$in": ["redeem", "gift_voucher", "bill_payment"]},
+            "created_at": {"$gte": today_start.isoformat()}
+        })
+        
+        # Active users - users who logged in within last 7 days
+        seven_days_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+        active_users = await db.users.count_documents({
+            "last_login": {"$gte": seven_days_ago}
+        })
+        
+        return {
+            "today_prc_earned": today_prc_earned,
+            "today_prc_burned": today_prc_burned,
+            "redeems_today": redeems_today,
+            "active_users": active_users,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logging.error(f"Error fetching live stats: {e}")
+        # Return safe fallback data
+        return {
+            "today_prc_earned": 0,
+            "today_prc_burned": 0,
+            "redeems_today": 0,
+            "active_users": 0,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
+
+@api_router.get("/public/live-activity")
+async def get_live_activity_feed():
+    """
+    Get live activity feed for social proof
+    Google Play Compliant - No amounts, no earnings in INR
+    
+    Format: "User from {city} {action}"
+    """
+    try:
+        # Get recent transactions (last 50, randomized for privacy)
+        recent_transactions = await db.transactions.find(
+            {"transaction_type": {"$in": ["mining", "tap_game", "redeem", "gift_voucher", "order"]}},
+            {"_id": 0, "user_id": 1, "transaction_type": 1, "created_at": 1}
+        ).sort("created_at", -1).limit(50).to_list(50)
+        
+        activities = []
+        cities = ["Mumbai", "Pune", "Nashik", "Nagpur", "Thane", "Kolhapur", "Aurangabad", "Solapur", "Sangli", "Satara"]
+        actions = {
+            "mining": "earned PRC via mining",
+            "tap_game": "earned PRC via game",
+            "redeem": "redeemed rewards",
+            "gift_voucher": "claimed a gift voucher",
+            "order": "placed a marketplace order"
+        }
+        
+        import random
+        for txn in recent_transactions[:10]:  # Show last 10
+            city = random.choice(cities)
+            action = actions.get(txn.get("transaction_type"), "earned rewards")
+            activities.append({
+                "city": city,
+                "action": action,
+                "time_ago": _get_time_ago(txn.get("created_at"))
+            })
+        
+        return {"activities": activities}
+    except Exception as e:
+        logging.error(f"Error fetching live activity: {e}")
+        return {"activities": []}
+
+
+def _get_time_ago(timestamp_str):
+    """Helper to format time ago"""
+    if not timestamp_str:
+        return "just now"
+    try:
+        timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+        now = datetime.now(timezone.utc)
+        diff = now - timestamp
+        
+        if diff.total_seconds() < 60:
+            return "just now"
+        elif diff.total_seconds() < 3600:
+            return f"{int(diff.total_seconds() / 60)}m ago"
+        elif diff.total_seconds() < 86400:
+            return f"{int(diff.total_seconds() / 3600)}h ago"
+        else:
+            return f"{int(diff.total_seconds() / 86400)}d ago"
+    except:
+        return "recently"
+
+
 # Include all API routes (must be after all route definitions)
 app.include_router(api_router)
 
