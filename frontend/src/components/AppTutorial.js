@@ -382,8 +382,7 @@ const AppTutorial = ({ onComplete, showSkip = true }) => {
   const { t, language } = useLanguage();
   
   // Memoize slides to regenerate when language changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const tutorialSlides = useMemo(() => getTutorialSlides(t), [language]);
+  const tutorialSlides = useMemo(() => getTutorialSlides(t), [t, language]);
 
   const nextSlide = () => {
     if (currentSlide < tutorialSlides.length - 1) {
