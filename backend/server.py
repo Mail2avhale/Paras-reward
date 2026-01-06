@@ -1729,12 +1729,44 @@ async def login(
     
     if not user:
         record_login_attempt(identifier, False)
+        # Create security alert for failed login
+        await create_security_alert(
+            alert_type="failed_login",
+            severity="low",
+            title="Failed Login Attempt",
+            message=f"Login attempt with non-existent user: {identifier}",
+            details={"identifier": identifier, "reason": "user_not_found"},
+            ip_address=real_ip,
+            user_identifier=identifier
+        )
         raise HTTPException(status_code=404, detail="User not registered. Please register to continue.")
     
     # Verify password
     if user.get("password_hash"):
         if not verify_password(password, user["password_hash"]):
             record_login_attempt(identifier, False)
+            # Create security alert for failed password
+            alert_severity = "medium" if attempts_left <= 2 else "low"
+            await create_security_alert(
+                alert_type="failed_login",
+                severity=alert_severity,
+                title="Failed Password Attempt",
+                message=f"Invalid password for user: {user.get('email', identifier)}. {attempts_left - 1} attempts remaining.",
+                details={"identifier": identifier, "email": user.get('email'), "attempts_left": attempts_left - 1},
+                ip_address=real_ip,
+                user_identifier=identifier
+            )
+            # Create brute force alert if locked out
+            if attempts_left <= 1:
+                await create_security_alert(
+                    alert_type="brute_force",
+                    severity="high",
+                    title="🚨 Brute Force Attack Detected",
+                    message=f"Account {user.get('email', identifier)} locked for 5 minutes due to multiple failed login attempts.",
+                    details={"identifier": identifier, "email": user.get('email'), "lockout_minutes": 5},
+                    ip_address=real_ip,
+                    user_identifier=identifier
+                )
             raise HTTPException(status_code=401, detail=f"Invalid password. {attempts_left - 1} attempts remaining.")
     
     if user.get("is_banned"):
@@ -1752,6 +1784,16 @@ async def login(
                 details={"reason": "IP not whitelisted", "ip": real_ip},
                 ip_address=real_ip,
                 user_agent=user_agent
+            )
+            # Create high severity alert for blocked IP
+            await create_security_alert(
+                alert_type="ip_blocked",
+                severity="high",
+                title="🚫 Admin Login Blocked - IP Not Whitelisted",
+                message=f"Admin {user.get('email')} attempted login from non-whitelisted IP: {real_ip}",
+                details={"email": user.get('email'), "ip": real_ip, "uid": user.get('uid')},
+                ip_address=real_ip,
+                user_identifier=user.get('email')
             )
             raise HTTPException(status_code=403, detail="Access denied. IP not whitelisted for admin access.")
     
