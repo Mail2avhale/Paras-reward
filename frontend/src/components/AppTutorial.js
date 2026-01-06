@@ -434,7 +434,7 @@ const AppTutorial = ({ onComplete, showSkip = true }) => {
           {showSkip && (
             <button
               onClick={handleComplete}
-              className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-colors"
+              className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-colors z-30"
               data-testid="tutorial-skip-btn"
             >
               <X className="w-5 h-5" />
