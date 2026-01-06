@@ -438,14 +438,6 @@ const DashboardModern = ({ user, onLogout }) => {
           translations={{}}
         />
 
-        {/* Live Activity Feed */}
-        <LiveActivityFeed 
-          translations={{
-            liveActivity: t('liveActivity') || 'लाइव Activity',
-            userFrom: t('userFrom') || 'User from'
-          }}
-        />
-
         {/* Quick Actions */}
         <div className="bg-white rounded-2xl p-6 shadow-lg mb-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4">{t('quickActions')}</h2>
