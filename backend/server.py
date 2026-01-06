@@ -5165,7 +5165,7 @@ async def get_ip_whitelist(admin_uid: str):
 async def update_ip_whitelist(
     admin_uid: str,
     enabled: bool,
-    whitelist: List[str] = []
+    whitelist: List[str] = Query(default=[])
 ):
     """Update IP whitelist settings"""
     admin = await db.users.find_one({"uid": admin_uid})
