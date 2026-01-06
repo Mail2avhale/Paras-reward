@@ -114,7 +114,7 @@ const Mining = ({ user, onLogout }) => {
   const startMiningSession = async () => {
     setLoading(true);
     try {
-      const response = await axios.post(`${API}/mining/start/${user.uid}`);
+      const response = await axios.post(`${API}/api/mining/start/${user.uid}`);
       
       // Show animated feedback
       setAnimatedFeedback({
