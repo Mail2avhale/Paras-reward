@@ -456,6 +456,13 @@ const AppTutorial = ({ onComplete, showSkip = true }) => {
 
         {/* Content */}
         <div className="p-6">
+          {/* Mascot positioned at the corner */}
+          {slide.mascot && (
+            <div className="absolute -top-16 right-4 z-20">
+              <ParasBuddy emotion={slide.mascot.emotion} message={slide.mascot.message} />
+            </div>
+          )}
+          
           <AnimatePresence mode="wait">
             <motion.div
               key={currentSlide}
