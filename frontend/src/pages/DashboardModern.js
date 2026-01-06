@@ -387,6 +387,19 @@ const DashboardModern = ({ user, onLogout }) => {
               </p>
             </div>
           </div>
+          
+          {/* Live Transparency Panel */}
+          <div className="mt-6 px-4">
+            <LiveTransparencyPanel 
+              translations={{
+                liveStats: t('liveStats') || 'Live Platform Stats',
+                todayPrcEarned: t('platformEarned') || 'Today PRC Earned',
+                todayPrcBurned: t('platformBurned') || 'Today PRC Burned',
+                redeemsToday: t('redeemsToday') || 'Redeems Today',
+                activeUsers: t('activeUsers') || 'Active Users'
+              }}
+            />
+          </div>
         </div>
       </div>
 
