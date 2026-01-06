@@ -42,6 +42,20 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 
 ## What's Been Implemented
 
+### January 6, 2026 (Current Session - Part 9)
+- ✅ **P0 Bug Fix: Mining UI Race Condition (TESTED - 100% Frontend Success)**
+  
+  **Bug**: Mining starts but immediately shows as "paused". After clicking "Start Mining", the UI briefly shows active state then reverts to "Mining Paused".
+  
+  **Root Cause**: Race condition in `Mining.js` - `fetchMiningStatus()` was called immediately after the start API call without using the response data. The frontend fetched status before the database was fully updated.
+  
+  **Fix Applied** (`/app/frontend/src/pages/Mining.js` lines 114-156):
+  - Updated `startMiningSession` to use optimistic state update from API response
+  - `setMiningStatus` now called with `session_active: true` BEFORE the delayed fetch
+  - Added 2-second delay before `fetchMiningStatus()` to ensure backend persistence
+  
+  **Test Report**: `/app/test_reports/iteration_15.json`
+
 ### January 6, 2026 (Current Session - Part 8)
 - ✅ **Phase 2: Full Accounting Suite (TESTED - 27/27 Backend Tests Passed, 100% Frontend)**
   
