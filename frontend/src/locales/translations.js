@@ -82,6 +82,16 @@ const translations = {
     hi: "माइनिंग रुका",
     en: "Mining Paused"
   },
+  liveActivity: {
+    mr: "लाइव Activity",
+    hi: "लाइव एक्टिविटी",
+    en: "Live Activity"
+  },
+  userFrom: {
+    mr: "User from",
+    hi: "User from",
+    en: "User from"
+  },
   
   // ==================== STATS CARDS ====================
   totalMined: {
