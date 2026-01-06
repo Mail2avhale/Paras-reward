@@ -1,58 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="7" skipped="0" tests="16" time="1.915" timestamp="2026-01-06T16:56:26.826227+00:00" hostname="agent-env-f72bcf88-0fea-4816-898f-664fa23b53c3"><testcase classname="tests.test_admin_security.TestAdminLogin" name="test_admin_login_returns_tokens" time="0.080" /><testcase classname="tests.test_admin_security.TestAdminLogin" name="test_invalid_login_returns_error" time="0.052"><failure message="AssertionError: Expected 401, got 200&#10;assert 200 == 401&#10; +  where 200 = &lt;Response [200]&gt;.status_code">tests/test_admin_security.py:52: in test_invalid_login_returns_error
-    assert response.status_code == 401, f"Expected 401, got {response.status_code}"
-E   AssertionError: Expected 401, got 200
-E   assert 200 == 401
-E    +  where 200 = &lt;Response [200]&gt;.status_code</failure></testcase><testcase classname="tests.test_admin_security.TestRateLimiting" name="test_rate_limit_after_failed_attempts" time="0.240"><failure message="AssertionError: Expected 429 after rate limit, got 404: {&quot;detail&quot;:&quot;User not registered. Please register to continue.&quot;}&#10;assert 404 == 429&#10; +  where 404 = &lt;Response [404]&gt;.status_code">tests/test_admin_security.py:87: in test_rate_limit_after_failed_attempts
-    assert response.status_code == 429, f"Expected 429 after rate limit, got {response.status_code}: {response.text}"
-E   AssertionError: Expected 429 after rate limit, got 404: {"detail":"User not registered. Please register to continue."}
-E   assert 404 == 429
-E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_admin_security.TestSecurityDashboard" name="test_security_dashboard_loads" time="0.086" /><testcase classname="tests.test_admin_security.TestSecurityDashboard" name="test_security_dashboard_requires_admin" time="0.069" /><testcase classname="tests.test_admin_security.TestEmergencyLockdown" name="test_get_lockdown_status" time="0.098" /><testcase classname="tests.test_admin_security.TestEmergencyLockdown" name="test_activate_partial_lockdown" time="0.180"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
-    return complexjson.loads(self.text, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/__init__.py:346: in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:337: in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-
-During handling of the above exception, another exception occurred:
-tests/test_admin_security.py:214: in test_activate_partial_lockdown
-    status = status_response.json()
-             ^^^^^^^^^^^^^^^^^^^^^^
-/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
-    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
-E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="tests.test_admin_security.TestEmergencyLockdown" name="test_deactivate_lockdown" time="0.125"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
-    return complexjson.loads(self.text, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/__init__.py:346: in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:337: in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-
-During handling of the above exception, another exception occurred:
-tests/test_admin_security.py:237: in test_deactivate_lockdown
-    status = status_response.json()
-             ^^^^^^^^^^^^^^^^^^^^^^
-/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
-    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
-E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="tests.test_admin_security.TestEmergencyLockdown" name="test_activate_full_lockdown_and_deactivate" time="0.140" /><testcase classname="tests.test_admin_security.TestIPWhitelist" name="test_get_ip_whitelist" time="0.078" /><testcase classname="tests.test_admin_security.TestIPWhitelist" name="test_update_ip_whitelist" time="0.082"><failure message="AssertionError: Failed: {&quot;detail&quot;:[{&quot;type&quot;:&quot;missing&quot;,&quot;loc&quot;:[&quot;body&quot;],&quot;msg&quot;:&quot;Field required&quot;,&quot;input&quot;:null,&quot;url&quot;:&quot;https://errors.pydantic.dev/2.12/v/missing&quot;}]}&#10;assert 422 == 200&#10; +  where 422 = &lt;Response [422]&gt;.status_code">tests/test_admin_security.py:310: in test_update_ip_whitelist
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="16" time="1.648" timestamp="2026-01-06T16:58:12.690280+00:00" hostname="agent-env-f72bcf88-0fea-4816-898f-664fa23b53c3"><testcase classname="tests.test_admin_security.TestAdminLogin" name="test_admin_login_returns_tokens" time="0.077" /><testcase classname="tests.test_admin_security.TestAdminLogin" name="test_nonexistent_user_returns_404" time="0.041" /><testcase classname="tests.test_admin_security.TestRateLimiting" name="test_rate_limit_configuration_exists" time="0.083" /><testcase classname="tests.test_admin_security.TestSecurityDashboard" name="test_security_dashboard_loads" time="0.092" /><testcase classname="tests.test_admin_security.TestSecurityDashboard" name="test_security_dashboard_requires_admin" time="0.037" /><testcase classname="tests.test_admin_security.TestEmergencyLockdown" name="test_get_lockdown_status" time="0.088" /><testcase classname="tests.test_admin_security.TestEmergencyLockdown" name="test_activate_and_deactivate_partial_lockdown" time="0.212" /><testcase classname="tests.test_admin_security.TestEmergencyLockdown" name="test_activate_full_lockdown_and_deactivate" time="0.215" /><testcase classname="tests.test_admin_security.TestIPWhitelist" name="test_get_ip_whitelist" time="0.083" /><testcase classname="tests.test_admin_security.TestIPWhitelist" name="test_update_ip_whitelist_via_query_params" time="0.082"><failure message="AssertionError: Failed: {&quot;detail&quot;:[{&quot;type&quot;:&quot;missing&quot;,&quot;loc&quot;:[&quot;body&quot;],&quot;msg&quot;:&quot;Field required&quot;,&quot;input&quot;:null,&quot;url&quot;:&quot;https://errors.pydantic.dev/2.12/v/missing&quot;}]}&#10;assert 422 == 200&#10; +  where 422 = &lt;Response [422]&gt;.status_code">tests/test_admin_security.py:299: in test_update_ip_whitelist_via_query_params
     assert response.status_code == 200, f"Failed: {response.text}"
 E   AssertionError: Failed: {"detail":[{"type":"missing","loc":["body"],"msg":"Field required","input":null,"url":"https://errors.pydantic.dev/2.12/v/missing"}]}
 E   assert 422 == 200
-E    +  where 422 = &lt;Response [422]&gt;.status_code</failure></testcase><testcase classname="tests.test_admin_security.TestIPWhitelist" name="test_disable_ip_whitelist" time="0.090"><failure message="AssertionError: Failed: {&quot;detail&quot;:[{&quot;type&quot;:&quot;missing&quot;,&quot;loc&quot;:[&quot;body&quot;],&quot;msg&quot;:&quot;Field required&quot;,&quot;input&quot;:null,&quot;url&quot;:&quot;https://errors.pydantic.dev/2.12/v/missing&quot;}]}&#10;assert 422 == 200&#10; +  where 422 = &lt;Response [422]&gt;.status_code">tests/test_admin_security.py:335: in test_disable_ip_whitelist
+E    +  where 422 = &lt;Response [422]&gt;.status_code</failure></testcase><testcase classname="tests.test_admin_security.TestIPWhitelist" name="test_disable_ip_whitelist" time="0.085"><failure message="AssertionError: Failed: {&quot;detail&quot;:[{&quot;type&quot;:&quot;missing&quot;,&quot;loc&quot;:[&quot;body&quot;],&quot;msg&quot;:&quot;Field required&quot;,&quot;input&quot;:null,&quot;url&quot;:&quot;https://errors.pydantic.dev/2.12/v/missing&quot;}]}&#10;assert 422 == 200&#10; +  where 422 = &lt;Response [422]&gt;.status_code">tests/test_admin_security.py:320: in test_disable_ip_whitelist
     assert response.status_code == 200, f"Failed: {response.text}"
 E   AssertionError: Failed: {"detail":[{"type":"missing","loc":["body"],"msg":"Field required","input":null,"url":"https://errors.pydantic.dev/2.12/v/missing"}]}
 E   assert 422 == 200
-E    +  where 422 = &lt;Response [422]&gt;.status_code</failure></testcase><testcase classname="tests.test_admin_security.TestAuditLogs" name="test_get_audit_logs" time="0.084" /><testcase classname="tests.test_admin_security.TestAuditLogs" name="test_audit_logs_pagination" time="0.124" /><testcase classname="tests.test_admin_security.TestAuditLogs" name="test_audit_logs_filtering" time="0.086" /><testcase classname="tests.test_admin_security.TestSessionManagement" name="test_login_creates_session" time="0.080"><failure message="assert 520 == 200&#10; +  where 520 = &lt;Response [520]&gt;.status_code">tests/test_admin_security.py:464: in test_login_creates_session
-    assert dashboard_response.status_code == 200
-E   assert 520 == 200
-E    +  where 520 = &lt;Response [520]&gt;.status_code</failure></testcase></testsuite></testsuites>
+E    +  where 422 = &lt;Response [422]&gt;.status_code</failure></testcase><testcase classname="tests.test_admin_security.TestAuditLogs" name="test_get_audit_logs" time="0.090" /><testcase classname="tests.test_admin_security.TestAuditLogs" name="test_audit_logs_pagination" time="0.128" /><testcase classname="tests.test_admin_security.TestAuditLogs" name="test_audit_logs_filtering" time="0.091" /><testcase classname="tests.test_admin_security.TestSessionManagement" name="test_login_creates_session_and_dashboard_shows_it" time="0.088" /><testcase classname="tests.test_admin_security.TestJWTTokens" name="test_jwt_tokens_are_valid_format" time="0.045" /></testsuite></testsuites>
