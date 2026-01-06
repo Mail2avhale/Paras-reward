@@ -96,7 +96,6 @@ const AdminSocialMediaSettings = lazy(() => import("@/pages/AdminSocialMediaSett
 const AdminUserLedger = lazy(() => import("@/pages/AdminUserLedger"));
 const AdminRedeemSettings = lazy(() => import("@/pages/AdminRedeemSettings"));
 const AdminPRCRain = lazy(() => import("@/pages/AdminPRCRain"));
-const AdminCapitalManagement = lazy(() => import("@/pages/AdminCapitalManagement"));
 const AdminAccountingDashboard = lazy(() => import("@/pages/AdminAccountingDashboard"));
 const PRCEmergencyControls = lazy(() => import("@/pages/PRCEmergencyControls"));
 const AdminUserControls = lazy(() => import("@/pages/AdminUserControls"));
