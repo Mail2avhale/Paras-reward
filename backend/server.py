@@ -20791,14 +20791,15 @@ async def get_live_activity_feed():
     Format: "User from {city} {action}"
     """
     try:
-        # Get recent transactions (last 50, randomized for privacy)
-        # Check both 'type' and 'transaction_type' fields for compatibility
+        # Get recent transactions (last 50) - include all activity types
+        all_activity_types = [
+            "mining", "tap_game", "order", "gift_voucher_request", "bill_payment_request",
+            "prc_rain_gain", "prc_rain_loss", "cashback", "referral", "admin_credit"
+        ]
+        
         recent_transactions = await db.transactions.find(
-            {"$or": [
-                {"type": {"$in": ["mining", "tap_game", "order", "gift_voucher_request", "bill_payment_request"]}},
-                {"transaction_type": {"$in": ["mining", "tap_game", "redeem", "gift_voucher", "order"]}}
-            ]},
-            {"_id": 0, "user_id": 1, "type": 1, "transaction_type": 1, "created_at": 1}
+            {"type": {"$in": all_activity_types}},
+            {"_id": 0, "user_id": 1, "type": 1, "created_at": 1}
         ).sort("created_at", -1).limit(50).to_list(50)
         
         activities = []
@@ -20811,14 +20812,17 @@ async def get_live_activity_feed():
             "order": {"action": "order", "text": "placed an order"},
             "gift_voucher_request": {"action": "voucher", "text": "claimed a gift voucher"},
             "bill_payment_request": {"action": "redeem", "text": "redeemed rewards"},
-            "redeem": {"action": "redeem", "text": "redeemed rewards"},
-            "gift_voucher": {"action": "voucher", "text": "claimed a gift voucher"}
+            "prc_rain_gain": {"action": "mining", "text": "earned PRC bonus"},
+            "prc_rain_loss": {"action": "tap_game", "text": "participated in PRC rain"},
+            "cashback": {"action": "redeem", "text": "earned cashback"},
+            "referral": {"action": "mining", "text": "earned referral bonus"},
+            "admin_credit": {"action": "mining", "text": "earned bonus PRC"}
         }
         
         import random
-        for txn in recent_transactions[:10]:  # Show last 10
+        for txn in recent_transactions[:15]:  # Show last 15 for more variety
             city = random.choice(cities)
-            txn_type = txn.get("type") or txn.get("transaction_type", "mining")
+            txn_type = txn.get("type", "mining")
             action_info = action_map.get(txn_type, {"action": "mining", "text": "earned rewards"})
             
             activities.append({
