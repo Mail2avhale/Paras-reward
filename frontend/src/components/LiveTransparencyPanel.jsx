@@ -38,7 +38,8 @@ const LiveTransparencyPanel = ({ translations = {} }) => {
     redeemsToday: 'Redeems Today',
     activeUsers: 'Active Users',
     lastUpdated: 'Updated',
-    justNow: 'just now'
+    justNow: 'just now',
+    totalPrcInSystem: 'Total PRC in System'
   };
 
   const fetchLiveStats = async () => {
@@ -50,6 +51,7 @@ const LiveTransparencyPanel = ({ translations = {} }) => {
           todayPrcBurned: response.data.today_prc_burned || 0,
           redeemsToday: response.data.redeems_today || 0,
           activeUsers: response.data.active_users || 0,
+          totalPrcInSystem: response.data.total_prc_in_system || 0,
           lastUpdated: new Date()
         });
       }
