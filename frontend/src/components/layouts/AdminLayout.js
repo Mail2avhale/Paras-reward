@@ -57,7 +57,8 @@ const AdminLayout = ({ children, user, onLogout }) => {
   const [expandedGroups, setExpandedGroups] = useState({
     settings: false,
     payments: false,
-    finance: false
+    finance: false,
+    security: false
   });
   const [userPermissions, setUserPermissions] = useState([]);
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
