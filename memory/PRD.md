@@ -42,6 +42,30 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 
 ## What's Been Implemented
 
+### January 6, 2026 (Current Session - Part 3)
+- ✅ **Draggable Dashboard Cards (TESTED - 100% Frontend Tests Passed)**
+  - **Feature**: Users can customize their dashboard by dragging and reordering cards
+  - **Implementation Details**:
+    - Uses `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities` libraries
+    - Created `DraggableDashboard.jsx` component with:
+      - `SortableCard` wrapper with drag handles
+      - `DraggableDashboard` container with edit mode controls
+      - `DashboardCard` wrapper for individual cards
+    - 9 draggable cards: stats-cards, smart-insights, quick-actions, recent-activity, security-trust, user-controls, statement-export, activity-feed, vip-banner
+  - **UI Features**:
+    - Purple floating edit button (gear icon) in bottom right corner
+    - Edit mode control panel with Save/Reset/Close buttons
+    - Purple drag handles (⠿) on left side of each card in edit mode
+    - Purple ring outline on cards in edit mode
+    - "Cards drag करा आणि reorder करा" instruction banner
+    - VIP banner is **locked** (gray lock icon, cannot be moved)
+  - **Persistence**: Layout saved to `localStorage` with key `dashboard_card_order`
+  - **Files Modified**:
+    - `/app/frontend/src/components/DraggableDashboard.jsx` (NEW)
+    - `/app/frontend/src/pages/DashboardModern.js` (MODIFIED)
+    - `/app/frontend/package.json` (added @dnd-kit packages)
+  - Test report: `/app/test_reports/iteration_9.json`
+
 ### January 6, 2026 (Current Session - Part 2)
 - ✅ **Multi-Language Tutorial Support (TESTED - 100% Frontend Tests Passed)**
   - **Tutorial Translations**: AppTutorial.js now fully supports English, Hindi, and Marathi
