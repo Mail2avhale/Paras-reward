@@ -122,28 +122,28 @@ const AdminUserControls = () => {
       return;
     }
 
-    try {
-      let settings = {};
-      switch (action) {
-        case 'pause':
-          settings = { mining_active: false };
-          break;
-        case 'resume':
-          settings = { mining_active: true };
-          break;
-        case 'setCap500':
-          settings = { daily_prc_cap: 500 };
-          break;
-        case 'setCap1000':
-          settings = { daily_prc_cap: 1000 };
-          break;
-        case 'removeCap':
-          settings = { daily_prc_cap: 0 };
-          break;
-        default:
-          return;
-      }
+    let settings = {};
+    switch (action) {
+      case 'pause':
+        settings = { mining_active: false };
+        break;
+      case 'resume':
+        settings = { mining_active: true };
+        break;
+      case 'setCap500':
+        settings = { daily_prc_cap: 500 };
+        break;
+      case 'setCap1000':
+        settings = { daily_prc_cap: 1000 };
+        break;
+      case 'removeCap':
+        settings = { daily_prc_cap: 0 };
+        break;
+      default:
+        return;
+    }
 
+    try {
       await axios.post(`${API}/api/admin/user-controls/bulk`, {
         user_ids: selectedUsers,
         settings
