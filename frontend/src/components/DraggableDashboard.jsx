@@ -226,10 +226,13 @@ const DraggableDashboard = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-2 px-4 rounded-xl mb-4 text-center text-sm font-medium"
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-4 rounded-xl mb-4 text-center"
           >
-            <GripVertical className="w-4 h-4 inline-block mr-2" />
-            {t('dragToReorder')}
+            <div className="flex items-center justify-center gap-2">
+              <GripVertical className="w-5 h-5" />
+              <span className="font-medium">{t('dragToReorder')}</span>
+            </div>
+            <p className="text-xs text-white/70 mt-1">खालील cards वरचे ⠿ icon drag करा</p>
           </motion.div>
         )}
       </AnimatePresence>
