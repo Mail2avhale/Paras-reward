@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -8,7 +8,7 @@ import {
   Plus, RefreshCw, Download, Calendar, Search, Filter,
   ChevronLeft, ChevronRight, X, Check, IndianRupee, TrendingUp,
   TrendingDown, Banknote, CreditCard, Receipt, Users, ShoppingCart,
-  Home, Zap, FileText, Settings
+  Home, Zap, FileText, Settings, Sparkles, Lightbulb
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -27,6 +27,10 @@ const AdminCashBankBook = ({ user }) => {
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showOpeningBalanceModal, setShowOpeningBalanceModal] = useState(false);
+  
+  // Auto-categorization state
+  const [autoSuggestion, setAutoSuggestion] = useState(null);
+  const [isAutoSuggesting, setIsAutoSuggesting] = useState(false);
   
   // Form states
   const [entryForm, setEntryForm] = useState({
