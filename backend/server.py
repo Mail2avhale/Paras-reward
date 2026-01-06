@@ -21956,6 +21956,507 @@ async def get_accounting_summary():
         logging.error(f"Error getting accounting summary: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ==================== CHART OF ACCOUNTS ====================
+# Standard accounting structure for the platform
+
+CHART_OF_ACCOUNTS = {
+    "assets": {
+        "code": "1000",
+        "name": "Assets",
+        "accounts": [
+            {"code": "1001", "name": "Cash in Hand", "type": "current", "normal_balance": "debit"},
+            {"code": "1002", "name": "Bank Account", "type": "current", "normal_balance": "debit"},
+            {"code": "1003", "name": "Accounts Receivable", "type": "current", "normal_balance": "debit"},
+            {"code": "1004", "name": "Prepaid Expenses", "type": "current", "normal_balance": "debit"},
+            {"code": "1010", "name": "Office Equipment", "type": "fixed", "normal_balance": "debit"},
+            {"code": "1011", "name": "Computer & IT Equipment", "type": "fixed", "normal_balance": "debit"},
+            {"code": "1012", "name": "Furniture & Fixtures", "type": "fixed", "normal_balance": "debit"},
+            {"code": "1020", "name": "Accumulated Depreciation", "type": "contra", "normal_balance": "credit"}
+        ]
+    },
+    "liabilities": {
+        "code": "2000",
+        "name": "Liabilities",
+        "accounts": [
+            {"code": "2001", "name": "Accounts Payable", "type": "current", "normal_balance": "credit"},
+            {"code": "2002", "name": "PRC Redemption Liability", "type": "current", "normal_balance": "credit"},
+            {"code": "2003", "name": "GST Payable", "type": "current", "normal_balance": "credit"},
+            {"code": "2004", "name": "TDS Payable", "type": "current", "normal_balance": "credit"},
+            {"code": "2005", "name": "Salary Payable", "type": "current", "normal_balance": "credit"},
+            {"code": "2010", "name": "Long-term Loans", "type": "long_term", "normal_balance": "credit"}
+        ]
+    },
+    "equity": {
+        "code": "3000",
+        "name": "Owner's Equity",
+        "accounts": [
+            {"code": "3001", "name": "Owner's Capital", "type": "equity", "normal_balance": "credit"},
+            {"code": "3002", "name": "Additional Capital", "type": "equity", "normal_balance": "credit"},
+            {"code": "3003", "name": "Owner's Drawings", "type": "contra_equity", "normal_balance": "debit"},
+            {"code": "3004", "name": "Retained Earnings", "type": "equity", "normal_balance": "credit"}
+        ]
+    },
+    "income": {
+        "code": "4000",
+        "name": "Income",
+        "accounts": [
+            {"code": "4001", "name": "VIP Membership Fees", "type": "operating", "normal_balance": "credit"},
+            {"code": "4002", "name": "Ads Revenue", "type": "operating", "normal_balance": "credit"},
+            {"code": "4003", "name": "Commission Income", "type": "operating", "normal_balance": "credit"},
+            {"code": "4004", "name": "Service Charges", "type": "operating", "normal_balance": "credit"},
+            {"code": "4005", "name": "PRC Redemption Income", "type": "operating", "normal_balance": "credit"},
+            {"code": "4010", "name": "Interest Income", "type": "other", "normal_balance": "credit"},
+            {"code": "4011", "name": "Other Income", "type": "other", "normal_balance": "credit"}
+        ]
+    },
+    "expenses": {
+        "code": "5000",
+        "name": "Expenses",
+        "accounts": [
+            {"code": "5001", "name": "Rent Expense", "type": "operating", "normal_balance": "debit"},
+            {"code": "5002", "name": "Salary & Wages", "type": "operating", "normal_balance": "debit"},
+            {"code": "5003", "name": "Utilities", "type": "operating", "normal_balance": "debit"},
+            {"code": "5004", "name": "Internet & Phone", "type": "operating", "normal_balance": "debit"},
+            {"code": "5005", "name": "Marketing & Advertising", "type": "operating", "normal_balance": "debit"},
+            {"code": "5006", "name": "Server & Hosting", "type": "operating", "normal_balance": "debit"},
+            {"code": "5007", "name": "Office Supplies", "type": "operating", "normal_balance": "debit"},
+            {"code": "5008", "name": "Professional Fees", "type": "operating", "normal_balance": "debit"},
+            {"code": "5009", "name": "Bank Charges", "type": "operating", "normal_balance": "debit"},
+            {"code": "5010", "name": "Depreciation Expense", "type": "non_cash", "normal_balance": "debit"},
+            {"code": "5011", "name": "Maintenance & Repairs", "type": "operating", "normal_balance": "debit"},
+            {"code": "5012", "name": "Travel & Conveyance", "type": "operating", "normal_balance": "debit"},
+            {"code": "5020", "name": "GST Expense", "type": "tax", "normal_balance": "debit"},
+            {"code": "5021", "name": "Other Expenses", "type": "other", "normal_balance": "debit"}
+        ]
+    }
+}
+
+@api_router.get("/admin/accounting/chart-of-accounts")
+async def get_chart_of_accounts():
+    """Get the complete Chart of Accounts"""
+    try:
+        # Get account balances from database
+        account_balances = {}
+        
+        # Cash balance
+        cash_account = await db.company_accounts.find_one({"account_type": "cash"})
+        account_balances["1001"] = cash_account.get("current_balance", 0) if cash_account else 0
+        
+        # Bank balance
+        bank_account = await db.company_accounts.find_one({"account_type": "bank"})
+        account_balances["1002"] = bank_account.get("current_balance", 0) if bank_account else 0
+        
+        # PRC Liability (users' PRC balance)
+        total_prc = await db.users.aggregate([
+            {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
+        ]).to_list(length=1)
+        prc_liability = (total_prc[0]["total"] if total_prc else 0) * PRC_TO_INR_RATE
+        account_balances["2002"] = prc_liability
+        
+        # Capital from capital_entries collection
+        capital_entries = await db.capital_entries.find({}).to_list(length=None)
+        owner_capital = sum(e.get("amount", 0) for e in capital_entries if e.get("entry_type") == "capital")
+        additional_capital = sum(e.get("amount", 0) for e in capital_entries if e.get("entry_type") == "additional_capital")
+        drawings = sum(e.get("amount", 0) for e in capital_entries if e.get("entry_type") == "drawings")
+        
+        account_balances["3001"] = owner_capital
+        account_balances["3002"] = additional_capital
+        account_balances["3003"] = drawings
+        
+        # Add balances to chart
+        chart_with_balances = {}
+        for category, data in CHART_OF_ACCOUNTS.items():
+            chart_with_balances[category] = {
+                "code": data["code"],
+                "name": data["name"],
+                "accounts": []
+            }
+            category_total = 0
+            for account in data["accounts"]:
+                balance = account_balances.get(account["code"], 0)
+                chart_with_balances[category]["accounts"].append({
+                    **account,
+                    "balance": round(balance, 2)
+                })
+                if account["normal_balance"] == "debit":
+                    category_total += balance
+                else:
+                    category_total -= balance
+            chart_with_balances[category]["total"] = round(abs(category_total), 2)
+        
+        return {
+            "chart_of_accounts": chart_with_balances,
+            "total_accounts": sum(len(data["accounts"]) for data in CHART_OF_ACCOUNTS.values()),
+            "last_updated": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logging.error(f"Error getting chart of accounts: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== CAPITAL & OWNER'S EQUITY MANAGEMENT ====================
+
+@api_router.get("/admin/accounting/capital")
+async def get_capital_summary():
+    """Get capital and owner's equity summary"""
+    try:
+        # Get all capital entries
+        entries = await db.capital_entries.find({}).sort("date", -1).to_list(length=None)
+        
+        # Calculate totals
+        opening_capital = sum(e.get("amount", 0) for e in entries if e.get("entry_type") == "opening_capital")
+        additional_capital = sum(e.get("amount", 0) for e in entries if e.get("entry_type") == "additional_capital")
+        drawings = sum(e.get("amount", 0) for e in entries if e.get("entry_type") == "drawings")
+        
+        # Get retained earnings from P&L
+        all_income = await db.cash_book.find({"entry_type": "income"}).to_list(length=None)
+        all_income += await db.bank_book.find({"entry_type": "income"}).to_list(length=None)
+        all_expenses = await db.cash_book.find({"entry_type": "expense"}).to_list(length=None)
+        all_expenses += await db.bank_book.find({"entry_type": "expense"}).to_list(length=None)
+        
+        total_income = sum(e.get("amount", 0) for e in all_income)
+        total_expense = sum(e.get("amount", 0) for e in all_expenses)
+        retained_earnings = total_income - total_expense
+        
+        total_equity = opening_capital + additional_capital - drawings + retained_earnings
+        
+        return {
+            "opening_capital": round(opening_capital, 2),
+            "additional_capital": round(additional_capital, 2),
+            "total_capital_invested": round(opening_capital + additional_capital, 2),
+            "drawings": round(drawings, 2),
+            "retained_earnings": round(retained_earnings, 2),
+            "total_equity": round(total_equity, 2),
+            "entries": [{
+                "id": str(e.get("_id", "")),
+                "entry_id": e.get("entry_id", ""),
+                "date": e.get("date", ""),
+                "entry_type": e.get("entry_type", ""),
+                "amount": e.get("amount", 0),
+                "description": e.get("description", ""),
+                "reference_no": e.get("reference_no", ""),
+                "created_by": e.get("created_by", "")
+            } for e in entries[:50]],
+            "entries_count": len(entries)
+        }
+    except Exception as e:
+        logging.error(f"Error getting capital summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/accounting/capital/entry")
+async def add_capital_entry(
+    entry_type: str,  # opening_capital, additional_capital, drawings
+    amount: float,
+    description: str = "",
+    reference_no: str = "",
+    date: str = None,
+    admin_id: str = ""
+):
+    """Add a capital entry (investment or drawings)"""
+    try:
+        if entry_type not in ["opening_capital", "additional_capital", "drawings"]:
+            raise HTTPException(status_code=400, detail="Invalid entry type. Use: opening_capital, additional_capital, or drawings")
+        
+        if amount <= 0:
+            raise HTTPException(status_code=400, detail="Amount must be positive")
+        
+        now = datetime.utcnow().isoformat()
+        entry_date = date or now[:10]
+        
+        entry = {
+            "entry_id": str(uuid.uuid4()),
+            "entry_type": entry_type,
+            "amount": amount,
+            "description": description or f"{entry_type.replace('_', ' ').title()}",
+            "reference_no": reference_no,
+            "date": entry_date,
+            "created_at": now,
+            "created_by": admin_id
+        }
+        
+        await db.capital_entries.insert_one(entry)
+        
+        # Also add to cash/bank book based on entry type
+        if entry_type in ["opening_capital", "additional_capital"]:
+            # Capital coming in - add to cash book as income (capital category)
+            await db.cash_book.insert_one({
+                "entry_id": str(uuid.uuid4()),
+                "entry_type": "capital",
+                "amount": amount,
+                "description": description or f"Capital: {entry_type.replace('_', ' ').title()}",
+                "category": "capital",
+                "reference_no": reference_no,
+                "date": entry_date,
+                "created_at": now,
+                "created_by": admin_id,
+                "linked_capital_entry": entry["entry_id"]
+            })
+            
+            # Update cash balance
+            await db.company_accounts.update_one(
+                {"account_type": "cash"},
+                {"$inc": {"current_balance": amount}},
+                upsert=True
+            )
+        elif entry_type == "drawings":
+            # Drawings - money going out
+            await db.cash_book.insert_one({
+                "entry_id": str(uuid.uuid4()),
+                "entry_type": "expense",
+                "amount": amount,
+                "description": description or "Owner's Drawings",
+                "category": "drawings",
+                "reference_no": reference_no,
+                "date": entry_date,
+                "created_at": now,
+                "created_by": admin_id,
+                "linked_capital_entry": entry["entry_id"]
+            })
+            
+            # Update cash balance
+            await db.company_accounts.update_one(
+                {"account_type": "cash"},
+                {"$inc": {"current_balance": -amount}},
+                upsert=True
+            )
+        
+        return {
+            "success": True,
+            "message": f"{entry_type.replace('_', ' ').title()} entry added successfully",
+            "entry_id": entry["entry_id"],
+            "amount": amount
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error adding capital entry: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== TRIAL BALANCE ====================
+
+@api_router.get("/admin/accounting/trial-balance")
+async def get_trial_balance(as_of_date: str = None):
+    """Generate Trial Balance - Sum of Debits should equal Sum of Credits"""
+    try:
+        # Get all account balances
+        
+        # DEBIT BALANCES (Assets + Expenses + Drawings)
+        debit_accounts = []
+        
+        # Cash in Hand
+        cash_account = await db.company_accounts.find_one({"account_type": "cash"})
+        cash_balance = cash_account.get("current_balance", 0) if cash_account else 0
+        if cash_balance != 0:
+            debit_accounts.append({
+                "code": "1001",
+                "name": "Cash in Hand",
+                "debit": max(cash_balance, 0),
+                "credit": max(-cash_balance, 0) if cash_balance < 0 else 0
+            })
+        
+        # Bank Balance
+        bank_account = await db.company_accounts.find_one({"account_type": "bank"})
+        bank_balance = bank_account.get("current_balance", 0) if bank_account else 0
+        if bank_balance != 0:
+            debit_accounts.append({
+                "code": "1002",
+                "name": "Bank Account",
+                "debit": max(bank_balance, 0),
+                "credit": max(-bank_balance, 0) if bank_balance < 0 else 0
+            })
+        
+        # Expenses by category
+        cash_expenses = await db.cash_book.find({"entry_type": "expense"}).to_list(length=None)
+        bank_expenses = await db.bank_book.find({"entry_type": "expense"}).to_list(length=None)
+        all_expenses = cash_expenses + bank_expenses
+        
+        expense_by_category = {}
+        for exp in all_expenses:
+            cat = exp.get("category", "other")
+            if cat not in expense_by_category:
+                expense_by_category[cat] = 0
+            expense_by_category[cat] += exp.get("amount", 0)
+        
+        for cat, amount in expense_by_category.items():
+            if amount != 0:
+                debit_accounts.append({
+                    "code": f"5xxx",
+                    "name": f"{cat.replace('_', ' ').title()} Expense",
+                    "debit": round(amount, 2),
+                    "credit": 0
+                })
+        
+        # Drawings
+        drawings = await db.capital_entries.find({"entry_type": "drawings"}).to_list(length=None)
+        total_drawings = sum(d.get("amount", 0) for d in drawings)
+        if total_drawings > 0:
+            debit_accounts.append({
+                "code": "3003",
+                "name": "Owner's Drawings",
+                "debit": round(total_drawings, 2),
+                "credit": 0
+            })
+        
+        # CREDIT BALANCES (Liabilities + Equity + Income)
+        credit_accounts = []
+        
+        # PRC Liability
+        total_prc = await db.users.aggregate([
+            {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
+        ]).to_list(length=1)
+        prc_liability = (total_prc[0]["total"] if total_prc else 0) * PRC_TO_INR_RATE
+        if prc_liability > 0:
+            credit_accounts.append({
+                "code": "2002",
+                "name": "PRC Redemption Liability",
+                "debit": 0,
+                "credit": round(prc_liability, 2)
+            })
+        
+        # Capital
+        capital_entries = await db.capital_entries.find({"entry_type": {"$in": ["opening_capital", "additional_capital"]}}).to_list(length=None)
+        total_capital = sum(c.get("amount", 0) for c in capital_entries)
+        if total_capital > 0:
+            credit_accounts.append({
+                "code": "3001",
+                "name": "Owner's Capital",
+                "debit": 0,
+                "credit": round(total_capital, 2)
+            })
+        
+        # Income by category
+        cash_income = await db.cash_book.find({"entry_type": {"$in": ["income", "capital"]}}).to_list(length=None)
+        bank_income = await db.bank_book.find({"entry_type": {"$in": ["income", "capital"]}}).to_list(length=None)
+        all_income = cash_income + bank_income
+        
+        # Exclude capital entries from income (they're in equity)
+        income_by_category = {}
+        for inc in all_income:
+            cat = inc.get("category", "other")
+            if cat == "capital" or cat == "drawings":
+                continue  # Skip capital, it's in equity section
+            if cat not in income_by_category:
+                income_by_category[cat] = 0
+            income_by_category[cat] += inc.get("amount", 0)
+        
+        for cat, amount in income_by_category.items():
+            if amount != 0:
+                credit_accounts.append({
+                    "code": f"4xxx",
+                    "name": f"{cat.replace('_', ' ').title()} Income",
+                    "debit": 0,
+                    "credit": round(amount, 2)
+                })
+        
+        # Calculate totals
+        total_debit = sum(a["debit"] for a in debit_accounts + credit_accounts)
+        total_credit = sum(a["credit"] for a in debit_accounts + credit_accounts)
+        
+        difference = round(total_debit - total_credit, 2)
+        is_balanced = abs(difference) < 0.01
+        
+        return {
+            "report_type": "Trial Balance",
+            "as_of_date": as_of_date or datetime.utcnow().strftime("%Y-%m-%d"),
+            "accounts": debit_accounts + credit_accounts,
+            "totals": {
+                "total_debit": round(total_debit, 2),
+                "total_credit": round(total_credit, 2),
+                "difference": difference,
+                "is_balanced": is_balanced
+            },
+            "status": "✓ Balanced" if is_balanced else f"⚠ Difference of ₹{abs(difference)}",
+            "generated_at": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logging.error(f"Error generating trial balance: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== JOURNAL ENTRIES (Double Entry) ====================
+
+@api_router.get("/admin/accounting/journal-entries")
+async def get_journal_entries(page: int = 1, limit: int = 50):
+    """Get all journal entries with debit/credit details"""
+    try:
+        skip = (page - 1) * limit
+        
+        entries = await db.journal_entries.find({}).sort("date", -1).skip(skip).limit(limit).to_list(length=limit)
+        total = await db.journal_entries.count_documents({})
+        
+        formatted_entries = []
+        for entry in entries:
+            formatted_entries.append({
+                "id": str(entry.get("_id", "")),
+                "entry_id": entry.get("entry_id", ""),
+                "date": entry.get("date", ""),
+                "narration": entry.get("narration", ""),
+                "debit_account": entry.get("debit_account", ""),
+                "debit_amount": entry.get("debit_amount", 0),
+                "credit_account": entry.get("credit_account", ""),
+                "credit_amount": entry.get("credit_amount", 0),
+                "reference_no": entry.get("reference_no", ""),
+                "created_by": entry.get("created_by", "")
+            })
+        
+        return {
+            "entries": formatted_entries,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "total_pages": (total + limit - 1) // limit
+            }
+        }
+    except Exception as e:
+        logging.error(f"Error getting journal entries: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/accounting/journal-entry")
+async def add_journal_entry(
+    debit_account: str,
+    credit_account: str,
+    amount: float,
+    narration: str,
+    date: str = None,
+    reference_no: str = "",
+    admin_id: str = ""
+):
+    """Add a journal entry (double-entry bookkeeping)"""
+    try:
+        if amount <= 0:
+            raise HTTPException(status_code=400, detail="Amount must be positive")
+        
+        if debit_account == credit_account:
+            raise HTTPException(status_code=400, detail="Debit and Credit accounts cannot be the same")
+        
+        now = datetime.utcnow().isoformat()
+        entry_date = date or now[:10]
+        
+        entry = {
+            "entry_id": str(uuid.uuid4()),
+            "date": entry_date,
+            "debit_account": debit_account,
+            "debit_amount": amount,
+            "credit_account": credit_account,
+            "credit_amount": amount,
+            "narration": narration,
+            "reference_no": reference_no,
+            "created_at": now,
+            "created_by": admin_id
+        }
+        
+        await db.journal_entries.insert_one(entry)
+        
+        return {
+            "success": True,
+            "message": "Journal entry added successfully",
+            "entry_id": entry["entry_id"]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error adding journal entry: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ==================== PRC LEDGER SYSTEM ====================
 # Conversion rate: 10 PRC = ₹1 INR (or 1000 PRC = ₹100)
 PRC_TO_INR_RATE = 0.1  # 1 PRC = ₹0.1
