@@ -132,6 +132,19 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'audit', label: 'Audit Service', icon: Shield, path: '/admin/audit' },
       ]
     },
+    security: {
+      label: '🔐 Security',
+      icon: Shield,
+      subItems: [
+        { 
+          id: 'security-dashboard', 
+          label: 'Security Dashboard', 
+          icon: Shield, 
+          path: '/admin/security',
+          description: 'JWT, Rate Limiting, Sessions, Audit Logs'
+        },
+      ]
+    },
     settings: {
       label: 'Settings',
       icon: Settings,
