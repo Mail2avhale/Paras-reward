@@ -8,7 +8,8 @@ import {
   ArrowLeft, RefreshCw, AlertTriangle, CheckCircle, XCircle,
   TrendingUp, TrendingDown, DollarSign, Coins, Shield, Users,
   PieChart, BarChart3, Clock, Settings, Download, Calendar,
-  Wallet, Receipt, FileText, AlertCircle, Activity, Percent
+  Wallet, Receipt, FileText, AlertCircle, Activity, Percent,
+  Eye, LayoutGrid, Banknote, CreditCard, IndianRupee
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
