@@ -192,6 +192,33 @@ async def log_admin_action(
     await db.admin_audit_logs.insert_one(audit_entry)
     return audit_entry
 
+# ========== SECURITY ALERTS ==========
+async def create_security_alert(
+    alert_type: str,
+    severity: str,  # low, medium, high, critical
+    title: str,
+    message: str,
+    details: dict = None,
+    ip_address: str = None,
+    user_identifier: str = None
+):
+    """Create a security alert for admin notification"""
+    alert = {
+        "alert_id": str(uuid.uuid4()),
+        "alert_type": alert_type,  # failed_login, ip_blocked, lockdown_activated, suspicious_activity, brute_force
+        "severity": severity,
+        "title": title,
+        "message": message,
+        "details": details or {},
+        "ip_address": ip_address,
+        "user_identifier": user_identifier,
+        "is_read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.security_alerts.insert_one(alert)
+    return alert
+
 # ========== IP WHITELISTING ==========
 async def check_ip_whitelist(ip_address: str, uid: str = None) -> bool:
     """Check if IP is whitelisted for admin access"""
