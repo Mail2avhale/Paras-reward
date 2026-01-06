@@ -53,7 +53,7 @@ const OutletPanel = ({ user, onLogout }) => {
 
   const fetchDashboardData = async () => {
     try {
-      const walletRes = await axios.get(`${API}/wallet/${user.uid}`);
+      const walletRes = await axios.get(`${API}/api/wallet/${user.uid}`);
       setWalletData(walletRes.data);
 
       const financialRes = await axios.get(`${API}/stockist/${user.uid}/financial-info`);
@@ -112,7 +112,7 @@ const OutletPanel = ({ user, onLogout }) => {
         return;
       }
 
-      await axios.post(`${API}/wallet/prc/withdraw`, {
+      await axios.post(`${API}/api/wallet/prc/withdraw`, {
         uid: user.uid,
         amount: parseFloat(amount),
         payment_mode: 'upi'

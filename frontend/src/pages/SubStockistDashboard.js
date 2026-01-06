@@ -50,7 +50,7 @@ const SubStockistDashboard = ({ user, onLogout }) => {
 
   const fetchDashboardData = async () => {
     try {
-      const walletRes = await axios.get(`${API}/wallet/${user.uid}`);
+      const walletRes = await axios.get(`${API}/api/wallet/${user.uid}`);
       setWalletData(walletRes.data);
 
       const financialRes = await axios.get(`${API}/stockist/${user.uid}/financial-info`);
@@ -76,7 +76,7 @@ const SubStockistDashboard = ({ user, onLogout }) => {
         return;
       }
 
-      await axios.post(`${API}/wallet/profit/withdraw`, {
+      await axios.post(`${API}/api/wallet/profit/withdraw`, {
         uid: user.uid,
         amount: parseFloat(amount),
         payment_mode: 'upi'

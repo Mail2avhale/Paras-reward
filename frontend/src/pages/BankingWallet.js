@@ -44,7 +44,7 @@ const BankingWallet = ({ user, walletBalance = 0 }) => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `${API}/wallet/transactions/${user.uid}?wallet_type=${activeWallet}_wallet&page=${pagination.page}&limit=${pagination.limit}`
+        `${API}/api/wallet/transactions/${user.uid}?wallet_type=${activeWallet}_wallet&page=${pagination.page}&limit=${pagination.limit}`
       );
       
       setTransactions(response.data.transactions || []);
