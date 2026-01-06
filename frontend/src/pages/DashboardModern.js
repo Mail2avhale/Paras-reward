@@ -14,6 +14,8 @@ import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
 import QuickKYCModal from '@/components/QuickKYCModal';
 import PRCRain from '@/components/PRCRain';
 import AppTutorial from '@/components/AppTutorial';
+import LiveMiningIndicator from '@/components/LiveMiningIndicator';
+import LiveTransparencyPanel from '@/components/LiveTransparencyPanel';
 import { useLanguage, LANGUAGES } from '@/contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
