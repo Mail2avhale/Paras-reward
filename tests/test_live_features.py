@@ -69,24 +69,25 @@ class TestUserDashboardAPIs:
     """Test user dashboard related APIs"""
     
     def test_user_login(self):
-        """Test user login with VIP credentials"""
-        response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "final_test_vip@test.com",
-            "password": "testpass123"
-        })
-        # Login may return 200 or 401 depending on user existence
-        assert response.status_code in [200, 401], f"Unexpected status: {response.status_code}"
+        """Test user login with VIP credentials (query params)"""
+        response = requests.post(
+            f"{BASE_URL}/api/auth/login",
+            params={"identifier": "final_test_vip@test.com", "password": "testpass123"}
+        )
+        # Login may return 200 or 404 depending on user existence
+        assert response.status_code in [200, 404], f"Unexpected status: {response.status_code}"
     
     def test_admin_login(self):
-        """Test admin login"""
-        response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "admin@paras.com",
-            "password": "admin"
-        })
+        """Test admin login (query params)"""
+        response = requests.post(
+            f"{BASE_URL}/api/auth/login",
+            params={"identifier": "admin@paras.com", "password": "admin"}
+        )
         assert response.status_code == 200, f"Admin login failed: {response.status_code}"
         
         data = response.json()
-        assert 'user' in data or 'uid' in data, "Login response should contain user data"
+        assert 'uid' in data, "Login response should contain uid"
+        assert data.get('role') == 'admin', "User should be admin"
 
 
 class TestMasterSummaryAPI:
