@@ -215,6 +215,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/liquidity" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminLiquidity user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/video-ads" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminVideoAds user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/settings" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSettings user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/security" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSecurityDashboard user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/settings/system" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSystemSettings user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/settings/web" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminWebSettings user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/settings/social" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSocialMediaSettings user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
