@@ -16,6 +16,8 @@ import PRCRain from '@/components/PRCRain';
 import AppTutorial from '@/components/AppTutorial';
 import LiveMiningIndicator from '@/components/LiveMiningIndicator';
 import LiveTransparencyPanel from '@/components/LiveTransparencyPanel';
+import SmartUserInsights from '@/components/SmartUserInsights';
+import LiveActivityFeed from '@/components/LiveActivityFeed';
 import { useLanguage, LANGUAGES } from '@/contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
