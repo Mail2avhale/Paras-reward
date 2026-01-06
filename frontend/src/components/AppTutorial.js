@@ -413,10 +413,10 @@ const AppTutorial = ({ onComplete, showSkip = true }) => {
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl"
+        className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl relative"
       >
         {/* Header with gradient */}
-        <div className={`bg-gradient-to-r ${slide.color} p-6 text-white relative`}>
+        <div className={`bg-gradient-to-r ${slide.color} p-6 text-white relative overflow-visible`}>
           {showSkip && (
             <button
               onClick={handleComplete}
