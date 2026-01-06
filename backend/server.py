@@ -220,7 +220,7 @@ async def check_ip_whitelist(ip_address: str, uid: str = None) -> bool:
 # ========== EMERGENCY LOCKDOWN ==========
 async def get_lockdown_status() -> dict:
     """Get current system lockdown status"""
-    settings = await db.admin_security_settings.find_one({"setting_type": "lockdown"})
+    settings = await db.admin_security_settings.find_one({"setting_type": "lockdown"}, {"_id": 0})
     if not settings:
         return {
             "lockdown_active": False,
