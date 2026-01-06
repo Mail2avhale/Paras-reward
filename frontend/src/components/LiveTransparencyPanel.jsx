@@ -188,9 +188,6 @@ const LiveTransparencyPanel = ({ translations = {} }) => {
           </div>
         </div>
       )}
-          </div>
-        </div>
-      </div>
 
       {/* Last Updated */}
       <div className="mt-3 text-center">
