@@ -2,11 +2,90 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronRight, ChevronLeft, X, Coins, Users, ShoppingBag, 
-  Gift, Zap, CloudRain, TrendingUp, Shield, Smartphone, Check
+  Gift, Zap, CloudRain, TrendingUp, Shield, Smartphone, Check,
+  Sparkles, Star, Heart, Rocket
 } from 'lucide-react';
 import { Button } from './ui/button';
 
-// Animated Icon Components
+// Cute Mascot Character - Paras Buddy
+const ParasBuddy = ({ emotion = 'happy', message = '' }) => {
+  const emotions = {
+    happy: '😊',
+    excited: '🤩',
+    thinking: '🤔',
+    celebrating: '🥳',
+    waving: '👋',
+    mining: '⛏️',
+    rich: '🤑',
+    cool: '😎'
+  };
+
+  return (
+    <motion.div 
+      className="flex flex-col items-center gap-2"
+      initial={{ scale: 0, rotate: -180 }}
+      animate={{ scale: 1, rotate: 0 }}
+      transition={{ type: "spring", stiffness: 260, damping: 20 }}
+    >
+      {/* Speech Bubble */}
+      {message && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/90 backdrop-blur-sm px-4 py-2 rounded-2xl shadow-lg max-w-[200px] text-center relative"
+        >
+          <span className="text-sm font-medium text-gray-800">{message}</span>
+          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white/90 rotate-45"></div>
+        </motion.div>
+      )}
+      
+      {/* Character Body */}
+      <motion.div
+        animate={{ 
+          y: [0, -8, 0],
+          rotate: [-2, 2, -2]
+        }}
+        transition={{ 
+          duration: 2, 
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+        className="relative"
+      >
+        {/* Main Body - Cute Blob Shape */}
+        <div className="w-20 h-20 bg-gradient-to-br from-purple-400 via-purple-500 to-indigo-600 rounded-[40%_60%_70%_30%/60%_30%_70%_40%] shadow-xl relative overflow-hidden">
+          {/* Face */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-4xl">{emotions[emotion]}</span>
+          </div>
+          
+          {/* Sparkle Effects */}
+          <motion.div
+            className="absolute top-1 right-1"
+            animate={{ scale: [0, 1, 0], rotate: [0, 180, 360] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            <Sparkles className="w-4 h-4 text-yellow-300" />
+          </motion.div>
+        </div>
+        
+        {/* Little Arms */}
+        <motion.div
+          className="absolute -left-2 top-8 w-4 h-4 bg-purple-400 rounded-full"
+          animate={{ rotate: [-20, 20, -20] }}
+          transition={{ duration: 1, repeat: Infinity }}
+        />
+        <motion.div
+          className="absolute -right-2 top-8 w-4 h-4 bg-purple-400 rounded-full"
+          animate={{ rotate: [20, -20, 20] }}
+          transition={{ duration: 1, repeat: Infinity }}
+        />
+      </motion.div>
+    </motion.div>
+  );
+};
+
+// Animated Icon Components with Cartoon Style
 const AnimatedCoin = () => (
   <motion.div
     className="relative w-24 h-24 mx-auto"
