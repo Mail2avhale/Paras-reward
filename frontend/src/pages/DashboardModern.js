@@ -608,6 +608,14 @@ const DashboardModern = ({ user, onLogout }) => {
           translations={{}}
         />
 
+        {/* Live Activity Feed - Moved to Bottom */}
+        <LiveActivityFeed 
+          translations={{
+            liveActivity: t('liveActivity') || 'लाइव Activity',
+            userFrom: t('userFrom') || 'User from'
+          }}
+        />
+
         {/* Upgrade to VIP Banner */}
         {stats.membershipType !== 'vip' && (
           <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-6 shadow-lg mb-6 text-white">
