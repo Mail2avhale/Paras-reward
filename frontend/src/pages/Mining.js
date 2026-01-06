@@ -116,6 +116,19 @@ const Mining = ({ user, onLogout }) => {
     try {
       const response = await axios.post(`${API}/mining/start/${user.uid}`);
       
+      // IMPORTANT: Update state directly from the response to avoid race conditions
+      // The backend returns session_active, session_start, session_end, remaining_hours
+      if (response.data && response.data.session_active) {
+        setMiningStatus(prevStatus => ({
+          ...prevStatus,
+          session_active: true,
+          session_start: response.data.session_start,
+          session_end: response.data.session_end,
+          remaining_hours: response.data.remaining_hours,
+          mined_this_session: 0  // Just started, so 0
+        }));
+      }
+      
       // Show animated feedback
       setAnimatedFeedback({
         message: `⛏️ Mining Started!\n💎 Earning PRC Now!`,
@@ -130,7 +143,11 @@ const Mining = ({ user, onLogout }) => {
           });
         }, 3500);
       }
-      fetchMiningStatus();
+      
+      // Fetch full status after a delay to let backend fully persist
+      setTimeout(() => {
+        fetchMiningStatus();
+      }, 2000);
     } catch (error) {
       console.error('Error starting mining:', error);
       setAnimatedFeedback({
