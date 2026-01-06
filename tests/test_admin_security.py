@@ -10,6 +10,49 @@ import time
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
+# Global admin UID for cleanup
+ADMIN_UID = None
+
+def get_admin_uid():
+    """Get admin UID from login"""
+    global ADMIN_UID
+    if ADMIN_UID:
+        return ADMIN_UID
+    response = requests.post(
+        f"{BASE_URL}/api/auth/login",
+        params={
+            "identifier": "admin@paras.com",
+            "password": "admin"
+        }
+    )
+    if response.status_code == 200:
+        ADMIN_UID = response.json()["uid"]
+        return ADMIN_UID
+    return None
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_ip_whitelist():
+    """Ensure IP whitelist is disabled before and after tests"""
+    # Setup: disable IP whitelist
+    admin_uid = get_admin_uid()
+    if admin_uid:
+        requests.post(
+            f"{BASE_URL}/api/admin/security/ip-whitelist",
+            params={"admin_uid": admin_uid, "enabled": "false"}
+        )
+    
+    yield
+    
+    # Teardown: disable IP whitelist
+    admin_uid = get_admin_uid()
+    if admin_uid:
+        requests.post(
+            f"{BASE_URL}/api/admin/security/ip-whitelist",
+            params={"admin_uid": admin_uid, "enabled": "false"}
+        )
+
+
 class TestAdminLogin:
     """Test admin login with JWT token generation"""
     
@@ -58,16 +101,8 @@ class TestRateLimiting:
     
     def test_rate_limit_configuration_exists(self):
         """Test that rate limit configuration is returned in dashboard"""
-        # Login first
-        login_response = requests.post(
-            f"{BASE_URL}/api/auth/login",
-            params={
-                "identifier": "admin@paras.com",
-                "password": "admin"
-            }
-        )
-        assert login_response.status_code == 200
-        admin_uid = login_response.json()["uid"]
+        admin_uid = get_admin_uid()
+        assert admin_uid, "Failed to get admin UID"
         
         # Check dashboard for rate limit config
         response = requests.get(
@@ -86,21 +121,11 @@ class TestRateLimiting:
 class TestSecurityDashboard:
     """Test security dashboard endpoint"""
     
-    @pytest.fixture
-    def admin_uid(self):
-        """Get admin UID from login"""
-        response = requests.post(
-            f"{BASE_URL}/api/auth/login",
-            params={
-                "identifier": "admin@paras.com",
-                "password": "admin"
-            }
-        )
-        assert response.status_code == 200
-        return response.json()["uid"]
-    
-    def test_security_dashboard_loads(self, admin_uid):
+    def test_security_dashboard_loads(self):
         """Test that security dashboard returns all expected stats"""
+        admin_uid = get_admin_uid()
+        assert admin_uid, "Failed to get admin UID"
+        
         response = requests.get(
             f"{BASE_URL}/api/admin/security/dashboard",
             params={"admin_uid": admin_uid}
@@ -152,21 +177,11 @@ class TestSecurityDashboard:
 class TestEmergencyLockdown:
     """Test emergency lockdown functionality"""
     
-    @pytest.fixture
-    def admin_uid(self):
-        """Get admin UID from login"""
-        response = requests.post(
-            f"{BASE_URL}/api/auth/login",
-            params={
-                "identifier": "admin@paras.com",
-                "password": "admin"
-            }
-        )
-        assert response.status_code == 200
-        return response.json()["uid"]
-    
-    def test_get_lockdown_status(self, admin_uid):
+    def test_get_lockdown_status(self):
         """Test getting lockdown status"""
+        admin_uid = get_admin_uid()
+        assert admin_uid, "Failed to get admin UID"
+        
         response = requests.get(
             f"{BASE_URL}/api/admin/security/lockdown-status",
             params={"admin_uid": admin_uid}
@@ -181,8 +196,11 @@ class TestEmergencyLockdown:
         
         print(f"✅ Lockdown status retrieved - Active: {data['lockdown_active']}")
     
-    def test_activate_and_deactivate_partial_lockdown(self, admin_uid):
+    def test_activate_and_deactivate_partial_lockdown(self):
         """Test activating and deactivating partial lockdown"""
+        admin_uid = get_admin_uid()
+        assert admin_uid, "Failed to get admin UID"
+        
         # Activate partial lockdown
         response = requests.post(
             f"{BASE_URL}/api/admin/security/lockdown",
@@ -228,8 +246,11 @@ class TestEmergencyLockdown:
         assert final_data["lockdown_active"] == False, "Lockdown should be inactive"
         print(f"✅ Lockdown status verified as inactive")
     
-    def test_activate_full_lockdown_and_deactivate(self, admin_uid):
+    def test_activate_full_lockdown_and_deactivate(self):
         """Test full lockdown cycle"""
+        admin_uid = get_admin_uid()
+        assert admin_uid, "Failed to get admin UID"
+        
         # Activate full lockdown
         response = requests.post(
             f"{BASE_URL}/api/admin/security/lockdown",
@@ -256,21 +277,11 @@ class TestEmergencyLockdown:
 class TestIPWhitelist:
     """Test IP whitelist functionality"""
     
-    @pytest.fixture
-    def admin_uid(self):
-        """Get admin UID from login"""
-        response = requests.post(
-            f"{BASE_URL}/api/auth/login",
-            params={
-                "identifier": "admin@paras.com",
-                "password": "admin"
-            }
-        )
-        assert response.status_code == 200
-        return response.json()["uid"]
-    
-    def test_get_ip_whitelist(self, admin_uid):
+    def test_get_ip_whitelist(self):
         """Test getting IP whitelist"""
+        admin_uid = get_admin_uid()
+        assert admin_uid, "Failed to get admin UID"
+        
         response = requests.get(
             f"{BASE_URL}/api/admin/security/ip-whitelist",
             params={"admin_uid": admin_uid}
@@ -285,12 +296,15 @@ class TestIPWhitelist:
         
         print(f"✅ IP whitelist retrieved - Enabled: {data['enabled']}, IPs: {len(data['whitelist'])}")
     
-    def test_update_ip_whitelist_via_query_params(self, admin_uid):
-        """Test updating IP whitelist using query parameters"""
+    def test_update_ip_whitelist_via_query_params(self):
+        """Test updating IP whitelist using query parameters (without enabling)"""
+        admin_uid = get_admin_uid()
+        assert admin_uid, "Failed to get admin UID"
+        
         test_ips = ["192.168.1.1", "10.0.0.1"]
         
-        # Build URL with multiple whitelist params
-        url = f"{BASE_URL}/api/admin/security/ip-whitelist?admin_uid={admin_uid}&enabled=true"
+        # Build URL with multiple whitelist params - keep enabled=false to not block login
+        url = f"{BASE_URL}/api/admin/security/ip-whitelist?admin_uid={admin_uid}&enabled=false"
         for ip in test_ips:
             url += f"&whitelist={ip}"
         
@@ -300,20 +314,15 @@ class TestIPWhitelist:
         data = response.json()
         
         assert "message" in data
-        print(f"✅ IP whitelist updated: {data['message']}")
+        assert data["valid_ips"] == 2, f"Expected 2 valid IPs, got {data['valid_ips']}"
+        print(f"✅ IP whitelist updated: {data['message']}, valid IPs: {data['valid_ips']}")
         
-        # Verify update
-        get_response = requests.get(
-            f"{BASE_URL}/api/admin/security/ip-whitelist",
-            params={"admin_uid": admin_uid}
-        )
-        whitelist_data = get_response.json()
-        assert whitelist_data["enabled"] == True
-        print(f"✅ IP whitelist enabled verified")
-        
-    def test_disable_ip_whitelist(self, admin_uid):
+    def test_disable_ip_whitelist(self):
         """Test disabling IP whitelist"""
-        url = f"{BASE_URL}/api/admin/security/ip-whitelist?admin_uid={admin_uid}&enabled=false&whitelist="
+        admin_uid = get_admin_uid()
+        assert admin_uid, "Failed to get admin UID"
+        
+        url = f"{BASE_URL}/api/admin/security/ip-whitelist?admin_uid={admin_uid}&enabled=false"
         
         response = requests.post(url)
         
@@ -324,21 +333,11 @@ class TestIPWhitelist:
 class TestAuditLogs:
     """Test audit logging functionality"""
     
-    @pytest.fixture
-    def admin_uid(self):
-        """Get admin UID from login"""
-        response = requests.post(
-            f"{BASE_URL}/api/auth/login",
-            params={
-                "identifier": "admin@paras.com",
-                "password": "admin"
-            }
-        )
-        assert response.status_code == 200
-        return response.json()["uid"]
-    
-    def test_get_audit_logs(self, admin_uid):
+    def test_get_audit_logs(self):
         """Test getting audit logs"""
+        admin_uid = get_admin_uid()
+        assert admin_uid, "Failed to get admin UID"
+        
         response = requests.get(
             f"{BASE_URL}/api/admin/security/audit-logs",
             params={
@@ -366,8 +365,11 @@ class TestAuditLogs:
                 assert field in log, f"Missing field in log: {field}"
             print(f"   - Latest action: {log['action']}")
     
-    def test_audit_logs_pagination(self, admin_uid):
+    def test_audit_logs_pagination(self):
         """Test audit logs pagination"""
+        admin_uid = get_admin_uid()
+        assert admin_uid, "Failed to get admin UID"
+        
         # Get page 1
         response1 = requests.get(
             f"{BASE_URL}/api/admin/security/audit-logs",
@@ -398,8 +400,11 @@ class TestAuditLogs:
         assert data1["total"] == data2["total"]
         print(f"✅ Audit logs pagination working - Total: {data1['total']}")
     
-    def test_audit_logs_filtering(self, admin_uid):
+    def test_audit_logs_filtering(self):
         """Test audit logs filtering by action"""
+        admin_uid = get_admin_uid()
+        assert admin_uid, "Failed to get admin UID"
+        
         response = requests.get(
             f"{BASE_URL}/api/admin/security/audit-logs",
             params={
@@ -434,7 +439,7 @@ class TestSessionManagement:
             }
         )
         
-        assert response.status_code == 200
+        assert response.status_code == 200, f"Login failed: {response.text}"
         data = response.json()
         
         # Verify session-related data
@@ -470,7 +475,7 @@ class TestJWTTokens:
             }
         )
         
-        assert response.status_code == 200
+        assert response.status_code == 200, f"Login failed: {response.text}"
         data = response.json()
         
         access_token = data["access_token"]
