@@ -35,6 +35,7 @@ const MENU_TO_PERMISSION = {
   'ads-income': 'ads_income',
   'fixed-expenses': 'fixed_expenses',
   'prc-analytics': 'prc_analytics',
+  'prc-economy': 'prc_economy',
   'liquidity': 'liquidity',
   'audit': 'audit',
   'vip-payment': 'vip_payment',
