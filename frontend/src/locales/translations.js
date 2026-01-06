@@ -46,6 +46,43 @@ const translations = {
     en: "Spending"
   },
   
+  // ==================== LIVE STATS (Google Policy Compliant) ====================
+  liveStats: {
+    mr: "लाइव प्लॅटफॉर्म स्टॅट्स",
+    hi: "लाइव प्लेटफॉर्म स्टैट्स",
+    en: "Live Platform Stats"
+  },
+  platformEarned: {
+    mr: "आज PRC कमावले",
+    hi: "आज PRC कमाया",
+    en: "Today PRC Earned"
+  },
+  platformBurned: {
+    mr: "आज PRC वापरले",
+    hi: "आज PRC उपयोग",
+    en: "Today PRC Burned"
+  },
+  redeemsToday: {
+    mr: "आजचे रिडीम्स",
+    hi: "आज के रिडीम",
+    en: "Redeems Today"
+  },
+  activeUsers: {
+    mr: "सक्रिय वापरकर्ते",
+    hi: "सक्रिय उपयोगकर्ता",
+    en: "Active Users"
+  },
+  miningActive: {
+    mr: "माइनिंग सुरू • लाइव",
+    hi: "माइनिंग चालू • लाइव",
+    en: "Mining Active • Live"
+  },
+  miningPaused: {
+    mr: "माइनिंग थांबले",
+    hi: "माइनिंग रुका",
+    en: "Mining Paused"
+  },
+  
   // ==================== STATS CARDS ====================
   totalMined: {
     mr: "एकूण माइन",
