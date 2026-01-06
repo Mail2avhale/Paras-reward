@@ -1669,12 +1669,25 @@ async def register_user(request: Request):
 
 @api_router.post("/auth/login")
 async def login(
+    request: Request,
     identifier: str,
     password: str,
     device_id: Optional[str] = None,
     ip_address: Optional[str] = None
 ):
     """User login with email/mobile and password"""
+    # Get real IP address
+    real_ip = ip_address or request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    
+    # Check rate limit for login attempts
+    allowed, locked_seconds, attempts_left = check_login_rate_limit(identifier)
+    if not allowed:
+        raise HTTPException(
+            status_code=429, 
+            detail=f"Too many login attempts. Please try again in {locked_seconds} seconds."
+        )
+    
     # Normalize email to lowercase for case-insensitive matching
     normalized_identifier = identifier.lower() if '@' in identifier else identifier
     
@@ -1688,15 +1701,35 @@ async def login(
     }, {"_id": 0})  # Exclude _id to avoid serialization issues
     
     if not user:
+        record_login_attempt(identifier, False)
         raise HTTPException(status_code=404, detail="User not registered. Please register to continue.")
     
     # Verify password
     if user.get("password_hash"):
         if not verify_password(password, user["password_hash"]):
-            raise HTTPException(status_code=401, detail="Invalid password")
+            record_login_attempt(identifier, False)
+            raise HTTPException(status_code=401, detail=f"Invalid password. {attempts_left - 1} attempts remaining.")
     
     if user.get("is_banned"):
         raise HTTPException(status_code=403, detail=f"Account suspended: {user.get('suspension_reason', 'Contact support')}")
+    
+    # Check system lockdown for admin users
+    if user.get("role") in ["admin", "sub_admin"]:
+        # Check IP whitelist for admin
+        ip_allowed = await check_ip_whitelist(real_ip, user["uid"])
+        if not ip_allowed:
+            await log_admin_action(
+                admin_uid=user["uid"],
+                action="login_blocked_ip",
+                entity_type="security",
+                details={"reason": "IP not whitelisted", "ip": real_ip},
+                ip_address=real_ip,
+                user_agent=user_agent
+            )
+            raise HTTPException(status_code=403, detail="Access denied. IP not whitelisted for admin access.")
+    
+    # Record successful login
+    record_login_attempt(identifier, True)
     
     # Check VIP membership expiry and add renewal message
     vip_expiry_message = None
@@ -1723,6 +1756,46 @@ async def login(
         )
         user["prc_balance"] = 0
     
+    # Generate JWT tokens for admin users
+    token_id = str(uuid.uuid4())
+    access_token = None
+    refresh_token = None
+    
+    if user.get("role") in ["admin", "sub_admin"]:
+        token_data = {
+            "uid": user["uid"],
+            "email": user.get("email"),
+            "role": user.get("role"),
+            "token_id": token_id
+        }
+        access_token = create_access_token(token_data)
+        refresh_token = create_refresh_token(token_data)
+        
+        # Create admin session
+        session_data = {
+            "session_id": str(uuid.uuid4()),
+            "uid": user["uid"],
+            "token_id": token_id,
+            "is_active": True,
+            "ip_address": real_ip,
+            "user_agent": user_agent,
+            "device_id": device_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "last_activity": datetime.now(timezone.utc).isoformat(),
+            "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=JWT_ACCESS_TOKEN_EXPIRE_MINUTES)).isoformat()
+        }
+        await db.admin_sessions.insert_one(session_data)
+        
+        # Log admin login
+        await log_admin_action(
+            admin_uid=user["uid"],
+            action="login",
+            entity_type="auth",
+            details={"device_id": device_id, "identifier": identifier},
+            ip_address=real_ip,
+            user_agent=user_agent
+        )
+    
     # Update last login and device info
     update_data = {
         "last_login": datetime.now(timezone.utc).isoformat(),
@@ -1745,9 +1818,9 @@ async def login(
     await log_activity(
         user_id=user["uid"],
         action_type="login",
-        description=f"User logged in from {ip_address or 'unknown IP'}",
+        description=f"User logged in from {real_ip}",
         metadata={"device_id": device_id, "identifier": identifier},
-        ip_address=ip_address
+        ip_address=real_ip
     )
     
     # Convert datetime strings
@@ -1762,7 +1835,15 @@ async def login(
     if "password_hash" in user:
         del user["password_hash"]
     
-    return User(**user)
+    # Build response with tokens
+    response_data = User(**user).model_dump()
+    if access_token:
+        response_data["access_token"] = access_token
+        response_data["refresh_token"] = refresh_token
+        response_data["token_type"] = "bearer"
+        response_data["expires_in"] = JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    
+    return response_data
 
 @api_router.post("/auth/forgot-password")
 async def forgot_password(email: str):
