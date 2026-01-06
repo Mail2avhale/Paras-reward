@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://emi-payment.preview.emergentagent.com/setup
+   https://ledgerpro-28.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

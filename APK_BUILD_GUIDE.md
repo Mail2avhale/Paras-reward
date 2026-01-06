@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://emi-payment.preview.emergentagent.com",
+    "url": "https://ledgerpro-28.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
