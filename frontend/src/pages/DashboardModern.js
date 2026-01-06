@@ -650,19 +650,6 @@ const DashboardModern = ({ user, onLogout }) => {
             />
           </DashboardCard>
 
-          {/* Phase 3: User Control Settings */}
-          <DashboardCard cardId="user-controls">
-            <UserControlSettings 
-              userId={user?.uid}
-              userSettings={{
-                miningPaused: !userData?.mining_active,
-                dailyPrcCap: userData?.daily_prc_cap || 0,
-                notificationsEnabled: true
-              }}
-              translations={{}}
-            />
-          </DashboardCard>
-
           {/* Phase 3: Live Statement Export */}
           <DashboardCard cardId="statement-export">
             <LiveStatementExport 
