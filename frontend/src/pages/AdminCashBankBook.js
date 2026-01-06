@@ -649,10 +649,11 @@ const AdminCashBankBook = ({ user }) => {
                   onChange={(e) => setEntryForm({...entryForm, amount: e.target.value})}
                   className="w-full px-4 py-3 border rounded-lg text-lg font-semibold"
                   placeholder="Enter amount"
+                  data-testid="entry-amount"
                 />
               </div>
 
-              {/* Description */}
+              {/* Description with Auto-Categorization */}
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-1 block">Description</label>
                 <input
@@ -660,8 +661,44 @@ const AdminCashBankBook = ({ user }) => {
                   value={entryForm.description}
                   onChange={(e) => setEntryForm({...entryForm, description: e.target.value})}
                   className="w-full px-4 py-2 border rounded-lg"
-                  placeholder="e.g., Director Capital Investment"
+                  placeholder="e.g., Director Capital Investment, Rent, Salary"
+                  data-testid="entry-description"
                 />
+                
+                {/* Auto-suggestion indicator */}
+                {isAutoSuggesting && (
+                  <div className="mt-2 flex items-center gap-2 text-sm text-gray-500">
+                    <Sparkles className="h-4 w-4 animate-pulse text-amber-500" />
+                    <span>Analyzing description...</span>
+                  </div>
+                )}
+                
+                {/* Auto-suggestion result */}
+                {autoSuggestion && autoSuggestion.confidence > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Lightbulb className="h-4 w-4 text-amber-600" />
+                        <span className="text-sm font-medium text-amber-800">
+                          Suggested: <span className="capitalize">{autoSuggestion.suggested_category?.replace('_', ' ')}</span>
+                          <span className="text-amber-600 ml-1">({autoSuggestion.suggested_type})</span>
+                        </span>
+                      </div>
+                      <button
+                        onClick={applyAutoSuggestion}
+                        className="text-xs px-2 py-1 bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors"
+                        data-testid="apply-suggestion-btn"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                    <p className="text-xs text-amber-700 mt-1">{autoSuggestion.match_reason}</p>
+                  </motion.div>
+                )}
               </div>
 
               {/* Reference No */}
