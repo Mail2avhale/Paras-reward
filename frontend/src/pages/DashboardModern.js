@@ -592,6 +592,30 @@ const DashboardModern = ({ user, onLogout }) => {
           )}
         </div>
 
+        {/* Phase 3: Security & Trust Center */}
+        <SecurityTrustCenter 
+          userId={user?.uid}
+          user={userData}
+          translations={{}}
+        />
+
+        {/* Phase 3: User Control Settings */}
+        <UserControlSettings 
+          userId={user?.uid}
+          userSettings={{
+            miningPaused: !userData?.mining_active,
+            dailyPrcCap: userData?.daily_prc_cap || 0,
+            notificationsEnabled: true
+          }}
+          translations={{}}
+        />
+
+        {/* Phase 3: Live Statement Export */}
+        <LiveStatementExport 
+          userId={user?.uid}
+          translations={{}}
+        />
+
         {/* Upgrade to VIP Banner */}
         {stats.membershipType !== 'vip' && (
           <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-6 shadow-lg mb-6 text-white">
