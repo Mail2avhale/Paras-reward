@@ -224,10 +224,6 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 
 ## Pending/In-Progress
 
-### P0 - High Priority (Current)
-- [ ] **Phase 2: Admin Dashboard UI Update** - Update AdminAccountingDashboard to use new ledger endpoints
-- [ ] **Admin Finance UI Simplification** - User requested simpler view (awaiting decision: Simple/Medium/Custom)
-
 ### P2 - Medium Priority
 - [ ] Verify pagination on Voucher History page
 - [ ] Verify pagination on Bill Payments History page
