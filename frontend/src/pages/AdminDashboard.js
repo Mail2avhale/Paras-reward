@@ -148,6 +148,54 @@ const AdminDashboard = ({ user, onLogout }) => {
       {/* Quick Access Cards */}
       <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Access</h2>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {/* Security Dashboard - NEW */}
+        <a href="/admin/security" className="block">
+          <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-red-500 bg-gradient-to-r from-red-50 to-white">
+            <div className="flex items-center gap-3">
+              <Shield className="h-6 w-6 text-red-600" />
+              <div>
+                <p className="font-semibold text-gray-900">🔐 Security</p>
+                <p className="text-xs text-gray-500">Alerts & Lockdown</p>
+              </div>
+            </div>
+          </Card>
+        </a>
+        {/* Accounting Dashboard */}
+        <a href="/admin/accounting" className="block">
+          <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-emerald-500 bg-gradient-to-r from-emerald-50 to-white">
+            <div className="flex items-center gap-3">
+              <BookOpen className="h-6 w-6 text-emerald-600" />
+              <div>
+                <p className="font-semibold text-gray-900">📊 Accounting</p>
+                <p className="text-xs text-gray-500">Reports & Ledger</p>
+              </div>
+            </div>
+          </Card>
+        </a>
+        {/* PRC Economy */}
+        <a href="/admin/prc-economy" className="block">
+          <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-orange-500 bg-gradient-to-r from-orange-50 to-white">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-6 w-6 text-orange-600" />
+              <div>
+                <p className="font-semibold text-gray-900">⚠️ PRC Emergency</p>
+                <p className="text-xs text-gray-500">Stop Mining & Burn</p>
+              </div>
+            </div>
+          </Card>
+        </a>
+        {/* Company Wallets */}
+        <a href="/admin/company-wallets" className="block">
+          <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-indigo-500 bg-gradient-to-r from-indigo-50 to-white">
+            <div className="flex items-center gap-3">
+              <Wallet className="h-6 w-6 text-indigo-600" />
+              <div>
+                <p className="font-semibold text-gray-900">💰 Wallets</p>
+                <p className="text-xs text-gray-500">Company Funds</p>
+              </div>
+            </div>
+          </Card>
+        </a>
         <a href="/admin/users" className="block">
           <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-blue-500">
             <div className="flex items-center gap-3">
