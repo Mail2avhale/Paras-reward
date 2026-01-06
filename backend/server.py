@@ -20672,7 +20672,11 @@ async def get_live_platform_stats():
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
         
-        # Today's PRC earned from transactions
+        today_prc_earned = 0
+        today_prc_burned = 0
+        redeems_today = 0
+        
+        # Try transactions collection first
         earned_pipeline = [
             {
                 "$match": {
@@ -20683,9 +20687,29 @@ async def get_live_platform_stats():
             {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
         ]
         earned_result = await db.transactions.aggregate(earned_pipeline).to_list(1)
-        today_prc_earned = round(earned_result[0].get("total", 0), 2) if earned_result else 0
+        if earned_result:
+            today_prc_earned = round(earned_result[0].get("total", 0), 2)
         
-        # Today's PRC burned/spent from transactions
+        # Also check wallet_transactions as fallback
+        if today_prc_earned == 0:
+            wallet_earned = await db.wallet_transactions.aggregate([
+                {"$match": {"type": {"$in": ["credit", "mining", "tap", "referral", "bonus"]}, "created_at": {"$gte": today_start.isoformat()}}},
+                {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+            ]).to_list(1)
+            if wallet_earned:
+                today_prc_earned = round(wallet_earned[0].get("total", 0), 2)
+        
+        # Also aggregate from user mining_history for today
+        if today_prc_earned == 0:
+            mining_today = await db.users.aggregate([
+                {"$unwind": {"path": "$mining_history", "preserveNullAndEmptyArrays": False}},
+                {"$match": {"mining_history.timestamp": {"$gte": today_start.isoformat()}}},
+                {"$group": {"_id": None, "total": {"$sum": "$mining_history.amount"}}}
+            ]).to_list(1)
+            if mining_today:
+                today_prc_earned = round(mining_today[0].get("total", 0), 2)
+        
+        # PRC Burned from transactions
         burned_pipeline = [
             {
                 "$match": {
@@ -20696,7 +20720,17 @@ async def get_live_platform_stats():
             {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
         ]
         burned_result = await db.transactions.aggregate(burned_pipeline).to_list(1)
-        today_prc_burned = round(burned_result[0].get("total", 0), 2) if burned_result else 0
+        if burned_result:
+            today_prc_burned = round(burned_result[0].get("total", 0), 2)
+        
+        # Fallback: check wallet_transactions for debits
+        if today_prc_burned == 0:
+            wallet_burned = await db.wallet_transactions.aggregate([
+                {"$match": {"type": {"$in": ["debit", "order", "redeem", "burn"]}, "created_at": {"$gte": today_start.isoformat()}}},
+                {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+            ]).to_list(1)
+            if wallet_burned:
+                today_prc_burned = round(wallet_burned[0].get("total", 0), 2)
         
         # Redeems completed today (count only - no amounts for compliance)
         redeems_today = await db.transactions.count_documents({
@@ -20704,17 +20738,35 @@ async def get_live_platform_stats():
             "created_at": {"$gte": today_start.isoformat()}
         })
         
+        # Fallback: check redeem_requests
+        if redeems_today == 0:
+            redeems_today = await db.redeem_requests.count_documents({
+                "status": "completed",
+                "created_at": {"$gte": today_start.isoformat()}
+            })
+        
         # Active users - users who logged in within last 7 days
         seven_days_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
         active_users = await db.users.count_documents({
             "last_login": {"$gte": seven_days_ago}
         })
         
+        # Fallback: count all active users
+        if active_users == 0:
+            active_users = await db.users.count_documents({"is_active": True})
+        
+        # Get total PRC in system for reference
+        total_prc_result = await db.users.aggregate([
+            {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
+        ]).to_list(1)
+        total_prc = round(total_prc_result[0].get("total", 0), 2) if total_prc_result else 0
+        
         return {
             "today_prc_earned": today_prc_earned,
             "today_prc_burned": today_prc_burned,
             "redeems_today": redeems_today,
             "active_users": active_users,
+            "total_prc_in_system": total_prc,
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     except Exception as e:
@@ -20725,6 +20777,7 @@ async def get_live_platform_stats():
             "today_prc_burned": 0,
             "redeems_today": 0,
             "active_users": 0,
+            "total_prc_in_system": 0,
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
