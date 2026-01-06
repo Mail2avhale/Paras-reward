@@ -100,6 +100,48 @@ const AdminCashBankBook = ({ user }) => {
     }
   };
 
+  // Auto-categorization function with debounce
+  const fetchAutoSuggestion = useCallback(async (description, amount) => {
+    if (!description || description.length < 3) {
+      setAutoSuggestion(null);
+      return;
+    }
+    
+    setIsAutoSuggesting(true);
+    try {
+      const response = await axios.post(`${API}/api/admin/accounting/auto-categorize`, null, {
+        params: { description, amount: parseFloat(amount) || 0 }
+      });
+      setAutoSuggestion(response.data);
+    } catch (error) {
+      console.error('Auto-categorize error:', error);
+      setAutoSuggestion(null);
+    } finally {
+      setIsAutoSuggesting(false);
+    }
+  }, []);
+
+  // Debounced auto-suggestion
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (entryForm.description && showEntryModal) {
+        fetchAutoSuggestion(entryForm.description, entryForm.amount);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [entryForm.description, entryForm.amount, showEntryModal, fetchAutoSuggestion]);
+
+  const applyAutoSuggestion = () => {
+    if (autoSuggestion) {
+      setEntryForm(prev => ({
+        ...prev,
+        category: autoSuggestion.suggested_category,
+        entry_type: autoSuggestion.suggested_type
+      }));
+      toast.success(`Applied: ${autoSuggestion.suggested_category.replace('_', ' ')}`);
+    }
+  };
+
   const handleAddEntry = async () => {
     if (!entryForm.amount || !entryForm.description) {
       toast.error('Please fill required fields');
@@ -122,6 +164,7 @@ const AdminCashBankBook = ({ user }) => {
       toast.success('Entry added successfully!');
       setShowEntryModal(false);
       setEntryForm({ account: 'cash', entry_type: 'income', amount: '', description: '', category: '', reference_no: '' });
+      setAutoSuggestion(null);
       fetchAllData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to add entry');
