@@ -43,12 +43,23 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 ## What's Been Implemented
 
 ### January 6, 2026 (Current Session - Part 4)
-- ✅ **Bug Fixes**
-  - **Smart Insights Text Visibility**: Fixed contrast issue - changed text colors from light (`text-*-200`) to dark (`text-*-900`) for better readability on colored backgrounds
-  - **PRC Economy Link in Admin**: Added "PRC Emergency Controls" link to Finance menu in Admin sidebar (path: `/admin/prc-economy`)
+- ✅ **Bug Fixes & Improvements**
+  - **Smart Insights Text Visibility**: Fixed contrast issue - changed text colors from light to dark for better readability
+  - **PRC Economy Link in Admin**: Added "PRC Emergency Controls" link to Finance menu
+  - **User Controls Card Removed from Dashboard**: Removed "User Controls" card from user dashboard (was showing Pause Mining, Daily PRC Cap, etc.) - these are admin-only features
+  - **Admin User Controls Page Created**: New `/admin/user-controls` page for admins to:
+    - Search users by name/email
+    - View user mining status, daily caps, PRC balance
+    - Pause/Resume mining for individual users
+    - Set daily PRC caps (Unlimited, 100, 500, 1000, 2000, 5000 PRC)
+    - Toggle utility-only mode
+    - Bulk actions: Pause All, Resume All, Set Cap, Remove Cap
+    - Detailed user modal with all settings
   - Files Modified:
-    - `/app/frontend/src/components/SmartUserInsights.jsx`
-    - `/app/frontend/src/components/layouts/AdminLayout.js`
+    - `/app/frontend/src/pages/DashboardModern.js` (removed user-controls card)
+    - `/app/frontend/src/pages/AdminUserControls.js` (NEW)
+    - `/app/frontend/src/components/layouts/AdminLayout.js` (added link)
+    - `/app/frontend/src/App.js` (added route)
 
 ### January 6, 2026 (Current Session - Part 3)
 - ✅ **Draggable Dashboard Cards (TESTED - 100% Frontend Tests Passed)**
