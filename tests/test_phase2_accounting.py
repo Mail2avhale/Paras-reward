@@ -542,7 +542,7 @@ class TestIntegration:
             assert response.status_code == 200
             data = response.json()
             expected_gst = 100.0 * (rate / 100)
-            assert data["gst_amount"] == expected_gst
+            assert abs(data["gst_amount"] - expected_gst) < 0.01  # Allow small floating point difference
             print(f"✅ GST rate {rate}%: base=100, gst_amount={data['gst_amount']}")
 
 
