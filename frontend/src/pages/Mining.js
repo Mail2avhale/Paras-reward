@@ -86,7 +86,7 @@ const Mining = ({ user, onLogout }) => {
 
   const fetchMiningStatus = async () => {
     try {
-      const response = await axios.get(`${API}/mining/status/${user.uid}`);
+      const response = await axios.get(`${API}/api/mining/status/${user.uid}`);
       setMiningStatus(response.data);
       
       // Check if user is free and should see validity warning
