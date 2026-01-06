@@ -154,6 +154,17 @@ const LiveTransparencyPanel = ({ translations = {} }) => {
           </div>
         </div>
 
+        {/* Active Users */}
+        <div className="bg-purple-500/10 rounded-xl p-3 border border-purple-500/20">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Users className="w-3.5 h-3.5 text-purple-400" />
+            <span className="text-xs text-purple-300/80">{t('activeUsers')}</span>
+          </div>
+          <div className="text-lg font-bold text-purple-300">
+            {formatNumber(stats.activeUsers)}+
+          </div>
+        </div>
+
         {/* Redeems Today */}
         <div className="bg-blue-500/10 rounded-xl p-3 border border-blue-500/20">
           <div className="flex items-center gap-1.5 mb-1">
@@ -164,15 +175,19 @@ const LiveTransparencyPanel = ({ translations = {} }) => {
             {stats.redeemsToday}
           </div>
         </div>
+      </div>
 
-        {/* Active Users */}
-        <div className="bg-purple-500/10 rounded-xl p-3 border border-purple-500/20">
-          <div className="flex items-center gap-1.5 mb-1">
-            <Users className="w-3.5 h-3.5 text-purple-400" />
-            <span className="text-xs text-purple-300/80">{t('activeUsers')}</span>
+      {/* Total PRC in System */}
+      {stats.totalPrcInSystem > 0 && (
+        <div className="mt-3 bg-yellow-500/10 rounded-xl p-3 border border-yellow-500/20">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-yellow-300/80">{t('totalPrcInSystem')}</span>
+            <span className="text-lg font-bold text-yellow-300">
+              {formatNumber(stats.totalPrcInSystem)} PRC
+            </span>
           </div>
-          <div className="text-lg font-bold text-purple-300">
-            {formatNumber(stats.activeUsers)}+
+        </div>
+      )}
           </div>
         </div>
       </div>
