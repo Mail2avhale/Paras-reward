@@ -226,144 +226,153 @@ const AnimatedGift = () => (
   </motion.div>
 );
 
-// Tutorial Slides Data with Mascot Integration
-const tutorialSlides = [
+// Animation components for Mining slide
+const MiningAnimation = () => (
+  <motion.div className="relative w-32 h-32 mx-auto">
+    <motion.div
+      className="w-24 h-24 mx-auto bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center"
+      animate={{ boxShadow: ['0 0 20px #8b5cf6', '0 0 40px #8b5cf6', '0 0 20px #8b5cf6'] }}
+      transition={{ duration: 2, repeat: Infinity }}
+    >
+      <Zap className="w-12 h-12 text-yellow-400" />
+    </motion.div>
+    <motion.div
+      className="absolute -top-2 right-4 text-xl"
+      animate={{ y: [0, -20], opacity: [1, 0] }}
+      transition={{ duration: 1, repeat: Infinity }}
+    >
+      +5
+    </motion.div>
+  </motion.div>
+);
+
+// Animation component for VIP slide
+const VIPAnimation = () => (
+  <motion.div className="w-32 h-32 mx-auto relative">
+    <motion.div
+      animate={{ 
+        rotateY: [0, 360],
+        scale: [1, 1.1, 1]
+      }}
+      transition={{ duration: 3, repeat: Infinity }}
+      className="w-24 h-24 mx-auto bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-600 rounded-full flex items-center justify-center shadow-2xl"
+    >
+      <span className="text-5xl">👑</span>
+    </motion.div>
+    {[...Array(8)].map((_, i) => (
+      <motion.div
+        key={i}
+        className="absolute w-2 h-2 bg-yellow-400 rounded-full"
+        style={{
+          top: '50%',
+          left: '50%',
+        }}
+        animate={{
+          x: [0, Math.cos((i * 45 * Math.PI) / 180) * 60],
+          y: [0, Math.sin((i * 45 * Math.PI) / 180) * 60],
+          opacity: [1, 0],
+          scale: [1, 0],
+        }}
+        transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1 }}
+      />
+    ))}
+  </motion.div>
+);
+
+// Animation component for Ready slide
+const ReadyAnimation = () => (
+  <motion.div 
+    className="w-32 h-32 mx-auto flex items-center justify-center"
+    animate={{ scale: [1, 1.2, 1] }}
+    transition={{ duration: 1, repeat: Infinity }}
+  >
+    <div className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
+      <Check className="w-12 h-12 text-white" />
+    </div>
+  </motion.div>
+);
+
+// Function to generate tutorial slides with translations
+const getTutorialSlides = (t) => [
   {
     id: 'welcome',
-    title: 'Paras Reward मध्ये स्वागत! 🎉',
-    subtitle: 'तुमचा reward journey सुरू करा',
-    description: 'Mining करा, Refer करा, आणि exciting rewards मिळवा!',
+    title: t('tutorialWelcomeTitle'),
+    subtitle: t('tutorialWelcomeSubtitle'),
+    description: t('tutorialWelcomeDesc'),
     animation: <AnimatedCoin />,
-    mascot: { emotion: 'waving', message: 'नमस्कार! मी Paras Buddy!' },
+    mascot: { emotion: 'waving', message: t('mascotWelcome') },
     color: 'from-yellow-500 to-orange-600',
-    tips: ['दररोज mining करा', 'Friends ना refer करा', 'VIP बना आणि जास्त कमवा']
+    tips: [t('tutorialWelcomeTip1'), t('tutorialWelcomeTip2'), t('tutorialWelcomeTip3')]
   },
   {
     id: 'mining',
-    title: 'PRC Mining ⛏️',
-    subtitle: 'तुमचे PRC कमवा',
-    description: 'Dashboard वर "Start Mining" button दाबा आणि automatic PRC कमवायला सुरुवात करा.',
-    animation: (
-      <motion.div className="relative w-32 h-32 mx-auto">
-        <motion.div
-          className="w-24 h-24 mx-auto bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center"
-          animate={{ boxShadow: ['0 0 20px #8b5cf6', '0 0 40px #8b5cf6', '0 0 20px #8b5cf6'] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          <Zap className="w-12 h-12 text-yellow-400" />
-        </motion.div>
-        <motion.div
-          className="absolute -top-2 right-4 text-xl"
-          animate={{ y: [0, -20], opacity: [1, 0] }}
-          transition={{ duration: 1, repeat: Infinity }}
-        >
-          +5
-        </motion.div>
-      </motion.div>
-    ),
-    mascot: { emotion: 'mining', message: 'Mining सुरू करा!' },
+    title: t('tutorialMiningTitle'),
+    subtitle: t('tutorialMiningSubtitle'),
+    description: t('tutorialMiningDesc'),
+    animation: <MiningAnimation />,
+    mascot: { emotion: 'mining', message: t('mascotMining') },
     color: 'from-purple-600 to-blue-600',
-    tips: ['VIP members ला 2x PRC मिळतो', 'Referrals वाढवा = Mining speed वाढते', 'दररोज login करा']
+    tips: [t('tutorialMiningTip1'), t('tutorialMiningTip2'), t('tutorialMiningTip3')]
   },
   {
     id: 'referral',
-    title: '5-Level Referral System 👥',
-    subtitle: 'Team बनवा, जास्त कमवा',
-    description: 'तुमचा referral code share करा. तुमच्या 5 levels पर्यंतच्या team च्या mining वर bonus मिळतो!',
+    title: t('tutorialReferralTitle'),
+    subtitle: t('tutorialReferralSubtitle'),
+    description: t('tutorialReferralDesc'),
     animation: <AnimatedNetwork />,
-    mascot: { emotion: 'excited', message: 'Team बनवा!' },
+    mascot: { emotion: 'excited', message: t('mascotReferral') },
     color: 'from-blue-600 to-cyan-500',
-    tips: ['Level 1: Direct referrals', 'Level 2-5: Indirect bonus', 'Active referrals = जास्त bonus']
+    tips: [t('tutorialReferralTip1'), t('tutorialReferralTip2'), t('tutorialReferralTip3')]
   },
   {
     id: 'rain',
-    title: 'PRC Rain Drop 🌧️',
-    subtitle: 'Surprise rewards!',
-    description: 'Random वेळी colorful drops पडतात. Tap करा आणि PRC जिंका! पण सावधान - काही drops negative असतात! 🎲',
+    title: t('tutorialRainTitle'),
+    subtitle: t('tutorialRainSubtitle'),
+    description: t('tutorialRainDesc'),
     animation: <AnimatedRain />,
-    mascot: { emotion: 'celebrating', message: 'Tap करा! 🎯' },
+    mascot: { emotion: 'celebrating', message: t('mascotRain') },
     color: 'from-indigo-600 to-purple-600',
-    tips: ['कोणताही color = surprise PRC', 'जितके जास्त taps, तितके जास्त chances', 'Daily limit आहे']
+    tips: [t('tutorialRainTip1'), t('tutorialRainTip2'), t('tutorialRainTip3')]
   },
   {
     id: 'marketplace',
-    title: 'Marketplace 🛒',
-    subtitle: 'PRC ने shopping करा',
-    description: 'तुमचे PRC वापरून real products खरेदी करा. VIP members साठी exclusive deals!',
+    title: t('tutorialMarketplaceTitle'),
+    subtitle: t('tutorialMarketplaceSubtitle'),
+    description: t('tutorialMarketplaceDesc'),
     animation: <AnimatedShop />,
-    mascot: { emotion: 'rich', message: 'Shopping time!' },
+    mascot: { emotion: 'rich', message: t('mascotMarketplace') },
     color: 'from-green-600 to-teal-500',
-    tips: ['PRC = Real value', 'Home delivery available', 'VIP exclusive products']
+    tips: [t('tutorialMarketplaceTip1'), t('tutorialMarketplaceTip2'), t('tutorialMarketplaceTip3')]
   },
   {
     id: 'redeem',
-    title: 'Gift Vouchers & Bill Pay 🎁',
-    subtitle: 'PRC चे रुपये करा',
-    description: 'PhonePe vouchers घ्या किंवा Mobile/Electricity bills भरा - सर्व PRC ने!',
+    title: t('tutorialRedeemTitle'),
+    subtitle: t('tutorialRedeemSubtitle'),
+    description: t('tutorialRedeemDesc'),
     animation: <AnimatedGift />,
-    mascot: { emotion: 'happy', message: 'Rewards मिळवा!' },
+    mascot: { emotion: 'happy', message: t('mascotRedeem') },
     color: 'from-pink-600 to-rose-500',
-    tips: ['₹100 पासून vouchers', 'Bills instant pay', 'KYC verified असणे आवश्यक']
+    tips: [t('tutorialRedeemTip1'), t('tutorialRedeemTip2'), t('tutorialRedeemTip3')]
   },
   {
     id: 'vip',
-    title: 'VIP Membership 👑',
-    subtitle: 'Premium benefits unlock करा',
-    description: 'VIP बना आणि 2x mining, marketplace access, gift vouchers, bill payments सर्व unlock करा!',
-    animation: (
-      <motion.div className="w-32 h-32 mx-auto relative">
-        <motion.div
-          animate={{ 
-            rotateY: [0, 360],
-            scale: [1, 1.1, 1]
-          }}
-          transition={{ duration: 3, repeat: Infinity }}
-          className="w-24 h-24 mx-auto bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-600 rounded-full flex items-center justify-center shadow-2xl"
-        >
-          <span className="text-5xl">👑</span>
-        </motion.div>
-        {[...Array(8)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-2 h-2 bg-yellow-400 rounded-full"
-            style={{
-              top: '50%',
-              left: '50%',
-            }}
-            animate={{
-              x: [0, Math.cos((i * 45 * Math.PI) / 180) * 60],
-              y: [0, Math.sin((i * 45 * Math.PI) / 180) * 60],
-              opacity: [1, 0],
-              scale: [1, 0],
-            }}
-            transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1 }}
-          />
-        ))}
-      </motion.div>
-    ),
-    mascot: { emotion: 'cool', message: 'VIP बना!' },
+    title: t('tutorialVipTitle'),
+    subtitle: t('tutorialVipSubtitle'),
+    description: t('tutorialVipDesc'),
+    animation: <VIPAnimation />,
+    mascot: { emotion: 'cool', message: t('mascotVip') },
     color: 'from-amber-500 to-yellow-600',
-    tips: ['Monthly/Quarterly/Yearly plans', 'सर्व features unlock', 'Priority support']
+    tips: [t('tutorialVipTip1'), t('tutorialVipTip2'), t('tutorialVipTip3')]
   },
   {
     id: 'ready',
-    title: 'तुम्ही Ready आहात! 🚀',
-    subtitle: 'आता सुरुवात करा',
-    description: 'Dashboard वर जा आणि तुमचा reward journey सुरू करा. शुभेच्छा! 🍀',
-    animation: (
-      <motion.div 
-        className="w-32 h-32 mx-auto flex items-center justify-center"
-        animate={{ scale: [1, 1.2, 1] }}
-        transition={{ duration: 1, repeat: Infinity }}
-      >
-        <div className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
-          <Check className="w-12 h-12 text-white" />
-        </div>
-      </motion.div>
-    ),
-    mascot: { emotion: 'celebrating', message: 'Let\'s go! 🚀' },
+    title: t('tutorialReadyTitle'),
+    subtitle: t('tutorialReadySubtitle'),
+    description: t('tutorialReadyDesc'),
+    animation: <ReadyAnimation />,
+    mascot: { emotion: 'celebrating', message: t('mascotReady') },
     color: 'from-green-500 to-emerald-600',
-    tips: ['Daily login bonus', 'Refer & earn', 'Support: Help section मध्ये']
+    tips: [t('tutorialReadyTip1'), t('tutorialReadyTip2'), t('tutorialReadyTip3')]
   }
 ];
 
