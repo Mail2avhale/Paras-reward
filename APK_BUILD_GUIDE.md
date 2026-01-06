@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://finbook-6.preview.emergentagent.com",
+    "url": "https://fintech-miner.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

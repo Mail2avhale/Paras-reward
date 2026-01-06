@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://finbook-6.preview.emergentagent.com/setup
+   https://fintech-miner.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
