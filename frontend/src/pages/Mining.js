@@ -148,7 +148,7 @@ const Mining = ({ user, onLogout }) => {
     const loadingId = notifications.loading('Claiming PRC Rewards', 'Processing your mining rewards...');
     
     try {
-      const response = await axios.post(`${API}/mining/claim/${user.uid}`);
+      const response = await axios.post(`${API}/api/mining/claim/${user.uid}`);
       
       toast.dismiss(loadingId);
       
