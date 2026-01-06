@@ -196,30 +196,41 @@ const AdminUserControls = () => {
     }
   };
 
-  // User Detail Modal
-  const UserDetailModal = () => {
-    if (!selectedUser) return null;
+  // Modal settings state
+  const [modalSettings, setModalSettings] = useState({
+    mining_active: true,
+    daily_prc_cap: 0,
+    utility_only_mode: false,
+    notifications_enabled: true
+  });
 
-    const [localSettings, setLocalSettings] = useState({
-      mining_active: selectedUser.mining_active !== false,
-      daily_prc_cap: selectedUser.daily_prc_cap || 0,
-      utility_only_mode: selectedUser.utility_only_mode || false,
-      notifications_enabled: selectedUser.notifications_enabled !== false
-    });
+  // Update modal settings when selectedUser changes
+  useEffect(() => {
+    if (selectedUser) {
+      setModalSettings({
+        mining_active: selectedUser.mining_active !== false,
+        daily_prc_cap: selectedUser.daily_prc_cap || 0,
+        utility_only_mode: selectedUser.utility_only_mode || false,
+        notifications_enabled: selectedUser.notifications_enabled !== false
+      });
+    }
+  }, [selectedUser]);
 
-    const capOptions = [
-      { value: 0, label: 'Unlimited' },
-      { value: 100, label: '100 PRC' },
-      { value: 500, label: '500 PRC' },
-      { value: 1000, label: '1000 PRC' },
-      { value: 2000, label: '2000 PRC' },
-      { value: 5000, label: '5000 PRC' }
-    ];
-
-    const handleSave = () => {
-      updateUserSettings(selectedUser.uid, localSettings);
+  const handleSaveUserSettings = () => {
+    if (selectedUser) {
+      updateUserSettings(selectedUser.uid, modalSettings);
       setShowUserModal(false);
-    };
+    }
+  };
+
+  const capOptions = [
+    { value: 0, label: 'Unlimited' },
+    { value: 100, label: '100 PRC' },
+    { value: 500, label: '500 PRC' },
+    { value: 1000, label: '1000 PRC' },
+    { value: 2000, label: '2000 PRC' },
+    { value: 5000, label: '5000 PRC' }
+  ];
 
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
