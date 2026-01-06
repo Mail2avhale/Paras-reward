@@ -47,16 +47,30 @@ const AdminAccountingDashboard = ({ user }) => {
       const [
         dashboardRes,
         settingsRes,
-        rateRes
+        rateRes,
+        masterSummaryRes,
+        cashRes,
+        bankRes
       ] = await Promise.all([
         axios.get(`${API}/api/admin/accounting/master-dashboard`),
         axios.get(`${API}/api/admin/accounting/settings`),
-        axios.get(`${API}/api/admin/accounting/conversion-rate`)
+        axios.get(`${API}/api/admin/accounting/conversion-rate`),
+        // New ledger endpoints for Quick View
+        axios.get(`${API}/api/admin/ledger/master-summary`),
+        axios.get(`${API}/api/admin/ledger/cash`),
+        axios.get(`${API}/api/admin/ledger/bank`)
       ]);
       
       setDashboardData(dashboardRes.data);
       setAccountingSettings(settingsRes.data);
       setConversionRate(rateRes.data);
+      
+      // Set Quick View data
+      setQuickViewData({
+        masterSummary: masterSummaryRes.data,
+        cashBalance: cashRes.data.current_balance || 0,
+        bankBalance: bankRes.data.current_balance || 0
+      });
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load accounting data');
