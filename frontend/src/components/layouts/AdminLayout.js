@@ -114,6 +114,8 @@ const AdminLayout = ({ children, user, onLogout }) => {
       subItems: [
         { id: 'accounting', label: 'Accounting Dashboard', icon: BarChart2, path: '/admin/accounting' },
         { id: 'cash-bank-book', label: 'Cash & Bank Book', icon: Wallet, path: '/admin/cash-bank-book' },
+        { id: 'prc-ledger', label: 'PRC Ledger (DR/CR)', icon: Activity, path: '/admin/prc-ledger' },
+        { id: 'financial-reports', label: 'Financial Reports', icon: FileText, path: '/admin/financial-reports' },
         { id: 'profit-loss', label: 'Profit & Loss', icon: TrendingUp, path: '/admin/profit-loss' },
         { id: 'company-wallets', label: 'Company Wallets', icon: Wallet, path: '/admin/company-wallets' },
         { id: 'capital', label: 'Capital & Liabilities', icon: Building, path: '/admin/capital' },
