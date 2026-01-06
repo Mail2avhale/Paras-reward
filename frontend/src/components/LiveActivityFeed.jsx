@@ -70,13 +70,28 @@ const LiveActivityFeed = ({ translations = {}, maxItems = 5 }) => {
   const fetchActivities = async () => {
     try {
       const response = await axios.get(`${API}/api/public/live-activity`);
+      console.log('Live Activity API response:', response.data);
+      
       if (response.data?.activities?.length > 0) {
-        setActivities(response.data.activities);
+        // Map API response to include icon/color from templates
+        const mappedActivities = response.data.activities.map((activity, idx) => {
+          const template = actionTemplates.find(t => t.action === activity.action) || actionTemplates[0];
+          return {
+            ...activity,
+            id: idx,
+            icon: template.icon,
+            color: template.color,
+            text: activity.text || template.text
+          };
+        });
+        setActivities(mappedActivities);
+        console.log('Loaded real activities:', mappedActivities.length);
       } else {
-        // Generate sample activities if none from API
+        console.log('No activities from API, using samples');
         generateSampleActivities();
       }
     } catch (error) {
+      console.error('Live Activity fetch error:', error.message);
       generateSampleActivities();
     } finally {
       setLoading(false);
