@@ -81,8 +81,8 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 - ✅ **Tutorial Updated**
   - Added Paras Buddy mascot with cartoon animations
   - Different emotions per slide (waving, mining, excited, celebrating)
-  - Speech bubbles with Marathi text
-  - Note: Multi-language translation pending (later)
+  - Speech bubbles with translated text
+  - Multi-language support: English, Hindi, Marathi (completed)
 
 - ✅ **Phase 2: Smart Features**
   - **Smart User Insights** (`/app/frontend/src/components/SmartUserInsights.jsx`)
