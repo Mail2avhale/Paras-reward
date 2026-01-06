@@ -18,6 +18,9 @@ import LiveMiningIndicator from '@/components/LiveMiningIndicator';
 import LiveTransparencyPanel from '@/components/LiveTransparencyPanel';
 import SmartUserInsights from '@/components/SmartUserInsights';
 import LiveActivityFeed from '@/components/LiveActivityFeed';
+import SecurityTrustCenter from '@/components/SecurityTrustCenter';
+import UserControlSettings from '@/components/UserControlSettings';
+import LiveStatementExport from '@/components/LiveStatementExport';
 import { useLanguage, LANGUAGES } from '@/contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
