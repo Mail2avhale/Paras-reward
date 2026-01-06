@@ -229,12 +229,237 @@ const AdminAccountingDashboard = ({ user }) => {
               <p className="text-sm text-gray-500">Advanced P&L, Liability & Risk Management</p>
             </div>
           </div>
-          <Button onClick={fetchAllData} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-3">
+            {/* View Mode Toggle */}
+            <div className="flex bg-white rounded-lg shadow-sm border overflow-hidden" data-testid="view-mode-toggle">
+              <button
+                onClick={() => setViewMode('quick')}
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
+                  viewMode === 'quick' 
+                    ? 'bg-purple-600 text-white' 
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+                data-testid="quick-view-btn"
+              >
+                <Eye className="h-4 w-4" />
+                Quick View
+              </button>
+              <button
+                onClick={() => setViewMode('detailed')}
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
+                  viewMode === 'detailed' 
+                    ? 'bg-purple-600 text-white' 
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+                data-testid="detailed-view-btn"
+              >
+                <LayoutGrid className="h-4 w-4" />
+                Detailed
+              </button>
+            </div>
+            <Button onClick={fetchAllData} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
+        {/* QUICK VIEW MODE */}
+        {viewMode === 'quick' && quickViewData && (
+          <div className="space-y-6" data-testid="quick-view-dashboard">
+            {/* Main Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              {/* Total Income */}
+              <Card className="p-5 bg-gradient-to-br from-green-50 to-emerald-50 border-green-200" data-testid="total-income-card">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-green-700">Total Income</span>
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <TrendingUp className="h-5 w-5 text-green-600" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-green-700">
+                  {formatCurrency(quickViewData.masterSummary?.income?.total || 0)}
+                </div>
+                <div className="text-xs text-green-600 mt-1">All revenue sources</div>
+              </Card>
+
+              {/* Total Expense */}
+              <Card className="p-5 bg-gradient-to-br from-red-50 to-rose-50 border-red-200" data-testid="total-expense-card">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-red-700">Total Expense</span>
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <TrendingDown className="h-5 w-5 text-red-600" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-red-700">
+                  {formatCurrency(quickViewData.masterSummary?.expense?.total || 0)}
+                </div>
+                <div className="text-xs text-red-600 mt-1">All outflows</div>
+              </Card>
+
+              {/* Net P&L */}
+              <Card className={`p-5 border-2 ${
+                (quickViewData.masterSummary?.net_profit_loss || 0) >= 0 
+                  ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-300' 
+                  : 'bg-gradient-to-br from-orange-50 to-red-50 border-orange-300'
+              }`} data-testid="net-pl-card">
+                <div className="flex items-center justify-between mb-3">
+                  <span className={`text-sm font-medium ${
+                    (quickViewData.masterSummary?.net_profit_loss || 0) >= 0 ? 'text-emerald-700' : 'text-orange-700'
+                  }`}>Net P&L</span>
+                  <div className={`p-2 rounded-lg ${
+                    (quickViewData.masterSummary?.net_profit_loss || 0) >= 0 ? 'bg-emerald-100' : 'bg-orange-100'
+                  }`}>
+                    <IndianRupee className={`h-5 w-5 ${
+                      (quickViewData.masterSummary?.net_profit_loss || 0) >= 0 ? 'text-emerald-600' : 'text-orange-600'
+                    }`} />
+                  </div>
+                </div>
+                <div className={`text-2xl font-bold ${
+                  (quickViewData.masterSummary?.net_profit_loss || 0) >= 0 ? 'text-emerald-700' : 'text-orange-700'
+                }`}>
+                  {formatCurrency(quickViewData.masterSummary?.net_profit_loss || 0)}
+                </div>
+                <div className={`text-xs mt-1 ${
+                  (quickViewData.masterSummary?.net_profit_loss || 0) >= 0 ? 'text-emerald-600' : 'text-orange-600'
+                }`}>
+                  {(quickViewData.masterSummary?.net_profit_loss || 0) >= 0 ? '✓ Profit' : '⚠ Loss'}
+                </div>
+              </Card>
+
+              {/* Cash Balance */}
+              <Card className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200" data-testid="cash-balance-card">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-blue-700">Cash Balance</span>
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Banknote className="h-5 w-5 text-blue-600" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-blue-700">
+                  {formatCurrency(quickViewData.cashBalance)}
+                </div>
+                <div className="text-xs text-blue-600 mt-1">Cash in hand</div>
+              </Card>
+
+              {/* Bank Balance */}
+              <Card className="p-5 bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200" data-testid="bank-balance-card">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-purple-700">Bank Balance</span>
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <CreditCard className="h-5 w-5 text-purple-600" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-purple-700">
+                  {formatCurrency(quickViewData.bankBalance)}
+                </div>
+                <div className="text-xs text-purple-600 mt-1">Bank accounts</div>
+              </Card>
+            </div>
+
+            {/* Income & Expense Breakdown */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Income Breakdown */}
+              <Card className="p-6" data-testid="income-breakdown">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-green-700">
+                  <TrendingUp className="h-5 w-5" />
+                  Income Breakdown
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-gray-600">Ad Revenue</span>
+                    <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.income?.ad_revenue || 0)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-gray-600">Subscription</span>
+                    <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.income?.subscription || 0)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-gray-600">Commission</span>
+                    <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.income?.commission || 0)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-gray-600">Interest</span>
+                    <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.income?.interest || 0)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-600">Penalty/Forfeit</span>
+                    <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.income?.penalty_forfeit || 0)}</span>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Expense Breakdown */}
+              <Card className="p-6" data-testid="expense-breakdown">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-red-700">
+                  <TrendingDown className="h-5 w-5" />
+                  Expense Breakdown
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-gray-600">Operational Expenses</span>
+                    <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.expense?.operational || 0)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-600">Redemption Payouts</span>
+                    <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.expense?.redeem_payouts || 0)}</span>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* PRC Stats */}
+            <Card className="p-6" data-testid="prc-stats">
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-purple-700">
+                <Coins className="h-5 w-5" />
+                PRC Statistics
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-purple-50 p-4 rounded-lg text-center">
+                  <div className="text-sm text-purple-600 mb-1">Total PRC in System</div>
+                  <div className="text-2xl font-bold text-purple-700">
+                    {(quickViewData.masterSummary?.prc_stats?.total_in_system || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                  </div>
+                </div>
+                <div className="bg-blue-50 p-4 rounded-lg text-center">
+                  <div className="text-sm text-blue-600 mb-1">INR Liability</div>
+                  <div className="text-2xl font-bold text-blue-700">
+                    {formatCurrency(quickViewData.masterSummary?.prc_stats?.inr_liability || 0)}
+                  </div>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg text-center">
+                  <div className="text-sm text-gray-600 mb-1">Conversion Rate</div>
+                  <div className="text-2xl font-bold text-gray-700">
+                    1 INR = {quickViewData.masterSummary?.prc_stats?.conversion_rate || 10} PRC
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Quick Actions */}
+            <div className="flex justify-center gap-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setViewMode('detailed')}
+                className="flex items-center gap-2"
+              >
+                <LayoutGrid className="h-4 w-4" />
+                View Detailed Dashboard
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/admin/finance')}
+                className="flex items-center gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                Go to Finance Section
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* DETAILED VIEW MODE */}
+        {viewMode === 'detailed' && (
+          <>
         {/* Alerts */}
         {dashboardData?.alerts?.length > 0 && (
           <div className="mb-6 space-y-2">
