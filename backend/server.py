@@ -5414,6 +5414,103 @@ async def update_session_activity(uid: str, token_id: str):
     )
     return {"message": "Activity updated"}
 
+# ========== SECURITY ALERTS API ==========
+@api_router.get("/admin/security/alerts")
+async def get_security_alerts(
+    admin_uid: str,
+    page: int = 1,
+    limit: int = 20,
+    unread_only: bool = False,
+    severity: Optional[str] = None,
+    alert_type: Optional[str] = None
+):
+    """Get security alerts with filtering and pagination"""
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin or admin.get("role") not in ["admin", "sub_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    query = {}
+    if unread_only:
+        query["is_read"] = False
+    if severity:
+        query["severity"] = severity
+    if alert_type:
+        query["alert_type"] = alert_type
+    
+    skip = (page - 1) * limit
+    total = await db.security_alerts.count_documents(query)
+    alerts = await db.security_alerts.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Get unread count
+    unread_count = await db.security_alerts.count_documents({"is_read": False})
+    
+    return {
+        "alerts": alerts,
+        "total": total,
+        "unread_count": unread_count,
+        "page": page,
+        "pages": (total + limit - 1) // limit
+    }
+
+@api_router.get("/admin/security/alerts/unread-count")
+async def get_unread_alerts_count(admin_uid: str):
+    """Get count of unread security alerts (for notification badge)"""
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin or admin.get("role") not in ["admin", "sub_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    unread_count = await db.security_alerts.count_documents({"is_read": False})
+    
+    # Get severity breakdown
+    critical_count = await db.security_alerts.count_documents({"is_read": False, "severity": "critical"})
+    high_count = await db.security_alerts.count_documents({"is_read": False, "severity": "high"})
+    
+    return {
+        "unread_count": unread_count,
+        "critical_count": critical_count,
+        "high_count": high_count,
+        "has_critical": critical_count > 0,
+        "has_high": high_count > 0
+    }
+
+@api_router.post("/admin/security/alerts/mark-read")
+async def mark_alerts_read(admin_uid: str, alert_ids: List[str] = None, mark_all: bool = False):
+    """Mark security alerts as read"""
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin or admin.get("role") not in ["admin", "sub_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if mark_all:
+        result = await db.security_alerts.update_many(
+            {"is_read": False},
+            {"$set": {"is_read": True, "read_at": datetime.now(timezone.utc).isoformat(), "read_by": admin_uid}}
+        )
+        return {"message": f"Marked {result.modified_count} alerts as read"}
+    
+    if alert_ids:
+        result = await db.security_alerts.update_many(
+            {"alert_id": {"$in": alert_ids}},
+            {"$set": {"is_read": True, "read_at": datetime.now(timezone.utc).isoformat(), "read_by": admin_uid}}
+        )
+        return {"message": f"Marked {result.modified_count} alerts as read"}
+    
+    return {"message": "No alerts to mark"}
+
+@api_router.delete("/admin/security/alerts/clear-old")
+async def clear_old_alerts(admin_uid: str, days_old: int = 30):
+    """Clear alerts older than specified days"""
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin or admin.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    cutoff_date = (datetime.now(timezone.utc) - timedelta(days=days_old)).isoformat()
+    result = await db.security_alerts.delete_many({
+        "created_at": {"$lt": cutoff_date},
+        "is_read": True
+    })
+    
+    return {"message": f"Deleted {result.deleted_count} old alerts"}
+
 # ========== ADMIN ROUTES ==========
 @api_router.post("/admin/promote")
 async def promote_user(email: str, role: str):
