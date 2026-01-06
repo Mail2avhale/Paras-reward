@@ -382,7 +382,7 @@ const AppTutorial = ({ onComplete, showSkip = true }) => {
   const { t, language } = useLanguage();
   
   // Memoize slides to regenerate only when language changes
-  const tutorialSlides = useMemo(() => getTutorialSlides(t), [language, t]);
+  const tutorialSlides = useMemo(() => getTutorialSlides(t), [t]);
 
   const nextSlide = () => {
     if (currentSlide < tutorialSlides.length - 1) {
