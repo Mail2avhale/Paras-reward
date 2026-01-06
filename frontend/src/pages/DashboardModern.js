@@ -420,6 +420,29 @@ const DashboardModern = ({ user, onLogout }) => {
           </div>
         </div>
 
+        {/* Smart User Insights */}
+        <SmartUserInsights 
+          userId={user?.uid}
+          userStats={{
+            prc_balance: stats.prcBalance,
+            today_earned: todayStats.today_prc_earned,
+            yesterday_earned: 0,
+            mining_streak: userData?.mining_streak || 0,
+            is_vip: stats.membershipType === 'vip',
+            referral_count: stats.referralCount,
+            total_mined: stats.totalMined
+          }}
+          translations={{}}
+        />
+
+        {/* Live Activity Feed */}
+        <LiveActivityFeed 
+          translations={{
+            liveActivity: t('liveActivity') || 'लाइव Activity',
+            userFrom: t('userFrom') || 'User from'
+          }}
+        />
+
         {/* Quick Actions */}
         <div className="bg-white rounded-2xl p-6 shadow-lg mb-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4">{t('quickActions')}</h2>
