@@ -5326,6 +5326,17 @@ async def activate_lockdown(
         user_agent=request.headers.get("user-agent", "unknown")
     )
     
+    # Create critical security alert
+    await create_security_alert(
+        alert_type="lockdown_activated",
+        severity="critical",
+        title=f"🔒 System Lockdown Activated ({lockdown_type.upper()})",
+        message=f"Admin {admin.get('email')} activated {lockdown_type} lockdown. Reason: {reason}",
+        details={"type": lockdown_type, "reason": reason, "features": locked_features or [], "admin_email": admin.get('email')},
+        ip_address=real_ip,
+        user_identifier=admin.get('email')
+    )
+    
     return {"message": f"System lockdown activated ({lockdown_type})", "locked_features": locked_features}
 
 @api_router.post("/admin/security/lockdown/deactivate")
