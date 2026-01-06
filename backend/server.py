@@ -21186,6 +21186,424 @@ async def get_user_statement(uid: str, format: str = "csv", period: str = "month
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ========== PRC ECONOMY EMERGENCY CONTROLS ==========
+
+@api_router.get("/admin/prc-economy/status")
+async def get_prc_economy_status():
+    """
+    Get current PRC economy status for admin dashboard
+    """
+    try:
+        # Get system settings
+        settings = await db.system_settings.find_one({"type": "prc_economy"})
+        global_mining_enabled = settings.get("global_mining_enabled", True) if settings else True
+        circuit_breaker_active = settings.get("circuit_breaker_active", False) if settings else False
+        
+        # Get total PRC in system
+        total_prc_result = await db.users.aggregate([
+            {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
+        ]).to_list(1)
+        total_prc = round(total_prc_result[0].get("total", 0), 2) if total_prc_result else 0
+        
+        # Get total users
+        total_users = await db.users.count_documents({})
+        
+        # Get daily mint rate (from last 24 hours)
+        yesterday = datetime.now(timezone.utc) - timedelta(days=1)
+        daily_mint_pipeline = [
+            {"$match": {"created_at": {"$gte": yesterday.isoformat()}, "transaction_type": {"$in": ["mining", "tap_game", "referral_bonus"]}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]
+        daily_mint_result = await db.transactions.aggregate(daily_mint_pipeline).to_list(1)
+        daily_mint_rate = round(daily_mint_result[0].get("total", 0), 2) if daily_mint_result else 0
+        
+        return {
+            "globalMiningEnabled": global_mining_enabled,
+            "totalPrcInSystem": total_prc,
+            "totalUsers": total_users,
+            "dailyMintRate": daily_mint_rate,
+            "circuitBreakerActive": circuit_breaker_active
+        }
+    except Exception as e:
+        logging.error(f"Error fetching PRC economy status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/prc-economy/emergency-stop")
+async def emergency_stop_mining(request: Request):
+    """
+    Emergency stop all mining across platform
+    """
+    try:
+        data = await request.json()
+        send_notification = data.get("sendNotification", True)
+        
+        # Update system settings
+        await db.system_settings.update_one(
+            {"type": "prc_economy"},
+            {
+                "$set": {
+                    "global_mining_enabled": False,
+                    "emergency_stop_at": datetime.now(timezone.utc).isoformat(),
+                    "emergency_stop_reason": "Admin initiated emergency stop"
+                }
+            },
+            upsert=True
+        )
+        
+        # Stop mining for all users
+        result = await db.users.update_many(
+            {"mining_active": True},
+            {"$set": {"mining_active": False, "mining_stopped_reason": "emergency_stop"}}
+        )
+        
+        # Log the action
+        await db.admin_actions.insert_one({
+            "action": "emergency_mining_stop",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "users_affected": result.modified_count,
+            "notification_sent": send_notification
+        })
+        
+        # Send notification to users (if enabled)
+        if send_notification:
+            await db.notifications.insert_many([
+                {
+                    "user_id": user["uid"],
+                    "title": "Mining Paused",
+                    "message": "Mining has been temporarily paused for maintenance. We'll notify you when it resumes.",
+                    "type": "system",
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "read": False
+                }
+                async for user in db.users.find({"mining_active": False}, {"uid": 1})
+            ][:1000])  # Limit to 1000 notifications at a time
+        
+        return {
+            "success": True,
+            "usersAffected": result.modified_count,
+            "message": "Mining stopped for all users"
+        }
+    except Exception as e:
+        logging.error(f"Error in emergency stop: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/prc-economy/resume-mining")
+async def resume_mining(request: Request):
+    """
+    Resume mining for all users
+    """
+    try:
+        data = await request.json()
+        send_notification = data.get("sendNotification", True)
+        
+        # Update system settings
+        await db.system_settings.update_one(
+            {"type": "prc_economy"},
+            {
+                "$set": {
+                    "global_mining_enabled": True,
+                    "mining_resumed_at": datetime.now(timezone.utc).isoformat()
+                }
+            },
+            upsert=True
+        )
+        
+        # Resume mining for users who were stopped by emergency
+        result = await db.users.update_many(
+            {"mining_stopped_reason": "emergency_stop"},
+            {
+                "$set": {"mining_active": True},
+                "$unset": {"mining_stopped_reason": ""}
+            }
+        )
+        
+        # Log the action
+        await db.admin_actions.insert_one({
+            "action": "mining_resumed",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "users_affected": result.modified_count,
+            "notification_sent": send_notification
+        })
+        
+        return {
+            "success": True,
+            "usersAffected": result.modified_count,
+            "message": "Mining resumed for all users"
+        }
+    except Exception as e:
+        logging.error(f"Error resuming mining: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/prc-economy/burn-preview")
+async def preview_prc_burn(request: Request):
+    """
+    Preview the impact of a PRC burn without executing
+    """
+    try:
+        data = await request.json()
+        method = data.get("method", "progressive")
+        flat_percentage = data.get("flatPercentage", 5)
+        progressive_rates = data.get("progressiveRates", [
+            {"minBalance": 50000, "percentage": 15},
+            {"minBalance": 20000, "percentage": 10},
+            {"minBalance": 10000, "percentage": 7},
+            {"minBalance": 5000, "percentage": 5},
+            {"minBalance": 0, "percentage": 2}
+        ])
+        min_protected_balance = data.get("minProtectedBalance", 5000)
+        
+        # Get all users with balance above minimum
+        users = await db.users.find(
+            {"prc_balance": {"$gt": min_protected_balance}},
+            {"uid": 1, "prc_balance": 1}
+        ).to_list(None)
+        
+        total_burn = 0
+        users_affected = 0
+        
+        for user in users:
+            balance = user.get("prc_balance", 0)
+            
+            if method == "progressive":
+                # Find applicable rate
+                burn_percentage = 0
+                for rate in sorted(progressive_rates, key=lambda x: x["minBalance"], reverse=True):
+                    if balance >= rate["minBalance"]:
+                        burn_percentage = rate["percentage"]
+                        break
+                burn_amount = balance * (burn_percentage / 100)
+            elif method == "flat":
+                burn_amount = balance * (flat_percentage / 100)
+            else:  # cap method
+                cap = data.get("cap", 50000)
+                burn_amount = max(0, balance - cap)
+            
+            # Ensure user keeps minimum protected balance
+            max_burn = balance - min_protected_balance
+            burn_amount = min(burn_amount, max_burn)
+            
+            if burn_amount > 0:
+                total_burn += burn_amount
+                users_affected += 1
+        
+        # Get users who will be protected
+        users_protected = await db.users.count_documents(
+            {"prc_balance": {"$lte": min_protected_balance}}
+        )
+        
+        # Get current total PRC
+        total_prc_result = await db.users.aggregate([
+            {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
+        ]).to_list(1)
+        current_total = total_prc_result[0].get("total", 0) if total_prc_result else 0
+        
+        return {
+            "usersAffected": users_affected,
+            "totalBurn": round(total_burn, 2),
+            "usersProtected": users_protected,
+            "currentTotalPrc": round(current_total, 2),
+            "newTotalPrc": round(current_total - total_burn, 2),
+            "reductionPercentage": round((total_burn / current_total) * 100, 2) if current_total > 0 else 0
+        }
+    except Exception as e:
+        logging.error(f"Error in burn preview: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/prc-economy/execute-burn")
+async def execute_prc_burn(request: Request):
+    """
+    Execute PRC burn across all eligible users
+    """
+    try:
+        data = await request.json()
+        method = data.get("method", "progressive")
+        flat_percentage = data.get("flatPercentage", 5)
+        progressive_rates = data.get("progressiveRates", [
+            {"minBalance": 50000, "percentage": 15},
+            {"minBalance": 20000, "percentage": 10},
+            {"minBalance": 10000, "percentage": 7},
+            {"minBalance": 5000, "percentage": 5},
+            {"minBalance": 0, "percentage": 2}
+        ])
+        min_protected_balance = data.get("minProtectedBalance", 5000)
+        send_notification = data.get("sendNotification", True)
+        
+        # Get all users with balance above minimum
+        users = await db.users.find(
+            {"prc_balance": {"$gt": min_protected_balance}},
+            {"uid": 1, "prc_balance": 1, "email": 1}
+        ).to_list(None)
+        
+        total_burn = 0
+        users_affected = 0
+        burn_details = []
+        
+        for user in users:
+            balance = user.get("prc_balance", 0)
+            
+            if method == "progressive":
+                burn_percentage = 0
+                for rate in sorted(progressive_rates, key=lambda x: x["minBalance"], reverse=True):
+                    if balance >= rate["minBalance"]:
+                        burn_percentage = rate["percentage"]
+                        break
+                burn_amount = balance * (burn_percentage / 100)
+            elif method == "flat":
+                burn_amount = balance * (flat_percentage / 100)
+            else:
+                cap = data.get("cap", 50000)
+                burn_amount = max(0, balance - cap)
+            
+            max_burn = balance - min_protected_balance
+            burn_amount = min(burn_amount, max_burn)
+            
+            if burn_amount > 0:
+                new_balance = balance - burn_amount
+                
+                # Update user balance
+                await db.users.update_one(
+                    {"uid": user["uid"]},
+                    {"$set": {"prc_balance": round(new_balance, 2)}}
+                )
+                
+                # Record transaction
+                await db.transactions.insert_one({
+                    "user_id": user["uid"],
+                    "transaction_type": "burn",
+                    "amount": -burn_amount,
+                    "balance_after": new_balance,
+                    "description": f"Economy stabilization burn ({method} method)",
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                })
+                
+                total_burn += burn_amount
+                users_affected += 1
+                burn_details.append({
+                    "uid": user["uid"],
+                    "burned": burn_amount,
+                    "new_balance": new_balance
+                })
+        
+        # Log the burn action
+        burn_log = {
+            "action": "prc_burn",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "method": method,
+            "total_burned": round(total_burn, 2),
+            "users_affected": users_affected,
+            "min_protected_balance": min_protected_balance,
+            "notification_sent": send_notification
+        }
+        await db.admin_actions.insert_one(burn_log)
+        
+        # Send notifications if enabled
+        if send_notification and users_affected > 0:
+            notifications = []
+            for detail in burn_details[:1000]:  # Limit notifications
+                notifications.append({
+                    "user_id": detail["uid"],
+                    "title": "PRC Balance Adjustment",
+                    "message": f"As part of economy maintenance, {detail['burned']:.2f} PRC has been adjusted. Your new balance is {detail['new_balance']:.2f} PRC.",
+                    "type": "system",
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "read": False
+                })
+            if notifications:
+                await db.notifications.insert_many(notifications)
+        
+        return {
+            "success": True,
+            "totalBurned": round(total_burn, 2),
+            "usersAffected": users_affected,
+            "message": f"Successfully burned {round(total_burn, 2)} PRC from {users_affected} users"
+        }
+    except Exception as e:
+        logging.error(f"Error executing burn: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/prc-economy/circuit-breaker-settings")
+async def update_circuit_breaker_settings(request: Request):
+    """
+    Update auto circuit breaker settings
+    """
+    try:
+        data = await request.json()
+        
+        await db.system_settings.update_one(
+            {"type": "circuit_breakers"},
+            {
+                "$set": {
+                    "daily_mint_limit": data.get("dailyMintLimit", 100000),
+                    "total_prc_cap": data.get("totalPrcCap", 10000000),
+                    "per_user_daily_limit": data.get("perUserDailyLimit", 1000),
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            },
+            upsert=True
+        )
+        
+        return {"success": True, "message": "Circuit breaker settings updated"}
+    except Exception as e:
+        logging.error(f"Error updating circuit breaker settings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========== USER DASHBOARD CARD PREFERENCES ==========
+
+@api_router.get("/user/dashboard-layout/{uid}")
+async def get_user_dashboard_layout(uid: str):
+    """
+    Get user's dashboard card layout preferences
+    """
+    try:
+        user = await db.users.find_one({"uid": uid}, {"dashboard_layout": 1})
+        
+        # Default layout
+        default_layout = [
+            {"id": "prc_balance", "visible": True, "order": 0},
+            {"id": "live_transparency", "visible": True, "order": 1},
+            {"id": "smart_insights", "visible": True, "order": 2},
+            {"id": "stats_cards", "visible": True, "order": 3},
+            {"id": "quick_actions", "visible": True, "order": 4},
+            {"id": "security_center", "visible": True, "order": 5},
+            {"id": "user_controls", "visible": True, "order": 6},
+            {"id": "statement_export", "visible": True, "order": 7},
+            {"id": "live_activity", "visible": True, "order": 8}
+        ]
+        
+        return {
+            "layout": user.get("dashboard_layout", default_layout) if user else default_layout
+        }
+    except Exception as e:
+        logging.error(f"Error fetching dashboard layout: {e}")
+        return {"layout": []}
+
+
+@api_router.put("/user/dashboard-layout/{uid}")
+async def update_user_dashboard_layout(uid: str, request: Request):
+    """
+    Update user's dashboard card layout preferences
+    """
+    try:
+        data = await request.json()
+        layout = data.get("layout", [])
+        
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"dashboard_layout": layout}}
+        )
+        
+        return {"success": True, "message": "Dashboard layout saved"}
+    except Exception as e:
+        logging.error(f"Error updating dashboard layout: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Include all API routes (must be after all route definitions)
 app.include_router(api_router)
 
