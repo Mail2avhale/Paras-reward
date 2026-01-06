@@ -93,6 +93,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/admin' },
     { id: 'users', label: 'Users', icon: Users, path: '/admin/users' },
+    { id: 'user-controls', label: 'User Controls', icon: UserCog, path: '/admin/user-controls' },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
     { id: 'kyc', label: 'KYC Verification', icon: FileText, path: '/admin/kyc' },
     { id: 'orders', label: 'Orders', icon: ShoppingCart, path: '/admin/orders' },
