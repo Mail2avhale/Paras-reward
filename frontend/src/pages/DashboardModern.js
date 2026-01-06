@@ -19,21 +19,19 @@ import LiveTransparencyPanel from '@/components/LiveTransparencyPanel';
 import SmartUserInsights from '@/components/SmartUserInsights';
 import LiveActivityFeed from '@/components/LiveActivityFeed';
 import SecurityTrustCenter from '@/components/SecurityTrustCenter';
-import UserControlSettings from '@/components/UserControlSettings';
 import LiveStatementExport from '@/components/LiveStatementExport';
 import DraggableDashboard, { DashboardCard } from '@/components/DraggableDashboard';
 import { useLanguage, LANGUAGES } from '@/contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
-// Default card order for the dashboard
+// Default card order for the dashboard (removed user-controls - admin feature only)
 const DEFAULT_CARD_ORDER = [
   'stats-cards',
   'smart-insights',
   'quick-actions',
   'recent-activity',
   'security-trust',
-  'user-controls',
   'statement-export',
   'activity-feed',
   'vip-banner'
