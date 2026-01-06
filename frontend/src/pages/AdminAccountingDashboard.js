@@ -1185,6 +1185,8 @@ const AdminAccountingDashboard = ({ user }) => {
             </div>
           </Card>
         )}
+          </>
+        )}
       </div>
     </div>
   );
