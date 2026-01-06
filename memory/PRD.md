@@ -51,8 +51,15 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
     - Tips (3 per slide)
     - Mascot speech bubbles
     - Navigation buttons (Back/Next/Start)
+  - **Language Selection Screen** (NEW):
+    - Shows before tutorial starts for first-time users
+    - Beautiful purple gradient header with rotating globe icon
+    - Three language options with colorful flag icons (🇮🇳 Marathi, 🇮🇳 Hindi, 🇬🇧 English)
+    - "You can change this later in Settings" helper text
+    - Skip button (X) to use default language
   - **Implementation Details**:
     - Uses `useLanguage()` hook from LanguageContext
+    - `LanguageSelectionScreen` component for language picker
     - `getTutorialSlides(t)` function generates slides with translations
     - `useMemo` with `[t, language]` dependency for performance
     - 50+ translation keys added to `/app/frontend/src/locales/translations.js`
