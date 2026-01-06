@@ -69,6 +69,7 @@ const AdminAuditService = lazy(() => import("@/pages/AdminAuditService"));
 const AdminProfitLoss = lazy(() => import("@/pages/AdminProfitLoss"));
 const AdminLiquidity = lazy(() => import("@/pages/AdminLiquidity"));
 const AdminCompanyWallets = lazy(() => import("@/pages/AdminCompanyWallets"));
+const AdminCashBankBook = lazy(() => import("@/pages/AdminCashBankBook"));
 const AdminAdsIncome = lazy(() => import("@/pages/AdminAdsIncome"));
 const AdminFraudAlerts = lazy(() => import("@/pages/AdminFraudAlerts"));
 const AdminVideoAds = lazy(() => import("@/pages/AdminVideoAds"));
