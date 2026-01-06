@@ -102,7 +102,7 @@ const Mining = ({ user, onLogout }) => {
     if (!isFreeUser) return;
     
     try {
-      const response = await axios.get(`${API}/api/wallet/${user.uid}`);
+      const response = await axios.get(`${API}/wallet/${user.uid}`);
       if (response.data.prc_expiry_info) {
         setPrcExpiryInfo(response.data.prc_expiry_info);
       }
