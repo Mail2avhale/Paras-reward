@@ -21,6 +21,7 @@ import LiveActivityFeed from '@/components/LiveActivityFeed';
 import SecurityTrustCenter from '@/components/SecurityTrustCenter';
 import UserControlSettings from '@/components/UserControlSettings';
 import LiveStatementExport from '@/components/LiveStatementExport';
+import DraggableDashboard, { DashboardCard } from '@/components/DraggableDashboard';
 import { useLanguage, LANGUAGES } from '@/contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
