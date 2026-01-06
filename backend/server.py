@@ -4997,6 +4997,354 @@ async def activate_outlet(outlet_id: str):
     )
     return {"message": "Outlet activated"}
 
+# ========== ADMIN SECURITY ENDPOINTS ==========
+
+@api_router.post("/auth/refresh-token")
+async def refresh_access_token(refresh_token: str):
+    """Refresh access token using refresh token"""
+    payload = verify_token(refresh_token, token_type="refresh")
+    
+    uid = payload.get("uid")
+    user = await db.users.find_one({"uid": uid}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    # Create new access token
+    token_id = str(uuid.uuid4())
+    token_data = {
+        "uid": user["uid"],
+        "email": user.get("email"),
+        "role": user.get("role"),
+        "token_id": token_id
+    }
+    new_access_token = create_access_token(token_data)
+    
+    # Update session
+    if user.get("role") in ["admin", "sub_admin"]:
+        await db.admin_sessions.update_one(
+            {"uid": uid, "is_active": True},
+            {"$set": {
+                "token_id": token_id,
+                "last_activity": datetime.now(timezone.utc).isoformat(),
+                "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=JWT_ACCESS_TOKEN_EXPIRE_MINUTES)).isoformat()
+            }}
+        )
+    
+    return {
+        "access_token": new_access_token,
+        "token_type": "bearer",
+        "expires_in": JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    }
+
+@api_router.post("/auth/logout")
+async def logout(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Logout and invalidate session"""
+    if not credentials:
+        return {"message": "Already logged out"}
+    
+    try:
+        payload = verify_token(credentials.credentials)
+        uid = payload.get("uid")
+        token_id = payload.get("token_id")
+        
+        # Invalidate session
+        await db.admin_sessions.update_one(
+            {"uid": uid, "token_id": token_id},
+            {"$set": {"is_active": False, "logged_out_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        # Log logout action
+        real_ip = request.client.host if request.client else "unknown"
+        await log_admin_action(
+            admin_uid=uid,
+            action="logout",
+            entity_type="auth",
+            ip_address=real_ip,
+            user_agent=request.headers.get("user-agent", "unknown")
+        )
+    except:
+        pass
+    
+    return {"message": "Logged out successfully"}
+
+@api_router.post("/auth/logout-all-sessions")
+async def logout_all_sessions(uid: str, admin_uid: str):
+    """Logout from all sessions (admin only)"""
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin or admin.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    result = await db.admin_sessions.update_many(
+        {"uid": uid, "is_active": True},
+        {"$set": {"is_active": False, "logged_out_at": datetime.now(timezone.utc).isoformat(), "logout_reason": "admin_forced"}}
+    )
+    
+    await log_admin_action(
+        admin_uid=admin_uid,
+        action="force_logout_all",
+        entity_type="security",
+        entity_id=uid,
+        details={"sessions_terminated": result.modified_count}
+    )
+    
+    return {"message": f"Logged out {result.modified_count} sessions"}
+
+@api_router.get("/admin/security/sessions/{uid}")
+async def get_user_sessions(uid: str, admin_uid: str):
+    """Get all active sessions for a user"""
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin or admin.get("role") not in ["admin", "sub_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    sessions = await db.admin_sessions.find(
+        {"uid": uid},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    
+    return {
+        "uid": uid,
+        "sessions": sessions,
+        "active_count": len([s for s in sessions if s.get("is_active")])
+    }
+
+@api_router.get("/admin/security/audit-logs")
+async def get_admin_audit_logs(
+    admin_uid: str,
+    page: int = 1,
+    limit: int = 50,
+    action: Optional[str] = None,
+    entity_type: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """Get admin audit logs with filtering"""
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin or admin.get("role") not in ["admin", "sub_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    query = {}
+    if action:
+        query["action"] = action
+    if entity_type:
+        query["entity_type"] = entity_type
+    if start_date:
+        query["timestamp"] = {"$gte": start_date}
+    if end_date:
+        if "timestamp" in query:
+            query["timestamp"]["$lte"] = end_date
+        else:
+            query["timestamp"] = {"$lte": end_date}
+    
+    skip = (page - 1) * limit
+    total = await db.admin_audit_logs.count_documents(query)
+    logs = await db.admin_audit_logs.find(query, {"_id": 0}).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
+    
+    return {
+        "logs": logs,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit
+    }
+
+@api_router.get("/admin/security/ip-whitelist")
+async def get_ip_whitelist(admin_uid: str):
+    """Get IP whitelist settings"""
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin or admin.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    settings = await db.admin_security_settings.find_one({"setting_type": "ip_whitelist"}, {"_id": 0})
+    return settings or {
+        "setting_type": "ip_whitelist",
+        "enabled": False,
+        "whitelist": [],
+        "updated_at": None
+    }
+
+@api_router.post("/admin/security/ip-whitelist")
+async def update_ip_whitelist(
+    admin_uid: str,
+    enabled: bool,
+    whitelist: List[str]
+):
+    """Update IP whitelist settings"""
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin or admin.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Validate IPs
+    import ipaddress
+    valid_ips = []
+    for ip in whitelist:
+        try:
+            if "/" in ip:
+                ipaddress.ip_network(ip, strict=False)
+            else:
+                ipaddress.ip_address(ip)
+            valid_ips.append(ip)
+        except ValueError:
+            pass  # Skip invalid IPs
+    
+    settings_data = {
+        "setting_type": "ip_whitelist",
+        "enabled": enabled,
+        "whitelist": valid_ips,
+        "updated_by": admin_uid,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.admin_security_settings.update_one(
+        {"setting_type": "ip_whitelist"},
+        {"$set": settings_data},
+        upsert=True
+    )
+    
+    await log_admin_action(
+        admin_uid=admin_uid,
+        action="update_ip_whitelist",
+        entity_type="security",
+        details={"enabled": enabled, "ip_count": len(valid_ips)}
+    )
+    
+    return {"message": "IP whitelist updated", "valid_ips": len(valid_ips)}
+
+@api_router.get("/admin/security/lockdown-status")
+async def get_lockdown_status_api(admin_uid: str):
+    """Get current system lockdown status"""
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin or admin.get("role") not in ["admin", "sub_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    status = await get_lockdown_status()
+    return status
+
+@api_router.post("/admin/security/lockdown")
+async def activate_lockdown(
+    request: Request,
+    admin_uid: str,
+    lockdown_type: str = "full",  # full, partial
+    reason: str = "Emergency lockdown",
+    locked_features: List[str] = None  # For partial: withdrawals, registrations, mining, marketplace
+):
+    """Activate system lockdown"""
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin or admin.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only main admin can activate lockdown")
+    
+    lockdown_data = {
+        "setting_type": "lockdown",
+        "lockdown_active": True,
+        "lockdown_type": lockdown_type,
+        "lockdown_reason": reason,
+        "locked_features": locked_features or ["withdrawals", "registrations", "mining", "marketplace"],
+        "lockdown_by": admin_uid,
+        "lockdown_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.admin_security_settings.update_one(
+        {"setting_type": "lockdown"},
+        {"$set": lockdown_data},
+        upsert=True
+    )
+    
+    real_ip = request.client.host if request.client else "unknown"
+    await log_admin_action(
+        admin_uid=admin_uid,
+        action="activate_lockdown",
+        entity_type="security",
+        details={"type": lockdown_type, "reason": reason, "features": locked_features},
+        ip_address=real_ip,
+        user_agent=request.headers.get("user-agent", "unknown")
+    )
+    
+    return {"message": f"System lockdown activated ({lockdown_type})", "locked_features": locked_features}
+
+@api_router.post("/admin/security/lockdown/deactivate")
+async def deactivate_lockdown(request: Request, admin_uid: str):
+    """Deactivate system lockdown"""
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin or admin.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only main admin can deactivate lockdown")
+    
+    # Get current lockdown info before deactivating
+    current = await get_lockdown_status()
+    
+    await db.admin_security_settings.update_one(
+        {"setting_type": "lockdown"},
+        {"$set": {
+            "lockdown_active": False,
+            "deactivated_by": admin_uid,
+            "deactivated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    real_ip = request.client.host if request.client else "unknown"
+    await log_admin_action(
+        admin_uid=admin_uid,
+        action="deactivate_lockdown",
+        entity_type="security",
+        details={"previous_type": current.get("lockdown_type"), "duration_hours": None},
+        ip_address=real_ip,
+        user_agent=request.headers.get("user-agent", "unknown")
+    )
+    
+    return {"message": "System lockdown deactivated"}
+
+@api_router.get("/admin/security/dashboard")
+async def get_security_dashboard(admin_uid: str):
+    """Get comprehensive security dashboard"""
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin or admin.get("role") not in ["admin", "sub_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    
+    # Active sessions
+    active_sessions = await db.admin_sessions.count_documents({"is_active": True})
+    
+    # Today's logins
+    today_logins = await db.admin_audit_logs.count_documents({
+        "action": "login",
+        "timestamp": {"$gte": today_start}
+    })
+    
+    # Failed login attempts (from rate limit storage - approximate)
+    failed_attempts_today = sum(1 for k, v in login_attempt_storage.items() if v.get("count", 0) > 0)
+    
+    # Recent suspicious activities
+    suspicious_activities = await db.admin_audit_logs.find({
+        "action": {"$in": ["login_blocked_ip", "force_logout_all", "activate_lockdown"]}
+    }, {"_id": 0}).sort("timestamp", -1).limit(10).to_list(10)
+    
+    # Lockdown status
+    lockdown = await get_lockdown_status()
+    
+    # IP whitelist status
+    ip_whitelist = await db.admin_security_settings.find_one({"setting_type": "ip_whitelist"}, {"_id": 0})
+    
+    return {
+        "active_admin_sessions": active_sessions,
+        "today_admin_logins": today_logins,
+        "failed_login_attempts_active": failed_attempts_today,
+        "lockdown_status": lockdown,
+        "ip_whitelist_enabled": ip_whitelist.get("enabled", False) if ip_whitelist else False,
+        "ip_whitelist_count": len(ip_whitelist.get("whitelist", [])) if ip_whitelist else 0,
+        "recent_security_events": suspicious_activities,
+        "session_timeout_minutes": SESSION_TIMEOUT_MINUTES,
+        "rate_limit_login_attempts": RATE_LIMIT_LOGIN_ATTEMPTS,
+        "jwt_token_expiry_minutes": JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+    }
+
+@api_router.post("/admin/security/update-session-activity")
+async def update_session_activity(uid: str, token_id: str):
+    """Update session last activity (for frontend heartbeat)"""
+    await db.admin_sessions.update_one(
+        {"uid": uid, "token_id": token_id, "is_active": True},
+        {"$set": {"last_activity": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"message": "Activity updated"}
+
 # ========== ADMIN ROUTES ==========
 @api_router.post("/admin/promote")
 async def promote_user(email: str, role: str):
