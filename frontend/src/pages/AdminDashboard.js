@@ -5,7 +5,8 @@ import {
   Users, Package, CreditCard, FileText, 
   Search, BarChart3, TrendingUp, TrendingDown,
   Store, Award, ShoppingCart, Bell, Settings, DollarSign,
-  ArrowUpRight, ArrowDownRight, Truck, Activity
+  ArrowUpRight, ArrowDownRight, Truck, Activity,
+  Shield, Wallet, BookOpen, AlertTriangle, Lock
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
