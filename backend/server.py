@@ -20792,30 +20792,45 @@ async def get_live_activity_feed():
     """
     try:
         # Get recent transactions (last 50, randomized for privacy)
+        # Check both 'type' and 'transaction_type' fields for compatibility
         recent_transactions = await db.transactions.find(
-            {"transaction_type": {"$in": ["mining", "tap_game", "redeem", "gift_voucher", "order"]}},
-            {"_id": 0, "user_id": 1, "transaction_type": 1, "created_at": 1}
+            {"$or": [
+                {"type": {"$in": ["mining", "tap_game", "order", "gift_voucher_request", "bill_payment_request"]}},
+                {"transaction_type": {"$in": ["mining", "tap_game", "redeem", "gift_voucher", "order"]}}
+            ]},
+            {"_id": 0, "user_id": 1, "type": 1, "transaction_type": 1, "created_at": 1}
         ).sort("created_at", -1).limit(50).to_list(50)
         
         activities = []
-        cities = ["Mumbai", "Pune", "Nashik", "Nagpur", "Thane", "Kolhapur", "Aurangabad", "Solapur", "Sangli", "Satara"]
-        actions = {
-            "mining": "earned PRC via mining",
-            "tap_game": "earned PRC via game",
-            "redeem": "redeemed rewards",
-            "gift_voucher": "claimed a gift voucher",
-            "order": "placed a marketplace order"
+        cities = ["Mumbai", "Pune", "Nashik", "Nagpur", "Thane", "Kolhapur", "Aurangabad", "Solapur", "Sangli", "Satara", "Amravati", "Nanded", "Akola", "Latur", "Jalgaon"]
+        
+        # Action mapping - key matches frontend actionTemplates
+        action_map = {
+            "mining": {"action": "mining", "text": "earned PRC via mining"},
+            "tap_game": {"action": "tap_game", "text": "played tap game"},
+            "order": {"action": "order", "text": "placed an order"},
+            "gift_voucher_request": {"action": "voucher", "text": "claimed a gift voucher"},
+            "bill_payment_request": {"action": "redeem", "text": "redeemed rewards"},
+            "redeem": {"action": "redeem", "text": "redeemed rewards"},
+            "gift_voucher": {"action": "voucher", "text": "claimed a gift voucher"}
         }
         
         import random
         for txn in recent_transactions[:10]:  # Show last 10
             city = random.choice(cities)
-            action = actions.get(txn.get("transaction_type"), "earned rewards")
+            txn_type = txn.get("type") or txn.get("transaction_type", "mining")
+            action_info = action_map.get(txn_type, {"action": "mining", "text": "earned rewards"})
+            
             activities.append({
                 "city": city,
-                "action": action,
+                "action": action_info["action"],  # Key for frontend icon matching
+                "text": action_info["text"],       # Display text
                 "time_ago": _get_time_ago(txn.get("created_at"))
             })
+        
+        # If no real transactions, return empty to trigger frontend fallback
+        if not activities:
+            return {"activities": []}
         
         return {"activities": activities}
     except Exception as e:
