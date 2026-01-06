@@ -84,7 +84,7 @@ const WalletNew = ({ user, onLogout }) => {
 
   const fetchWalletData = async () => {
     try {
-      const response = await axios.get(`${API}/api/wallet/${user.uid}`);
+      const response = await axios.get(`${API}/wallet/${user.uid}`);
       setWalletData(response.data);
     } catch (error) {
       console.error('Error fetching wallet:', error);
@@ -93,7 +93,7 @@ const WalletNew = ({ user, onLogout }) => {
 
   const fetchRedemptions = async () => {
     try {
-      const response = await axios.get(`${API}/api/wallet/Redemptions/${user.uid}`);
+      const response = await axios.get(`${API}/wallet/Redemptions/${user.uid}`);
       setRedemptions(response.data);
     } catch (error) {
       console.error('Error fetching Redemptions:', error);
@@ -125,7 +125,7 @@ const WalletNew = ({ user, onLogout }) => {
     const loadingId = notifications.loading('Processing Redemption', 'Please wait while we process your Redemption request...');
     
     try {
-      const response = await axios.post(`${API}/api/wallet/cashback/Redeem`, {
+      const response = await axios.post(`${API}/wallet/cashback/Redeem`, {
         user_id: user.uid,
         amount: parseFloat(cashbackAmount),
         payment_mode: cashbackPaymentMode,
@@ -184,7 +184,7 @@ const WalletNew = ({ user, onLogout }) => {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API}/api/wallet/prc/Redeem`, {
+      const response = await axios.post(`${API}/wallet/prc/Redeem`, {
         user_id: user.uid,
         amount: parseFloat(prcAmount),
         payment_mode: prcPaymentMode,

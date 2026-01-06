@@ -119,7 +119,7 @@ const DashboardPremium = ({ user, onLogout }) => {
     try {
       const [userRes, statsRes, transactionsRes] = await Promise.all([
         axios.get(`${API}/auth/user/${user.uid}`),
-        axios.get(`${API}/api/mining/status/${user.uid}`),
+        axios.get(`${API}/mining/status/${user.uid}`),
         axios.get(`${API}/transactions/${user.uid}?limit=50`)
       ]);
       

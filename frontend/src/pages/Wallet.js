@@ -23,7 +23,7 @@ const Wallet = ({ user, onLogout }) => {
 
   const fetchWalletData = async () => {
     try {
-      const response = await axios.get(`${API}/api/wallet/${user.uid}`);
+      const response = await axios.get(`${API}/wallet/${user.uid}`);
       setWalletData(response.data);
     } catch (error) {
       console.error('Error fetching wallet:', error);
@@ -51,7 +51,7 @@ const Wallet = ({ user, onLogout }) => {
     }
 
     try {
-      await axios.post(`${API}/api/wallet/${user.uid}/Redeem`, {
+      await axios.post(`${API}/wallet/${user.uid}/Redeem`, {
         amount: parseFloat(RedeemAmount),
         upi_id: upiId
       });
