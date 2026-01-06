@@ -42,6 +42,35 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 
 ## What's Been Implemented
 
+### January 6, 2026 (Current Session - Part 7)
+- ✅ **Phase 1: Accounting Foundation (TESTED - 14/14 Backend Tests Passed, 100% Frontend)**
+  
+  **1. Capital & Owner's Equity Management** (`/admin/capital-management`):
+  - Opening Capital entry (भांडवल)
+  - Additional Capital investments
+  - Owner's Drawings (मालकाने काढलेले पैसे)
+  - Automatic cash_book entry creation when capital is added
+  - Equity Calculation: Opening + Additional - Drawings + Retained = Total Equity
+  - APIs: `GET/POST /api/admin/accounting/capital`, `/api/admin/accounting/capital/entry`
+  
+  **2. Trial Balance** (`/admin/trial-balance`):
+  - Total Debits vs Total Credits verification
+  - Balance status indicator (✓ Balanced or ⚠ Difference amount)
+  - Account-wise debit/credit breakdown
+  - API: `GET /api/admin/accounting/trial-balance`
+  
+  **3. Chart of Accounts**:
+  - 39 accounts across 5 categories (Assets, Liabilities, Equity, Income, Expenses)
+  - Account codes: 1xxx=Assets, 2xxx=Liabilities, 3xxx=Equity, 4xxx=Income, 5xxx=Expenses
+  - Normal balance indicators (Debit/Credit)
+  - API: `GET /api/admin/accounting/chart-of-accounts`
+  
+  **4. Balance Sheet Enhancement**:
+  - Now shows detailed equity breakdown: Opening Capital, Additional Capital, Less Drawings, Retained Earnings
+  - Balance check: Assets = Liabilities + Equity verification
+  
+  Test report: `/app/test_reports/iteration_13.json`
+
 ### January 6, 2026 (Current Session - Part 6)
 - ✅ **PRC Ledger with DR/CR Accounting (TESTED - 18/18 Backend Tests Passed, 100% Frontend)**
   - **Feature**: Complete PRC transaction ledger with INR value conversion
