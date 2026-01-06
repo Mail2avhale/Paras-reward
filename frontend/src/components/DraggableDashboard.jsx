@@ -149,35 +149,40 @@ const DraggableDashboard = ({
 
   return (
     <div className="relative">
-      {/* Edit Mode Toggle Button */}
+      {/* Edit Mode Toggle Button - Always visible when not in edit mode */}
+      {!isEditMode && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setIsEditMode(true)}
+          className="fixed bottom-28 right-4 z-50 bg-gradient-to-br from-purple-600 to-indigo-600 text-white p-4 rounded-full shadow-xl hover:shadow-2xl transition-all"
+          data-testid="edit-dashboard-btn"
+          title={t('customizeDashboard')}
+        >
+          <Settings2 className="w-6 h-6" />
+        </motion.button>
+      )}
+
+      {/* Edit Mode Control Panel */}
       <AnimatePresence>
-        {!isEditMode ? (
-          <motion.button
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            onClick={() => setIsEditMode(true)}
-            className="fixed bottom-24 right-4 z-40 bg-purple-600 text-white p-3 rounded-full shadow-lg hover:bg-purple-700 transition-colors"
-            data-testid="edit-dashboard-btn"
-          >
-            <Settings2 className="w-5 h-5" />
-          </motion.button>
-        ) : (
+        {isEditMode && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 100 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-24 left-4 right-4 z-40 bg-white rounded-2xl shadow-2xl p-4 border border-purple-100"
+            exit={{ opacity: 0, y: 100 }}
+            className="fixed bottom-20 left-4 right-4 z-50 bg-white rounded-2xl shadow-2xl p-4 border-2 border-purple-200"
             data-testid="edit-mode-panel"
           >
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className="font-bold text-gray-900">{t('customizeDashboard')}</h3>
-                <p className="text-xs text-gray-500">{t('dragToReorder')}</p>
+                <h3 className="font-bold text-gray-900 text-lg">{t('customizeDashboard')}</h3>
+                <p className="text-sm text-gray-500">{t('dragToReorder')}</p>
               </div>
               <button 
                 onClick={handleCancel}
-                className="p-2 hover:bg-gray-100 rounded-full"
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
                 <X className="w-5 h-5 text-gray-500" />
               </button>
@@ -187,7 +192,7 @@ const DraggableDashboard = ({
               <Button
                 onClick={handleSave}
                 disabled={!hasChanges}
-                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                className={`flex-1 ${hasChanges ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-300'} text-white`}
                 data-testid="save-layout-btn"
               >
                 <Check className="w-4 h-4 mr-2" />
@@ -196,7 +201,7 @@ const DraggableDashboard = ({
               <Button
                 onClick={handleReset}
                 variant="outline"
-                className="flex-1"
+                className="flex-1 border-purple-300"
                 data-testid="reset-layout-btn"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
