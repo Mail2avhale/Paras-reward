@@ -411,6 +411,9 @@ const AdminLayout = ({ children, user, onLogout }) => {
           {/* Finance Group */}
           {renderMenuGroup('finance')}
           
+          {/* Security Group */}
+          {renderMenuGroup('security')}
+          
           {/* Settings Group */}
           {renderMenuGroup('settings')}
           
