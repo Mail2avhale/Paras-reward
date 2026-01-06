@@ -379,6 +379,10 @@ const getTutorialSlides = (t) => [
 const AppTutorial = ({ onComplete, showSkip = true }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [direction, setDirection] = useState(0);
+  const { t, language } = useLanguage();
+  
+  // Memoize slides to regenerate only when language changes
+  const tutorialSlides = useMemo(() => getTutorialSlides(t), [language, t]);
 
   const nextSlide = () => {
     if (currentSlide < tutorialSlides.length - 1) {
@@ -431,6 +435,7 @@ const AppTutorial = ({ onComplete, showSkip = true }) => {
             <button
               onClick={handleComplete}
               className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-colors"
+              data-testid="tutorial-skip-btn"
             >
               <X className="w-5 h-5" />
             </button>
@@ -443,6 +448,7 @@ const AppTutorial = ({ onComplete, showSkip = true }) => {
                 key={idx}
                 className={`h-1.5 rounded-full ${idx === currentSlide ? 'w-6 bg-white' : 'w-1.5 bg-white/50'}`}
                 animate={{ width: idx === currentSlide ? 24 : 6 }}
+                data-testid={`tutorial-progress-dot-${idx}`}
               />
             ))}
           </div>
@@ -481,13 +487,13 @@ const AppTutorial = ({ onComplete, showSkip = true }) => {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
             >
-              <h2 className="text-2xl font-bold text-gray-900 mb-1">{slide.title}</h2>
-              <p className="text-sm text-gray-500 mb-3">{slide.subtitle}</p>
-              <p className="text-gray-700 mb-4">{slide.description}</p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-1" data-testid="tutorial-slide-title">{slide.title}</h2>
+              <p className="text-sm text-gray-500 mb-3" data-testid="tutorial-slide-subtitle">{slide.subtitle}</p>
+              <p className="text-gray-700 mb-4" data-testid="tutorial-slide-description">{slide.description}</p>
 
               {/* Tips */}
               <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                <p className="text-xs font-semibold text-gray-500 mb-2">💡 Tips:</p>
+                <p className="text-xs font-semibold text-gray-500 mb-2">{t('tutorialTips')}</p>
                 <ul className="space-y-1">
                   {slide.tips.map((tip, idx) => (
                     <motion.li
@@ -496,6 +502,7 @@ const AppTutorial = ({ onComplete, showSkip = true }) => {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.1 }}
                       className="text-sm text-gray-600 flex items-center gap-2"
+                      data-testid={`tutorial-tip-${idx}`}
                     >
                       <span className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
                       {tip}
@@ -513,20 +520,22 @@ const AppTutorial = ({ onComplete, showSkip = true }) => {
               onClick={prevSlide}
               disabled={currentSlide === 0}
               className="flex items-center gap-1"
+              data-testid="tutorial-prev-btn"
             >
               <ChevronLeft className="w-4 h-4" />
-              Back
+              {t('tutorialPrev')}
             </Button>
 
-            <span className="text-sm text-gray-400">
+            <span className="text-sm text-gray-400" data-testid="tutorial-slide-counter">
               {currentSlide + 1} / {tutorialSlides.length}
             </span>
 
             <Button
               onClick={nextSlide}
               className={`bg-gradient-to-r ${slide.color} text-white flex items-center gap-1`}
+              data-testid="tutorial-next-btn"
             >
-              {currentSlide === tutorialSlides.length - 1 ? 'Start' : 'Next'}
+              {currentSlide === tutorialSlides.length - 1 ? t('tutorialStart') : t('tutorialNext')}
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
