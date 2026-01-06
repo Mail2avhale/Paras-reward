@@ -3,10 +3,95 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronRight, ChevronLeft, X, Coins, Users, ShoppingBag, 
   Gift, Zap, CloudRain, TrendingUp, Shield, Smartphone, Check,
-  Sparkles, Star, Heart, Rocket
+  Sparkles, Star, Heart, Rocket, Globe
 } from 'lucide-react';
 import { Button } from './ui/button';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage, LANGUAGES } from '../contexts/LanguageContext';
+
+// Language Selection Screen Component
+const LanguageSelectionScreen = ({ onSelect, onSkip }) => {
+  const languageOptions = [
+    { code: 'mr', name: 'मराठी', subtitle: 'Marathi', flag: '🇮🇳', color: 'from-orange-500 to-orange-600' },
+    { code: 'hi', name: 'हिंदी', subtitle: 'Hindi', flag: '🇮🇳', color: 'from-green-500 to-green-600' },
+    { code: 'en', name: 'English', subtitle: 'English', flag: '🇬🇧', color: 'from-blue-500 to-blue-600' }
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl"
+      >
+        {/* Header */}
+        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-6 text-white relative">
+          <button
+            onClick={onSkip}
+            className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-colors z-30"
+            data-testid="language-skip-btn"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          
+          {/* Globe Animation */}
+          <motion.div 
+            className="w-24 h-24 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center"
+            animate={{ rotate: [0, 360] }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          >
+            <Globe className="w-12 h-12 text-white" />
+          </motion.div>
+          
+          <h2 className="text-2xl font-bold text-center">Choose Your Language</h2>
+          <p className="text-white/80 text-center text-sm mt-1">भाषा निवडा • भाषा चुनें</p>
+        </div>
+
+        {/* Language Options */}
+        <div className="p-6 space-y-3">
+          {languageOptions.map((lang, index) => (
+            <motion.button
+              key={lang.code}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.1 }}
+              onClick={() => onSelect(lang.code)}
+              className="w-full p-4 rounded-2xl border-2 border-gray-100 hover:border-purple-300 
+                         transition-all flex items-center gap-4 group hover:bg-purple-50"
+              data-testid={`language-option-${lang.code}`}
+            >
+              {/* Flag Circle */}
+              <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${lang.color} 
+                              flex items-center justify-center text-2xl shadow-lg
+                              group-hover:scale-110 transition-transform`}>
+                {lang.flag}
+              </div>
+              
+              {/* Text */}
+              <div className="flex-1 text-left">
+                <p className="text-lg font-bold text-gray-900">{lang.name}</p>
+                <p className="text-sm text-gray-500">{lang.subtitle}</p>
+              </div>
+              
+              {/* Arrow */}
+              <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-purple-600 
+                                       group-hover:translate-x-1 transition-all" />
+            </motion.button>
+          ))}
+          
+          {/* Helper Text */}
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="text-center text-xs text-gray-400 mt-4"
+          >
+            You can change this later in Settings
+          </motion.p>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 
 // Cute Mascot Character - Paras Buddy
 const ParasBuddy = ({ emotion = 'happy', message = '' }) => {
