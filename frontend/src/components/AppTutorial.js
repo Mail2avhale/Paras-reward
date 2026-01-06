@@ -462,12 +462,23 @@ const getTutorialSlides = (t) => [
 ];
 
 const AppTutorial = ({ onComplete, showSkip = true }) => {
+  const [showLanguageSelect, setShowLanguageSelect] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [direction, setDirection] = useState(0);
-  const { t, language } = useLanguage();
+  const { t, language, changeLanguage } = useLanguage();
   
   // Memoize slides to regenerate when language changes
   const tutorialSlides = useMemo(() => getTutorialSlides(t), [t, language]);
+
+  const handleLanguageSelect = (langCode) => {
+    changeLanguage(langCode);
+    setShowLanguageSelect(false);
+  };
+
+  const handleSkipLanguageSelect = () => {
+    // Keep current language, just proceed to tutorial
+    setShowLanguageSelect(false);
+  };
 
   const nextSlide = () => {
     if (currentSlide < tutorialSlides.length - 1) {
@@ -489,6 +500,16 @@ const AppTutorial = ({ onComplete, showSkip = true }) => {
     localStorage.setItem('tutorial_completed', 'true');
     if (onComplete) onComplete();
   };
+
+  // Show language selection screen first
+  if (showLanguageSelect) {
+    return (
+      <LanguageSelectionScreen 
+        onSelect={handleLanguageSelect}
+        onSkip={handleSkipLanguageSelect}
+      />
+    );
+  }
 
   const slide = tutorialSlides[currentSlide];
 
