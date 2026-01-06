@@ -21604,6 +21604,359 @@ async def update_user_dashboard_layout(uid: str, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# =====================================================
+# CASH BOOK & BANK BOOK ACCOUNTING SYSTEM
+# =====================================================
+
+# Pydantic models for Cash/Bank Book
+class CashBankEntry(BaseModel):
+    entry_type: str  # capital, income, expense, transfer_in, transfer_out
+    amount: float
+    description: str
+    category: str = ""  # rent, salary, purchase, vip_fee, ads_income, etc.
+    reference_no: str = ""
+    date: str = ""  # If empty, use current date
+
+class TransferEntry(BaseModel):
+    from_account: str  # cash or bank
+    to_account: str    # cash or bank
+    amount: float
+    description: str = ""
+    reference_no: str = ""
+
+@api_router.get("/admin/accounting/cash-book")
+async def get_cash_book(page: int = 1, limit: int = 50):
+    """Get Cash Book with running balance"""
+    try:
+        # Get or create cash account
+        cash_account = await db.company_accounts.find_one({"account_type": "cash"})
+        if not cash_account:
+            cash_account = {
+                "account_type": "cash",
+                "account_name": "Cash in Hand",
+                "opening_balance": 0,
+                "current_balance": 0,
+                "created_at": datetime.utcnow().isoformat()
+            }
+            await db.company_accounts.insert_one(cash_account)
+        
+        # Get transactions
+        skip = (page - 1) * limit
+        cursor = db.cash_book.find().sort("created_at", -1).skip(skip).limit(limit)
+        entries = await cursor.to_list(length=limit)
+        
+        # Calculate running balance for each entry
+        all_entries = await db.cash_book.find().sort("created_at", 1).to_list(length=None)
+        running_balance = cash_account.get("opening_balance", 0)
+        balance_map = {}
+        for entry in all_entries:
+            if entry.get("entry_type") in ["capital", "income", "transfer_in"]:
+                running_balance += entry.get("amount", 0)
+            else:
+                running_balance -= entry.get("amount", 0)
+            balance_map[str(entry.get("_id"))] = running_balance
+        
+        # Add running balance to entries
+        for entry in entries:
+            entry["_id"] = str(entry["_id"])
+            entry["running_balance"] = balance_map.get(entry["_id"], 0)
+        
+        total = await db.cash_book.count_documents({})
+        
+        return {
+            "account_name": "Cash in Hand",
+            "opening_balance": cash_account.get("opening_balance", 0),
+            "current_balance": running_balance,
+            "entries": entries,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "total_pages": (total + limit - 1) // limit
+            }
+        }
+    except Exception as e:
+        logging.error(f"Error getting cash book: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/accounting/bank-book")
+async def get_bank_book(page: int = 1, limit: int = 50):
+    """Get Bank Book with running balance"""
+    try:
+        # Get or create bank account
+        bank_account = await db.company_accounts.find_one({"account_type": "bank"})
+        if not bank_account:
+            bank_account = {
+                "account_type": "bank",
+                "account_name": "Bank Account",
+                "bank_name": "",
+                "account_number": "",
+                "opening_balance": 0,
+                "current_balance": 0,
+                "created_at": datetime.utcnow().isoformat()
+            }
+            await db.company_accounts.insert_one(bank_account)
+        
+        # Get transactions
+        skip = (page - 1) * limit
+        cursor = db.bank_book.find().sort("created_at", -1).skip(skip).limit(limit)
+        entries = await cursor.to_list(length=limit)
+        
+        # Calculate running balance
+        all_entries = await db.bank_book.find().sort("created_at", 1).to_list(length=None)
+        running_balance = bank_account.get("opening_balance", 0)
+        balance_map = {}
+        for entry in all_entries:
+            if entry.get("entry_type") in ["capital", "income", "transfer_in", "deposit"]:
+                running_balance += entry.get("amount", 0)
+            else:
+                running_balance -= entry.get("amount", 0)
+            balance_map[str(entry.get("_id"))] = running_balance
+        
+        for entry in entries:
+            entry["_id"] = str(entry["_id"])
+            entry["running_balance"] = balance_map.get(entry["_id"], 0)
+        
+        total = await db.bank_book.count_documents({})
+        
+        return {
+            "account_name": bank_account.get("account_name", "Bank Account"),
+            "bank_name": bank_account.get("bank_name", ""),
+            "account_number": bank_account.get("account_number", ""),
+            "opening_balance": bank_account.get("opening_balance", 0),
+            "current_balance": running_balance,
+            "entries": entries,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "total_pages": (total + limit - 1) // limit
+            }
+        }
+    except Exception as e:
+        logging.error(f"Error getting bank book: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/accounting/cash-book/entry")
+async def add_cash_entry(entry: CashBankEntry, admin_id: str = ""):
+    """Add entry to Cash Book"""
+    try:
+        entry_date = entry.date if entry.date else datetime.utcnow().isoformat()
+        
+        cash_entry = {
+            "entry_id": str(uuid.uuid4()),
+            "entry_type": entry.entry_type,
+            "amount": abs(entry.amount),
+            "description": entry.description,
+            "category": entry.category,
+            "reference_no": entry.reference_no,
+            "date": entry_date,
+            "created_at": datetime.utcnow().isoformat(),
+            "created_by": admin_id
+        }
+        
+        await db.cash_book.insert_one(cash_entry)
+        
+        # Update current balance
+        cash_account = await db.company_accounts.find_one({"account_type": "cash"})
+        if cash_account:
+            current = cash_account.get("current_balance", 0)
+            if entry.entry_type in ["capital", "income", "transfer_in"]:
+                new_balance = current + abs(entry.amount)
+            else:
+                new_balance = current - abs(entry.amount)
+            await db.company_accounts.update_one(
+                {"account_type": "cash"},
+                {"$set": {"current_balance": new_balance}}
+            )
+        
+        return {"success": True, "message": "Cash entry added", "entry_id": cash_entry["entry_id"]}
+    except Exception as e:
+        logging.error(f"Error adding cash entry: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/accounting/bank-book/entry")
+async def add_bank_entry(entry: CashBankEntry, admin_id: str = ""):
+    """Add entry to Bank Book"""
+    try:
+        entry_date = entry.date if entry.date else datetime.utcnow().isoformat()
+        
+        bank_entry = {
+            "entry_id": str(uuid.uuid4()),
+            "entry_type": entry.entry_type,
+            "amount": abs(entry.amount),
+            "description": entry.description,
+            "category": entry.category,
+            "reference_no": entry.reference_no,
+            "date": entry_date,
+            "created_at": datetime.utcnow().isoformat(),
+            "created_by": admin_id
+        }
+        
+        await db.bank_book.insert_one(bank_entry)
+        
+        # Update current balance
+        bank_account = await db.company_accounts.find_one({"account_type": "bank"})
+        if bank_account:
+            current = bank_account.get("current_balance", 0)
+            if entry.entry_type in ["capital", "income", "transfer_in", "deposit"]:
+                new_balance = current + abs(entry.amount)
+            else:
+                new_balance = current - abs(entry.amount)
+            await db.company_accounts.update_one(
+                {"account_type": "bank"},
+                {"$set": {"current_balance": new_balance}}
+            )
+        
+        return {"success": True, "message": "Bank entry added", "entry_id": bank_entry["entry_id"]}
+    except Exception as e:
+        logging.error(f"Error adding bank entry: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/accounting/transfer")
+async def transfer_between_accounts(transfer: TransferEntry, admin_id: str = ""):
+    """Transfer money between Cash and Bank accounts"""
+    try:
+        if transfer.from_account == transfer.to_account:
+            raise HTTPException(status_code=400, detail="From and To accounts must be different")
+        
+        timestamp = datetime.utcnow().isoformat()
+        transfer_ref = f"TRF-{str(uuid.uuid4())[:8].upper()}"
+        
+        # Debit from source account
+        from_entry = {
+            "entry_id": str(uuid.uuid4()),
+            "entry_type": "transfer_out",
+            "amount": abs(transfer.amount),
+            "description": f"Transfer to {transfer.to_account.title()} - {transfer.description}",
+            "category": "transfer",
+            "reference_no": transfer_ref,
+            "date": timestamp,
+            "created_at": timestamp,
+            "created_by": admin_id
+        }
+        
+        # Credit to destination account
+        to_entry = {
+            "entry_id": str(uuid.uuid4()),
+            "entry_type": "transfer_in",
+            "amount": abs(transfer.amount),
+            "description": f"Transfer from {transfer.from_account.title()} - {transfer.description}",
+            "category": "transfer",
+            "reference_no": transfer_ref,
+            "date": timestamp,
+            "created_at": timestamp,
+            "created_by": admin_id
+        }
+        
+        # Insert entries
+        if transfer.from_account == "cash":
+            await db.cash_book.insert_one(from_entry)
+            await db.bank_book.insert_one(to_entry)
+        else:
+            await db.bank_book.insert_one(from_entry)
+            await db.cash_book.insert_one(to_entry)
+        
+        # Update balances
+        from_account = await db.company_accounts.find_one({"account_type": transfer.from_account})
+        to_account = await db.company_accounts.find_one({"account_type": transfer.to_account})
+        
+        if from_account:
+            await db.company_accounts.update_one(
+                {"account_type": transfer.from_account},
+                {"$inc": {"current_balance": -abs(transfer.amount)}}
+            )
+        if to_account:
+            await db.company_accounts.update_one(
+                {"account_type": transfer.to_account},
+                {"$inc": {"current_balance": abs(transfer.amount)}}
+            )
+        
+        return {"success": True, "message": "Transfer completed", "reference": transfer_ref}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error in transfer: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/accounting/set-opening-balance")
+async def set_opening_balance(account_type: str, amount: float, bank_name: str = "", account_number: str = ""):
+    """Set opening balance for Cash or Bank account"""
+    try:
+        update_data = {
+            "opening_balance": amount,
+            "current_balance": amount,
+            "updated_at": datetime.utcnow().isoformat()
+        }
+        
+        if account_type == "bank":
+            update_data["bank_name"] = bank_name
+            update_data["account_number"] = account_number
+        
+        result = await db.company_accounts.update_one(
+            {"account_type": account_type},
+            {"$set": update_data},
+            upsert=True
+        )
+        
+        return {"success": True, "message": f"{account_type.title()} opening balance set to ₹{amount}"}
+    except Exception as e:
+        logging.error(f"Error setting opening balance: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/accounting/summary")
+async def get_accounting_summary():
+    """Get summary of all accounts"""
+    try:
+        cash_account = await db.company_accounts.find_one({"account_type": "cash"})
+        bank_account = await db.company_accounts.find_one({"account_type": "bank"})
+        
+        # Get today's transactions
+        today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_str = today.isoformat()
+        
+        cash_today = await db.cash_book.count_documents({"created_at": {"$gte": today_str}})
+        bank_today = await db.bank_book.count_documents({"created_at": {"$gte": today_str}})
+        
+        # Calculate totals
+        cash_entries = await db.cash_book.find().to_list(length=None)
+        bank_entries = await db.bank_book.find().to_list(length=None)
+        
+        cash_credit = sum(e.get("amount", 0) for e in cash_entries if e.get("entry_type") in ["capital", "income", "transfer_in"])
+        cash_debit = sum(e.get("amount", 0) for e in cash_entries if e.get("entry_type") in ["expense", "transfer_out"])
+        
+        bank_credit = sum(e.get("amount", 0) for e in bank_entries if e.get("entry_type") in ["capital", "income", "transfer_in", "deposit"])
+        bank_debit = sum(e.get("amount", 0) for e in bank_entries if e.get("entry_type") in ["expense", "transfer_out", "withdrawal"])
+        
+        cash_balance = (cash_account.get("opening_balance", 0) if cash_account else 0) + cash_credit - cash_debit
+        bank_balance = (bank_account.get("opening_balance", 0) if bank_account else 0) + bank_credit - bank_debit
+        
+        return {
+            "cash": {
+                "account_name": "Cash in Hand",
+                "opening_balance": cash_account.get("opening_balance", 0) if cash_account else 0,
+                "total_credit": cash_credit,
+                "total_debit": cash_debit,
+                "current_balance": cash_balance,
+                "today_transactions": cash_today
+            },
+            "bank": {
+                "account_name": bank_account.get("account_name", "Bank Account") if bank_account else "Bank Account",
+                "bank_name": bank_account.get("bank_name", "") if bank_account else "",
+                "account_number": bank_account.get("account_number", "") if bank_account else "",
+                "opening_balance": bank_account.get("opening_balance", 0) if bank_account else 0,
+                "total_credit": bank_credit,
+                "total_debit": bank_debit,
+                "current_balance": bank_balance,
+                "today_transactions": bank_today
+            },
+            "total_balance": cash_balance + bank_balance
+        }
+    except Exception as e:
+        logging.error(f"Error getting accounting summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Include all API routes (must be after all route definitions)
 app.include_router(api_router)
 
