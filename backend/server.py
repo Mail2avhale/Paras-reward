@@ -21956,6 +21956,575 @@ async def get_accounting_summary():
         logging.error(f"Error getting accounting summary: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ==================== PRC LEDGER SYSTEM ====================
+# Conversion rate: 10 PRC = ₹1 INR (or 1000 PRC = ₹100)
+PRC_TO_INR_RATE = 0.1  # 1 PRC = ₹0.1
+
+@api_router.get("/admin/accounting/prc-ledger")
+async def get_prc_ledger(page: int = 1, limit: int = 50, filter_type: str = "all"):
+    """Get PRC Ledger with all mining and consumption transactions"""
+    try:
+        skip = (page - 1) * limit
+        
+        # Build query based on filter
+        query = {}
+        if filter_type == "credit":
+            query["type"] = {"$in": ["mining", "tap_game", "referral", "admin_credit", "cashback", "prc_rain_gain"]}
+        elif filter_type == "debit":
+            query["type"] = {"$in": ["order", "prc_burn", "bill_payment_request", "gift_voucher_request", "prc_rain_loss"]}
+        
+        # Get transactions from the transactions collection
+        cursor = db.transactions.find(query).sort("created_at", -1).skip(skip).limit(limit)
+        transactions = await cursor.to_list(length=limit)
+        
+        # Format entries for ledger view
+        entries = []
+        for txn in transactions:
+            entry_type = txn.get("type", "unknown")
+            amount = txn.get("amount", 0)
+            is_credit = entry_type in ["mining", "tap_game", "referral", "admin_credit", "cashback", "prc_rain_gain", "withdrawal_rejected"]
+            
+            entries.append({
+                "id": str(txn.get("_id", "")),
+                "transaction_id": txn.get("transaction_id", ""),
+                "date": txn.get("created_at", ""),
+                "description": txn.get("description", f"{entry_type.replace('_', ' ').title()}"),
+                "type": entry_type,
+                "user_id": txn.get("user_id", ""),
+                "prc_amount": amount,
+                "inr_value": round(amount * PRC_TO_INR_RATE, 2),
+                "dr_cr": "CR" if is_credit else "DR",
+                "balance_after": txn.get("balance_after", 0)
+            })
+        
+        # Get totals
+        total_mined = await db.transactions.aggregate([
+            {"$match": {"type": {"$in": ["mining", "tap_game", "referral"]}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(length=1)
+        
+        total_consumed = await db.transactions.aggregate([
+            {"$match": {"type": {"$in": ["order", "bill_payment_request", "gift_voucher_request"]}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(length=1)
+        
+        total_burned = await db.transactions.aggregate([
+            {"$match": {"type": "prc_burn"}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(length=1)
+        
+        mined_prc = total_mined[0]["total"] if total_mined else 0
+        consumed_prc = total_consumed[0]["total"] if total_consumed else 0
+        burned_prc = total_burned[0]["total"] if total_burned else 0
+        
+        total = await db.transactions.count_documents(query)
+        
+        return {
+            "summary": {
+                "total_mined_prc": round(mined_prc, 2),
+                "total_mined_inr": round(mined_prc * PRC_TO_INR_RATE, 2),
+                "total_consumed_prc": round(consumed_prc, 2),
+                "total_consumed_inr": round(consumed_prc * PRC_TO_INR_RATE, 2),
+                "total_burned_prc": round(burned_prc, 2),
+                "total_burned_inr": round(burned_prc * PRC_TO_INR_RATE, 2),
+                "net_circulation_prc": round(mined_prc - consumed_prc - burned_prc, 2),
+                "conversion_rate": f"10 PRC = ₹1"
+            },
+            "entries": entries,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "total_pages": (total + limit - 1) // limit
+            }
+        }
+    except Exception as e:
+        logging.error(f"Error getting PRC ledger: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/accounting/sync-prc-to-books")
+async def sync_prc_to_cash_book(admin_id: str = ""):
+    """Sync PRC transactions to Cash/Bank Book with INR value conversion"""
+    try:
+        # Get last sync timestamp
+        sync_record = await db.prc_sync_records.find_one({"type": "cash_book_sync"})
+        last_sync = sync_record.get("last_sync") if sync_record else None
+        
+        # Build query for unsync'd transactions
+        query = {"type": {"$in": ["mining", "tap_game", "referral", "order", "prc_burn"]}}
+        if last_sync:
+            query["created_at"] = {"$gt": last_sync}
+        
+        transactions = await db.transactions.find(query).to_list(length=1000)
+        
+        # Group and sum by type for bulk entries
+        income_total = 0
+        expense_total = 0
+        burn_total = 0
+        
+        for txn in transactions:
+            amount = txn.get("amount", 0)
+            if txn.get("type") in ["mining", "tap_game", "referral"]:
+                income_total += amount
+            elif txn.get("type") in ["order"]:
+                expense_total += amount
+            elif txn.get("type") == "prc_burn":
+                burn_total += amount
+        
+        now = datetime.utcnow().isoformat()
+        entries_added = 0
+        
+        # Add PRC Income entry to Cash Book (virtual asset)
+        if income_total > 0:
+            inr_value = round(income_total * PRC_TO_INR_RATE, 2)
+            await db.cash_book.insert_one({
+                "entry_id": str(uuid.uuid4()),
+                "entry_type": "income",
+                "amount": inr_value,
+                "description": f"PRC Mined/Earned ({income_total:.2f} PRC @ ₹0.1/PRC)",
+                "category": "prc_income",
+                "reference_no": f"PRC-SYNC-{now[:10]}",
+                "date": now,
+                "created_at": now,
+                "created_by": admin_id,
+                "is_prc_sync": True
+            })
+            entries_added += 1
+        
+        # Add PRC Consumption as liability reduction (income to company)
+        if expense_total > 0:
+            inr_value = round(expense_total * PRC_TO_INR_RATE, 2)
+            await db.cash_book.insert_one({
+                "entry_id": str(uuid.uuid4()),
+                "entry_type": "income",
+                "amount": inr_value,
+                "description": f"PRC Redeemed/Consumed ({expense_total:.2f} PRC @ ₹0.1/PRC)",
+                "category": "prc_redemption",
+                "reference_no": f"PRC-REDEEM-{now[:10]}",
+                "date": now,
+                "created_at": now,
+                "created_by": admin_id,
+                "is_prc_sync": True
+            })
+            entries_added += 1
+        
+        # Record sync timestamp
+        await db.prc_sync_records.update_one(
+            {"type": "cash_book_sync"},
+            {"$set": {"last_sync": now, "transactions_processed": len(transactions)}},
+            upsert=True
+        )
+        
+        return {
+            "success": True,
+            "message": f"Synced {len(transactions)} PRC transactions",
+            "entries_added": entries_added,
+            "totals": {
+                "prc_income": income_total,
+                "prc_consumed": expense_total,
+                "prc_burned": burn_total,
+                "inr_income_value": round(income_total * PRC_TO_INR_RATE, 2),
+                "inr_consumed_value": round(expense_total * PRC_TO_INR_RATE, 2)
+            }
+        }
+    except Exception as e:
+        logging.error(f"Error syncing PRC to books: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== MONTHLY FINANCIAL REPORTS ====================
+
+@api_router.get("/admin/reports/profit-loss-statement")
+async def get_profit_loss_statement(month: int = None, year: int = None):
+    """Generate Profit & Loss Statement for a month"""
+    try:
+        now = datetime.utcnow()
+        target_month = month or now.month
+        target_year = year or now.year
+        
+        # Date range for the month
+        start_date = datetime(target_year, target_month, 1)
+        if target_month == 12:
+            end_date = datetime(target_year + 1, 1, 1)
+        else:
+            end_date = datetime(target_year, target_month + 1, 1)
+        
+        start_str = start_date.isoformat()
+        end_str = end_date.isoformat()
+        
+        # Get Cash Book entries for the month
+        cash_entries = await db.cash_book.find({
+            "created_at": {"$gte": start_str, "$lt": end_str}
+        }).to_list(length=None)
+        
+        bank_entries = await db.bank_book.find({
+            "created_at": {"$gte": start_str, "$lt": end_str}
+        }).to_list(length=None)
+        
+        # Categorize income and expenses
+        income_categories = {}
+        expense_categories = {}
+        
+        for entry in cash_entries + bank_entries:
+            category = entry.get("category", "other")
+            amount = entry.get("amount", 0)
+            entry_type = entry.get("entry_type", "")
+            
+            if entry_type in ["capital", "income", "transfer_in"]:
+                if category not in income_categories:
+                    income_categories[category] = 0
+                income_categories[category] += amount
+            elif entry_type in ["expense", "transfer_out"]:
+                if category not in expense_categories:
+                    expense_categories[category] = 0
+                expense_categories[category] += amount
+        
+        total_income = sum(income_categories.values())
+        total_expenses = sum(expense_categories.values())
+        net_profit = total_income - total_expenses
+        
+        # Get PRC metrics for the month
+        prc_transactions = await db.transactions.find({
+            "created_at": {"$gte": start_str, "$lt": end_str}
+        }).to_list(length=None)
+        
+        prc_mined = sum(t.get("amount", 0) for t in prc_transactions if t.get("type") in ["mining", "tap_game", "referral"])
+        prc_consumed = sum(t.get("amount", 0) for t in prc_transactions if t.get("type") in ["order", "bill_payment_request", "gift_voucher_request"])
+        prc_burned = sum(t.get("amount", 0) for t in prc_transactions if t.get("type") == "prc_burn")
+        
+        return {
+            "report_type": "Profit & Loss Statement",
+            "period": f"{start_date.strftime('%B %Y')}",
+            "month": target_month,
+            "year": target_year,
+            "income": {
+                "categories": income_categories,
+                "total": round(total_income, 2)
+            },
+            "expenses": {
+                "categories": expense_categories,
+                "total": round(total_expenses, 2)
+            },
+            "net_profit": round(net_profit, 2),
+            "profit_margin": round((net_profit / total_income * 100) if total_income > 0 else 0, 2),
+            "prc_metrics": {
+                "mined": round(prc_mined, 2),
+                "consumed": round(prc_consumed, 2),
+                "burned": round(prc_burned, 2),
+                "net_liability": round((prc_mined - prc_consumed - prc_burned) * PRC_TO_INR_RATE, 2)
+            },
+            "generated_at": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logging.error(f"Error generating P&L statement: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/reports/balance-sheet")
+async def get_balance_sheet():
+    """Generate Balance Sheet"""
+    try:
+        # Get account balances
+        cash_account = await db.company_accounts.find_one({"account_type": "cash"})
+        bank_account = await db.company_accounts.find_one({"account_type": "bank"})
+        
+        cash_balance = cash_account.get("current_balance", 0) if cash_account else 0
+        bank_balance = bank_account.get("current_balance", 0) if bank_account else 0
+        
+        # Get total PRC in circulation (liability)
+        total_prc = await db.users.aggregate([
+            {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
+        ]).to_list(length=1)
+        prc_liability = total_prc[0]["total"] if total_prc else 0
+        prc_liability_inr = round(prc_liability * PRC_TO_INR_RATE, 2)
+        
+        # Get capital entries
+        capital_entries = await db.cash_book.find({"category": "capital"}).to_list(length=None)
+        capital_entries += await db.bank_book.find({"category": "capital"}).to_list(length=None)
+        total_capital = sum(e.get("amount", 0) for e in capital_entries)
+        
+        # Calculate retained earnings (simplified)
+        all_income = await db.cash_book.find({"entry_type": "income"}).to_list(length=None)
+        all_income += await db.bank_book.find({"entry_type": "income"}).to_list(length=None)
+        all_expenses = await db.cash_book.find({"entry_type": "expense"}).to_list(length=None)
+        all_expenses += await db.bank_book.find({"entry_type": "expense"}).to_list(length=None)
+        
+        total_income = sum(e.get("amount", 0) for e in all_income)
+        total_expense = sum(e.get("amount", 0) for e in all_expenses)
+        retained_earnings = total_income - total_expense
+        
+        total_assets = cash_balance + bank_balance
+        total_liabilities = prc_liability_inr
+        total_equity = total_capital + retained_earnings
+        
+        return {
+            "report_type": "Balance Sheet",
+            "as_of_date": datetime.utcnow().isoformat(),
+            "assets": {
+                "current_assets": {
+                    "cash_in_hand": round(cash_balance, 2),
+                    "bank_balance": round(bank_balance, 2)
+                },
+                "total_assets": round(total_assets, 2)
+            },
+            "liabilities": {
+                "current_liabilities": {
+                    "prc_redemption_liability": prc_liability_inr,
+                    "prc_in_circulation": round(prc_liability, 2)
+                },
+                "total_liabilities": round(total_liabilities, 2)
+            },
+            "equity": {
+                "capital": round(total_capital, 2),
+                "retained_earnings": round(retained_earnings, 2),
+                "total_equity": round(total_equity, 2)
+            },
+            "balance_check": {
+                "assets": round(total_assets, 2),
+                "liabilities_plus_equity": round(total_liabilities + total_equity, 2),
+                "is_balanced": abs(total_assets - (total_liabilities + total_equity)) < 0.01
+            }
+        }
+    except Exception as e:
+        logging.error(f"Error generating balance sheet: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/reports/prc-flow")
+async def get_prc_flow_report(month: int = None, year: int = None):
+    """Generate PRC Flow Report for a month"""
+    try:
+        now = datetime.utcnow()
+        target_month = month or now.month
+        target_year = year or now.year
+        
+        # Date range
+        start_date = datetime(target_year, target_month, 1)
+        if target_month == 12:
+            end_date = datetime(target_year + 1, 1, 1)
+        else:
+            end_date = datetime(target_year, target_month + 1, 1)
+        
+        start_str = start_date.isoformat()
+        end_str = end_date.isoformat()
+        
+        # Get all PRC transactions for the month
+        transactions = await db.transactions.find({
+            "created_at": {"$gte": start_str, "$lt": end_str}
+        }).to_list(length=None)
+        
+        # Categorize by type
+        inflow = {
+            "mining": 0,
+            "tap_game": 0,
+            "referral": 0,
+            "admin_credit": 0,
+            "cashback": 0,
+            "prc_rain_gain": 0
+        }
+        
+        outflow = {
+            "orders": 0,
+            "bill_payments": 0,
+            "gift_vouchers": 0,
+            "prc_burn": 0,
+            "prc_rain_loss": 0
+        }
+        
+        for txn in transactions:
+            amount = txn.get("amount", 0)
+            txn_type = txn.get("type", "")
+            
+            if txn_type == "mining":
+                inflow["mining"] += amount
+            elif txn_type == "tap_game":
+                inflow["tap_game"] += amount
+            elif txn_type == "referral":
+                inflow["referral"] += amount
+            elif txn_type == "admin_credit":
+                inflow["admin_credit"] += amount
+            elif txn_type == "cashback":
+                inflow["cashback"] += amount
+            elif txn_type == "prc_rain_gain":
+                inflow["prc_rain_gain"] += amount
+            elif txn_type == "order":
+                outflow["orders"] += amount
+            elif txn_type == "bill_payment_request":
+                outflow["bill_payments"] += amount
+            elif txn_type == "gift_voucher_request":
+                outflow["gift_vouchers"] += amount
+            elif txn_type == "prc_burn":
+                outflow["prc_burn"] += amount
+            elif txn_type == "prc_rain_loss":
+                outflow["prc_rain_loss"] += amount
+        
+        total_inflow = sum(inflow.values())
+        total_outflow = sum(outflow.values())
+        net_flow = total_inflow - total_outflow
+        
+        # Get daily breakdown
+        daily_stats = {}
+        for txn in transactions:
+            date_str = txn.get("created_at", "")[:10]
+            if date_str not in daily_stats:
+                daily_stats[date_str] = {"inflow": 0, "outflow": 0}
+            
+            amount = txn.get("amount", 0)
+            txn_type = txn.get("type", "")
+            
+            if txn_type in ["mining", "tap_game", "referral", "admin_credit", "cashback", "prc_rain_gain"]:
+                daily_stats[date_str]["inflow"] += amount
+            else:
+                daily_stats[date_str]["outflow"] += amount
+        
+        return {
+            "report_type": "PRC Flow Report",
+            "period": f"{start_date.strftime('%B %Y')}",
+            "month": target_month,
+            "year": target_year,
+            "inflow": {
+                "breakdown": {k: round(v, 2) for k, v in inflow.items()},
+                "total": round(total_inflow, 2),
+                "inr_value": round(total_inflow * PRC_TO_INR_RATE, 2)
+            },
+            "outflow": {
+                "breakdown": {k: round(v, 2) for k, v in outflow.items()},
+                "total": round(total_outflow, 2),
+                "inr_value": round(total_outflow * PRC_TO_INR_RATE, 2)
+            },
+            "net_flow": {
+                "prc": round(net_flow, 2),
+                "inr_value": round(net_flow * PRC_TO_INR_RATE, 2)
+            },
+            "daily_breakdown": [{
+                "date": date,
+                "inflow": round(stats["inflow"], 2),
+                "outflow": round(stats["outflow"], 2),
+                "net": round(stats["inflow"] - stats["outflow"], 2)
+            } for date, stats in sorted(daily_stats.items())],
+            "generated_at": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logging.error(f"Error generating PRC flow report: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== AUTO EXPENSE CATEGORIZATION ====================
+
+# Keyword patterns for auto-categorization
+CATEGORY_KEYWORDS = {
+    "rent": ["rent", "lease", "property", "office space", "shop rent", "गाळा", "भाडे"],
+    "salary": ["salary", "wages", "payroll", "staff", "employee", "पगार", "वेतन"],
+    "utilities": ["electricity", "water", "gas", "internet", "phone", "mobile", "vij", "पाणी", "विज"],
+    "maintenance": ["repair", "maintenance", "service", "fix", "दुरुस्ती"],
+    "purchase": ["purchase", "buy", "stock", "inventory", "खरेदी", "माल"],
+    "travel": ["travel", "transport", "petrol", "diesel", "fuel", "प्रवास", "पेट्रोल"],
+    "marketing": ["marketing", "advertising", "promotion", "ads", "जाहिरात"],
+    "capital": ["capital", "investment", "director", "partner", "भांडवल", "गुंतवणूक"],
+    "vip_fee": ["vip", "membership", "subscription", "सदस्यता"],
+    "ads_income": ["ads", "advertising", "admob", "unity", "जाहिरात उत्पन्न"],
+    "prc_income": ["prc", "mining", "mined"],
+    "prc_redemption": ["redeem", "redemption", "convert"]
+}
+
+# Amount patterns for recurring categorization
+async def get_recurring_patterns(user_id: str = None):
+    """Get recurring amount patterns for auto-categorization"""
+    try:
+        # Find amounts that appear multiple times with same description pattern
+        pipeline = [
+            {"$group": {
+                "_id": {"amount": "$amount", "category": "$category"},
+                "count": {"$sum": 1},
+                "descriptions": {"$addToSet": "$description"}
+            }},
+            {"$match": {"count": {"$gte": 2}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 50}
+        ]
+        
+        cash_patterns = await db.cash_book.aggregate(pipeline).to_list(length=50)
+        bank_patterns = await db.bank_book.aggregate(pipeline).to_list(length=50)
+        
+        return {
+            "cash_patterns": cash_patterns,
+            "bank_patterns": bank_patterns
+        }
+    except Exception as e:
+        logging.error(f"Error getting recurring patterns: {e}")
+        return {"cash_patterns": [], "bank_patterns": []}
+
+@api_router.post("/admin/accounting/auto-categorize")
+async def auto_categorize_entry(description: str, amount: float = 0):
+    """Auto-categorize an entry based on keywords and amount patterns"""
+    try:
+        description_lower = description.lower()
+        suggested_category = "other"
+        confidence = 0.0
+        match_reason = ""
+        
+        # 1. Check keyword patterns first
+        for category, keywords in CATEGORY_KEYWORDS.items():
+            for keyword in keywords:
+                if keyword.lower() in description_lower:
+                    suggested_category = category
+                    confidence = 0.9
+                    match_reason = f"Keyword match: '{keyword}'"
+                    break
+            if confidence > 0:
+                break
+        
+        # 2. Check amount patterns if no keyword match
+        if confidence == 0 and amount > 0:
+            # Check for recurring amounts in database
+            cash_match = await db.cash_book.find_one({"amount": amount})
+            bank_match = await db.bank_book.find_one({"amount": amount})
+            
+            if cash_match and cash_match.get("category"):
+                suggested_category = cash_match["category"]
+                confidence = 0.7
+                match_reason = f"Amount pattern match: ₹{amount} previously categorized as {suggested_category}"
+            elif bank_match and bank_match.get("category"):
+                suggested_category = bank_match["category"]
+                confidence = 0.7
+                match_reason = f"Amount pattern match: ₹{amount} previously categorized as {suggested_category}"
+        
+        # 3. Suggest entry type based on category
+        if suggested_category in ["capital", "vip_fee", "ads_income", "prc_income", "prc_redemption"]:
+            suggested_type = "income"
+        elif suggested_category in ["rent", "salary", "utilities", "maintenance", "purchase", "travel", "marketing"]:
+            suggested_type = "expense"
+        else:
+            suggested_type = "expense"  # Default to expense for uncategorized
+        
+        return {
+            "suggested_category": suggested_category,
+            "suggested_type": suggested_type,
+            "confidence": confidence,
+            "match_reason": match_reason,
+            "all_categories": list(CATEGORY_KEYWORDS.keys()) + ["other"]
+        }
+    except Exception as e:
+        logging.error(f"Error auto-categorizing: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/accounting/category-suggestions")
+async def get_category_suggestions():
+    """Get all available categories with their keywords"""
+    return {
+        "categories": [
+            {"id": "capital", "label": "Capital Investment", "keywords": CATEGORY_KEYWORDS["capital"], "type": "income"},
+            {"id": "vip_fee", "label": "VIP Membership Fee", "keywords": CATEGORY_KEYWORDS["vip_fee"], "type": "income"},
+            {"id": "ads_income", "label": "Ads Income", "keywords": CATEGORY_KEYWORDS["ads_income"], "type": "income"},
+            {"id": "prc_income", "label": "PRC Mining Value", "keywords": CATEGORY_KEYWORDS["prc_income"], "type": "income"},
+            {"id": "prc_redemption", "label": "PRC Redemption", "keywords": CATEGORY_KEYWORDS["prc_redemption"], "type": "income"},
+            {"id": "rent", "label": "Rent", "keywords": CATEGORY_KEYWORDS["rent"], "type": "expense"},
+            {"id": "salary", "label": "Salary & Wages", "keywords": CATEGORY_KEYWORDS["salary"], "type": "expense"},
+            {"id": "utilities", "label": "Utilities", "keywords": CATEGORY_KEYWORDS["utilities"], "type": "expense"},
+            {"id": "maintenance", "label": "Maintenance", "keywords": CATEGORY_KEYWORDS["maintenance"], "type": "expense"},
+            {"id": "purchase", "label": "Purchase", "keywords": CATEGORY_KEYWORDS["purchase"], "type": "expense"},
+            {"id": "travel", "label": "Travel & Transport", "keywords": CATEGORY_KEYWORDS["travel"], "type": "expense"},
+            {"id": "marketing", "label": "Marketing", "keywords": CATEGORY_KEYWORDS["marketing"], "type": "expense"},
+            {"id": "other", "label": "Other", "keywords": [], "type": "expense"}
+        ]
+    }
+
 
 # Include all API routes (must be after all route definitions)
 app.include_router(api_router)
