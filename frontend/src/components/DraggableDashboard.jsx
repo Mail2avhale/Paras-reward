@@ -42,30 +42,27 @@ const SortableCard = ({ id, children, isEditMode, isLocked }) => {
   return (
     <div ref={setNodeRef} style={style} className="relative">
       {isEditMode && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.8 }}
-          className={`absolute left-2 top-2 z-20 ${
+        <div
+          className={`absolute left-2 top-2 z-20 touch-none ${
             isLocked ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'
           }`}
           {...(isLocked ? {} : { ...attributes, ...listeners })}
         >
-          <div className={`p-2.5 rounded-xl shadow-lg ${
+          <div className={`p-3 rounded-xl shadow-lg select-none ${
             isLocked 
               ? 'bg-gray-400' 
-              : 'bg-gradient-to-br from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700'
+              : 'bg-gradient-to-br from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 active:scale-95'
           }`}>
             {isLocked ? (
-              <Lock className="w-5 h-5 text-white" />
+              <Lock className="w-6 h-6 text-white pointer-events-none" />
             ) : (
-              <GripVertical className="w-5 h-5 text-white" />
+              <GripVertical className="w-6 h-6 text-white pointer-events-none" />
             )}
           </div>
-        </motion.div>
+        </div>
       )}
       <div className={`transition-all duration-200 ${
-        isEditMode ? 'pt-2 ring-2 ring-purple-300 ring-offset-2 rounded-2xl bg-purple-50/50' : ''
+        isEditMode ? 'pt-14 ring-2 ring-purple-300 ring-offset-2 rounded-2xl bg-purple-50/30' : ''
       }`}>
         {children}
       </div>
