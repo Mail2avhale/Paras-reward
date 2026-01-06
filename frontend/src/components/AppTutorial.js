@@ -225,7 +225,7 @@ const AnimatedGift = () => (
   </motion.div>
 );
 
-// Tutorial Slides Data
+// Tutorial Slides Data with Mascot Integration
 const tutorialSlides = [
   {
     id: 'welcome',
@@ -233,6 +233,7 @@ const tutorialSlides = [
     subtitle: 'तुमचा reward journey सुरू करा',
     description: 'Mining करा, Refer करा, आणि exciting rewards मिळवा!',
     animation: <AnimatedCoin />,
+    mascot: { emotion: 'waving', message: 'नमस्कार! मी Paras Buddy!' },
     color: 'from-yellow-500 to-orange-600',
     tips: ['दररोज mining करा', 'Friends ना refer करा', 'VIP बना आणि जास्त कमवा']
   },
@@ -259,6 +260,7 @@ const tutorialSlides = [
         </motion.div>
       </motion.div>
     ),
+    mascot: { emotion: 'mining', message: 'Mining सुरू करा!' },
     color: 'from-purple-600 to-blue-600',
     tips: ['VIP members ला 2x PRC मिळतो', 'Referrals वाढवा = Mining speed वाढते', 'दररोज login करा']
   },
@@ -268,6 +270,7 @@ const tutorialSlides = [
     subtitle: 'Team बनवा, जास्त कमवा',
     description: 'तुमचा referral code share करा. तुमच्या 5 levels पर्यंतच्या team च्या mining वर bonus मिळतो!',
     animation: <AnimatedNetwork />,
+    mascot: { emotion: 'excited', message: 'Team बनवा!' },
     color: 'from-blue-600 to-cyan-500',
     tips: ['Level 1: Direct referrals', 'Level 2-5: Indirect bonus', 'Active referrals = जास्त bonus']
   },
@@ -277,6 +280,7 @@ const tutorialSlides = [
     subtitle: 'Surprise rewards!',
     description: 'Random वेळी colorful drops पडतात. Tap करा आणि PRC जिंका! पण सावधान - काही drops negative असतात! 🎲',
     animation: <AnimatedRain />,
+    mascot: { emotion: 'celebrating', message: 'Tap करा! 🎯' },
     color: 'from-indigo-600 to-purple-600',
     tips: ['कोणताही color = surprise PRC', 'जितके जास्त taps, तितके जास्त chances', 'Daily limit आहे']
   },
@@ -286,6 +290,7 @@ const tutorialSlides = [
     subtitle: 'PRC ने shopping करा',
     description: 'तुमचे PRC वापरून real products खरेदी करा. VIP members साठी exclusive deals!',
     animation: <AnimatedShop />,
+    mascot: { emotion: 'rich', message: 'Shopping time!' },
     color: 'from-green-600 to-teal-500',
     tips: ['PRC = Real value', 'Home delivery available', 'VIP exclusive products']
   },
@@ -295,6 +300,7 @@ const tutorialSlides = [
     subtitle: 'PRC चे रुपये करा',
     description: 'PhonePe vouchers घ्या किंवा Mobile/Electricity bills भरा - सर्व PRC ने!',
     animation: <AnimatedGift />,
+    mascot: { emotion: 'happy', message: 'Rewards मिळवा!' },
     color: 'from-pink-600 to-rose-500',
     tips: ['₹100 पासून vouchers', 'Bills instant pay', 'KYC verified असणे आवश्यक']
   },
@@ -334,6 +340,7 @@ const tutorialSlides = [
         ))}
       </motion.div>
     ),
+    mascot: { emotion: 'cool', message: 'VIP बना!' },
     color: 'from-amber-500 to-yellow-600',
     tips: ['Monthly/Quarterly/Yearly plans', 'सर्व features unlock', 'Priority support']
   },
@@ -353,6 +360,7 @@ const tutorialSlides = [
         </div>
       </motion.div>
     ),
+    mascot: { emotion: 'celebrating', message: 'Let\'s go! 🚀' },
     color: 'from-green-500 to-emerald-600',
     tips: ['Daily login bonus', 'Refer & earn', 'Support: Help section मध्ये']
   }
