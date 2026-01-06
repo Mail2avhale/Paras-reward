@@ -27,6 +27,226 @@ import time
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+# ========== SECURITY CONFIGURATION ==========
+JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
+JWT_ALGORITHM = "HS256"
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 hour
+JWT_REFRESH_TOKEN_EXPIRE_DAYS = 7
+
+# Rate limiting configuration
+RATE_LIMIT_LOGIN_ATTEMPTS = 5  # Max login attempts per minute
+RATE_LIMIT_API_CALLS = 100  # Max API calls per minute for admin
+RATE_LIMIT_WINDOW_SECONDS = 60
+
+# Session timeout (30 minutes)
+SESSION_TIMEOUT_MINUTES = 30
+
+# Rate limiting storage (in-memory, per-process)
+rate_limit_storage = defaultdict(lambda: {"count": 0, "reset_time": time.time()})
+login_attempt_storage = defaultdict(lambda: {"count": 0, "reset_time": time.time(), "locked_until": 0})
+
+# Security bearer
+security = HTTPBearer(auto_error=False)
+
+# ========== JWT UTILITIES ==========
+def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
+    """Create JWT access token"""
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=JWT_ACCESS_TOKEN_EXPIRE_MINUTES))
+    to_encode.update({
+        "exp": expire,
+        "iat": datetime.now(timezone.utc),
+        "type": "access"
+    })
+    return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+def create_refresh_token(data: dict) -> str:
+    """Create JWT refresh token"""
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(days=JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode.update({
+        "exp": expire,
+        "iat": datetime.now(timezone.utc),
+        "type": "refresh"
+    })
+    return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+def verify_token(token: str, token_type: str = "access") -> dict:
+    """Verify JWT token and return payload"""
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        if payload.get("type") != token_type:
+            raise HTTPException(status_code=401, detail=f"Invalid token type. Expected {token_type}")
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+    """Get current user from JWT token"""
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    payload = verify_token(credentials.credentials)
+    uid = payload.get("uid")
+    if not uid:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+    
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0})
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    # Check if session is still valid (not logged out)
+    active_session = await db.admin_sessions.find_one({
+        "uid": uid,
+        "token_id": payload.get("token_id"),
+        "is_active": True
+    })
+    
+    if user.get("role") in ["admin", "sub_admin"] and not active_session:
+        raise HTTPException(status_code=401, detail="Session expired or logged out")
+    
+    return user
+
+async def get_current_admin(user: dict = Depends(get_current_user)) -> dict:
+    """Verify current user is admin"""
+    if user.get("role") not in ["admin", "sub_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+# ========== RATE LIMITING ==========
+def check_rate_limit(key: str, max_requests: int, window_seconds: int = RATE_LIMIT_WINDOW_SECONDS) -> bool:
+    """Check if rate limit exceeded. Returns True if allowed, False if blocked."""
+    current_time = time.time()
+    
+    if current_time > rate_limit_storage[key]["reset_time"]:
+        rate_limit_storage[key] = {"count": 1, "reset_time": current_time + window_seconds}
+        return True
+    
+    if rate_limit_storage[key]["count"] >= max_requests:
+        return False
+    
+    rate_limit_storage[key]["count"] += 1
+    return True
+
+def check_login_rate_limit(identifier: str) -> tuple:
+    """Check login rate limit. Returns (allowed: bool, locked_until: int, attempts_left: int)"""
+    current_time = time.time()
+    key = f"login:{identifier}"
+    
+    # Check if locked
+    if login_attempt_storage[key]["locked_until"] > current_time:
+        return False, int(login_attempt_storage[key]["locked_until"] - current_time), 0
+    
+    # Reset if window expired
+    if current_time > login_attempt_storage[key]["reset_time"]:
+        login_attempt_storage[key] = {"count": 0, "reset_time": current_time + RATE_LIMIT_WINDOW_SECONDS, "locked_until": 0}
+    
+    attempts_left = RATE_LIMIT_LOGIN_ATTEMPTS - login_attempt_storage[key]["count"]
+    return True, 0, attempts_left
+
+def record_login_attempt(identifier: str, success: bool):
+    """Record login attempt"""
+    key = f"login:{identifier}"
+    current_time = time.time()
+    
+    if success:
+        # Reset on successful login
+        login_attempt_storage[key] = {"count": 0, "reset_time": current_time + RATE_LIMIT_WINDOW_SECONDS, "locked_until": 0}
+    else:
+        login_attempt_storage[key]["count"] += 1
+        
+        # Lock for 5 minutes after max attempts
+        if login_attempt_storage[key]["count"] >= RATE_LIMIT_LOGIN_ATTEMPTS:
+            login_attempt_storage[key]["locked_until"] = current_time + 300  # 5 minutes lockout
+
+# ========== ADMIN AUDIT LOGGING ==========
+async def log_admin_action(
+    admin_uid: str,
+    action: str,
+    entity_type: str,
+    entity_id: str = None,
+    details: dict = None,
+    ip_address: str = None,
+    user_agent: str = None,
+    before_data: dict = None,
+    after_data: dict = None
+):
+    """Log admin action for audit trail"""
+    audit_entry = {
+        "audit_id": str(uuid.uuid4()),
+        "admin_uid": admin_uid,
+        "action": action,
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "details": details or {},
+        "ip_address": ip_address,
+        "user_agent": user_agent,
+        "before_data": before_data,
+        "after_data": after_data,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.admin_audit_logs.insert_one(audit_entry)
+    return audit_entry
+
+# ========== IP WHITELISTING ==========
+async def check_ip_whitelist(ip_address: str, uid: str = None) -> bool:
+    """Check if IP is whitelisted for admin access"""
+    # Get security settings
+    settings = await db.admin_security_settings.find_one({"setting_type": "ip_whitelist"})
+    
+    if not settings or not settings.get("enabled", False):
+        return True  # Whitelist not enabled, allow all
+    
+    whitelist = settings.get("whitelist", [])
+    
+    # Check if IP is in whitelist
+    if ip_address in whitelist:
+        return True
+    
+    # Check for CIDR ranges (basic implementation)
+    for allowed_ip in whitelist:
+        if "/" in allowed_ip:
+            # Basic CIDR check (simplified)
+            network = allowed_ip.split("/")[0]
+            if ip_address.startswith(network.rsplit(".", 1)[0]):
+                return True
+    
+    return False
+
+# ========== EMERGENCY LOCKDOWN ==========
+async def get_lockdown_status() -> dict:
+    """Get current system lockdown status"""
+    settings = await db.admin_security_settings.find_one({"setting_type": "lockdown"})
+    if not settings:
+        return {
+            "lockdown_active": False,
+            "lockdown_type": None,
+            "lockdown_reason": None,
+            "lockdown_by": None,
+            "lockdown_at": None
+        }
+    return settings
+
+async def is_system_locked(feature: str = None) -> bool:
+    """Check if system or specific feature is locked"""
+    status = await get_lockdown_status()
+    
+    if not status.get("lockdown_active"):
+        return False
+    
+    lockdown_type = status.get("lockdown_type", "full")
+    
+    if lockdown_type == "full":
+        return True
+    
+    # Partial lockdown - check specific features
+    locked_features = status.get("locked_features", [])
+    return feature in locked_features if feature else False
+
 # MongoDB connection with Atlas-compatible settings
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(
