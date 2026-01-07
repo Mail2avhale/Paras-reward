@@ -3,7 +3,7 @@ import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Coins, Play, Clock, Zap, TrendingUp, Users, AlertCircle, Crown, ArrowLeft, HelpCircle } from 'lucide-react';
+import { Coins, Play, Clock, Star, TrendingUp, Users, AlertCircle, Crown, ArrowLeft, HelpCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link, useNavigate } from 'react-router-dom';
 import notifications from '@/utils/notifications';
@@ -13,36 +13,36 @@ import { useLanguage } from '@/contexts/LanguageContext';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-// Mining page translations
-const miningTranslations = {
-  mining: { mr: "माइनिंग", hi: "माइनिंग", en: "Mining" },
-  startMining: { mr: "माइनिंग सुरू करा", hi: "माइनिंग शुरू करें", en: "Start Mining" },
-  miningActive: { mr: "माइनिंग सक्रिय", hi: "माइनिंग सक्रिय", en: "Mining Active" },
-  miningPaused: { mr: "माइनिंग थांबवले", hi: "माइनिंग रुका हुआ", en: "Mining Paused" },
+// Daily Rewards page translations (AdMob Compliant - No crypto/mining terminology)
+const rewardsTranslations = {
+  dailyRewards: { mr: "दैनिक बक्षिसे", hi: "दैनिक पुरस्कार", en: "Daily Rewards" },
+  startSession: { mr: "सत्र सुरू करा", hi: "सत्र शुरू करें", en: "Start Session" },
+  rewardsActive: { mr: "बक्षिसे सक्रिय", hi: "पुरस्कार सक्रिय", en: "Rewards Active" },
+  sessionPaused: { mr: "सत्र थांबवले", hi: "सत्र रुका हुआ", en: "Session Paused" },
   sessionComplete: { mr: "सत्र पूर्ण", hi: "सत्र पूर्ण", en: "Session Complete" },
   currentSession: { mr: "वर्तमान सत्र", hi: "वर्तमान सत्र", en: "Current Session" },
-  todayMined: { mr: "आज माइन केलेले", hi: "आज माइन किया", en: "Today Mined" },
-  totalMined: { mr: "एकूण माइन", hi: "कुल माइन", en: "Total Mined" },
+  todayCollected: { mr: "आज गोळा केले", hi: "आज इकट्ठा किया", en: "Today Collected" },
+  totalCollected: { mr: "एकूण गोळा", hi: "कुल इकट्ठा", en: "Total Collected" },
   prcBalance: { mr: "PRC शिल्लक", hi: "PRC बैलेंस", en: "PRC Balance" },
   timeRemaining: { mr: "उर्वरित वेळ", hi: "शेष समय", en: "Time Remaining" },
   sessionsToday: { mr: "आज सत्रे", hi: "आज सत्र", en: "Sessions Today" },
-  miningRate: { mr: "माइनिंग दर", hi: "माइनिंग दर", en: "Mining Rate" },
+  rewardRate: { mr: "बक्षीस दर", hi: "पुरस्कार दर", en: "Reward Rate" },
   perHour: { mr: "/तास", hi: "/घंटा", en: "/hour" },
   freeUserWarning: { 
-    mr: "फ्री युजर: PRC 2 दिवसांसाठी वैध",
-    hi: "फ्री यूजर: PRC 2 दिनों के लिए वैध",
-    en: "Free User: PRC valid for 2 days"
+    mr: "फ्री युजर: Points 2 दिवसांसाठी वैध",
+    hi: "फ्री यूजर: Points 2 दिनों के लिए वैध",
+    en: "Free User: Points valid for 2 days"
   },
   upgradeToVip: { mr: "VIP बना", hi: "VIP बनें", en: "Upgrade to VIP" },
-  miningComplete: { mr: "माइनिंग पूर्ण!", hi: "माइनिंग पूर्ण!", en: "Mining Complete!" },
-  earned: { mr: "कमावले", hi: "कमाया", en: "Earned" },
+  sessionDone: { mr: "सत्र पूर्ण!", hi: "सत्र पूर्ण!", en: "Session Done!" },
+  earned: { mr: "मिळाले", hi: "मिला", en: "Collected" },
   goBack: { mr: "मागे जा", hi: "वापस जाएं", en: "Go Back" },
   referralBonus: { mr: "रेफरल बोनस", hi: "रेफरल बोनस", en: "Referral Bonus" },
   inviteFriends: { mr: "मित्रांना आमंत्रित करा", hi: "दोस्तों को आमंत्रित करें", en: "Invite Friends" },
   stats: { mr: "आकडेवारी", hi: "आंकड़े", en: "Stats" },
   sessionEnds: { mr: "सत्र संपते", hi: "सत्र समाप्त", en: "Session Ends" },
-  sessionEarned: { mr: "सत्रात कमावले", hi: "सत्र में कमाया", en: "Session Earned" },
-  baseMiningRate: { mr: "बेस माइनिंग दर", hi: "बेस माइनिंग दर", en: "Base Mining Rate" },
+  sessionCollected: { mr: "सत्रात मिळाले", hi: "सत्र में मिला", en: "Session Points" },
+  baseRate: { mr: "बेस दर", hi: "बेस दर", en: "Base Rate" },
   totalReferralBonus: { mr: "एकूण रेफरल बोनस", hi: "कुल रेफरल बोनस", en: "Total Referral Bonus" },
   vipBonus: { mr: "VIP बोनस", hi: "VIP बोनस", en: "VIP Bonus" },
   claimRewards: { mr: "बक्षीस मिळवा", hi: "इनाम प्राप्त करें", en: "Claim Rewards" },
@@ -50,16 +50,16 @@ const miningTranslations = {
   remainingInSession: { mr: "या सत्रात उर्वरित", hi: "इस सत्र में शेष", en: "remaining in this session" },
   lifetimeValidity: { mr: "आजीवन वैधता", hi: "आजीवन वैधता", en: "Lifetime validity" },
   validFor2Days: { mr: "2 दिवसांसाठी वैध", hi: "2 दिनों के लिए वैध", en: "Valid for 2 days" },
-  startMiningSession: { mr: "माइनिंग सत्र सुरू करा", hi: "माइनिंग सत्र शुरू करें", en: "Start Mining Session" }
+  startRewardsSession: { mr: "बक्षीस सत्र सुरू करा", hi: "पुरस्कार सत्र शुरू करें", en: "Start Rewards Session" }
 };
 
-const Mining = ({ user, onLogout }) => {
+const DailyRewards = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const { language } = useLanguage();
   
   // Local translation function
   const t = (key) => {
-    const translation = miningTranslations[key];
+    const translation = rewardsTranslations[key];
     if (!translation) return key;
     return translation[language] || translation['en'] || key;
   };
