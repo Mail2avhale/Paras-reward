@@ -254,68 +254,21 @@ const DashboardModern = ({ user, onLogout }) => {
     fetchTransactionsPage(newPage);
   };
 
-  // Color mapping for QuickActionButton to ensure Tailwind compiles these classes
-  const colorStyles = {
-    purple: 'bg-gradient-to-br from-purple-500 to-purple-600',
-    pink: 'bg-gradient-to-br from-pink-500 to-pink-600',
-    blue: 'bg-gradient-to-br from-blue-500 to-blue-600',
-    green: 'bg-gradient-to-br from-green-500 to-green-600',
-    teal: 'bg-gradient-to-br from-teal-500 to-emerald-600',
-    orange: 'bg-gradient-to-br from-orange-500 to-orange-600',
-    indigo: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
+  // Navigation handler for BottomNavItem
+  const handleNavigation = (tabName) => {
+    setActiveTab(tabName);
+    const routes = {
+      'home': '/dashboard',
+      'mine': '/mining',
+      'game': '/game',
+      'shop': '/marketplace',
+      'refer': '/referrals',
+      'profile': '/profile'
+    };
+    if (routes[tabName]) {
+      navigate(routes[tabName]);
+    }
   };
-
-  const QuickActionButton = ({ icon: Icon, label, onClick, color = 'purple', customStyle }) => (
-    <button
-      onClick={onClick}
-      className={`flex flex-col items-center justify-center p-4 rounded-2xl text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 ${!customStyle ? (colorStyles[color] || colorStyles.purple) : ''}`}
-      style={customStyle}
-    >
-      <Icon className="w-8 h-8 mb-2" />
-      <span className="text-sm font-semibold">{label}</span>
-    </button>
-  );
-
-  const BottomNavItem = ({ icon: Icon, label, tabName, isActive, isCenterButton = false }) => (
-    <button
-      onClick={() => {
-        setActiveTab(tabName);
-        if (tabName === 'home') {
-          navigate('/dashboard');
-        } else if (tabName === 'mine') {
-          navigate('/mining');
-        } else if (tabName === 'game') {
-          navigate('/game');
-        } else if (tabName === 'shop') {
-          navigate('/marketplace');
-        } else if (tabName === 'refer') {
-          navigate('/referrals');
-        } else if (tabName === 'profile') {
-          navigate('/profile');
-        }
-      }}
-      className={`flex flex-col items-center justify-center flex-1 py-3 transition-colors ${
-        isCenterButton 
-          ? 'relative -mt-6' 
-          : ''
-      } ${
-        isActive 
-          ? 'text-purple-600' 
-          : 'text-gray-500 hover:text-purple-500'
-      }`}
-    >
-      {isCenterButton ? (
-        <div className="bg-gradient-to-br from-purple-600 to-blue-500 p-4 rounded-full shadow-2xl">
-          <Icon className={`w-8 h-8 text-white ${isActive ? 'animate-bounce' : ''}`} />
-        </div>
-      ) : (
-        <>
-          <Icon className={`w-6 h-6 mb-1 ${isActive ? 'animate-bounce' : ''}`} />
-          <span className="text-xs font-medium">{label}</span>
-        </>
-      )}
-    </button>
-  );
 
   if (loading) {
     return (
