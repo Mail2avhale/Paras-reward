@@ -4,7 +4,8 @@ import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import ImageCropUpload from '@/components/ImageCropUpload';
-import { FileText, Upload, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
+import KYCAIVerification from '@/components/KYCAIVerification';
+import { FileText, Upload, CheckCircle, Clock, XCircle, AlertCircle, Sparkles, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import notifications from '@/utils/notifications';
 
