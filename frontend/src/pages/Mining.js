@@ -252,7 +252,6 @@ const Mining = ({ user, onLogout }) => {
         
         <div className="flex items-center gap-3 mb-4">
           <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">{t('mining')}</h1>
-          <SectionHelpButton context="mining" user={user} />
         </div>
         <p className="text-lg text-gray-600 mb-8">
           {language === 'mr' ? 'दैनिक माइनिंग कृतींद्वारे PRC रिवॉर्ड पॉइंट्स कमवा' 
