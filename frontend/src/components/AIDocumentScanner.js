@@ -188,6 +188,13 @@ const AIDocumentScanner = ({ user, onProfileUpdate }) => {
     </div>
   );
 
+  // Handle image captured from ModernImageUpload component
+  const handleModernImageCapture = (imageInfo) => {
+    setImageBase64(imageInfo.base64);
+    setImagePreview(imageInfo.previewUrl);
+    setStep('preview');
+  };
+
   const renderUploadStep = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -200,31 +207,17 @@ const AIDocumentScanner = ({ user, onProfileUpdate }) => {
         </Button>
       </div>
 
-      <div 
-        className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-purple-400 transition-colors cursor-pointer"
-        onClick={() => fileInputRef.current?.click()}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          onChange={handleImageUpload}
-          className="hidden"
-        />
-        <div className="space-y-4">
-          <div className="mx-auto w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center">
-            <Upload className="w-10 h-10 text-purple-600" />
-          </div>
-          <div>
-            <p className="text-lg font-medium text-gray-700">
-              Click to upload या drag & drop करा
-            </p>
-            <p className="text-sm text-gray-500 mt-1">
-              JPG, PNG, WEBP • Max 10MB
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* Modern Image Upload Component with Camera & Gallery */}
+      <ModernImageUpload
+        onImageCapture={handleModernImageCapture}
+        maxSizeMB={2}
+        maxWidth={1200}
+        maxHeight={1200}
+        quality={0.8}
+        label={documentType === 'aadhaar' ? 'Aadhaar Card Upload करा' : 'PAN Card Upload करा'}
+        showCamera={true}
+        className="min-h-[200px]"
+      />
 
       <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
         <div className="flex items-start gap-3">
@@ -232,9 +225,10 @@ const AIDocumentScanner = ({ user, onProfileUpdate }) => {
           <div className="text-sm text-yellow-800">
             <p className="font-semibold">Tips for best results:</p>
             <ul className="mt-1 space-y-1">
-              <li>• Document सरळ आणि पूर्ण दिसायला हवे</li>
-              <li>• चांगल्या lighting मध्ये photo काढा</li>
-              <li>• Blur किंवा धूसर photo टाळा</li>
+              <li>• 📷 Camera: Document चा clear photo काढा</li>
+              <li>• 📁 Gallery: Already saved photo select करा</li>
+              <li>• 💡 चांगल्या lighting मध्ये photo काढा</li>
+              <li>• ✅ Auto-compress होईल (Max 2MB)</li>
             </ul>
           </div>
         </div>
