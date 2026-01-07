@@ -5336,35 +5336,45 @@ async def get_chatbot_history(uid: str, limit: int = 50):
 
 # Page-specific contextual help tips
 CONTEXTUAL_HELP_TIPS = {
-    "mining": {
-        "title": "Mining Help",
+    "daily-rewards": {
+        "title": "Daily Rewards Help",
         "tips": [
-            "Start a 24-hour mining session to earn PRC automatically",
-            "More referrals = higher mining rate bonus",
-            "Claim your PRC before the session ends",
-            "VIP members get lifetime PRC validity"
+            "Start a 24-hour session to collect PRC points",
+            "Invite more friends for bonus points",
+            "Claim your points before the session ends",
+            "VIP members get lifetime points validity"
         ],
-        "ai_prompt": "User is on the Mining page of a fintech rewards app. They want to mine PRC (reward points). Provide 2-3 helpful tips specific to crypto/reward mining, session management, and maximizing earnings. Keep response under 100 words, be encouraging."
+        "ai_prompt": "User is on the Daily Rewards page of a loyalty points app. They can start a session to collect PRC loyalty points. Provide 2-3 helpful tips on session management and collecting points. Keep response under 100 words, be encouraging."
+    },
+    "mining": {
+        "title": "Daily Rewards Help",
+        "tips": [
+            "Start a 24-hour session to collect PRC points",
+            "Invite more friends for bonus points",
+            "Claim your points before the session ends",
+            "VIP members get lifetime points validity"
+        ],
+        "ai_prompt": "User is on the Daily Rewards page of a loyalty points app. They can start a session to collect PRC loyalty points. Provide 2-3 helpful tips on session management and collecting points. Keep response under 100 words, be encouraging."
     },
     "referrals": {
-        "title": "Referral Network Help",
+        "title": "Invite Friends Help",
         "tips": [
-            "Share your referral code to grow your network",
-            "Earn bonuses from 5 levels of referrals",
-            "Active referrals give higher bonuses",
+            "Share your referral code to invite friends",
+            "Earn bonus points when friends join",
+            "Active friends give higher bonuses",
             "Use social sharing to reach more people"
         ],
-        "ai_prompt": "User is on the Referral Dashboard of a fintech app with a 5-level MLM referral system. Provide 2-3 tips on growing their network, activating referrals, and maximizing referral bonuses. Keep response under 100 words."
+        "ai_prompt": "User is on the Referrals page of a loyalty app. They can invite friends and earn bonus PRC points. Provide 2-3 tips on inviting friends, sharing referral codes, and earning bonus points. Keep response under 100 words."
     },
     "dashboard": {
         "title": "Dashboard Help",
         "tips": [
-            "Check your PRC balance and mining status",
+            "Check your PRC points balance here",
             "Quick access to all features from here",
-            "Monitor your referral network growth",
-            "Start mining if session is inactive"
+            "Monitor your friends and rewards",
+            "Start a rewards session if inactive"
         ],
-        "ai_prompt": "User is on the main Dashboard of a fintech rewards app. Provide 2-3 tips on navigating the app, managing their PRC balance, and using key features like mining, referrals, and marketplace. Keep response under 100 words."
+        "ai_prompt": "User is on the main Dashboard of a loyalty rewards app. Provide 2-3 tips on navigating the app, checking their PRC points balance, and using key features like daily rewards, referrals, and marketplace. Keep response under 100 words."
     },
     "marketplace": {
         "title": "Marketplace Help",
@@ -5374,7 +5384,7 @@ CONTEXTUAL_HELP_TIPS = {
             "Check cashback rates before buying",
             "Track orders in your order history"
         ],
-        "ai_prompt": "User is on the Marketplace page where they can buy products using PRC points. Provide 2-3 tips on smart shopping, maximizing cashback, and understanding the VIP benefits. Keep response under 100 words."
+        "ai_prompt": "User is on the Marketplace page where they can buy products using PRC loyalty points. Provide 2-3 tips on smart shopping, maximizing cashback, and understanding the VIP benefits. Keep response under 100 words."
     },
     "profile": {
         "title": "Profile Help",
@@ -5389,12 +5399,12 @@ CONTEXTUAL_HELP_TIPS = {
     "vip": {
         "title": "VIP Membership Help",
         "tips": [
-            "VIP gives lifetime PRC validity",
+            "VIP gives lifetime PRC points validity",
             "Access marketplace and bill payments",
             "Higher cashback on all transactions",
-            "Lower minimum withdrawal limits"
+            "Lower minimum redemption limits"
         ],
-        "ai_prompt": "User is on the VIP Membership page considering upgrading. Provide 2-3 compelling tips about VIP benefits like lifetime PRC validity, marketplace access, higher cashback, and lower withdrawal limits. Keep response under 100 words, be persuasive but honest."
+        "ai_prompt": "User is on the VIP Membership page considering upgrading. Provide 2-3 compelling tips about VIP benefits like lifetime points validity, marketplace access, higher cashback, and lower redemption limits. Keep response under 100 words, be persuasive but honest."
     },
     "game": {
         "title": "Tap Game Help",
@@ -5404,7 +5414,7 @@ CONTEXTUAL_HELP_TIPS = {
             "Compete on the leaderboard",
             "Redeem game points for PRC"
         ],
-        "ai_prompt": "User is on the Tap Game page, an interactive game to earn rewards. Provide 2-3 tips on maximizing game earnings, strategies for high scores, and converting game points to PRC. Keep response under 100 words, be fun and engaging."
+        "ai_prompt": "User is on the Tap Game page, an interactive game to earn rewards. Provide 2-3 tips on maximizing game points, strategies for high scores, and converting game points to PRC. Keep response under 100 words, be fun and engaging."
     },
     "bill-payments": {
         "title": "Bill Payments Help",
