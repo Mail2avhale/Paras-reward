@@ -2071,7 +2071,7 @@ agent_communication:
 
 test_plan:
   current_focus:
-    - "Enhanced VIP Membership Transactions Section"
+    - "KYC Document Upload Camera/Image Fix"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
