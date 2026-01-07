@@ -5329,6 +5329,219 @@ async def get_chatbot_history(uid: str, limit: int = 50):
     
     return {"history": history}
 
+@api_router.post("/ai/scan-document")
+async def ai_scan_document(
+    uid: str,
+    document_type: str,  # aadhaar, pan
+    image_base64: str
+):
+    """AI-powered document scanning - Extract details from Aadhaar/PAN image and auto-fill profile"""
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+    
+    # Validate document type
+    if document_type not in ["aadhaar", "pan"]:
+        raise HTTPException(status_code=400, detail="Invalid document type. Use 'aadhaar' or 'pan'")
+    
+    # Create extraction prompt based on document type
+    if document_type == "aadhaar":
+        extraction_prompt = """Analyze this Aadhaar Card image carefully and extract ALL information visible.
+
+Extract and return in this exact JSON format:
+{
+    "success": true/false,
+    "document_type": "aadhaar",
+    "extracted_data": {
+        "full_name": "Name exactly as shown on card",
+        "aadhaar_number": "12-digit number (format: XXXX XXXX XXXX)",
+        "date_of_birth": "DD/MM/YYYY format",
+        "gender": "Male/Female/Other",
+        "address": "Full address if visible",
+        "father_name": "Father's name if visible",
+        "vid": "Virtual ID if visible"
+    },
+    "confidence": 0-100,
+    "is_valid_document": true/false,
+    "message": "Success message in Marathi OR error description"
+}
+
+Important:
+- If image is blurry or not an Aadhaar card, set success=false
+- Extract EXACT text as shown on card (don't modify names)
+- For Aadhaar number, include spaces (XXXX XXXX XXXX format)
+- Set confidence based on image clarity and readability"""
+    else:
+        extraction_prompt = """Analyze this PAN Card image carefully and extract ALL information visible.
+
+Extract and return in this exact JSON format:
+{
+    "success": true/false,
+    "document_type": "pan",
+    "extracted_data": {
+        "full_name": "Name exactly as shown on card",
+        "pan_number": "10-character PAN (format: ABCDE1234F)",
+        "date_of_birth": "DD/MM/YYYY format",
+        "father_name": "Father's name as shown",
+        "signature_name": "Name in signature area if different"
+    },
+    "confidence": 0-100,
+    "is_valid_document": true/false,
+    "message": "Success message in Marathi OR error description"
+}
+
+Important:
+- If image is blurry or not a PAN card, set success=false
+- Extract EXACT text as shown on card
+- PAN format: 5 letters + 4 digits + 1 letter (e.g., ABCDE1234F)
+- Set confidence based on image clarity"""
+
+    try:
+        # Create chat instance for document scanning
+        scan_chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"scan_{uid}_{document_type}_{str(uuid.uuid4())[:8]}",
+            system_message="You are an expert document scanner. Extract information accurately from Indian identity documents (Aadhaar, PAN). Always respond in valid JSON format only."
+        ).with_model("gemini", "gemini-2.5-flash")
+        
+        # Create message with image
+        image_content = ImageContent(image_base64=image_base64)
+        user_msg = UserMessage(
+            text=extraction_prompt,
+            file_contents=[image_content]
+        )
+        
+        # Get AI response
+        response = await scan_chat.send_message(user_msg)
+        
+        # Parse JSON response
+        import json
+        try:
+            # Extract JSON from response
+            json_start = response.find('{')
+            json_end = response.rfind('}') + 1
+            if json_start != -1 and json_end > json_start:
+                result = json.loads(response[json_start:json_end])
+            else:
+                result = {
+                    "success": False,
+                    "message": "AI response parsing failed",
+                    "confidence": 0
+                }
+        except json.JSONDecodeError:
+            result = {
+                "success": False,
+                "message": "AI response parsing failed - invalid JSON",
+                "confidence": 0
+            }
+        
+        # Log scan attempt
+        scan_log = {
+            "uid": uid,
+            "document_type": document_type,
+            "scan_result": result,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        await db.document_scans.insert_one(scan_log)
+        
+        # If successful and user wants auto-update, update profile
+        if result.get("success") and result.get("confidence", 0) >= 70:
+            extracted = result.get("extracted_data", {})
+            update_data = {}
+            
+            if extracted.get("full_name"):
+                update_data["name"] = extracted["full_name"]
+            if extracted.get("date_of_birth"):
+                update_data["dob"] = extracted["date_of_birth"]
+            if extracted.get("gender"):
+                update_data["gender"] = extracted["gender"]
+            if extracted.get("address"):
+                update_data["address"] = extracted["address"]
+            
+            if document_type == "aadhaar":
+                if extracted.get("aadhaar_number"):
+                    # Store only last 4 digits for security
+                    aadhaar = extracted["aadhaar_number"].replace(" ", "")
+                    update_data["aadhaar_last4"] = aadhaar[-4:] if len(aadhaar) >= 4 else aadhaar
+                    update_data["aadhaar_masked"] = f"XXXX XXXX {aadhaar[-4:]}" if len(aadhaar) >= 4 else aadhaar
+            else:
+                if extracted.get("pan_number"):
+                    update_data["pan_number"] = extracted["pan_number"]
+                if extracted.get("father_name"):
+                    update_data["father_name"] = extracted["father_name"]
+            
+            # Add scan metadata
+            update_data[f"{document_type}_scanned"] = True
+            update_data[f"{document_type}_scan_confidence"] = result.get("confidence", 0)
+            update_data[f"{document_type}_scanned_at"] = datetime.now(timezone.utc).isoformat()
+            
+            result["profile_updates"] = update_data
+        
+        return {
+            "document_type": document_type,
+            "scan_result": result
+        }
+        
+    except Exception as e:
+        logging.error(f"Document scan error: {e}")
+        return {
+            "document_type": document_type,
+            "scan_result": {
+                "success": False,
+                "message": f"Scan failed: {str(e)}",
+                "confidence": 0
+            }
+        }
+
+@api_router.post("/ai/scan-and-update-profile")
+async def ai_scan_and_update_profile(
+    uid: str,
+    document_type: str,
+    image_base64: str,
+    auto_update: bool = True
+):
+    """Scan document and automatically update user profile with extracted data"""
+    # First scan the document
+    scan_result = await ai_scan_document(uid, document_type, image_base64)
+    
+    result = scan_result.get("scan_result", {})
+    
+    if not result.get("success") or result.get("confidence", 0) < 70:
+        return {
+            "success": False,
+            "message": result.get("message", "Document scan failed"),
+            "scan_result": result
+        }
+    
+    # If auto_update is enabled, update the profile
+    if auto_update and result.get("profile_updates"):
+        updates = result["profile_updates"]
+        
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": updates}
+        )
+        
+        # Get updated user profile
+        updated_user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0})
+        
+        return {
+            "success": True,
+            "message": f"✅ {document_type.upper()} scanned successfully! Profile updated.",
+            "extracted_data": result.get("extracted_data", {}),
+            "profile_updates": updates,
+            "updated_profile": updated_user,
+            "confidence": result.get("confidence", 0)
+        }
+    
+    return {
+        "success": True,
+        "message": "Document scanned successfully",
+        "extracted_data": result.get("extracted_data", {}),
+        "profile_updates": result.get("profile_updates", {}),
+        "confidence": result.get("confidence", 0),
+        "auto_updated": False
+    }
+
 # ========== ADMIN SECURITY ENDPOINTS ==========
 
 @api_router.post("/auth/refresh-token")
