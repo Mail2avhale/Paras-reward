@@ -753,6 +753,11 @@ const DashboardModern = ({ user, onLogout }) => {
           setShowKYCModal(false);
         }}
       />
+
+      {/* AI Chatbot - Always visible floating button */}
+      {user && !showTutorial && (
+        <AIChatbotEnhanced user={user} userStats={stats} />
+      )}
     </div>
   );
 };
