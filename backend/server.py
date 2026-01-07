@@ -17200,6 +17200,46 @@ async def get_referral_earnings(user_id: str):
     }
 
 
+@api_router.get("/referrals/{user_id}/levels")
+async def get_referral_levels(user_id: str):
+    """Get referral count by level (5 levels deep)"""
+    
+    level_counts = await count_active_referrals_by_level(user_id)
+    
+    # Also get active vs inactive counts
+    total_active = 0
+    total_inactive = 0
+    
+    referrals_by_level = await get_multi_level_referrals(user_id, max_levels=5)
+    
+    for level, users in referrals_by_level.items():
+        for user in users:
+            # Check if user has been active (mined or made transactions in last 30 days)
+            from datetime import datetime, timedelta, timezone
+            thirty_days_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+            
+            recent_activity = await db.transactions.count_documents({
+                "user_id": user.get("uid"),
+                "created_at": {"$gte": thirty_days_ago}
+            })
+            
+            if recent_activity > 0 or user.get("mining_active"):
+                total_active += 1
+            else:
+                total_inactive += 1
+    
+    return {
+        "level_1": level_counts.get("level_1", 0),
+        "level_2": level_counts.get("level_2", 0),
+        "level_3": level_counts.get("level_3", 0),
+        "level_4": level_counts.get("level_4", 0),
+        "level_5": level_counts.get("level_5", 0),
+        "active_count": total_active,
+        "inactive_count": total_inactive,
+        "total": sum(level_counts.values())
+    }
+
+
 # ========== NOTIFICATION SYSTEM ==========
 async def create_notification(
     user_id: str,
