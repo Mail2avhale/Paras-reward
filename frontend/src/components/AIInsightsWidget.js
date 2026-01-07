@@ -66,10 +66,10 @@ const AIInsightsWidget = ({ userId, userStats, onActionClick }) => {
     if (userStats.prc_balance < 50) {
       newInsights.push({
         type: 'warning',
-        title: 'Low Balance Alert',
-        message: 'Your PRC balance is running low. Start mining to earn more!',
-        action: 'Start Mining',
-        actionPath: '/mining'
+        title: 'Low Points Alert',
+        message: 'Your PRC balance is running low. Start collecting daily rewards!',
+        action: 'Collect Rewards',
+        actionPath: '/daily-rewards'
       });
     } else if (userStats.prc_balance > 500) {
       newInsights.push({
@@ -81,22 +81,22 @@ const AIInsightsWidget = ({ userId, userStats, onActionClick }) => {
       });
     }
 
-    // Mining insights
+    // Daily Rewards insights
     if (!userStats.is_mining_active) {
       newInsights.push({
         type: 'tip',
-        title: 'Mining Inactive',
-        message: 'Start a 24-hour mining session to earn PRC automatically.',
-        action: 'Start Mining',
-        actionPath: '/mining'
+        title: 'Daily Rewards Available',
+        message: 'Start a 24-hour session to collect bonus PRC points.',
+        action: 'Start Session',
+        actionPath: '/daily-rewards'
       });
     } else {
       newInsights.push({
         type: 'growth',
-        title: 'Mining Active! ⛏️',
+        title: 'Points Collecting! ⭐',
         message: 'You\'re earning PRC right now. Keep it going!',
         action: 'View Progress',
-        actionPath: '/mining'
+        actionPath: '/daily-rewards'
       });
     }
 
@@ -104,18 +104,18 @@ const AIInsightsWidget = ({ userId, userStats, onActionClick }) => {
     if (userStats.referral_count === 0) {
       newInsights.push({
         type: 'opportunity',
-        title: 'Grow Your Network',
-        message: 'Invite friends to earn bonus PRC from 5 levels of referrals!',
+        title: 'Invite Friends',
+        message: 'Invite friends and earn bonus PRC when they join!',
         action: 'Invite Friends',
-        actionPath: '/network'
+        actionPath: '/referrals'
       });
     } else if (userStats.referral_count >= 5) {
       newInsights.push({
         type: 'achievement',
-        title: 'Network Builder! 🏆',
-        message: `You have ${userStats.referral_count} referrals earning you bonus PRC!`,
-        action: 'View Network',
-        actionPath: '/network'
+        title: 'Great Network! 🏆',
+        message: `You have ${userStats.referral_count} friends earning you bonus PRC!`,
+        action: 'View Friends',
+        actionPath: '/referrals'
       });
     }
 
