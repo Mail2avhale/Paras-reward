@@ -479,19 +479,19 @@ const translations = {
     en: "Start your reward journey"
   },
   tutorialWelcomeDesc: {
-    mr: "Mining करा, Refer करा, आणि exciting rewards मिळवा!",
-    hi: "Mining करें, Refer करें, और exciting rewards पाएं!",
-    en: "Mine, Refer, and earn exciting rewards!"
+    mr: "बक्षिसे गोळा करा, Refer करा, आणि exciting rewards मिळवा!",
+    hi: "पुरस्कार इकट्ठा करें, Refer करें, और exciting rewards पाएं!",
+    en: "Collect rewards, Refer, and earn exciting prizes!"
   },
   tutorialWelcomeTip1: {
-    mr: "दररोज mining करा",
-    hi: "रोज mining करें",
-    en: "Mine every day"
+    mr: "दररोज बक्षिसे गोळा करा",
+    hi: "रोज पुरस्कार इकट्ठा करें",
+    en: "Collect rewards every day"
   },
   tutorialWelcomeTip2: {
     mr: "Friends ना refer करा",
     hi: "Friends को refer करें",
-    en: "Refer your friends"
+    en: "Invite your friends"
   },
   tutorialWelcomeTip3: {
     mr: "VIP बना आणि जास्त कमवा",
@@ -504,21 +504,21 @@ const translations = {
     en: "Hello! I'm Paras Buddy!"
   },
 
-  // Mining Slide
+  // Daily Rewards Slide
   tutorialMiningTitle: {
-    mr: "PRC Mining ⛏️",
-    hi: "PRC Mining ⛏️",
-    en: "PRC Mining ⛏️"
+    mr: "दैनिक बक्षिसे ⭐",
+    hi: "दैनिक पुरस्कार ⭐",
+    en: "Daily Rewards ⭐"
   },
   tutorialMiningSubtitle: {
-    mr: "तुमचे PRC कमवा",
-    hi: "अपने PRC कमाएं",
-    en: "Earn your PRC"
+    mr: "तुमचे PRC मिळवा",
+    hi: "अपने PRC पाएं",
+    en: "Collect your PRC"
   },
   tutorialMiningDesc: {
-    mr: "Dashboard वर \"Start Mining\" button दाबा आणि automatic PRC कमवायला सुरुवात करा.",
-    hi: "Dashboard पर \"Start Mining\" button दबाएं और automatic PRC कमाना शुरू करें.",
-    en: "Press \"Start Mining\" button on Dashboard and start earning PRC automatically."
+    mr: "Dashboard वर \"Collect Rewards\" button दाबा आणि PRC पॉइंट्स गोळा करायला सुरुवात करा.",
+    hi: "Dashboard पर \"Collect Rewards\" button दबाएं और PRC पॉइंट्स इकट्ठा करना शुरू करें.",
+    en: "Press \"Collect Rewards\" button on Dashboard and start collecting PRC points."
   },
   tutorialMiningTip1: {
     mr: "VIP members ला 2x PRC मिळतो",
@@ -526,8 +526,8 @@ const translations = {
     en: "VIP members get 2x PRC"
   },
   tutorialMiningTip2: {
-    mr: "Referrals वाढवा = Mining speed वाढते",
-    hi: "Referrals बढ़ाएं = Mining speed बढ़ती है",
+    mr: "Referrals वाढवा = जास्त बोनस मिळतो",
+    hi: "Referrals बढ़ाएं = ज्यादा बोनस मिलता है",
     en: "More Referrals = Faster Mining"
   },
   tutorialMiningTip3: {
