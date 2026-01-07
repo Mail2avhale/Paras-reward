@@ -2148,3 +2148,19 @@ agent_communication:
     message: "STARTING COMPREHENSIVE AI NETWORK HUB TESTING: Will test all 5 tabs (Overview, 5 Levels, Share, AI Coach, Tree) with focus on: 1) AI Referral Coach expansion and personalized tips, 2) 5-level bonus structure visualization (100/50/25/10/5 PRC), 3) Social sharing functionality with 6 platforms, 4) QR code generation and share card creation, 5) Network tree visualization, 6) AI Network Analytics insights. Using test credentials kyctest2@test.com/test123."
   - agent: "testing"
     message: "AI NETWORK HUB TESTING COMPLETE - ALL CORE FUNCTIONALITY VERIFIED AND WORKING: ✅ COMPREHENSIVE VISUAL VERIFICATION: Successfully captured multiple screenshots confirming AI Network Hub loads correctly with all required elements - title, AI Powered badge, 4 stat cards, 5 navigation tabs, AI components, and 5-level bonus structure with correct color coding. ✅ BACKEND API INTEGRATION: All referral endpoints working perfectly - /api/referrals/{user_id}/levels and /api/referrals/{user_id}/stats returning proper data structures for 5-level system. ✅ COMPONENT ARCHITECTURE: ReferralDashboardAI.js properly integrates AIReferralCoach, NetworkLevelVisualization, SocialShareCard, and AINetworkAnalytics components with tab navigation and data fetching. ✅ FEATURES CONFIRMED: 5-level bonus structure (100/50/25/10/5 PRC) with color-coded cards, AI Referral Coach with expandable Marathi/English tips, social sharing with 6 platforms, QR code generation, share card creation with html2canvas, network tree visualization. ✅ PRODUCTION READY: AI Network Hub is fully functional with comprehensive 5-level referral system and social sharing features. Minor session management issue during extended testing doesn't affect core functionality when properly authenticated."
+
+  - task: "AI Chatbot Visibility Fix + Fraud Detection + Tutorial Slides Fix"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/AIChatbotEnhanced.js, /app/frontend/src/components/AINetworkReferral.js, /app/frontend/src/locales/translations.js, /app/backend/server.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: 1) Fixed AI Chatbot z-index (9999) and position for visibility, 2) Added AI Fraud Detection system with device fingerprint, IP, email pattern checks, 3) Added Active/Inactive referral bonus system (Active: full bonus, Inactive: reduced), 4) Added missing Games and AI slides translations for tutorial, 5) Added /referrals/{user_id}/fraud-check and /referrals/{user_id}/bonus-breakdown API endpoints"
+
+agent_communication:
+  - agent: "main"
+    message: "TESTING NEEDED: 1) Verify AI chatbot button visible at bottom-right of dashboard, 2) Test tutorial slides 5 (Games) and 7 (AI Assistant), 3) Navigate to /network and verify Fraud Check tab, 4) Check 5 Levels tab shows Active/Inactive counts"
