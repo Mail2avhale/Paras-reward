@@ -42,6 +42,45 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 
 ## What's Been Implemented
 
+### January 7, 2026 (Current Session - Part 12)
+- ✅ **AI Chatbot (GPT-5.2 Powered) - WORKING**
+  
+  **Features:**
+  - 24/7 AI Customer Support Assistant
+  - Marathi + English bilingual support
+  - Context-aware responses (knows user's VIP status, KYC, balance)
+  - Quick question buttons for common queries
+  - Session-based conversation history
+  
+  **Capabilities:**
+  - VIP membership queries (₹299/month, benefits)
+  - Mining information
+  - KYC status check
+  - Wallet balance inquiries
+  - General FAQs
+  
+  **Backend API:** `POST /api/ai/chatbot`
+  **Frontend Component:** `/app/frontend/src/components/AIChatbot.js`
+  **Location:** Dashboard page (bottom-right floating button)
+  
+- ✅ **KYC Auto-Verification (Gemini Vision) - WORKING**
+  
+  **Features:**
+  - AI-powered document scanning
+  - Aadhaar + PAN card verification
+  - Auto name & number extraction
+  - Compare with user-entered data
+  - Auto-approve if confidence ≥ 80%
+  - Manual review flag for uncertain cases
+  
+  **Backend API:** `POST /api/ai/kyc-verify`
+  **Frontend Component:** `/app/frontend/src/components/KYCAIVerification.js`
+  **Location:** KYC page (选择 AI Auto-Verification option)
+  
+  **DB Collections:**
+  - `chatbot_logs` - Chat history
+  - `kyc_ai_logs` - KYC verification attempts
+
 ### January 6, 2026 (Current Session - Part 11)
 - ✅ **Real-time Security Alerts System (TESTED - Working)**
   
