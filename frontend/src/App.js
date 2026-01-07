@@ -58,6 +58,7 @@ const VIPMembership = lazy(() => import("@/pages/VIPMembership"));
 const Leaderboard = lazy(() => import("@/pages/Leaderboard"));
 const ProfileAdvanced = lazy(() => import("@/pages/ProfileAdvanced"));
 const ReferralDashboard = lazy(() => import("@/pages/ReferralDashboard"));
+const ReferralDashboardAI = lazy(() => import("@/pages/ReferralDashboardAI"));
 const GamificationDashboard = lazy(() => import("@/pages/GamificationDashboard"));
 // Removed: ScratchCard game (feature removed)
 const FlashSalesPage = lazy(() => import("@/pages/FlashSalesPage"));
