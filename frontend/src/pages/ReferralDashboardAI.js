@@ -90,9 +90,9 @@ function ReferralDashboardAI({ user, onLogout }) {
             animate={{ rotate: 360 }}
             transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
           >
-            <Network className="w-8 h-8 text-white" />
+            <UserPlus className="w-8 h-8 text-white" />
           </motion.div>
-          <p className="text-gray-600">Loading your network...</p>
+          <p className="text-gray-600">Loading your friends...</p>
         </div>
       </div>
     );
@@ -100,10 +100,10 @@ function ReferralDashboardAI({ user, onLogout }) {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
-    { id: 'network', label: '5 Levels', icon: Network },
-    { id: 'fraud', label: 'Fraud Check', icon: Shield },
+    { id: 'network', label: 'Levels', icon: Users },
+    { id: 'fraud', label: 'Verify', icon: Shield },
     { id: 'share', label: 'Share', icon: Share2 },
-    { id: 'ai', label: 'AI Coach', icon: Brain },
+    { id: 'ai', label: 'AI Tips', icon: Brain },
     { id: 'tree', label: 'Tree', icon: Users },
   ];
 
@@ -120,11 +120,11 @@ function ReferralDashboardAI({ user, onLogout }) {
             <div>
               <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center">
-                  <Network className="w-6 h-6 text-white" />
+                  <UserPlus className="w-6 h-6 text-white" />
                 </div>
-                AI Network Hub
+                Invite Friends Hub
               </h1>
-              <p className="text-gray-600 mt-1">Smart referral system with 5-level bonuses</p>
+              <p className="text-gray-600 mt-1">Smart referral program with bonus rewards</p>
             </div>
             <div className="hidden md:flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-xl">
               <Sparkles className="w-5 h-5" />
@@ -143,7 +143,7 @@ function ReferralDashboardAI({ user, onLogout }) {
           <Card className="p-4 bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm opacity-80">Total Network</p>
+                <p className="text-sm opacity-80">Total Friends</p>
                 <p className="text-2xl font-bold">
                   {Object.values(levelStats || {}).reduce((a, b) => typeof b === 'number' ? a + b : a, 0)}
                 </p>
