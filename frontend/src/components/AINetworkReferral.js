@@ -852,5 +852,6 @@ export {
   NetworkLevelVisualization, 
   SocialShareCard, 
   AINetworkAnalytics,
+  AIFraudDetection,
   LEVEL_CONFIG 
 };
