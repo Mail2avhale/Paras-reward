@@ -5,10 +5,10 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   TrendingUp, Users, ShoppingBag, User, Coins, 
-  Zap, Gift, ArrowUpRight, Clock, CheckCircle,
+  Gift, ArrowUpRight, Clock, CheckCircle,
   Home, Store, UserPlus, Gamepad2, CreditCard, HelpCircle,
-  Globe, ChevronDown, ArrowUp, ArrowDown, Network, Brain,
-  Sparkles, Crown, Wallet, Target, PiggyBank
+  Globe, ChevronDown, ArrowUp, ArrowDown, Brain,
+  Sparkles, Crown, Wallet, Target, PiggyBank, Star, CalendarCheck
 } from 'lucide-react';
 import PRCExpiryTimer from '@/components/PRCExpiryTimer';
 import ProfileCompletionBanner from '@/components/ProfileCompletionBanner';
@@ -16,7 +16,7 @@ import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
 import QuickKYCModal from '@/components/QuickKYCModal';
 import PRCRain from '@/components/PRCRain';
 import AppTutorialAdvanced from '@/components/AppTutorialAdvanced';
-import LiveMiningIndicator from '@/components/LiveMiningIndicator';
+import LiveRewardsIndicator from '@/components/LiveRewardsIndicator';
 import LiveTransparencyPanel from '@/components/LiveTransparencyPanel';
 import SmartUserInsights from '@/components/SmartUserInsights';
 import LiveActivityFeed from '@/components/LiveActivityFeed';
