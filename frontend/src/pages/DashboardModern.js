@@ -465,12 +465,15 @@ const DashboardModern = ({ user, onLogout }) => {
               </div>
 
               {/* Referrals */}
-              <div className="bg-white rounded-2xl p-3 shadow-lg">
+              <div 
+                className="bg-white rounded-2xl p-3 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+                onClick={() => navigate('/network')}
+              >
                 <div className="flex items-center justify-center mb-2">
-                  <Users className="w-5 h-5 text-blue-500" />
+                  <Network className="w-5 h-5 text-purple-500" />
                 </div>
                 <div className="text-lg font-bold text-gray-900 text-center">{stats.referralCount}</div>
-                <div className="text-xs text-gray-500 text-center mt-1">{t('referrals')}</div>
+                <div className="text-xs text-purple-600 text-center mt-1 font-medium">AI Network →</div>
               </div>
             </div>
           </DashboardCard>
