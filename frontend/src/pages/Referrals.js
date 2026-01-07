@@ -467,7 +467,7 @@ const Referrals = ({ user, onLogout }) => {
 
             <div className="mt-6 p-4 bg-white/10 rounded-xl">
               <p className="text-sm opacity-90">
-                <strong>Bonus:</strong> +10% mining rate per active referral (Max 200)
+                <strong>Bonus:</strong> +10% rewards rate per active referral (Max 200)
               </p>
             </div>
           </Card>
@@ -479,7 +479,7 @@ const Referrals = ({ user, onLogout }) => {
               Apply Referral Code
             </h2>
             <p className="text-gray-600 mb-6">
-              Enter a friend's referral code to help them earn bonus mining rewards!
+              Enter a friend's referral code to help them earn bonus rewards!
             </p>
             <div className="space-y-4">
               <Input
