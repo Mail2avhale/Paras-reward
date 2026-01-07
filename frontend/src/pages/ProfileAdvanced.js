@@ -7,13 +7,14 @@ import {
   Upload, Save, X, Check, AlertCircle, Phone, Mail, Home, 
   Building, Key, Fingerprint, Smartphone, FileText, Calendar,
   ChevronRight, CheckCircle, Edit2, Trash2, RefreshCw, XCircle,
-  Download, Clock, RotateCcw, Receipt
+  Download, Clock, RotateCcw, Receipt, Scan, Sparkles
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ImageCropUpload from '@/components/ImageCropUpload';
+import AIDocumentScanner from '@/components/AIDocumentScanner';
 import { locationData } from '@/data/locationData';
 import { useLanguage } from '@/contexts/LanguageContext';
 
