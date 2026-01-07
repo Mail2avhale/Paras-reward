@@ -73,14 +73,14 @@ const translations = {
     en: "Active Users"
   },
   miningActive: {
-    mr: "माइनिंग सुरू • लाइव",
-    hi: "माइनिंग चालू • लाइव",
-    en: "Mining Active • Live"
+    mr: "पॉइंट्स जमा होत आहेत • लाइव",
+    hi: "पॉइंट्स इकट्ठे हो रहे • लाइव",
+    en: "Collecting Points • Live"
   },
   miningPaused: {
-    mr: "माइनिंग थांबले",
-    hi: "माइनिंग रुका",
-    en: "Mining Paused"
+    mr: "सत्र थांबले",
+    hi: "सत्र रुका",
+    en: "Session Paused"
   },
   liveActivity: {
     mr: "लाइव Activity",
