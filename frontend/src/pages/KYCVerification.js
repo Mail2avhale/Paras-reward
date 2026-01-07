@@ -468,12 +468,14 @@ const KYCVerification = ({ user, onLogout }) => {
               </div>
             )}
 
-            {!selectedDocType && (
+            {!selectedDocType && verificationMode === 'manual' && (
               <div className="text-center py-12 text-gray-500">
                 <FileText className="h-16 w-16 mx-auto mb-4 text-gray-300" />
                 <p className="text-lg font-medium">Please select a document type to begin</p>
                 <p className="text-sm mt-2">Choose Aadhaar or PAN card above</p>
               </div>
+            )}
+            </>
             )}
           </Card>
         )}
