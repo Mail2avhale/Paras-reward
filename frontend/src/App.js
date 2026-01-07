@@ -187,7 +187,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
             {/* Protected Routes */}
             <Route path="/dashboard" element={user ? <DashboardModern user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/support" element={user ? <SupportTickets user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-            <Route path="/mining" element={user ? <Mining user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/daily-rewards" element={user ? <DailyRewards user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/mining" element={<Navigate to="/daily-rewards" />} /> {/* Redirect old route */}
             <Route path="/game" element={user ? <TapGame user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             {/* Removed: Treasure Hunt and Scratch Card games */}
             <Route path="/referrals" element={user ? <Referrals user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
