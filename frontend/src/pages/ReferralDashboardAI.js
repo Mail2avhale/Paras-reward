@@ -248,7 +248,7 @@ function ReferralDashboardAI({ user, onLogout }) {
                       className={`p-4 rounded-xl bg-gradient-to-br ${level.color} text-white text-center`}
                     >
                       <span className="text-2xl mb-2 block">{level.icon}</span>
-                      <p className="font-bold text-lg">{level.bonus} PRC</p>
+                      <p className="font-bold text-lg">{level.activeBonus} PRC</p>
                       <p className="text-xs opacity-80">{level.name}</p>
                     </div>
                   ))}
