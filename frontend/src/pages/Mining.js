@@ -251,12 +251,12 @@ const DailyRewards = ({ user, onLogout }) => {
         </button>
         
         <div className="flex items-center gap-3 mb-4">
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">{t('mining')}</h1>
+          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">{t('dailyRewards')}</h1>
         </div>
         <p className="text-lg text-gray-600 mb-8">
-          {language === 'mr' ? 'दैनिक माइनिंग कृतींद्वारे PRC रिवॉर्ड पॉइंट्स कमवा' 
-           : language === 'hi' ? 'दैनिक माइनिंग गतिविधियों द्वारे PRC रिवॉर्ड पॉइंट्स कमाएं'
-           : 'Earn PRC reward points through daily mining activities'}
+          {language === 'mr' ? 'दैनिक सत्रांद्वारे PRC पॉइंट्स गोळा करा' 
+           : language === 'hi' ? 'दैनिक सत्रों द्वारा PRC पॉइंट्स इकट्ठा करें'
+           : 'Collect PRC points through daily reward sessions'}
         </p>
 
         {/* PRC Expiry Alert for Free Users */}
@@ -276,7 +276,7 @@ const DailyRewards = ({ user, onLogout }) => {
                 )}
                 <p className="text-white/90 mb-4">
                   {validityStatus.type === 'expired' 
-                    ? 'Mine new PRC or upgrade to VIP for lifetime validity!'
+                    ? 'Collect new PRC or upgrade to VIP for lifetime validity!'
                     : 'Use it in the marketplace before it expires! Upgrade to VIP for lifetime validity.'}
                 </p>
                 <div className="flex gap-3">
