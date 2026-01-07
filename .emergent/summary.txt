@@ -1,170 +1,176 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to build a comprehensive fintech accounting system, fix UI bugs, and add AdMob compliance. This evolved to include Global Live Features (live stats, insights, activity feeds), critical admin Emergency Controls (stop mining, PRC burn), and UI/UX enhancements like a multi-lingual tutorial and draggable dashboard cards.
+The user's initial goal was to build a comprehensive fintech accounting system, which was completed. Subsequent work involved adding a full suite of admin security features and several AI integrations, including an AI Chatbot, AI-powered KYC auto-verification, and an AI Auto-Fill for KYC documents.
 
-Most recently, the user requested and the agent delivered a full double-entry accounting system, including a Cash/Bank Book, PRC Ledger, Financial Reports (P&L, Balance Sheet), Capital Management, Trial Balance, AR/AP, and more.
-
-After these features were implemented, the user reported two bugs:
-1.  The Live Activity card was showing mock data instead of real-time data (FIXED).
-2.  The mining feature starts but then immediately shows as paused. The user provided a screen recording of this issue. This is the current, unresolved problem.
+The user then reported a bug with the KYC document upload process (camera not working). This led to a series of feature requests and bug fixes, including:
+1.  Fixing the KYC camera/upload bug.
+2.  Fixing a critical admin password vulnerability.
+3.  A complete visual overhaul of the app's tutorial.
+4.  Fixing the AI chatbot's visibility and mobile responsiveness.
+5.  Implementing a sophisticated 5-level AI-powered referral system with social sharing, fraud detection, and active/inactive bonuses.
+6.  Integrating the new referral hub into the main dashboard.
+7.  Implementing AI-powered contextual help on various pages.
+8.  Fixing multiple bugs reported by the user along the way ( values, broken tutorial slides, and runtime errors).
 
 **PRODUCT REQUIREMENTS:**
-1.  **Fintech Accounting System:**
-    *   **[DONE]** Ledger, Cash Book, Bank Book.
-    *   **[DONE]** PRC Ledger and its integration into accounting.
-    *   **[DONE]** Financial Reports (P&L, Balance Sheet, PRC Flow).
-    *   **[DONE]** Auto-Expense Categorization.
-    *   **[DONE]** Capital Management, Trial Balance, Chart of Accounts.
-    *   **[DONE]** Full Accounting Suite (AR, AP, Bank Reconciliation, Financial Ratios, Budgeting, Audit Trail).
-2.  **Global Live Features (Google Policy Compliant):**
-    *   **[DONE]** All phases completed.
-    *   **[FIXED]** Bug where Live Activity card showed mock data.
-3.  **Core Application Features:**
-    *   **[BUG]** Mining starts but immediately shows as paused.
-4.  **UI/UX Enhancements:**
-    *   **[DONE]** Multi-lingual tutorial.
-    *   **[DONE]** Draggable dashboard cards.
-5.  **Future Integrations:**
-    *   **[NOT STARTED]** AdMob + Unity Ads integration.
+Refer to . Key pending items include:
+-   **[IN PROGRESS]** Implement AI Contextual Help without causing runtime errors.
+-   **[NOT STARTED]** AdMob + Unity Ads integration.
+-   **[NOT STARTED]** AI-powered features for users (Smart Financial Advisor, Product Recommendations, etc.).
+-   **[NOT STARTED]** Automated monthly financial reports.
 
 **User's preferred language**: The user communicates in a mix of English and Marathi. The next agent MUST respond in English for technical clarity but be prepared to understand and address requests in Marathi. For example: 
 
 **what currently exists?**
-The application is a full-featured fintech platform with a FastAPI backend and React frontend.
-- **Backend ():** Contains a comprehensive suite of accounting APIs, including Cash/Bank Book, PRC Ledger, Financial Reports, Capital Management, Trial Balance, AR/AP, and more. The mining-related endpoints (, , ) are also present. A bug was fixed in the  endpoint to return real, correctly formatted data.
-- **Frontend ():**
-    - A large number of new admin pages have been created to support the accounting features (e.g., , , , , , etc.).
-    -  and  have been updated with routes and menu links for all new pages.
-    -  was fixed to correctly parse and display real data from the backend.
-    - Multiple files, including  and , were modified to fix an incorrect API path issue where  was being duplicated (). Despite this fix, the mining UI bug persists.
+The application is a full-stack fintech platform (FastAPI backend, React frontend) with a rich feature set. It includes a full accounting suite, a robust admin security system, and numerous AI features.
+
+-   **Backend ():** Includes endpoints for JWT auth, security management, and AI features (chatbot, KYC scan). Recently added new endpoints to support a 5-level referral system, including bonus breakdowns and fraud detection.
+-   **Frontend ():** The UI has been significantly enhanced with a new visually advanced tutorial (), an enhanced AI chatbot (), and a new AI-powered referral hub (). The dashboard () has been updated to integrate these new features.
 
 **Last working item**:
-- **Last item agent was working**: Debugging an issue where the mining session starts but the UI immediately reverts to showing Mining Paused. The user provided a screen recording confirming this behavior. The agent identified and fixed a systemic issue with double  prefixes in frontend API calls, but this did not resolve the core mining bug.
-- **Status**: IN PROGRESS
-- **Agent Testing Done**: N (The agent's fix did not solve the user's reported problem).
-- **Which testing method agent to use?**: Frontend testing agent. The backend APIs appear to function correctly when tested with . The issue is likely in the React component's state management (). The testing agent should be instructed to log in, navigate to the mining page, start a session, and verify that the UI correctly reflects the mining active state and stays that way.
-- **User Testing Done**: N (User confirmed the bug is still present after the agent's attempted fix).
+-   **Last item agent was working**: Fixing a critical runtime error (circular dependency) that occurred when navigating between pages, particularly when returning to the home page. The error started after the agent implemented the  component.
+-   **Status**: IN PROGRESS
+-   **Agent Testing Done**: Y (Agent confirmed the error was gone after removing the feature).
+-   **Which testing method agent to use?**: Manual testing by developer. The agent should re-implement the AI Contextual Help feature carefully, starting with one page, and test navigation extensively to ensure the circular dependency does not reappear.
+-   **User Testing Done**: N (User reported the error, but has not verified the fix, which involved removing the feature entirely).
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Mining stops immediately after starting (P0 - HIGHEST)**
-    - **Description**: After a user clicks Start Mining, the UI briefly shows a loading/active state and then immediately reverts to Mining Paused, even though the backend API call to start mining is successful.
-    - **Status**: IN PROGRESS
-    - **Is recurring issue?**: Y
-    - **Should Test frontend/backend/both after fix?**: frontend
-- **Issue 2: Draggable cards UX (P1)**
-    - **Description**: The draggable cards are far down the dashboard page, requiring significant scrolling to use, which may lead the user to believe the feature is broken.
-    - **Status**: USER VERIFICATION PENDING
-    - **Is recurring issue?**: Y
-    - **Should Test frontend/backend/both after fix?**: frontend
-- **Issue 3: Pagination Verification on History Pages (P2)**
-    - **Description**: A long-standing task to verify that pagination works correctly on the **Voucher history** () and **Bill Payments history** () pages.
-    - **Status**: NOT STARTED
-    - **Is recurring issue?**: Y
-    - **Should Test frontend/backend/both after fix?**: frontend
+-   **Issue 1: Circular Dependency Causes Runtime Errors (P0 - HIGHEST)**
+-   **Issue 2: Draggable cards UX (P2)**
+-   **Issue 3: Pagination Verification on History Pages (P2)**
+
+**Issues Detail:**
+-   **Issue 1: Circular Dependency Causes Runtime Errors (P0 - HIGHEST)**
+    -   **Attempted fixes**: The agent fixed the immediate crash by removing the newly created  component and all its imports from other pages (, ). This stabilized the app but removed the feature the user requested.
+    -   **Next debug checklist**:
+        1.  The root cause is likely related to how lazy-loaded pages import shared components that may, in turn, have their own dependencies.
+        2.  Re-create the  component.
+        3.  Instead of importing the component directly into multiple pages, consider a more centralized or decoupled approach. For example, manage the help modal's state globally in  or a context and render it at the top level.
+        4.  Start by re-integrating the help button on a single page (e.g., ) and thoroughly test navigation to and from that page.
+        5.  If stable, add it to the next page () and repeat testing to isolate the exact import chain causing the loop.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical stability issue. A proper fix will restore the  feature without causing the application to crash during navigation.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: frontend
+    -   **Blocked on other issue**: None
+
+-   **Issue 2: Draggable cards UX (P2)**
+    -   **Description**: The draggable cards on the dashboard are far down the page, requiring significant scrolling. User may think the feature is broken.
+    -   **Status**: USER VERIFICATION PENDING
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: frontend
+    -   **Blocked on other issue**: None
+
+-   **Issue 3: Pagination Verification on History Pages (P2)**
+    -   **Description**: A long-standing task to verify that pagination works correctly on the **Voucher history** () and **Bill Payments history** () pages.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: frontend
+    -   **Blocked on other issue**: None
 
 **In progress Task List**:
-- None. All feature development tasks from the previous session were completed. The only active work is the P0 bug fix.
+-   **Task 1: Re-implement AI Contextual Help Feature (P0)**
+    -   **Where to resume**: Create a new  component and integrate it into the application pages one by one, testing thoroughly at each step to avoid the previous circular dependency error.
+    -   **What will be achieved with this?**: A functional, non-breaking AI help feature that provides contextual information to users on different pages, as requested.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: frontend
+    -   **Blocked on something**: Blocked by **Issue 1**.
 
 **Upcoming and Future Tasks**
-- **Upcoming Tasks:**
-    - **P1: AdMob Integration:** Integrate AdMob + Unity Ads to automate income tracking. This will require using the  subagent.
-    - **P2: Automated Monthly Reports:** Add functionality to automatically generate and email monthly financial reports to the admin.
-- **Future Tasks:**
-    - Implement Progressive Web App (PWA) functionality.
-    - Build the Hierarchical Reporting Structure for user referrals/teams.
-    - Display a graphical representation of the monetary value for Total PRC Used.
-    - Implement a Save PRC feature.
-    - Add an admin backup system.
-    - Add Anti-hack security measures.
-    - Implement automatic interest calculation for the Capital & Liability feature.
+-   **Upcoming Tasks:**
+    -   **P1: AdMob Integration:** Integrate AdMob + Unity Ads to automate income tracking.
+    -   **P2: AI for Users - Smart Financial Advisor:** Provide users with personalized financial tips and recommendations.
+    -   **P2: Automated Monthly Reports:** Add functionality to automatically generate and email monthly financial reports to the admin.
+-   **Future Tasks:**
+    -   AI Product Recommendations for users.
+    -   Implement Progressive Web App (PWA) functionality.
+    -   Build the Hierarchical Reporting Structure for user referrals/teams.
 
 **Completed work in this session**
-- **Comprehensive Accounting System (DONE & TESTED):**
-  - **Cash Book & Bank Book:** Implemented and tested.
-  - **PRC Ledger:** Created a dedicated ledger for PRC transactions with DR/CR entries.
-  - **Financial Reports:** Built pages for Profit & Loss, Balance Sheet, and PRC Flow.
-  - **Capital Management:** Added functionality to manage opening capital and equity.
-  - **Trial Balance & Chart of Accounts:** Implemented foundational accounting tools.
-  - **Full Accounting Suite (Phase 2):** Delivered Accounts Receivable (AR), Accounts Payable (AP), Financial Ratios, and Budgeting features.
-- **Live Activity Feed Bug (FIXED):** Corrected the backend API and frontend component to show real-time user activity instead of mock data.
-- **API Path Correction (DONE):** Found and fixed a systemic bug where frontend calls were using a double  prefix, causing 404 errors.
+-   **KYC Image Upload Bug (FIXED):** Integrated the  component into . Verified by the testing agent.
+-   **Admin Password Verification Flaw (FIXED):** Corrected backend logic to check the correct password field, added a fallback check, and reset the admin password. Verified via curl commands.
+-   **Advanced Interactive Tutorial (DONE):** Replaced the basic tutorial with a new, visually rich, and animated component (). Verified with testing agent.
+-   **AI Chatbot UI/UX Enhancement (DONE):** Fixed visibility, z-index overlap, and mobile-view responsiveness issues. The chatbot is now always visible and correctly sized on all devices.
+-   **AI-Powered Referral System (DONE):**
+    -   Implemented a 5-level referral bonus structure.
+    -   Created a new AI Network Hub page () with tabs for Overview, Levels, Fraud Check, and Sharing.
+    -   Added backend APIs for level stats, fraud checks, and active/inactive bonus breakdowns.
+    -   Designed a Share Card with a QR code and social sharing buttons (WhatsApp, Facebook, X, etc.).
+-   **Dashboard Integration (DONE):** Added clickable links and buttons on the main dashboard () to navigate to the new AI Network Hub.
+-   **Bug Fixes (DONE):**
+    -   **Tutorial Slides:** Added missing translations for slides 5 and 7.
+    -   **NaN in Earnings:** Fixed a bug in the AI Network Analytics card that showed  for potential earnings.
+    -   **Chatbot Overlap:** Repositioned the chatbot and another floating action button to prevent them from overlapping.
 
 **Earlier issues found/mentioned but not fixed**
-- The issues listed under  cover this.
-
-**Known issue recurrence from previous fork**
-- **Draggable cards UX:** User may perceive it as broken due to scrolling.
-- **Pagination Verification:** Not yet started.
+-   None. The agent successfully addressed all issues raised in this session, although the fix for the circular dependency was to remove the feature, which is a temporary measure.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Frontend**: React,  for API calls, , , , . Heavy use of  loading for admin components.
-- **Backend**: FastAPI, MongoDB (via ), Pydantic models.
-- **State Management**: React , , . The current mining bug is likely a state management issue.
+-   **Backend**: FastAPI, MongoDB (), Pydantic,  for password hashing.
+-   **Frontend**: React, , , , ,  for generating shareable images.
+-   **Architecture**: Heavy use of React's  and  for page loading, which is a potential source of the circular dependency issue.
 
 **key DB schema**
-- **New Collections**: , , , , .
-- **Existing Collections**: , , , .
+-   No new collections were added. The  collection is now leveraged more for referral tracking.
+
+**changes in tech stack**
+-    was added to the frontend dependencies for generating social sharing images.
 
 **All files of reference**
--  (Primary file for the current bug)
--  (Contains the mining endpoints: , )
--  (Defines the base  constant, which was part of the previous bug)
-- The user's screen recording of the bug: 
+-    (Manages lazy loading and routing, a key place to investigate the dependency issue).
+-    (The central hub that imports many new components).
+-    (One of the pages where the now-removed  was used).
+-    (The other page where  was used).
+-    (Contains all backend logic).
 
 **key api endpoints**
-- : Starts a new 24-hour mining session.
-- : Fetches the current mining status, including  boolean.
-- : Claims mined PRC.
+-    (MODIFIED: Password verification logic fixed)
+-    (NEW: Fetches referral stats for each of the 5 levels)
+-    (NEW: Provides details on active vs. inactive referral bonuses)
+-    (NEW: An endpoint for AI-based referral fraud analysis)
 
 **Critical Info for New Agent**
-- **IMMEDIATE TASK:** Your top priority is to fix the mining bug. The user has provided a screen recording showing that the UI reverts to Mining Paused immediately after starting a session.
-- **DEBUGGING CHECKLIST:**
-    1.  **Analyze **: The problem is almost certainly here. The previous agent fixed a URL prefix issue (), but the core problem remains.
-    2.  **Examine  hooks**: Look at the dependency arrays of the  hooks that call . It's possible a state change is triggering an immediate re-fetch that returns the old paused state before the backend has fully processed the start request.
-    3.  **Log API Responses**: In , add  statements inside  and  to see the exact sequence of events and the data being returned by the server in the browser console.
-    4.  **Race Condition**: The  function sets loading to false and then  is likely called. This could be a race condition. Consider updating the local state optimistically or chaining the  call inside the  of the  call to ensure sequence.
-- **Do not assume the backend is the problem.** All  tests showed the backend APIs work as expected in isolation. Focus on the frontend state lifecycle.
+-   **Top Priority:** You must fix the circular dependency error properly. The previous agent removed the  feature to stop the app from crashing. Your first task is to re-implement this feature without reintroducing the runtime error. Be very careful with imports and test navigation thoroughly after each change.
+-   **User Interaction:** The user is very hands-on and provides feedback in a mix of English and Marathi. They have a strong preference for visually impressive, eye-catching features with gradients and animations.
+-   **Codebase Complexity:** The frontend has grown complex. The use of  is critical for performance but is the likely cause of the navigation bug. Be mindful of how components and pages import each other.
 
 **documents and test reports created in this job**
-- 
-- 
-- 
-- 
--  (Heavily updated with all new accounting features)
+-    (Updated multiple times to run the testing agent for KYC, Tutorial, and Network Hub features).
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User**: Reports that the Live Activity card is showing mock data. (COMPLETED - Fixed)
-9. **Agent**: Acknowledges and starts investigating the Live Activity bug. (COMPLETED)
-8. **Agent**: Fixes the Live Activity bug and explains the solution. (COMPLETED)
-7. **User**: Confirms and asks to start Phase 2 of the accounting suite. (COMPLETED)
-6. **Agent**: Implements and tests the full Phase 2 Accounting Suite (AR, AP, Ratios, etc.). (COMPLETED)
-5. **User**: Reports that mining starts but then immediately stops. मी mining स्टार्ट केले. Mining started असा मेसेज मिळाला पण परत mining बंद झाले (I started mining. I got a Mining started message, but then mining stopped again). (PENDING)
-4. **Agent**: Acknowledges and starts investigating the mining bug. (COMPLETED)
-3. **User**: Provides a screenshot of a Not Found error. (COMPLETED - Led to /api/api fix)
-2. **Agent**: Fixes the double  prefix issue and asks the user to test again. (COMPLETED)
-1. **User**: Provides a screen recording showing the bug still exists. Mining successful Start hote pn परत Mining pause dakhvte (Mining starts successfully but then shows paused again). (PENDING - This is the current state)
+10. **User**: Asks to see where the Social Sharing and QR code are. (COMPLETED)
+9.  **User**: Reports that the AI Network Hub is not accessible from the dashboard. (COMPLETED)
+8.  **User**: Reports that the Potential earning card shows NaN PRC. (COMPLETED)
+7.  **User**: Asks for an AI Contextual Help feature on pages. (IN PROGRESS)
+6.  **User**: Reports a circular dependency error when switching pages. (IN PROGRESS - Feature removed as a temporary fix)
+5.  **User**: Reports the same error persists when navigating home. (IN PROGRESS)
+4.  **User**: Reports the chatbot button overlaps another button and the chat window is too large on mobile. Also notes the AI referral page doesn't seem updated. (COMPLETED)
+3.  **User**: Reports the chatbot button is still not displayed, slides 5 & 7 of the tutorial are not working, and requests AI concepts for referral fraud/bonuses. (COMPLETED)
+2.  **User**: Asks for an AI-powered way to improve the user dashboard view and notes the chatbot icon is missing. (COMPLETED)
+1.  **User**: Requests an AI-powered referral system with 5 levels and social media sharing. (COMPLETED)
 
 **Project Health Check:**
-- **Broken**: The core mining feature is non-functional from a UI perspective, which is a critical issue for users.
-- **Mocked**: AdMob/Unity Ads integration is not yet implemented.
+-   **Broken**: The AI Contextual Help feature is non-existent as it was deleted to fix a critical runtime error. The underlying circular dependency issue is a major stability risk.
+-   **Mocked**: AdMob/Unity Ads integration is not yet implemented.
 
 **3rd Party Integrations**
-- **@dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities**: Used for draggable dashboard cards.
-- **lottie-react**: Used for animations.
-- **framer-motion**: Used for UI animations.
-- **AdMob + Unity Ads**: Requested, but not yet implemented.
+-   **OpenAI GPT-5.2**: Used for AI Chatbot via . Uses Emergent LLM Key.
+-   **Gemini Pro**: Used for AI Document Scanning (KYC) via . Uses Emergent LLM Key.
+-   **@dnd-kit/core**: Used for draggable dashboard cards.
+-   **lottie-react, framer-motion**: Used for UI animations.
+-   **html2canvas**: (NEW) Used to generate shareable images for the referral card.
 
 **Testing status**
-- **Testing agent used after significant changes**: YES. Used extensively and successfully to validate all backend accounting features.
-- **Troubleshoot agent used after agent stuck in loop**: NO.
-- **Test files created**: Test reports from  to  are available.
-- **Known regressions**: The mining feature is now broken.
+-   **Testing agent used after significant changes**: YES. Successfully used for the KYC fix, new tutorial, and AI Network Hub.
+-   **Troubleshoot agent used after agent stuck in loop**: NO.
+-   **Test files created**: None in this session, but  was updated.
+-   **Known regressions**: The  feature was removed to fix a regression (runtime error).
 
 **Credentials to test flow:**
-- **Admin**:  / 
-- **Regular User**:  / 
+-   **Admin**:  / 
+-   **Regular User**:  /  (A new user / was also created).
 
 **What agent forgot to execute**
-The agent correctly identified and fixed a significant API path issue () but failed to recognize that it was not the root cause of the user's reported mining bug. The agent did not perform a deep enough analysis of the frontend component's state management () to find the true cause of the UI state reverting to paused.</analysis>
+-   The agent did not solve the root cause of the circular dependency error. Instead, it removed the feature that was triggering it. The core task of implementing AI Contextual Help without errors is still pending and is the highest priority for the next agent.</analysis>

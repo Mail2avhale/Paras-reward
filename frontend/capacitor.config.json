@@ -3,7 +3,7 @@
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://kyc-scanner-app.preview.emergentagent.com",
+    "url": "https://smart-fin-hub.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://kyc-scanner-app.preview.emergentagent.com/setup
+   https://smart-fin-hub.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
