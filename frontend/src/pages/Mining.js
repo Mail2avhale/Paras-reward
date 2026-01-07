@@ -619,4 +619,4 @@ const DailyRewards = ({ user, onLogout }) => {
   );
 };
 
-export default Mining;
+export default DailyRewards;
