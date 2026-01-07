@@ -815,8 +815,8 @@ const DashboardModern = ({ user, onLogout }) => {
             onNavigate={handleNavigation}
           />
           <BottomNavItem 
-            icon={Zap} 
-            label={t('mine')} 
+            icon={Star} 
+            label="Rewards" 
             tabName="mine" 
             isActive={activeTab === 'mine'} 
             onNavigate={handleNavigation}
