@@ -691,7 +691,7 @@ const RewardsHome = () => {
                 <ul className="space-y-3 mb-8">
                   <li className="flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>5x Mining Speed</span>
+                    <span>5x Rewards Speed</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-green-500" />
