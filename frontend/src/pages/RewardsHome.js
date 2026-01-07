@@ -22,9 +22,9 @@ const homeTranslations = {
     en: "Earn PRC & Get Rewarded!"
   },
   heroSubtitle: {
-    mr: "आमच्या प्लॅटफॉर्मवर माइन करा, खेळा आणि तुमचे बक्षीस रिडीम करा",
-    hi: "हमारे प्लेटफॉर्म पर माइन करें, खेलें और अपने इनाम रिडीम करें",
-    en: "Mine, Play & Redeem Your Rewards on Our Platform"
+    mr: "आमच्या प्लॅटफॉर्मवर बक्षिसे गोळा करा, खेळा आणि रिडीम करा",
+    hi: "हमारे प्लेटफॉर्म पर पुरस्कार इकट्ठा करें, खेलें और रिडीम करें",
+    en: "Collect, Play & Redeem Your Rewards on Our Platform"
   },
   getStarted: {
     mr: "सुरू करा",
@@ -42,14 +42,14 @@ const homeTranslations = {
     en: "Features"
   },
   dailyMining: {
-    mr: "दैनिक माइनिंग",
-    hi: "दैनिक माइनिंग",
-    en: "Daily Mining"
+    mr: "दैनिक बक्षिसे",
+    hi: "दैनिक पुरस्कार",
+    en: "Daily Rewards"
   },
   dailyMiningDesc: {
-    mr: "आमच्या स्वयंचलित माइनिंग सिस्टमद्वारे दररोज PRC कॉइन्स कमवा. VIP सदस्य 5 पट वेगाने कमवतात!",
-    hi: "हमारी स्वचालित माइनिंग प्रणाली से रोज PRC सिक्के कमाएं। VIP सदस्य 5 गुना तेजी से कमाते हैं!",
-    en: "Earn PRC coins daily through our automated mining system. VIP members earn up to 5x faster!"
+    mr: "आमच्या स्वयंचलित सिस्टमद्वारे दररोज PRC पॉइंट्स गोळा करा. VIP सदस्य 5 पट वेगाने मिळवतात!",
+    hi: "हमारी स्वचालित प्रणाली से रोज PRC पॉइंट्स इकट्ठा करें। VIP सदस्य 5 गुना तेजी से पाते हैं!",
+    en: "Collect PRC points daily through our rewards system. VIP members earn up to 5x faster!"
   },
   referralRewards: {
     mr: "रेफरल बक्षीस",
@@ -57,9 +57,9 @@ const homeTranslations = {
     en: "Referral Rewards"
   },
   referralRewardsDesc: {
-    mr: "मित्रांना आमंत्रित करा आणि 5 स्तरांवर बोनस PRC कमवा. तुमचे नेटवर्क वाढवा आणि कमाई वाढवा.",
-    hi: "दोस्तों को आमंत्रित करें और 5 स्तरों पर बोनस PRC कमाएं। अपना नेटवर्क बढ़ाएं और कमाई बढ़ाएं।",
-    en: "Invite friends and earn bonus PRC on 5 levels. Build your network and maximize earnings."
+    mr: "मित्रांना आमंत्रित करा आणि बोनस PRC कमवा. तुमचे मित्र वाढवा आणि कमाई वाढवा.",
+    hi: "दोस्तों को आमंत्रित करें और बोनस PRC कमाएं। अपने दोस्त बढ़ाएं और कमाई बढ़ाएं।",
+    en: "Invite friends and earn bonus PRC. Build your friends network and maximize earnings."
   },
   giftVouchers: {
     mr: "गिफ्ट व्हाउचर",
@@ -77,9 +77,9 @@ const homeTranslations = {
     en: "Bill Payments"
   },
   billPaymentsDesc: {
-    mr: "तुमचे मोबाइल, DTH, वीज बिल थेट तुमच्या कमावलेल्या PRC कॉइन्सद्वारे भरा.",
-    hi: "अपने मोबाइल, DTH, बिजली बिल सीधे अपने कमाए PRC सिक्कों से भरें।",
-    en: "Pay your mobile, DTH, electricity bills directly using your earned PRC coins."
+    mr: "तुमचे मोबाइल, DTH, वीज बिल थेट तुमच्या कमावलेल्या PRC पॉइंट्सद्वारे भरा.",
+    hi: "अपने मोबाइल, DTH, बिजली बिल सीधे अपने कमाए PRC पॉइंट्स से भरें।",
+    en: "Pay your mobile, DTH, electricity bills directly using your earned PRC points."
   },
   howItWorks: {
     mr: "कसे काम करते",
@@ -97,14 +97,14 @@ const homeTranslations = {
     en: "Sign up for free and join our platform"
   },
   step2Title: {
-    mr: "PRC कमवा",
-    hi: "PRC कमाएं",
-    en: "Earn PRC"
+    mr: "PRC गोळा करा",
+    hi: "PRC इकट्ठा करें",
+    en: "Collect PRC"
   },
   step2Desc: {
-    mr: "दररोज माइनिंग करा, गेम खेळा, आणि रेफर करा",
-    hi: "रोज माइनिंग करें, गेम खेलें, और रेफर करें",
-    en: "Mine daily, play games, and refer friends"
+    mr: "दररोज बक्षिसे गोळा करा, गेम खेळा, आणि रेफर करा",
+    hi: "रोज पुरस्कार इकट्ठा करें, गेम खेलें, और रेफर करें",
+    en: "Collect daily rewards, play games, and refer friends"
   },
   step3Title: {
     mr: "बक्षीस मिळवा",
