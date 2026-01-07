@@ -15,6 +15,7 @@ const API = `${BACKEND_URL}/api`;
 const KYCVerification = ({ user, onLogout }) => {
   const [userData, setUserData] = useState(null);
   const [selectedDocType, setSelectedDocType] = useState(''); // 'aadhaar' or 'pan'
+  const [verificationMode, setVerificationMode] = useState(''); // 'ai' or 'manual'
   const [kycData, setKycData] = useState({
     document_type: '', // 'aadhaar' or 'pan'
     aadhaar_front_base64: '',
