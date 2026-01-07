@@ -1,0 +1,446 @@
+import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import axios from 'axios';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { 
+  MessageCircle, Send, X, Bot, User, 
+  Loader2, Sparkles, HelpCircle, Zap, TrendingUp,
+  Gift, Crown, ChevronRight, Lightbulb, Target,
+  Volume2, VolumeX, Maximize2, Minimize2
+} from 'lucide-react';
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+// AI-powered suggestions based on user stats
+const getAISuggestions = (userStats, userName) => {
+  const suggestions = [];
+  
+  if (userStats?.prcBalance > 1000) {
+    suggestions.push({
+      icon: '🛒',
+      text: 'You have enough PRC to redeem gifts!',
+      action: 'Marketplace बघा',
+      type: 'reward'
+    });
+  }
+  
+  if (userStats?.membershipType !== 'vip') {
+    suggestions.push({
+      icon: '👑',
+      text: 'VIP membership ने 2x mining speed मिळेल',
+      action: 'VIP बघा',
+      type: 'upgrade'
+    });
+  }
+  
+  if (userStats?.referralCount < 5) {
+    suggestions.push({
+      icon: '👥',
+      text: 'Refer friends & earn 100 PRC each!',
+      action: 'Share करा',
+      type: 'referral'
+    });
+  }
+  
+  suggestions.push({
+    icon: '⛏️',
+    text: 'Daily mining ने consistent income मिळतो',
+    action: 'Mining सुरू करा',
+    type: 'mining'
+  });
+  
+  return suggestions.slice(0, 3);
+};
+
+const AIChatbotEnhanced = ({ user, userStats }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [sessionId, setSessionId] = useState(null);
+  const [showPulse, setShowPulse] = useState(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Show pulse animation for a while then stop
+  useEffect(() => {
+    const timer = setTimeout(() => setShowPulse(false), 10000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Add welcome message when chat opens
+  useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      const greeting = new Date().getHours() < 12 ? 'शुभ सकाळ' : new Date().getHours() < 17 ? 'शुभ दुपार' : 'शुभ संध्याकाळ';
+      setMessages([{
+        type: 'bot',
+        text: `${greeting} ${user?.name || 'User'}! 👋\n\nमी Paras Reward चा AI Assistant आहे. मी तुम्हाला कशी मदत करू शकतो?`,
+        timestamp: new Date(),
+        suggestions: getAISuggestions(userStats, user?.name)
+      }]);
+    }
+  }, [isOpen, user?.name, messages.length, userStats]);
+
+  const sendMessage = async (messageText = inputMessage) => {
+    if (!messageText.trim() || isLoading) return;
+
+    const userMessage = {
+      type: 'user',
+      text: messageText,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage('');
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post(`${API}/ai/chatbot`, null, {
+        params: {
+          uid: user.uid,
+          message: messageText,
+          session_id: sessionId
+        }
+      });
+
+      const botMessage = {
+        type: 'bot',
+        text: response.data.response,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, botMessage]);
+      
+      if (!sessionId) {
+        setSessionId(response.data.session_id);
+      }
+    } catch (error) {
+      console.error('Chatbot error:', error);
+      setMessages(prev => [...prev, {
+        type: 'bot',
+        text: 'माफ करा, काही तांत्रिक अडचण आली. कृपया पुन्हा प्रयत्न करा. 🔄',
+        timestamp: new Date(),
+        isError: true
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const quickQuestions = [
+    { icon: '👑', text: "VIP चे फायदे?" },
+    { icon: '⛏️', text: "Mining कसे करायचे?" },
+    { icon: '📋', text: "KYC status?" },
+    { icon: '🎁', text: "PRC redeem?" }
+  ];
+
+  const handleQuickQuestion = (question) => {
+    sendMessage(question);
+  };
+
+  // Floating button when closed
+  if (!isOpen) {
+    return (
+      <motion.div
+        className="fixed bottom-20 right-4 z-[100]"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 260, damping: 20, delay: 1 }}
+      >
+        {/* Attention-grabbing pulse rings */}
+        {showPulse && (
+          <>
+            <motion.div
+              className="absolute inset-0 rounded-full bg-purple-500"
+              animate={{ scale: [1, 2.5], opacity: [0.4, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+            <motion.div
+              className="absolute inset-0 rounded-full bg-purple-500"
+              animate={{ scale: [1, 2], opacity: [0.3, 0] }}
+              transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+            />
+          </>
+        )}
+        
+        {/* Main button */}
+        <motion.button
+          onClick={() => { setIsOpen(true); setShowPulse(false); }}
+          className="relative w-16 h-16 rounded-full shadow-2xl flex items-center justify-center overflow-hidden"
+          style={{
+            background: 'linear-gradient(135deg, #8b5cf6, #6366f1, #4f46e5)',
+            boxShadow: '0 8px 32px rgba(139, 92, 246, 0.4)',
+          }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          data-testid="chatbot-toggle-btn"
+        >
+          {/* Animated gradient overlay */}
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+            animate={{ x: [-100, 100] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          />
+          
+          <Bot className="w-8 h-8 text-white relative z-10" />
+          
+          {/* AI badge */}
+          <motion.span 
+            className="absolute -top-1 -right-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-[10px] font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-lg"
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          >
+            AI
+          </motion.span>
+        </motion.button>
+        
+        {/* Floating label */}
+        <motion.div
+          className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-sm px-4 py-2 rounded-xl shadow-xl whitespace-nowrap"
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: showPulse ? 1 : 0, x: showPulse ? 0 : 10 }}
+          transition={{ delay: 2 }}
+        >
+          <span className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-yellow-400" />
+            मदत हवी? Ask me! 🤖
+          </span>
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-gray-900 rotate-45" />
+        </motion.div>
+      </motion.div>
+    );
+  }
+
+  // Chat window when open
+  return (
+    <AnimatePresence>
+      <motion.div 
+        className={`fixed z-[100] ${isExpanded ? 'inset-4' : 'bottom-20 right-4 w-[380px] max-w-[calc(100vw-2rem)]'}`}
+        initial={{ scale: 0.8, opacity: 0, y: 50 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.8, opacity: 0, y: 50 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        data-testid="chatbot-container"
+      >
+        <Card className="h-full shadow-2xl border-0 overflow-hidden flex flex-col">
+          {/* Header */}
+          <div 
+            className="text-white p-4 flex-shrink-0"
+            style={{
+              background: 'linear-gradient(135deg, #8b5cf6, #6366f1, #4f46e5)',
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <motion.div 
+                  className="relative w-12 h-12 rounded-xl flex items-center justify-center"
+                  style={{ background: 'rgba(255,255,255,0.2)' }}
+                  animate={{ rotate: [0, 5, -5, 0] }}
+                  transition={{ duration: 4, repeat: Infinity }}
+                >
+                  <Bot className="w-7 h-7" />
+                  <motion.div
+                    className="absolute -top-1 -right-1"
+                    animate={{ scale: [1, 1.3, 1], rotate: [0, 180, 360] }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                  >
+                    <Sparkles className="w-4 h-4 text-yellow-300" />
+                  </motion.div>
+                </motion.div>
+                <div>
+                  <h3 className="font-bold text-lg flex items-center gap-2">
+                    Paras AI
+                    <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Beta</span>
+                  </h3>
+                  <p className="text-xs text-purple-200 flex items-center gap-1">
+                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                    Online • मराठी & English
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <button 
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  {isExpanded ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+                </button>
+                <button 
+                  onClick={() => setIsOpen(false)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Messages */}
+          <div className={`flex-1 overflow-y-auto p-4 bg-gradient-to-b from-gray-50 to-white space-y-4 ${isExpanded ? '' : 'h-[350px]'}`}>
+            {messages.map((msg, index) => (
+              <motion.div 
+                key={index}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className={`flex items-start gap-2 max-w-[85%] ${msg.type === 'user' ? 'flex-row-reverse' : ''}`}>
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                    msg.type === 'user' 
+                      ? 'bg-gradient-to-br from-purple-500 to-indigo-600' 
+                      : 'bg-gradient-to-br from-indigo-500 to-purple-600'
+                  }`}>
+                    {msg.type === 'user' ? (
+                      <User className="w-5 h-5 text-white" />
+                    ) : (
+                      <Bot className="w-5 h-5 text-white" />
+                    )}
+                  </div>
+                  <div>
+                    <div className={`rounded-2xl px-4 py-3 ${
+                      msg.type === 'user' 
+                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-br-md' 
+                        : msg.isError 
+                          ? 'bg-red-100 text-red-800 rounded-bl-md'
+                          : 'bg-white text-gray-800 shadow-md rounded-bl-md border border-gray-100'
+                    }`}>
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                    </div>
+                    
+                    {/* AI Suggestions */}
+                    {msg.suggestions && msg.suggestions.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        <p className="text-xs text-gray-500 flex items-center gap-1 ml-1">
+                          <Lightbulb className="w-3 h-3 text-yellow-500" />
+                          AI Suggestions for you:
+                        </p>
+                        {msg.suggestions.map((suggestion, i) => (
+                          <motion.button
+                            key={i}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.1 }}
+                            onClick={() => sendMessage(suggestion.action)}
+                            className="w-full text-left p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-100 hover:border-purple-300 transition-all group"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">{suggestion.icon}</span>
+                                <span className="text-sm text-gray-700">{suggestion.text}</span>
+                              </div>
+                              <ChevronRight className="w-4 h-4 text-purple-400 group-hover:translate-x-1 transition-transform" />
+                            </div>
+                          </motion.button>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <p className={`text-[10px] mt-1 ml-1 ${msg.type === 'user' ? 'text-right text-purple-300' : 'text-gray-400'}`}>
+                      {msg.timestamp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+            
+            {isLoading && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex justify-start"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                    <Bot className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="bg-white rounded-2xl rounded-bl-md px-4 py-3 shadow-md border border-gray-100">
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        {[0, 1, 2].map(i => (
+                          <motion.div
+                            key={i}
+                            className="w-2 h-2 bg-purple-500 rounded-full"
+                            animate={{ y: [0, -6, 0] }}
+                            transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.1 }}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-sm text-gray-500">विचार करत आहे...</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+            
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Quick Questions */}
+          {messages.length <= 1 && (
+            <div className="px-4 py-3 bg-gray-50 border-t flex-shrink-0">
+              <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                <Target className="w-3 h-3" /> Quick questions:
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {quickQuestions.map((q, i) => (
+                  <motion.button
+                    key={i}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.05 }}
+                    onClick={() => handleQuickQuestion(q.text)}
+                    className="text-left p-2.5 bg-white rounded-xl border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all text-sm flex items-center gap-2"
+                  >
+                    <span>{q.icon}</span>
+                    <span className="text-gray-700 truncate">{q.text}</span>
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Input */}
+          <div className="p-4 bg-white border-t flex-shrink-0">
+            <div className="flex gap-2">
+              <Input
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                placeholder="Type your message..."
+                className="flex-1 rounded-xl border-gray-200 focus:border-purple-400 focus:ring-purple-400"
+                disabled={isLoading}
+              />
+              <Button 
+                onClick={() => sendMessage()}
+                disabled={isLoading || !inputMessage.trim()}
+                className="rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 px-4"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
+              </Button>
+            </div>
+            <p className="text-[10px] text-gray-400 text-center mt-2">
+              Powered by AI • मराठी, हिंदी, English supported
+            </p>
+          </div>
+        </Card>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
+export default AIChatbotEnhanced;
