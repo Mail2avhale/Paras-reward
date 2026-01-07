@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   TrendingUp, Users, ShoppingBag, User, Coins, 
   Zap, Gift, ArrowUpRight, Clock, CheckCircle,
   Home, Store, UserPlus, Gamepad2, CreditCard, HelpCircle,
-  Globe, ChevronDown, ArrowUp, ArrowDown, Network, Brain
+  Globe, ChevronDown, ArrowUp, ArrowDown, Network, Brain,
+  Sparkles, Crown, Wallet, Target, PiggyBank
 } from 'lucide-react';
 import PRCExpiryTimer from '@/components/PRCExpiryTimer';
 import ProfileCompletionBanner from '@/components/ProfileCompletionBanner';
@@ -22,18 +24,22 @@ import SecurityTrustCenter from '@/components/SecurityTrustCenter';
 import LiveStatementExport from '@/components/LiveStatementExport';
 import DraggableDashboard, { DashboardCard } from '@/components/DraggableDashboard';
 import AIChatbotEnhanced from '@/components/AIChatbotEnhanced';
+import AIInsightsWidget from '@/components/AIInsightsWidget';
+import AIFinancialSummary from '@/components/AIFinancialSummary';
+import AIStatsCard from '@/components/AIStatsCard';
+import QuickActionsGrid from '@/components/QuickActionsGrid';
 import { useLanguage, LANGUAGES } from '@/contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
 // Default card order for the dashboard (removed user-controls - admin feature only)
 const DEFAULT_CARD_ORDER = [
-  'stats-cards',
-  'smart-insights',
-  'quick-actions',
+  'ai-financial-summary',
+  'ai-stats-grid',
+  'ai-insights',
+  'quick-actions-grid',
   'recent-activity',
   'security-trust',
-  'statement-export',
   'activity-feed',
   'vip-banner'
 ];
