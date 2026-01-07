@@ -9,7 +9,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import notifications from '@/utils/notifications';
 import AnimatedFeedback from '@/components/AnimatedFeedback';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { SectionHelpButton } from '@/components/AIContextualHelp';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
