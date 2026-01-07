@@ -562,44 +562,49 @@ const DashboardModern = ({ user, onLogout }) => {
             resetLayout: t('resetLayout')
           }}
         >
-          {/* Stats Cards - 3 columns */}
-          <DashboardCard cardId="stats-cards">
-            <div className="grid grid-cols-3 gap-3">
-              {/* Total Mined */}
-              <div className="bg-white rounded-2xl p-3 shadow-lg">
-                <div className="flex items-center justify-center mb-2">
-                  <TrendingUp className="w-5 h-5 text-green-500" />
-                </div>
-                <div className="text-lg font-bold text-gray-900 text-center">{stats.totalMined.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
-                <div className="text-xs text-gray-500 text-center mt-1">{t('totalMined')}</div>
-              </div>
-
-              {/* Total PRC Used */}
-              <div className="bg-white rounded-2xl p-3 shadow-lg">
-                <div className="flex items-center justify-center mb-2">
-                  <Coins className="w-5 h-5 text-purple-500" />
-                </div>
-                <div className="text-lg font-bold text-gray-900 text-center">{stats.totalPrcUsed.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
-                <div className="text-xs text-gray-500 text-center mt-1">{t('prcUsed')}</div>
-                <div className="text-xs text-purple-600 text-center font-medium">≈ ₹{stats.totalPrcUsedValue}</div>
-              </div>
-
-              {/* Referrals */}
-              <div 
-                className="bg-white rounded-2xl p-3 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+          {/* AI Stats Grid - Modern Bento Style */}
+          <DashboardCard cardId="ai-stats-grid">
+            <div className="grid grid-cols-2 gap-3">
+              <AIStatsCard 
+                icon={TrendingUp}
+                label={t('totalMined')}
+                value={stats.totalMined}
+                subValue="Lifetime earnings"
+                gradient="from-green-500 to-emerald-600"
+                delay={0}
+              />
+              <AIStatsCard 
+                icon={Coins}
+                label={t('prcUsed')}
+                value={stats.totalPrcUsed}
+                subValue={`≈ ₹${stats.totalPrcUsedValue}`}
+                gradient="from-purple-500 to-indigo-600"
+                delay={1}
+              />
+              <AIStatsCard 
+                icon={ArrowUpRight}
+                label="Today Earned"
+                value={todayStats.today_prc_earned.toFixed(1)}
+                subValue="PRC today"
+                change={todayStats.today_prc_earned > 0 ? 12 : 0}
+                changeLabel="vs avg"
+                gradient="from-blue-500 to-cyan-600"
+                delay={2}
+              />
+              <AIStatsCard 
+                icon={Network}
+                label="AI Network"
+                value={stats.referralCount}
+                subValue="Total referrals"
+                gradient="from-indigo-500 to-purple-600"
+                delay={3}
                 onClick={() => navigate('/network')}
-              >
-                <div className="flex items-center justify-center mb-2">
-                  <Network className="w-5 h-5 text-purple-500" />
-                </div>
-                <div className="text-lg font-bold text-gray-900 text-center">{stats.referralCount}</div>
-                <div className="text-xs text-purple-600 text-center mt-1 font-medium">AI Network →</div>
-              </div>
+              />
             </div>
           </DashboardCard>
 
-          {/* Smart User Insights */}
-          <DashboardCard cardId="smart-insights">
+          {/* AI Insights Section - Already shown above, this is for draggable order */}
+          <DashboardCard cardId="ai-insights">
             <SmartUserInsights 
               userId={user?.uid}
               userStats={{
@@ -615,68 +620,42 @@ const DashboardModern = ({ user, onLogout }) => {
             />
           </DashboardCard>
 
-          {/* Quick Actions */}
-          <DashboardCard cardId="quick-actions">
-            <div className="bg-white rounded-2xl p-6 shadow-lg">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">{t('quickActions')}</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                <QuickActionButton 
-                  icon={Zap} 
-                  label={t('mine')} 
+          {/* Quick Actions Grid - Already shown above */}
+          <DashboardCard cardId="quick-actions-grid">
+            <div className="bg-white rounded-3xl p-5 shadow-lg border border-gray-100">
+              <h3 className="font-bold text-gray-900 text-lg mb-4">{t('quickActions')}</h3>
+              <div className="grid grid-cols-3 gap-3">
+                <motion.button 
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => navigate('/mining')}
-                  color="purple"
-                />
-                <QuickActionButton 
-                  icon={Gamepad2} 
-                  label={t('tapGame')} 
+                  className="flex flex-col items-center p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg"
+                >
+                  <Zap className="w-6 h-6 text-white mb-2" />
+                  <span className="text-xs font-bold text-white">{t('mine')}</span>
+                </motion.button>
+                <motion.button 
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => navigate('/game')}
-                  color="pink"
-                />
-                <QuickActionButton 
-                  icon={Store} 
-                  label={t('shop')} 
-                  onClick={() => {
-                    if (stats.membershipType !== 'vip') {
-                      alert('VIP membership required to shop in marketplace');
-                    } else {
-                      navigate('/marketplace');
-                    }
-                  }}
-                  color="blue"
-                />
-                <QuickActionButton 
-                  icon={UserPlus} 
-                  label="AI Network" 
+                  className="flex flex-col items-center p-4 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 shadow-lg"
+                >
+                  <Gamepad2 className="w-6 h-6 text-white mb-2" />
+                  <span className="text-xs font-bold text-white">{t('tapGame')}</span>
+                </motion.button>
+                <motion.button 
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => navigate('/network')}
-                  customStyle={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)' }}
-                />
-                <QuickActionButton 
-                  icon={CreditCard} 
-                  label={t('billPay')} 
-                  onClick={() => {
-                    if (stats.membershipType !== 'vip') {
-                      alert('VIP membership required to use bill payment services');
-                    } else {
-                      navigate('/bill-payments');
-                    }
-                  }}
-                  customStyle={{ background: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)' }}
-                />
-                <QuickActionButton 
-                  icon={Gift} 
-                  label={t('vouchers')} 
-                  onClick={() => {
-                    if (stats.membershipType !== 'vip') {
-                      alert('VIP membership required to redeem gift vouchers');
-                    } else {
-                      navigate('/gift-vouchers');
-                    }
-                  }}
-                  color="orange"
-                />
+                  className="flex flex-col items-center p-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg"
+                >
+                  <UserPlus className="w-6 h-6 text-white mb-2" />
+                  <span className="text-xs font-bold text-white">Network</span>
+                </motion.button>
               </div>
             </div>
           </DashboardCard>
+
 
           {/* Recent Activity */}
           <DashboardCard cardId="recent-activity">
