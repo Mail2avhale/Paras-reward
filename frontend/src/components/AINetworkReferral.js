@@ -296,6 +296,164 @@ const NetworkLevelVisualization = ({ levelStats, bonusBreakdown }) => {
 };
 
 // ============================================
+// AI FRAUD DETECTION PANEL
+// ============================================
+const AIFraudDetection = ({ userId }) => {
+  const [fraudData, setFraudData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const checkFraud = async () => {
+    setIsLoading(true);
+    try {
+      const response = await axios.get(`${API}/referrals/${userId}/fraud-check`);
+      setFraudData(response.data);
+    } catch (error) {
+      console.error('Fraud check error:', error);
+      toast.error('Failed to check for fraud');
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    if (userId) {
+      checkFraud();
+    }
+  }, [userId]);
+
+  const getFraudStatusColor = (confidence) => {
+    if (confidence >= 0.5) return 'from-red-500 to-red-600';
+    if (confidence >= 0.3) return 'from-yellow-500 to-orange-500';
+    return 'from-green-500 to-emerald-600';
+  };
+
+  return (
+    <Card className="overflow-hidden border-0 shadow-xl">
+      <div 
+        className={`p-4 text-white cursor-pointer bg-gradient-to-r ${
+          fraudData?.total_fraud > 0 ? 'from-red-500 to-red-600' : 'from-green-500 to-emerald-600'
+        }`}
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
+              {fraudData?.total_fraud > 0 ? '🚨' : '✅'}
+            </div>
+            <div>
+              <h3 className="font-bold text-lg">AI Fraud Detection</h3>
+              <p className="text-sm opacity-80">
+                {fraudData?.total_fraud > 0 
+                  ? `${fraudData.total_fraud} suspicious referrals detected` 
+                  : 'No fraud detected'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {isLoading && <RefreshCw className="w-5 h-5 animate-spin" />}
+            <motion.div
+              animate={{ rotate: isExpanded ? 90 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronRight className="w-6 h-6" />
+            </motion.div>
+          </div>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {isExpanded && fraudData && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 space-y-4 bg-gradient-to-b from-gray-50 to-white">
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3 rounded-xl bg-blue-50 text-center">
+                  <p className="text-2xl font-bold text-blue-600">{fraudData.total_referrals}</p>
+                  <p className="text-xs text-gray-600">Total Checked</p>
+                </div>
+                <div className="p-3 rounded-xl bg-red-50 text-center">
+                  <p className="text-2xl font-bold text-red-600">{fraudData.total_fraud}</p>
+                  <p className="text-xs text-gray-600">Fraudulent</p>
+                </div>
+                <div className="p-3 rounded-xl bg-yellow-50 text-center">
+                  <p className="text-2xl font-bold text-yellow-600">{fraudData.total_suspicious}</p>
+                  <p className="text-xs text-gray-600">Suspicious</p>
+                </div>
+              </div>
+
+              {/* Fraud Rate */}
+              <div className="p-4 rounded-xl bg-gradient-to-r from-gray-100 to-gray-50">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Fraud Rate</span>
+                  <span className={`font-bold ${
+                    fraudData.fraud_rate > 10 ? 'text-red-600' : 
+                    fraudData.fraud_rate > 5 ? 'text-yellow-600' : 'text-green-600'
+                  }`}>
+                    {fraudData.fraud_rate}%
+                  </span>
+                </div>
+                <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <motion.div
+                    className={`h-full rounded-full ${
+                      fraudData.fraud_rate > 10 ? 'bg-red-500' : 
+                      fraudData.fraud_rate > 5 ? 'bg-yellow-500' : 'bg-green-500'
+                    }`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(fraudData.fraud_rate, 100)}%` }}
+                    transition={{ duration: 1 }}
+                  />
+                </div>
+              </div>
+
+              {/* Suspicious Users List */}
+              {fraudData.results?.filter(r => r.is_fraud || r.confidence > 0.3).length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-gray-700">⚠️ Flagged Referrals:</p>
+                  {fraudData.results.filter(r => r.is_fraud || r.confidence > 0.3).slice(0, 5).map((result, i) => (
+                    <div key={i} className={`p-3 rounded-xl border ${
+                      result.is_fraud ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm">{result.name}</p>
+                          <p className="text-xs text-gray-500">{result.email}</p>
+                        </div>
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          result.is_fraud ? 'bg-red-500 text-white' : 'bg-yellow-500 text-white'
+                        }`}>
+                          {Math.round(result.confidence * 100)}% suspicious
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 mt-1">{result.reason}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Refresh Button */}
+              <Button 
+                onClick={checkFraud} 
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600"
+              >
+                {isLoading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                Re-scan Network
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </Card>
+  );
+};
+
+
+// ============================================
 // SOCIAL SHARE CARD GENERATOR
 // ============================================
 const SocialShareCard = ({ user, referralCode, onShare }) => {
