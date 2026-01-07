@@ -528,7 +528,7 @@ const translations = {
   tutorialMiningTip2: {
     mr: "Referrals वाढवा = जास्त बोनस मिळतो",
     hi: "Referrals बढ़ाएं = ज्यादा बोनस मिलता है",
-    en: "More Referrals = Faster Mining"
+    en: "More Friends = More Bonus"
   },
   tutorialMiningTip3: {
     mr: "दररोज login करा",
@@ -536,9 +536,9 @@ const translations = {
     en: "Login daily"
   },
   mascotMining: {
-    mr: "Mining सुरू करा!",
-    hi: "Mining शुरू करें!",
-    en: "Start Mining!"
+    mr: "बक्षिसे गोळा करा!",
+    hi: "पुरस्कार इकट्ठा करें!",
+    en: "Collect Rewards!"
   },
 
   // Referral Slide
