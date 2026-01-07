@@ -17240,6 +17240,303 @@ async def get_referral_levels(user_id: str):
     }
 
 
+# ========== AI REFERRAL FRAUD DETECTION & BONUS SYSTEM ==========
+
+# Level-wise bonus configuration
+REFERRAL_LEVEL_BONUS = {
+    1: {"active": 100, "inactive": 20},  # Level 1: 100 PRC for active, 20 PRC for inactive
+    2: {"active": 50, "inactive": 10},   # Level 2: 50 PRC for active, 10 PRC for inactive
+    3: {"active": 25, "inactive": 5},    # Level 3: 25 PRC for active, 5 PRC for inactive
+    4: {"active": 10, "inactive": 2},    # Level 4: 10 PRC for active, 2 PRC for inactive
+    5: {"active": 5, "inactive": 1},     # Level 5: 5 PRC for active, 1 PRC for inactive
+}
+
+async def check_referral_fraud(user_id: str, referred_by: str) -> dict:
+    """
+    AI-powered fraud detection for referral system
+    Returns: {"is_fraud": bool, "reason": str, "confidence": float}
+    """
+    fraud_signals = []
+    confidence = 0.0
+    
+    user = await db.users.find_one({"uid": user_id}, {"_id": 0})
+    referrer = await db.users.find_one({"uid": referred_by}, {"_id": 0})
+    
+    if not user or not referrer:
+        return {"is_fraud": False, "reason": "User not found", "confidence": 0.0}
+    
+    # Check 1: Same device fingerprint
+    if user.get("device_fingerprint") and user.get("device_fingerprint") == referrer.get("device_fingerprint"):
+        fraud_signals.append("Same device fingerprint")
+        confidence += 0.4
+    
+    # Check 2: Same IP address registration
+    if user.get("registration_ip") and user.get("registration_ip") == referrer.get("registration_ip"):
+        fraud_signals.append("Same IP address at registration")
+        confidence += 0.3
+    
+    # Check 3: Similar email patterns (e.g., user1@gmail.com, user2@gmail.com)
+    user_email = user.get("email", "")
+    referrer_email = referrer.get("email", "")
+    if user_email and referrer_email:
+        # Check if emails have similar base (ignoring numbers)
+        import re
+        user_base = re.sub(r'\d+', '', user_email.split('@')[0].lower())
+        referrer_base = re.sub(r'\d+', '', referrer_email.split('@')[0].lower())
+        if user_base and referrer_base and user_base == referrer_base:
+            fraud_signals.append("Similar email pattern")
+            confidence += 0.2
+    
+    # Check 4: Rapid referral pattern (multiple referrals in short time)
+    from datetime import datetime, timedelta, timezone
+    one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    recent_referrals = await db.users.count_documents({
+        "referred_by": referred_by,
+        "created_at": {"$gte": one_hour_ago}
+    })
+    if recent_referrals > 5:
+        fraud_signals.append(f"Rapid referral pattern: {recent_referrals} in 1 hour")
+        confidence += 0.3
+    
+    # Check 5: No activity after registration (bot behavior)
+    user_created = user.get("created_at", "")
+    if user_created:
+        try:
+            created_time = datetime.fromisoformat(user_created.replace('Z', '+00:00'))
+            if datetime.now(timezone.utc) - created_time > timedelta(days=7):
+                # Check if user has any activity
+                activity_count = await db.transactions.count_documents({"user_id": user_id})
+                mining_sessions = user.get("total_mining_sessions", 0)
+                if activity_count == 0 and mining_sessions == 0:
+                    fraud_signals.append("No activity after 7 days")
+                    confidence += 0.25
+        except:
+            pass
+    
+    is_fraud = confidence >= 0.5
+    reason = "; ".join(fraud_signals) if fraud_signals else "No fraud signals detected"
+    
+    return {
+        "is_fraud": is_fraud,
+        "reason": reason,
+        "confidence": round(confidence, 2),
+        "signals": fraud_signals
+    }
+
+async def calculate_referral_bonus(referrer_id: str, referred_id: str, level: int = 1) -> dict:
+    """
+    Calculate referral bonus based on activity status and level
+    Active referrals get full bonus, inactive get reduced bonus
+    """
+    referred_user = await db.users.find_one({"uid": referred_id}, {"_id": 0})
+    if not referred_user:
+        return {"bonus": 0, "status": "user_not_found"}
+    
+    # Check if referred user is active (mined or transacted in last 30 days)
+    from datetime import datetime, timedelta, timezone
+    thirty_days_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    
+    recent_activity = await db.transactions.count_documents({
+        "user_id": referred_id,
+        "created_at": {"$gte": thirty_days_ago}
+    })
+    
+    is_active = recent_activity > 0 or referred_user.get("mining_active", False)
+    
+    # Get bonus based on level and activity
+    level_config = REFERRAL_LEVEL_BONUS.get(level, {"active": 5, "inactive": 1})
+    bonus = level_config["active"] if is_active else level_config["inactive"]
+    
+    # Check for fraud
+    fraud_check = await check_referral_fraud(referred_id, referrer_id)
+    if fraud_check["is_fraud"]:
+        bonus = 0  # No bonus for fraudulent referrals
+    
+    return {
+        "bonus": bonus,
+        "status": "active" if is_active else "inactive",
+        "level": level,
+        "fraud_detected": fraud_check["is_fraud"],
+        "fraud_reason": fraud_check.get("reason", "")
+    }
+
+@api_router.get("/referrals/{user_id}/fraud-check")
+async def check_user_referral_fraud(user_id: str):
+    """Check all referrals for potential fraud"""
+    
+    # Get all direct referrals
+    direct_referrals = await db.users.find({"referred_by": user_id}, {"_id": 0}).to_list(length=100)
+    
+    fraud_results = []
+    total_fraud = 0
+    total_suspicious = 0
+    
+    for referral in direct_referrals:
+        fraud_check = await check_referral_fraud(referral.get("uid"), user_id)
+        
+        result = {
+            "user_id": referral.get("uid"),
+            "email": referral.get("email", "")[:3] + "***",  # Partially hide email
+            "name": referral.get("name", "Unknown"),
+            "is_fraud": fraud_check["is_fraud"],
+            "confidence": fraud_check["confidence"],
+            "reason": fraud_check["reason"]
+        }
+        fraud_results.append(result)
+        
+        if fraud_check["is_fraud"]:
+            total_fraud += 1
+        elif fraud_check["confidence"] > 0.3:
+            total_suspicious += 1
+    
+    return {
+        "total_referrals": len(direct_referrals),
+        "total_fraud": total_fraud,
+        "total_suspicious": total_suspicious,
+        "fraud_rate": round((total_fraud / len(direct_referrals) * 100) if direct_referrals else 0, 2),
+        "results": fraud_results
+    }
+
+@api_router.get("/referrals/{user_id}/bonus-breakdown")
+async def get_referral_bonus_breakdown(user_id: str):
+    """Get detailed bonus breakdown by level and activity status"""
+    
+    referrals_by_level = await get_multi_level_referrals(user_id, max_levels=5)
+    
+    breakdown = {
+        "levels": [],
+        "total_active_bonus": 0,
+        "total_inactive_bonus": 0,
+        "total_potential_bonus": 0,
+        "active_referrals": 0,
+        "inactive_referrals": 0
+    }
+    
+    for level in range(1, 6):
+        level_key = f"level_{level}"
+        users = referrals_by_level.get(level_key, [])
+        
+        level_data = {
+            "level": level,
+            "total_members": len(users),
+            "active_members": 0,
+            "inactive_members": 0,
+            "active_bonus_per_member": REFERRAL_LEVEL_BONUS[level]["active"],
+            "inactive_bonus_per_member": REFERRAL_LEVEL_BONUS[level]["inactive"],
+            "total_earned": 0,
+            "potential_if_all_active": len(users) * REFERRAL_LEVEL_BONUS[level]["active"]
+        }
+        
+        for user in users:
+            bonus_info = await calculate_referral_bonus(user_id, user.get("uid"), level)
+            
+            if bonus_info["status"] == "active":
+                level_data["active_members"] += 1
+                level_data["total_earned"] += bonus_info["bonus"]
+                breakdown["active_referrals"] += 1
+                breakdown["total_active_bonus"] += bonus_info["bonus"]
+            else:
+                level_data["inactive_members"] += 1
+                level_data["total_earned"] += bonus_info["bonus"]
+                breakdown["inactive_referrals"] += 1
+                breakdown["total_inactive_bonus"] += bonus_info["bonus"]
+        
+        breakdown["levels"].append(level_data)
+        breakdown["total_potential_bonus"] += level_data["potential_if_all_active"]
+    
+    return breakdown
+
+@api_router.post("/ai/referral-suggestions")
+async def get_ai_referral_suggestions(uid: str):
+    """AI-powered suggestions to improve referral network"""
+    
+    user = await db.users.find_one({"uid": uid}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get network stats
+    level_counts = await count_active_referrals_by_level(uid)
+    bonus_breakdown = await get_referral_bonus_breakdown(uid)
+    
+    suggestions = []
+    
+    # Suggestion 1: Activate inactive referrals
+    inactive_count = bonus_breakdown.get("inactive_referrals", 0)
+    if inactive_count > 0:
+        potential_gain = sum([
+            l["inactive_members"] * (REFERRAL_LEVEL_BONUS[l["level"]]["active"] - REFERRAL_LEVEL_BONUS[l["level"]]["inactive"])
+            for l in bonus_breakdown.get("levels", [])
+        ])
+        suggestions.append({
+            "type": "activate_inactive",
+            "priority": "high",
+            "title": f"Activate {inactive_count} Inactive Referrals",
+            "description": f"तुमचे {inactive_count} referrals inactive आहेत. त्यांना active केल्यास {potential_gain} PRC extra मिळेल!",
+            "action": "Send reminder to inactive members",
+            "potential_gain": potential_gain
+        })
+    
+    # Suggestion 2: Grow Level 1 referrals
+    level1_count = level_counts.get("level_1", 0)
+    if level1_count < 10:
+        suggestions.append({
+            "type": "grow_network",
+            "priority": "high",
+            "title": f"Grow Your Direct Network",
+            "description": f"तुमचे {level1_count} direct referrals आहेत. 10 पर्यंत वाढवा आणि bonus unlock करा!",
+            "action": "Share referral link on WhatsApp",
+            "target": 10 - level1_count
+        })
+    
+    # Suggestion 3: Focus on deeper levels
+    level2_count = level_counts.get("level_2", 0)
+    if level1_count > 5 and level2_count < level1_count:
+        suggestions.append({
+            "type": "deepen_network",
+            "priority": "medium",
+            "title": "Help Your Referrals Grow",
+            "description": "तुमच्या Level 1 members ना त्यांचे referrals वाढवायला मदत करा. Level 2 bonus मिळेल!",
+            "action": "Share tips with your team",
+            "target": level1_count - level2_count
+        })
+    
+    # Suggestion 4: VIP upgrade
+    if user.get("membership_type") != "vip" and level1_count >= 5:
+        suggestions.append({
+            "type": "upgrade_vip",
+            "priority": "medium",
+            "title": "Upgrade to VIP",
+            "description": "VIP members ला 2x referral bonus मिळतो. तुमच्या network साठी VIP योग्य आहे!",
+            "action": "View VIP plans",
+            "benefit": "2x referral earnings"
+        })
+    
+    # Suggestion 5: Fraud alert
+    fraud_check = await check_user_referral_fraud(uid)
+    if fraud_check.get("total_fraud", 0) > 0:
+        suggestions.append({
+            "type": "fraud_alert",
+            "priority": "critical",
+            "title": "⚠️ Suspicious Activity Detected",
+            "description": f"{fraud_check['total_fraud']} referrals मध्ये suspicious activity आढळली. Genuine referrals आणा!",
+            "action": "Review referral quality",
+            "fraud_count": fraud_check["total_fraud"]
+        })
+    
+    return {
+        "suggestions": suggestions,
+        "network_health": {
+            "total_referrals": sum(level_counts.values()),
+            "active_percentage": round(
+                (bonus_breakdown["active_referrals"] / max(1, bonus_breakdown["active_referrals"] + bonus_breakdown["inactive_referrals"])) * 100, 
+                1
+            ),
+            "fraud_rate": fraud_check.get("fraud_rate", 0)
+        }
+    }
+
+
+
 # ========== NOTIFICATION SYSTEM ==========
 async def create_notification(
     user_id: str,
