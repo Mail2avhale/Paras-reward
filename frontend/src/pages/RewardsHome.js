@@ -399,11 +399,11 @@ const RewardsHome = () => {
                       <Coins className="h-10 w-10 text-blue-900" />
                     </div>
                     <h3 className="text-2xl font-bold">Your PRC Balance</h3>
-                    <p className="text-4xl font-bold text-yellow-400 mt-2">₹0.00</p>
+                    <p className="text-4xl font-bold text-yellow-400 mt-2">0 PRC</p>
                   </div>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center p-3 bg-white/10 rounded-lg">
-                      <span className="text-blue-200">Today's Mining</span>
+                      <span className="text-blue-200">Today's Rewards</span>
                       <span className="font-semibold text-green-400">+12.5 PRC</span>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-white/10 rounded-lg">
