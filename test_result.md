@@ -2141,3 +2141,5 @@ agent_communication:
 agent_communication:
   - agent: "main"
     message: "TESTING NEEDED: AI Network Hub. Test: 1) Login and navigate to /network, 2) Verify 5-Level bonus structure display, 3) Expand AI Referral Coach and check tips, 4) Check AI Network Analytics insights, 5) Click Share tab and verify social sharing buttons (WhatsApp, Facebook, X, Instagram, Copy Link), 6) Click '5 Levels' tab and verify level visualization, 7) Test 'Generate Share Card' button."
+  - agent: "testing"
+    message: "STARTING COMPREHENSIVE AI NETWORK HUB TESTING: Will test all 5 tabs (Overview, 5 Levels, Share, AI Coach, Tree) with focus on: 1) AI Referral Coach expansion and personalized tips, 2) 5-level bonus structure visualization (100/50/25/10/5 PRC), 3) Social sharing functionality with 6 platforms, 4) QR code generation and share card creation, 5) Network tree visualization, 6) AI Network Analytics insights. Using test credentials kyctest2@test.com/test123."
