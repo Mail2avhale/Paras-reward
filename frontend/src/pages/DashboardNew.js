@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
+import AIChatbot from '@/components/AIChatbot';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
