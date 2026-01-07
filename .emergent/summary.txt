@@ -1,19 +1,15 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to build a comprehensive fintech accounting system, which was completed. Subsequent work involved adding a full suite of admin security features and several AI integrations, including an AI Chatbot, AI-powered KYC auto-verification, and an AI Auto-Fill for KYC documents.
+The initial goal was to build a fintech accounting system. This was expanded to include admin security, AI features (Chatbot, KYC Auto-Fill/Verification), a 5-level AI referral system, and a complete visual overhaul.
 
-The user then reported a bug with the KYC document upload process (camera not working). This led to a series of feature requests and bug fixes, including:
-1.  Fixing the KYC camera/upload bug.
-2.  Fixing a critical admin password vulnerability.
-3.  A complete visual overhaul of the app's tutorial.
-4.  Fixing the AI chatbot's visibility and mobile responsiveness.
-5.  Implementing a sophisticated 5-level AI-powered referral system with social sharing, fraud detection, and active/inactive bonuses.
-6.  Integrating the new referral hub into the main dashboard.
-7.  Implementing AI-powered contextual help on various pages.
-8.  Fixing multiple bugs reported by the user along the way ( values, broken tutorial slides, and runtime errors).
+The current set of tasks originated from user requests to:
+1.  Implement an AI Contextual Help feature on various pages.
+2.  Redesign the user dashboard to be AI-powered and adhere to industry standards.
+3.  Ensure the entire application is compliant with Google AdMob policies, which involves removing all misleading financial language, mining terminology, and direct monetary symbols (e.g., ₹).
+4.  Fix bugs reported by the user, including a page crash on the Daily Rewards (formerly Mining) page.
 
 **PRODUCT REQUIREMENTS:**
 Refer to . Key pending items include:
--   **[IN PROGRESS]** Implement AI Contextual Help without causing runtime errors.
+-   **[IN PROGRESS]** Finalize AdMob Policy Compliance across all pages.
 -   **[NOT STARTED]** AdMob + Unity Ads integration.
 -   **[NOT STARTED]** AI-powered features for users (Smart Financial Advisor, Product Recommendations, etc.).
 -   **[NOT STARTED]** Automated monthly financial reports.
@@ -21,41 +17,42 @@ Refer to . Key pending items include:
 **User's preferred language**: The user communicates in a mix of English and Marathi. The next agent MUST respond in English for technical clarity but be prepared to understand and address requests in Marathi. For example: 
 
 **what currently exists?**
-The application is a full-stack fintech platform (FastAPI backend, React frontend) with a rich feature set. It includes a full accounting suite, a robust admin security system, and numerous AI features.
+The application is a full-stack fintech platform (FastAPI backend, React frontend). It has recently undergone significant refactoring to achieve Google AdMob policy compliance.
 
--   **Backend ():** Includes endpoints for JWT auth, security management, and AI features (chatbot, KYC scan). Recently added new endpoints to support a 5-level referral system, including bonus breakdowns and fraud detection.
--   **Frontend ():** The UI has been significantly enhanced with a new visually advanced tutorial (), an enhanced AI chatbot (), and a new AI-powered referral hub (). The dashboard () has been updated to integrate these new features.
+-   **Backend ():** An endpoint  has been added. The hardcoded help tips within this endpoint have been updated to use AdMob-compliant language (e.g., Daily Rewards instead of Mining).
+-   **Frontend ():**
+    -   **AI Contextual Help**: A new global  component has been created and integrated into . It displays a help icon and provides page-specific tips without causing the circular dependency issues seen previously.
+    -   **AI-Powered Dashboard**:  has been completely redesigned using a bento grid layout and several new AI-focused components: , , , and .
+    -   **AdMob Compliance**: A large-scale refactoring was performed across numerous files (, , , , , , , ) to replace terms like Mining, Mine, ₹, and other financial language with compliant terms like Daily Rewards, Points, and Activity. The  page and its route have been renamed to reflect this change.
 
 **Last working item**:
--   **Last item agent was working**: Fixing a critical runtime error (circular dependency) that occurred when navigating between pages, particularly when returning to the home page. The error started after the agent implemented the  component.
+-   **Last item agent was working**: Fixing the remaining AdMob policy violations on the  page, as identified by the testing agent. The agent had just finished a series of edits on the file to remove the last instances of non-compliant terminology (mining power, mining speed, etc.).
 -   **Status**: IN PROGRESS
--   **Agent Testing Done**: Y (Agent confirmed the error was gone after removing the feature).
--   **Which testing method agent to use?**: Manual testing by developer. The agent should re-implement the AI Contextual Help feature carefully, starting with one page, and test navigation extensively to ensure the circular dependency does not reappear.
--   **User Testing Done**: N (User reported the error, but has not verified the fix, which involved removing the feature entirely).
+-   **Agent Testing Done**: N (The agent completed the code changes but has not yet re-run the testing agent to verify the fix.)
+-   **Which testing method agent to use?**: Frontend testing agent. The agent MUST run the test to verify that all AdMob compliance issues reported in the last test run have been resolved.
+-   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Circular Dependency Causes Runtime Errors (P0 - HIGHEST)**
+-   **Issue 1: Finalize AdMob Compliance (P0 - HIGHEST)**
 -   **Issue 2: Draggable cards UX (P2)**
 -   **Issue 3: Pagination Verification on History Pages (P2)**
 
 **Issues Detail:**
--   **Issue 1: Circular Dependency Causes Runtime Errors (P0 - HIGHEST)**
-    -   **Attempted fixes**: The agent fixed the immediate crash by removing the newly created  component and all its imports from other pages (, ). This stabilized the app but removed the feature the user requested.
+-   **Issue 1: Finalize AdMob Compliance (P0 - HIGHEST)**
+    -   **Attempted fixes**: The agent performed a massive, app-wide refactor of terminology. However, the last testing agent run revealed that the  page still contained several violations (e.g., Boost Mining Power, Mining speed bonus). The agent has just applied fixes for these.
     -   **Next debug checklist**:
-        1.  The root cause is likely related to how lazy-loaded pages import shared components that may, in turn, have their own dependencies.
-        2.  Re-create the  component.
-        3.  Instead of importing the component directly into multiple pages, consider a more centralized or decoupled approach. For example, manage the help modal's state globally in  or a context and render it at the top level.
-        4.  Start by re-integrating the help button on a single page (e.g., ) and thoroughly test navigation to and from that page.
-        5.  If stable, add it to the next page () and repeat testing to isolate the exact import chain causing the loop.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical stability issue. A proper fix will restore the  feature without causing the application to crash during navigation.
+        1.  Invoke the  with the same AdMob compliance task to confirm the latest fixes on  are effective and that no new regressions have been introduced.
+        2.  Carefully review the test report for any remaining violations.
+        3.  Address any new findings.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a mandatory requirement from the user. The app cannot be submitted for AdMob approval until all policy violations are removed.
     -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: frontend
     -   **Blocked on other issue**: None
 
 -   **Issue 2: Draggable cards UX (P2)**
-    -   **Description**: The draggable cards on the dashboard are far down the page, requiring significant scrolling. User may think the feature is broken.
-    -   **Status**: USER VERIFICATION PENDING
+    -   **Description**: The draggable cards on the dashboard are far down the page, requiring significant scrolling. User may think the feature is broken. This was reported before the dashboard redesign and may or may not still be relevant.
+    -   **Status**: NOT STARTED
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: frontend
     -   **Blocked on other issue**: None
@@ -68,12 +65,12 @@ The application is a full-stack fintech platform (FastAPI backend, React fronten
     -   **Blocked on other issue**: None
 
 **In progress Task List**:
--   **Task 1: Re-implement AI Contextual Help Feature (P0)**
-    -   **Where to resume**: Create a new  component and integrate it into the application pages one by one, testing thoroughly at each step to avoid the previous circular dependency error.
-    -   **What will be achieved with this?**: A functional, non-breaking AI help feature that provides contextual information to users on different pages, as requested.
+-   **Task 1: AdMob Policy Compliance (P0)**
+    -   **Where to resume**: The fixes for  are complete. The immediate next step is to run the frontend testing agent to verify that the app is now fully compliant.
+    -   **What will be achieved with this?**: A fully AdMob-compliant application, ready for submission.
     -   **Status**: IN PROGRESS
     -   **Should Test frontend/backend/both after fix?**: frontend
-    -   **Blocked on something**: Blocked by **Issue 1**.
+    -   **Blocked on something**: None.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
@@ -86,91 +83,86 @@ The application is a full-stack fintech platform (FastAPI backend, React fronten
     -   Build the Hierarchical Reporting Structure for user referrals/teams.
 
 **Completed work in this session**
--   **KYC Image Upload Bug (FIXED):** Integrated the  component into . Verified by the testing agent.
--   **Admin Password Verification Flaw (FIXED):** Corrected backend logic to check the correct password field, added a fallback check, and reset the admin password. Verified via curl commands.
--   **Advanced Interactive Tutorial (DONE):** Replaced the basic tutorial with a new, visually rich, and animated component (). Verified with testing agent.
--   **AI Chatbot UI/UX Enhancement (DONE):** Fixed visibility, z-index overlap, and mobile-view responsiveness issues. The chatbot is now always visible and correctly sized on all devices.
--   **AI-Powered Referral System (DONE):**
-    -   Implemented a 5-level referral bonus structure.
-    -   Created a new AI Network Hub page () with tabs for Overview, Levels, Fraud Check, and Sharing.
-    -   Added backend APIs for level stats, fraud checks, and active/inactive bonus breakdowns.
-    -   Designed a Share Card with a QR code and social sharing buttons (WhatsApp, Facebook, X, etc.).
--   **Dashboard Integration (DONE):** Added clickable links and buttons on the main dashboard () to navigate to the new AI Network Hub.
--   **Bug Fixes (DONE):**
-    -   **Tutorial Slides:** Added missing translations for slides 5 and 7.
-    -   **NaN in Earnings:** Fixed a bug in the AI Network Analytics card that showed  for potential earnings.
-    -   **Chatbot Overlap:** Repositioned the chatbot and another floating action button to prevent them from overlapping.
+-   **AI Contextual Help Feature (DONE)**: Successfully implemented a global help component () in  that provides page-specific AI-powered tips, fixing the previous circular dependency error. Verified by the testing agent.
+-   **AI-Powered Dashboard Redesign (DONE)**: Overhauled  with a new bento-grid layout and new components (, , , ) for a modern, AI-centric user experience. Verified by the testing agent.
+-   **AdMob Compliance Refactoring (IN PROGRESS, mostly DONE)**: Performed an extensive, app-wide refactor to remove non-compliant language. Updated dozens of components, pages, translations, and configuration files.
 
 **Earlier issues found/mentioned but not fixed**
--   None. The agent successfully addressed all issues raised in this session, although the fix for the circular dependency was to remove the feature, which is a temporary measure.
+-   **Issue 1: Draggable cards UX**: The dashboard cards may be too far down the page. This was not addressed.
+-   **Issue 2: Pagination Verification on History Pages**: This task to check pagination on history pages has not been started.
+
+**Known issue recurrence from previous fork**
+-   **Issue recurrence in previous fork**: Circular Dependency Causes Runtime Errors
+-   **Recurrence count**: 1
+-   **Status**: RESOLVED. The agent fixed this by implementing the  feature as a global component in  rather than importing it into individual lazy-loaded pages.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend**: FastAPI, MongoDB (), Pydantic,  for password hashing.
--   **Frontend**: React, , , , ,  for generating shareable images.
--   **Architecture**: Heavy use of React's  and  for page loading, which is a potential source of the circular dependency issue.
+-   **Backend**: FastAPI, MongoDB (), Pydantic.
+-   **Frontend**: React, , , , , .
+-   **Architecture**: Global component state management in  was used to solve the circular dependency. The UI now heavily features a bento grid layout on the dashboard.
 
 **key DB schema**
--   No new collections were added. The  collection is now leveraged more for referral tracking.
+-   No schema changes in this session.
 
 **changes in tech stack**
--    was added to the frontend dependencies for generating social sharing images.
+-   No new dependencies were added.
 
 **All files of reference**
--    (Manages lazy loading and routing, a key place to investigate the dependency issue).
--    (The central hub that imports many new components).
--    (One of the pages where the now-removed  was used).
--    (The other page where  was used).
--    (Contains all backend logic).
+-    (The redesigned AI dashboard)
+-    (The page most heavily refactored for AdMob compliance)
+-    (The main landing page, also updated for compliance)
+-    &  (Referral pages updated for compliance)
+-    (Contains all text changes)
+-    (Contains the new contextual help endpoint)
 
 **key api endpoints**
--    (MODIFIED: Password verification logic fixed)
--    (NEW: Fetches referral stats for each of the 5 levels)
--    (NEW: Provides details on active vs. inactive referral bonuses)
--    (NEW: An endpoint for AI-based referral fraud analysis)
+-    (NEW: Provides AI-powered, page-specific help tips)
 
 **Critical Info for New Agent**
--   **Top Priority:** You must fix the circular dependency error properly. The previous agent removed the  feature to stop the app from crashing. Your first task is to re-implement this feature without reintroducing the runtime error. Be very careful with imports and test navigation thoroughly after each change.
--   **User Interaction:** The user is very hands-on and provides feedback in a mix of English and Marathi. They have a strong preference for visually impressive, eye-catching features with gradients and animations.
--   **Codebase Complexity:** The frontend has grown complex. The use of  is critical for performance but is the likely cause of the navigation bug. Be mindful of how components and pages import each other.
+-   **Top Priority**: Your first and only immediate task is to verify that the application is **fully compliant with AdMob policies**. The previous agent just finished applying a round of fixes to . You MUST run the frontend testing agent to confirm these fixes are successful and that no violations remain anywhere in the app. Do not proceed to any other task until the testing agent gives a clean report for AdMob compliance.
+-   **User Communication**: The user is highly focused on the AdMob compliance task. Keep them updated on the testing status. Remember to communicate in English, but be prepared to understand Marathi.
+-   **Code State**: The codebase has been heavily modified. Be aware that the term Mining has been programmatically and textually replaced with Daily Rewards or similar concepts.
 
 **documents and test reports created in this job**
--    (Updated multiple times to run the testing agent for KYC, Tutorial, and Network Hub features).
+-    (Updated to include AI Contextual Help and the AI-Powered Dashboard as completed features).
+-    (Updated multiple times to test the new features and AdMob compliance).
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User**: Asks to see where the Social Sharing and QR code are. (COMPLETED)
-9.  **User**: Reports that the AI Network Hub is not accessible from the dashboard. (COMPLETED)
-8.  **User**: Reports that the Potential earning card shows NaN PRC. (COMPLETED)
-7.  **User**: Asks for an AI Contextual Help feature on pages. (IN PROGRESS)
-6.  **User**: Reports a circular dependency error when switching pages. (IN PROGRESS - Feature removed as a temporary fix)
-5.  **User**: Reports the same error persists when navigating home. (IN PROGRESS)
-4.  **User**: Reports the chatbot button overlaps another button and the chat window is too large on mobile. Also notes the AI referral page doesn't seem updated. (COMPLETED)
-3.  **User**: Reports the chatbot button is still not displayed, slides 5 & 7 of the tutorial are not working, and requests AI concepts for referral fraud/bonuses. (COMPLETED)
-2.  **User**: Asks for an AI-powered way to improve the user dashboard view and notes the chatbot icon is missing. (COMPLETED)
-1.  **User**: Requests an AI-powered referral system with 5 levels and social media sharing. (COMPLETED)
+10. **User**: Confirms to proceed with all suggested AdMob compliance changes. (COMPLETED)
+9.  **User**: Provides credits. (ACKNOWLEDGED)
+8.  **User**: Asks to check the main homepage for AdMob compliance. (COMPLETED)
+7.  **User**: Reports errors on the  page and asks to check the  and  pages for AdMob issues. (IN PROGRESS)
+6.  **User**: Asks for an AI-powered, well-designed dashboard. (COMPLETED)
+5.  **User**: Asks for a summary. (COMPLETED)
+4.  **User**: Selects the AI Contextual Help task to be worked on. (COMPLETED)
+3.  **User**: (From previous session) Requests an AI-powered referral system with 5 levels and social media sharing. (COMPLETED)
+2.  **User**: (From previous session) Requests an AI-powered way to improve the user dashboard view and notes the chatbot icon is missing. (COMPLETED)
+1.  **User**: (From previous session) Reports the chatbot button overlaps another button and the chat window is too large on mobile. (COMPLETED)
 
 **Project Health Check:**
--   **Broken**: The AI Contextual Help feature is non-existent as it was deleted to fix a critical runtime error. The underlying circular dependency issue is a major stability risk.
+-   **Broken**: The application may still contain AdMob policy violations. The  page was crashing before the last fix, and the fix has not been verified.
 -   **Mocked**: AdMob/Unity Ads integration is not yet implemented.
 
 **3rd Party Integrations**
--   **OpenAI GPT-5.2**: Used for AI Chatbot via . Uses Emergent LLM Key.
+-   **OpenAI GPT-5.2**: Used for AI Chatbot and AI Contextual Help via . Uses Emergent LLM Key.
 -   **Gemini Pro**: Used for AI Document Scanning (KYC) via . Uses Emergent LLM Key.
 -   **@dnd-kit/core**: Used for draggable dashboard cards.
 -   **lottie-react, framer-motion**: Used for UI animations.
--   **html2canvas**: (NEW) Used to generate shareable images for the referral card.
+-   **html2canvas**: Used to generate shareable images for the referral card.
 
 **Testing status**
--   **Testing agent used after significant changes**: YES. Successfully used for the KYC fix, new tutorial, and AI Network Hub.
+-   **Testing agent used after significant changes**: YES. The testing agent was used to verify the AI Contextual Help, the AI-Powered Dashboard, and to find AdMob compliance violations. The last run reported **CRITICAL FAILURES** related to AdMob policy, which the previous agent was in the process of fixing.
 -   **Troubleshoot agent used after agent stuck in loop**: NO.
--   **Test files created**: None in this session, but  was updated.
--   **Known regressions**: The  feature was removed to fix a regression (runtime error).
+-   **Test files created**:  was updated multiple times.
+-   **Known regressions**: None currently, but the latest fixes for AdMob compliance need to be verified to ensure no new regressions were introduced.
 
 **Credentials to test flow:**
 -   **Admin**:  / 
--   **Regular User**:  /  (A new user / was also created).
+-   **Regular User**:  / 
 
 **What agent forgot to execute**
--   The agent did not solve the root cause of the circular dependency error. Instead, it removed the feature that was triggering it. The core task of implementing AI Contextual Help without errors is still pending and is the highest priority for the next agent.</analysis>
+-   The agent did not run a final verification test (via testing agent or screenshot) after applying the last set of AdMob compliance fixes to . This is the immediate next step.
+-   The long-standing issues ( and ) were not addressed.</analysis>
