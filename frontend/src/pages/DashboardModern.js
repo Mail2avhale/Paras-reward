@@ -482,24 +482,12 @@ const DashboardModern = ({ user, onLogout }) => {
                 />
               </div>
             </motion.div>
-          
-          {/* Live Transparency Panel */}
-          <div className="mt-6 px-4">
-            <LiveTransparencyPanel 
-              translations={{
-                liveStats: t('liveStats') || 'Live Platform Stats',
-                todayPrcEarned: t('platformEarned') || 'Today PRC Earned',
-                todayPrcBurned: t('platformBurned') || 'Today PRC Burned',
-                redeemsToday: t('redeemsToday') || 'Redeems Today',
-                activeUsers: t('activeUsers') || 'Active Users'
-              }}
-            />
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-md mx-auto px-4 -mt-20 pb-24">
+      <div className="max-w-md mx-auto px-4 -mt-8 pb-24 relative z-10">
         {/* Profile Completion Banner - Not draggable */}
         <ProfileCompletionBanner 
           user={userData} 
@@ -511,6 +499,56 @@ const DashboardModern = ({ user, onLogout }) => {
           miningHistory={miningHistory}
           isFreeUser={stats.membershipType !== 'vip'}
         />
+        
+        {/* AI Financial Summary - Key Feature */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mb-4"
+        >
+          <AIFinancialSummary 
+            userId={user?.uid}
+            stats={stats}
+            todayStats={todayStats}
+          />
+        </motion.div>
+
+        {/* AI Insights Widget */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mb-4"
+        >
+          <AIInsightsWidget 
+            userId={user?.uid}
+            userStats={{
+              prc_balance: stats.prcBalance,
+              today_earned: todayStats.today_prc_earned,
+              yesterday_earned: 0,
+              mining_streak: userData?.mining_streak || 0,
+              is_vip: stats.membershipType === 'vip',
+              is_mining_active: userData?.mining_active || false,
+              referral_count: stats.referralCount,
+              total_mined: stats.totalMined
+            }}
+            onActionClick={(path) => navigate(path)}
+          />
+        </motion.div>
+
+        {/* Quick Actions Grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mb-4"
+        >
+          <QuickActionsGrid 
+            isVip={stats.membershipType === 'vip'}
+            onVipRequired={() => toast.info('VIP membership required. Upgrade now!')}
+          />
+        </motion.div>
         
         {/* Draggable Dashboard Cards */}
         <DraggableDashboard
