@@ -1741,9 +1741,10 @@ async def login(
         )
         raise HTTPException(status_code=404, detail="User not registered. Please register to continue.")
     
-    # Verify password
-    if user.get("password_hash"):
-        if not verify_password(password, user["password_hash"]):
+    # Verify password - check both password_hash (new format) and password (legacy format)
+    stored_password = user.get("password_hash") or user.get("password")
+    if stored_password:
+        if not verify_password(password, stored_password):
             record_login_attempt(identifier, False)
             # Create security alert for failed password
             alert_severity = "medium" if attempts_left <= 2 else "low"
