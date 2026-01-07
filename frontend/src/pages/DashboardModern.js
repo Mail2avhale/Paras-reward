@@ -13,7 +13,7 @@ import ProfileCompletionBanner from '@/components/ProfileCompletionBanner';
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
 import QuickKYCModal from '@/components/QuickKYCModal';
 import PRCRain from '@/components/PRCRain';
-import AppTutorial from '@/components/AppTutorial';
+import AppTutorialAdvanced from '@/components/AppTutorialAdvanced';
 import LiveMiningIndicator from '@/components/LiveMiningIndicator';
 import LiveTransparencyPanel from '@/components/LiveTransparencyPanel';
 import SmartUserInsights from '@/components/SmartUserInsights';
