@@ -367,7 +367,7 @@ function ReferralDashboardAI({ user, onLogout }) {
                   <div className="h-64 bg-gray-50 rounded-xl flex flex-col items-center justify-center">
                     <Users className="w-16 h-16 text-gray-300 mb-4" />
                     <p className="text-gray-500 text-lg">No referrals yet</p>
-                    <p className="text-gray-400 text-sm">Share your link to build your network!</p>
+                    <p className="text-gray-400 text-sm">Share your link to invite friends!</p>
                     <Button 
                       className="mt-4 bg-purple-600"
                       onClick={() => setActiveTab('share')}
