@@ -3,7 +3,7 @@
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://fintech-miner.preview.emergentagent.com",
+    "url": "https://kyc-scanner-app.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
