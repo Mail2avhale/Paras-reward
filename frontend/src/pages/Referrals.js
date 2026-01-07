@@ -26,18 +26,18 @@ const referralTranslations = {
   copied: { mr: "कॉपी केले!", hi: "कॉपी हो गया!", en: "Copied!" },
   referralLink: { mr: "रेफरल लिंक", hi: "रेफरल लिंक", en: "Referral Link" },
   shareOnWhatsapp: { mr: "WhatsApp वर शेअर करा", hi: "WhatsApp पर शेयर करें", en: "Share on WhatsApp" },
-  yourNetwork: { mr: "तुमचे नेटवर्क", hi: "आपका नेटवर्क", en: "Your Network" },
+  yourNetwork: { mr: "तुमचे मित्र", hi: "आपके दोस्त", en: "Your Friends" },
   level: { mr: "स्तर", hi: "स्तर", en: "Level" },
   users: { mr: "वापरकर्ते", hi: "उपयोगकर्ता", en: "Users" },
-  earnedPRC: { mr: "कमावलेले PRC", hi: "कमाया PRC", en: "Earned PRC" },
+  earnedPRC: { mr: "मिळवलेले PRC", hi: "मिला PRC", en: "Earned PRC" },
   goBack: { mr: "मागे जा", hi: "वापस जाएं", en: "Go Back" },
   applyReferralCode: { mr: "रेफरल कोड लागू करा", hi: "रेफरल कोड लागू करें", en: "Apply Referral Code" },
   enterCode: { mr: "कोड एंटर करा", hi: "कोड दर्ज करें", en: "Enter Code" },
   apply: { mr: "लागू करा", hi: "लागू करें", en: "Apply" },
   referralDesc: { 
-    mr: "मित्रांना आमंत्रित करा आणि 5 स्तरांवर कमाई करा! प्रत्येक रेफरलवर बोनस PRC मिळवा.",
-    hi: "दोस्तों को आमंत्रित करें और 5 स्तरों पर कमाई करें! हर रेफरल पर बोनस PRC पाएं।",
-    en: "Invite friends and earn on 5 levels! Get bonus PRC on every referral."
+    mr: "मित्रांना आमंत्रित करा आणि बोनस PRC मिळवा! प्रत्येक रेफरलवर बोनस मिळतो.",
+    hi: "दोस्तों को आमंत्रित करें और बोनस PRC पाएं! हर रेफरल पर बोनस मिलता है।",
+    en: "Invite friends and earn bonus PRC! Get bonus on every referral."
   }
 };
 
