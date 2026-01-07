@@ -1141,6 +1141,40 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                       <p className="text-sm text-gray-600">Upload Aadhaar and/or PAN card with document numbers</p>
                     </div>
 
+                    {/* AI Document Scanner - NEW FEATURE */}
+                    <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-xl p-4 mb-6">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg">
+                          <Sparkles className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-bold text-purple-900 text-lg">🆕 AI Auto-Fill Feature!</h4>
+                          <p className="text-sm text-purple-800 mt-1">
+                            Document photo upload करा → AI automatically details वाचेल → Form auto-fill होईल!
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4">
+                        <AIDocumentScanner 
+                          user={user}
+                          onProfileUpdate={(updates) => {
+                            // Refresh user data
+                            fetchUserData();
+                            // Update local KYC data if available
+                            if (updates.name) setKycData(prev => ({...prev, full_name: updates.name}));
+                            if (updates.aadhaar_last4) setKycData(prev => ({...prev, aadhaar_number: `XXXXXXXX${updates.aadhaar_last4}`}));
+                            if (updates.pan_number) setKycData(prev => ({...prev, pan_number: updates.pan_number}));
+                            toast.success('✅ Profile auto-filled with scanned data!');
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="border-t border-gray-200 pt-6">
+                      <h4 className="font-semibold text-gray-900 mb-4">किंवा Manual Upload करा:</h4>
+                    </div>
+
                     {errors.kyc && (
                       <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
                         {errors.kyc}
