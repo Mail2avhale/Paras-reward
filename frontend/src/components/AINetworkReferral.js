@@ -171,9 +171,9 @@ const AIReferralCoach = ({ user, networkStats, onSuggestionClick }) => {
 };
 
 // ============================================
-// 5-LEVEL NETWORK VISUALIZATION
+// 5-LEVEL NETWORK VISUALIZATION (with Active/Inactive)
 // ============================================
-const NetworkLevelVisualization = ({ levelStats }) => {
+const NetworkLevelVisualization = ({ levelStats, bonusBreakdown }) => {
   return (
     <Card className="p-6 border-0 shadow-xl">
       <div className="flex items-center justify-between mb-6">
@@ -182,7 +182,29 @@ const NetworkLevelVisualization = ({ levelStats }) => {
           5-Level Network
         </h3>
         <div className="text-sm text-gray-500">
-          Total: {Object.values(levelStats || {}).reduce((a, b) => a + b, 0)} members
+          Total: {Object.values(levelStats || {}).filter(v => typeof v === 'number').reduce((a, b) => a + b, 0)} members
+        </div>
+      </div>
+
+      {/* Active vs Inactive Summary */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="p-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">✅</span>
+            <div>
+              <p className="text-lg font-bold">{levelStats?.active_count || 0}</p>
+              <p className="text-xs opacity-80">Active (Full Bonus)</p>
+            </div>
+          </div>
+        </div>
+        <div className="p-3 rounded-xl bg-gradient-to-r from-gray-400 to-gray-500 text-white">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">⏸️</span>
+            <div>
+              <p className="text-lg font-bold">{levelStats?.inactive_count || 0}</p>
+              <p className="text-xs opacity-80">Inactive (Reduced)</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -190,7 +212,11 @@ const NetworkLevelVisualization = ({ levelStats }) => {
       <div className="space-y-3">
         {LEVEL_CONFIG.map((level, index) => {
           const count = levelStats?.[`level_${level.level}`] || 0;
-          const potentialEarning = count * level.bonus;
+          const levelData = bonusBreakdown?.levels?.find(l => l.level === level.level);
+          const activeCount = levelData?.active_members || 0;
+          const inactiveCount = levelData?.inactive_members || 0;
+          const actualEarning = levelData?.total_earned || 0;
+          const potentialEarning = count * level.activeBonus;
           
           return (
             <motion.div
@@ -206,18 +232,43 @@ const NetworkLevelVisualization = ({ levelStats }) => {
                     <span className="text-2xl">{level.icon}</span>
                     <div>
                       <p className="font-bold">{level.name}</p>
-                      <p className="text-sm opacity-80">{level.bonus} PRC per referral</p>
+                      <p className="text-xs opacity-80">
+                        Active: {level.activeBonus} PRC | Inactive: {level.inactiveBonus} PRC
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-3xl font-bold">{count}</p>
-                    <p className="text-sm opacity-80">members</p>
+                    <p className="text-xs opacity-80">
+                      <span className="text-green-300">{activeCount}✓</span> / <span className="text-gray-300">{inactiveCount}○</span>
+                    </p>
                   </div>
                 </div>
                 
                 {/* Progress bar */}
                 <div className="mt-3">
                   <div className="flex justify-between text-xs mb-1">
+                    <span>Earned: {actualEarning} PRC</span>
+                    <span>Potential: {potentialEarning} PRC</span>
+                  </div>
+                  <div className="h-2 bg-white/30 rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full bg-white rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${potentialEarning > 0 ? (actualEarning / potentialEarning) * 100 : 0}%` }}
+                      transition={{ duration: 1, delay: index * 0.1 }}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Connection line */}
+              {index < LEVEL_CONFIG.length - 1 && (
+                <div className="absolute left-8 -bottom-3 w-0.5 h-6 bg-gradient-to-b from-gray-300 to-transparent z-10" />
+              )}
+            </motion.div>
+          );
+        })}
                     <span>Potential Earnings</span>
                     <span className="font-bold">{potentialEarning} PRC</span>
                   </div>
