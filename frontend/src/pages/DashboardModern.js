@@ -812,12 +812,14 @@ const DashboardModern = ({ user, onLogout }) => {
             label={t('home')} 
             tabName="home" 
             isActive={activeTab === 'home'} 
+            onNavigate={handleNavigation}
           />
           <BottomNavItem 
             icon={Zap} 
             label={t('mine')} 
             tabName="mine" 
             isActive={activeTab === 'mine'} 
+            onNavigate={handleNavigation}
           />
           <BottomNavItem 
             icon={Gamepad2} 
@@ -825,18 +827,21 @@ const DashboardModern = ({ user, onLogout }) => {
             tabName="game" 
             isActive={activeTab === 'game'}
             isCenterButton={true}
+            onNavigate={handleNavigation}
           />
           <BottomNavItem 
             icon={ShoppingBag} 
             label={t('shop')} 
             tabName="shop" 
             isActive={activeTab === 'shop'} 
+            onNavigate={handleNavigation}
           />
           <BottomNavItem 
             icon={User} 
             label={t('profile')} 
             tabName="profile" 
             isActive={activeTab === 'profile'} 
+            onNavigate={handleNavigation}
           />
         </div>
       </div>
