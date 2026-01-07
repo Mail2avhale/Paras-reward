@@ -329,7 +329,29 @@ backend:
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "1. Scratch card cashback not credited in cashback wallet with transaction entry. 2. No admin dashboard view for PRC mined vs consumed analytics. 3. App download from homepage not working - shows 'You can't install the app on your device' error."
+user_problem_statement: "Implement AI Contextual Help feature without causing circular dependency runtime errors."
+
+# NEW TASK - AI Contextual Help Feature
+
+frontend:
+  - task: "AI Contextual Help Feature"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/AIContextualHelp.js, /app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: AI Contextual Help feature with global rendering approach to avoid circular dependency. Changes: 1) Created AIContextualHelp.js component with route-based help detection, 2) Backend API endpoint /api/ai/contextual-help/{page} with static tips and optional AI-generated suggestions, 3) Component rendered at App.js level (not imported into individual pages), 4) Help button appears at bottom-40 right-4 with z-index 9998, 5) Modal panel slides up from bottom with tips and AI suggestions button. Backend API tested via curl - returns correct tips and AI-generated content."
+
+agent_communication:
+  - agent: "main"
+    message: "Implemented AI Contextual Help feature. Please test: 1) Login as a regular user (not admin), 2) Navigate to /mining, /dashboard, /referrals, etc., 3) Look for blue help button (HelpCircle icon) at bottom right, 4) Click to open help panel, 5) Click 'Get AI-Powered Suggestions' button, 6) Test navigation between pages - panel should close and button should appear on supported pages. Test credentials: Use any non-admin user. Admin users won't see the help button."
+
+# Previous problem statement preserved below:
+previous_problem_statement: "1. Scratch card cashback not credited in cashback wallet with transaction entry. 2. No admin dashboard view for PRC mined vs consumed analytics. 3. App download from homepage not working - shows 'You can't install the app on your device' error."
 
 backend:
   - task: "Profile-Based Password Recovery"
