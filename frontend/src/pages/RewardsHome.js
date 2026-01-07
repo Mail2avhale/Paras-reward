@@ -611,7 +611,7 @@ const RewardsHome = () => {
                 <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center">
                   <span className="font-bold text-blue-900">2</span>
                 </div>
-                <span className="text-white font-medium">{language === 'mr' ? 'माइन करा' : language === 'hi' ? 'माइन करें' : 'Mine PRC'}</span>
+                <span className="text-white font-medium">{language === 'mr' ? 'PRC गोळा करा' : language === 'hi' ? 'PRC इकट्ठा करें' : 'Collect PRC'}</span>
               </div>
               <ArrowRight className="h-6 w-6 text-yellow-400 hidden sm:block" />
               <div className="flex items-center gap-3 bg-white/10 backdrop-blur px-6 py-3 rounded-full border border-white/20">
