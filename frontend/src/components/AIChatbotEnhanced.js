@@ -226,7 +226,11 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
   return (
     <AnimatePresence>
       <motion.div 
-        className={`fixed z-[9999] ${isExpanded ? 'inset-4' : 'bottom-24 right-4 w-[380px] max-w-[calc(100vw-2rem)]'}`}
+        className={`fixed z-[9999] ${
+          isExpanded 
+            ? 'inset-4' 
+            : 'bottom-20 right-2 left-2 sm:left-auto sm:right-4 sm:w-[380px] max-h-[70vh] sm:max-h-[500px]'
+        }`}
         initial={{ scale: 0.8, opacity: 0, y: 50 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.8, opacity: 0, y: 50 }}
