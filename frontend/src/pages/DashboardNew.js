@@ -638,6 +638,9 @@ const DashboardNew = ({ user, onLogout }) => {
         </div>
         
       </div>
+      
+      {/* AI Chatbot - Only on Dashboard */}
+      <AIChatbot user={user} />
     </div>
   );
 };
