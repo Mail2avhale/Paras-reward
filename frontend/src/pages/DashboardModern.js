@@ -6,7 +6,7 @@ import {
   TrendingUp, Users, ShoppingBag, User, Coins, 
   Zap, Gift, ArrowUpRight, Clock, CheckCircle,
   Home, Store, UserPlus, Gamepad2, CreditCard, HelpCircle,
-  Globe, ChevronDown, ArrowUp, ArrowDown
+  Globe, ChevronDown, ArrowUp, ArrowDown, Network, Brain
 } from 'lucide-react';
 import PRCExpiryTimer from '@/components/PRCExpiryTimer';
 import ProfileCompletionBanner from '@/components/ProfileCompletionBanner';
