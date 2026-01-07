@@ -70,7 +70,7 @@ const TopBar = ({ user, onLogout }) => {
                 PARAS REWARD
               </span>
               <span className="text-xs text-purple-600 leading-tight">
-                India&apos;s No.1 Mining Platform
+                India&apos;s No.1 Rewards Platform
               </span>
             </div>
           </div>
