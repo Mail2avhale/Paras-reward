@@ -570,7 +570,7 @@ const DailyRewards = ({ user, onLogout }) => {
 
         {/* How It Works */}
         <Card className="p-8 bg-white mt-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">How Mining Works</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">How Daily Rewards Work</h2>
           <div className="grid md:grid-cols-3 gap-6">
             <div className="text-center">
               <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -578,27 +578,27 @@ const DailyRewards = ({ user, onLogout }) => {
               </div>
               <h3 className="font-bold text-lg mb-2">1. Start Session</h3>
               <p className="text-gray-600 text-sm">
-                Start a 24-hour mining session to begin earning PRC coins automatically.
+                Start a 24-hour rewards session to begin collecting PRC points automatically.
               </p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <TrendingUp className="h-8 w-8 text-green-600" />
               </div>
-              <h3 className="font-bold text-lg mb-2">2. Earn PRC</h3>
+              <h3 className="font-bold text-lg mb-2">2. Collect PRC</h3>
               <p className="text-gray-600 text-sm">
-                Your mining rate increases with referrals. The more friends, the more you earn!
+                Your rate increases with friends. The more friends, the more you collect!
               </p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Coins className="h-8 w-8 text-blue-600" />
               </div>
-              <h3 className="font-bold text-lg mb-2">3. Claim & Use</h3>
+              <h3 className="font-bold text-lg mb-2">3. Claim & Redeem</h3>
               <p className="text-gray-600 text-sm">
                 {isFreeUser 
-                  ? 'Claim PRC and use within 2 days for Treasure Hunt. Upgrade for marketplace access!'
-                  : 'Claim PRC anytime and use for Treasure Hunt or shop in marketplace!'}
+                  ? 'Claim PRC and use within 2 days in games. Upgrade for marketplace access!'
+                  : 'Claim PRC anytime and use in games or shop in marketplace!'}
               </p>
             </div>
           </div>
