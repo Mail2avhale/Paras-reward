@@ -2076,17 +2076,9 @@ test_plan:
   test_all: false
   test_priority: "high_first"
 
-  - task: "KYC Document Upload Camera/Image Fix"
-    implemented: true
-    working: "NA"
-    file: "/app/frontend/src/components/AIDocumentScanner.js, /app/frontend/src/components/ModernImageUpload.js"
-    stuck_count: 0
-    priority: "critical"
-    needs_retesting: true
-    status_history:
-      - working: "NA"
-        agent: "main"
-        comment: "IMPLEMENTED: Integrated ModernImageUpload.js component into AIDocumentScanner.js for KYC document upload. Features: 1) Camera capture with proper permissions handling, 2) Gallery upload option, 3) Auto-compression and resize (max 2MB, 1200x1200px), 4) Image preview with rotate and retake options, 5) Mobile-optimized UI with clear fallback when camera fails. The fix replaces the basic file input with a modern image upload experience that handles camera access issues gracefully."
+agent_communication:
+  - agent: "main"
+    message: "KYC Document Upload Camera/Image Fix has been implemented with ModernImageUpload component. Testing agent should verify: 1) Login flow with kyctest2@test.com/test123, 2) Navigate to Profile page KYC Documents section, 3) Test document type selection (Aadhaar/PAN), 4) Test Camera and Gallery upload buttons, 5) Verify UI elements and mobile responsiveness, 6) Test auto-compression and image processing features."
 
 agent_communication:
   - agent: "main"
