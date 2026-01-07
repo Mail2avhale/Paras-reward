@@ -123,7 +123,6 @@ function ReferralDashboardAI({ user, onLogout }) {
                   <Network className="w-6 h-6 text-white" />
                 </div>
                 AI Network Hub
-                <SectionHelpButton context="network" user={user} />
               </h1>
               <p className="text-gray-600 mt-1">Smart referral system with 5-level bonuses</p>
             </div>
