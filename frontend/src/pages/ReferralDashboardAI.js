@@ -7,7 +7,7 @@ import {
   Users, TrendingUp, Award, Share2, Copy, Check, 
   ChevronRight, Sparkles, Bot, Brain, Trophy,
   Crown, Zap, Gift, ArrowRight, Download, BarChart3,
-  MessageCircle, Network, Coins, Target, Star
+  MessageCircle, Network, Coins, Target, Star, Shield
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import {
   NetworkLevelVisualization, 
   SocialShareCard, 
   AINetworkAnalytics,
+  AIFraudDetection,
   LEVEL_CONFIG 
 } from '@/components/AINetworkReferral';
 
@@ -28,6 +29,7 @@ function ReferralDashboardAI({ user, onLogout }) {
   const [earnings, setEarnings] = useState(null);
   const [treeData, setTreeData] = useState(null);
   const [levelStats, setLevelStats] = useState(null);
+  const [bonusBreakdown, setBonusBreakdown] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -40,11 +42,12 @@ function ReferralDashboardAI({ user, onLogout }) {
   const fetchReferralData = async () => {
     setLoading(true);
     try {
-      const [statsRes, earningsRes, treeRes, levelRes] = await Promise.all([
+      const [statsRes, earningsRes, treeRes, levelRes, bonusRes] = await Promise.all([
         axios.get(`${API}/referrals/${user.uid}/stats`).catch(() => ({ data: {} })),
         axios.get(`${API}/referrals/${user.uid}/earnings`).catch(() => ({ data: {} })),
         axios.get(`${API}/referrals/${user.uid}/tree`).catch(() => ({ data: { tree: null } })),
-        axios.get(`${API}/referrals/${user.uid}/levels`).catch(() => ({ data: {} }))
+        axios.get(`${API}/referrals/${user.uid}/levels`).catch(() => ({ data: {} })),
+        axios.get(`${API}/referrals/${user.uid}/bonus-breakdown`).catch(() => ({ data: {} }))
       ]);
 
       setStats(statsRes.data);
