@@ -435,8 +435,8 @@ const DashboardModern = ({ user, onLogout }) => {
                   <Wallet className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs text-purple-200">Total Balance</p>
-                  <p className="text-[10px] text-purple-300">10 PRC = ₹1</p>
+                  <p className="text-xs text-purple-200">Loyalty Points</p>
+                  <p className="text-[10px] text-purple-300">Paras Reward Coins</p>
                 </div>
               </div>
               
@@ -450,8 +450,8 @@ const DashboardModern = ({ user, onLogout }) => {
                   {stats.prcBalance.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                   <span className="text-lg text-purple-300 ml-2">PRC</span>
                 </motion.div>
-                <p className="text-xl text-green-400 font-semibold mt-1">
-                  ≈ ₹{(stats.prcBalance / 10).toFixed(2)}
+                <p className="text-sm text-purple-200 mt-1">
+                  Redeem for rewards & vouchers
                 </p>
               </div>
               
@@ -460,26 +460,26 @@ const DashboardModern = ({ user, onLogout }) => {
                 <div className="bg-white/10 rounded-xl p-3 text-center">
                   <TrendingUp className="w-4 h-4 text-green-400 mx-auto mb-1" />
                   <p className="text-sm font-bold text-white">{stats.totalMined.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
-                  <p className="text-[10px] text-purple-300">Mined</p>
+                  <p className="text-[10px] text-purple-300">Earned</p>
                 </div>
                 <div className="bg-white/10 rounded-xl p-3 text-center">
                   <Coins className="w-4 h-4 text-purple-400 mx-auto mb-1" />
                   <p className="text-sm font-bold text-white">{stats.totalPrcUsed.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
-                  <p className="text-[10px] text-purple-300">Used</p>
+                  <p className="text-[10px] text-purple-300">Redeemed</p>
                 </div>
                 <div 
                   className="bg-white/10 rounded-xl p-3 text-center cursor-pointer hover:bg-white/20 transition-colors"
-                  onClick={() => navigate('/network')}
+                  onClick={() => navigate('/referrals')}
                 >
-                  <Network className="w-4 h-4 text-indigo-400 mx-auto mb-1" />
+                  <UserPlus className="w-4 h-4 text-indigo-400 mx-auto mb-1" />
                   <p className="text-sm font-bold text-white">{stats.referralCount}</p>
-                  <p className="text-[10px] text-purple-300">Network</p>
+                  <p className="text-[10px] text-purple-300">Friends</p>
                 </div>
               </div>
               
-              {/* Mining Status */}
+              {/* Rewards Status */}
               <div className="mt-4 pt-4 border-t border-white/10">
-                <LiveMiningIndicator 
+                <LiveRewardsIndicator 
                   isMining={userData?.mining_active || false}
                   miningEndTime={userData?.mining_session_end}
                 />
