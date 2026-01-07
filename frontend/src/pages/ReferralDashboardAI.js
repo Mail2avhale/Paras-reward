@@ -7,7 +7,7 @@ import {
   Users, TrendingUp, Award, Share2, Copy, Check, 
   ChevronRight, Sparkles, Bot, Brain, Trophy,
   Crown, Zap, Gift, ArrowRight, Download, BarChart3,
-  MessageCircle, Network, Coins, Target, Star, Shield
+  MessageCircle, UserPlus, Coins, Target, Star, Shield
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
