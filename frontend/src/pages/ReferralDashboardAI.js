@@ -7,7 +7,7 @@ import {
   Users, TrendingUp, Award, Share2, Copy, Check, 
   ChevronRight, Sparkles, Bot, Brain, Trophy,
   Crown, Zap, Gift, ArrowRight, Download, BarChart3,
-  MessageCircle, Network, Coins, Target, Star, Shield, HelpCircle
+  MessageCircle, Network, Coins, Target, Star, Shield
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,6 @@ import {
   AIFraudDetection,
   LEVEL_CONFIG 
 } from '@/components/AINetworkReferral';
-import { SectionHelpButton } from '@/components/AIContextualHelp';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 const API = `${BACKEND_URL}/api`;
