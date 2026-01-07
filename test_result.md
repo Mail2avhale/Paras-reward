@@ -340,7 +340,7 @@ frontend:
     file: "/app/frontend/src/pages/DashboardModern.js, /app/frontend/src/pages/Mining.js, /app/frontend/src/components/QuickActionsGrid.js, /app/frontend/src/components/AIInsightsWidget.js, /app/frontend/src/components/AIFinancialSummary.js"
     stuck_count: 1
     priority: "critical"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
