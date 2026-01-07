@@ -47,7 +47,7 @@ const SupportTickets = lazy(() => import("@/pages/SupportTickets"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const DashboardNew = lazy(() => import("@/pages/DashboardNew"));
 const DashboardPremium = lazy(() => import("@/pages/DashboardPremium"));
-const Mining = lazy(() => import("@/pages/Mining"));
+const DailyRewards = lazy(() => import("@/pages/Mining")); // Renamed for AdMob compliance
 const TapGame = lazy(() => import("@/pages/TapGame"));
 const DashboardModern = lazy(() => import("@/pages/DashboardModern"));
 const Referrals = lazy(() => import("@/pages/Referrals"));
