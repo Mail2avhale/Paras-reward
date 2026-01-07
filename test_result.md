@@ -1051,6 +1051,7 @@ metadata:
 
 test_plan:
   current_focus:
+    - "Advanced Interactive Tutorial with Mesh Gradients"
     - "Scratch Card Cashback Credit Fix"
     - "Admin Dashboard Navigation Fix"
     - "Manager Role Update Fix"
