@@ -242,12 +242,12 @@ const Referrals = ({ user, onLogout }) => {
               <div>
                 <h2 className="text-xl font-bold flex items-center gap-2">
                   <TrendingUp className="h-6 w-6 text-green-400" />
-                  {language === 'mr' ? 'स्तर-निहाय रेफरल आणि माइनिंग बोनस' : language === 'hi' ? 'स्तर-वार रेफरल और माइनिंग बोनस' : 'Level-wise Referral & Mining Bonus'}
+                  {language === 'mr' ? 'रेफरल बोनस तपशील' : language === 'hi' ? 'रेफरल बोनस विवरण' : 'Referral Bonus Details'}
                 </h2>
                 <p className="text-gray-400 text-sm mt-1">
-                  {language === 'mr' ? 'तुमच्या referrals मुळे किती mining speed वाढली आहे ते बघा' 
-                   : language === 'hi' ? 'आपके referrals से कितनी mining speed बढ़ी है देखें'
-                   : 'See how your referrals boost your mining speed'}
+                  {language === 'mr' ? 'तुमच्या referrals मुळे किती बोनस मिळाला ते बघा' 
+                   : language === 'hi' ? 'आपके referrals से कितना बोनस मिला देखें'
+                   : 'See how your referrals earn you bonus PRC'}
                 </p>
               </div>
               <Button
@@ -262,10 +262,10 @@ const Referrals = ({ user, onLogout }) => {
               </Button>
             </div>
 
-            {/* Mining Speed Summary */}
+            {/* Rewards Rate Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-white/10 rounded-xl p-4">
-                <div className="text-gray-400 text-sm">{language === 'mr' ? 'बेस माइनिंग दर' : language === 'hi' ? 'बेस माइनिंग दर' : 'Base Mining Rate'}</div>
+                <div className="text-gray-400 text-sm">{language === 'mr' ? 'बेस दर' : language === 'hi' ? 'बेस दर' : 'Base Rate'}</div>
                 <div className="text-2xl font-bold text-white">
                   {multiLevelStats.base_mining_rate?.toFixed(2)} PRC/{language === 'mr' ? 'दिवस' : language === 'hi' ? 'दिन' : 'day'}
                 </div>
@@ -277,7 +277,7 @@ const Referrals = ({ user, onLogout }) => {
                 </div>
               </div>
               <div className="bg-purple-500/20 rounded-xl p-4">
-                <div className="text-purple-300 text-sm">{language === 'mr' ? 'प्रभावी माइनिंग दर' : language === 'hi' ? 'प्रभावी माइनिंग दर' : 'Effective Mining Rate'}</div>
+                <div className="text-purple-300 text-sm">{language === 'mr' ? 'प्रभावी दर' : language === 'hi' ? 'प्रभावी दर' : 'Effective Rate'}</div>
                 <div className="text-2xl font-bold text-purple-400">
                   {multiLevelStats.summary?.effective_mining_rate_display}
                 </div>
