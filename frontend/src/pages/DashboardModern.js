@@ -8,7 +8,7 @@ import {
   Gift, ArrowUpRight, Clock, CheckCircle,
   Home, Store, UserPlus, Gamepad2, CreditCard, HelpCircle,
   Globe, ChevronDown, ArrowUp, ArrowDown, Brain,
-  Sparkles, Crown, Wallet, Target, PiggyBank, Star, CalendarCheck
+  Sparkles, Crown, Wallet, Target, PiggyBank, Star, CalendarCheck, Zap
 } from 'lucide-react';
 import PRCExpiryTimer from '@/components/PRCExpiryTimer';
 import ProfileCompletionBanner from '@/components/ProfileCompletionBanner';
