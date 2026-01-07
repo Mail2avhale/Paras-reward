@@ -5066,6 +5066,269 @@ async def activate_outlet(outlet_id: str):
     )
     return {"message": "Outlet activated"}
 
+# ========== AI CHATBOT & KYC AUTO-VERIFICATION ==========
+from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+
+EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
+
+# Chatbot system message with platform context
+CHATBOT_SYSTEM_MESSAGE = """तुम्ही Paras Reward Platform चे AI Assistant आहात. तुम्ही Marathi आणि English दोन्ही भाषांमध्ये मदत करू शकता.
+
+Platform बद्दल माहिती:
+1. **VIP Membership:** ₹299/महिना - Benefits: Unlimited mining, Marketplace access, Gift vouchers, Bill payments
+2. **Mining:** 24-तासांचे sessions, VIP users ला जास्त mining rate मिळतो
+3. **PRC (Paras Reward Coin):** Platform currency, VIP users साठी lifetime validity
+4. **KYC:** Aadhaar + PAN verification आवश्यक, साधारण 24-48 तासांत approve होते
+5. **Wallet:** PRC balance आणि Cash wallet दोन्ही available
+
+तुम्ही मदत करू शकता:
+- VIP plans बद्दल माहिती
+- Mining कसे काम करते
+- KYC status आणि process
+- Wallet balance queries
+- General FAQs
+- Technical support
+
+नेहमी friendly आणि helpful रहा. जर तुम्हाला माहित नसेल तर सांगा "कृपया support team शी संपर्क करा"."""
+
+# Store chat sessions in memory (for demo - production should use DB)
+chat_sessions = {}
+
+@api_router.post("/ai/chatbot")
+async def ai_chatbot(
+    uid: str,
+    message: str,
+    session_id: Optional[str] = None
+):
+    """AI Chatbot for customer support"""
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+    
+    # Get user info for context
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Create session ID if not provided
+    if not session_id:
+        session_id = f"chat_{uid}_{str(uuid.uuid4())[:8]}"
+    
+    # Get or create chat instance
+    if session_id not in chat_sessions:
+        # Add user context to system message
+        user_context = f"""
+
+Current User Context:
+- Name: {user.get('name', 'User')}
+- Membership: {user.get('membership_type', 'free').upper()}
+- PRC Balance: {user.get('prc_balance', 0):.2f}
+- KYC Status: {user.get('kyc_status', 'pending')}
+- Mining Active: {'हो' if user.get('mining_active') else 'नाही'}
+"""
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=session_id,
+            system_message=CHATBOT_SYSTEM_MESSAGE + user_context
+        ).with_model("openai", "gpt-5.2")
+        chat_sessions[session_id] = chat
+    else:
+        chat = chat_sessions[session_id]
+    
+    try:
+        # Send message and get response
+        user_msg = UserMessage(text=message)
+        response = await chat.send_message(user_msg)
+        
+        # Log chat for analytics
+        await db.chatbot_logs.insert_one({
+            "uid": uid,
+            "session_id": session_id,
+            "user_message": message,
+            "bot_response": response,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "response": response,
+            "session_id": session_id
+        }
+    except Exception as e:
+        logging.error(f"Chatbot error: {e}")
+        return {
+            "response": "माफ करा, काही तांत्रिक अडचण आली. कृपया पुन्हा प्रयत्न करा किंवा support@paras.com वर संपर्क करा.",
+            "session_id": session_id,
+            "error": True
+        }
+
+@api_router.post("/ai/kyc-verify")
+async def ai_kyc_verify(
+    uid: str,
+    document_type: str,  # aadhaar, pan
+    image_base64: str,
+    entered_name: str,
+    entered_number: str  # Aadhaar number or PAN number
+):
+    """AI-powered KYC document verification"""
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+    
+    # Validate document type
+    if document_type not in ["aadhaar", "pan"]:
+        raise HTTPException(status_code=400, detail="Invalid document type. Use 'aadhaar' or 'pan'")
+    
+    # Create verification prompt
+    if document_type == "aadhaar":
+        verification_prompt = f"""Analyze this Aadhaar Card image and extract the following information:
+1. Full Name on the card
+2. Aadhaar Number (12 digits)
+3. Date of Birth (if visible)
+4. Gender (if visible)
+
+User entered:
+- Name: {entered_name}
+- Aadhaar Number: {entered_number}
+
+Compare the extracted data with user-entered data and respond in this JSON format:
+{{
+    "extracted_name": "name from card",
+    "extracted_number": "number from card",
+    "name_match": true/false,
+    "number_match": true/false,
+    "confidence": 0-100,
+    "is_valid_document": true/false,
+    "verification_status": "approved" or "manual_review" or "rejected",
+    "reason": "explanation in Marathi"
+}}
+
+If the image is not clear or not an Aadhaar card, set is_valid_document to false."""
+    else:
+        verification_prompt = f"""Analyze this PAN Card image and extract the following information:
+1. Full Name on the card
+2. PAN Number (10 characters - ABCDE1234F format)
+3. Father's Name (if visible)
+4. Date of Birth (if visible)
+
+User entered:
+- Name: {entered_name}
+- PAN Number: {entered_number}
+
+Compare the extracted data with user-entered data and respond in this JSON format:
+{{
+    "extracted_name": "name from card",
+    "extracted_number": "number from card",
+    "name_match": true/false,
+    "number_match": true/false,
+    "confidence": 0-100,
+    "is_valid_document": true/false,
+    "verification_status": "approved" or "manual_review" or "rejected",
+    "reason": "explanation in Marathi"
+}}
+
+If the image is not clear or not a PAN card, set is_valid_document to false."""
+
+    try:
+        # Create chat instance for KYC verification
+        kyc_chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"kyc_{uid}_{document_type}_{str(uuid.uuid4())[:8]}",
+            system_message="You are a KYC document verification expert. Analyze documents accurately and provide verification results in JSON format only."
+        ).with_model("gemini", "gemini-2.5-flash")
+        
+        # Create message with image
+        image_content = ImageContent(image_base64=image_base64)
+        user_msg = UserMessage(
+            text=verification_prompt,
+            file_contents=[image_content]
+        )
+        
+        # Get AI response
+        response = await kyc_chat.send_message(user_msg)
+        
+        # Parse JSON response
+        import json
+        try:
+            # Extract JSON from response
+            json_start = response.find('{')
+            json_end = response.rfind('}') + 1
+            if json_start != -1 and json_end > json_start:
+                result = json.loads(response[json_start:json_end])
+            else:
+                result = {
+                    "verification_status": "manual_review",
+                    "reason": "AI response parsing failed",
+                    "confidence": 0
+                }
+        except json.JSONDecodeError:
+            result = {
+                "verification_status": "manual_review",
+                "reason": "AI response parsing failed",
+                "confidence": 0
+            }
+        
+        # Log KYC verification attempt
+        kyc_log = {
+            "uid": uid,
+            "document_type": document_type,
+            "entered_name": entered_name,
+            "entered_number": entered_number[-4:] if len(entered_number) > 4 else "****",  # Only last 4 digits for security
+            "ai_result": result,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        await db.kyc_ai_logs.insert_one(kyc_log)
+        
+        # If auto-approved, update user KYC status
+        if result.get("verification_status") == "approved" and result.get("confidence", 0) >= 80:
+            update_field = f"kyc_{document_type}_verified" 
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {
+                    update_field: True,
+                    f"kyc_{document_type}_verified_at": datetime.now(timezone.utc).isoformat(),
+                    f"kyc_{document_type}_method": "ai_auto"
+                }}
+            )
+            
+            # Check if both documents are verified for full KYC approval
+            user = await db.users.find_one({"uid": uid})
+            if user.get("kyc_aadhaar_verified") and user.get("kyc_pan_verified"):
+                await db.users.update_one(
+                    {"uid": uid},
+                    {"$set": {
+                        "kyc_status": "approved",
+                        "kyc_approved_at": datetime.now(timezone.utc).isoformat(),
+                        "kyc_approved_by": "AI_AUTO"
+                    }}
+                )
+                result["full_kyc_approved"] = True
+        
+        return {
+            "document_type": document_type,
+            "verification_result": result,
+            "auto_approved": result.get("verification_status") == "approved" and result.get("confidence", 0) >= 80
+        }
+        
+    except Exception as e:
+        logging.error(f"KYC AI verification error: {e}")
+        return {
+            "document_type": document_type,
+            "verification_result": {
+                "verification_status": "manual_review",
+                "reason": f"AI verification failed: {str(e)}",
+                "confidence": 0
+            },
+            "auto_approved": False
+        }
+
+@api_router.get("/ai/chatbot/history/{uid}")
+async def get_chatbot_history(uid: str, limit: int = 50):
+    """Get chatbot conversation history for a user"""
+    history = await db.chatbot_logs.find(
+        {"uid": uid},
+        {"_id": 0}
+    ).sort("timestamp", -1).limit(limit).to_list(limit)
+    
+    return {"history": history}
+
 # ========== ADMIN SECURITY ENDPOINTS ==========
 
 @api_router.post("/auth/refresh-token")
