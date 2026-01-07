@@ -453,7 +453,7 @@ const DailyRewards = ({ user, onLogout }) => {
                   disabled={loading}
                   className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-12 py-6 text-xl rounded-2xl shadow-xl"
                 >
-                  {loading ? 'Starting...' : 'Start Mining'}
+                  {loading ? 'Starting...' : 'Start Session'}
                 </Button>
               </>
             ) : (
@@ -465,17 +465,17 @@ const DailyRewards = ({ user, onLogout }) => {
                     </div>
                     <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full animate-ping"></div>
                   </div>
-                  <h2 className="text-3xl font-bold text-gray-900 mb-3">Mining in Progress</h2>
+                  <h2 className="text-3xl font-bold text-gray-900 mb-3">Collecting Points...</h2>
                   <p className="text-gray-600 max-w-2xl mx-auto mb-2">
-                    You're currently earning {miningStatus.mining_rate_per_hour.toFixed(2)} PRC per hour.
+                    You're currently collecting {miningStatus.mining_rate_per_hour.toFixed(2)} PRC per hour.
                   </p>
                   {isFreeUser && (
                     <p className="text-orange-600 font-medium text-sm">
-                      ⏰ PRC expires 2 days after claim. Use it for Treasure Hunt!
+                      ⏰ PRC expires 2 days after claim. Use it in the marketplace!
                     </p>
                   )}
                   <div className="mt-6 p-6 bg-gradient-to-r from-purple-100 to-pink-100 rounded-2xl inline-block">
-                    <p className="text-sm text-gray-600 mb-2">Earned This Session</p>
+                    <p className="text-sm text-gray-600 mb-2">Collected This Session</p>
                     <p className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                       {miningStatus.mined_this_session.toFixed(2)}
                     </p>
