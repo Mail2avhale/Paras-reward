@@ -262,29 +262,57 @@ const KYCVerification = ({ user, onLogout }) => {
                   </Button>
                 </div>
                 
-                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
-                  <p className="text-sm text-purple-800">
-                    <strong>📌 Tip:</strong> दोन्ही documents (Aadhaar + PAN) verify करा complete KYC साठी!
-                  </p>
+                {/* AI Document Scanner - NEW FEATURE */}
+                <div className="mb-8">
+                  <div className="bg-gradient-to-r from-purple-100 to-indigo-100 border border-purple-300 rounded-xl p-4 mb-6">
+                    <div className="flex items-start gap-3">
+                      <Scan className="w-6 h-6 text-purple-600 mt-0.5" />
+                      <div>
+                        <p className="font-bold text-purple-900">🆕 Auto Profile Fill!</p>
+                        <p className="text-sm text-purple-800 mt-1">
+                          Document photo upload करा → AI automatically सगळे details वाचेल → Profile auto-fill होईल!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <AIDocumentScanner 
+                    user={user}
+                    onProfileUpdate={(updates) => {
+                      fetchUserData();
+                      toast.success('Profile updated with scanned data!');
+                    }}
+                  />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <KYCAIVerification 
-                    user={user} 
-                    documentType="aadhaar"
-                    onVerified={(type, result) => {
-                      fetchUserData();
-                      toast.success('Aadhaar verified!');
-                    }}
-                  />
-                  <KYCAIVerification 
-                    user={user} 
-                    documentType="pan"
-                    onVerified={(type, result) => {
-                      fetchUserData();
-                      toast.success('PAN verified!');
-                    }}
-                  />
+                <div className="border-t border-gray-200 pt-6 mt-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">
+                    किंवा KYC Verification करा (Admin Review)
+                  </h4>
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                    <p className="text-sm text-blue-800">
+                      <strong>📌 Tip:</strong> दोन्ही documents (Aadhaar + PAN) verify करा complete KYC साठी!
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <KYCAIVerification 
+                      user={user} 
+                      documentType="aadhaar"
+                      onVerified={(type, result) => {
+                        fetchUserData();
+                        toast.success('Aadhaar verified!');
+                      }}
+                    />
+                    <KYCAIVerification 
+                      user={user} 
+                      documentType="pan"
+                      onVerified={(type, result) => {
+                        fetchUserData();
+                        toast.success('PAN verified!');
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
             )}
