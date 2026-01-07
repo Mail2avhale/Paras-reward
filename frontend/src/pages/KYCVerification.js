@@ -197,6 +197,107 @@ const KYCVerification = ({ user, onLogout }) => {
           <Card data-testid="kyc-upload" className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Submit KYC Documents</h2>
             
+            {/* AI vs Manual Selection */}
+            {!verificationMode && (
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Verification Method निवडा</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* AI Verification Option */}
+                  <button
+                    onClick={() => setVerificationMode('ai')}
+                    className="p-6 border-2 border-purple-400 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl hover:shadow-lg transition-all group relative overflow-hidden"
+                  >
+                    <div className="absolute top-2 right-2">
+                      <span className="px-2 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold rounded-full animate-pulse">
+                        ⚡ FAST
+                      </span>
+                    </div>
+                    <div className="text-center">
+                      <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                        <Sparkles className="h-8 w-8 text-white" />
+                      </div>
+                      <h4 className="font-bold text-lg mb-1 text-purple-900">🤖 AI Auto-Verification</h4>
+                      <p className="text-sm text-purple-700 mb-2">Instant approval in 30 seconds!</p>
+                      <ul className="text-xs text-gray-600 space-y-1">
+                        <li>✅ AI document scanning</li>
+                        <li>✅ Auto name & number match</li>
+                        <li>✅ तात्काळ approval</li>
+                      </ul>
+                    </div>
+                  </button>
+
+                  {/* Manual Verification Option */}
+                  <button
+                    onClick={() => setVerificationMode('manual')}
+                    className="p-6 border-2 border-gray-300 rounded-xl hover:border-gray-400 hover:bg-gray-50 transition-all"
+                  >
+                    <div className="text-center">
+                      <div className="mx-auto w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-3">
+                        <FileText className="h-8 w-8 text-gray-500" />
+                      </div>
+                      <h4 className="font-bold text-lg mb-1 text-gray-800">📄 Manual Verification</h4>
+                      <p className="text-sm text-gray-600 mb-2">Admin review in 24-48 hours</p>
+                      <ul className="text-xs text-gray-500 space-y-1">
+                        <li>📤 Document upload</li>
+                        <li>👤 Admin review</li>
+                        <li>⏰ 24-48 तास</li>
+                      </ul>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* AI Verification Mode */}
+            {verificationMode === 'ai' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-purple-600" />
+                    AI Auto-Verification
+                  </h3>
+                  <Button variant="outline" size="sm" onClick={() => setVerificationMode('')}>
+                    ← Back
+                  </Button>
+                </div>
+                
+                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-purple-800">
+                    <strong>📌 Tip:</strong> दोन्ही documents (Aadhaar + PAN) verify करा complete KYC साठी!
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <KYCAIVerification 
+                    user={user} 
+                    documentType="aadhaar"
+                    onVerified={(type, result) => {
+                      fetchUserData();
+                      toast.success('Aadhaar verified!');
+                    }}
+                  />
+                  <KYCAIVerification 
+                    user={user} 
+                    documentType="pan"
+                    onVerified={(type, result) => {
+                      fetchUserData();
+                      toast.success('PAN verified!');
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Manual Verification Mode */}
+            {verificationMode === 'manual' && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Manual Document Upload</h3>
+                  <Button variant="outline" size="sm" onClick={() => setVerificationMode('')}>
+                    ← Back
+                  </Button>
+                </div>
+            
             {/* Information Banner */}
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
               <div className="flex items-start gap-3">
