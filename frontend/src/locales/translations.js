@@ -652,6 +652,80 @@ const translations = {
     en: "Shopping time!"
   },
 
+  // Games Slide
+  tutorialGamesTitle: {
+    mr: "Games खेळा 🎮",
+    hi: "Games खेलें 🎮",
+    en: "Play Games 🎮"
+  },
+  tutorialGamesSubtitle: {
+    mr: "मजा करा, PRC कमवा",
+    hi: "मज़े करें, PRC कमाएं",
+    en: "Have fun, earn PRC"
+  },
+  tutorialGamesDesc: {
+    mr: "Tap Challenge आणि Scratch Cards खेळा आणि bonus PRC जिंका!",
+    hi: "Tap Challenge और Scratch Cards खेलें और bonus PRC जीतें!",
+    en: "Play Tap Challenge and Scratch Cards to win bonus PRC!"
+  },
+  tutorialGamesTip1: {
+    mr: "🎯 Daily tap challenges",
+    hi: "🎯 Daily tap challenges",
+    en: "🎯 Daily tap challenges"
+  },
+  tutorialGamesTip2: {
+    mr: "🎰 Lucky scratch cards",
+    hi: "🎰 Lucky scratch cards",
+    en: "🎰 Lucky scratch cards"
+  },
+  tutorialGamesTip3: {
+    mr: "🏅 500 PRC पर्यंत जिंका",
+    hi: "🏅 500 PRC तक जीतें",
+    en: "🏅 Win up to 500 PRC"
+  },
+  mascotGames: {
+    mr: "खेळूया! 🎮",
+    hi: "खेलें! 🎮",
+    en: "Let's play! 🎮"
+  },
+
+  // AI Assistant Slide
+  tutorialAITitle: {
+    mr: "AI Assistant 🤖",
+    hi: "AI Assistant 🤖",
+    en: "AI Assistant 🤖"
+  },
+  tutorialAISubtitle: {
+    mr: "24/7 मदत तुमच्यासाठी",
+    hi: "24/7 मदद आपके लिए",
+    en: "24/7 help for you"
+  },
+  tutorialAIDesc: {
+    mr: "कोणताही प्रश्न असेल तर AI Assistant ला विचारा. Marathi, Hindi, English मध्ये मदत!",
+    hi: "कोई भी सवाल हो तो AI Assistant से पूछें. Marathi, Hindi, English में मदद!",
+    en: "Ask AI Assistant any question. Help available in Marathi, Hindi, English!"
+  },
+  tutorialAITip1: {
+    mr: "💬 कधीही, काहीही विचारा",
+    hi: "💬 कभी भी, कुछ भी पूछें",
+    en: "💬 Ask anything, anytime"
+  },
+  tutorialAITip2: {
+    mr: "🌐 Marathi, Hindi, English",
+    hi: "🌐 Marathi, Hindi, English",
+    en: "🌐 Marathi, Hindi, English"
+  },
+  tutorialAITip3: {
+    mr: "🎓 App features शिका सोप्या पद्धतीने",
+    hi: "🎓 App features सीखें आसान तरीके से",
+    en: "🎓 Learn app features easily"
+  },
+  mascotAI: {
+    mr: "मी मदत करतो! 🤖",
+    hi: "मैं मदद करता हूं! 🤖",
+    en: "I'll help! 🤖"
+  },
+
   // Redeem Slide
   tutorialRedeemTitle: {
     mr: "Gift Vouchers & Bill Pay 🎁",
