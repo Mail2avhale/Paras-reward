@@ -1,7 +1,7 @@
 {
-  "name": "PARAS REWARD - Earn Daily Rewards",
+  "name": "PARAS REWARD - Loyalty Points Platform",
   "short_name": "PARAS REWARD",
-  "description": "India's #1 Reward Points Platform. Earn PRC through daily activities and redeem for real products.",
+  "description": "India's #1 Loyalty Rewards Platform. Collect PRC points through daily activities and redeem for real products.",
   "start_url": "/?utm_source=pwa",
   "display": "standalone",
   "background_color": "#1e1b4b",
@@ -41,24 +41,24 @@
       "icons": [{ "src": "/paras-logo.jpg", "sizes": "192x192" }]
     },
     {
-      "name": "Mining",
-      "short_name": "Mining",
-      "description": "Start earning rewards",
-      "url": "/mining",
+      "name": "Daily Rewards",
+      "short_name": "Rewards",
+      "description": "Collect daily points",
+      "url": "/daily-rewards",
       "icons": [{ "src": "/paras-logo.jpg", "sizes": "192x192" }]
     },
     {
-      "name": "Treasure Hunt",
-      "short_name": "Hunt",
-      "description": "Play & earn cashback",
-      "url": "/treasure-hunt",
+      "name": "Games",
+      "short_name": "Games",
+      "description": "Play games & win",
+      "url": "/game",
       "icons": [{ "src": "/paras-logo.jpg", "sizes": "192x192" }]
     },
     {
-      "name": "Wallet",
-      "short_name": "Wallet",
-      "description": "Manage your balance",
-      "url": "/wallet",
+      "name": "Invite Friends",
+      "short_name": "Invite",
+      "description": "Earn referral bonus",
+      "url": "/referrals",
       "icons": [{ "src": "/paras-logo.jpg", "sizes": "192x192" }]
     },
     {
