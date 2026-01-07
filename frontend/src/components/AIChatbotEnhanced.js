@@ -153,10 +153,10 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
   if (!isOpen) {
     return (
       <motion.div
-        className="fixed bottom-20 right-4 z-[100]"
+        className="fixed bottom-24 right-4 z-[9999]"
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 260, damping: 20, delay: 1 }}
+        transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.5 }}
       >
         {/* Attention-grabbing pulse rings */}
         {showPulse && (
