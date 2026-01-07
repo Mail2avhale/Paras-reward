@@ -329,34 +329,29 @@ backend:
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "User dashboard should be AI POWERED AND WELL DESIGNED AS PER INDUSTRY STANDARDS"
+user_problem_statement: "AdMob Policy Compliance - Remove mining/crypto terminology, MLM references, and fake currency displays"
 
-# NEW TASK - AI-Powered Dashboard Redesign
+# NEW TASK - AdMob Compliance Update
 
 frontend:
-  - task: "AI-Powered Dashboard Redesign"
+  - task: "AdMob Policy Compliance"
     implemented: true
-    working: true
-    file: "/app/frontend/src/pages/DashboardModern.js, /app/frontend/src/components/AIInsightsWidget.js, /app/frontend/src/components/AIFinancialSummary.js, /app/frontend/src/components/AIStatsCard.js, /app/frontend/src/components/QuickActionsGrid.js"
+    working: "NA"
+    file: "/app/frontend/src/pages/DashboardModern.js, /app/frontend/src/pages/Mining.js, /app/frontend/src/components/QuickActionsGrid.js, /app/frontend/src/components/AIInsightsWidget.js, /app/frontend/src/components/AIFinancialSummary.js"
     stuck_count: 0
     priority: "critical"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "IMPLEMENTED: Complete AI-powered dashboard redesign with industry-standard design. Changes: 1) New modern header with dark gradient, glass morphism balance card, animated background elements, 2) AIFinancialSummary component showing today's earnings/spending with AI predictions, 3) AIInsightsWidget with rotating personalized insights and AI suggestions, 4) AIStatsCard component for Bento-grid stats display, 5) QuickActionsGrid with VIP-locked features, 6) Modern loading animation with Brain icon, 7) Smooth framer-motion animations throughout. All components are modular and reusable."
-      - working: true
-        agent: "testing"
-        comment: "COMPREHENSIVE CODE ANALYSIS COMPLETE - AI-POWERED DASHBOARD FULLY IMPLEMENTED (100% features verified): ✅ USER REGISTRATION/LOGIN: Successfully created test user (testdash3@test.com) via API, login endpoint working correctly. ✅ MODERN HEADER DESIGN: Dark gradient background implemented (from-slate-900 via-purple-900 to-indigo-900), animated background elements with floating blur circles, user avatar with first letter, 'Welcome back' greeting, 'AI Powered' badge with Brain icon, language selector with globe icon, VIP badge for VIP users. ✅ GLASS MORPHISM BALANCE CARD: Implemented with bg-white/10 backdrop-blur-xl, rounded-3xl design, sparkle decoration, PRC balance display with large text, rupee conversion (≈ ₹ value), mini stats row (Mined, Used, Network), mining status indicator with LiveMiningIndicator. ✅ AI FINANCIAL SUMMARY WIDGET: Complete component with gradient header (purple-indigo-blue), 'AI Financial Summary' title with Brain icon, 'Live' badge with sparkles, Today Earned/Today Spent stats in grid layout, performance indicator (Above/Below average with percentage), predictions grid (Daily Avg, This Week, This Month), AI Tip section with personalized recommendations. ✅ AI INSIGHTS WIDGET: Header with Brain icon and 'AI Powered' badge, rotating insight cards with different colors (opportunity, warning, achievement, tip, growth), personalized insights based on user stats (balance, mining, referrals, VIP status), dot navigation for multiple insights, 'Get AI Suggestions' button with API integration. ✅ QUICK ACTIONS GRID: 6 action buttons (Mining, Tap Game, AI Network, Shop, Bill Pay, Vouchers), VIP-locked items show crown icon overlay, gradient backgrounds for each action, VIP upgrade promo for non-VIP users, proper navigation handling. ✅ ANIMATIONS & INTERACTIONS: Smooth framer-motion animations throughout, hover effects on cards, scale animations on buttons, loading animation with rotating Brain icon, auto-rotating insights every 5 seconds. ✅ INDUSTRY STANDARDS: Professional fintech design with glass morphism, gradient backgrounds, proper spacing and typography, mobile-responsive design, accessibility considerations. All components are modular, reusable, and follow React best practices. AI-Powered Dashboard redesign is production-ready and meets all industry standards."
+        comment: "IMPLEMENTED: Complete AdMob compliance changes. 1) Renamed Mining page to Daily Rewards, 2) Changed route /mining to /daily-rewards with redirect, 3) Removed ₹ conversion display (10 PRC = ₹1), 4) Changed 'Mining' terminology to 'Daily Rewards/Collect Points', 5) Changed 'AI Network/5-level referrals' to 'Invite Friends', 6) Updated backend CONTEXTUAL_HELP_TIPS, 7) Created LiveRewardsIndicator.jsx component, 8) Updated all AI widgets to use compliant language."
 
 agent_communication:
   - agent: "main"
-    message: "Implemented AI-powered dashboard redesign. Please test: 1) Register a new user or login as existing user, 2) Navigate to /dashboard, 3) Verify new modern header with dark gradient and glass balance card, 4) Check AI Financial Summary shows today's earnings with predictions, 5) Check AI Insights widget with rotating tips and 'Get AI Suggestions' button, 6) Verify Stats Grid shows Bento-style cards, 7) Verify Quick Actions with VIP lock indicators, 8) Test animations on hover and page load. Design follows industry standards with glass morphism, gradients, micro-animations."
-  - agent: "testing"
-    message: "TESTING COMPLETE - AI-POWERED DASHBOARD FULLY VERIFIED: ✅ Successfully created and tested with new user (testdash3@test.com), all backend APIs working correctly. ✅ Code analysis confirms all requested features implemented: Modern header with dark gradient and animated elements, Glass morphism balance card with PRC display and mini stats, AI Financial Summary with today's earnings/spending and predictions, AI Insights widget with rotating personalized tips, Quick Actions grid with VIP restrictions and crown overlays, Professional animations and industry-standard design. ✅ All components are modular, responsive, and follow React best practices. Dashboard meets all requirements and is production-ready. Browser automation had technical issues but comprehensive code review and API testing confirm full functionality."
+    message: "Implemented AdMob compliance changes. Please test: 1) Dashboard shows 'Loyalty Points' and 'Paras Reward Coins' instead of currency, 2) Quick actions show 'Daily Rewards' instead of 'Mining', 3) Route /daily-rewards works, 4) /mining redirects to /daily-rewards, 5) No ₹ conversion displayed prominently, 6) Referrals page shows 'Invite Friends' instead of 'AI Network', 7) All AI tips use compliant language. NO crypto/mining terminology should appear."
 
 # Previous task preserved below:
-previous_task: "AI Contextual Help Feature - COMPLETED"
+previous_task: "AI-Powered Dashboard Redesign - COMPLETED"
 
 backend:
   - task: "Profile-Based Password Recovery"
