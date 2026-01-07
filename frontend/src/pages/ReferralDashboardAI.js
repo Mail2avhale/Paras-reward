@@ -54,6 +54,7 @@ function ReferralDashboardAI({ user, onLogout }) {
       setEarnings(earningsRes.data);
       setTreeData(treeRes.data.tree);
       setLevelStats(levelRes.data);
+      setBonusBreakdown(bonusRes.data);
     } catch (error) {
       console.error('Error fetching referral data:', error);
       toast.error('Failed to load referral data');
