@@ -206,9 +206,9 @@ const translations = {
     en: "PRC Sources"
   },
   mining: {
-    mr: "माइनिंग",
-    hi: "माइनिंग",
-    en: "Mining"
+    mr: "दैनिक बक्षिसे",
+    hi: "दैनिक पुरस्कार",
+    en: "Daily Rewards"
   },
   games: {
     mr: "गेम्स",
@@ -243,9 +243,9 @@ const translations = {
     en: "No activity yet"
   },
   startMining: {
-    mr: "माइनिंग सुरू करा!",
-    hi: "माइनिंग शुरू करें!",
-    en: "Start mining!"
+    mr: "बक्षिसे गोळा करा!",
+    hi: "पुरस्कार इकट्ठा करें!",
+    en: "Collect rewards!"
   },
 
   // ==================== ACCOUNT STATUS ====================
