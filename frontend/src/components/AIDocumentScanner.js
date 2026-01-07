@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import ModernImageUpload from '@/components/ModernImageUpload';
 import { 
   Scan, Camera, Upload, CheckCircle2, Loader2, 
   User, CreditCard, Calendar, MapPin, Sparkles,
