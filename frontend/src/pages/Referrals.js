@@ -336,7 +336,7 @@ const Referrals = ({ user, onLogout }) => {
                       <th className="py-2 text-center text-green-400">Active</th>
                       <th className="py-2 text-center text-red-400">Inactive</th>
                       <th className="py-2 text-center text-gray-400">Bonus %</th>
-                      <th className="py-2 text-right text-green-400">Mining Bonus</th>
+                      <th className="py-2 text-right text-green-400">Bonus PRC</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -366,9 +366,9 @@ const Referrals = ({ user, onLogout }) => {
             {/* Info Box */}
             <div className="mt-4 p-3 bg-white/5 rounded-lg text-xs text-gray-400">
               <strong className="text-white">{language === 'mr' ? 'कसे काम करते:' : language === 'hi' ? 'कैसे काम करता है:' : 'How it works:'}</strong> 
-              {language === 'mr' ? ' Active referrals (last 24 hours login) वरून mining bonus मिळतो. जितके जास्त active referrals, तितकी जास्त mining speed!'
-               : language === 'hi' ? ' Active referrals (last 24 hours login) से mining bonus मिलता है। जितने ज्यादा active referrals, उतनी ज्यादा mining speed!'
-               : ' Active referrals (last 24 hours login) give you mining bonus. More active referrals = faster mining!'}
+              {language === 'mr' ? ' Active referrals (24 तासात login) मुळे बोनस मिळतो. जितके जास्त active friends, तितका जास्त बोनस!'
+               : language === 'hi' ? ' Active referrals (24 घंटे में login) से बोनस मिलता है। जितने ज्यादा active friends, उतना ज्यादा बोनस!'
+               : ' Active referrals (logged in within 24 hours) give you bonus. More active friends = more bonus!'}
             </div>
           </Card>
         )}
