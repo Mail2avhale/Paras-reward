@@ -595,13 +595,13 @@ const DashboardModern = ({ user, onLogout }) => {
                 delay={2}
               />
               <AIStatsCard 
-                icon={Network}
-                label="AI Network"
+                icon={UserPlus}
+                label="Friends"
                 value={stats.referralCount}
-                subValue="Total referrals"
+                subValue="Invited friends"
                 gradient="from-indigo-500 to-purple-600"
                 delay={3}
-                onClick={() => navigate('/network')}
+                onClick={() => navigate('/referrals')}
               />
             </div>
           </DashboardCard>
