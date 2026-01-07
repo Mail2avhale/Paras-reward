@@ -10,6 +10,18 @@
 # Solution: Added missing routes in App.js and created new admin pages (AdminKYC.js, AdminOrders.js, AdminSupport.js)
 
 frontend:
+  - task: "KYC Document Upload Camera/Image Fix"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/AIDocumentScanner.js, /app/frontend/src/components/ModernImageUpload.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: KYC Document Upload fix with ModernImageUpload component integration. AIDocumentScanner.js now uses ModernImageUpload component that provides both Camera capture and Gallery upload options with auto-compression. Features: Document type selection (Aadhaar Card, PAN Card), Camera capture with proper permissions and fallback, Gallery upload with file validation, Auto-compression (Max 2MB, 1200x1200px), Preview with rotate/retake options, Mobile-optimized UI with responsive design. ModernImageUpload component handles camera permissions, image processing, compression, and provides fallback to camera app when browser camera fails."
+
   - task: "Admin Sidebar Navigation Fix"
     implemented: true
     working: true
