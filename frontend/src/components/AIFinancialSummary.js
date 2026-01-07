@@ -39,8 +39,8 @@ const AIFinancialSummary = ({ userId, stats, todayStats }) => {
               <Brain className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-lg">AI Financial Summary</h3>
-              <p className="text-xs text-white/70">Smart analysis of your earnings</p>
+              <h3 className="font-bold text-lg">AI Points Summary</h3>
+              <p className="text-xs text-white/70">Smart analysis of your rewards</p>
             </div>
           </div>
           <motion.div 
@@ -59,20 +59,20 @@ const AIFinancialSummary = ({ userId, stats, todayStats }) => {
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <ArrowUpRight className="w-4 h-4 text-green-300" />
-              <span className="text-xs text-white/70">Today Earned</span>
+              <span className="text-xs text-white/70">Today Collected</span>
             </div>
             <p className="text-2xl font-bold">+{todayStats.today_prc_earned.toFixed(1)}</p>
-            <p className="text-xs text-white/60">PRC</p>
+            <p className="text-xs text-white/60">PRC Points</p>
           </div>
 
           {/* Today's Spending */}
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <ArrowDownRight className="w-4 h-4 text-red-300" />
-              <span className="text-xs text-white/70">Today Spent</span>
+              <span className="text-xs text-white/70">Today Redeemed</span>
             </div>
             <p className="text-2xl font-bold">-{todayStats.today_prc_spent.toFixed(1)}</p>
-            <p className="text-xs text-white/60">PRC</p>
+            <p className="text-xs text-white/60">PRC Points</p>
           </div>
         </div>
       </div>
@@ -95,12 +95,12 @@ const AIFinancialSummary = ({ userId, stats, todayStats }) => {
             </div>
             <div>
               <p className={`font-semibold text-sm ${isAboveAverage ? 'text-green-700' : 'text-amber-700'}`}>
-                {isAboveAverage ? 'Above Average!' : 'Below Average'}
+                {isAboveAverage ? 'Great Progress!' : 'Keep Going!'}
               </p>
               <p className="text-xs text-gray-500">
                 {isAboveAverage 
-                  ? `You're earning ${Math.abs(todayPerformance)}% more than usual` 
-                  : `Earning ${Math.abs(todayPerformance)}% less than usual`}
+                  ? `Collecting ${Math.abs(todayPerformance)}% more points than usual` 
+                  : `Collect more to reach your daily goal`}
               </p>
             </div>
           </div>
@@ -109,7 +109,8 @@ const AIFinancialSummary = ({ userId, stats, todayStats }) => {
           </div>
         </div>
 
-        {/* Predictions Grid */}
+        {/* Stats Grid - Based on past activity */}
+        <p className="text-[10px] text-gray-400 mb-2 text-center">Based on your activity history</p>
         <div className="grid grid-cols-3 gap-3">
           {/* Daily Average */}
           <motion.div 
@@ -121,24 +122,24 @@ const AIFinancialSummary = ({ userId, stats, todayStats }) => {
             <p className="text-xs text-gray-500">Daily Avg</p>
           </motion.div>
 
-          {/* Weekly Prediction */}
+          {/* Weekly Estimate */}
           <motion.div 
             className="bg-blue-50 rounded-xl p-3 text-center border border-blue-100"
             whileHover={{ scale: 1.02 }}
           >
             <PiggyBank className="w-5 h-5 text-blue-500 mx-auto mb-2" />
             <p className="text-lg font-bold text-blue-700">{weeklyPrediction}</p>
-            <p className="text-xs text-blue-600">This Week</p>
+            <p className="text-xs text-blue-600">Weekly Est.</p>
           </motion.div>
 
-          {/* Monthly Prediction */}
+          {/* Monthly Estimate */}
           <motion.div 
             className="bg-purple-50 rounded-xl p-3 text-center border border-purple-100"
             whileHover={{ scale: 1.02 }}
           >
             <Coins className="w-5 h-5 text-purple-500 mx-auto mb-2" />
             <p className="text-lg font-bold text-purple-700">{monthlyPrediction}</p>
-            <p className="text-xs text-purple-600">This Month</p>
+            <p className="text-xs text-purple-600">Monthly Est.</p>
           </motion.div>
         </div>
 
@@ -152,8 +153,8 @@ const AIFinancialSummary = ({ userId, stats, todayStats }) => {
               <p className="text-xs font-semibold text-purple-700 mb-1">AI Tip</p>
               <p className="text-xs text-gray-600 leading-relaxed">
                 {isAboveAverage 
-                  ? "Great progress! Keep mining consistently to maintain this momentum. Consider growing your referral network for bonus earnings."
-                  : "Start a mining session now to boost your daily earnings. Consistent mining is key to reaching your goals!"}
+                  ? "Great progress! Keep collecting daily rewards consistently. Invite friends to earn bonus points together!"
+                  : "Start your daily rewards session to collect more points. Consistent activity helps you reach your goals!"}
               </p>
             </div>
           </div>
