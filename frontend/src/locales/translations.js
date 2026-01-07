@@ -307,9 +307,9 @@ const translations = {
     en: "Upgrade Now"
   },
   vipBenefitsDesc: {
-    mr: "अमर्याद माइनिंग, उच्च दर, आणि विशेष वैशिष्ट्ये",
-    hi: "असीमित माइनिंग, उच्च दर, और विशेष सुविधाएं",
-    en: "Unlimited mining, higher rates, and exclusive features"
+    mr: "अमर्याद बक्षिसे, उच्च दर, आणि विशेष वैशिष्ट्ये",
+    hi: "असीमित पुरस्कार, उच्च दर, और विशेष सुविधाएं",
+    en: "Unlimited rewards, higher rates, and exclusive features"
   },
   vipBenefits: {
     mr: "VIP फायदे",
@@ -363,9 +363,9 @@ const translations = {
   
   // ==================== TRANSACTION TYPES ====================
   txMining: {
-    mr: "माइनिंग बक्षीस",
-    hi: "माइनिंग इनाम",
-    en: "Mining Reward"
+    mr: "दैनिक बक्षीस",
+    hi: "दैनिक इनाम",
+    en: "Daily Reward"
   },
   txGame: {
     mr: "गेम बक्षीस",
