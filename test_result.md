@@ -2088,3 +2088,19 @@ agent_communication:
 agent_communication:
   - agent: "main"
     message: "TESTING NEEDED: KYC Document Upload fix implemented. Please test the following flow: 1) Login as regular user (kyctest2@test.com / test123), 2) Navigate to Profile > KYC Documents section, 3) Click on 'Aadhaar Card' or 'PAN Card' option, 4) Verify that the Camera and Gallery buttons appear, 5) Test both Camera capture and Gallery upload options, 6) Verify image preview, rotate, and retake functionality, 7) Confirm the upload flow works end-to-end with AI scanning."
+
+  - task: "Advanced Interactive Tutorial with Mesh Gradients"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/AppTutorialAdvanced.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Created new AppTutorialAdvanced.js with: 1) Mesh gradient animated backgrounds, 2) Floating particles effect, 3) Glassmorphism cards, 4) 8 feature slides (Welcome, Mining, Referral, Marketplace, Games, VIP, AI Assistant, Ready), 5) 3D animated icons, 6) Clickable progress dots, 7) Smooth transitions. Integrated into DashboardModern.js"
+
+agent_communication:
+  - agent: "main"
+    message: "TESTING NEEDED: Advanced Tutorial implementation. Please test: 1) Login as user (kyctest2@test.com/test123), 2) Verify the language selection screen with mesh gradient background and glassmorphism, 3) Select English and verify tutorial slides appear, 4) Navigate through all 8 slides using Next button, 5) Verify animations on each slide (coin rotation, mining glow, network nodes, etc.), 6) Test clicking on progress dots to jump between slides, 7) Test Skip button (X) to close tutorial, 8) Verify tutorial completes and dashboard loads."
