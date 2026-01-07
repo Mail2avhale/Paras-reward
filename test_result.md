@@ -336,15 +336,18 @@ user_problem_statement: "AdMob Policy Compliance - Remove mining/crypto terminol
 frontend:
   - task: "AdMob Policy Compliance"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/frontend/src/pages/DashboardModern.js, /app/frontend/src/pages/Mining.js, /app/frontend/src/components/QuickActionsGrid.js, /app/frontend/src/components/AIInsightsWidget.js, /app/frontend/src/components/AIFinancialSummary.js"
     stuck_count: 0
     priority: "critical"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "IMPLEMENTED: Complete AdMob compliance changes. 1) Renamed Mining page to Daily Rewards, 2) Changed route /mining to /daily-rewards with redirect, 3) Removed ₹ conversion display (10 PRC = ₹1), 4) Changed 'Mining' terminology to 'Daily Rewards/Collect Points', 5) Changed 'AI Network/5-level referrals' to 'Invite Friends', 6) Updated backend CONTEXTUAL_HELP_TIPS, 7) Created LiveRewardsIndicator.jsx component, 8) Updated all AI widgets to use compliant language."
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL ADMOB COMPLIANCE FAILURES FOUND (Multiple violations detected): ❌ MAJOR VIOLATIONS: 1) HTML page title still contains 'Mining-Based Reward Platform' in /app/frontend/public/index.html (lines 18, 30, 38, 54), 2) TopBar component shows 'India's No.1 Mining Platform' tagline (line 73), 3) Meta descriptions contain mining terminology (lines 21, 31, 39), 4) Homepage shows 'Today's Mining' text, 5) /mining route redirects to login instead of /daily-rewards, 6) User authentication issues preventing full dashboard testing. ✅ PARTIAL SUCCESS: QuickActionsGrid shows 'Daily Rewards' button, no ₹ currency symbols found, some compliant terminology present. IMPACT: App will be rejected by AdMob due to crypto/mining terminology in critical areas (page title, meta tags, visible UI). All mining references must be removed from HTML title, meta tags, and UI components."
 
 agent_communication:
   - agent: "main"
