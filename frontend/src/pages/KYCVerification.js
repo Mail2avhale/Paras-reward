@@ -5,7 +5,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import ImageCropUpload from '@/components/ImageCropUpload';
 import KYCAIVerification from '@/components/KYCAIVerification';
-import { FileText, Upload, CheckCircle, Clock, XCircle, AlertCircle, Sparkles, Zap } from 'lucide-react';
+import AIDocumentScanner from '@/components/AIDocumentScanner';
+import { FileText, Upload, CheckCircle, Clock, XCircle, AlertCircle, Sparkles, Zap, Scan } from 'lucide-react';
 import { toast } from 'sonner';
 import notifications from '@/utils/notifications';
 
