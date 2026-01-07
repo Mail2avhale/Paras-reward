@@ -269,27 +269,6 @@ const NetworkLevelVisualization = ({ levelStats, bonusBreakdown }) => {
             </motion.div>
           );
         })}
-                    <span>Potential Earnings</span>
-                    <span className="font-bold">{potentialEarning} PRC</span>
-                  </div>
-                  <div className="h-2 bg-white/30 rounded-full overflow-hidden">
-                    <motion.div
-                      className="h-full bg-white rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(count * 10, 100)}%` }}
-                      transition={{ duration: 1, delay: index * 0.1 }}
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              {/* Connection line */}
-              {index < LEVEL_CONFIG.length - 1 && (
-                <div className="absolute left-8 -bottom-3 w-0.5 h-6 bg-gradient-to-b from-gray-300 to-transparent z-10" />
-              )}
-            </motion.div>
-          );
-        })}
       </div>
 
       {/* Total Earnings Summary */}
@@ -298,15 +277,16 @@ const NetworkLevelVisualization = ({ levelStats, bonusBreakdown }) => {
           <div className="flex items-center gap-3">
             <Trophy className="w-8 h-8" />
             <div>
-              <p className="font-bold text-lg">Total Network Earnings</p>
-              <p className="text-sm opacity-80">From all 5 levels</p>
+              <p className="font-bold text-lg">Network Earnings</p>
+              <p className="text-sm opacity-80">Active bonus sustains the system</p>
             </div>
           </div>
           <div className="text-right">
             <p className="text-3xl font-bold">
-              {LEVEL_CONFIG.reduce((total, level) => {
-                return total + ((levelStats?.[`level_${level.level}`] || 0) * level.bonus);
-              }, 0)} PRC
+              {bonusBreakdown?.total_active_bonus + bonusBreakdown?.total_inactive_bonus || 0} PRC
+            </p>
+            <p className="text-xs opacity-80">
+              Potential: {bonusBreakdown?.total_potential_bonus || 0} PRC
             </p>
           </div>
         </div>
