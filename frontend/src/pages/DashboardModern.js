@@ -631,11 +631,11 @@ const DashboardModern = ({ user, onLogout }) => {
                 <motion.button 
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate('/mining')}
+                  onClick={() => navigate('/daily-rewards')}
                   className="flex flex-col items-center p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg"
                 >
-                  <Zap className="w-6 h-6 text-white mb-2" />
-                  <span className="text-xs font-bold text-white">{t('mine')}</span>
+                  <Star className="w-6 h-6 text-white mb-2" />
+                  <span className="text-xs font-bold text-white">Rewards</span>
                 </motion.button>
                 <motion.button 
                   whileHover={{ scale: 1.05, y: -2 }}
@@ -649,11 +649,11 @@ const DashboardModern = ({ user, onLogout }) => {
                 <motion.button 
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate('/network')}
+                  onClick={() => navigate('/referrals')}
                   className="flex flex-col items-center p-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg"
                 >
                   <UserPlus className="w-6 h-6 text-white mb-2" />
-                  <span className="text-xs font-bold text-white">Network</span>
+                  <span className="text-xs font-bold text-white">Invite</span>
                 </motion.button>
               </div>
             </div>
