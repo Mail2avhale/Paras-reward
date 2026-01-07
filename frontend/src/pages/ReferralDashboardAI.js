@@ -239,7 +239,7 @@ function ReferralDashboardAI({ user, onLogout }) {
               <Card className="p-6 border-0 shadow-xl lg:col-span-2">
                 <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <Gift className="w-6 h-6 text-purple-600" />
-                  5-Level Bonus Structure
+                  Referral Bonus Structure
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   {LEVEL_CONFIG.map((level) => (
