@@ -507,11 +507,11 @@ const RewardsHome = () => {
           
           {/* Interactive Demo Cards */}
           <div className="grid lg:grid-cols-3 gap-8">
-            {/* Mining Demo */}
+            {/* Daily Rewards Demo */}
             <div className="group">
               <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-6 border border-white/20 hover:border-yellow-400/50 transition-all duration-300 hover:transform hover:scale-105">
                 <div className="h-48 flex items-center justify-center mb-6 relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-500/20 to-orange-500/20">
-                  {/* Animated Mining Icon */}
+                  {/* Animated Rewards Icon */}
                   <div className="relative">
                     <div className="w-24 h-24 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center animate-bounce shadow-2xl">
                       <Coins className="h-12 w-12 text-white" />
@@ -523,12 +523,12 @@ const RewardsHome = () => {
                   </div>
                 </div>
                 <h3 className="text-xl font-bold mb-2 text-yellow-400">
-                  {language === 'mr' ? '⛏️ माइनिंग' : language === 'hi' ? '⛏️ माइनिंग' : '⛏️ Mining'}
+                  {language === 'mr' ? '⭐ दैनिक बक्षिसे' : language === 'hi' ? '⭐ दैनिक पुरस्कार' : '⭐ Daily Rewards'}
                 </h3>
                 <p className="text-blue-200 text-sm mb-4">
-                  {language === 'mr' ? 'दररोज माइन करा आणि PRC कमवा. VIP 5x वेगाने कमवतात!' 
-                   : language === 'hi' ? 'रोज माइन करें और PRC कमाएं। VIP 5x तेजी से कमाते हैं!'
-                   : 'Mine daily and earn PRC. VIP members earn 5x faster!'}
+                  {language === 'mr' ? 'दररोज PRC गोळा करा. VIP 5x वेगाने मिळवतात!' 
+                   : language === 'hi' ? 'रोज PRC इकट्ठा करें। VIP 5x तेजी से पाते हैं!'
+                   : 'Collect PRC daily. VIP members get 5x faster!'}
                 </p>
                 <div className="flex items-center gap-2 text-green-400 text-sm font-medium">
                   <TrendingUp className="h-4 w-4" />
