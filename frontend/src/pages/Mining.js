@@ -333,7 +333,7 @@ const DailyRewards = ({ user, onLogout }) => {
                 }`}></div>
                 <div>
                   <h3 className="text-2xl font-bold">
-                    {miningStatus.session_active ? t('miningActive') : t('miningPaused')}
+                    {miningStatus.session_active ? t('rewardsActive') : t('sessionPaused')}
                   </h3>
                   <p className="text-white/90">
                     {miningStatus.session_active 
@@ -360,7 +360,7 @@ const DailyRewards = ({ user, onLogout }) => {
           </Card>
         )}
 
-        {/* Mining Stats */}
+        {/* Rewards Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="p-6 bg-white">
             <div className="flex items-center justify-between mb-2">
