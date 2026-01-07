@@ -329,7 +329,7 @@ function ReferralDashboardAI({ user, onLogout }) {
               <Card className="p-6 border-0 shadow-xl">
                 <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <Users className="w-6 h-6 text-purple-600" />
-                  Network Tree View
+                  Friends Tree View
                 </h3>
                 {treeData ? (
                   <div className="h-[500px] bg-gray-50 rounded-xl overflow-hidden">
