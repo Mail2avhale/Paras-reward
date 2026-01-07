@@ -755,7 +755,7 @@ const DashboardModern = ({ user, onLogout }) => {
       />
 
       {/* AI Chatbot - Always visible floating button */}
-      {user && !showTutorial && (
+      {user && (
         <AIChatbotEnhanced user={user} userStats={stats} />
       )}
     </div>
