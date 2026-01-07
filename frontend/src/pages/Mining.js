@@ -3,7 +3,7 @@ import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Coins, Play, Clock, Star, TrendingUp, Users, AlertCircle, Crown, ArrowLeft, HelpCircle } from 'lucide-react';
+import { Coins, Play, Clock, Star, TrendingUp, Users, AlertCircle, Crown, ArrowLeft, HelpCircle, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link, useNavigate } from 'react-router-dom';
 import notifications from '@/utils/notifications';
