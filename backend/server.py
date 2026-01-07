@@ -1769,6 +1769,10 @@ async def login(
                     user_identifier=identifier
                 )
             raise HTTPException(status_code=401, detail=f"Invalid password. {attempts_left - 1} attempts remaining.")
+    else:
+        # No password stored - reject login for security
+        record_login_attempt(identifier, False)
+        raise HTTPException(status_code=401, detail="Account has no password set. Please contact support.")
     
     if user.get("is_banned"):
         raise HTTPException(status_code=403, detail=f"Account suspended: {user.get('suspension_reason', 'Contact support')}")
