@@ -523,9 +523,9 @@ const DashboardModern = ({ user, onLogout }) => {
                 />
                 <QuickActionButton 
                   icon={UserPlus} 
-                  label={t('refer')} 
-                  onClick={() => navigate('/referrals')}
-                  color="green"
+                  label="AI Network" 
+                  onClick={() => navigate('/network')}
+                  customStyle={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)' }}
                 />
                 <QuickActionButton 
                   icon={CreditCard} 
