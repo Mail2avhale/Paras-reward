@@ -254,7 +254,7 @@ const RewardsHome = () => {
   const features = getFeatures();
 
   const vipBenefits = [
-    { icon: Zap, text: 'Up to 5x Mining Speed' },
+    { icon: Zap, text: 'Up to 5x Rewards Speed' },
     { icon: Percent, text: 'Higher Referral Bonuses' },
     { icon: Crown, text: 'Exclusive VIP Offers' },
     { icon: Shield, text: 'Priority Support' },
@@ -264,7 +264,7 @@ const RewardsHome = () => {
 
   const howItWorks = [
     { step: 1, title: 'Sign Up', description: 'Create your free account in seconds', icon: Smartphone },
-    { step: 2, title: 'Start Mining', description: 'Activate mining and earn PRC daily', icon: Coins },
+    { step: 2, title: 'Collect Rewards', description: 'Start collecting PRC points daily', icon: Coins },
     { step: 3, title: 'Invite Friends', description: 'Share your referral code and earn more', icon: Users },
     { step: 4, title: 'Redeem Rewards', description: 'Convert PRC to vouchers & payments', icon: Gift }
   ];
