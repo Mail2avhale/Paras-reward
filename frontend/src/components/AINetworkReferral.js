@@ -761,13 +761,13 @@ const AINetworkAnalytics = ({ networkStats, earnings }) => {
       
       // Earnings analysis
       const totalPotential = LEVEL_CONFIG.reduce((total, level) => {
-        return total + ((networkStats?.[`level_${level.level}`] || 0) * level.bonus);
+        return total + ((networkStats?.[`level_${level.level}`] || 0) * level.activeBonus);
       }, 0);
       
       newInsights.push({
         icon: '💰',
         title: 'Potential Earnings',
-        value: `${totalPotential} PRC`,
+        value: `${totalPotential || 0} PRC`,
         description: 'सध्याच्या network मधून maximum earning potential',
         color: 'from-amber-500 to-orange-600'
       });
