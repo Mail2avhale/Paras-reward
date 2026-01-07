@@ -16,13 +16,13 @@ import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-// Level configuration with bonuses
+// Level configuration with active/inactive bonuses
 const LEVEL_CONFIG = [
-  { level: 1, name: 'Direct Referral', bonus: 100, color: 'from-purple-500 to-purple-600', icon: '👤' },
-  { level: 2, name: 'Level 2', bonus: 50, color: 'from-blue-500 to-blue-600', icon: '👥' },
-  { level: 3, name: 'Level 3', bonus: 25, color: 'from-cyan-500 to-cyan-600', icon: '👨‍👩‍👦' },
-  { level: 4, name: 'Level 4', bonus: 10, color: 'from-green-500 to-green-600', icon: '🌳' },
-  { level: 5, name: 'Level 5', bonus: 5, color: 'from-amber-500 to-amber-600', icon: '🌟' },
+  { level: 1, name: 'Direct Referral', activeBonus: 100, inactiveBonus: 20, color: 'from-purple-500 to-purple-600', icon: '👤' },
+  { level: 2, name: 'Level 2', activeBonus: 50, inactiveBonus: 10, color: 'from-blue-500 to-blue-600', icon: '👥' },
+  { level: 3, name: 'Level 3', activeBonus: 25, inactiveBonus: 5, color: 'from-cyan-500 to-cyan-600', icon: '👨‍👩‍👦' },
+  { level: 4, name: 'Level 4', activeBonus: 10, inactiveBonus: 2, color: 'from-green-500 to-green-600', icon: '🌳' },
+  { level: 5, name: 'Level 5', activeBonus: 5, inactiveBonus: 1, color: 'from-amber-500 to-amber-600', icon: '🌟' },
 ];
 
 // ============================================
