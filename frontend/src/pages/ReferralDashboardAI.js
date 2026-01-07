@@ -264,7 +264,19 @@ function ReferralDashboardAI({ user, onLogout }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
-              <NetworkLevelVisualization levelStats={levelStats} />
+              <NetworkLevelVisualization levelStats={levelStats} bonusBreakdown={bonusBreakdown} />
+            </motion.div>
+          )}
+
+          {activeTab === 'fraud' && (
+            <motion.div
+              key="fraud"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="max-w-2xl mx-auto"
+            >
+              <AIFraudDetection userId={user.uid} />
             </motion.div>
           )}
 
