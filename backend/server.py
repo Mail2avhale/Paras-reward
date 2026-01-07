@@ -5334,6 +5334,169 @@ async def get_chatbot_history(uid: str, limit: int = 50):
     
     return {"history": history}
 
+# Page-specific contextual help tips
+CONTEXTUAL_HELP_TIPS = {
+    "mining": {
+        "title": "Mining Help",
+        "tips": [
+            "Start a 24-hour mining session to earn PRC automatically",
+            "More referrals = higher mining rate bonus",
+            "Claim your PRC before the session ends",
+            "VIP members get lifetime PRC validity"
+        ],
+        "ai_prompt": "User is on the Mining page of a fintech rewards app. They want to mine PRC (reward points). Provide 2-3 helpful tips specific to crypto/reward mining, session management, and maximizing earnings. Keep response under 100 words, be encouraging."
+    },
+    "referrals": {
+        "title": "Referral Network Help",
+        "tips": [
+            "Share your referral code to grow your network",
+            "Earn bonuses from 5 levels of referrals",
+            "Active referrals give higher bonuses",
+            "Use social sharing to reach more people"
+        ],
+        "ai_prompt": "User is on the Referral Dashboard of a fintech app with a 5-level MLM referral system. Provide 2-3 tips on growing their network, activating referrals, and maximizing referral bonuses. Keep response under 100 words."
+    },
+    "dashboard": {
+        "title": "Dashboard Help",
+        "tips": [
+            "Check your PRC balance and mining status",
+            "Quick access to all features from here",
+            "Monitor your referral network growth",
+            "Start mining if session is inactive"
+        ],
+        "ai_prompt": "User is on the main Dashboard of a fintech rewards app. Provide 2-3 tips on navigating the app, managing their PRC balance, and using key features like mining, referrals, and marketplace. Keep response under 100 words."
+    },
+    "marketplace": {
+        "title": "Marketplace Help",
+        "tips": [
+            "VIP membership required for purchases",
+            "Use PRC points for product discounts",
+            "Check cashback rates before buying",
+            "Track orders in your order history"
+        ],
+        "ai_prompt": "User is on the Marketplace page where they can buy products using PRC points. Provide 2-3 tips on smart shopping, maximizing cashback, and understanding the VIP benefits. Keep response under 100 words."
+    },
+    "profile": {
+        "title": "Profile Help",
+        "tips": [
+            "Complete KYC for full platform access",
+            "Keep your contact info updated",
+            "Upload clear documents for faster verification",
+            "Check VIP transaction history here"
+        ],
+        "ai_prompt": "User is on their Profile page where they manage personal info and KYC documents. Provide 2-3 tips on completing verification, maintaining account security, and managing their profile. Keep response under 100 words."
+    },
+    "vip": {
+        "title": "VIP Membership Help",
+        "tips": [
+            "VIP gives lifetime PRC validity",
+            "Access marketplace and bill payments",
+            "Higher cashback on all transactions",
+            "Lower minimum withdrawal limits"
+        ],
+        "ai_prompt": "User is on the VIP Membership page considering upgrading. Provide 2-3 compelling tips about VIP benefits like lifetime PRC validity, marketplace access, higher cashback, and lower withdrawal limits. Keep response under 100 words, be persuasive but honest."
+    },
+    "game": {
+        "title": "Tap Game Help",
+        "tips": [
+            "Tap fast to earn more points",
+            "Complete daily challenges for bonuses",
+            "Compete on the leaderboard",
+            "Redeem game points for PRC"
+        ],
+        "ai_prompt": "User is on the Tap Game page, an interactive game to earn rewards. Provide 2-3 tips on maximizing game earnings, strategies for high scores, and converting game points to PRC. Keep response under 100 words, be fun and engaging."
+    },
+    "bill-payments": {
+        "title": "Bill Payments Help",
+        "tips": [
+            "VIP required for bill payments",
+            "Pay mobile, DTH, and utility bills",
+            "Earn cashback on every payment",
+            "Processing takes 3-7 business days"
+        ],
+        "ai_prompt": "User is on the Bill Payments page where VIP members can pay utility bills. Provide 2-3 tips on using the service efficiently, understanding processing times, and earning cashback. Keep response under 100 words."
+    },
+    "gift-vouchers": {
+        "title": "Gift Vouchers Help",
+        "tips": [
+            "VIP required for voucher redemption",
+            "Redeem PRC for PhonePe vouchers",
+            "Check minimum redemption amount",
+            "Vouchers delivered to your email"
+        ],
+        "ai_prompt": "User is on the Gift Vouchers page for redeeming PRC points. Provide 2-3 tips on voucher redemption, minimum amounts, and delivery process. Keep response under 100 words."
+    }
+}
+
+@api_router.get("/ai/contextual-help/{page}")
+async def get_contextual_help(page: str, use_ai: bool = False, uid: Optional[str] = None):
+    """Get contextual help tips for a specific page, optionally with AI-generated suggestions"""
+    
+    # Normalize page name
+    page_key = page.lower().replace("-", "_").replace(" ", "_")
+    
+    # Map route names to help keys
+    route_mapping = {
+        "network": "referrals",
+        "referrals_ai": "referrals",
+        "referral_dashboard_ai": "referrals",
+        "dashboard_modern": "dashboard",
+        "tap_game": "game",
+        "gift_voucher": "gift-vouchers",
+        "gift_vouchers": "gift-vouchers",
+        "vip_membership": "vip",
+        "bill_payments": "bill-payments",
+        "profile_advanced": "profile"
+    }
+    
+    page_key = route_mapping.get(page_key, page_key)
+    
+    # Get static tips
+    help_data = CONTEXTUAL_HELP_TIPS.get(page_key)
+    
+    if not help_data:
+        return {
+            "page": page,
+            "title": "Help",
+            "tips": ["Explore this page to learn more!", "Need help? Use the AI chatbot."],
+            "ai_response": None
+        }
+    
+    response = {
+        "page": page,
+        "title": help_data["title"],
+        "tips": help_data["tips"],
+        "ai_response": None
+    }
+    
+    # Generate AI response if requested
+    if use_ai and EMERGENT_LLM_KEY:
+        try:
+            # Get user context if uid provided
+            user_context = ""
+            if uid:
+                user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0})
+                if user:
+                    user_context = f"\nUser context: {user.get('membership_type', 'free').upper()} member, PRC balance: {user.get('prc_balance', 0):.2f}, KYC: {user.get('kyc_status', 'pending')}"
+            
+            chat = LlmChat(
+                api_key=EMERGENT_LLM_KEY,
+                session_id=f"help_{page}_{str(uuid.uuid4())[:8]}",
+                system_message="You are a helpful assistant for Paras Reward, a fintech app. Give short, friendly tips in English. Be encouraging and helpful."
+            ).with_model("openai", "gpt-4o-mini")
+            
+            prompt = help_data["ai_prompt"] + user_context
+            user_msg = UserMessage(text=prompt)
+            ai_response = await chat.send_message(user_msg)
+            
+            response["ai_response"] = ai_response
+            
+        except Exception as e:
+            logging.error(f"AI contextual help error: {e}")
+            response["ai_response"] = None
+    
+    return response
+
 @api_router.post("/ai/scan-document")
 async def ai_scan_document(
     uid: str,
