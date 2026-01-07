@@ -394,7 +394,7 @@ const DailyRewards = ({ user, onLogout }) => {
 
           <Card className="p-6 bg-white">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm font-medium">{t('miningRate')}</span>
+              <span className="text-gray-600 text-sm font-medium">{t('rewardRate')}</span>
               <TrendingUp className="h-5 w-5 text-green-600" />
             </div>
             <div className="text-3xl font-bold text-gray-900">
@@ -405,7 +405,7 @@ const DailyRewards = ({ user, onLogout }) => {
 
           <Card className="p-6 bg-white">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm font-medium">{t('sessionEarned')}</span>
+              <span className="text-gray-600 text-sm font-medium">{t('sessionCollected')}</span>
               <Zap className="h-5 w-5 text-yellow-600" />
             </div>
             <div className="text-3xl font-bold text-gray-900">
@@ -422,11 +422,11 @@ const DailyRewards = ({ user, onLogout }) => {
             <div className="text-3xl font-bold text-gray-900">
               {miningStatus?.active_referrals || 0}
             </div>
-            <p className="text-sm text-gray-500 mt-1">{t('miningActive')}</p>
+            <p className="text-sm text-gray-500 mt-1">Active Friends</p>
           </Card>
         </div>
 
-        {/* Main Mining Control */}
+        {/* Main Rewards Control */}
         <Card className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl mb-8">
           <div className="text-center">
             {!miningStatus?.session_active ? (
@@ -435,11 +435,11 @@ const DailyRewards = ({ user, onLogout }) => {
                   <div className="w-32 h-32 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
                     <Play className="h-16 w-16 text-white" />
                   </div>
-                  <h2 className="text-3xl font-bold text-gray-900 mb-3">{t('startMiningSession')}</h2>
+                  <h2 className="text-3xl font-bold text-gray-900 mb-3">{t('startRewardsSession')}</h2>
                   <p className="text-gray-600 max-w-2xl mx-auto mb-4">
-                    {language === 'mr' ? '24 तासांचे माइनिंग सत्र सुरू करण्यासाठी खालील बटणावर क्लिक करा. तुम्ही तुमच्या माइनिंग रेट आणि रेफरल्सवर आधारित PRC कमवाल.' 
-                     : language === 'hi' ? '24 घंटे का माइनिंग सत्र शुरू करने के लिए नीचे बटन क्लिक करें। आप अपनी माइनिंग दर और रेफरल के आधार पर PRC कमाएंगे।'
-                     : 'Click the button below to start your 24-hour mining session. You\'ll earn PRC coins based on your mining rate and active referrals.'}
+                    {language === 'mr' ? '24 तासांचे बक्षीस सत्र सुरू करण्यासाठी खालील बटणावर क्लिक करा. तुम्ही तुमच्या दर आणि मित्रांवर आधारित PRC गोळा कराल.' 
+                     : language === 'hi' ? '24 घंटे का पुरस्कार सत्र शुरू करने के लिए नीचे बटन क्लिक करें। आप अपनी दर और दोस्तों के आधार पर PRC इकट्ठा करेंगे।'
+                     : 'Click the button below to start your 24-hour rewards session. You\'ll collect PRC points based on your rate and active friends.'}
                   </p>
                   {isFreeUser && (
                     <p className="text-orange-600 font-medium text-sm">
