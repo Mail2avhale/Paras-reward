@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Zap, Gamepad2, Store, UserPlus, CreditCard, 
+  Star, Gamepad2, Store, UserPlus, CreditCard, 
   Gift, ArrowRight, Lock, Crown
 } from 'lucide-react';
 
@@ -11,13 +11,13 @@ const QuickActionsGrid = ({ isVip = false, onVipRequired }) => {
 
   const actions = [
     {
-      id: 'mining',
-      icon: Zap,
-      label: 'Mining',
-      description: 'Earn PRC',
+      id: 'rewards',
+      icon: Star,
+      label: 'Daily Rewards',
+      description: 'Collect PRC',
       gradient: 'from-purple-500 to-violet-600',
       shadowColor: 'shadow-purple-200',
-      path: '/mining',
+      path: '/daily-rewards',
       requiresVip: false
     },
     {
@@ -31,13 +31,13 @@ const QuickActionsGrid = ({ isVip = false, onVipRequired }) => {
       requiresVip: false
     },
     {
-      id: 'network',
+      id: 'friends',
       icon: UserPlus,
-      label: 'AI Network',
-      description: 'Grow Team',
+      label: 'Invite Friends',
+      description: 'Earn Bonus',
       gradient: 'from-indigo-500 to-purple-600',
       shadowColor: 'shadow-indigo-200',
-      path: '/network',
+      path: '/referrals',
       requiresVip: false
     },
     {
