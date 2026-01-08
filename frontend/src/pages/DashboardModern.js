@@ -113,31 +113,6 @@ const DashboardModern = ({ user, onLogout }) => {
   const [showKYCModal, setShowKYCModal] = useState(false);
   const [userData, setUserData] = useState(null);
   const [showTutorial, setShowTutorial] = useState(false);
-  
-  // Dashboard card order state
-  const [cardOrder, setCardOrder] = useState(() => {
-    const saved = localStorage.getItem('dashboard_card_order');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Validate that all default cards are present
-        const hasAllCards = DEFAULT_CARD_ORDER.every(card => parsed.includes(card));
-        if (hasAllCards && parsed.length === DEFAULT_CARD_ORDER.length) {
-          return parsed;
-        }
-      } catch (e) {
-        console.warn('Failed to parse saved card order');
-      }
-    }
-    return DEFAULT_CARD_ORDER;
-  });
-
-  // Handle card order change
-  const handleCardOrderChange = (newOrder) => {
-    setCardOrder(newOrder);
-    localStorage.setItem('dashboard_card_order', JSON.stringify(newOrder));
-    toast.success(t('saveLayout') + ' ✓');
-  };
 
   // Check if should show tutorial for first-time users - HIGHEST PRIORITY
   useEffect(() => {
