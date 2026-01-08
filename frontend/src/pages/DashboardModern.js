@@ -572,41 +572,41 @@ const DashboardModern = ({ user, onLogout }) => {
             translations={{}}
           />
 
-          {/* Section 3: Quick Actions */}
-          <div className="bg-white rounded-3xl p-5 shadow-lg border border-gray-100">
-            <h3 className="font-bold text-gray-900 text-lg mb-4">{t('quickActions')}</h3>
-            <div className="grid grid-cols-3 gap-3">
-              <motion.button 
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate('/daily-rewards')}
-                className="flex flex-col items-center p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg"
-              >
-                <Star className="w-6 h-6 text-white mb-2" />
-                <span className="text-xs font-bold text-white">Rewards</span>
-              </motion.button>
-              <motion.button 
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate('/game')}
-                className="flex flex-col items-center p-4 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 shadow-lg"
-              >
-                <Gamepad2 className="w-6 h-6 text-white mb-2" />
-                <span className="text-xs font-bold text-white">{t('tapGame')}</span>
-              </motion.button>
-              <motion.button 
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate('/referrals')}
-                className="flex flex-col items-center p-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg"
-              >
-                <UserPlus className="w-6 h-6 text-white mb-2" />
-                <span className="text-xs font-bold text-white">Invite</span>
-              </motion.button>
-            </div>
-          </div>
+          {/* Section 3: Live Activity Feed */}
+          <LiveActivityFeed 
+            translations={{
+              liveActivity: t('liveActivity') || 'Live Activity',
+              userFrom: t('userFrom') || 'User from'
+            }}
+          />
 
-          {/* Section 4: Recent Activity */}
+          {/* Section 4: Upgrade to VIP Banner */}
+          {stats.membershipType !== 'vip' && (
+            <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-6 shadow-lg text-white">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-xl font-bold mb-2">{t('upgradeToVip')}</h3>
+                  <p className="text-sm text-yellow-50 mb-4">
+                    {t('vipBenefitsDesc')}
+                  </p>
+                  <div className="flex items-center gap-2 mb-4">
+                    <CheckCircle className="w-5 h-5" />
+                    <span className="text-sm">Only ₹299/month</span>
+                  </div>
+                  <button 
+                    onClick={() => navigate('/vip')}
+                    className="bg-white text-orange-600 px-6 py-2 rounded-full font-bold hover:bg-yellow-50 transition-colors flex items-center gap-2"
+                  >
+                    {t('upgradeNow')}
+                    <ArrowUpRight className="w-4 h-4" />
+                  </button>
+                </div>
+                <Zap className="w-16 h-16 opacity-20" />
+              </div>
+            </div>
+          )}
+
+          {/* Section 5: Recent Activity (at bottom) */}
           <div className="bg-white rounded-2xl p-6 shadow-lg">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-gray-900">{t('recentActivity')}</h2>
@@ -640,7 +640,7 @@ const DashboardModern = ({ user, onLogout }) => {
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-gray-900">
-                          {transaction.description || transaction.type}
+                          {(transaction.description || transaction.type || '').replace(/mining/gi, 'rewards').replace(/Mining/gi, 'Rewards')}
                         </p>
                         <p className="text-xs text-gray-500">
                           {new Date(transaction.timestamp).toLocaleDateString()}
@@ -669,40 +669,6 @@ const DashboardModern = ({ user, onLogout }) => {
               </button>
             )}
           </div>
-
-          {/* Section 5: Live Activity Feed */}
-          <LiveActivityFeed 
-            translations={{
-              liveActivity: t('liveActivity') || 'Live Activity',
-              userFrom: t('userFrom') || 'User from'
-            }}
-          />
-
-          {/* Section 6: Upgrade to VIP Banner */}
-          {stats.membershipType !== 'vip' && (
-            <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-6 shadow-lg text-white">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-xl font-bold mb-2">{t('upgradeToVip')}</h3>
-                  <p className="text-sm text-yellow-50 mb-4">
-                    {t('vipBenefitsDesc')}
-                  </p>
-                  <div className="flex items-center gap-2 mb-4">
-                    <CheckCircle className="w-5 h-5" />
-                    <span className="text-sm">Only ₹299/month</span>
-                  </div>
-                  <button 
-                    onClick={() => navigate('/vip')}
-                    className="bg-white text-orange-600 px-6 py-2 rounded-full font-bold hover:bg-yellow-50 transition-colors flex items-center gap-2"
-                  >
-                    {t('upgradeNow')}
-                    <ArrowUpRight className="w-4 h-4" />
-                  </button>
-                </div>
-                <Zap className="w-16 h-16 opacity-20" />
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
