@@ -1,197 +1,298 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import Navbar from '@/components/Navbar';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Wallet as WalletIcon, ArrowDownToLine, Lock, AlertCircle } from 'lucide-react';
+import { 
+  Wallet as WalletIcon, ArrowDownToLine, ArrowLeft, Coins, 
+  TrendingUp, Clock, Shield, AlertCircle, CreditCard
+} from 'lucide-react';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { useLanguage } from '@/contexts/LanguageContext';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+const API = process.env.REACT_APP_BACKEND_URL;
 
-const Wallet = ({ user, onLogout }) => {
-  const [walletData, setWalletData] = useState(null);
+const Wallet = ({ user }) => {
+  const navigate = useNavigate();
+  const { language } = useLanguage();
+  
+  const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
-  const [RedeemAmount, setRedeemAmount] = useState('');
+  const [walletData, setWalletData] = useState(null);
+  const [redeemAmount, setRedeemAmount] = useState('');
   const [upiId, setUpiId] = useState('');
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawals, setWithdrawals] = useState([]);
+
+  const t = {
+    title: language === 'mr' ? 'वॉलेट' : language === 'hi' ? 'वॉलेट' : 'Wallet',
+    prcBalance: language === 'mr' ? 'PRC शिल्लक' : language === 'hi' ? 'PRC बैलेंस' : 'PRC Balance',
+    cashbackBalance: language === 'mr' ? 'कॅशबॅक शिल्लक' : language === 'hi' ? 'कैशबैक बैलेंस' : 'Cashback Balance',
+    withdraw: language === 'mr' ? 'काढा' : language === 'hi' ? 'निकालें' : 'Withdraw',
+    minWithdraw: language === 'mr' ? 'किमान ₹100' : language === 'hi' ? 'न्यूनतम ₹100' : 'Min ₹100',
+    kycRequired: language === 'mr' ? 'KYC आवश्यक' : language === 'hi' ? 'KYC आवश्यक' : 'KYC Required',
+    recentWithdrawals: language === 'mr' ? 'अलीकडील पैसे काढणे' : language === 'hi' ? 'हाल की निकासी' : 'Recent Withdrawals',
+  };
 
   useEffect(() => {
-    fetchWalletData();
-    fetchUserData();
+    fetchData();
   }, []);
 
-  const fetchWalletData = async () => {
+  const fetchData = async () => {
     try {
-      const response = await axios.get(`${API}/wallet/${user.uid}`);
-      setWalletData(response.data);
+      setLoading(true);
+      
+      // Fetch user data
+      const userRes = await axios.get(`${API}/api/user/${user.uid}`);
+      setUserData(userRes.data);
+      setUpiId(userRes.data.upi_id || '');
+      
+      // Fetch wallet data
+      try {
+        const walletRes = await axios.get(`${API}/api/wallet/${user.uid}`);
+        setWalletData(walletRes.data);
+      } catch (e) {
+        setWalletData({ cashback_balance: userRes.data.cashback_wallet_balance || 0 });
+      }
+      
+      // Fetch withdrawal history
+      try {
+        const withdrawRes = await axios.get(`${API}/api/withdrawals/${user.uid}`);
+        setWithdrawals(withdrawRes.data.withdrawals || []);
+      } catch (e) {
+        setWithdrawals([]);
+      }
+      
     } catch (error) {
-      console.error('Error fetching wallet:', error);
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const fetchUserData = async () => {
-    try {
-      const response = await axios.get(`${API}/auth/user/${user.uid}`);
-      setUserData(response.data);
-    } catch (error) {
-      console.error('Error fetching user:', error);
-    }
-  };
-
-  const handleRedeem = async () => {
-    if (!RedeemAmount || parseFloat(RedeemAmount) < 100) {
-      toast.error('Minimum Redemption amount is ₹100');
+  const handleWithdraw = async () => {
+    const amount = parseFloat(redeemAmount);
+    
+    if (!amount || amount < 100) {
+      toast.error('Minimum withdrawal is ₹100');
       return;
     }
-
+    
     if (!upiId) {
       toast.error('Please enter UPI ID');
       return;
     }
-
+    
+    if (userData?.kyc_status !== 'verified') {
+      toast.error('Please complete KYC verification first');
+      navigate('/kyc');
+      return;
+    }
+    
+    const balance = walletData?.cashback_balance || userData?.cashback_wallet_balance || 0;
+    if (amount > balance) {
+      toast.error('Insufficient balance');
+      return;
+    }
+    
+    setWithdrawing(true);
     try {
-      await axios.post(`${API}/wallet/${user.uid}/Redeem`, {
-        amount: parseFloat(RedeemAmount),
+      await axios.post(`${API}/api/wallet/withdraw`, {
+        uid: user.uid,
+        amount,
         upi_id: upiId
       });
-      toast.success(`Redemption of ₹${RedeemAmount} processed successfully!`);
+      
+      toast.success('Withdrawal request submitted! Processing in 3-7 days.');
       setRedeemAmount('');
-      setUpiId('');
-      fetchWalletData();
+      fetchData();
+      
     } catch (error) {
-      console.error('Error Redeeming:', error);
-      toast.error(error.response?.data?.detail || 'Redemption failed');
+      toast.error(error.response?.data?.detail || 'Withdrawal failed');
+    } finally {
+      setWithdrawing(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 pt-20 pb-24">
-      
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-8">Cashback Wallet</h1>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
-        {/* Wallet Balance */}
-        <Card data-testid="wallet-balance" className="bg-gradient-to-br from-emerald-600 to-teal-600 text-white p-8 rounded-3xl shadow-2xl mb-8">
+  const prcBalance = userData?.prc_balance || 0;
+  const cashbackBalance = walletData?.cashback_balance || userData?.cashback_wallet_balance || 0;
+  const isKycVerified = userData?.kyc_status === 'verified';
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-8">
+      {/* Header */}
+      <div className="px-5 pt-6 pb-4">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate('/dashboard')}
+            className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center"
+          >
+            <ArrowLeft className="w-5 h-5 text-white" />
+          </button>
+          <div>
+            <h1 className="text-white text-xl font-bold">{t.title}</h1>
+            <p className="text-gray-400 text-sm">Manage your earnings</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Balance Cards */}
+      <div className="px-5 mb-6 space-y-4">
+        {/* PRC Balance Card */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl p-5"
+          style={{
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%)',
+          }}
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm opacity-90 mb-2">Available Balance</p>
-              <h2 className="text-6xl font-bold">₹{walletData?.balance?.toFixed(2) || '0.00'}</h2>
-              <p className="text-sm opacity-90 mt-2">Wallet Status: {walletData?.status?.toUpperCase()}</p>
+              <p className="text-gray-400 text-sm">{t.prcBalance}</p>
+              <p className="text-3xl font-bold text-amber-400">{prcBalance.toFixed(2)}</p>
+              <p className="text-gray-500 text-xs mt-1">Use in Marketplace</p>
             </div>
-            <div className="bg-white/20 p-6 rounded-2xl">
-              <WalletIcon className="h-16 w-16" />
+            <div className="w-14 h-14 rounded-full bg-amber-500/20 flex items-center justify-center">
+              <Coins className="w-7 h-7 text-amber-500" />
             </div>
           </div>
-        </Card>
+        </motion.div>
 
-        {/* Status Alerts */}
-        {walletData?.status === 'frozen' && (
-          <Card data-testid="frozen-alert" className="bg-red-50 border-2 border-red-200 p-6 rounded-2xl mb-8">
-            <div className="flex items-center gap-4">
-              <Lock className="h-8 w-8 text-red-600" />
-              <div>
-                <h3 className="font-bold text-red-900 mb-1">Wallet Frozen</h3>
-                <p className="text-sm text-red-700">
-                  Your wallet is frozen due to unpaid maintenance fee. Please pay ₹99 to reactivate.
-                </p>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {userData?.kyc_status !== 'verified' && (
-          <Card data-testid="kyc-alert" className="bg-yellow-50 border-2 border-yellow-200 p-6 rounded-2xl mb-8">
-            <div className="flex items-center gap-4">
-              <AlertCircle className="h-8 w-8 text-yellow-600" />
-              <div>
-                <h3 className="font-bold text-yellow-900 mb-1">KYC Required</h3>
-                <p className="text-sm text-yellow-700">
-                  Complete KYC verification to enable wallet Redemptions.
-                </p>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Redemption Form */}
-        <Card data-testid="Redemption-form" className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Redeem Funds</h2>
-          
-          <div className="space-y-4">
+        {/* Cashback Balance Card */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="relative overflow-hidden rounded-2xl p-5"
+          style={{
+            background: 'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%)',
+          }}
+        >
+          <div className="flex items-center justify-between">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Amount (₹)</label>
+              <p className="text-emerald-200 text-sm">{t.cashbackBalance}</p>
+              <p className="text-3xl font-bold text-white">₹{cashbackBalance.toFixed(2)}</p>
+              <p className="text-emerald-300/70 text-xs mt-1">Withdrawable</p>
+            </div>
+            <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center">
+              <WalletIcon className="w-7 h-7 text-white" />
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Withdraw Section */}
+      <div className="px-5 mb-6">
+        <h2 className="text-white font-bold text-lg mb-4">{t.withdraw}</h2>
+        
+        {!isKycVerified ? (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5">
+            <div className="flex items-start gap-3">
+              <Shield className="w-6 h-6 text-amber-500" />
+              <div>
+                <p className="text-amber-400 font-semibold">{t.kycRequired}</p>
+                <p className="text-gray-400 text-sm mt-1">Complete KYC to withdraw funds</p>
+                <Button
+                  onClick={() => navigate('/kyc')}
+                  className="mt-3 bg-amber-500 hover:bg-amber-600 text-black"
+                  size="sm"
+                >
+                  Complete KYC
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 space-y-4">
+            <div>
+              <label className="text-gray-400 text-sm mb-1 block">Amount (₹)</label>
               <Input
-                data-testid="Redeem-amount-input"
                 type="number"
-                placeholder="Minimum ₹100"
-                value={RedeemAmount}
+                value={redeemAmount}
                 onChange={(e) => setRedeemAmount(e.target.value)}
-                className="py-6 text-lg rounded-xl"
-                disabled={walletData?.status !== 'active' || userData?.kyc_status !== 'verified'}
+                placeholder="Enter amount"
+                className="bg-gray-800 border-gray-700 text-white"
+                min="100"
               />
+              <p className="text-gray-500 text-xs mt-1">{t.minWithdraw} • Available: ₹{cashbackBalance.toFixed(2)}</p>
             </div>
-
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">UPI ID</label>
+              <label className="text-gray-400 text-sm mb-1 block">UPI ID</label>
               <Input
-                data-testid="upi-input"
-                type="text"
-                placeholder="yourname@upi"
                 value={upiId}
                 onChange={(e) => setUpiId(e.target.value)}
-                className="py-6 text-lg rounded-xl"
-                disabled={walletData?.status !== 'active' || userData?.kyc_status !== 'verified'}
+                placeholder="Enter UPI ID (e.g., name@upi)"
+                className="bg-gray-800 border-gray-700 text-white"
               />
             </div>
-
-            <div className="bg-gray-50 p-4 rounded-xl">
-              <p className="text-sm text-gray-700">
-                <strong>Redemption Fee:</strong> ₹5 per transaction
-                <br />
-                <strong>You will receive:</strong> ₹{(parseFloat(RedeemAmount) || 0).toFixed(2)}
-              </p>
-            </div>
-
+            
             <Button
-              data-testid="Redeem-btn"
-              onClick={handleRedeem}
-              disabled={walletData?.status !== 'active' || userData?.kyc_status !== 'verified'}
-              className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-6 rounded-xl text-lg font-semibold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleWithdraw}
+              disabled={withdrawing || !redeemAmount || !upiId}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3"
             >
-              <ArrowDownToLine className="mr-2 h-5 w-5" />
-              Redeem to UPI
+              {withdrawing ? 'Processing...' : (
+                <>
+                  <ArrowDownToLine className="w-4 h-4 mr-2" />
+                  {t.withdraw}
+                </>
+              )}
             </Button>
+            
+            <p className="text-gray-500 text-xs text-center">
+              Processing time: 3-7 working days
+            </p>
           </div>
-        </Card>
-
-        {/* Wallet Info */}
-        <Card data-testid="wallet-info" className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">How Cashback Wallet Works</h3>
-          <ul className="space-y-3 text-gray-700">
-            <li className="flex items-start">
-              <span className="inline-block w-6 h-6 bg-purple-100 rounded-full flex-shrink-0 mr-3 flex items-center justify-center text-purple-600 font-semibold text-sm">1</span>
-              <span>Earn 25% cashback on every product redemption (deducted from PRC)</span>
-            </li>
-            <li className="flex items-start">
-              <span className="inline-block w-6 h-6 bg-purple-100 rounded-full flex-shrink-0 mr-3 flex items-center justify-center text-purple-600 font-semibold text-sm">2</span>
-              <span>Cashback is automatically credited to your wallet in INR</span>
-            </li>
-            <li className="flex items-start">
-              <span className="inline-block w-6 h-6 bg-purple-100 rounded-full flex-shrink-0 mr-3 flex items-center justify-center text-purple-600 font-semibold text-sm">3</span>
-              <span>Minimum Redemption: ₹100 | Redemption fee: ₹5</span>
-            </li>
-            <li className="flex items-start">
-              <span className="inline-block w-6 h-6 bg-purple-100 rounded-full flex-shrink-0 mr-3 flex items-center justify-center text-purple-600 font-semibold text-sm">4</span>
-              <span>Monthly maintenance: ₹99 (auto-deducted)</span>
-            </li>
-            <li className="flex items-start">
-              <span className="inline-block w-6 h-6 bg-purple-100 rounded-full flex-shrink-0 mr-3 flex items-center justify-center text-purple-600 font-semibold text-sm">5</span>
-              <span>Wallet freezes if maintenance unpaid for 7 days</span>
-            </li>
-          </ul>
-        </Card>
+        )}
       </div>
+
+      {/* Recent Withdrawals */}
+      {withdrawals.length > 0 && (
+        <div className="px-5">
+          <h2 className="text-white font-bold text-lg mb-4">{t.recentWithdrawals}</h2>
+          <div className="space-y-3">
+            {withdrawals.slice(0, 5).map((w, index) => (
+              <div 
+                key={index}
+                className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    w.status === 'completed' ? 'bg-emerald-500/20' :
+                    w.status === 'pending' ? 'bg-amber-500/20' : 'bg-red-500/20'
+                  }`}>
+                    <ArrowDownToLine className={`w-5 h-5 ${
+                      w.status === 'completed' ? 'text-emerald-500' :
+                      w.status === 'pending' ? 'text-amber-500' : 'text-red-500'
+                    }`} />
+                  </div>
+                  <div>
+                    <p className="text-white font-medium">₹{w.amount}</p>
+                    <p className="text-gray-500 text-xs">{new Date(w.created_at).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded-full capitalize ${
+                  w.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' :
+                  w.status === 'pending' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'
+                }`}>
+                  {w.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
