@@ -127,14 +127,14 @@ const translations = {
     en: "Vouchers"
   },
   mine: {
-    mr: "माइन करा",
-    hi: "माइन करें",
-    en: "Mine"
+    mr: "बक्षिसे",
+    hi: "पुरस्कार",
+    en: "Rewards"
   },
   mineDesc: {
-    mr: "दर तासाला PRC मिळवा",
-    hi: "हर घंटे PRC पाएं",
-    en: "Earn PRC hourly"
+    mr: "दररोज PRC पॉइंट्स गोळा करा",
+    hi: "दैनिक PRC पॉइंट्स इकट्ठा करें",
+    en: "Collect daily PRC points"
   },
   tapGame: {
     mr: "टॅप गेम",
