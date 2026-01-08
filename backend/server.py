@@ -26172,6 +26172,15 @@ async def startup_db():
             replace_existing=True
         )
         
+        # Schedule hard deletion of expired accounts - runs daily at 3:30 AM
+        scheduler.add_job(
+            hard_delete_expired_accounts,
+            CronTrigger(hour=3, minute=30),  # Daily at 3:30 AM
+            id='hard_delete_expired_accounts',
+            name='Permanently delete accounts after 30-day grace period',
+            replace_existing=True
+        )
+        
         # Start the scheduler
         scheduler.start()
         print("✅ Scheduled tasks started:")
@@ -26180,6 +26189,7 @@ async def startup_db():
         print("   - Wallet reconciliation: Daily at 3 AM")
         print("   - Daily system summary: Daily at 12:05 AM")
         print("   - Inactive user PRC burn: Weekly Sunday at 4 AM")
+        print("   - Account hard delete: Daily at 3:30 AM")
     except Exception as e:
         print(f"⚠️ Error starting scheduler (non-critical): {e}")
 
