@@ -69,26 +69,43 @@ const DashboardModern = ({ user, onLogout }) => {
     try {
       setLoading(true);
       
-      // Fetch user data
-      const userResponse = await axios.get(`${API}/api/user/${user.uid}`);
-      const fetchedUserData = userResponse.data;
-      setUserData(fetchedUserData);
-      setMiningHistory(fetchedUserData.mining_history || []);
-      
-      // Set stats
-      setStats({
-        prcBalance: fetchedUserData.prc_balance || 0,
-        totalMined: fetchedUserData.total_mined || 0,
-        referralCount: fetchedUserData.referral_count || 0,
-        membershipType: fetchedUserData.membership_type || 'free'
-      });
+      // Try to fetch user data from API
+      try {
+        const userResponse = await axios.get(`${API}/api/user/${user.uid}`);
+        const fetchedUserData = userResponse.data;
+        setUserData(fetchedUserData);
+        setMiningHistory(fetchedUserData.mining_history || []);
+        
+        // Set stats from API response
+        setStats({
+          prcBalance: fetchedUserData.prc_balance || 0,
+          totalMined: fetchedUserData.total_mined || 0,
+          referralCount: fetchedUserData.referral_count || 0,
+          membershipType: fetchedUserData.membership_type || 'free'
+        });
+      } catch (apiError) {
+        // Fallback to user prop data if API fails
+        console.log('Using fallback user data');
+        setUserData(user);
+        setStats({
+          prcBalance: user.prc_balance || 0,
+          totalMined: user.total_mined || 0,
+          referralCount: user.referral_count || 0,
+          membershipType: user.membership_type || 'free'
+        });
+      }
 
       // Fetch transactions
-      const txResponse = await axios.get(`${API}/api/transactions/${user.uid}?page=1&per_page=5`);
-      setRecentTransactions(txResponse.data.transactions || []);
+      try {
+        const txResponse = await axios.get(`${API}/api/transactions/${user.uid}?page=1&per_page=5`);
+        setRecentTransactions(txResponse.data.transactions || []);
+      } catch (txError) {
+        setRecentTransactions([]);
+      }
 
       // Check profile completion
-      const profileComplete = fetchedUserData.name && fetchedUserData.phone && fetchedUserData.city;
+      const currentUser = userData || user;
+      const profileComplete = currentUser?.name && currentUser?.phone && currentUser?.city;
       if (!profileComplete && !localStorage.getItem('profile_popup_dismissed')) {
         setShowProfilePopup(true);
       }
