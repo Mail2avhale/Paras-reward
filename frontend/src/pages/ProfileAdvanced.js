@@ -532,7 +532,8 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     { id: 'kyc', label: 'KYC Documents', icon: FileText, color: 'orange' },
     { id: 'vip-history', label: 'VIP Transactions', icon: CreditCard, color: 'yellow' },
     { id: 'security', label: 'Security Options', icon: Shield, color: 'red' },
-    { id: 'password', label: 'Change Password', icon: Lock, color: 'indigo' }
+    { id: 'password', label: 'Change Password', icon: Lock, color: 'indigo' },
+    { id: 'delete-account', label: 'Delete Account', icon: Trash2, color: 'rose' }
   ];
 
   return (
