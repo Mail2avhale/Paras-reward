@@ -808,8 +808,8 @@ const DashboardModern = ({ user, onLogout }) => {
           <BottomNavItem 
             icon={Star} 
             label="Rewards" 
-            tabName="mine" 
-            isActive={activeTab === 'mine'} 
+            tabName="rewards" 
+            isActive={activeTab === 'rewards'} 
             onNavigate={handleNavigation}
           />
           <BottomNavItem 
