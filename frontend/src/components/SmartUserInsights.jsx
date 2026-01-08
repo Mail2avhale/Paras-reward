@@ -27,18 +27,18 @@ const SmartUserInsights = ({ userId, userStats = {}, translations = {} }) => {
   const defaultTranslations = {
     // Marathi translations
     moreToday: 'आज तुम्ही कालपेक्षा जास्त PRC कमावले! 🎉',
-    lessToday: 'आज mining सुरू करा, काल पेक्षा कमी PRC आहे',
+    lessToday: 'आज rewards collect करा, काल पेक्षा कमी PRC आहे',
     goalRemaining: 'Recharge goal साठी फक्त {amount} PRC बाकी! 🎯',
-    streakActive: '{days} दिवस सतत mining! Keep going! 🔥',
+    streakActive: '{days} दिवस सतत rewards! Keep going! 🔥',
     vipBenefit: 'VIP म्हणून तुम्ही 2x PRC कमावत आहात! 👑',
-    referralTip: 'आणखी 1 referral = Mining speed boost! 👥',
+    referralTip: 'आणखी 1 referral = Bonus rewards! 👥',
     closeToRedeem: 'अजून {amount} PRC = ₹100 voucher! 💰',
-    topMiner: 'तुम्ही आज top 10% miners मध्ये आहात! ⭐',
+    topMiner: 'तुम्ही आज top 10% earners मध्ये आहात! ⭐',
     dailyGoal: 'आजचे goal: {target} PRC - {progress}% complete',
     newAchievement: 'नवीन achievement unlock होणार! 🏆',
     // English fallbacks
     moreToday_en: 'You earned more PRC than yesterday! 🎉',
-    lessToday_en: 'Start mining today, you have less PRC than yesterday',
+    lessToday_en: 'Start collecting today, you have less PRC than yesterday',
     goalRemaining_en: 'Only {amount} PRC left for recharge goal! 🎯',
   };
 
