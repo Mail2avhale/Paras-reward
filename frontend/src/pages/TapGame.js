@@ -1,135 +1,203 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import Navbar from '@/components/Navbar';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Hand, Zap, Trophy } from 'lucide-react';
+import { Hand, Zap, Trophy, ArrowLeft, Star, Target } from 'lucide-react';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+const API = process.env.REACT_APP_BACKEND_URL;
 
-// Tap Game translations
-const tapGameTranslations = {
-  tapToEarn: { mr: "टॅप करा आणि कमवा", hi: "टैप करें और कमाएं", en: "Tap to Earn" },
-  tapsToday: { mr: "आजचे टॅप्स", hi: "आज के टैप", en: "Taps Today" },
-  remaining: { mr: "बाकी", hi: "शेष", en: "Remaining" },
-  tapTheButton: { mr: "बटण टॅप करा!", hi: "बटन टैप करें!", en: "Tap the Button!" },
-  tapFast: { mr: "वेगाने टॅप करा आणि PRC कमवा", hi: "तेजी से टैप करें और PRC कमाएं", en: "Tap fast and earn PRC" },
-  howToPlay: { mr: "कसे खेळायचे", hi: "कैसे खेलें", en: "How to Play" },
-  tapButtonBelow: { mr: "खालील बटणावर टॅप करा", hi: "नीचे बटन पर टैप करें", en: "Tap the button below" },
-  earnPRCPerTap: { mr: "प्रत्येक टॅपवर PRC मिळवा", hi: "हर टैप पर PRC पाएं", en: "Earn PRC per tap" },
-  dailyLimit: { mr: "दररोज 100 टॅप्स", hi: "रोज 100 टैप", en: "100 taps per day" },
-  dailyLimitReached: { mr: "दैनिक टॅप मर्यादा पूर्ण!", hi: "दैनिक टैप सीमा पूर्ण!", en: "Daily tap limit reached!" },
-  prcAdded: { mr: "PRC जोडले!", hi: "PRC जोड़ा गया!", en: "PRC added!" }
-};
-
-const TapGame = ({ user, onLogout }) => {
+const TapGame = ({ user }) => {
+  const navigate = useNavigate();
   const { language } = useLanguage();
   
-  // Local translation function
-  const t = (key) => {
-    const translation = tapGameTranslations[key];
-    if (!translation) return key;
-    return translation[language] || translation['en'] || key;
-  };
-  
   const [taps, setTaps] = useState(0);
+  const [totalTapsToday, setTotalTapsToday] = useState(0);
   const [remainingTaps, setRemainingTaps] = useState(100);
   const [animating, setAnimating] = useState(false);
+  const [earnedPRC, setEarnedPRC] = useState(0);
+  const [floatingNumbers, setFloatingNumbers] = useState([]);
+
+  const t = {
+    title: language === 'mr' ? 'टॅप गेम' : language === 'hi' ? 'टैप गेम' : 'Tap Game',
+    tapToEarn: language === 'mr' ? 'टॅप करा आणि कमवा' : language === 'hi' ? 'टैप करें और कमाएं' : 'Tap to Earn',
+    tapsToday: language === 'mr' ? 'आजचे टॅप्स' : language === 'hi' ? 'आज के टैप' : 'Taps Today',
+    remaining: language === 'mr' ? 'बाकी' : language === 'hi' ? 'शेष' : 'Remaining',
+    earned: language === 'mr' ? 'मिळवले' : language === 'hi' ? 'कमाया' : 'Earned',
+    limitReached: language === 'mr' ? 'दैनिक मर्यादा पूर्ण!' : language === 'hi' ? 'दैनिक सीमा पूर्ण!' : 'Daily limit reached!',
+  };
+
+  useEffect(() => {
+    fetchTapStats();
+  }, [user]);
+
+  const fetchTapStats = async () => {
+    try {
+      const response = await axios.get(`${API}/api/user/${user.uid}`);
+      const data = response.data;
+      const tapsToday = data.taps_today || 0;
+      setTotalTapsToday(tapsToday);
+      setRemainingTaps(Math.max(0, 100 - tapsToday));
+    } catch (error) {
+      console.error('Error fetching tap stats:', error);
+    }
+  };
 
   const handleTap = async () => {
     if (remainingTaps <= 0) {
-      toast.error(t('dailyLimitReached'));
+      toast.error(t.limitReached);
       return;
     }
 
-    setTaps(taps + 1);
-    setRemainingTaps(remainingTaps - 1);
+    // Immediate visual feedback
+    setTaps(prev => prev + 1);
+    setTotalTapsToday(prev => prev + 1);
+    setRemainingTaps(prev => prev - 1);
     setAnimating(true);
+    
+    // Add floating number
+    const id = Date.now();
+    setFloatingNumbers(prev => [...prev, { id, x: Math.random() * 100 - 50 }]);
+    setTimeout(() => {
+      setFloatingNumbers(prev => prev.filter(n => n.id !== id));
+    }, 1000);
 
     setTimeout(() => setAnimating(false), 100);
 
-    // Send tap to backend every 10 taps or when reaching 0
+    // Send tap to backend every 10 taps
     if ((taps + 1) % 10 === 0 || remainingTaps - 1 === 0) {
       try {
-        const tapsToSend = (taps + 1) % 10 === 0 ? 10 : (taps + 1);
-        const response = await axios.post(`${API}/game/tap/${user.uid}`, {
-          taps: tapsToSend
-        });
-        setRemainingTaps(response.data.remaining_taps);
-        toast.success(`+${response.data.prc_earned} ${t('prcAdded')}`);
-        if (response.data.remaining_taps === 0) {
-          toast.success(`🎉 ${language === 'mr' ? 'पूर्ण! आज तुम्ही' : language === 'hi' ? 'पूर्ण! आज आपने' : 'Completed! You earned'} ${response.data.prc_earned} PRC ${language === 'mr' ? 'कमावले!' : language === 'hi' ? 'कमाया!' : 'today!'}`, { duration: 5000 });
-        }
-        setTaps(0); // Reset local counter
+        const tapsToSend = Math.min(10, taps + 1);
+        await axios.post(`${API}/api/game/tap/${user.uid}`, { taps: tapsToSend });
+        const prcEarned = tapsToSend * 0.1;
+        setEarnedPRC(prev => prev + prcEarned);
       } catch (error) {
-        console.error('Error submitting taps:', error);
-        toast.error(error.response?.data?.detail || 'Failed to submit taps');
+        console.error('Error recording taps:', error);
       }
     }
   };
 
+  const progress = ((100 - remainingTaps) / 100) * 100;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 pt-20 pb-24">
-      
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-8 text-center">{t('tapToEarn')}</h1>
-
-        {/* Tap Counter */}
-        <Card data-testid="tap-counter-card" className="bg-gradient-to-br from-blue-600 to-purple-600 text-white p-8 rounded-3xl shadow-2xl mb-8">
-          <div className="text-center">
-            <Trophy className="h-12 w-12 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-2">{t('tapsToday')}</h2>
-            <p className="text-6xl font-bold mb-4">{100 - remainingTaps}</p>
-            <p className="text-lg opacity-90">{t('remaining')}: {remainingTaps}/100</p>
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-8">
+      {/* Header */}
+      <div className="px-5 pt-6 pb-4">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate('/dashboard')}
+            className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center"
+          >
+            <ArrowLeft className="w-5 h-5 text-white" />
+          </button>
+          <div>
+            <h1 className="text-white text-xl font-bold">{t.title}</h1>
+            <p className="text-gray-400 text-sm">{t.tapToEarn}</p>
           </div>
-        </Card>
+        </div>
+      </div>
 
-        {/* Tap Button */}
-        <div className="text-center mb-8">
-          <button
-            data-testid="tap-button"
+      {/* Stats */}
+      <div className="px-5 mb-6">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 text-center">
+            <Target className="w-6 h-6 text-pink-500 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-white">{totalTapsToday}</p>
+            <p className="text-gray-500 text-xs">{t.tapsToday}</p>
+          </div>
+          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 text-center">
+            <Zap className="w-6 h-6 text-amber-500 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-white">{remainingTaps}</p>
+            <p className="text-gray-500 text-xs">{t.remaining}</p>
+          </div>
+          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 text-center">
+            <Star className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-white">{earnedPRC.toFixed(1)}</p>
+            <p className="text-gray-500 text-xs">{t.earned}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="px-5 mb-8">
+        <div className="bg-gray-800 rounded-full h-3 overflow-hidden">
+          <motion.div 
+            className="h-full bg-gradient-to-r from-pink-500 to-rose-500"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.3 }}
+          />
+        </div>
+        <p className="text-center text-gray-500 text-sm mt-2">{totalTapsToday}/100 taps today</p>
+      </div>
+
+      {/* Tap Button Area */}
+      <div className="px-5 flex flex-col items-center justify-center min-h-[300px]">
+        <div className="relative">
+          {/* Floating Numbers */}
+          <AnimatePresence>
+            {floatingNumbers.map(num => (
+              <motion.div
+                key={num.id}
+                initial={{ opacity: 1, y: 0, x: num.x }}
+                animate={{ opacity: 0, y: -80 }}
+                exit={{ opacity: 0 }}
+                className="absolute top-0 left-1/2 text-amber-400 font-bold text-xl pointer-events-none"
+              >
+                +0.1
+              </motion.div>
+            ))}
+          </AnimatePresence>
+
+          {/* Main Tap Button */}
+          <motion.button
             onClick={handleTap}
             disabled={remainingTaps <= 0}
-            className={`relative inline-flex items-center justify-center w-64 h-64 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-200 ${
-              animating ? 'scale-95' : 'scale-100 hover:scale-105'
-            } ${remainingTaps <= 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} tap-effect`}
+            whileTap={{ scale: 0.9 }}
+            animate={animating ? { scale: 1.1 } : { scale: 1 }}
+            className={`w-40 h-40 rounded-full flex items-center justify-center shadow-2xl ${
+              remainingTaps > 0 
+                ? 'bg-gradient-to-br from-pink-500 via-rose-500 to-red-600'
+                : 'bg-gray-700'
+            }`}
+            style={{
+              boxShadow: remainingTaps > 0 
+                ? '0 0 60px rgba(236, 72, 153, 0.5), 0 20px 40px rgba(0,0,0,0.3)'
+                : 'none'
+            }}
           >
-            <div className="absolute inset-0 rounded-full bg-white/20 animate-ping"></div>
-            <Hand className="h-32 w-32 text-white relative z-10" />
-          </button>
-          
-          <p className="text-2xl font-bold text-gray-900 mt-6">{t('tapTheButton')}</p>
-          <p className="text-gray-600 mt-2">{language === 'mr' ? 'प्रत्येक टॅप = 1 PRC' : language === 'hi' ? 'हर टैप = 1 PRC' : 'Each tap = 1 PRC'}</p>
+            <Hand className={`w-16 h-16 ${remainingTaps > 0 ? 'text-white' : 'text-gray-500'}`} />
+          </motion.button>
+
+          {/* Glow Ring */}
+          {remainingTaps > 0 && (
+            <div className="absolute inset-0 rounded-full animate-ping opacity-30 bg-pink-500"></div>
+          )}
         </div>
 
-        {/* Game Info */}
-        <Card data-testid="game-info" className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg">
-          <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-            <Zap className="h-6 w-6 text-purple-600 mr-2" />
-            {t('howToPlay')}
-          </h3>
-          <ul className="space-y-3 text-gray-700">
-            <li className="flex items-start">
-              <span className="inline-block w-6 h-6 bg-purple-100 rounded-full flex-shrink-0 mr-3 flex items-center justify-center text-purple-600 font-semibold text-sm">1</span>
-              <span>{language === 'mr' ? 'वरील बटणावर टॅप करून PRC कमवा' : language === 'hi' ? 'ऊपर बटन पर टैप करके PRC कमाएं' : 'Tap the button above to earn PRC coins instantly'}</span>
-            </li>
-            <li className="flex items-start">
-              <span className="inline-block w-6 h-6 bg-purple-100 rounded-full flex-shrink-0 mr-3 flex items-center justify-center text-purple-600 font-semibold text-sm">2</span>
-              <span>{language === 'mr' ? 'दररोज 100 वेळा टॅप करता येते' : language === 'hi' ? 'रोज 100 बार टैप कर सकते हैं' : 'You can tap up to 100 times per day'}</span>
-            </li>
-            <li className="flex items-start">
-              <span className="inline-block w-6 h-6 bg-purple-100 rounded-full flex-shrink-0 mr-3 flex items-center justify-center text-purple-600 font-semibold text-sm">3</span>
-              <span>{language === 'mr' ? 'प्रत्येक टॅपवर 1 PRC मिळतो (1 PRC = ₹0.10)' : language === 'hi' ? 'हर टैप पर 1 PRC मिलता है (1 PRC = ₹0.10)' : 'Each tap gives you 1 PRC (1 PRC = ₹0.10)'}</span>
-            </li>
-            <li className="flex items-start">
-              <span className="inline-block w-6 h-6 bg-purple-100 rounded-full flex-shrink-0 mr-3 flex items-center justify-center text-purple-600 font-semibold text-sm">4</span>
-              <span>{language === 'mr' ? 'दररोज येऊन टॅप करून अधिक PRC कमवा' : language === 'hi' ? 'रोज आकर टैप करके ज्यादा PRC कमाएं' : 'Come back daily to earn more PRC through tapping'}</span>
-            </li>
-          </ul>
-        </Card>
+        <p className="text-gray-400 mt-6 text-center">
+          {remainingTaps > 0 ? 'Tap fast to earn PRC!' : t.limitReached}
+        </p>
+      </div>
+
+      {/* How It Works */}
+      <div className="px-5 mt-8">
+        <h2 className="text-white font-bold text-lg mb-4">How to Play</h2>
+        <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 space-y-4">
+          {[
+            { icon: Hand, text: 'Tap the button as fast as you can' },
+            { icon: Star, text: 'Earn 0.1 PRC per tap' },
+            { icon: Trophy, text: 'Max 100 taps per day' },
+          ].map((item, index) => (
+            <div key={index} className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-pink-500/20 flex items-center justify-center">
+                <item.icon className="w-5 h-5 text-pink-500" />
+              </div>
+              <p className="text-gray-300 text-sm">{item.text}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
