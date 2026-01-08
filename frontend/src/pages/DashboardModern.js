@@ -756,14 +756,6 @@ const DashboardModern = ({ user, onLogout }) => {
             />
           </DashboardCard>
 
-          {/* Phase 3: Live Statement Export */}
-          <DashboardCard cardId="statement-export">
-            <LiveStatementExport 
-              userId={user?.uid}
-              translations={{}}
-            />
-          </DashboardCard>
-
           {/* Live Activity Feed */}
           <DashboardCard cardId="activity-feed">
             <LiveActivityFeed 
