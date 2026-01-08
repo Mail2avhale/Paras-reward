@@ -1,537 +1,406 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import Navbar from '@/components/Navbar';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import ImageCropUpload from '@/components/ImageCropUpload';
-import KYCAIVerification from '@/components/KYCAIVerification';
-import AIDocumentScanner from '@/components/AIDocumentScanner';
-import { FileText, Upload, CheckCircle, Clock, XCircle, AlertCircle, Sparkles, Zap, Scan } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { 
+  FileText, Upload, CheckCircle, Clock, XCircle, ArrowLeft, 
+  CreditCard, User, Shield, Camera, AlertCircle
+} from 'lucide-react';
 import { toast } from 'sonner';
-import notifications from '@/utils/notifications';
+import { motion } from 'framer-motion';
+import { useLanguage } from '@/contexts/LanguageContext';
+import ImageCropUpload from '@/components/ImageCropUpload';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+const API = process.env.REACT_APP_BACKEND_URL;
 
-const KYCVerification = ({ user, onLogout }) => {
+const KYCVerification = ({ user }) => {
+  const navigate = useNavigate();
+  const { language } = useLanguage();
+  
+  const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
-  const [selectedDocType, setSelectedDocType] = useState(''); // 'aadhaar' or 'pan'
-  const [verificationMode, setVerificationMode] = useState(''); // 'ai' or 'manual'
+  const [submitting, setSubmitting] = useState(false);
+  const [selectedDocType, setSelectedDocType] = useState('aadhaar');
   const [kycData, setKycData] = useState({
-    document_type: '', // 'aadhaar' or 'pan'
-    aadhaar_front_base64: '',
-    aadhaar_back_base64: '',
+    aadhaar_front: '',
+    aadhaar_back: '',
     aadhaar_number: '',
-    pan_front_base64: '',
-    pan_number: ''
+    pan_front: '',
+    pan_number: '',
+    full_name: ''
   });
 
+  const t = {
+    title: language === 'mr' ? 'KYC सत्यापन' : language === 'hi' ? 'KYC सत्यापन' : 'KYC Verification',
+    selectDoc: language === 'mr' ? 'दस्तऐवज निवडा' : language === 'hi' ? 'दस्तावेज़ चुनें' : 'Select Document',
+    aadhaar: language === 'mr' ? 'आधार कार्ड' : language === 'hi' ? 'आधार कार्ड' : 'Aadhaar Card',
+    pan: language === 'mr' ? 'पॅन कार्ड' : language === 'hi' ? 'पैन कार्ड' : 'PAN Card',
+    front: language === 'mr' ? 'समोरील बाजू' : language === 'hi' ? 'सामने की तरफ' : 'Front Side',
+    back: language === 'mr' ? 'मागील बाजू' : language === 'hi' ? 'पीछे की तरफ' : 'Back Side',
+    uploadDoc: language === 'mr' ? 'दस्तऐवज अपलोड करा' : language === 'hi' ? 'दस्तावेज़ अपलोड करें' : 'Upload Document',
+    submit: language === 'mr' ? 'सबमिट करा' : language === 'hi' ? 'सबमिट करें' : 'Submit for Verification',
+    verified: language === 'mr' ? 'सत्यापित' : language === 'hi' ? 'सत्यापित' : 'Verified',
+    pending: language === 'mr' ? 'प्रलंबित' : language === 'hi' ? 'लंबित' : 'Pending',
+    rejected: language === 'mr' ? 'नाकारले' : language === 'hi' ? 'अस्वीकृत' : 'Rejected',
+  };
+
   useEffect(() => {
-    fetchUserData();
+    fetchData();
   }, []);
 
-  const fetchUserData = async () => {
+  const fetchData = async () => {
     try {
-      const response = await axios.get(`${API}/auth/user/${user.uid}`);
+      setLoading(true);
+      const response = await axios.get(`${API}/api/user/${user.uid}`);
       setUserData(response.data);
+      
+      // Pre-fill name if available
+      if (response.data.name) {
+        setKycData(prev => ({ ...prev, full_name: response.data.name }));
+      }
     } catch (error) {
       console.error('Error fetching user:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDocTypeSelect = (type) => {
-    setSelectedDocType(type);
-    setKycData({
-      ...kycData,
-      document_type: type,
-      // Clear opposite document type when switching
-      aadhaar_front_base64: type === 'aadhaar' ? kycData.aadhaar_front_base64 : '',
-      aadhaar_back_base64: type === 'aadhaar' ? kycData.aadhaar_back_base64 : '',
-      aadhaar_number: type === 'aadhaar' ? kycData.aadhaar_number : '',
-      pan_front_base64: type === 'pan' ? kycData.pan_front_base64 : '',
-      pan_number: type === 'pan' ? kycData.pan_number : ''
-    });
-  };
-
-  const submitKYC = async () => {
-    // Validation: Check if document type is selected
-    if (!selectedDocType) {
-      notifications.error(
-        'Document Selection Required',
-        'Please select either Aadhaar or PAN card to continue with KYC verification.'
-      );
-      return;
-    }
-
-    // Validation: Check if selected documents are uploaded
+  const handleSubmit = async () => {
+    // Validation
     if (selectedDocType === 'aadhaar') {
-      if (!kycData.aadhaar_front_base64 || !kycData.aadhaar_back_base64) {
-        notifications.error(
-          'Missing Documents',
-          'Please upload both front and back sides of your Aadhaar card.'
-        );
+      if (!kycData.aadhaar_front || !kycData.aadhaar_back) {
+        toast.error('Please upload both sides of Aadhaar');
         return;
       }
       if (!kycData.aadhaar_number || kycData.aadhaar_number.length !== 12) {
-        notifications.error(
-          'Invalid Aadhaar Number',
-          'Please enter a valid 12-digit Aadhaar number.'
-        );
+        toast.error('Please enter valid 12-digit Aadhaar number');
         return;
       }
-    } else if (selectedDocType === 'pan') {
-      if (!kycData.pan_front_base64) {
-        notifications.error(
-          'Missing Document',
-          'Please upload your PAN card to continue.'
-        );
+    } else {
+      if (!kycData.pan_front) {
+        toast.error('Please upload PAN card image');
         return;
       }
       if (!kycData.pan_number || kycData.pan_number.length !== 10) {
-        notifications.error(
-          'Invalid PAN Number',
-          'Please enter a valid 10-character PAN number.'
-        );
+        toast.error('Please enter valid 10-character PAN number');
         return;
       }
     }
 
-    // Show loading notification
-    const loadingId = notifications.loading(
-      'Submitting KYC Documents',
-      'Please wait while we upload your documents securely...'
-    );
+    if (!kycData.full_name) {
+      toast.error('Please enter your full name');
+      return;
+    }
 
+    setSubmitting(true);
     try {
-      await axios.post(`${API}/kyc/submit/${user.uid}`, {
-        ...kycData,
-        document_type: selectedDocType
+      await axios.post(`${API}/api/kyc/submit/${user.uid}`, {
+        document_type: selectedDocType,
+        full_name: kycData.full_name,
+        aadhaar_front_base64: kycData.aadhaar_front,
+        aadhaar_back_base64: kycData.aadhaar_back,
+        aadhaar_number: kycData.aadhaar_number,
+        pan_front_base64: kycData.pan_front,
+        pan_number: kycData.pan_number
       });
       
-      toast.dismiss(loadingId);
+      toast.success('KYC submitted! Verification in 24-48 hours.');
+      navigate('/profile');
       
-      notifications.celebrate(
-        '🎉 KYC Submitted Successfully!',
-        'Your documents have been submitted for verification. Our team will review them within 24-48 hours. You\'ll receive a notification once approved.'
-      );
-      
-      fetchUserData();
-      setKycData({
-        document_type: '',
-        aadhaar_front_base64: '',
-        aadhaar_back_base64: '',
-        pan_front_base64: ''
-      });
-      setSelectedDocType('');
     } catch (error) {
-      console.error('Error submitting KYC:', error);
-      toast.dismiss(loadingId);
-      
-      notifications.error(
-        'Submission Failed',
-        error.response?.data?.detail || 'Failed to submit KYC documents. Please check your internet connection and try again.'
+      toast.error(error.response?.data?.detail || 'Failed to submit KYC');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const getStatusBadge = () => {
+    const status = userData?.kyc_status;
+    if (status === 'verified') {
+      return (
+        <div className="flex items-center gap-2 bg-emerald-500/20 px-4 py-2 rounded-full">
+          <CheckCircle className="w-5 h-5 text-emerald-500" />
+          <span className="text-emerald-400 font-semibold">{t.verified}</span>
+        </div>
+      );
+    } else if (status === 'pending') {
+      return (
+        <div className="flex items-center gap-2 bg-amber-500/20 px-4 py-2 rounded-full">
+          <Clock className="w-5 h-5 text-amber-500" />
+          <span className="text-amber-400 font-semibold">{t.pending}</span>
+        </div>
+      );
+    } else if (status === 'rejected') {
+      return (
+        <div className="flex items-center gap-2 bg-red-500/20 px-4 py-2 rounded-full">
+          <XCircle className="w-5 h-5 text-red-500" />
+          <span className="text-red-400 font-semibold">{t.rejected}</span>
+        </div>
       );
     }
+    return null;
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'verified':
-        return <CheckCircle className="h-12 w-12 text-green-600" />;
-      case 'pending':
-        return <Clock className="h-12 w-12 text-yellow-600" />;
-      case 'rejected':
-        return <XCircle className="h-12 w-12 text-red-600" />;
-      default:
-        return <FileText className="h-12 w-12 text-gray-400" />;
-    }
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'verified':
-        return 'bg-green-100 text-green-700';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-700';
-      case 'rejected':
-        return 'bg-red-100 text-red-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
-  };
+  const isVerified = userData?.kyc_status === 'verified';
+  const isPending = userData?.kyc_status === 'pending';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 pt-20 pb-24">
-      
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-8">KYC Verification</h1>
-
-        {/* Status Card */}
-        <Card data-testid="kyc-status" className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl mb-8">
-          <div className="text-center">
-            {getStatusIcon(userData?.kyc_status)}
-            <h2 className="text-2xl font-bold text-gray-900 mt-4 mb-2">KYC Status</h2>
-            <div className={`inline-block px-6 py-2 rounded-full font-semibold ${getStatusColor(userData?.kyc_status)}`}>
-              {userData?.kyc_status?.toUpperCase()}
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-8">
+      {/* Header */}
+      <div className="px-5 pt-6 pb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate(-1)}
+              className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center"
+            >
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </button>
+            <div>
+              <h1 className="text-white text-xl font-bold">{t.title}</h1>
+              <p className="text-gray-400 text-sm">Verify your identity</p>
             </div>
-            
-            {userData?.kyc_status === 'verified' && (
-              <p className="text-gray-600 mt-4">
-                Your KYC is verified. You can now redeem products and withdraw from wallet.
-              </p>
-            )}
-            {userData?.kyc_status === 'pending' && (
-              <p className="text-gray-600 mt-4">
-                Your KYC documents are under review. Please wait for admin verification.
-              </p>
-            )}
-            {userData?.kyc_status === 'rejected' && (
-              <p className="text-gray-600 mt-4">
-                Your KYC was rejected. Please resubmit with correct documents.
-              </p>
-            )}
           </div>
-        </Card>
+          {getStatusBadge()}
+        </div>
+      </div>
 
-        {/* Document Upload */}
-        {userData?.kyc_status !== 'verified' && (
-          <Card data-testid="kyc-upload" className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Submit KYC Documents</h2>
-            
-            {/* AI vs Manual Selection */}
-            {!verificationMode && (
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Verification Method निवडा</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* AI Verification Option */}
-                  <button
-                    onClick={() => setVerificationMode('ai')}
-                    className="p-6 border-2 border-purple-400 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl hover:shadow-lg transition-all group relative overflow-hidden"
-                  >
-                    <div className="absolute top-2 right-2">
-                      <span className="px-2 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold rounded-full animate-pulse">
-                        ⚡ FAST
-                      </span>
-                    </div>
-                    <div className="text-center">
-                      <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                        <Sparkles className="h-8 w-8 text-white" />
-                      </div>
-                      <h4 className="font-bold text-lg mb-1 text-purple-900">🤖 AI Auto-Verification</h4>
-                      <p className="text-sm text-purple-700 mb-2">Instant approval in 30 seconds!</p>
-                      <ul className="text-xs text-gray-600 space-y-1">
-                        <li>✅ AI document scanning</li>
-                        <li>✅ Auto name & number match</li>
-                        <li>✅ तात्काळ approval</li>
-                      </ul>
-                    </div>
-                  </button>
+      {/* Status Card for Verified/Pending */}
+      {(isVerified || isPending) && (
+        <div className="px-5 mb-6">
+          <div className={`rounded-2xl p-5 ${isVerified ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-amber-500/10 border border-amber-500/30'}`}>
+            <div className="flex items-center gap-4">
+              {isVerified ? (
+                <CheckCircle className="w-12 h-12 text-emerald-500" />
+              ) : (
+                <Clock className="w-12 h-12 text-amber-500" />
+              )}
+              <div>
+                <p className={`font-bold text-lg ${isVerified ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {isVerified ? 'KYC Verified!' : 'KYC Under Review'}
+                </p>
+                <p className="text-gray-400 text-sm">
+                  {isVerified 
+                    ? 'You can now withdraw funds and access all features.'
+                    : 'Your documents are being verified. This takes 24-48 hours.'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-                  {/* Manual Verification Option */}
-                  <button
-                    onClick={() => setVerificationMode('manual')}
-                    className="p-6 border-2 border-gray-300 rounded-xl hover:border-gray-400 hover:bg-gray-50 transition-all"
-                  >
-                    <div className="text-center">
-                      <div className="mx-auto w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-3">
-                        <FileText className="h-8 w-8 text-gray-500" />
-                      </div>
-                      <h4 className="font-bold text-lg mb-1 text-gray-800">📄 Manual Verification</h4>
-                      <p className="text-sm text-gray-600 mb-2">Admin review in 24-48 hours</p>
-                      <ul className="text-xs text-gray-500 space-y-1">
-                        <li>📤 Document upload</li>
-                        <li>👤 Admin review</li>
-                        <li>⏰ 24-48 तास</li>
-                      </ul>
+      {/* KYC Form - Only show if not verified */}
+      {!isVerified && !isPending && (
+        <>
+          {/* Document Type Selection */}
+          <div className="px-5 mb-6">
+            <h2 className="text-white font-bold text-lg mb-4">{t.selectDoc}</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setSelectedDocType('aadhaar')}
+                className={`p-4 rounded-2xl border-2 transition-all ${
+                  selectedDocType === 'aadhaar'
+                    ? 'border-amber-500 bg-amber-500/10'
+                    : 'border-gray-800 bg-gray-900/50'
+                }`}
+              >
+                <CreditCard className={`w-8 h-8 mb-2 mx-auto ${selectedDocType === 'aadhaar' ? 'text-amber-500' : 'text-gray-500'}`} />
+                <p className={`font-medium ${selectedDocType === 'aadhaar' ? 'text-white' : 'text-gray-400'}`}>
+                  {t.aadhaar}
+                </p>
+              </button>
+              <button
+                onClick={() => setSelectedDocType('pan')}
+                className={`p-4 rounded-2xl border-2 transition-all ${
+                  selectedDocType === 'pan'
+                    ? 'border-amber-500 bg-amber-500/10'
+                    : 'border-gray-800 bg-gray-900/50'
+                }`}
+              >
+                <FileText className={`w-8 h-8 mb-2 mx-auto ${selectedDocType === 'pan' ? 'text-amber-500' : 'text-gray-500'}`} />
+                <p className={`font-medium ${selectedDocType === 'pan' ? 'text-white' : 'text-gray-400'}`}>
+                  {t.pan}
+                </p>
+              </button>
+            </div>
+          </div>
+
+          {/* Full Name */}
+          <div className="px-5 mb-6">
+            <label className="text-gray-400 text-sm mb-2 block">Full Name (as on document) *</label>
+            <Input
+              value={kycData.full_name}
+              onChange={(e) => setKycData({...kycData, full_name: e.target.value})}
+              placeholder="Enter your full name"
+              className="bg-gray-800 border-gray-700 text-white"
+            />
+          </div>
+
+          {/* Aadhaar Upload */}
+          {selectedDocType === 'aadhaar' && (
+            <div className="px-5 mb-6 space-y-4">
+              {/* Aadhaar Number */}
+              <div>
+                <label className="text-gray-400 text-sm mb-2 block">Aadhaar Number *</label>
+                <Input
+                  value={kycData.aadhaar_number}
+                  onChange={(e) => setKycData({...kycData, aadhaar_number: e.target.value.replace(/\D/g, '').slice(0, 12)})}
+                  placeholder="Enter 12-digit Aadhaar number"
+                  className="bg-gray-800 border-gray-700 text-white"
+                  maxLength={12}
+                />
+              </div>
+
+              {/* Front Side */}
+              <div>
+                <label className="text-gray-400 text-sm mb-2 block">{t.front} *</label>
+                <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4">
+                  {kycData.aadhaar_front ? (
+                    <div className="relative">
+                      <img 
+                        src={kycData.aadhaar_front} 
+                        alt="Aadhaar Front" 
+                        className="w-full h-40 object-cover rounded-xl"
+                      />
+                      <button 
+                        onClick={() => setKycData({...kycData, aadhaar_front: ''})}
+                        className="absolute top-2 right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center"
+                      >
+                        <XCircle className="w-5 h-5 text-white" />
+                      </button>
                     </div>
-                  </button>
+                  ) : (
+                    <ImageCropUpload
+                      onImageCropped={(data) => setKycData({...kycData, aadhaar_front: data})}
+                      aspectRatio={1.6}
+                    />
+                  )}
                 </div>
               </div>
-            )}
 
-            {/* AI Verification Mode */}
-            {verificationMode === 'ai' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-purple-600" />
-                    AI Auto-Verification
-                  </h3>
-                  <Button variant="outline" size="sm" onClick={() => setVerificationMode('')}>
-                    ← Back
-                  </Button>
-                </div>
-                
-                {/* AI Document Scanner - NEW FEATURE */}
-                <div className="mb-8">
-                  <div className="bg-gradient-to-r from-purple-100 to-indigo-100 border border-purple-300 rounded-xl p-4 mb-6">
-                    <div className="flex items-start gap-3">
-                      <Scan className="w-6 h-6 text-purple-600 mt-0.5" />
-                      <div>
-                        <p className="font-bold text-purple-900">🆕 Auto Profile Fill!</p>
-                        <p className="text-sm text-purple-800 mt-1">
-                          Document photo upload करा → AI automatically सगळे details वाचेल → Profile auto-fill होईल!
-                        </p>
-                      </div>
+              {/* Back Side */}
+              <div>
+                <label className="text-gray-400 text-sm mb-2 block">{t.back} *</label>
+                <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4">
+                  {kycData.aadhaar_back ? (
+                    <div className="relative">
+                      <img 
+                        src={kycData.aadhaar_back} 
+                        alt="Aadhaar Back" 
+                        className="w-full h-40 object-cover rounded-xl"
+                      />
+                      <button 
+                        onClick={() => setKycData({...kycData, aadhaar_back: ''})}
+                        className="absolute top-2 right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center"
+                      >
+                        <XCircle className="w-5 h-5 text-white" />
+                      </button>
                     </div>
-                  </div>
-                  
-                  <AIDocumentScanner 
-                    user={user}
-                    onProfileUpdate={(updates) => {
-                      fetchUserData();
-                      toast.success('Profile updated with scanned data!');
-                    }}
-                  />
-                </div>
-
-                <div className="border-t border-gray-200 pt-6 mt-6">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4">
-                    किंवा KYC Verification करा (Admin Review)
-                  </h4>
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-                    <p className="text-sm text-blue-800">
-                      <strong>📌 Tip:</strong> दोन्ही documents (Aadhaar + PAN) verify करा complete KYC साठी!
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <KYCAIVerification 
-                      user={user} 
-                      documentType="aadhaar"
-                      onVerified={(type, result) => {
-                        fetchUserData();
-                        toast.success('Aadhaar verified!');
-                      }}
+                  ) : (
+                    <ImageCropUpload
+                      onImageCropped={(data) => setKycData({...kycData, aadhaar_back: data})}
+                      aspectRatio={1.6}
                     />
-                    <KYCAIVerification 
-                      user={user} 
-                      documentType="pan"
-                      onVerified={(type, result) => {
-                        fetchUserData();
-                        toast.success('PAN verified!');
-                      }}
-                    />
-                  </div>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Manual Verification Mode */}
-            {verificationMode === 'manual' && (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800">Manual Document Upload</h3>
-                  <Button variant="outline" size="sm" onClick={() => setVerificationMode('')}>
-                    ← Back
-                  </Button>
+          {/* PAN Upload */}
+          {selectedDocType === 'pan' && (
+            <div className="px-5 mb-6 space-y-4">
+              {/* PAN Number */}
+              <div>
+                <label className="text-gray-400 text-sm mb-2 block">PAN Number *</label>
+                <Input
+                  value={kycData.pan_number}
+                  onChange={(e) => setKycData({...kycData, pan_number: e.target.value.toUpperCase().slice(0, 10)})}
+                  placeholder="Enter 10-character PAN"
+                  className="bg-gray-800 border-gray-700 text-white uppercase"
+                  maxLength={10}
+                />
+              </div>
+
+              {/* PAN Card Image */}
+              <div>
+                <label className="text-gray-400 text-sm mb-2 block">PAN Card Image *</label>
+                <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4">
+                  {kycData.pan_front ? (
+                    <div className="relative">
+                      <img 
+                        src={kycData.pan_front} 
+                        alt="PAN Card" 
+                        className="w-full h-40 object-cover rounded-xl"
+                      />
+                      <button 
+                        onClick={() => setKycData({...kycData, pan_front: ''})}
+                        className="absolute top-2 right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center"
+                      >
+                        <XCircle className="w-5 h-5 text-white" />
+                      </button>
+                    </div>
+                  ) : (
+                    <ImageCropUpload
+                      onImageCropped={(data) => setKycData({...kycData, pan_front: data})}
+                      aspectRatio={1.6}
+                    />
+                  )}
                 </div>
-            
-            {/* Information Banner */}
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+              </div>
+            </div>
+          )}
+
+          {/* Info Box */}
+          <div className="px-5 mb-6">
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4">
               <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                <div className="text-sm text-blue-800">
-                  <p className="font-semibold mb-1">Flexible Document Submission</p>
-                  <p>You can submit <strong>either Aadhaar card OR PAN card</strong> for KYC verification. Choose whichever document is convenient for you.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Document Type Selection */}
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Step 1: Select Document Type</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button
-                  onClick={() => handleDocTypeSelect('aadhaar')}
-                  className={`p-6 border-2 rounded-xl transition-all ${
-                    selectedDocType === 'aadhaar'
-                      ? 'border-purple-600 bg-purple-50 shadow-lg'
-                      : 'border-gray-300 hover:border-purple-400 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="text-center">
-                    <FileText className={`h-12 w-12 mx-auto mb-3 ${
-                      selectedDocType === 'aadhaar' ? 'text-purple-600' : 'text-gray-400'
-                    }`} />
-                    <h4 className="font-bold text-lg mb-1">Aadhaar Card</h4>
-                    <p className="text-sm text-gray-600">Upload front and back</p>
-                    {selectedDocType === 'aadhaar' && (
-                      <div className="mt-2">
-                        <span className="inline-block px-3 py-1 bg-purple-600 text-white text-xs font-semibold rounded-full">
-                          ✓ Selected
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => handleDocTypeSelect('pan')}
-                  className={`p-6 border-2 rounded-xl transition-all ${
-                    selectedDocType === 'pan'
-                      ? 'border-purple-600 bg-purple-50 shadow-lg'
-                      : 'border-gray-300 hover:border-purple-400 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="text-center">
-                    <FileText className={`h-12 w-12 mx-auto mb-3 ${
-                      selectedDocType === 'pan' ? 'text-purple-600' : 'text-gray-400'
-                    }`} />
-                    <h4 className="font-bold text-lg mb-1">PAN Card</h4>
-                    <p className="text-sm text-gray-600">Upload front only</p>
-                    {selectedDocType === 'pan' && (
-                      <div className="mt-2">
-                        <span className="inline-block px-3 py-1 bg-purple-600 text-white text-xs font-semibold rounded-full">
-                          ✓ Selected
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Document Upload Section */}
-            {selectedDocType && (
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-800">Step 2: Upload Document(s)</h3>
-                
-                {selectedDocType === 'aadhaar' && (
-                  <>
-                    {/* Aadhaar Number */}
-                    <div className="mb-6">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Aadhaar Number <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Enter 12-digit Aadhaar number"
-                        maxLength={12}
-                        value={kycData.aadhaar_number}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          setKycData({...kycData, aadhaar_number: value});
-                        }}
-                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-purple-600 focus:outline-none transition-colors text-lg font-mono"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Enter the 12-digit number from your Aadhaar card</p>
-                    </div>
-
-                    {/* Aadhaar Front */}
-                    <ImageCropUpload
-                      value={kycData.aadhaar_front_base64}
-                      onChange={(base64Image) => setKycData({...kycData, aadhaar_front_base64: base64Image})}
-                      label="Aadhaar Card (Front)"
-                      aspectRatio={16/10}
-                      maxSizeMB={2}
-                      required={true}
-                    />
-
-                    {/* Aadhaar Back */}
-                    <ImageCropUpload
-                      value={kycData.aadhaar_back_base64}
-                      onChange={(base64Image) => setKycData({...kycData, aadhaar_back_base64: base64Image})}
-                      label="Aadhaar Card (Back)"
-                      aspectRatio={16/10}
-                      maxSizeMB={2}
-                      required={true}
-                    />
-                  </>
-                )}
-
-                {selectedDocType === 'pan' && (
-                  <>
-                    {/* PAN Number */}
-                    <div className="mb-6">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        PAN Number <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Enter 10-character PAN (e.g., ABCDE1234F)"
-                        maxLength={10}
-                        value={kycData.pan_number}
-                        onChange={(e) => {
-                          const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                          setKycData({...kycData, pan_number: value});
-                        }}
-                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-purple-600 focus:outline-none transition-colors text-lg font-mono uppercase"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Format: 5 letters + 4 digits + 1 letter (e.g., ABCDE1234F)</p>
-                    </div>
-
-                    {/* PAN Card */}
-                    <ImageCropUpload
-                      value={kycData.pan_front_base64}
-                      onChange={(base64Image) => setKycData({...kycData, pan_front_base64: base64Image})}
-                      label="PAN Card"
-                      aspectRatio={16/10}
-                      maxSizeMB={2}
-                      required={true}
-                    />
-                  </>
-                )}
-
-                <div className="pt-4">
-                  <Button
-                    onClick={submitKYC}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-6 text-lg font-semibold rounded-2xl shadow-xl"
-                  >
-                    <Upload className="mr-2 h-5 w-5" />
-                    Submit KYC for Verification
-                  </Button>
-                </div>
-
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-600">
-                    <strong>Note:</strong> Please ensure that:
-                  </p>
-                  <ul className="list-disc list-inside text-xs text-gray-600 mt-2 space-y-1">
-                    <li>Documents are clear and readable</li>
-                    <li>All details are visible</li>
-                    <li>Photos are not blurred or cut off</li>
-                    <li>File size is under 5MB per image</li>
+                <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5" />
+                <div className="text-sm">
+                  <p className="text-blue-400 font-medium mb-1">Important</p>
+                  <ul className="text-gray-400 space-y-1">
+                    <li>• Upload clear images of your document</li>
+                    <li>• All details should be clearly visible</li>
+                    <li>• Verification takes 24-48 hours</li>
+                    <li>• Required for withdrawals</li>
                   </ul>
                 </div>
               </div>
-            )}
+            </div>
+          </div>
 
-            {!selectedDocType && verificationMode === 'manual' && (
-              <div className="text-center py-12 text-gray-500">
-                <FileText className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium">Please select a document type to begin</p>
-                <p className="text-sm mt-2">Choose Aadhaar or PAN card above</p>
-              </div>
-            )}
-            </>
-            )}
-          </Card>
-        )}
-
-        {/* Additional Info */}
-        <Card className="bg-white/80 backdrop-blur-sm p-6 mt-8">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Why KYC?</h3>
-          <ul className="space-y-3 text-sm text-gray-700">
-            <li className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-              <span>Required for product redemption and wallet withdrawals</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-              <span>Ensures secure transactions and prevents fraud</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-              <span>One-time verification process</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-              <span>Your documents are encrypted and stored securely</span>
-            </li>
-          </ul>
-        </Card>
-      </div>
+          {/* Submit Button */}
+          <div className="px-5">
+            <Button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-4 rounded-2xl text-lg"
+            >
+              {submitting ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                  Submitting...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2 justify-center">
+                  <Shield className="w-5 h-5" />
+                  {t.submit}
+                </span>
+              )}
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 };
