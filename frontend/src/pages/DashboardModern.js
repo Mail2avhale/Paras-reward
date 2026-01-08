@@ -95,12 +95,22 @@ const DashboardModern = ({ user, onLogout }) => {
         });
       }
 
-      // Fetch transactions
+      // Fetch transactions - try multiple sources
       try {
         const txResponse = await axios.get(`${API}/api/transactions/${user.uid}?page=1&per_page=5`);
-        setRecentTransactions(txResponse.data.transactions || []);
+        const transactions = txResponse.data.transactions || txResponse.data || [];
+        setRecentTransactions(transactions);
       } catch (txError) {
-        setRecentTransactions([]);
+        // Fallback to mining history if transactions API fails
+        console.log('Transactions API failed, using mining history');
+        const miningHistory = userData?.mining_history || user?.mining_history || [];
+        const formattedHistory = miningHistory.slice(0, 5).map((h, i) => ({
+          type: 'mining_reward',
+          description: 'Daily Rewards',
+          amount: h.prc_earned || h.amount || 0,
+          timestamp: h.timestamp || h.date || new Date().toISOString()
+        }));
+        setRecentTransactions(formattedHistory);
       }
 
       // Check profile completion
