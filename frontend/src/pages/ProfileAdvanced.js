@@ -1925,6 +1925,231 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                 </Button>
               </Card>
             )}
+
+            {/* Delete Account Section */}
+            {activeSection === 'delete-account' && (
+              <Card className="p-6 border-2 border-red-200 bg-red-50/30">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                    <Trash2 className="w-6 h-6 text-red-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-red-900">Delete Account</h2>
+                    <p className="text-sm text-red-600">Permanently remove your account and data</p>
+                  </div>
+                </div>
+
+                {/* If deletion is already scheduled */}
+                {deletionStatus?.is_scheduled_for_deletion ? (
+                  <div className="space-y-6">
+                    <div className="bg-orange-100 border border-orange-300 rounded-xl p-6">
+                      <div className="flex items-start gap-4">
+                        <AlertCircle className="w-8 h-8 text-orange-600 flex-shrink-0" />
+                        <div>
+                          <h3 className="text-lg font-bold text-orange-900 mb-2">
+                            ⚠️ Account Scheduled for Deletion
+                          </h3>
+                          <p className="text-orange-800 mb-4">
+                            Your account will be permanently deleted on{' '}
+                            <strong>{new Date(deletionStatus.hard_delete_date).toLocaleDateString()}</strong>
+                          </p>
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className="bg-orange-50 p-3 rounded-lg">
+                              <p className="text-sm text-orange-600">Days Remaining</p>
+                              <p className="text-2xl font-bold text-orange-900">{deletionStatus.days_remaining}</p>
+                            </div>
+                            <div className="bg-red-50 p-3 rounded-lg">
+                              <p className="text-sm text-red-600">PRC Forfeited</p>
+                              <p className="text-2xl font-bold text-red-900">{deletionStatus.prc_forfeited?.toFixed(2) || '0'}</p>
+                            </div>
+                          </div>
+                          {deletionStatus.can_recover && (
+                            <p className="text-sm text-orange-700">
+                              You can still recover your account within the grace period.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Cancel Deletion Form */}
+                    {deletionStatus.can_recover && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Cancel Account Deletion</h3>
+                        <p className="text-gray-600 mb-4">
+                          Enter your password to restore your account. Note: Forfeited PRC cannot be recovered.
+                        </p>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="cancel_delete_password">Password *</Label>
+                            <div className="relative">
+                              <Input
+                                id="cancel_delete_password"
+                                type={showPasswordCurrent ? 'text' : 'password'}
+                                value={deleteAccountPassword}
+                                onChange={(e) => setDeleteAccountPassword(e.target.value)}
+                                placeholder="Enter your password"
+                                className="pr-10"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPasswordCurrent(!showPasswordCurrent)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                              >
+                                {showPasswordCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </button>
+                            </div>
+                          </div>
+                          <Button
+                            onClick={handleCancelAccountDeletion}
+                            disabled={loadingDeletion || !deleteAccountPassword}
+                            className="w-full bg-green-600 hover:bg-green-700"
+                          >
+                            {loadingDeletion ? (
+                              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <RotateCcw className="w-4 h-4 mr-2" />
+                            )}
+                            Restore My Account
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    {/* Warning Box */}
+                    <div className="bg-red-100 border border-red-300 rounded-xl p-6 mb-6">
+                      <h3 className="text-lg font-bold text-red-900 mb-4 flex items-center gap-2">
+                        <AlertCircle className="w-5 h-5" />
+                        Warning: This Action is Irreversible
+                      </h3>
+                      <ul className="space-y-3 text-red-800">
+                        <li className="flex items-start gap-2">
+                          <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                          <span>All your <strong>PRC balance will be forfeited</strong></span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                          <span>All your <strong>cashback balance will be forfeited</strong></span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                          <span>Your <strong>referrals will be removed</strong> from your network</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                          <span>All your <strong>order history and transactions</strong> will be deleted</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Clock className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                          <span>You have <strong>30 days to cancel</strong> before permanent deletion</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    {/* Current Balances Warning */}
+                    {(user?.prc_balance > 0 || user?.cashback_wallet_balance > 0) && (
+                      <div className="bg-yellow-100 border border-yellow-300 rounded-xl p-4 mb-6">
+                        <h4 className="font-semibold text-yellow-900 mb-2">💰 You will lose these balances:</h4>
+                        <div className="flex gap-4">
+                          <div className="bg-yellow-50 p-3 rounded-lg">
+                            <p className="text-sm text-yellow-700">PRC Balance</p>
+                            <p className="text-xl font-bold text-yellow-900">{user?.prc_balance?.toFixed(2) || '0'}</p>
+                          </div>
+                          <div className="bg-yellow-50 p-3 rounded-lg">
+                            <p className="text-sm text-yellow-700">Cashback</p>
+                            <p className="text-xl font-bold text-yellow-900">₹{user?.cashback_wallet_balance?.toFixed(2) || '0'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Delete Button */}
+                    {!showDeleteConfirmation ? (
+                      <Button
+                        onClick={() => setShowDeleteConfirmation(true)}
+                        className="w-full bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        I want to delete my account
+                      </Button>
+                    ) : (
+                      <div className="bg-white border border-red-300 rounded-xl p-6">
+                        <h3 className="text-lg font-semibold text-red-900 mb-4">Confirm Account Deletion</h3>
+                        
+                        {/* Reason for deletion (optional) */}
+                        <div className="mb-4">
+                          <Label htmlFor="delete_reason">Reason for leaving (optional)</Label>
+                          <select
+                            id="delete_reason"
+                            value={deleteReason}
+                            onChange={(e) => setDeleteReason(e.target.value)}
+                            className="w-full mt-1 p-2 border border-gray-300 rounded-lg"
+                          >
+                            <option value="">Select a reason...</option>
+                            <option value="Not using the app">Not using the app anymore</option>
+                            <option value="Privacy concerns">Privacy concerns</option>
+                            <option value="Found a better alternative">Found a better alternative</option>
+                            <option value="Too many notifications">Too many notifications</option>
+                            <option value="Technical issues">Technical issues</option>
+                            <option value="Other">Other reason</option>
+                          </select>
+                        </div>
+
+                        {/* Password confirmation */}
+                        <div className="mb-4">
+                          <Label htmlFor="delete_password">Enter your password to confirm *</Label>
+                          <div className="relative">
+                            <Input
+                              id="delete_password"
+                              type={showPasswordCurrent ? 'text' : 'password'}
+                              value={deleteAccountPassword}
+                              onChange={(e) => setDeleteAccountPassword(e.target.value)}
+                              placeholder="Enter your password"
+                              className="pr-10"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPasswordCurrent(!showPasswordCurrent)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                            >
+                              {showPasswordCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={() => {
+                              setShowDeleteConfirmation(false);
+                              setDeleteAccountPassword('');
+                              setDeleteReason('');
+                            }}
+                            variant="outline"
+                            className="flex-1"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleRequestAccountDeletion}
+                            disabled={loadingDeletion || !deleteAccountPassword}
+                            className="flex-1 bg-red-600 hover:bg-red-700"
+                          >
+                            {loadingDeletion ? (
+                              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4 mr-2" />
+                            )}
+                            Delete Account
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </Card>
+            )}
           </div>
         </div>
       </div>
