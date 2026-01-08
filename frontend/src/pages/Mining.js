@@ -1,620 +1,304 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import Navbar from '@/components/Navbar';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Coins, Play, Clock, Star, TrendingUp, Users, AlertCircle, Crown, ArrowLeft, HelpCircle, Zap } from 'lucide-react';
+import { Coins, Play, Clock, Star, Crown, ArrowLeft, Zap, Gift, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
-import { Link, useNavigate } from 'react-router-dom';
-import notifications from '@/utils/notifications';
-import AnimatedFeedback from '@/components/AnimatedFeedback';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+const API = process.env.REACT_APP_BACKEND_URL;
 
-// Daily Rewards page translations (AdMob Compliant - No crypto/mining terminology)
-const rewardsTranslations = {
-  dailyRewards: { mr: "दैनिक बक्षिसे", hi: "दैनिक पुरस्कार", en: "Daily Rewards" },
-  startSession: { mr: "सत्र सुरू करा", hi: "सत्र शुरू करें", en: "Start Session" },
-  rewardsActive: { mr: "बक्षिसे सक्रिय", hi: "पुरस्कार सक्रिय", en: "Rewards Active" },
-  sessionPaused: { mr: "सत्र थांबवले", hi: "सत्र रुका हुआ", en: "Session Paused" },
-  sessionComplete: { mr: "सत्र पूर्ण", hi: "सत्र पूर्ण", en: "Session Complete" },
-  currentSession: { mr: "वर्तमान सत्र", hi: "वर्तमान सत्र", en: "Current Session" },
-  todayCollected: { mr: "आज गोळा केले", hi: "आज इकट्ठा किया", en: "Today Collected" },
-  totalCollected: { mr: "एकूण गोळा", hi: "कुल इकट्ठा", en: "Total Collected" },
-  prcBalance: { mr: "PRC शिल्लक", hi: "PRC बैलेंस", en: "PRC Balance" },
-  timeRemaining: { mr: "उर्वरित वेळ", hi: "शेष समय", en: "Time Remaining" },
-  sessionsToday: { mr: "आज सत्रे", hi: "आज सत्र", en: "Sessions Today" },
-  rewardRate: { mr: "बक्षीस दर", hi: "पुरस्कार दर", en: "Reward Rate" },
-  perHour: { mr: "/तास", hi: "/घंटा", en: "/hour" },
-  freeUserWarning: { 
-    mr: "फ्री युजर: Points 2 दिवसांसाठी वैध",
-    hi: "फ्री यूजर: Points 2 दिनों के लिए वैध",
-    en: "Free User: Points valid for 2 days"
-  },
-  upgradeToVip: { mr: "VIP बना", hi: "VIP बनें", en: "Upgrade to VIP" },
-  sessionDone: { mr: "सत्र पूर्ण!", hi: "सत्र पूर्ण!", en: "Session Done!" },
-  earned: { mr: "मिळाले", hi: "मिला", en: "Collected" },
-  goBack: { mr: "मागे जा", hi: "वापस जाएं", en: "Go Back" },
-  referralBonus: { mr: "रेफरल बोनस", hi: "रेफरल बोनस", en: "Referral Bonus" },
-  inviteFriends: { mr: "मित्रांना आमंत्रित करा", hi: "दोस्तों को आमंत्रित करें", en: "Invite Friends" },
-  stats: { mr: "आकडेवारी", hi: "आंकड़े", en: "Stats" },
-  sessionEnds: { mr: "सत्र संपते", hi: "सत्र समाप्त", en: "Session Ends" },
-  sessionCollected: { mr: "सत्रात मिळाले", hi: "सत्र में मिला", en: "Session Points" },
-  baseRate: { mr: "बेस दर", hi: "बेस दर", en: "Base Rate" },
-  totalReferralBonus: { mr: "एकूण रेफरल बोनस", hi: "कुल रेफरल बोनस", en: "Total Referral Bonus" },
-  vipBonus: { mr: "VIP बोनस", hi: "VIP बोनस", en: "VIP Bonus" },
-  claimRewards: { mr: "बक्षीस मिळवा", hi: "इनाम प्राप्त करें", en: "Claim Rewards" },
-  start24hSession: { mr: "24 तासांचे सत्र सुरू करा", hi: "24 घंटे का सत्र शुरू करें", en: "Start 24h Session" },
-  remainingInSession: { mr: "या सत्रात उर्वरित", hi: "इस सत्र में शेष", en: "remaining in this session" },
-  lifetimeValidity: { mr: "आजीवन वैधता", hi: "आजीवन वैधता", en: "Lifetime validity" },
-  validFor2Days: { mr: "2 दिवसांसाठी वैध", hi: "2 दिनों के लिए वैध", en: "Valid for 2 days" },
-  startRewardsSession: { mr: "बक्षीस सत्र सुरू करा", hi: "पुरस्कार सत्र शुरू करें", en: "Start Rewards Session" }
-};
-
-const DailyRewards = ({ user, onLogout }) => {
+const DailyRewards = ({ user }) => {
   const navigate = useNavigate();
   const { language } = useLanguage();
   
-  // Local translation function
-  const t = (key) => {
-    const translation = rewardsTranslations[key];
-    if (!translation) return key;
-    return translation[language] || translation['en'] || key;
+  const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState(null);
+  const [isMining, setIsMining] = useState(false);
+  const [sessionTimeRemaining, setSessionTimeRemaining] = useState(0);
+  const [sessionPRC, setSessionPRC] = useState(0);
+  const [miningRate, setMiningRate] = useState(1.0);
+  const [isStarting, setIsStarting] = useState(false);
+
+  // Translations
+  const t = {
+    dailyRewards: language === 'mr' ? 'दैनिक बक्षिसे' : language === 'hi' ? 'दैनिक पुरस्कार' : 'Daily Rewards',
+    startSession: language === 'mr' ? 'सत्र सुरू करा' : language === 'hi' ? 'सत्र शुरू करें' : 'Start Session',
+    sessionActive: language === 'mr' ? 'सत्र सक्रिय' : language === 'hi' ? 'सत्र सक्रिय' : 'Session Active',
+    timeRemaining: language === 'mr' ? 'उर्वरित वेळ' : language === 'hi' ? 'शेष समय' : 'Time Remaining',
+    currentBalance: language === 'mr' ? 'वर्तमान शिल्लक' : language === 'hi' ? 'वर्तमान बैलेंस' : 'Current Balance',
+    rewardRate: language === 'mr' ? 'बक्षीस दर' : language === 'hi' ? 'पुरस्कार दर' : 'Reward Rate',
+    perHour: language === 'mr' ? '/तास' : language === 'hi' ? '/घंटा' : '/hour',
+    totalEarned: language === 'mr' ? 'एकूण मिळवले' : language === 'hi' ? 'कुल कमाया' : 'Total Earned',
+    sessionEarnings: language === 'mr' ? 'सत्र कमाई' : language === 'hi' ? 'सत्र कमाई' : 'Session Earnings',
+    vipBonus: language === 'mr' ? 'VIP बोनस' : language === 'hi' ? 'VIP बोनस' : 'VIP Bonus',
+    freeWarning: language === 'mr' ? 'फ्री युजर: Points 2 दिवसांसाठी वैध' : language === 'hi' ? 'फ्री यूजर: Points 2 दिनों के लिए वैध' : 'Free User: Points valid for 2 days',
   };
-  
-  const [miningStatus, setMiningStatus] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [showValidityWarning, setShowValidityWarning] = useState(false);
-  const [prcExpiryInfo, setPrcExpiryInfo] = useState(null);
-  const [animatedFeedback, setAnimatedFeedback] = useState(null);
-  
-  const isAdmin = user?.role === 'admin';
-  const isFreeUser = user?.membership_type !== 'vip';
 
   useEffect(() => {
-    fetchMiningStatus();
-    fetchPRCExpiry();
-    const interval = setInterval(() => {
-      fetchMiningStatus();
-      fetchPRCExpiry();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchMiningStatus = async () => {
-    try {
-      const response = await axios.get(`${API}/mining/status/${user.uid}`);
-      setMiningStatus(response.data);
-      
-      // Check if user is free and should see validity warning
-      if (isFreeUser && response.data.current_balance > 0) {
-        setShowValidityWarning(true);
-      }
-    } catch (error) {
-      console.error('Error fetching mining status:', error);
+    if (user?.uid) {
+      fetchUserData();
     }
-  };
+  }, [user]);
 
-  const fetchPRCExpiry = async () => {
-    if (!isFreeUser) return;
-    
-    try {
-      const response = await axios.get(`${API}/wallet/${user.uid}`);
-      if (response.data.prc_expiry_info) {
-        setPrcExpiryInfo(response.data.prc_expiry_info);
-      }
-    } catch (error) {
-      console.error('Error fetching PRC expiry:', error);
-    }
-  };
-
-  const startMiningSession = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.post(`${API}/mining/start/${user.uid}`);
-      
-      // IMPORTANT: Update state directly from the response to avoid race conditions
-      // The backend returns session_active, session_start, session_end, remaining_hours
-      if (response.data && response.data.session_active) {
-        setMiningStatus(prevStatus => ({
-          ...prevStatus,
-          session_active: true,
-          session_start: response.data.session_start,
-          session_end: response.data.session_end,
-          remaining_hours: response.data.remaining_hours,
-          mined_this_session: 0  // Just started, so 0
-        }));
-      }
-      
-      // Show animated feedback
-      setAnimatedFeedback({
-        message: `⛏️ Mining Started!\n💎 Earning PRC Now!`,
-        type: 'success',
-        duration: 3000
-      });
-      
-      if (isFreeUser) {
-        setTimeout(() => {
-          toast.info('⏰ Your PRC will be valid for 2 days. Upgrade to VIP for lifetime validity!', {
-            duration: 6000
-          });
-        }, 3500);
-      }
-      
-      // Fetch full status after a delay to let backend fully persist
-      setTimeout(() => {
-        fetchMiningStatus();
-      }, 2000);
-    } catch (error) {
-      console.error('Error starting mining:', error);
-      setAnimatedFeedback({
-        message: `❌ Mining Failed!\n${error.response?.data?.detail || 'Please try again'}`,
-        type: 'error',
-        duration: 3000
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const claimCoins = async () => {
-    setLoading(true);
-    const loadingId = notifications.loading('Claiming PRC Rewards', 'Processing your mining rewards...');
-    
-    try {
-      const response = await axios.post(`${API}/mining/claim/${user.uid}`);
-      
-      toast.dismiss(loadingId);
-      
-      const claimedAmount = response.data.amount.toFixed(2);
-      
-      if (response.data.expires_at) {
-        const expiryDate = new Date(response.data.expires_at);
-        const daysLeft = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
+  useEffect(() => {
+    let interval;
+    if (isMining && sessionTimeRemaining > 0) {
+      interval = setInterval(() => {
+        setSessionTimeRemaining(prev => {
+          if (prev <= 1) {
+            setIsMining(false);
+            toast.success('Session complete! PRC collected.');
+            return 0;
+          }
+          return prev - 1;
+        });
         
-        notifications.celebrate(
-          `🎉 Claimed ${claimedAmount} PRC!`,
-          `Your rewards have been added to your balance. ${isFreeUser ? `⏰ Valid for ${daysLeft} days (until ${expiryDate.toLocaleDateString()} ${expiryDate.toLocaleTimeString()}). Upgrade to VIP for lifetime validity!` : '✨ Lifetime validity - use anytime!'}`
-        );
-      } else {
-        notifications.celebrate(
-          `🎉 Claimed ${claimedAmount} PRC!`,
-          'Your rewards have been added to your balance with lifetime validity!'
-        );
+        // Calculate earned PRC
+        const prcPerSecond = miningRate / 3600;
+        setSessionPRC(prev => prev + prcPerSecond);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isMining, sessionTimeRemaining, miningRate]);
+
+  const fetchUserData = async () => {
+    try {
+      const response = await axios.get(`${API}/api/user/${user.uid}`);
+      const data = response.data;
+      setUserData(data);
+      
+      // Check if session is active
+      if (data.mining_active && data.mining_session_end) {
+        const endTime = new Date(data.mining_session_end).getTime();
+        const now = Date.now();
+        const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
+        
+        if (remaining > 0) {
+          setIsMining(true);
+          setSessionTimeRemaining(remaining);
+        }
       }
       
-      fetchMiningStatus();
-      fetchPRCExpiry();
-    } catch (error) {
-      console.error('Error claiming coins:', error);
-      toast.dismiss(loadingId);
+      // Calculate mining rate
+      let rate = 1.0;
+      if (data.membership_type === 'vip') rate *= 2;
+      if (data.referral_count > 0) rate += data.referral_count * 0.1;
+      setMiningRate(rate);
       
-      notifications.error(
-        'Claim Failed',
-        error.response?.data?.detail || 'Unable to claim your mining rewards. Please try again.'
-      );
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      // Use fallback from user prop
+      setUserData(user);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatTime = (hours) => {
-    const h = Math.floor(hours);
-    const m = Math.floor((hours - h) * 60);
-    return `${h}h ${m}m`;
+  const startSession = async () => {
+    setIsStarting(true);
+    try {
+      const response = await axios.post(`${API}/api/mining/start/${user.uid}`);
+      if (response.data) {
+        setIsMining(true);
+        setSessionTimeRemaining(24 * 60 * 60); // 24 hours
+        setSessionPRC(0);
+        toast.success('Session started! Collecting PRC...');
+        fetchUserData();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to start session');
+    } finally {
+      setIsStarting(false);
+    }
   };
 
-  const getPRCValidityStatus = () => {
-    if (!isFreeUser || !prcExpiryInfo) return null;
-    
-    const { valid_prc, expired_prc, expiring_soon_prc, earliest_expiry } = prcExpiryInfo;
-    
-    if (valid_prc === 0 && expired_prc > 0) {
-      return {
-        type: 'expired',
-        message: `All ${expired_prc.toFixed(2)} PRC has expired!`,
-        color: 'from-red-600 to-rose-700'
-      };
-    }
-    
-    if (expiring_soon_prc > 0 && earliest_expiry) {
-      const expiryDate = new Date(earliest_expiry);
-      const hoursLeft = Math.floor((expiryDate - new Date()) / (1000 * 60 * 60));
-      
-      return {
-        type: 'expiring',
-        message: `${expiring_soon_prc.toFixed(2)} PRC expiring in ${hoursLeft}h!`,
-        expiryDate: expiryDate,
-        color: 'from-orange-500 to-red-500'
-      };
-    }
-    
-    return null;
+  const formatTime = (seconds) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const validityStatus = getPRCValidityStatus();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  const isVip = userData?.membership_type === 'vip';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 pt-20 pb-24">
-      
-      <div className="container mx-auto px-3 py-8 max-w-full lg:max-w-7xl xl:max-w-[90%]">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 text-purple-600 hover:text-purple-700 mb-4 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="font-medium">{t('goBack')}</span>
-        </button>
-        
-        <div className="flex items-center gap-3 mb-4">
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">{t('dailyRewards')}</h1>
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-8">
+      {/* Header */}
+      <div className="px-5 pt-6 pb-4">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate('/dashboard')}
+            className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center"
+          >
+            <ArrowLeft className="w-5 h-5 text-white" />
+          </button>
+          <div>
+            <h1 className="text-white text-xl font-bold">{t.dailyRewards}</h1>
+            <p className="text-gray-400 text-sm">Collect PRC points daily</p>
+          </div>
         </div>
-        <p className="text-lg text-gray-600 mb-8">
-          {language === 'mr' ? 'दैनिक सत्रांद्वारे PRC पॉइंट्स गोळा करा' 
-           : language === 'hi' ? 'दैनिक सत्रों द्वारा PRC पॉइंट्स इकट्ठा करें'
-           : 'Collect PRC points through daily reward sessions'}
-        </p>
+      </div>
 
-        {/* PRC Expiry Alert for Free Users */}
-        {isFreeUser && validityStatus && (
-          <Card className={`p-6 mb-6 bg-gradient-to-r ${validityStatus.color} text-white border-none`}>
-            <div className="flex items-start gap-4">
-              <AlertCircle className="h-6 w-6 flex-shrink-0 mt-1" />
-              <div className="flex-1">
-                <h3 className="text-xl font-bold mb-2">
-                  {validityStatus.type === 'expired' ? '⚠️ PRC Expired!' : '⏰ PRC Expiring Soon!'}
-                </h3>
-                <p className="text-white/90 mb-2">{validityStatus.message}</p>
-                {validityStatus.expiryDate && (
-                  <p className="text-sm text-white/80 mb-4">
-                    Expiry: {validityStatus.expiryDate.toLocaleDateString()} at {validityStatus.expiryDate.toLocaleTimeString()}
-                  </p>
-                )}
-                <p className="text-white/90 mb-4">
-                  {validityStatus.type === 'expired' 
-                    ? 'Collect new PRC or upgrade to VIP for lifetime validity!'
-                    : 'Use it in the marketplace before it expires! Upgrade to VIP for lifetime validity.'}
-                </p>
-                <div className="flex gap-3">
-                  <Link to="/marketplace">
-                    <Button className="bg-white text-orange-600 hover:bg-gray-100">
-                      Shop Now
-                    </Button>
-                  </Link>
-                  <Link to="/vip">
-                    <Button className="bg-white/20 text-white hover:bg-white/30">
-                      <Crown className="mr-2 h-4 w-4" />
-                      Upgrade to VIP
-                    </Button>
-                  </Link>
-                </div>
-              </div>
+      {/* Main Rewards Card */}
+      <div className="px-5 mb-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-3xl p-6"
+          style={{
+            background: isMining 
+              ? 'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%)'
+              : 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+          }}
+        >
+          {/* Glow effect when active */}
+          {isMining && (
+            <div className="absolute inset-0 opacity-20">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-400 rounded-full blur-3xl animate-pulse"></div>
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-green-400 rounded-full blur-3xl animate-pulse"></div>
             </div>
-          </Card>
-        )}
+          )}
 
-        {/* Free User PRC Validity Warning */}
-        {isFreeUser && showValidityWarning && !validityStatus && (
-          <Card className="p-6 mb-6 bg-gradient-to-r from-orange-500 to-red-500 text-white border-none">
-            <div className="flex items-start gap-4">
-              <AlertCircle className="h-6 w-6 flex-shrink-0 mt-1" />
-              <div className="flex-1">
-                <h3 className="text-xl font-bold mb-2">⏰ Free User: PRC Valid for 2 Days Only</h3>
-                <p className="text-white/90 mb-4">
-                  Your mined PRC expires after 2 days. Use it to play Treasure Hunt before it expires!
-                  Upgrade to VIP for lifetime PRC validity + marketplace access + higher cashback.
-                </p>
-                <Link to="/vip">
-                  <Button className="bg-white text-orange-600 hover:bg-gray-100">
-                    <Crown className="mr-2 h-4 w-4" />
-                    Upgrade to VIP (₹1000/year)
-                  </Button>
-                </Link>
+          <div className="relative z-10">
+            {/* Status Badge */}
+            <div className="flex items-center justify-between mb-6">
+              <div className={`px-4 py-2 rounded-full ${isMining ? 'bg-emerald-500/30' : 'bg-gray-700/50'}`}>
+                <span className={`text-sm font-semibold flex items-center gap-2 ${isMining ? 'text-emerald-400' : 'text-gray-400'}`}>
+                  {isMining ? <><Zap className="w-4 h-4" /> {t.sessionActive}</> : <><Clock className="w-4 h-4" /> Waiting</>}
+                </span>
               </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Session Status Banner */}
-        {miningStatus && (
-          <Card className={`p-6 mb-8 ${
-            miningStatus.session_active 
-              ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
-              : 'bg-gradient-to-r from-orange-500 to-red-600'
-          } text-white`}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className={`w-4 h-4 rounded-full ${
-                  miningStatus.session_active ? 'bg-white animate-pulse' : 'bg-white/50'
-                }`}></div>
-                <div>
-                  <h3 className="text-2xl font-bold">
-                    {miningStatus.session_active ? t('rewardsActive') : t('sessionPaused')}
-                  </h3>
-                  <p className="text-white/90">
-                    {miningStatus.session_active 
-                      ? `${formatTime(miningStatus.remaining_hours)} ${t('remainingInSession')}`
-                      : t('start24hSession')
-                    }
-                  </p>
-                  {isFreeUser && (
-                    <p className="text-xs text-white/75 mt-1">
-                      ⏰ {t('freeUserWarning')} | VIP: {t('lifetimeValidity')}
-                    </p>
-                  )}
-                </div>
-              </div>
-              {miningStatus.session_active && (
-                <div className="text-right">
-                  <p className="text-sm text-white/90">{t('sessionEnds')}</p>
-                  <p className="text-lg font-bold">
-                    {new Date(miningStatus.session_end).toLocaleString()}
-                  </p>
+              {isVip && (
+                <div className="bg-gradient-to-r from-amber-500 to-yellow-500 px-3 py-1 rounded-full">
+                  <span className="text-xs font-bold text-black flex items-center gap-1">
+                    <Crown className="w-3 h-3" /> 2x BONUS
+                  </span>
                 </div>
               )}
             </div>
-          </Card>
-        )}
 
-        {/* Rewards Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="p-6 bg-white">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm font-medium">{t('prcBalance')}</span>
-              <Coins className="h-5 w-5 text-purple-600" />
-            </div>
-            <div className="text-3xl font-bold text-gray-900">
-              {miningStatus?.current_balance?.toFixed(2) || '0.00'}
-            </div>
-            <p className="text-sm text-gray-500 mt-1">
-              {isFreeUser ? t('validFor2Days') : t('lifetimeValidity')}
-            </p>
-            {isFreeUser && prcExpiryInfo && prcExpiryInfo.valid_prc > 0 && (
-              <div className="mt-2">
-                <p className="text-xs text-green-600 font-medium">
-                  ✓ Valid: {prcExpiryInfo.valid_prc.toFixed(2)} PRC
-                </p>
-                {prcExpiryInfo.expired_prc > 0 && (
-                  <p className="text-xs text-red-600 font-medium">
-                    ✗ Expired: {prcExpiryInfo.expired_prc.toFixed(2)} PRC
-                  </p>
-                )}
-                {prcExpiryInfo.expiring_soon_prc > 0 && (
-                  <p className="text-xs text-orange-600 font-medium">
-                    ⏰ Expiring: {prcExpiryInfo.expiring_soon_prc.toFixed(2)} PRC
-                  </p>
-                )}
-              </div>
-            )}
-          </Card>
-
-          <Card className="p-6 bg-white">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm font-medium">{t('rewardRate')}</span>
-              <TrendingUp className="h-5 w-5 text-green-600" />
-            </div>
-            <div className="text-3xl font-bold text-gray-900">
-              {miningStatus?.mining_rate_per_hour?.toFixed(2) || '0.00'}
-            </div>
-            <p className="text-sm text-gray-500 mt-1">PRC{t('perHour')}</p>
-          </Card>
-
-          <Card className="p-6 bg-white">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm font-medium">{t('sessionCollected')}</span>
-              <Zap className="h-5 w-5 text-yellow-600" />
-            </div>
-            <div className="text-3xl font-bold text-gray-900">
-              {miningStatus?.mined_this_session?.toFixed(2) || '0.00'}
-            </div>
-            <p className="text-sm text-gray-500 mt-1">{t('currentSession')}</p>
-          </Card>
-
-          <Card className="p-6 bg-white">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm font-medium">{t('referralBonus')}</span>
-              <Users className="h-5 w-5 text-blue-600" />
-            </div>
-            <div className="text-3xl font-bold text-gray-900">
-              {miningStatus?.active_referrals || 0}
-            </div>
-            <p className="text-sm text-gray-500 mt-1">Active Friends</p>
-          </Card>
-        </div>
-
-        {/* Main Rewards Control */}
-        <Card className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl mb-8">
-          <div className="text-center">
-            {!miningStatus?.session_active ? (
-              <>
-                <div className="mb-6">
-                  <div className="w-32 h-32 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Play className="h-16 w-16 text-white" />
-                  </div>
-                  <h2 className="text-3xl font-bold text-gray-900 mb-3">{t('startRewardsSession')}</h2>
-                  <p className="text-gray-600 max-w-2xl mx-auto mb-4">
-                    {language === 'mr' ? '24 तासांचे बक्षीस सत्र सुरू करण्यासाठी खालील बटणावर क्लिक करा. तुम्ही तुमच्या दर आणि मित्रांवर आधारित PRC गोळा कराल.' 
-                     : language === 'hi' ? '24 घंटे का पुरस्कार सत्र शुरू करने के लिए नीचे बटन क्लिक करें। आप अपनी दर और दोस्तों के आधार पर PRC इकट्ठा करेंगे।'
-                     : 'Click the button below to start your 24-hour rewards session. You\'ll collect PRC points based on your rate and active friends.'}
-                  </p>
-                  {isFreeUser && (
-                    <p className="text-orange-600 font-medium text-sm">
-                      ⏰ {t('freeUserWarning')}
-                    </p>
-                  )}
+            {/* Timer or Start Button */}
+            {isMining ? (
+              <div className="text-center mb-6">
+                <p className="text-gray-400 text-sm mb-2">{t.timeRemaining}</p>
+                <div className="text-5xl font-bold text-white font-mono tracking-wider">
+                  {formatTime(sessionTimeRemaining)}
                 </div>
-
-                <Button
-                  onClick={startMiningSession}
-                  disabled={loading}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-12 py-6 text-xl rounded-2xl shadow-xl"
-                >
-                  {loading ? 'Starting...' : 'Start Session'}
-                </Button>
-              </>
+                <div className="mt-4 flex items-center justify-center gap-2">
+                  <Coins className="w-5 h-5 text-amber-400" />
+                  <span className="text-2xl font-bold text-amber-400">
+                    +{sessionPRC.toFixed(4)} PRC
+                  </span>
+                </div>
+              </div>
             ) : (
-              <>
-                <div className="mb-6">
-                  <div className="relative">
-                    <div className="w-32 h-32 bg-gradient-to-br from-green-600 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
-                      <Coins className="h-16 w-16 text-white" />
-                    </div>
-                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full animate-ping"></div>
-                  </div>
-                  <h2 className="text-3xl font-bold text-gray-900 mb-3">Collecting Points...</h2>
-                  <p className="text-gray-600 max-w-2xl mx-auto mb-2">
-                    You're currently collecting {miningStatus.mining_rate_per_hour.toFixed(2)} PRC per hour.
-                  </p>
-                  {isFreeUser && (
-                    <p className="text-orange-600 font-medium text-sm">
-                      ⏰ PRC expires 2 days after claim. Use it in the marketplace!
-                    </p>
-                  )}
-                  <div className="mt-6 p-6 bg-gradient-to-r from-purple-100 to-pink-100 rounded-2xl inline-block">
-                    <p className="text-sm text-gray-600 mb-2">Collected This Session</p>
-                    <p className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                      {miningStatus.mined_this_session.toFixed(2)}
-                    </p>
-                    <p className="text-sm text-gray-600 mt-2">PRC</p>
-                  </div>
+              <div className="text-center mb-6">
+                <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center">
+                  <Star className="w-12 h-12 text-black" />
                 </div>
-
-                <Button
-                  onClick={claimCoins}
-                  disabled={loading || miningStatus.mined_this_session < 0.01}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-12 py-6 text-xl rounded-2xl shadow-xl"
+                <p className="text-gray-400 mb-4">Start collecting daily rewards</p>
+                <Button 
+                  onClick={startSession}
+                  disabled={isStarting}
+                  className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-bold py-4 rounded-2xl text-lg"
                 >
-                  {loading ? 'Claiming...' : `Claim ${miningStatus.mined_this_session.toFixed(2)} PRC`}
+                  {isStarting ? 'Starting...' : t.startSession}
                 </Button>
-              </>
+              </div>
             )}
-          </div>
-        </Card>
 
-        {/* Membership Comparison */}
-        {isFreeUser && (
-          <Card className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">
-              Upgrade to VIP for Better Benefits!
-            </h3>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="bg-white p-6 rounded-xl">
-                <h4 className="font-bold text-lg mb-3 text-gray-700">Free User (Current)</h4>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-start">
-                    <span className="text-orange-500 mr-2">⏰</span>
-                    <span>PRC valid for <strong>2 days only</strong></span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-orange-500 mr-2">🎮</span>
-                    <span>Can only play <strong>Treasure Hunt</strong></span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-orange-500 mr-2">💰</span>
-                    <span>Treasure Hunt: <strong>10% cashback</strong></span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-orange-500 mr-2">🏆</span>
-                    <span>Daily topper: <strong>Max 20% cashback</strong></span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-orange-500 mr-2">🏪</span>
-                    <span>No marketplace access</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-orange-500 mr-2">💳</span>
-                    <span>Min Redemption: <strong>₹1000</strong></span>
-                  </li>
-                </ul>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 gap-4 mt-6">
+              <div className="bg-black/20 rounded-2xl p-4 text-center">
+                <p className="text-gray-400 text-xs mb-1">{t.currentBalance}</p>
+                <p className="text-2xl font-bold text-white">{(userData?.prc_balance || 0).toFixed(2)}</p>
+                <p className="text-amber-400 text-sm">PRC</p>
               </div>
-              <div className="bg-gradient-to-br from-purple-600 to-pink-600 p-6 rounded-xl text-white">
-                <h4 className="font-bold text-lg mb-3 flex items-center">
-                  <Crown className="mr-2" />
-                  VIP Member
-                </h4>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-start">
-                    <span className="text-yellow-300 mr-2">♾️</span>
-                    <span>PRC <strong>never expires</strong></span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-yellow-300 mr-2">🛒</span>
-                    <span>Full <strong>marketplace access</strong></span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-yellow-300 mr-2">💎</span>
-                    <span>Treasure Hunt: <strong>50% cashback</strong></span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-yellow-300 mr-2">🏆</span>
-                    <span>Top player: <strong>100% cashback</strong></span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-yellow-300 mr-2">💸</span>
-                    <span>Min Redemption: <strong>₹10</strong></span>
-                  </li>
-                </ul>
-                <Link to="/vip">
-                  <Button className="w-full mt-4 bg-white text-purple-600 hover:bg-gray-100">
-                    Upgrade Now - ₹1000/year
-                  </Button>
-                </Link>
+              <div className="bg-black/20 rounded-2xl p-4 text-center">
+                <p className="text-gray-400 text-xs mb-1">{t.rewardRate}</p>
+                <p className="text-2xl font-bold text-white">{miningRate.toFixed(1)}</p>
+                <p className="text-emerald-400 text-sm">{t.perHour}</p>
               </div>
-            </div>
-          </Card>
-        )}
-
-        {/* How It Works */}
-        <Card className="p-8 bg-white mt-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">How Daily Rewards Work</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Play className="h-8 w-8 text-purple-600" />
-              </div>
-              <h3 className="font-bold text-lg mb-2">1. Start Session</h3>
-              <p className="text-gray-600 text-sm">
-                Start a 24-hour rewards session to begin collecting PRC points automatically.
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="h-8 w-8 text-green-600" />
-              </div>
-              <h3 className="font-bold text-lg mb-2">2. Collect PRC</h3>
-              <p className="text-gray-600 text-sm">
-                Your rate increases with friends. The more friends, the more you collect!
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Coins className="h-8 w-8 text-blue-600" />
-              </div>
-              <h3 className="font-bold text-lg mb-2">3. Claim & Redeem</h3>
-              <p className="text-gray-600 text-sm">
-                {isFreeUser 
-                  ? 'Claim PRC and use within 2 days in games. Upgrade for marketplace access!'
-                  : 'Claim PRC anytime and use in games or shop in marketplace!'}
-              </p>
             </div>
           </div>
-        </Card>
+        </motion.div>
       </div>
-      
-      {/* Animated Feedback Overlay */}
-      {animatedFeedback && (
-        <AnimatedFeedback
-          message={animatedFeedback.message}
-          type={animatedFeedback.type}
-          duration={animatedFeedback.duration}
-          onClose={() => setAnimatedFeedback(null)}
-          position="center"
-        />
+
+      {/* Free User Warning */}
+      {!isVip && (
+        <div className="px-5 mb-6">
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4">
+            <div className="flex items-start gap-3">
+              <Clock className="w-5 h-5 text-amber-500 mt-0.5" />
+              <div>
+                <p className="text-amber-500 font-medium text-sm">{t.freeWarning}</p>
+                <button 
+                  onClick={() => navigate('/vip')}
+                  className="text-amber-400 text-xs mt-1 underline"
+                >
+                  Upgrade to VIP for lifetime validity →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
+
+      {/* Quick Stats */}
+      <div className="px-5 mb-6">
+        <h2 className="text-white font-bold text-lg mb-4">Your Stats</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4"
+          >
+            <TrendingUp className="w-8 h-8 text-emerald-500 mb-2" />
+            <p className="text-gray-400 text-xs">{t.totalEarned}</p>
+            <p className="text-xl font-bold text-white">{(userData?.total_mined || 0).toFixed(2)}</p>
+          </motion.div>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4"
+          >
+            <Gift className="w-8 h-8 text-purple-500 mb-2" />
+            <p className="text-gray-400 text-xs">Referral Bonus</p>
+            <p className="text-xl font-bold text-white">+{((userData?.referral_count || 0) * 10)}%</p>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* How It Works */}
+      <div className="px-5">
+        <h2 className="text-white font-bold text-lg mb-4">How It Works</h2>
+        <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 space-y-4">
+          {[
+            { icon: Play, text: 'Start a 24-hour session' },
+            { icon: Coins, text: 'Earn PRC automatically' },
+            { icon: Star, text: 'Invite friends for bonus rate' },
+          ].map((item, index) => (
+            <div key={index} className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <item.icon className="w-5 h-5 text-amber-500" />
+              </div>
+              <p className="text-gray-300 text-sm">{item.text}</p>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
