@@ -775,9 +775,9 @@ const translations = {
     en: "Unlock Premium benefits"
   },
   tutorialVipDesc: {
-    mr: "VIP बना आणि 2x mining, marketplace access, gift vouchers, bill payments सर्व unlock करा!",
-    hi: "VIP बनें और 2x mining, marketplace access, gift vouchers, bill payments सब unlock करें!",
-    en: "Become VIP and unlock 2x mining, marketplace access, gift vouchers, bill payments!"
+    mr: "VIP बना आणि 2x rewards, marketplace access, gift vouchers, bill payments सर्व unlock करा!",
+    hi: "VIP बनें और 2x rewards, marketplace access, gift vouchers, bill payments सब unlock करें!",
+    en: "Become VIP and unlock 2x rewards, marketplace access, gift vouchers, bill payments!"
   },
   tutorialVipTip1: {
     mr: "Monthly/Quarterly/Yearly plans",
