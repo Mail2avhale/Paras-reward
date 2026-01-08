@@ -137,6 +137,13 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   const [vipTransactionsPagination, setVipTransactionsPagination] = useState({});
   const [loadingVipTransactions, setLoadingVipTransactions] = useState(false);
   
+  // Account Deletion State
+  const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
+  const [deleteReason, setDeleteReason] = useState('');
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [deletionStatus, setDeletionStatus] = useState(null);
+  const [loadingDeletion, setLoadingDeletion] = useState(false);
+  
   // Validation Errors
   const [errors, setErrors] = useState({});
   
