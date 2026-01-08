@@ -200,7 +200,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/flash-sales" element={user ? <FlashSalesPage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/orders" element={user ? <Orders user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/vip" element={user ? <VIPMembership user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-            <Route path="/kyc" element={user ? <Navigate to="/profile" /> : <Navigate to="/login" />} />
+            <Route path="/kyc" element={user ? <KYCVerification user={user} /> : <Navigate to="/login" />} />
             {/* Removed: Wallet/Withdrawal functionality */}
             <Route path="/leaderboard" element={user ? <Leaderboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/gamification" element={user ? <GamificationDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
