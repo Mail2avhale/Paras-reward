@@ -10,7 +10,7 @@ const BottomNav = () => {
   const getActiveTab = () => {
     const path = location.pathname;
     if (path === '/dashboard') return 'home';
-    if (path === '/mining') return 'mine';
+    if (path === '/mining' || path === '/daily-rewards') return 'rewards';
     if (path === '/game') return 'game';
     if (path === '/profile' || path === '/profile-advanced') return 'profile';
     return 'home';
@@ -20,7 +20,7 @@ const BottomNav = () => {
 
   const navItems = [
     { id: 'home', label: 'Home', icon: Home, route: '/dashboard' },
-    { id: 'mine', label: 'Mine', icon: Zap, route: '/mining' },
+    { id: 'rewards', label: 'Rewards', icon: Zap, route: '/daily-rewards' },
     { id: 'game', label: 'Play', icon: Gamepad2, route: '/game' },
     { id: 'profile', label: 'Profile', icon: User, route: '/profile' },
   ];
