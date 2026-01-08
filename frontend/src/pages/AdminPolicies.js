@@ -83,15 +83,15 @@ By accessing or using PARAS REWARD, you agree to be bound by these Terms and Con
 - Processing time: Minimum 3 to 7 days
 - Membership fees are non-refundable after activation
 
-## 5. Mining & Rewards
+## 5. Daily Rewards
 - Free users: PRC expires after 2 days
 - VIP users: PRC never expires
-- Mining rates are subject to change
+- Reward rates are subject to change
 
 ## 6. Prohibited Activities
 - Using multiple accounts
 - Fraudulent activities
-- Automated mining or bots
+- Automated collection or bots
 
 ## 7. Contact
 For queries, reach out to our support team.`;
