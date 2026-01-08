@@ -1251,7 +1251,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                           user={user}
                           onProfileUpdate={(updates) => {
                             // Refresh user data
-                            fetchUserData();
+                            fetchUserProfile();
                             // Update local KYC data if available
                             if (updates.name) setKycData(prev => ({...prev, full_name: updates.name}));
                             if (updates.aadhaar_last4) setKycData(prev => ({...prev, aadhaar_number: `XXXXXXXX${updates.aadhaar_last4}`}));
