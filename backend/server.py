@@ -2628,6 +2628,191 @@ async def change_password(uid: str, old_password: str, new_password: str):
     
     return {"message": "Password changed successfully"}
 
+# ========== ACCOUNT DELETION ROUTES ==========
+
+@api_router.post("/user/{uid}/request-account-deletion")
+async def request_account_deletion(uid: str, request: Request):
+    """
+    Request account deletion with soft delete.
+    Account will be marked for deletion and permanently deleted after 30 days.
+    User can cancel within 30 days.
+    """
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if already scheduled for deletion
+    if user.get("is_deleted") or user.get("deletion_scheduled_at"):
+        raise HTTPException(status_code=400, detail="Account is already scheduled for deletion")
+    
+    data = await request.json()
+    password = data.get("password")
+    reason = data.get("reason", "User requested deletion")
+    
+    if not password:
+        raise HTTPException(status_code=400, detail="Password confirmation required")
+    
+    # Verify password
+    if not user.get("password_hash"):
+        raise HTTPException(status_code=400, detail="Password not set for this account")
+    
+    if not verify_password(password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    
+    # Calculate deletion dates
+    now = datetime.now(timezone.utc)
+    hard_delete_date = now + timedelta(days=30)
+    
+    # Get current balances for warning
+    prc_balance = user.get("prc_balance", 0)
+    cashback_balance = user.get("cashback_wallet_balance", 0) or user.get("cashback_balance", 0) or 0
+    
+    # Soft delete - mark user as deleted
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": {
+            "is_deleted": True,
+            "deleted_at": now.isoformat(),
+            "deletion_scheduled_at": hard_delete_date.isoformat(),
+            "deletion_reason": reason,
+            "prc_balance_forfeited": prc_balance,
+            "cashback_forfeited": cashback_balance,
+            "prc_balance": 0,  # Forfeit PRC
+            "cashback_wallet_balance": 0,  # Forfeit cashback
+            "cashback_balance": 0,
+            "updated_at": now.isoformat()
+        }}
+    )
+    
+    # Remove from referral hierarchy
+    # Update children to have no parent
+    await db.users.update_many(
+        {"referred_by": uid},
+        {"$set": {"referred_by": None, "referral_chain": []}}
+    )
+    
+    # Log the deletion request
+    await db.account_deletions.insert_one({
+        "uid": uid,
+        "email": user.get("email"),
+        "name": user.get("name"),
+        "requested_at": now.isoformat(),
+        "hard_delete_scheduled": hard_delete_date.isoformat(),
+        "reason": reason,
+        "prc_forfeited": prc_balance,
+        "cashback_forfeited": cashback_balance,
+        "status": "pending",
+        "created_at": now.isoformat()
+    })
+    
+    return {
+        "success": True,
+        "message": "Account scheduled for deletion",
+        "deleted_at": now.isoformat(),
+        "hard_delete_date": hard_delete_date.isoformat(),
+        "days_to_recover": 30,
+        "prc_forfeited": prc_balance,
+        "cashback_forfeited": cashback_balance,
+        "warning": "Your account will be permanently deleted after 30 days. You can cancel this within 30 days by logging in."
+    }
+
+@api_router.post("/user/{uid}/cancel-account-deletion")
+async def cancel_account_deletion(uid: str, request: Request):
+    """
+    Cancel account deletion request within 30-day grace period.
+    Restores the account but does NOT restore forfeited PRC/cashback.
+    """
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if not user.get("is_deleted"):
+        raise HTTPException(status_code=400, detail="Account is not scheduled for deletion")
+    
+    data = await request.json()
+    password = data.get("password")
+    
+    if not password:
+        raise HTTPException(status_code=400, detail="Password confirmation required")
+    
+    # Verify password
+    if not verify_password(password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    
+    # Check if still within grace period
+    deletion_scheduled = user.get("deletion_scheduled_at")
+    if deletion_scheduled:
+        scheduled_date = datetime.fromisoformat(deletion_scheduled.replace('Z', '+00:00'))
+        if datetime.now(timezone.utc) > scheduled_date:
+            raise HTTPException(status_code=400, detail="Grace period expired. Account cannot be recovered.")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Restore account (but not forfeited balances)
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": {
+            "is_deleted": False,
+            "deleted_at": None,
+            "deletion_scheduled_at": None,
+            "deletion_reason": None,
+            "account_recovered_at": now.isoformat(),
+            "updated_at": now.isoformat()
+        }}
+    )
+    
+    # Update deletion log
+    await db.account_deletions.update_one(
+        {"uid": uid, "status": "pending"},
+        {"$set": {
+            "status": "cancelled",
+            "cancelled_at": now.isoformat()
+        }}
+    )
+    
+    return {
+        "success": True,
+        "message": "Account deletion cancelled successfully",
+        "recovered_at": now.isoformat(),
+        "note": "Your account has been restored. Note: Forfeited PRC and cashback cannot be recovered."
+    }
+
+@api_router.get("/user/{uid}/deletion-status")
+async def get_deletion_status(uid: str):
+    """Get account deletion status"""
+    user = await db.users.find_one({"uid": uid}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if not user.get("is_deleted"):
+        return {
+            "is_scheduled_for_deletion": False,
+            "message": "Account is active"
+        }
+    
+    deletion_scheduled = user.get("deletion_scheduled_at")
+    if deletion_scheduled:
+        scheduled_date = datetime.fromisoformat(deletion_scheduled.replace('Z', '+00:00'))
+        now = datetime.now(timezone.utc)
+        days_remaining = (scheduled_date - now).days
+        
+        return {
+            "is_scheduled_for_deletion": True,
+            "deleted_at": user.get("deleted_at"),
+            "hard_delete_date": deletion_scheduled,
+            "days_remaining": max(0, days_remaining),
+            "can_recover": days_remaining > 0,
+            "prc_forfeited": user.get("prc_balance_forfeited", 0),
+            "cashback_forfeited": user.get("cashback_forfeited", 0),
+            "reason": user.get("deletion_reason")
+        }
+    
+    return {
+        "is_scheduled_for_deletion": True,
+        "can_recover": False,
+        "message": "Account is scheduled for permanent deletion"
+    }
+
 @api_router.get("/auth/user/{uid}", response_model=User)
 async def get_user(uid: str):
     """Get user details"""
