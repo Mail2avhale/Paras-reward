@@ -108,6 +108,7 @@ const AdminUserControls = lazy(() => import("@/pages/AdminUserControls"));
 const AdvancedUserManagement = lazy(() => import("@/pages/AdvancedUserManagement"));
 const BillPayments = lazy(() => import("@/pages/BillPayments"));
 const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption"));
+const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
 const ManagerDashboard = lazy(() => import("@/pages/ManagerDashboard"));
 const ManagerDashboardNew = lazy(() => import("@/pages/manager/ManagerDashboardNew"));
 const ManagerUsers = lazy(() => import("@/pages/manager/ManagerUsers"));
