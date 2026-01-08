@@ -128,7 +128,7 @@ const ContactUs = () => {
               <div>
                 <h3 className="text-xl font-semibold mb-2">Common Queries</h3>
                 <ul className="space-y-2 opacity-90">
-                  <li>• Mining & Rewards</li>
+                  <li>• Daily Rewards</li>
                   <li>• VIP Membership</li>
                   <li>• KYC Verification</li>
                   <li>• Product Redemption</li>
