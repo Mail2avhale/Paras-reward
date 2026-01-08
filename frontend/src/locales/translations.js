@@ -553,9 +553,9 @@ const translations = {
     en: "Build Team, Earn More"
   },
   tutorialReferralDesc: {
-    mr: "तुमचा referral code share करा. तुमच्या 5 levels पर्यंतच्या team च्या mining वर bonus मिळतो!",
-    hi: "अपना referral code share करें. अपनी 5 levels तक की team की mining पर bonus मिलेगा!",
-    en: "Share your referral code. Get bonus on mining from your team up to 5 levels!"
+    mr: "तुमचा referral code share करा. तुमच्या 5 levels पर्यंतच्या team वर bonus मिळतो!",
+    hi: "अपना referral code share करें. अपनी 5 levels तक की team पर bonus मिलेगा!",
+    en: "Share your referral code. Get bonus from your team up to 5 levels!"
   },
   tutorialReferralTip1: {
     mr: "Level 1: Direct referrals",
