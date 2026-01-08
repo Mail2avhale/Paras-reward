@@ -179,7 +179,7 @@ const AdminDashboard = ({ user, onLogout }) => {
               <AlertTriangle className="h-6 w-6 text-orange-600" />
               <div>
                 <p className="font-semibold text-gray-900">⚠️ PRC Emergency</p>
-                <p className="text-xs text-gray-500">Stop Mining & Burn</p>
+                <p className="text-xs text-gray-500">Stop Rewards & Burn</p>
               </div>
             </div>
           </Card>
