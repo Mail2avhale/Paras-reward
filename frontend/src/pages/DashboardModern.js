@@ -515,247 +515,195 @@ const DashboardModern = ({ user, onLogout }) => {
           />
         </motion.div>
         
-        {/* Draggable Dashboard Cards */}
-        <DraggableDashboard
-          cardIds={cardOrder}
-          onOrderChange={handleCardOrderChange}
-          lockedCards={['vip-banner']}
-          translations={{
-            customizeDashboard: t('customizeDashboard'),
-            dragToReorder: t('dragToReorder'),
-            saveLayout: t('saveLayout'),
-            resetLayout: t('resetLayout')
-          }}
-        >
-          {/* AI Stats Grid - Modern Bento Style */}
-          <DashboardCard cardId="ai-stats-grid">
-            <div className="grid grid-cols-2 gap-3">
-              <AIStatsCard 
-                icon={TrendingUp}
-                label={t('totalMined')}
-                value={stats.totalMined}
-                subValue="Lifetime earnings"
-                gradient="from-green-500 to-emerald-600"
-                delay={0}
-              />
-              <AIStatsCard 
-                icon={Coins}
-                label={t('prcUsed')}
-                value={stats.totalPrcUsed}
-                subValue={`≈ ₹${stats.totalPrcUsedValue}`}
-                gradient="from-purple-500 to-indigo-600"
-                delay={1}
-              />
-              <AIStatsCard 
-                icon={ArrowUpRight}
-                label="Today Earned"
-                value={todayStats.today_prc_earned.toFixed(1)}
-                subValue="PRC today"
-                change={todayStats.today_prc_earned > 0 ? 12 : 0}
-                changeLabel="vs avg"
-                gradient="from-blue-500 to-cyan-600"
-                delay={2}
-              />
-              <AIStatsCard 
-                icon={UserPlus}
-                label="Friends"
-                value={stats.referralCount}
-                subValue="Invited friends"
-                gradient="from-indigo-500 to-purple-600"
-                delay={3}
-                onClick={() => navigate('/referrals')}
-              />
-            </div>
-          </DashboardCard>
-
-          {/* AI Insights Section - Already shown above, this is for draggable order */}
-          <DashboardCard cardId="ai-insights">
-            <SmartUserInsights 
-              userId={user?.uid}
-              userStats={{
-                prc_balance: stats.prcBalance,
-                today_earned: todayStats.today_prc_earned,
-                yesterday_earned: 0,
-                mining_streak: userData?.mining_streak || 0,
-                is_vip: stats.membershipType === 'vip',
-                referral_count: stats.referralCount,
-                total_mined: stats.totalMined
-              }}
-              translations={{}}
+        {/* Dashboard Cards - Fixed Layout for Better UX */}
+        <div className="space-y-4">
+          
+          {/* Section 1: Stats Overview */}
+          <div className="grid grid-cols-2 gap-3">
+            <AIStatsCard 
+              icon={TrendingUp}
+              label="Total Earned"
+              value={stats.totalMined}
+              subValue="Lifetime PRC"
+              gradient="from-green-500 to-emerald-600"
+              delay={0}
             />
-          </DashboardCard>
+            <AIStatsCard 
+              icon={Coins}
+              label={t('prcUsed')}
+              value={stats.totalPrcUsed}
+              subValue="Redeemed"
+              gradient="from-purple-500 to-indigo-600"
+              delay={1}
+            />
+            <AIStatsCard 
+              icon={ArrowUpRight}
+              label="Today Earned"
+              value={todayStats.today_prc_earned.toFixed(1)}
+              subValue="PRC today"
+              change={todayStats.today_prc_earned > 0 ? 12 : 0}
+              changeLabel="vs avg"
+              gradient="from-blue-500 to-cyan-600"
+              delay={2}
+            />
+            <AIStatsCard 
+              icon={UserPlus}
+              label="Friends"
+              value={stats.referralCount}
+              subValue="Invited"
+              gradient="from-indigo-500 to-purple-600"
+              delay={3}
+              onClick={() => navigate('/referrals')}
+            />
+          </div>
 
-          {/* Quick Actions Grid - Already shown above */}
-          <DashboardCard cardId="quick-actions-grid">
-            <div className="bg-white rounded-3xl p-5 shadow-lg border border-gray-100">
-              <h3 className="font-bold text-gray-900 text-lg mb-4">{t('quickActions')}</h3>
-              <div className="grid grid-cols-3 gap-3">
-                <motion.button 
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate('/daily-rewards')}
-                  className="flex flex-col items-center p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg"
-                >
-                  <Star className="w-6 h-6 text-white mb-2" />
-                  <span className="text-xs font-bold text-white">Rewards</span>
-                </motion.button>
-                <motion.button 
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate('/game')}
-                  className="flex flex-col items-center p-4 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 shadow-lg"
-                >
-                  <Gamepad2 className="w-6 h-6 text-white mb-2" />
-                  <span className="text-xs font-bold text-white">{t('tapGame')}</span>
-                </motion.button>
-                <motion.button 
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate('/referrals')}
-                  className="flex flex-col items-center p-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg"
-                >
-                  <UserPlus className="w-6 h-6 text-white mb-2" />
-                  <span className="text-xs font-bold text-white">Invite</span>
-                </motion.button>
-              </div>
+          {/* Section 2: AI Insights */}
+          <SmartUserInsights 
+            userId={user?.uid}
+            userStats={{
+              prc_balance: stats.prcBalance,
+              today_earned: todayStats.today_prc_earned,
+              yesterday_earned: 0,
+              mining_streak: userData?.mining_streak || 0,
+              is_vip: stats.membershipType === 'vip',
+              referral_count: stats.referralCount,
+              total_mined: stats.totalMined
+            }}
+            translations={{}}
+          />
+
+          {/* Section 3: Quick Actions */}
+          <div className="bg-white rounded-3xl p-5 shadow-lg border border-gray-100">
+            <h3 className="font-bold text-gray-900 text-lg mb-4">{t('quickActions')}</h3>
+            <div className="grid grid-cols-3 gap-3">
+              <motion.button 
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate('/daily-rewards')}
+                className="flex flex-col items-center p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg"
+              >
+                <Star className="w-6 h-6 text-white mb-2" />
+                <span className="text-xs font-bold text-white">Rewards</span>
+              </motion.button>
+              <motion.button 
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate('/game')}
+                className="flex flex-col items-center p-4 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 shadow-lg"
+              >
+                <Gamepad2 className="w-6 h-6 text-white mb-2" />
+                <span className="text-xs font-bold text-white">{t('tapGame')}</span>
+              </motion.button>
+              <motion.button 
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate('/referrals')}
+                className="flex flex-col items-center p-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg"
+              >
+                <UserPlus className="w-6 h-6 text-white mb-2" />
+                <span className="text-xs font-bold text-white">Invite</span>
+              </motion.button>
             </div>
-          </DashboardCard>
+          </div>
 
-
-          {/* Recent Activity */}
-          <DashboardCard cardId="recent-activity">
-            <div className="bg-white rounded-2xl p-6 shadow-lg">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-900">{t('recentActivity')}</h2>
-                <button 
-                  onClick={() => navigate('/transactions')}
-                  className="text-sm text-purple-600 hover:text-purple-700 font-medium"
-                >
-                  {t('viewAll')}
-                </button>
+          {/* Section 4: Recent Activity */}
+          <div className="bg-white rounded-2xl p-6 shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">{t('recentActivity')}</h2>
+              <button 
+                onClick={() => navigate('/transactions')}
+                className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+              >
+                {t('viewAll')}
+              </button>
+            </div>
+            
+            {recentTransactions.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">{t('noActivity')}</p>
               </div>
-              
-              {recentTransactions.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">
-                  <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">{t('noActivity')}</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {recentTransactions.map((transaction, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          transaction.type === 'mining_reward' ? 'bg-green-100' :
-                          transaction.type === 'marketplace_purchase' ? 'bg-blue-100' :
-                          transaction.type === 'referral_bonus' ? 'bg-purple-100' :
-                          'bg-gray-100'
-                        }`}>
-                          {transaction.type === 'mining_reward' && <Zap className="w-5 h-5 text-green-600" />}
-                          {transaction.type === 'marketplace_purchase' && <ShoppingBag className="w-5 h-5 text-blue-600" />}
-                          {transaction.type === 'referral_bonus' && <Gift className="w-5 h-5 text-purple-600" />}
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900">
-                            {transaction.description || transaction.type}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(transaction.timestamp).toLocaleDateString()} {new Date(transaction.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                          </p>
-                        </div>
+            ) : (
+              <div className="space-y-3">
+                {recentTransactions.slice(0, 5).map((transaction, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        transaction.type === 'mining_reward' ? 'bg-green-100' :
+                        transaction.type === 'marketplace_purchase' ? 'bg-blue-100' :
+                        transaction.type === 'referral_bonus' ? 'bg-purple-100' :
+                        'bg-gray-100'
+                      }`}>
+                        {transaction.type === 'mining_reward' && <Zap className="w-5 h-5 text-green-600" />}
+                        {transaction.type === 'marketplace_purchase' && <ShoppingBag className="w-5 h-5 text-blue-600" />}
+                        {transaction.type === 'referral_bonus' && <Gift className="w-5 h-5 text-purple-600" />}
                       </div>
-                      <div className="text-right">
-                        <p className={`text-sm font-bold ${
-                          transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {transaction.amount > 0 ? '+' : ''}{transaction.amount?.toFixed(2) || 0} PRC
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {transaction.description || transaction.type}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(transaction.timestamp).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Pagination Controls */}
-              {recentTransactions.length > 0 && pagination.total_pages > 1 && (
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-                  <button
-                    onClick={() => handlePageChange(pagination.page - 1)}
-                    disabled={!pagination.has_prev}
-                    className={`px-4 py-2 text-sm font-medium rounded-lg ${
-                      pagination.has_prev
-                        ? 'bg-purple-600 text-white hover:bg-purple-700'
-                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    }`}
-                  >
-                    Previous
-                  </button>
-                  <div className="text-sm text-gray-600">
-                    Page {pagination.page} of {pagination.total_pages}
-                  </div>
-                  <button
-                    onClick={() => handlePageChange(pagination.page + 1)}
-                    disabled={!pagination.has_next}
-                    className={`px-4 py-2 text-sm font-medium rounded-lg ${
-                      pagination.has_next
-                        ? 'bg-purple-600 text-white hover:bg-purple-700'
-                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    }`}
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
-            </div>
-          </DashboardCard>
-
-          {/* Phase 3: Security & Trust Center */}
-          <DashboardCard cardId="security-trust">
-            <SecurityTrustCenter 
-              userId={user?.uid}
-              user={userData}
-              translations={{}}
-            />
-          </DashboardCard>
-
-          {/* Live Activity Feed */}
-          <DashboardCard cardId="activity-feed">
-            <LiveActivityFeed 
-              translations={{
-                liveActivity: t('liveActivity') || 'लाइव Activity',
-                userFrom: t('userFrom') || 'User from'
-              }}
-            />
-          </DashboardCard>
-
-          {/* Upgrade to VIP Banner */}
-          <DashboardCard cardId="vip-banner">
-            {stats.membershipType !== 'vip' && (
-              <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-6 shadow-lg text-white">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-xl font-bold mb-2">{t('upgradeToVip')}</h3>
-                    <p className="text-sm text-yellow-50 mb-4">
-                      {t('vipBenefitsDesc')}
-                    </p>
-                    <div className="flex items-center gap-2 mb-4">
-                      <CheckCircle className="w-5 h-5" />
-                      <span className="text-sm">Only ₹299/month</span>
+                    <div className="text-right">
+                      <p className={`text-sm font-bold ${
+                        transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {transaction.amount > 0 ? '+' : ''}{transaction.amount?.toFixed(2) || 0} PRC
+                      </p>
                     </div>
-                    <button 
-                      onClick={() => navigate('/vip')}
-                      className="bg-white text-orange-600 px-6 py-2 rounded-full font-bold hover:bg-yellow-50 transition-colors flex items-center gap-2"
-                    >
-                      {t('upgradeNow')}
-                      <ArrowUpRight className="w-4 h-4" />
-                    </button>
                   </div>
-                  <Zap className="w-16 h-16 opacity-20" />
-                </div>
+                ))}
               </div>
             )}
-          </DashboardCard>
-        </DraggableDashboard>
+
+            {/* View All Button */}
+            {recentTransactions.length > 5 && (
+              <button 
+                onClick={() => navigate('/transactions')}
+                className="w-full mt-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+              >
+                View All Transactions →
+              </button>
+            )}
+          </div>
+
+          {/* Section 5: Live Activity Feed */}
+          <LiveActivityFeed 
+            translations={{
+              liveActivity: t('liveActivity') || 'Live Activity',
+              userFrom: t('userFrom') || 'User from'
+            }}
+          />
+
+          {/* Section 6: Upgrade to VIP Banner */}
+          {stats.membershipType !== 'vip' && (
+            <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-6 shadow-lg text-white">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-xl font-bold mb-2">{t('upgradeToVip')}</h3>
+                  <p className="text-sm text-yellow-50 mb-4">
+                    {t('vipBenefitsDesc')}
+                  </p>
+                  <div className="flex items-center gap-2 mb-4">
+                    <CheckCircle className="w-5 h-5" />
+                    <span className="text-sm">Only ₹299/month</span>
+                  </div>
+                  <button 
+                    onClick={() => navigate('/vip')}
+                    className="bg-white text-orange-600 px-6 py-2 rounded-full font-bold hover:bg-yellow-50 transition-colors flex items-center gap-2"
+                  >
+                    {t('upgradeNow')}
+                    <ArrowUpRight className="w-4 h-4" />
+                  </button>
+                </div>
+                <Zap className="w-16 h-16 opacity-20" />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Bottom Navigation Bar */}
