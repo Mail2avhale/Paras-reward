@@ -1,364 +1,442 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import Navbar from '@/components/Navbar';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Package, Plus, Minus, Trash2, CheckCircle, ArrowLeft } from 'lucide-react';
+import { ShoppingCart, Package, Plus, Minus, Trash2, CheckCircle, ArrowLeft, Search, Star, Crown } from 'lucide-react';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '@/components/ui/input';
+import { useLanguage } from '@/contexts/LanguageContext';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+const API = process.env.REACT_APP_BACKEND_URL;
 
-const Marketplace = ({ user, onLogout }) => {
+const Marketplace = ({ user }) => {
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState({ items: [] });
   const [showCart, setShowCart] = useState(false);
   const [userData, setUserData] = useState(null);
-  const [deliveryAddress, setDeliveryAddress] = useState('');
-  const [loading, setLoading] = useState(false);
-  
-  // Check if user is admin
-  const isAdmin = user?.role === 'admin';
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+
+  const t = {
+    title: language === 'mr' ? 'मार्केटप्लेस' : language === 'hi' ? 'मार्केटप्लेस' : 'Marketplace',
+    search: language === 'mr' ? 'शोधा...' : language === 'hi' ? 'खोजें...' : 'Search products...',
+    cart: language === 'mr' ? 'कार्ट' : language === 'hi' ? 'कार्ट' : 'Cart',
+    checkout: language === 'mr' ? 'ऑर्डर करा' : language === 'hi' ? 'ऑर्डर करें' : 'Place Order',
+    emptyCart: language === 'mr' ? 'कार्ट रिकामी आहे' : language === 'hi' ? 'कार्ट खाली है' : 'Cart is empty',
+    addToCart: language === 'mr' ? 'कार्टमध्ये जोडा' : language === 'hi' ? 'कार्ट में जोड़ें' : 'Add to Cart',
+    vipOnly: language === 'mr' ? 'फक्त VIP साठी' : language === 'hi' ? 'केवल VIP के लिए' : 'VIP Only',
+  };
+
+  const categories = [
+    { id: 'all', name: 'All' },
+    { id: 'electronics', name: 'Electronics' },
+    { id: 'fashion', name: 'Fashion' },
+    { id: 'home', name: 'Home' },
+    { id: 'vouchers', name: 'Vouchers' },
+  ];
 
   useEffect(() => {
-    fetchProducts();
-    fetchUserData();
-    fetchCart();
+    fetchData();
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchData = async () => {
     try {
-      const response = await axios.get(`${API}/products?page=1&limit=1000`);
-      setProducts(response.data?.products || []);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      setProducts([]);
-    }
-  };
-
-  const fetchUserData = async () => {
-    try {
-      const response = await axios.get(`${API}/users/${user.uid}`);
-      setUserData(response.data);
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-    }
-  };
-
-  const fetchCart = async () => {
-    try {
-      const response = await axios.get(`${API}/cart/${user.uid}`);
-      setCart(response.data || { items: [] });
-    } catch (error) {
-      console.error('Error fetching cart:', error);
-    }
-  };
-
-  const addToCart = async (product) => {
-    try {
-      // Fetch fresh user data before checking VIP status
-      const userResponse = await axios.get(`${API}/users/${user.uid}`);
-      const freshUserData = userResponse.data;
+      setLoading(true);
       
-      if (freshUserData?.membership_type !== 'vip') {
-        toast.error('VIP membership required!');
-        navigate('/vip');
-        return;
-      }
-
-      // Add to cart
-      const response = await axios.post(`${API}/cart/add`, {
-        user_id: user.uid,
-        product_id: product.product_id,
-        quantity: 1
-      });
+      // Fetch products
+      const productsRes = await axios.get(`${API}/api/products?page=1&limit=100`);
+      setProducts(productsRes.data?.products || []);
       
-      toast.success('Added to cart!');
-      fetchCart();
-      fetchUserData();
-    } catch (error) {
-      console.error('Add to cart error:', error);
-      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to add to cart';
-      if (error.response?.status === 404) {
-        toast.error('Product or user not found. Please refresh the page.');
-      } else {
-        toast.error(errorMessage);
+      // Fetch user data
+      const userRes = await axios.get(`${API}/api/user/${user.uid}`);
+      setUserData(userRes.data);
+      
+      // Fetch cart
+      try {
+        const cartRes = await axios.get(`${API}/api/cart/${user.uid}`);
+        setCart(cartRes.data || { items: [] });
+      } catch (e) {
+        setCart({ items: [] });
       }
-    }
-  };
-
-  const removeFromCart = async (productId) => {
-    try {
-      await axios.delete(`${API}/cart/${user.uid}/item/${productId}`);
-      toast.success('Removed from cart');
-      fetchCart();
+      
     } catch (error) {
-      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to remove item';
-      toast.error(errorMessage);
-    }
-  };
-
-  const updateQuantity = async (productId, change) => {
-    const item = cart.items.find(i => i.product_id === productId);
-    if (!item) return;
-
-    const newQuantity = item.quantity + change;
-    if (newQuantity < 1) {
-      removeFromCart(productId);
-      return;
-    }
-
-    // Remove and re-add with new quantity
-    await removeFromCart(productId);
-    try {
-      await axios.post(`${API}/cart/add`, {
-        user_id: user.uid,
-        product_id: productId,
-        quantity: newQuantity
-      });
-      fetchCart();
-    } catch (error) {
-      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to update quantity';
-      toast.error(errorMessage);
-    }
-  };
-
-  const checkout = async () => {
-    if (!deliveryAddress.trim()) {
-      toast.error('Please enter delivery address');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await axios.post(`${API}/orders/checkout`, {
-        user_id: user.uid,
-        delivery_address: deliveryAddress
-      });
-
-      // Show success message with secret code
-      toast.success(
-        `Order placed successfully! Secret Code: ${response.data.secret_code}. Show this code at the outlet for delivery.`,
-        { duration: 8000 }
-      );
-
-      setShowCart(false);
-      setDeliveryAddress('');
-      fetchCart();
-      fetchUserData();
-      navigate('/orders');
-    } catch (error) {
-      // Ensure error message is a string
-      const errorMessage = error?.response?.data?.detail || error?.message || 'Checkout failed';
-      toast.error(errorMessage);
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const cartTotal = cart.items?.reduce((sum, item) => sum + (item.prc_price * item.quantity), 0) || 0;
-  const cartCount = cart.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  const addToCart = async (product) => {
+    if (!userData || userData.membership_type !== 'vip') {
+      toast.error('VIP membership required to shop');
+      navigate('/vip');
+      return;
+    }
+    
+    try {
+      await axios.post(`${API}/api/cart/${user.uid}/add`, {
+        product_id: product.id,
+        quantity: 1
+      });
+      toast.success('Added to cart');
+      
+      // Update local cart
+      const existingItem = cart.items.find(i => i.product_id === product.id);
+      if (existingItem) {
+        setCart({
+          ...cart,
+          items: cart.items.map(i => 
+            i.product_id === product.id 
+              ? { ...i, quantity: i.quantity + 1 }
+              : i
+          )
+        });
+      } else {
+        setCart({
+          ...cart,
+          items: [...cart.items, { product_id: product.id, quantity: 1, product }]
+        });
+      }
+    } catch (error) {
+      toast.error('Failed to add to cart');
+    }
+  };
+
+  const updateCartItem = async (productId, quantity) => {
+    if (quantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+    
+    try {
+      await axios.put(`${API}/api/cart/${user.uid}/update`, {
+        product_id: productId,
+        quantity
+      });
+      setCart({
+        ...cart,
+        items: cart.items.map(i => 
+          i.product_id === productId ? { ...i, quantity } : i
+        )
+      });
+    } catch (error) {
+      toast.error('Failed to update cart');
+    }
+  };
+
+  const removeFromCart = async (productId) => {
+    try {
+      await axios.delete(`${API}/api/cart/${user.uid}/remove/${productId}`);
+      setCart({
+        ...cart,
+        items: cart.items.filter(i => i.product_id !== productId)
+      });
+      toast.success('Removed from cart');
+    } catch (error) {
+      toast.error('Failed to remove item');
+    }
+  };
+
+  const placeOrder = async () => {
+    if (cart.items.length === 0) {
+      toast.error('Cart is empty');
+      return;
+    }
+    
+    const total = cart.items.reduce((sum, item) => {
+      const product = products.find(p => p.id === item.product_id) || item.product;
+      return sum + (product?.prc_price || 0) * item.quantity;
+    }, 0);
+    
+    if ((userData?.prc_balance || 0) < total) {
+      toast.error('Insufficient PRC balance');
+      return;
+    }
+    
+    try {
+      await axios.post(`${API}/api/orders`, {
+        uid: user.uid,
+        items: cart.items
+      });
+      toast.success('Order placed successfully!');
+      setCart({ items: [] });
+      setShowCart(false);
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to place order');
+    }
+  };
+
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
+    return matchesSearch && matchesCategory && p.is_active !== false;
+  });
+
+  const cartTotal = cart.items.reduce((sum, item) => {
+    const product = products.find(p => p.id === item.product_id) || item.product;
+    return sum + (product?.prc_price || 0) * item.quantity;
+  }, 0);
+
+  const isVip = userData?.membership_type === 'vip';
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 pt-20 pb-24">
-      
-      <div className="container mx-auto px-3 py-8 max-w-full lg:max-w-7xl xl:max-w-[90%]">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 text-purple-600 hover:text-purple-700 mb-4 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="font-medium">Back to Dashboard</span>
-        </button>
-        
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-2">Marketplace</h1>
-            <p className="text-lg text-gray-600">Redeem amazing products using your PRC coins</p>
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
+      {/* Header */}
+      <div className="px-5 pt-6 pb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate('/dashboard')}
+              className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center"
+            >
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </button>
+            <div>
+              <h1 className="text-white text-xl font-bold">{t.title}</h1>
+              <p className="text-gray-400 text-sm">Redeem your PRC</p>
+            </div>
           </div>
-          <Button
+          
+          {/* Cart Button */}
+          <button 
             onClick={() => setShowCart(true)}
-            className="bg-purple-600 hover:bg-purple-700 relative"
-            size="lg"
+            className="relative w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center"
           >
-            <ShoppingCart className="mr-2 h-5 w-5" />
-            Cart
-            {cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
-                {cartCount}
+            <ShoppingCart className="w-5 h-5 text-black" />
+            {cart.items.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">
+                {cart.items.length}
               </span>
             )}
-          </Button>
+          </button>
         </div>
+      </div>
 
-        {/* Products Grid */}
-        {products.length === 0 ? (
-          <Card className="p-12 text-center bg-white/80 backdrop-blur-sm">
-            <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg">No products available</p>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products.map((product, index) => (
-              <>
-                <Card key={product.product_id} className="bg-white/80 backdrop-blur-sm hover:shadow-xl transition-shadow overflow-hidden">
-                  <div className="aspect-square bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
-                    {product.image_url ? (
-                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <Package className="h-24 w-24 text-purple-300" />
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">{product.description}</p>
-                    
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <p className="text-2xl font-bold text-purple-600">{product.prc_price} PRC</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500">Stock</p>
-                        <p className="font-semibold text-gray-900">{product.stock_quantity}</p>
-                      </div>
-                    </div>
+      {/* Balance Card */}
+      <div className="px-5 mb-4">
+        <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <p className="text-gray-400 text-xs">Your Balance</p>
+            <p className="text-2xl font-bold text-amber-400">{(userData?.prc_balance || 0).toFixed(2)} PRC</p>
+          </div>
+          {!isVip && (
+            <button 
+              onClick={() => navigate('/vip')}
+              className="bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-2 rounded-xl text-black text-sm font-bold flex items-center gap-1"
+            >
+              <Crown className="w-4 h-4" /> Get VIP
+            </button>
+          )}
+        </div>
+      </div>
 
-                    <Button
-                      data-testid={`add-to-cart-${index}-btn`}
-                      onClick={() => addToCart(product)}
-                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
-                      disabled={product.stock_quantity === 0}
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      {product.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
-                    </Button>
-                  </div>
-                </Card>
-                
-                {/* Insert In-Feed Ad after every 4th product (Hidden for Admin) */}
-                {!isAdmin && (index + 1) % 4 === 0 && (
-                  <div className="col-span-1 md:col-span-2 lg:col-span-3 xl:col-span-4">
+      {/* Search */}
+      <div className="px-5 mb-4">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+          <Input 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t.search}
+            className="bg-gray-800 border-gray-700 text-white pl-12 rounded-xl"
+          />
+        </div>
+      </div>
+
+      {/* Categories */}
+      <div className="px-5 mb-6">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          {categories.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                selectedCategory === cat.id
+                  ? 'bg-amber-500 text-black'
+                  : 'bg-gray-800 text-gray-400'
+              }`}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* VIP Required Banner */}
+      {!isVip && (
+        <div className="px-5 mb-6">
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex items-center gap-3">
+            <Crown className="w-8 h-8 text-amber-500" />
+            <div>
+              <p className="text-amber-400 font-semibold">VIP Required</p>
+              <p className="text-gray-400 text-sm">Upgrade to VIP to shop in marketplace</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Products Grid */}
+      <div className="px-5">
+        <div className="grid grid-cols-2 gap-3">
+          {filteredProducts.map((product, index) => (
+            <motion.div
+              key={product.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              className="bg-gray-900/50 border border-gray-800 rounded-2xl overflow-hidden"
+            >
+              {/* Product Image */}
+              <div className="aspect-square bg-gray-800 relative">
+                {product.image_url ? (
+                  <img 
+                    src={product.image_url} 
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Package className="w-12 h-12 text-gray-600" />
                   </div>
                 )}
-              </>
-            ))}
+                {product.is_featured && (
+                  <div className="absolute top-2 left-2 bg-amber-500 px-2 py-1 rounded-full">
+                    <Star className="w-3 h-3 text-black" />
+                  </div>
+                )}
+              </div>
+              
+              {/* Product Info */}
+              <div className="p-3">
+                <h3 className="text-white font-medium text-sm line-clamp-1">{product.name}</h3>
+                <p className="text-amber-400 font-bold mt-1">{product.prc_price} PRC</p>
+                
+                <Button
+                  onClick={() => addToCart(product)}
+                  disabled={!isVip || product.stock <= 0}
+                  className={`w-full mt-2 text-sm py-2 ${
+                    isVip 
+                      ? 'bg-amber-500 hover:bg-amber-600 text-black'
+                      : 'bg-gray-700 text-gray-400'
+                  }`}
+                  size="sm"
+                >
+                  {product.stock <= 0 ? 'Out of Stock' : isVip ? t.addToCart : t.vipOnly}
+                </Button>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+        
+        {filteredProducts.length === 0 && (
+          <div className="text-center py-12">
+            <Package className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-400">No products found</p>
           </div>
         )}
       </div>
 
-      {/* Cart Modal */}
-      <Dialog open={showCart} onOpenChange={setShowCart}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">Shopping Cart</DialogTitle>
-            <DialogDescription>
-              Review your items and proceed to checkout
-            </DialogDescription>
-          </DialogHeader>
-
-          {cart.items?.length === 0 ? (
-            <div className="py-12 text-center">
-              <ShoppingCart className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">Your cart is empty</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {/* Cart Items */}
-              <div className="space-y-3">
-                {cart.items?.map((item) => (
-                  <Card key={item.product_id} className="p-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded flex items-center justify-center flex-shrink-0">
-                        <Package className="h-8 w-8 text-purple-400" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900">{item.product_name}</h4>
-                        <p className="text-purple-600 font-bold">{item.prc_price} PRC each</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateQuantity(item.product_id, -1)}
-                        >
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <span className="w-8 text-center font-semibold">{item.quantity}</span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateQuantity(item.product_id, 1)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => removeFromCart(item.product_id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Delivery Address */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Delivery Address *</label>
-                <Input
-                  placeholder="Enter your complete delivery address"
-                  value={deliveryAddress}
-                  onChange={(e) => setDeliveryAddress(e.target.value)}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Summary */}
-              <Card className="bg-purple-50 border-purple-200 p-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="font-semibold">Total Items:</span>
-                    <span>{cartCount}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-semibold">Total PRC:</span>
-                    <span className="text-purple-600 font-bold">{cartTotal.toFixed(2)} PRC</span>
-                  </div>
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>Your Balance:</span>
-                    <span>{userData?.prc_balance?.toFixed(2) || 0} PRC</span>
-                  </div>
-                  <div className="flex justify-between text-sm text-green-600">
-                    <span>Cashback (25%):</span>
-                    <span>₹{((cartTotal * 0.25) / 10).toFixed(2)}</span>
-                  </div>
+      {/* Cart Drawer */}
+      <AnimatePresence>
+        {showCart && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowCart(false)}
+              className="fixed inset-0 bg-black/60 z-50"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              className="fixed bottom-0 left-0 right-0 bg-gray-900 rounded-t-3xl z-50 max-h-[80vh] overflow-hidden"
+            >
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-white text-xl font-bold">{t.cart}</h2>
+                  <button onClick={() => setShowCart(false)} className="text-gray-400">✕</button>
                 </div>
-              </Card>
-
-              {/* Checkout Button */}
-              <Button
-                onClick={checkout}
-                disabled={loading || !deliveryAddress.trim()}
-                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-6 text-lg"
-              >
-                {loading ? 'Processing...' : (
+                
+                {cart.items.length === 0 ? (
+                  <div className="text-center py-8">
+                    <ShoppingCart className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                    <p className="text-gray-400">{t.emptyCart}</p>
+                  </div>
+                ) : (
                   <>
-                    <CheckCircle className="mr-2 h-5 w-5" />
-                    Checkout & Get Secret Code
+                    <div className="space-y-3 max-h-[40vh] overflow-y-auto">
+                      {cart.items.map(item => {
+                        const product = products.find(p => p.id === item.product_id) || item.product;
+                        return (
+                          <div key={item.product_id} className="bg-gray-800 rounded-xl p-3 flex items-center gap-3">
+                            <div className="w-16 h-16 bg-gray-700 rounded-lg flex items-center justify-center">
+                              {product?.image_url ? (
+                                <img src={product.image_url} alt="" className="w-full h-full object-cover rounded-lg" />
+                              ) : (
+                                <Package className="w-8 h-8 text-gray-500" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-white text-sm font-medium">{product?.name}</p>
+                              <p className="text-amber-400 text-sm">{product?.prc_price} PRC</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button 
+                                onClick={() => updateCartItem(item.product_id, item.quantity - 1)}
+                                className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center"
+                              >
+                                <Minus className="w-4 h-4 text-white" />
+                              </button>
+                              <span className="text-white w-6 text-center">{item.quantity}</span>
+                              <button 
+                                onClick={() => updateCartItem(item.product_id, item.quantity + 1)}
+                                className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center"
+                              >
+                                <Plus className="w-4 h-4 text-white" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    <div className="border-t border-gray-800 mt-4 pt-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-gray-400">Total</span>
+                        <span className="text-2xl font-bold text-amber-400">{cartTotal.toFixed(2)} PRC</span>
+                      </div>
+                      <Button
+                        onClick={placeOrder}
+                        disabled={(userData?.prc_balance || 0) < cartTotal}
+                        className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-4 rounded-xl"
+                      >
+                        <CheckCircle className="w-5 h-5 mr-2" />
+                        {t.checkout}
+                      </Button>
+                    </div>
                   </>
                 )}
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
