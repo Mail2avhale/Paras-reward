@@ -258,6 +258,7 @@ const DashboardModern = ({ user, onLogout }) => {
     setActiveTab(tabName);
     const routes = {
       'home': '/dashboard',
+      'rewards': '/daily-rewards',
       'mine': '/daily-rewards',
       'game': '/game',
       'shop': '/marketplace',
