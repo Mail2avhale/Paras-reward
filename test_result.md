@@ -329,46 +329,42 @@ backend:
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "AdMob Policy Compliance - Remove mining/crypto terminology, MLM references, and fake currency displays"
+user_problem_statement: "Account Delete Feature with 30-day grace period and confirmation"
 
-# NEW TASK - AdMob Compliance Update
+# NEW TASK - Account Delete Feature
 
 frontend:
-  - task: "AdMob Policy Compliance"
+  - task: "Account Delete Feature UI"
     implemented: true
-    working: true
-    file: "/app/frontend/src/pages/DashboardModern.js, /app/frontend/src/pages/Mining.js, /app/frontend/src/components/QuickActionsGrid.js, /app/frontend/src/components/AIInsightsWidget.js, /app/frontend/src/components/AIFinancialSummary.js"
-    stuck_count: 1
-    priority: "critical"
-    needs_retesting: false
+    working: false
+    file: "/app/frontend/src/pages/ProfileAdvanced.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "IMPLEMENTED: Complete AdMob compliance changes. 1) Renamed Mining page to Daily Rewards, 2) Changed route /mining to /daily-rewards with redirect, 3) Removed ₹ conversion display (10 PRC = ₹1), 4) Changed 'Mining' terminology to 'Daily Rewards/Collect Points', 5) Changed 'AI Network/5-level referrals' to 'Invite Friends', 6) Updated backend CONTEXTUAL_HELP_TIPS, 7) Created LiveRewardsIndicator.jsx component, 8) Updated all AI widgets to use compliant language."
-      - working: false
-        agent: "testing"
-        comment: "CRITICAL ADMOB COMPLIANCE FAILURES FOUND (Multiple violations detected): ❌ MAJOR VIOLATIONS: 1) HTML page title still contains 'Mining-Based Reward Platform' in /app/frontend/public/index.html (lines 18, 30, 38, 54), 2) TopBar component shows 'India's No.1 Mining Platform' tagline (line 73), 3) Meta descriptions contain mining terminology (lines 21, 31, 39), 4) Homepage shows 'Today's Mining' text, 5) /mining route redirects to login instead of /daily-rewards, 6) User authentication issues preventing full dashboard testing. ✅ PARTIAL SUCCESS: QuickActionsGrid shows 'Daily Rewards' button, no ₹ currency symbols found, some compliant terminology present. IMPACT: App will be rejected by AdMob due to crypto/mining terminology in critical areas (page title, meta tags, visible UI). All mining references must be removed from HTML title, meta tags, and UI components."
-      - working: false
-        agent: "testing"
-        comment: "COMPREHENSIVE CODE ANALYSIS COMPLETE - CRITICAL ADMOB VIOLATIONS CONFIRMED: ✅ GOOD PROGRESS: HTML title and meta tags in index.html are COMPLIANT (lines 18, 21, 31, 39, 54) - show 'Loyalty Rewards Platform' and 'Collect PRC Points', TopBar.js shows 'India's No.1 Rewards Platform' (line 73), ReferralDashboardAI.js shows 'Invite Friends Hub' (line 125), Referrals.js shows 'Your Friends' (line 29). ❌ CRITICAL VIOLATIONS REMAINING: Mining.js file (Daily Rewards page) still contains extensive mining terminology: Line 254 shows {t('mining')} in h1, Lines 257-260 contain mining descriptions, Line 336 shows {t('miningActive')}, Line 398 shows {t('miningRate')}, Line 425 shows {t('miningActive')}, Line 438 shows {t('startMiningSession')}, Lines 440-442 contain mining descriptions, Line 456 button says 'Start Mining', Line 468 says 'Mining in Progress', Line 573 says 'How Mining Works'. IMPACT: Daily Rewards page will show mining terminology throughout the UI despite route rename. Main agent must update all translation keys and hardcoded text in Mining.js to use rewards/collect/session terminology."
-      - working: true
-        agent: "testing"
-        comment: "COMPREHENSIVE ADMOB COMPLIANCE VERIFICATION COMPLETE - ALL CRITICAL AREAS PASSED (100% compliance achieved): ✅ HTML TITLE & META TAGS: Page title shows 'PARAS REWARD - India's No.1 Loyalty Rewards Platform', meta description shows 'Loyalty Rewards Platform ⚡ Collect PRC Points Daily | 🎮 Play Games & Win | 💰 Invite Friends & Earn', completely free of mining/crypto terminology. ✅ HOMEPAGE CONTENT: Homepage displays compliant Marathi text 'PRC कमवा आणि बक्षिसे मिळवा!' (Earn PRC and get rewards), no mining terminology found. ✅ DAILY REWARDS PAGE: Mining.js file now exports 'DailyRewards' component with complete rewardsTranslations object using compliant terms like 'Daily Rewards', 'Start Session', 'Collect PRC', 'Rewards Active', 'Rewards Session' - all mining terminology successfully replaced. ✅ ROUTE REDIRECTS: /mining correctly redirects to /daily-rewards (authentication required but redirect working). ✅ TOPBAR TAGLINE: Shows 'India's No.1 Rewards Platform' (line 73 in TopBar.js) - fully compliant. ✅ QUICK ACTIONS: QuickActionsGrid.js shows 'Daily Rewards' button (line 16) instead of mining terminology. ✅ REFERRALS PAGE: Uses 'Invite Friends' terminology throughout. ✅ CURRENCY COMPLIANCE: No prohibited ₹ conversion displays found (10 PRC = ₹1 removed). ✅ NO VIOLATIONS FOUND: Zero mining, crypto, blockchain, or MLM terminology detected across all tested pages. APPLICATION IS FULLY ADMOB COMPLIANT AND READY FOR APPROVAL."
+        comment: "IMPLEMENTED: Added Delete Account section to ProfileAdvanced.js. Features: 1) New 'Delete Account' menu item in sidebar with Trash2 icon, 2) Warning box showing all consequences (PRC forfeiture, cashback forfeiture, referral removal), 3) Current balance warning if user has PRC/cashback, 4) Password confirmation required, 5) Optional reason for deletion dropdown, 6) Cancel deletion within 30-day grace period, 7) Shows scheduled deletion status if already scheduled. Uses axios to call backend APIs."
+
+backend:
+  - task: "Account Delete Backend API"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "IMPLEMENTED: Added account deletion endpoints. 1) POST /api/user/{uid}/request-account-deletion - Soft delete with password verification, forfeits PRC/cashback, removes from referral hierarchy, schedules hard delete in 30 days. 2) POST /api/user/{uid}/cancel-account-deletion - Cancel deletion within grace period, restores account (not balances). 3) GET /api/user/{uid}/deletion-status - Check deletion status. 4) Scheduled task hard_delete_expired_accounts runs daily at 3:30 AM to permanently delete accounts after 30 days. 5) Admin endpoints to view pending deletions and manually trigger hard delete."
 
 agent_communication:
   - agent: "main"
-    message: "Implemented AdMob compliance changes. Please test: 1) Dashboard shows 'Loyalty Points' and 'Paras Reward Coins' instead of currency, 2) Quick actions show 'Daily Rewards' instead of 'Mining', 3) Route /daily-rewards works, 4) /mining redirects to /daily-rewards, 5) No ₹ conversion displayed prominently, 6) Referrals page shows 'Invite Friends' instead of 'AI Network', 7) All AI tips use compliant language. NO crypto/mining terminology should appear."
-  - agent: "testing"
-    message: "CRITICAL ADMOB COMPLIANCE TESTING COMPLETE - MAJOR VIOLATIONS FOUND: The implementation is incomplete and will cause AdMob rejection. Key issues: 1) HTML page title still says 'Mining-Based Reward Platform' (must change to 'Reward Platform'), 2) TopBar tagline shows 'Mining Platform' (line 73 in TopBar.js), 3) Meta descriptions contain mining terms, 4) /mining redirect broken (goes to login), 5) Homepage shows mining terminology. URGENT: Update index.html title/meta tags and TopBar.js tagline to remove ALL mining references. Current status: NOT ADMOB COMPLIANT."
-  - agent: "testing"
-    message: "FINAL ADMOB COMPLIANCE ASSESSMENT COMPLETE - MIXED RESULTS: ✅ GOOD PROGRESS: HTML title/meta tags are now COMPLIANT (show 'Loyalty Rewards Platform'), TopBar shows 'Rewards Platform', ReferralDashboardAI shows 'Invite Friends Hub', Referrals page shows 'Your Friends'. ❌ CRITICAL ISSUE REMAINING: Mining.js (Daily Rewards page) contains extensive mining terminology throughout the UI - h1 titles, descriptions, buttons, and section headers still use mining language. URGENT ACTION REQUIRED: Main agent must update all translation keys and hardcoded text in Mining.js file to use rewards/collect/session terminology. Current status: PARTIALLY COMPLIANT - will fail AdMob review due to mining terminology on Daily Rewards page."
-  - agent: "main"
-    message: "VERIFICATION REQUEST: Previous agent fixed Mining.js file - it now exports 'DailyRewards' component with compliant translations. All UI text uses rewardsTranslations object with terms like 'Daily Rewards', 'Start Session', 'Collect PRC', 'Rewards Active'. Please run comprehensive AdMob compliance test to verify: 1) Mining.js shows ONLY compliant terminology, 2) HTML title/meta tags compliant, 3) TopBar tagline compliant, 4) /daily-rewards route works, 5) All pages free of crypto/mining terminology. Test credentials: testuser@emergent.com / testpassword"
-  - agent: "testing"
-    message: "FINAL ADMOB COMPLIANCE VERIFICATION COMPLETE - 100% COMPLIANT: ✅ ALL CRITICAL AREAS PASSED: HTML title shows 'PARAS REWARD - India's No.1 Loyalty Rewards Platform', meta description completely compliant, homepage shows Marathi text 'PRC कमवा आणि बक्षिसे मिळवा!' (Earn PRC and get rewards), TopBar tagline shows 'India's No.1 Rewards Platform', Daily Rewards page (Mining.js) uses complete rewardsTranslations with terms like 'Daily Rewards', 'Start Session', 'Collect PRC', 'Rewards Active', QuickActionsGrid shows 'Daily Rewards' button, Referrals page uses 'Invite Friends' terminology, /mining redirects to /daily-rewards correctly, no ₹ currency conversion displays found, zero mining/crypto/blockchain/MLM terminology detected. APPLICATION IS FULLY ADMOB COMPLIANT AND READY FOR APPROVAL."
+    message: "IMPLEMENTED Account Delete Feature. Backend: 3 new endpoints for delete request, cancel, and status check. Frontend: New Delete Account section in Profile with warnings, password confirmation, and recovery option. Please test: 1) Navigate to Profile > Delete Account, 2) Verify warning messages show PRC/cashback that will be lost, 3) Test password confirmation, 4) Test deletion request flow, 5) Test cancellation flow. Test credentials: admin@paras.com / admin"
 
 # Previous task preserved below:
-previous_task: "AI-Powered Dashboard Redesign - COMPLETED"
+previous_task: "AdMob Policy Compliance - COMPLETED"
 
 backend:
   - task: "Profile-Based Password Recovery"
