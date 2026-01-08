@@ -21,7 +21,6 @@ import LiveTransparencyPanel from '@/components/LiveTransparencyPanel';
 import SmartUserInsights from '@/components/SmartUserInsights';
 import LiveActivityFeed from '@/components/LiveActivityFeed';
 import SecurityTrustCenter from '@/components/SecurityTrustCenter';
-import LiveStatementExport from '@/components/LiveStatementExport';
 import DraggableDashboard, { DashboardCard } from '@/components/DraggableDashboard';
 import AIChatbotEnhanced from '@/components/AIChatbotEnhanced';
 import AIInsightsWidget from '@/components/AIInsightsWidget';
