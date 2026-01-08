@@ -14,9 +14,9 @@ export const LANGUAGES = [
 // Language Provider Component
 export const LanguageProvider = ({ children }) => {
   const [language, setLanguage] = useState(() => {
-    // Get saved language from localStorage or default to Marathi
+    // Get saved language from localStorage or default to English
     const saved = localStorage.getItem('paras_language');
-    return saved || 'mr';
+    return saved || 'en';
   });
 
   // Save language preference
