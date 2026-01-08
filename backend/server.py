@@ -21124,6 +21124,96 @@ async def trigger_inactive_prc_burn():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ========== ACCOUNT HARD DELETE SCHEDULED TASK ==========
+
+async def hard_delete_expired_accounts():
+    """
+    Permanently delete accounts that have been soft-deleted for 30+ days.
+    Runs daily at 3 AM.
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Find all accounts scheduled for hard deletion
+        accounts_to_delete = db.users.find({
+            "is_deleted": True,
+            "deletion_scheduled_at": {"$lte": now.isoformat()}
+        })
+        
+        delete_count = 0
+        
+        async for user in accounts_to_delete:
+            uid = user.get("uid")
+            email = user.get("email")
+            
+            try:
+                # Archive user data before permanent deletion
+                await db.deleted_users_archive.insert_one({
+                    "uid": uid,
+                    "email": email,
+                    "name": user.get("name"),
+                    "deleted_at": user.get("deleted_at"),
+                    "hard_deleted_at": now.isoformat(),
+                    "prc_forfeited": user.get("prc_balance_forfeited", 0),
+                    "cashback_forfeited": user.get("cashback_forfeited", 0),
+                    "deletion_reason": user.get("deletion_reason"),
+                    "membership_type": user.get("membership_type"),
+                    "created_at": user.get("created_at")
+                })
+                
+                # Permanently delete user
+                await db.users.delete_one({"uid": uid})
+                
+                # Update account_deletions log
+                await db.account_deletions.update_one(
+                    {"uid": uid, "status": "pending"},
+                    {"$set": {
+                        "status": "completed",
+                        "hard_deleted_at": now.isoformat()
+                    }}
+                )
+                
+                delete_count += 1
+                logging.info(f"Hard deleted account: {uid} ({email})")
+                
+            except Exception as e:
+                logging.error(f"Error hard deleting user {uid}: {e}")
+        
+        logging.info(f"Account hard delete: {delete_count} accounts permanently deleted")
+        return {"accounts_deleted": delete_count}
+        
+    except Exception as e:
+        logging.error(f"Error in hard_delete_expired_accounts: {e}")
+        return {"accounts_deleted": 0, "error": str(e)}
+
+
+@api_router.post("/admin/accounts/hard-delete-expired")
+async def trigger_hard_delete_expired():
+    """Manually trigger hard deletion of expired accounts (admin only)"""
+    try:
+        result = await hard_delete_expired_accounts()
+        return {"success": True, "result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/accounts/pending-deletions")
+async def get_pending_deletions():
+    """Get list of accounts pending deletion"""
+    try:
+        pending = await db.account_deletions.find(
+            {"status": "pending"},
+            {"_id": 0}
+        ).to_list(100)
+        
+        return {
+            "pending_count": len(pending),
+            "accounts": pending
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ========== MASTER ACCOUNTING DASHBOARD ==========
 
 @api_router.get("/admin/accounting/master-dashboard")
