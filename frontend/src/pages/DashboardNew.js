@@ -146,10 +146,10 @@ const DashboardNew = ({ user, onLogout }) => {
   // Quick Actions with explanations
   const quickActions = [
     { 
-      name: 'Mine', 
-      subtext: 'Hourly PRC मिळवा',
+      name: 'Daily Rewards', 
+      subtext: 'Collect PRC Points',
       icon: Pickaxe, 
-      link: '/mining', 
+      link: '/daily-rewards', 
       gradient: 'from-green-500 to-emerald-600',
       active: stats?.is_mining
     },
