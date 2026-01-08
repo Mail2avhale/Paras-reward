@@ -162,7 +162,7 @@ const SmartUserInsights = ({ userId, userStats = {}, translations = {} }) => {
       generatedInsights.push({
         type: 'default',
         icon: 'zap',
-        message: 'Mining सुरू करा आणि rewards मिळवा! ⚡',
+        message: 'Rewards collect करा आणि prizes मिळवा! ⚡',
         color: 'purple'
       });
     }
