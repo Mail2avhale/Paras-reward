@@ -531,6 +531,89 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     }
   };
   
+  // Fetch deletion status on mount
+  const fetchDeletionStatus = async () => {
+    try {
+      const response = await axios.get(`${API}/api/user/${user.uid}/deletion-status`);
+      setDeletionStatus(response.data);
+    } catch (error) {
+      console.error('Error fetching deletion status:', error);
+    }
+  };
+  
+  // Handle Account Deletion Request
+  const handleRequestAccountDeletion = async () => {
+    if (!deleteAccountPassword) {
+      toast.error('Please enter your password to confirm');
+      return;
+    }
+    
+    setLoadingDeletion(true);
+    try {
+      const response = await axios.post(`${API}/api/user/${user.uid}/request-account-deletion`, {
+        password: deleteAccountPassword,
+        reason: deleteReason || 'User requested deletion'
+      });
+      
+      toast.success('Account scheduled for deletion');
+      setShowDeleteConfirmation(false);
+      setDeleteAccountPassword('');
+      setDeleteReason('');
+      setDeletionStatus({
+        is_scheduled_for_deletion: true,
+        hard_delete_date: response.data.hard_delete_date,
+        days_remaining: 30,
+        can_recover: true,
+        prc_forfeited: response.data.prc_forfeited,
+        cashback_forfeited: response.data.cashback_forfeited
+      });
+      
+      // Logout after scheduling deletion
+      setTimeout(() => {
+        toast.info('You will be logged out. You can cancel deletion within 30 days by logging in again.');
+        setTimeout(() => onLogout(), 2000);
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Error requesting deletion:', error);
+      toast.error(error.response?.data?.detail || 'Failed to request account deletion');
+    } finally {
+      setLoadingDeletion(false);
+    }
+  };
+  
+  // Handle Cancel Account Deletion
+  const handleCancelAccountDeletion = async () => {
+    if (!deleteAccountPassword) {
+      toast.error('Please enter your password to confirm');
+      return;
+    }
+    
+    setLoadingDeletion(true);
+    try {
+      await axios.post(`${API}/api/user/${user.uid}/cancel-account-deletion`, {
+        password: deleteAccountPassword
+      });
+      
+      toast.success('Account deletion cancelled! Your account has been restored.');
+      setDeleteAccountPassword('');
+      setDeletionStatus({ is_scheduled_for_deletion: false });
+      
+    } catch (error) {
+      console.error('Error cancelling deletion:', error);
+      toast.error(error.response?.data?.detail || 'Failed to cancel account deletion');
+    } finally {
+      setLoadingDeletion(false);
+    }
+  };
+  
+  // Fetch deletion status when delete-account section is active
+  useEffect(() => {
+    if (activeSection === 'delete-account' && user?.uid) {
+      fetchDeletionStatus();
+    }
+  }, [activeSection, user]);
+  
   // Navigation items
   const sections = [
     { id: 'profile', label: 'Profile Image', icon: Camera, color: 'purple' },
