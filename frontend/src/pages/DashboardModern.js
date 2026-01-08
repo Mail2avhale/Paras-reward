@@ -21,7 +21,6 @@ import LiveTransparencyPanel from '@/components/LiveTransparencyPanel';
 import SmartUserInsights from '@/components/SmartUserInsights';
 import LiveActivityFeed from '@/components/LiveActivityFeed';
 import SecurityTrustCenter from '@/components/SecurityTrustCenter';
-import DraggableDashboard, { DashboardCard } from '@/components/DraggableDashboard';
 import AIChatbotEnhanced from '@/components/AIChatbotEnhanced';
 import AIInsightsWidget from '@/components/AIInsightsWidget';
 import AIFinancialSummary from '@/components/AIFinancialSummary';
@@ -30,18 +29,6 @@ import QuickActionsGrid from '@/components/QuickActionsGrid';
 import { useLanguage, LANGUAGES } from '@/contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
-
-// Default card order for the dashboard (removed user-controls - admin feature only)
-const DEFAULT_CARD_ORDER = [
-  'ai-financial-summary',
-  'ai-stats-grid',
-  'ai-insights',
-  'quick-actions-grid',
-  'recent-activity',
-  'security-trust',
-  'activity-feed',
-  'vip-banner'
-];
 
 // Color mapping for QuickActionButton
 const colorStyles = {
