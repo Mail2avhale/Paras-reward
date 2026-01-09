@@ -512,71 +512,70 @@ const BillPayments = ({ user, onLogout }) => {
                   </div>
                 )}
 
-                <Button
+                <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-900 font-bold rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
                 >
-                  <Send className="h-4 w-4 mr-2" />
+                  <Send className="h-4 w-4" />
                   {loading ? 'Submitting...' : 'Submit Request'}
-                </Button>
+                </button>
               </form>
-            </Card>
+            </div>
           </div>
 
           {/* Right: Balance & Info */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* PRC Balance */}
-            <Card className="p-6 bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-              <p className="text-sm opacity-90 mb-2">Available PRC Balance</p>
-              <p className="text-4xl font-bold">{currentUser?.prc_balance?.toFixed(2) || '0.00'}</p>
-              <p className="text-xs opacity-75 mt-2">100 INR = 1000 PRC</p>
-            </Card>
+            <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 rounded-2xl p-5 border border-amber-500/30">
+              <p className="text-gray-400 text-sm mb-2">Available PRC Balance</p>
+              <p className="text-3xl font-bold text-amber-500">{currentUser?.prc_balance?.toFixed(2) || '0.00'}</p>
+              <p className="text-gray-500 text-xs mt-2">100 INR = 1000 PRC</p>
+            </div>
 
             {/* How it Works */}
-            <Card className="p-6">
-              <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <Receipt className="h-5 w-5 text-blue-600" />
+            <div className="bg-gray-900/50 rounded-2xl p-5 border border-gray-800">
+              <h3 className="font-bold text-white mb-3 flex items-center gap-2">
+                <Receipt className="h-5 w-5 text-amber-500" />
                 How It Works
               </h3>
-              <ol className="text-sm text-gray-700 space-y-2">
+              <ol className="text-sm text-gray-400 space-y-2">
                 <li>1. Select service type</li>
                 <li>2. Enter amount and details</li>
                 <li>3. PRC deducted immediately</li>
                 <li>4. Admin processes request</li>
                 <li>5. Recharge/payment completed</li>
               </ol>
-              <div className="mt-4 p-3 bg-yellow-50 rounded-lg">
-                <p className="text-xs text-yellow-800">
+              <div className="mt-4 p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                <p className="text-xs text-amber-300">
                   <strong>Note:</strong> Service charges apply. PRC will be refunded if request is rejected.
                 </p>
               </div>
-            </Card>
+            </div>
 
             {/* Security Note for Important Services */}
             {(selectedType === 'credit_card_payment' || selectedType === 'loan_emi') && (
-              <Card className="p-6 bg-red-50 border-2 border-red-200">
-                <h3 className="font-bold text-red-900 mb-3 flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5 text-red-600" />
-                  Important Security Notice
+              <div className="bg-red-500/10 rounded-2xl p-5 border border-red-500/20">
+                <h3 className="font-bold text-red-400 mb-3 flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-red-500" />
+                  Security Notice
                 </h3>
-                <ul className="text-xs text-red-800 space-y-2">
+                <ul className="text-xs text-red-300 space-y-2">
                   <li>✓ Only provide last 4 digits of card</li>
                   <li>✓ Never share full card number or CVV</li>
                   <li>✓ Verify bank/lender name correctly</li>
-                  <li>✓ Double-check account details before submitting</li>
-                  <li>✓ Admin will verify with bank/NBFC before processing</li>
+                  <li>✓ Double-check account details</li>
                 </ul>
-              </Card>
+              </div>
             )}
           </div>
         </div>
 
         {/* Request History */}
-        <Card className="p-6 mt-8">
+        <div className="bg-gray-900/50 rounded-2xl p-5 border border-gray-800 mt-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Request History</h2>
-            <p className="text-sm text-gray-500">Processing time: 3-7 days</p>
+            <h2 className="text-lg font-bold text-white">Request History</h2>
+            <p className="text-sm text-gray-500">Processing: 3-7 days</p>
           </div>
           
           {requests.length === 0 ? (
