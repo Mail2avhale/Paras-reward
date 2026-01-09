@@ -503,7 +503,9 @@ const Referrals = ({ user }) => {
               </motion.div>
             );
           })}
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Apply Referral Code */}
