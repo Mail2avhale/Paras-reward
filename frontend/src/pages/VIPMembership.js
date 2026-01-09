@@ -479,15 +479,7 @@ const VIPMembership = ({ user }) => {
                 </ol>
               </div>
             )}
-                  <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center flex-shrink-0">1</span>
-                  <span>Scan QR code with any UPI app</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center flex-shrink-0">2</span>
-                  <span>Enter amount: ₹{selectedPlan?.final_price}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center flex-shrink-0">3</span>
+          </div>
                   <span>Complete payment & note UTR number</span>
                 </li>
               </ol>
