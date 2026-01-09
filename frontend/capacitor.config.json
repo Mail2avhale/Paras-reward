@@ -3,7 +3,7 @@
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://smartcoin-app.preview.emergentagent.com",
+    "url": "https://ailedgerplus.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
