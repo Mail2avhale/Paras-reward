@@ -395,27 +395,33 @@ const DashboardModern = ({ user, onLogout }) => {
               {recentTransactions.slice(0, 4).map((tx, index) => (
                 <div key={index} className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      tx.amount >= 0 ? 'bg-emerald-500/20' : 'bg-red-500/20'
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
+                      tx.amount > 0 ? 'bg-emerald-500/20' : tx.amount < 0 ? 'bg-red-500/20' : 'bg-blue-500/20'
                     }`}>
-                      {tx.amount >= 0 ? (
+                      {tx.icon ? (
+                        <span>{tx.icon}</span>
+                      ) : tx.amount > 0 ? (
                         <TrendingUp className="w-5 h-5 text-emerald-500" />
-                      ) : (
+                      ) : tx.amount < 0 ? (
                         <ShoppingBag className="w-5 h-5 text-red-400" />
+                      ) : (
+                        <Clock className="w-5 h-5 text-blue-400" />
                       )}
                     </div>
                     <div>
                       <p className="text-white text-sm font-medium">
-                        {(tx.description || tx.type || 'Transaction').replace(/mining/gi, 'rewards')}
+                        {(tx.description || tx.type || 'Activity').replace(/mining/gi, 'rewards')}
                       </p>
                       <p className="text-gray-500 text-xs">
-                        {new Date(tx.timestamp).toLocaleDateString()}
+                        {tx.timestamp ? new Date(tx.timestamp).toLocaleDateString() : 'Today'}
                       </p>
                     </div>
                   </div>
-                  <p className={`font-bold ${tx.amount >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {tx.amount >= 0 ? '+' : ''}{tx.amount?.toFixed(2)} PRC
-                  </p>
+                  {tx.amount !== undefined && tx.amount !== 0 && (
+                    <p className={`font-bold ${tx.amount > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {tx.amount > 0 ? '+' : ''}{tx.amount?.toFixed(2)} PRC
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
