@@ -130,18 +130,26 @@ const Home = ({ user, onLogout }) => {
               </Link>
             </div>
 
-            {/* Stats Cards */}
+            {/* Stats Cards - Real Platform Stats */}
             <div className="grid grid-cols-3 gap-6 max-w-3xl mx-auto">
               <Card className="p-6 bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300">
-                <div className="text-3xl font-bold text-purple-400">10,000+</div>
+                <div className="text-3xl font-bold text-purple-400">
+                  {platformStats.activeUsers > 0 ? `${platformStats.activeUsers}+` : '---'}
+                </div>
                 <div className="text-gray-300 mt-1">{t('home.active_users')}</div>
               </Card>
               <Card className="p-6 bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300">
-                <div className="text-3xl font-bold text-pink-400">₹50L+</div>
+                <div className="text-3xl font-bold text-pink-400">
+                  {platformStats.totalPrcDistributed > 0 
+                    ? `${(platformStats.totalPrcDistributed / 1000).toFixed(0)}K` 
+                    : '---'}
+                </div>
                 <div className="text-gray-300 mt-1">{t('home.rewards_distributed')}</div>
               </Card>
               <Card className="p-6 bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300">
-                <div className="text-3xl font-bold text-purple-400">5000+</div>
+                <div className="text-3xl font-bold text-purple-400">
+                  {platformStats.totalProducts > 0 ? `${platformStats.totalProducts}+` : '---'}
+                </div>
                 <div className="text-gray-300 mt-1">{t('home.products')}</div>
               </Card>
             </div>
