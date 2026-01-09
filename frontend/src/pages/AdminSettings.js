@@ -142,6 +142,23 @@ const AdminSettings = ({ user }) => {
     }
   };
 
+  const handlePaymentConfigChange = (field, value) => {
+    setPaymentConfig(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSavePaymentConfig = async () => {
+    setSavingPayment(true);
+    try {
+      await axios.post(`${API}/api/admin/payment-config`, paymentConfig);
+      toast.success('VIP Payment settings saved successfully!');
+    } catch (error) {
+      console.error('Error saving payment config:', error);
+      toast.error('Failed to save payment settings');
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
       <div className="container mx-auto px-4 py-8">
