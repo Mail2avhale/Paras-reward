@@ -3072,6 +3072,141 @@ async def claim_mining(uid: str):
         "message": f"Successfully claimed {round(mined_amount, 2)} PRC!"
     }
 
+# ========== USER DATA ENDPOINT ==========
+@api_router.get("/user/{uid}")
+async def get_user_data(uid: str):
+    """Get user details - Comprehensive user data endpoint"""
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Process datetime fields
+    for field in ['created_at', 'last_login', 'membership_expiry', 'mining_start_time', 'mining_session_end']:
+        if user.get(field) and isinstance(user[field], str):
+            try:
+                user[field] = datetime.fromisoformat(user[field].replace('Z', '+00:00'))
+            except:
+                pass
+    
+    # Check mining session validity
+    now = datetime.now(timezone.utc)
+    if user.get("mining_start_time"):
+        start_time = user["mining_start_time"]
+        if isinstance(start_time, str):
+            start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+        if start_time.tzinfo is None:
+            start_time = start_time.replace(tzinfo=timezone.utc)
+        
+        session_end = start_time + timedelta(hours=24)
+        if now < session_end:
+            user["mining_active"] = True
+            user["mining_session_end"] = session_end.isoformat()
+        else:
+            user["mining_active"] = False
+    
+    # Get referral count
+    referral_count = await db.users.count_documents({"referred_by": uid})
+    user["referral_count"] = referral_count
+    
+    return user
+
+# ========== MINING COLLECT ENDPOINT ==========
+class MiningCollectRequest(BaseModel):
+    amount: Optional[float] = None
+
+@api_router.post("/mining/collect/{uid}")
+async def collect_mining_rewards(uid: str, request: MiningCollectRequest = None):
+    """Collect earned PRC from active mining session without resetting session"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    now = datetime.now(timezone.utc)
+    membership_type = user.get("membership_type", "free")
+    is_vip = membership_type == "vip"
+    
+    # Check if mining session is active
+    if not user.get("mining_start_time"):
+        raise HTTPException(status_code=400, detail="No active mining session")
+    
+    start_time = user["mining_start_time"]
+    if isinstance(start_time, str):
+        start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+    if start_time.tzinfo is None:
+        start_time = start_time.replace(tzinfo=timezone.utc)
+    
+    session_end = start_time + timedelta(hours=24)
+    
+    # Calculate earned amount
+    elapsed_minutes = (min(now, session_end) - start_time).total_seconds() / 60
+    rate_per_minute, base_rate, active_referrals, referral_breakdown = await calculate_mining_rate(uid)
+    calculated_amount = elapsed_minutes * rate_per_minute
+    
+    # Use provided amount if valid, otherwise use calculated
+    prc_to_collect = request.amount if request and request.amount and request.amount <= calculated_amount else calculated_amount
+    
+    if prc_to_collect < 0.01:
+        raise HTTPException(status_code=400, detail="Minimum collection is 0.01 PRC")
+    
+    # Update user balance
+    new_balance = user.get("prc_balance", 0) + prc_to_collect
+    new_total_mined = user.get("total_mined", 0) + prc_to_collect
+    
+    # Calculate expiry for free users
+    expiry_date = None if is_vip else (now + timedelta(days=2)).isoformat()
+    
+    # Add to mining history for burn tracking
+    mining_entry = {
+        "amount": prc_to_collect,
+        "timestamp": now.isoformat(),
+        "burned": False,
+        "expires_at": expiry_date,
+        "membership_type": membership_type
+    }
+    
+    # Reset session start time to now for continuous earning
+    await db.users.update_one(
+        {"uid": uid},
+        {
+            "$set": {
+                "prc_balance": new_balance,
+                "total_mined": new_total_mined,
+                "mining_start_time": now.isoformat()  # Reset start time for new accumulation
+            },
+            "$push": {"mining_history": mining_entry}
+        }
+    )
+    
+    # Log transaction
+    await db.transactions.insert_one({
+        "transaction_id": str(uuid.uuid4()),
+        "user_id": uid,
+        "type": "mining",
+        "amount": prc_to_collect,
+        "description": "Mining rewards collected",
+        "timestamp": now.isoformat(),
+        "expires_at": expiry_date,
+        "status": "completed"
+    })
+    
+    # Log activity
+    await log_activity(
+        user_id=uid,
+        action_type="mining_collected",
+        description=f"Collected {prc_to_collect:.2f} PRC from mining session",
+        metadata={"amount": prc_to_collect, "new_balance": new_balance}
+    )
+    
+    return {
+        "success": True,
+        "prc_collected": round(prc_to_collect, 4),
+        "new_balance": round(new_balance, 4),
+        "total_mined": round(new_total_mined, 4),
+        "membership_type": membership_type,
+        "validity": "lifetime" if is_vip else "2 days",
+        "expires_at": expiry_date
+    }
+
 @api_router.get("/user/stats/today/{uid}")
 async def get_user_today_stats(uid: str):
     """Get today's PRC earned and spent for a user"""
