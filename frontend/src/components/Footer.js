@@ -32,8 +32,24 @@ const Footer = () => {
 
   const fetchContactDetails = async () => {
     try {
-      const response = await axios.get(`${API}/api/contact-details`);
-      setContactDetails(response.data);
+      const response = await axios.get(`${API}/api/admin/contact-settings`);
+      if (response.data) {
+        const data = response.data;
+        const fullAddress = [
+          data.company_name,
+          data.address_line1,
+          data.address_line2,
+          `${data.city}${data.city && data.state ? ', ' : ''}${data.state} ${data.pincode}`.trim(),
+          data.country
+        ].filter(Boolean).join('\n');
+        
+        setContactDetails({
+          address: fullAddress || 'PARAS REWARD\nMaharashtra, India',
+          phone: data.phone_primary || '+91-XXXXXXXXXX',
+          email: data.email_support || 'support@parasreward.com',
+          website: 'www.parasreward.com'
+        });
+      }
     } catch (error) {
       console.error('Error fetching contact details:', error);
       // Keep default values on error
