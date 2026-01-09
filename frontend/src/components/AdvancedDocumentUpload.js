@@ -366,12 +366,11 @@ const AdvancedDocumentUpload = ({
 
   return (
     <div className="w-full">
-      {/* Hidden elements */}
+      {/* Hidden elements - separate inputs for camera and gallery */}
       <input 
         ref={fileInputRef}
         type="file" 
         accept="image/*"
-        capture="environment"
         onChange={handleFileUpload}
         className="hidden"
       />
