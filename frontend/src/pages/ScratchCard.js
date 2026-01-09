@@ -408,54 +408,54 @@ const ScratchCard = ({ user }) => {
                     <div className="text-xs text-gray-500">Won</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-pink-600">₹{stats.avg_cashback_per_card}</div>
-                    <div className="text-sm text-gray-600">Avg per Card</div>
+                    <div className="text-xl font-bold text-pink-500">₹{stats.avg_cashback_per_card}</div>
+                    <div className="text-xs text-gray-500">Avg</div>
                   </div>
                 </div>
-              </Card>
+              </div>
             )}
 
             {/* Recent History */}
             {history.length > 0 && (
-              <Card className="p-6">
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <History className="h-6 w-6 text-purple-600" />
+              <div className="bg-gray-900/50 rounded-2xl p-5 border border-gray-800">
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-white">
+                  <History className="h-5 w-5 text-amber-500" />
                   Recent Plays
                 </h3>
                 <div className="space-y-2">
                   {history.slice(0, 5).map((item) => (
-                    <div key={item.transaction_id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div key={item.transaction_id} className="flex justify-between items-center p-3 bg-gray-800/50 rounded-xl">
                       <div>
-                        <div className="font-semibold">{item.card_type} PRC Card</div>
+                        <div className="font-semibold text-white">{item.card_type} PRC Card</div>
                         <div className="text-xs text-gray-500">
                           {new Date(item.timestamp).toLocaleString()}
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-green-600">{item.cashback_percentage}%</div>
-                        <div className="text-sm text-gray-600">₹{item.cashback_inr}</div>
+                        <div className="font-bold text-emerald-500">{item.cashback_percentage}%</div>
+                        <div className="text-sm text-amber-500">₹{item.cashback_inr}</div>
                       </div>
                     </div>
                   ))}
                 </div>
-              </Card>
+              </div>
             )}
           </>
         ) : (
           /* Scratch Card Area */
-          <div className="max-w-2xl mx-auto">
-            <Card className="p-8">
-              <div className="text-center mb-6">
-                <h2 className="text-3xl font-bold mb-2">{selectedCard.name}</h2>
-                <p className="text-gray-600">Cost: {selectedCard.cost} PRC (₹{selectedCard.cost / 10})</p>
+          <div className="max-w-md mx-auto">
+            <div className="bg-gray-900/50 rounded-2xl p-6 border border-gray-800">
+              <div className="text-center mb-4">
+                <h2 className="text-2xl font-bold text-white mb-1">{selectedCard.name}</h2>
+                <p className="text-gray-500">Cost: {selectedCard.cost} PRC (₹{selectedCard.cost / 10})</p>
               </div>
 
               {!isScratching ? (
                 <div className="space-y-4">
-                  <div className={`p-12 rounded-2xl bg-gradient-to-br ${getCardColor(selectedCard.cost)} text-white text-center`}>
+                  <div className={`p-8 rounded-2xl bg-gradient-to-br ${getCardColor(selectedCard.cost)} text-white text-center`}>
                     <div className="mb-4">{getCardIcon(selectedCard.cost)}</div>
-                    <div className="text-2xl font-bold mb-4">Ready to Scratch?</div>
-                    <div className="text-lg">
+                    <div className="text-xl font-bold mb-2">Ready to Scratch?</div>
+                    <div className="text-sm">
                       {isVIP ? `Win ${selectedCard.min_cashback_vip}-${selectedCard.max_cashback_vip}% Cashback!` 
                              : `Win ${selectedCard.min_cashback_free}-${selectedCard.max_cashback_free}% Cashback!`}
                     </div>
