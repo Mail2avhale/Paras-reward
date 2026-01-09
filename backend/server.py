@@ -381,11 +381,16 @@ class User(BaseModel):
     reset_token_expiry: Optional[datetime] = None
     
     # Address fields
+    address: Optional[str] = None
     state: Optional[str] = None
     district: Optional[str] = None
     taluka: Optional[str] = None
+    tahsil: Optional[str] = None  # Alias for taluka
     village: Optional[str] = None
     pincode: Optional[str] = None
+    
+    # Personal info
+    birthday: Optional[str] = None  # ISO date string
     
     # KYC fields
     aadhaar_number: Optional[str] = None
