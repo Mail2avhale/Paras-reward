@@ -359,53 +359,53 @@ const ScratchCard = ({ user }) => {
                     <div className={`flex justify-center mb-4 text-white p-6 rounded-full bg-gradient-to-br ${getCardColor(card.cost)}`}>
                       {getCardIcon(card.cost)}
                     </div>
-                    <h3 className="text-2xl font-bold text-center mb-2">{card.name}</h3>
+                    <h3 className="text-xl font-bold text-center mb-2 text-white">{card.name}</h3>
                     <div className="text-center mb-4">
-                      <div className="text-4xl font-bold text-purple-600">{card.cost} PRC</div>
+                      <div className="text-3xl font-bold text-amber-500">{card.cost} PRC</div>
                       <div className="text-sm text-gray-500">= ₹{card.cost / 10}</div>
                     </div>
-                    <div className="space-y-2 text-sm text-gray-600">
+                    <div className="space-y-2 text-sm text-gray-400">
                       <div className="flex items-center justify-center gap-2">
-                        <Gift className="h-4 w-4" />
+                        <Gift className="h-4 w-4 text-amber-500" />
                         <span>{isVIP ? `Win ${card.min_cashback_vip}-${card.max_cashback_vip}%` : `Win ${card.min_cashback_free}-${card.max_cashback_free}%`}</span>
                       </div>
                       <div className="text-center text-xs text-gray-500">
                         {isVIP ? '⭐ VIP Rewards' : '🆓 Free User'}
                       </div>
                     </div>
-                    <Button
-                      className={`w-full mt-4 bg-gradient-to-r ${getCardColor(card.cost)} text-white`}
+                    <button
+                      className={`w-full mt-4 py-2.5 rounded-xl bg-gradient-to-r ${getCardColor(card.cost)} text-white font-bold`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleSelectCard(card);
                       }}
                     >
                       Select Card
-                    </Button>
+                    </button>
                   </div>
-                </Card>
+                </div>
               ))}
             </div>
 
             {/* Statistics */}
             {stats && stats.total_cards_played > 0 && (
-              <Card className="p-6 mb-8">
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <Trophy className="h-6 w-6 text-purple-600" />
+              <div className="bg-gray-900/50 rounded-2xl p-5 mb-6 border border-gray-800">
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-white">
+                  <Trophy className="h-5 w-5 text-amber-500" />
                   Your Statistics
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-4 gap-3">
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-purple-600">{stats.total_cards_played}</div>
-                    <div className="text-sm text-gray-600">Cards Played</div>
+                    <div className="text-xl font-bold text-amber-500">{stats.total_cards_played}</div>
+                    <div className="text-xs text-gray-500">Cards</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-orange-600">{stats.total_prc_spent}</div>
-                    <div className="text-sm text-gray-600">PRC Spent</div>
+                    <div className="text-xl font-bold text-orange-500">{stats.total_prc_spent}</div>
+                    <div className="text-xs text-gray-500">PRC</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-green-600">₹{stats.total_cashback_won}</div>
-                    <div className="text-sm text-gray-600">Total Won</div>
+                    <div className="text-xl font-bold text-emerald-500">₹{stats.total_cashback_won}</div>
+                    <div className="text-xs text-gray-500">Won</div>
                   </div>
                   <div className="text-center">
                     <div className="text-3xl font-bold text-pink-600">₹{stats.avg_cashback_per_card}</div>
