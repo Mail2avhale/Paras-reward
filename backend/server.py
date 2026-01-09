@@ -7200,6 +7200,95 @@ async def update_payment_config(request: Request):
     
     return {"message": "Payment configuration updated successfully"}
 
+@api_router.post("/vip/payment/submit")
+async def submit_vip_payment_new(request: Request):
+    """Submit VIP payment proof - new endpoint for VIPMembership page"""
+    data = await request.json()
+    
+    # Validate required fields
+    uid = data.get("uid")
+    if not uid:
+        raise HTTPException(status_code=400, detail="User ID is required")
+    
+    utr_number = data.get("utr_number")
+    if not utr_number:
+        raise HTTPException(status_code=400, detail="UTR / Transaction ID is required")
+    
+    screenshot_url = data.get("screenshot_url")
+    if not screenshot_url:
+        raise HTTPException(status_code=400, detail="Payment screenshot is required")
+    
+    # Get user info
+    user = await db.users.find_one({"uid": uid}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if user already has pending payment
+    existing = await db.vip_payments.find_one({
+        "user_id": uid,
+        "status": "pending"
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="You already have a pending payment request. Please wait for admin verification.")
+    
+    # Get plan details
+    plan_type = data.get("plan_type", "monthly")
+    amount = float(data.get("amount", 299))
+    
+    # Duration mapping based on plan type
+    plan_details = {
+        "monthly": {"days": 30, "name": "Monthly VIP"},
+        "quarterly": {"days": 90, "name": "Quarterly VIP"},
+        "half_yearly": {"days": 180, "name": "Half-Yearly VIP"},
+        "yearly": {"days": 365, "name": "Yearly VIP"}
+    }
+    
+    plan_info = plan_details.get(plan_type, plan_details["monthly"])
+    
+    # Create payment record
+    payment_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+    
+    payment_record = {
+        "payment_id": payment_id,
+        "user_id": uid,
+        "user_email": user.get("email", ""),
+        "user_name": user.get("name", ""),
+        "user_phone": user.get("phone", user.get("mobile", "")),
+        "amount": amount,
+        "plan_type": plan_type,
+        "plan_name": plan_info["name"],
+        "duration_days": plan_info["days"],
+        "utr_number": utr_number,
+        "screenshot_url": screenshot_url,
+        "payment_date": data.get("payment_date", now.strftime("%Y-%m-%d")),
+        "payment_time": data.get("payment_time", now.strftime("%H:%M")),
+        "payment_method": data.get("payment_method", "UPI"),
+        "status": "pending",
+        "created_at": now,
+        "updated_at": now
+    }
+    
+    await db.vip_payments.insert_one(payment_record)
+    
+    # Create notification for admin
+    await db.notifications.insert_one({
+        "notification_id": str(uuid.uuid4()),
+        "user_id": "admin",
+        "type": "vip_payment_request",
+        "title": "New VIP Payment Request",
+        "message": f"New VIP payment request from {user.get('name', user.get('email', 'User'))} for {plan_info['name']} (₹{amount})",
+        "read": False,
+        "created_at": now
+    })
+    
+    return {
+        "message": "Payment submitted successfully! Admin will verify your payment within 24 hours.",
+        "payment_id": payment_id,
+        "status": "pending"
+    }
+
 @api_router.post("/membership/submit-payment")
 async def submit_vip_payment(request: Request):
     """Submit VIP payment proof"""
