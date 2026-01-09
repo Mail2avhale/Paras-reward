@@ -151,10 +151,10 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
   };
 
   const quickQuestions = [
-    { icon: '👑', text: "VIP benefits?" },
-    { icon: '🎯', text: "रिवॉर्ड कसे मिळवायचे?" },
-    { icon: '📋', text: "KYC स्थिति?" },
-    { icon: '🎁', text: "PRC कैसे redeem करें?" }
+    { icon: '🚀', text: "PRC कसे कमवायचे?" },
+    { icon: '🎁', text: "रिवॉर्ड कसे redeem करायचे?" },
+    { icon: '👑', text: "VIP चे फायदे काय?" },
+    { icon: '💡', text: "How does Paras help me?" }
   ];
 
   const handleQuickQuestion = (question) => {
