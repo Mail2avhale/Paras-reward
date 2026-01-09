@@ -41,8 +41,14 @@ const Marketplace = ({ user }) => {
   ];
 
   useEffect(() => {
+    // Early VIP check
+    if (user && user.membership_type !== 'vip') {
+      toast.error('VIP membership required to access Marketplace');
+      setTimeout(() => navigate('/dashboard'), 2000);
+      return;
+    }
     fetchData();
-  }, []);
+  }, [user, navigate]);
 
   const fetchData = async () => {
     try {
