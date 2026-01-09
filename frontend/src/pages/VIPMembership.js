@@ -480,11 +480,6 @@ const VIPMembership = ({ user }) => {
               </div>
             )}
           </div>
-                  <span>Complete payment & note UTR number</span>
-                </li>
-              </ol>
-            </div>
-          </div>
 
           {/* Navigation */}
           <div className="flex gap-3">
