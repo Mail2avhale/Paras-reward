@@ -361,6 +361,29 @@ def check_region_access(user: dict, target_region: str = None) -> bool:
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# Health check endpoint for Kubernetes deployment
+# This must return 200 even if DB is not fully connected
+db_ready = False
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Kubernetes liveness/readiness probes"""
+    global db_ready
+    try:
+        # Try a simple DB operation if not yet confirmed ready
+        if not db_ready:
+            await db.command("ping")
+            db_ready = True
+        return {"status": "healthy", "database": "connected" if db_ready else "connecting"}
+    except Exception as e:
+        # Still return 200 to allow pod to start - DB might be warming up
+        return {"status": "starting", "database": "connecting", "message": str(e)[:100]}
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {"status": "ok", "message": "Paras Reward API is running"}
+
 # Create scheduler for automated tasks
 scheduler = AsyncIOScheduler()
 
