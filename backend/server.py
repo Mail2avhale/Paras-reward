@@ -18713,6 +18713,114 @@ async def delete_notification(notification_id: str):
     return {"message": "Notification deleted"}
 
 
+# ========== USER RECENT ACTIVITY ENDPOINT ==========
+@api_router.get("/user/{uid}/recent-activity")
+async def get_user_recent_activity(uid: str, limit: int = 10):
+    """
+    Get comprehensive recent activity for a user
+    Combines activity_logs (logins, game plays, etc.) and transactions
+    Returns: list of activities sorted by timestamp
+    """
+    activities = []
+    
+    # Get recent activity logs
+    activity_logs = await db.activity_logs.find(
+        {"user_id": uid},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(limit * 2).to_list(length=limit * 2)
+    
+    for log in activity_logs:
+        activity_type = log.get("action_type", "activity")
+        
+        # Map action types to user-friendly descriptions
+        type_icons = {
+            "login": {"icon": "🔓", "label": "Logged in"},
+            "mining_started": {"icon": "⛏️", "label": "Started rewards session"},
+            "mining_collected": {"icon": "💰", "label": "Collected rewards"},
+            "tap_game": {"icon": "👆", "label": "Played tap game"},
+            "kyc_submitted": {"icon": "📄", "label": "KYC submitted"},
+            "referral_applied": {"icon": "👥", "label": "Referral applied"},
+            "profile_updated": {"icon": "👤", "label": "Profile updated"},
+            "order_placed": {"icon": "🛒", "label": "Order placed"},
+            "withdrawal_requested": {"icon": "💸", "label": "Withdrawal requested"},
+        }
+        
+        info = type_icons.get(activity_type, {"icon": "📝", "label": activity_type.replace("_", " ").title()})
+        
+        activities.append({
+            "type": activity_type,
+            "icon": info["icon"],
+            "description": log.get("description") or info["label"],
+            "timestamp": log.get("created_at"),
+            "metadata": log.get("metadata", {}),
+            "source": "activity"
+        })
+    
+    # Get recent transactions
+    transactions = await db.transactions.find(
+        {"user_id": uid},
+        {"_id": 0}
+    ).sort("timestamp", -1).limit(limit * 2).to_list(length=limit * 2)
+    
+    for txn in transactions:
+        txn_type = txn.get("type", "transaction")
+        amount = txn.get("amount", 0)
+        
+        # Map transaction types
+        txn_icons = {
+            "mining": {"icon": "⛏️", "label": "Rewards earned"},
+            "tap_game": {"icon": "👆", "label": "Tap game earnings"},
+            "referral": {"icon": "👥", "label": "Referral bonus"},
+            "cashback": {"icon": "💸", "label": "Cashback received"},
+            "order": {"icon": "🛒", "label": "Product purchase"},
+            "withdrawal": {"icon": "💰", "label": "Withdrawal"},
+            "prc_burn": {"icon": "🔥", "label": "PRC expired"},
+        }
+        
+        info = txn_icons.get(txn_type, {"icon": "📊", "label": txn_type.replace("_", " ").title()})
+        
+        activities.append({
+            "type": txn_type,
+            "icon": info["icon"],
+            "description": txn.get("description") or info["label"],
+            "amount": amount,
+            "timestamp": txn.get("timestamp"),
+            "source": "transaction"
+        })
+    
+    # Sort all activities by timestamp (newest first)
+    def get_timestamp(item):
+        ts = item.get("timestamp")
+        if not ts:
+            return datetime.min.replace(tzinfo=timezone.utc)
+        if isinstance(ts, str):
+            try:
+                return datetime.fromisoformat(ts.replace('Z', '+00:00'))
+            except:
+                return datetime.min.replace(tzinfo=timezone.utc)
+        return ts
+    
+    activities.sort(key=get_timestamp, reverse=True)
+    
+    # Deduplicate similar activities within 1 minute
+    deduplicated = []
+    seen_keys = set()
+    
+    for activity in activities[:limit * 2]:
+        # Create a key based on type and approximate timestamp (same minute)
+        ts = get_timestamp(activity)
+        key = f"{activity['type']}_{ts.strftime('%Y%m%d%H%M') if isinstance(ts, datetime) and ts != datetime.min.replace(tzinfo=timezone.utc) else 'notime'}"
+        
+        if key not in seen_keys:
+            seen_keys.add(key)
+            deduplicated.append(activity)
+    
+    return {
+        "activities": deduplicated[:limit],
+        "total": len(deduplicated),
+        "user_id": uid
+    }
+
 # ========== ACTIVITY LOGS ROUTES ==========
 
 @api_router.get("/activity-logs")
