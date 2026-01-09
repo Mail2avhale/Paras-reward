@@ -439,7 +439,7 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
               </Button>
             </div>
             <p className="text-[10px] text-gray-400 text-center mt-2">
-              Powered by AI • For informational purposes only
+              Powered by AI • English, हिंदी, मराठी supported
             </p>
           </div>
         </Card>
