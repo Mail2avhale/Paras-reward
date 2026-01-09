@@ -39,21 +39,53 @@ const AdvancedDocumentUpload = ({
   // Start camera
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        } 
-      });
+      // Check if mediaDevices is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast.error('Camera not supported on this device. Please use file upload.');
+        return;
+      }
+
+      // Request camera permission with fallback options
+      let stream;
+      try {
+        // Try rear camera first (for documents)
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          } 
+        });
+      } catch (envError) {
+        console.log('Rear camera failed, trying any camera:', envError);
+        // Fallback to any available camera
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: true 
+        });
+      }
+
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        // Ensure video plays
+        try {
+          await videoRef.current.play();
+        } catch (playError) {
+          console.log('Auto-play handled by autoPlay attribute');
+        }
       }
       setShowCamera(true);
     } catch (error) {
       console.error('Camera error:', error);
-      toast.error('Camera access denied. Please use file upload.');
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        toast.error('Camera permission denied. Please allow camera access in your browser settings.');
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        toast.error('No camera found on this device. Please use file upload.');
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        toast.error('Camera is in use by another app. Please close other apps and try again.');
+      } else {
+        toast.error('Unable to access camera. Please use file upload instead.');
+      }
     }
   };
 
