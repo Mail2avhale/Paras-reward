@@ -379,6 +379,32 @@ api_router = APIRouter(prefix="/api")
 # This must return 200 even if DB is not fully connected
 db_ready = False
 
+async def retry_db_connection():
+    """Background task to retry database connection"""
+    global db_ready
+    max_attempts = 30  # Try for up to 5 minutes (30 * 10 seconds)
+    retry_delay = 10
+    
+    for attempt in range(max_attempts):
+        if db_ready:
+            return
+        try:
+            await asyncio.sleep(retry_delay)
+            await client.admin.command('ping')
+            db_ready = True
+            print(f"✅ MongoDB connection established in background (attempt {attempt + 1})")
+            # Now initialize database
+            try:
+                await initialize_database_indexes()
+                print("✅ Database indexes initialized (background)")
+            except Exception as e:
+                print(f"⚠️ Error initializing indexes: {e}")
+            return
+        except Exception as e:
+            print(f"⚠️ Background DB connection attempt {attempt + 1} failed: {str(e)[:100]}")
+    
+    print("❌ Failed to establish database connection after all background retries")
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint for Kubernetes liveness/readiness probes"""
