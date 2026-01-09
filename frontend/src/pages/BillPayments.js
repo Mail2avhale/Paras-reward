@@ -190,24 +190,21 @@ const BillPayments = ({ user, onLogout }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
+      <div className="container mx-auto px-5 py-6 max-w-6xl">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              onClick={() => navigate('/dashboard')}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Bill Payments & Recharge
-              </h1>
-              <p className="text-gray-600 text-sm mt-1">Pay bills and recharge using your PRC balance</p>
+        <div className="flex items-center gap-4 mb-6">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5 text-white" />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold text-white">
+              Bill Payments & Recharge
+            </h1>
+            <p className="text-gray-500 text-sm">Pay bills using your PRC balance</p>
             </div>
           </div>
           <Button
