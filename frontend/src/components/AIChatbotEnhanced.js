@@ -141,9 +141,9 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
 
   const quickQuestions = [
     { icon: '👑', text: "VIP benefits?" },
-    { icon: '🎯', text: "How to earn rewards?" },
-    { icon: '📋', text: "KYC status?" },
-    { icon: '🎁', text: "Redeem PRC?" }
+    { icon: '🎯', text: "रिवॉर्ड कसे मिळवायचे?" },
+    { icon: '📋', text: "KYC स्थिति?" },
+    { icon: '🎁', text: "PRC कैसे redeem करें?" }
   ];
 
   const handleQuickQuestion = (question) => {
