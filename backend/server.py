@@ -7072,6 +7072,32 @@ async def get_user_details(uid: str):
 
 # ========== VIP MEMBERSHIP & PAYMENT CONFIGURATION ==========
 
+@api_router.get("/vip/payment-config")
+async def get_public_payment_config():
+    """Get payment configuration for users (public endpoint)"""
+    config = await db.payment_config.find_one({})
+    if not config:
+        # Return default config
+        return {
+            "upi_id": "",
+            "qr_code_url": "",
+            "bank_name": "",
+            "account_number": "",
+            "ifsc_code": "",
+            "account_holder": "",
+            "instructions": "Please contact admin for payment details."
+        }
+    # Remove internal fields
+    return {
+        "upi_id": config.get("upi_id", ""),
+        "qr_code_url": config.get("qr_code_url", ""),
+        "bank_name": config.get("bank_name", ""),
+        "account_number": config.get("account_number", ""),
+        "ifsc_code": config.get("ifsc_code", ""),
+        "account_holder": config.get("account_holder", ""),
+        "instructions": config.get("instructions", "Please contact admin for payment details.")
+    }
+
 @api_router.get("/admin/payment-config")
 async def get_payment_config():
     """Get admin payment configuration"""
