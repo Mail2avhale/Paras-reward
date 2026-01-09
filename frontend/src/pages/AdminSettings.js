@@ -39,6 +39,8 @@ const AdminSettings = ({ user }) => {
     instructions: ''
   });
   const [savingPayment, setSavingPayment] = useState(false);
+  const [uploadingQR, setUploadingQR] = useState(false);
+  const qrInputRef = useRef(null);
 
   useEffect(() => {
     // Check if user is admin
