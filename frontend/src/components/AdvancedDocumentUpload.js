@@ -1,18 +1,19 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Camera, Upload, RotateCw, RotateCcw, ZoomIn, ZoomOut, Sun, Contrast, Check, X, RefreshCw, Crop } from 'lucide-react';
+import { Camera, Upload, RotateCw, RotateCcw, ZoomIn, ZoomOut, Sun, Contrast, Check, X, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 const AdvancedDocumentUpload = ({ 
   onChange, 
   label = 'Upload Document',
   aspectRatio = 1.6,
-  maxSizeMB = 2 
+  maxSizeMB = 5  // Increased default
 }) => {
   const [image, setImage] = useState(null);
   const [adjustedImage, setAdjustedImage] = useState(null);
   const [showCamera, setShowCamera] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
   
   // Image adjustments
   const [adjustments, setAdjustments] = useState({
@@ -30,61 +31,72 @@ const AdvancedDocumentUpload = ({
   // Cleanup camera on unmount
   useEffect(() => {
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
+      stopCamera();
     };
   }, []);
 
-  // Start camera
+  // Start camera with better error handling
   const startCamera = async () => {
     try {
+      setCameraReady(false);
+      setShowCamera(true);
+      
       // Check if mediaDevices is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        toast.error('Camera not supported on this device. Please use file upload.');
+        toast.error('कॅमेरा या डिव्हाइसवर उपलब्ध नाही. फाइल अपलोड वापरा.');
+        setShowCamera(false);
         return;
       }
 
-      // Request camera permission with fallback options
+      // Get camera stream - try environment first, then user
       let stream;
-      try {
-        // Try rear camera first (for documents)
-        stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          } 
-        });
-      } catch (envError) {
-        console.log('Rear camera failed, trying any camera:', envError);
-        // Fallback to any available camera
-        stream = await navigator.mediaDevices.getUserMedia({ 
-          video: true 
-        });
+      const constraints = [
+        { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } },
+        { video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } },
+        { video: true }
+      ];
+
+      for (const constraint of constraints) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraint);
+          break;
+        } catch (e) {
+          console.log('Camera constraint failed:', constraint, e);
+        }
+      }
+
+      if (!stream) {
+        throw new Error('No camera available');
       }
 
       streamRef.current = stream;
+      
+      // Wait for video element to be ready
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        // Ensure video plays
-        try {
-          await videoRef.current.play();
-        } catch (playError) {
-          console.log('Auto-play handled by autoPlay attribute');
-        }
+        
+        // Wait for video to load
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play()
+            .then(() => {
+              setCameraReady(true);
+            })
+            .catch(err => {
+              console.error('Video play error:', err);
+              setCameraReady(true); // Still show UI
+            });
+        };
       }
-      setShowCamera(true);
     } catch (error) {
       console.error('Camera error:', error);
-      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-        toast.error('Camera permission denied. Please allow camera access in your browser settings.');
-      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-        toast.error('No camera found on this device. Please use file upload.');
-      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
-        toast.error('Camera is in use by another app. Please close other apps and try again.');
+      setShowCamera(false);
+      
+      if (error.name === 'NotAllowedError') {
+        toast.error('कॅमेरा परवानगी नाकारली. कृपया ब्राउझर सेटिंग्जमध्ये कॅमेरा परवानगी द्या.');
+      } else if (error.name === 'NotFoundError') {
+        toast.error('कॅमेरा सापडला नाही. कृपया फाइल अपलोड वापरा.');
       } else {
-        toast.error('Unable to access camera. Please use file upload instead.');
+        toast.error('कॅमेरा सुरू करता आला नाही. फाइल अपलोड वापरा.');
       }
     }
   };
@@ -92,71 +104,149 @@ const AdvancedDocumentUpload = ({
   // Stop camera
   const stopCamera = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+      });
       streamRef.current = null;
     }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setCameraReady(false);
     setShowCamera(false);
   };
 
   // Capture photo from camera
   const capturePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current) {
+      toast.error('कृपया पुन्हा प्रयत्न करा');
+      return;
+    }
     
     const video = videoRef.current;
     const canvas = canvasRef.current;
     
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // Use actual video dimensions
+    const width = video.videoWidth || 1280;
+    const height = video.videoHeight || 720;
+    
+    canvas.width = width;
+    canvas.height = height;
     
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(video, 0, 0, width, height);
     
-    const imageData = canvas.toDataURL('image/jpeg', 0.9);
+    const imageData = canvas.toDataURL('image/jpeg', 0.85);
     setImage(imageData);
     stopCamera();
     setShowEditor(true);
     autoAdjustImage(imageData);
   };
 
-  // Handle file upload
-  const handleFileUpload = (e) => {
+  // Handle file upload with auto compression
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
-    if (file.size > maxSizeMB * 1024 * 1024) {
-      toast.error(`File size should be less than ${maxSizeMB}MB`);
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('कृपया इमेज फाइल निवडा');
       return;
     }
-    
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const imageData = event.target.result;
-      setImage(imageData);
+
+    setProcessing(true);
+
+    try {
+      // Compress and resize image automatically
+      const compressedImage = await compressImage(file, maxSizeMB);
+      setImage(compressedImage);
       setShowEditor(true);
-      autoAdjustImage(imageData);
-    };
-    reader.readAsDataURL(file);
+      autoAdjustImage(compressedImage);
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('इमेज प्रोसेस करता आली नाही');
+    } finally {
+      setProcessing(false);
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
-  // Auto-adjust image for document scanning
-  const autoAdjustImage = useCallback((imageData) => {
+  // Compress image to target size
+  const compressImage = (file, targetSizeMB) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          
+          // Calculate new dimensions (max 1600px on longest side)
+          const maxDim = 1600;
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = (height / width) * maxDim;
+              width = maxDim;
+            } else {
+              width = (width / height) * maxDim;
+              height = maxDim;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Start with high quality and reduce if needed
+          let quality = 0.9;
+          let result = canvas.toDataURL('image/jpeg', quality);
+          
+          // Reduce quality until under target size
+          while (result.length > targetSizeMB * 1024 * 1024 * 1.37 && quality > 0.3) {
+            quality -= 0.1;
+            result = canvas.toDataURL('image/jpeg', quality);
+          }
+          
+          resolve(result);
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Auto adjust image (brightness/contrast optimization)
+  const autoAdjustImage = useCallback(async (imageData) => {
     setProcessing(true);
     
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
+    try {
+      // Create image for analysis
+      const img = new Image();
+      img.src = imageData;
       
-      // Set canvas size
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
+      
+      // Create canvas for analysis
+      const canvas = document.createElement('canvas');
       canvas.width = img.width;
       canvas.height = img.height;
-      
-      // Draw image
+      const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0);
       
       // Get image data for analysis
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imgData.data;
+      const imageDataObj = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageDataObj.data;
       
       // Calculate average brightness
       let totalBrightness = 0;
@@ -165,21 +255,16 @@ const AdvancedDocumentUpload = ({
       }
       const avgBrightness = totalBrightness / (data.length / 4);
       
-      // Auto-adjust based on analysis
+      // Auto-adjust based on brightness
       let newBrightness = 100;
       let newContrast = 100;
       
-      // If image is too dark, increase brightness
       if (avgBrightness < 100) {
-        newBrightness = Math.min(150, 100 + (100 - avgBrightness) / 2);
+        newBrightness = Math.min(140, 100 + (100 - avgBrightness) * 0.5);
+        newContrast = Math.min(120, 100 + (100 - avgBrightness) * 0.3);
+      } else if (avgBrightness > 180) {
+        newBrightness = Math.max(80, 100 - (avgBrightness - 180) * 0.3);
       }
-      // If image is too bright, decrease slightly
-      else if (avgBrightness > 180) {
-        newBrightness = Math.max(80, 100 - (avgBrightness - 180) / 3);
-      }
-      
-      // Increase contrast for better document readability
-      newContrast = 115;
       
       setAdjustments(prev => ({
         ...prev,
@@ -187,74 +272,84 @@ const AdvancedDocumentUpload = ({
         contrast: Math.round(newContrast)
       }));
       
+      // Apply adjustments
+      applyAdjustments(imageData, {
+        brightness: Math.round(newBrightness),
+        contrast: Math.round(newContrast),
+        rotation: 0,
+        zoom: 1
+      });
+      
+      toast.success('इमेज ऑटो-ऑप्टिमाइज झाली!');
+    } catch (error) {
+      console.error('Auto adjust error:', error);
+      setAdjustedImage(imageData);
+    } finally {
       setProcessing(false);
-    };
-    img.src = imageData;
+    }
   }, []);
 
-  // Apply adjustments and generate final image
-  const applyAdjustments = useCallback(() => {
-    if (!image) return;
-    
+  // Apply manual adjustments
+  const applyAdjustments = (sourceImage, adj) => {
     const img = new Image();
+    img.src = sourceImage;
+    
     img.onload = () => {
       const canvas = document.createElement('canvas');
+      const rotated = adj.rotation % 180 !== 0;
+      
+      canvas.width = rotated ? img.height : img.width;
+      canvas.height = rotated ? img.width : img.height;
+      
       const ctx = canvas.getContext('2d');
       
-      // Handle rotation
-      const radians = adjustments.rotation * Math.PI / 180;
-      const cos = Math.abs(Math.cos(radians));
-      const sin = Math.abs(Math.sin(radians));
-      
-      // Calculate new dimensions after rotation
-      const newWidth = img.width * cos + img.height * sin;
-      const newHeight = img.width * sin + img.height * cos;
+      // Apply rotation
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((adj.rotation * Math.PI) / 180);
+      ctx.translate(-img.width / 2, -img.height / 2);
       
       // Apply zoom
-      canvas.width = newWidth * adjustments.zoom;
-      canvas.height = newHeight * adjustments.zoom;
-      
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-      ctx.rotate(radians);
-      ctx.scale(adjustments.zoom, adjustments.zoom);
+      if (adj.zoom !== 1) {
+        const scale = adj.zoom;
+        const offsetX = (img.width - img.width * scale) / 2;
+        const offsetY = (img.height - img.height * scale) / 2;
+        ctx.translate(offsetX, offsetY);
+        ctx.scale(scale, scale);
+      }
       
       // Apply filters
-      ctx.filter = `brightness(${adjustments.brightness}%) contrast(${adjustments.contrast}%)`;
+      ctx.filter = `brightness(${adj.brightness}%) contrast(${adj.contrast}%)`;
+      ctx.drawImage(img, 0, 0);
       
-      ctx.drawImage(img, -img.width / 2, -img.height / 2);
-      
-      const finalImage = canvas.toDataURL('image/jpeg', 0.9);
-      setAdjustedImage(finalImage);
+      setAdjustedImage(canvas.toDataURL('image/jpeg', 0.9));
     };
-    img.src = image;
-  }, [image, adjustments]);
+  };
 
-  // Apply adjustments when they change
-  useEffect(() => {
-    if (image && showEditor) {
-      applyAdjustments();
-    }
-  }, [image, adjustments, showEditor, applyAdjustments]);
-
-  // Confirm and save
-  const handleConfirm = () => {
-    if (adjustedImage) {
-      onChange(adjustedImage);
-      setShowEditor(false);
-      setImage(null);
-      setAdjustedImage(null);
-      toast.success('Document uploaded successfully!');
+  // Handle adjustment change
+  const handleAdjustmentChange = (key, value) => {
+    const newAdj = { ...adjustments, [key]: value };
+    setAdjustments(newAdj);
+    if (image) {
+      applyAdjustments(image, newAdj);
     }
   };
 
+  // Confirm and save
+  const handleConfirm = () => {
+    const finalImage = adjustedImage || image;
+    if (finalImage && onChange) {
+      onChange(finalImage);
+      toast.success('डॉक्युमेंट सेव्ह झाला!');
+    }
+    setShowEditor(false);
+    setImage(null);
+    setAdjustedImage(null);
+    setAdjustments({ brightness: 100, contrast: 100, rotation: 0, zoom: 1 });
+  };
+
   // Reset adjustments
-  const resetAdjustments = () => {
-    setAdjustments({
-      brightness: 100,
-      contrast: 100,
-      rotation: 0,
-      zoom: 1
-    });
+  const handleReset = () => {
+    setAdjustments({ brightness: 100, contrast: 100, rotation: 0, zoom: 1 });
     if (image) {
       autoAdjustImage(image);
     }
@@ -266,12 +361,7 @@ const AdvancedDocumentUpload = ({
     setImage(null);
     setAdjustedImage(null);
     stopCamera();
-    setAdjustments({
-      brightness: 100,
-      contrast: 100,
-      rotation: 0,
-      zoom: 1
-    });
+    setAdjustments({ brightness: 100, contrast: 100, rotation: 0, zoom: 1 });
   };
 
   return (
@@ -281,6 +371,7 @@ const AdvancedDocumentUpload = ({
         ref={fileInputRef}
         type="file" 
         accept="image/*"
+        capture="environment"
         onChange={handleFileUpload}
         className="hidden"
       />
@@ -289,48 +380,71 @@ const AdvancedDocumentUpload = ({
       {/* Camera View */}
       {showCamera && (
         <div className="fixed inset-0 z-50 bg-black flex flex-col">
-          <div className="flex-1 relative">
+          <div className="flex-1 relative overflow-hidden">
             <video 
               ref={videoRef} 
               autoPlay 
               playsInline
               muted
-              className="w-full h-full object-cover"
+              style={{ 
+                width: '100%', 
+                height: '100%', 
+                objectFit: 'cover',
+                transform: 'scaleX(1)' 
+              }}
             />
-            {/* Document frame guide */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div 
-                className="border-2 border-amber-500 rounded-lg"
-                style={{
-                  width: '85%',
-                  aspectRatio: aspectRatio,
-                  boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)'
-                }}
-              >
-                <div className="absolute top-2 left-2 w-6 h-6 border-t-2 border-l-2 border-amber-500"></div>
-                <div className="absolute top-2 right-2 w-6 h-6 border-t-2 border-r-2 border-amber-500"></div>
-                <div className="absolute bottom-2 left-2 w-6 h-6 border-b-2 border-l-2 border-amber-500"></div>
-                <div className="absolute bottom-2 right-2 w-6 h-6 border-b-2 border-r-2 border-amber-500"></div>
+            
+            {/* Loading indicator */}
+            {!cameraReady && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                <div className="text-center">
+                  <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                  <p className="text-white">कॅमेरा सुरू होत आहे...</p>
+                </div>
               </div>
-            </div>
+            )}
+            
+            {/* Document frame guide */}
+            {cameraReady && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div 
+                  className="border-2 border-amber-500 rounded-lg relative"
+                  style={{
+                    width: '85%',
+                    aspectRatio: aspectRatio,
+                    boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)'
+                  }}
+                >
+                  <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-amber-400 rounded-tl-lg"></div>
+                  <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-amber-400 rounded-tr-lg"></div>
+                  <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-amber-400 rounded-bl-lg"></div>
+                  <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-amber-400 rounded-br-lg"></div>
+                </div>
+              </div>
+            )}
+            
             <p className="absolute top-4 left-0 right-0 text-center text-white text-sm bg-black/50 py-2">
-              Align document within the frame
+              डॉक्युमेंट फ्रेममध्ये ठेवा
             </p>
           </div>
+          
+          {/* Camera controls */}
           <div className="bg-black p-4 flex items-center justify-center gap-8">
-            <button 
-              onClick={stopCamera}
-              className="w-14 h-14 rounded-full bg-gray-800 flex items-center justify-center"
-            >
-              <X className="w-6 h-6 text-white" />
+            <button onClick={stopCamera} className="text-gray-400 hover:text-white p-3">
+              <X className="w-8 h-8" />
             </button>
             <button 
               onClick={capturePhoto}
-              className="w-20 h-20 rounded-full bg-white flex items-center justify-center"
+              disabled={!cameraReady}
+              className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                cameraReady 
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-600' 
+                  : 'bg-gray-600'
+              }`}
             >
-              <div className="w-16 h-16 rounded-full border-4 border-gray-900"></div>
+              <Camera className="w-8 h-8 text-white" />
             </button>
-            <div className="w-14 h-14"></div>
+            <div className="w-14"></div>
           </div>
         </div>
       )}
@@ -338,133 +452,125 @@ const AdvancedDocumentUpload = ({
       {/* Editor View */}
       {showEditor && (
         <div className="fixed inset-0 z-50 bg-gray-950 flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 bg-gray-900 border-b border-gray-800">
-            <button onClick={handleCancel} className="text-gray-400 hover:text-white">
-              <X className="w-6 h-6" />
-            </button>
-            <h3 className="text-white font-bold">Adjust Document</h3>
-            <button onClick={resetAdjustments} className="text-amber-500 hover:text-amber-400">
-              <RefreshCw className="w-5 h-5" />
-            </button>
-          </div>
-
           {/* Preview */}
-          <div className="flex-1 flex items-center justify-center p-4 overflow-hidden bg-gray-900">
+          <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
             {processing ? (
               <div className="text-center">
-                <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                <p className="text-gray-400 text-sm">Auto-adjusting...</p>
+                <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                <p className="text-white">प्रोसेसिंग...</p>
               </div>
             ) : (
               <img 
                 src={adjustedImage || image} 
-                alt="Preview"
-                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                style={{
-                  maxHeight: 'calc(100vh - 300px)'
-                }}
+                alt="Preview" 
+                className="max-w-full max-h-full object-contain rounded-lg"
               />
             )}
           </div>
-
+          
           {/* Controls */}
-          <div className="bg-gray-900 border-t border-gray-800 p-4 space-y-4">
+          <div className="bg-gray-900 p-4 space-y-4">
             {/* Brightness */}
             <div className="flex items-center gap-3">
               <Sun className="w-5 h-5 text-amber-500" />
-              <input
-                type="range"
-                min="50"
-                max="150"
+              <input 
+                type="range" 
+                min="50" max="150" 
                 value={adjustments.brightness}
-                onChange={(e) => setAdjustments(prev => ({ ...prev, brightness: parseInt(e.target.value) }))}
-                className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                onChange={(e) => handleAdjustmentChange('brightness', parseInt(e.target.value))}
+                className="flex-1 accent-amber-500"
               />
-              <span className="text-white text-sm w-10 text-right">{adjustments.brightness}%</span>
+              <span className="text-white text-sm w-10">{adjustments.brightness}%</span>
             </div>
-
+            
             {/* Contrast */}
             <div className="flex items-center gap-3">
               <Contrast className="w-5 h-5 text-blue-500" />
-              <input
-                type="range"
-                min="50"
-                max="150"
+              <input 
+                type="range" 
+                min="50" max="150" 
                 value={adjustments.contrast}
-                onChange={(e) => setAdjustments(prev => ({ ...prev, contrast: parseInt(e.target.value) }))}
-                className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                onChange={(e) => handleAdjustmentChange('contrast', parseInt(e.target.value))}
+                className="flex-1 accent-blue-500"
               />
-              <span className="text-white text-sm w-10 text-right">{adjustments.contrast}%</span>
+              <span className="text-white text-sm w-10">{adjustments.contrast}%</span>
             </div>
-
-            {/* Rotation & Zoom */}
+            
+            {/* Quick actions */}
             <div className="flex items-center justify-center gap-4">
               <button 
-                onClick={() => setAdjustments(prev => ({ ...prev, rotation: prev.rotation - 90 }))}
-                className="p-3 bg-gray-800 rounded-xl hover:bg-gray-700 transition-colors"
+                onClick={() => handleAdjustmentChange('rotation', (adjustments.rotation - 90) % 360)}
+                className="p-3 bg-gray-800 rounded-xl text-white hover:bg-gray-700"
               >
-                <RotateCcw className="w-5 h-5 text-white" />
+                <RotateCcw className="w-5 h-5" />
               </button>
               <button 
-                onClick={() => setAdjustments(prev => ({ ...prev, rotation: prev.rotation + 90 }))}
-                className="p-3 bg-gray-800 rounded-xl hover:bg-gray-700 transition-colors"
+                onClick={() => handleAdjustmentChange('rotation', (adjustments.rotation + 90) % 360)}
+                className="p-3 bg-gray-800 rounded-xl text-white hover:bg-gray-700"
               >
-                <RotateCw className="w-5 h-5 text-white" />
-              </button>
-              <div className="w-px h-8 bg-gray-700"></div>
-              <button 
-                onClick={() => setAdjustments(prev => ({ ...prev, zoom: Math.max(0.5, prev.zoom - 0.1) }))}
-                className="p-3 bg-gray-800 rounded-xl hover:bg-gray-700 transition-colors"
-              >
-                <ZoomOut className="w-5 h-5 text-white" />
+                <RotateCw className="w-5 h-5" />
               </button>
               <button 
-                onClick={() => setAdjustments(prev => ({ ...prev, zoom: Math.min(2, prev.zoom + 0.1) }))}
-                className="p-3 bg-gray-800 rounded-xl hover:bg-gray-700 transition-colors"
+                onClick={handleReset}
+                className="p-3 bg-gray-800 rounded-xl text-white hover:bg-gray-700"
               >
-                <ZoomIn className="w-5 h-5 text-white" />
+                <RefreshCw className="w-5 h-5" />
               </button>
             </div>
-          </div>
-
-          {/* Confirm Button */}
-          <div className="p-4 bg-gray-900">
-            <button
-              onClick={handleConfirm}
-              disabled={processing}
-              className="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-gray-900 font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              <Check className="w-5 h-5" />
-              Confirm & Save
-            </button>
+            
+            {/* Action buttons */}
+            <div className="flex gap-3">
+              <button 
+                onClick={handleCancel}
+                className="flex-1 py-3 bg-gray-800 text-white rounded-xl font-medium"
+              >
+                रद्द करा
+              </button>
+              <button 
+                onClick={handleConfirm}
+                disabled={processing}
+                className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black rounded-xl font-bold flex items-center justify-center gap-2"
+              >
+                <Check className="w-5 h-5" />
+                सेव्ह करा
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Main Upload UI */}
+      {/* Default Upload UI */}
       {!showCamera && !showEditor && (
         <div className="space-y-3">
-          {/* Camera Button */}
-          <button
-            onClick={startCamera}
-            className="w-full py-4 bg-gradient-to-r from-amber-500/20 to-amber-600/10 border-2 border-dashed border-amber-500/50 rounded-xl flex items-center justify-center gap-3 hover:border-amber-500 transition-colors"
-          >
-            <Camera className="w-6 h-6 text-amber-500" />
-            <span className="text-amber-400 font-medium">Take Photo with Camera</span>
-          </button>
-
-          {/* File Upload Button */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full py-4 bg-gray-800/50 border border-gray-700 rounded-xl flex items-center justify-center gap-3 hover:border-gray-600 transition-colors"
-          >
-            <Upload className="w-5 h-5 text-gray-400" />
-            <span className="text-gray-400">Upload from Gallery</span>
-          </button>
-
-          <p className="text-center text-gray-600 text-xs">
-            Auto image enhancement • Max {maxSizeMB}MB • JPG, PNG
+          <p className="text-gray-400 text-sm font-medium">{label}</p>
+          
+          <div className="grid grid-cols-2 gap-3">
+            {/* Camera Button */}
+            <button
+              onClick={startCamera}
+              className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-amber-500/20 to-amber-600/20 border border-amber-500/50 rounded-xl hover:bg-amber-500/30 transition-all"
+            >
+              <Camera className="w-8 h-8 text-amber-500 mb-2" />
+              <span className="text-amber-400 text-sm font-medium">कॅमेरा वापरा</span>
+            </button>
+            
+            {/* Gallery Button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={processing}
+              className="flex flex-col items-center justify-center p-4 bg-gray-800/50 border border-gray-700 rounded-xl hover:bg-gray-700/50 transition-all"
+            >
+              {processing ? (
+                <div className="w-8 h-8 border-2 border-gray-500 border-t-amber-500 rounded-full animate-spin mb-2"></div>
+              ) : (
+                <Upload className="w-8 h-8 text-gray-400 mb-2" />
+              )}
+              <span className="text-gray-400 text-sm font-medium">गॅलरी</span>
+            </button>
+          </div>
+          
+          <p className="text-gray-600 text-xs text-center">
+            ऑटो इमेज ऑप्टिमायझेशन • मॅक्स {maxSizeMB}MB • JPG, PNG
           </p>
         </div>
       )}
