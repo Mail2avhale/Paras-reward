@@ -239,88 +239,156 @@ const DashboardModern = ({ user, onLogout }) => {
         </div>
       </div>
 
-      {/* Premium PRC Card - Credit Card Style */}
-      <div className="px-5 mb-6">
+      {/* Premium 3D Credit Card */}
+      <div className="px-5 mb-6" style={{ perspective: '1000px' }}>
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, rotateX: 15 }}
+          animate={{ opacity: 1, rotateX: 0 }}
+          whileHover={{ rotateY: 5, rotateX: -5, scale: 1.02 }}
+          transition={{ duration: 0.5 }}
           className="relative overflow-hidden rounded-3xl p-6"
           style={{
-            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(212, 175, 55, 0.1)'
+            background: 'linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 25%, #2d2d2d 50%, #1a1a1a 75%, #0c0c0c 100%)',
+            boxShadow: `
+              0 30px 60px -15px rgba(0, 0, 0, 0.7),
+              0 0 40px -10px rgba(212, 175, 55, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1),
+              inset 0 -1px 0 rgba(0, 0, 0, 0.3)
+            `,
+            transformStyle: 'preserve-3d'
           }}
         >
-          {/* Card Pattern */}
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-amber-500 to-transparent rounded-full blur-3xl"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-yellow-500 to-transparent rounded-full blur-3xl"></div>
+          {/* Holographic shine effect */}
+          <div 
+            className="absolute inset-0 opacity-30 pointer-events-none"
+            style={{
+              background: 'linear-gradient(105deg, transparent 40%, rgba(255, 215, 0, 0.4) 45%, rgba(255, 215, 0, 0.1) 50%, transparent 55%)',
+              animation: 'shimmer 3s infinite linear'
+            }}
+          />
+          
+          {/* Gold border accent */}
+          <div className="absolute inset-0 rounded-3xl border border-amber-500/20" />
+          
+          {/* Geometric pattern overlay */}
+          <div className="absolute inset-0 opacity-5">
+            <svg className="w-full h-full" viewBox="0 0 400 200">
+              <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="gold" strokeWidth="0.5"/>
+              </pattern>
+              <rect width="100%" height="100%" fill="url(#grid)" />
+            </svg>
           </div>
+
+          {/* Glow orbs */}
+          <div className="absolute -top-20 -right-20 w-40 h-40 bg-amber-500/20 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-20 -left-20 w-32 h-32 bg-yellow-500/20 rounded-full blur-3xl"></div>
 
           {/* Card Content */}
           <div className="relative z-10">
             {/* Top Row - Logo & Toggle */}
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-black" />
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div 
+                  className="w-12 h-12 rounded-xl flex items-center justify-center"
+                  style={{
+                    background: 'linear-gradient(135deg, #ffd700 0%, #b8860b 50%, #ffd700 100%)',
+                    boxShadow: '0 4px 15px rgba(212, 175, 55, 0.5)'
+                  }}
+                >
+                  <CreditCard className="w-6 h-6 text-black" />
                 </div>
                 <div>
-                  <p className="text-amber-400 text-xs font-semibold tracking-wider">PARAS REWARD</p>
-                  <p className="text-gray-500 text-[10px]">PREMIUM CARD</p>
+                  <p className="text-amber-400 text-sm font-bold tracking-wider">PARAS REWARD</p>
+                  <p className="text-amber-600/60 text-[10px] tracking-widest">PREMIUM CARD</p>
                 </div>
               </div>
               <button 
                 onClick={() => setShowBalance(!showBalance)}
-                className="text-gray-400 hover:text-amber-400 transition-colors"
+                className="text-gray-500 hover:text-amber-400 transition-colors p-2"
               >
                 {showBalance ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
               </button>
             </div>
 
-            {/* Balance */}
-            <div className="mb-8">
-              <p className="text-gray-400 text-xs mb-1">Available Balance</p>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
-                  {showBalance ? stats.prcBalance.toFixed(2) : '••••••'}
-                </span>
-                <span className="text-amber-500 text-lg font-medium">PRC</span>
+            {/* EMV Chip */}
+            <div className="absolute top-16 right-6">
+              <div 
+                className="w-14 h-10 rounded-md"
+                style={{
+                  background: 'linear-gradient(135deg, #ffd700 0%, #daa520 30%, #b8860b 50%, #daa520 70%, #ffd700 100%)',
+                  boxShadow: 'inset 0 2px 4px rgba(255, 255, 255, 0.3), inset 0 -2px 4px rgba(0, 0, 0, 0.2)'
+                }}
+              >
+                <div className="w-full h-full p-1 grid grid-cols-4 grid-rows-2 gap-0.5">
+                  {[...Array(8)].map((_, i) => (
+                    <div key={i} className="bg-amber-800/40 rounded-[1px]"></div>
+                  ))}
+                </div>
               </div>
             </div>
 
+            {/* Balance Section */}
+            <div className="mb-6 mt-2">
+              <p className="text-gray-500 text-xs mb-1 tracking-wide">AVAILABLE BALANCE</p>
+              <div className="flex items-baseline gap-3">
+                <span 
+                  className="text-5xl font-black"
+                  style={{
+                    background: 'linear-gradient(135deg, #ffd700 0%, #fff 30%, #ffd700 60%, #b8860b 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    textShadow: '0 0 30px rgba(255, 215, 0, 0.3)'
+                  }}
+                >
+                  {showBalance ? stats.prcBalance.toFixed(2) : '••••••'}
+                </span>
+                <span className="text-amber-500 text-xl font-bold">PRC</span>
+              </div>
+              <p className="text-gray-600 text-xs mt-1">
+                ≈ ₹{showBalance ? (stats.prcBalance / 10).toFixed(2) : '••••'}
+              </p>
+            </div>
+
+            {/* User Name - Credit Card Style */}
+            <div className="mb-4">
+              <p className="text-gray-600 text-[10px] tracking-widest mb-1">CARD HOLDER</p>
+              <p className="text-white text-lg font-bold tracking-wider uppercase">
+                {userData?.name || user?.email?.split('@')[0] || 'USER'}
+              </p>
+            </div>
+
             {/* Stats Row */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <p className="text-gray-500 text-[10px] uppercase tracking-wider mb-1">Total Earned</p>
-                <p className="text-white font-bold">{showBalance ? stats.totalMined.toFixed(0) : '••••'}</p>
+            <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-800">
+              <div>
+                <p className="text-gray-600 text-[9px] uppercase tracking-wider mb-1">EARNED</p>
+                <p className="text-amber-400 font-bold text-sm">{showBalance ? stats.totalMined.toFixed(0) : '••••'}</p>
               </div>
-              <div className="text-center border-x border-gray-700">
-                <p className="text-gray-500 text-[10px] uppercase tracking-wider mb-1">Friends</p>
-                <p className="text-white font-bold">{stats.referralCount}</p>
+              <div className="text-center border-x border-gray-800">
+                <p className="text-gray-600 text-[9px] uppercase tracking-wider mb-1">REFERRALS</p>
+                <p className="text-amber-400 font-bold text-sm">{stats.referralCount}</p>
               </div>
-              <div className="text-center">
-                <p className="text-gray-500 text-[10px] uppercase tracking-wider mb-1">Status</p>
-                <p className={`font-bold ${stats.membershipType === 'vip' ? 'text-amber-400' : 'text-gray-400'}`}>
-                  {stats.membershipType === 'vip' ? 'VIP' : 'FREE'}
+              <div className="text-right">
+                <p className="text-gray-600 text-[9px] uppercase tracking-wider mb-1">STATUS</p>
+                <p className={`font-bold text-sm ${stats.membershipType === 'vip' ? 'text-amber-400' : 'text-gray-500'}`}>
+                  {stats.membershipType === 'vip' ? '⭐ VIP' : 'FREE'}
                 </p>
               </div>
             </div>
 
-            {/* Card Chip Design */}
-            <div className="absolute top-6 right-6">
-              <div className="w-12 h-9 rounded-md bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 opacity-80">
-                <div className="w-full h-full grid grid-cols-4 gap-px p-1">
-                  {[...Array(8)].map((_, i) => (
-                    <div key={i} className="bg-amber-700/30 rounded-sm"></div>
-                  ))}
-                </div>
-              </div>
+            {/* Contactless Icon */}
+            <div className="absolute bottom-6 right-6 opacity-50">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2C10.5 2 9 2.5 7.5 3.5" stroke="#FFD700" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M12 6C11 6 10 6.3 9 7" stroke="#FFD700" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M12 10C11.5 10 11 10.2 10.5 10.5" stroke="#FFD700" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
             </div>
           </div>
 
           {/* PRC Expiry Warning for Free Users */}
           {stats.membershipType !== 'vip' && stats.prcBalance > 0 && (
-            <div className="relative z-10 mt-4 pt-4 border-t border-gray-700/50">
+            <div className="relative z-10 mt-4 pt-4 border-t border-gray-800/50">
               <PRCExpiryTimer 
                 userId={user?.uid}
                 prcBalance={stats.prcBalance}
