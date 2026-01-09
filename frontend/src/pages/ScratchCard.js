@@ -553,21 +553,21 @@ const ScratchCard = ({ user }) => {
               {revealed && (
                 <div className="mt-6 space-y-4">
                   <div className="text-center">
-                    <div className="text-sm text-gray-600">New Balances</div>
+                    <div className="text-sm text-gray-500">New Balances</div>
                     <div className="flex justify-center gap-8 mt-2">
                       <div>
-                        <div className="text-lg font-semibold text-purple-600">{result?.new_prc_balance} PRC</div>
-                        <div className="text-xs text-gray-500">PRC Balance</div>
+                        <div className="text-lg font-semibold text-amber-500">{result?.new_prc_balance} PRC</div>
+                        <div className="text-xs text-gray-600">PRC Balance</div>
                       </div>
                       <div>
-                        <div className="text-lg font-semibold text-green-600">₹{result?.new_cashback_wallet}</div>
-                        <div className="text-xs text-gray-500">Cashback Wallet</div>
+                        <div className="text-lg font-semibold text-emerald-500">₹{result?.new_cashback_wallet}</div>
+                        <div className="text-xs text-gray-600">Cashback Wallet</div>
                       </div>
                     </div>
                   </div>
                   
-                  <Button
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white"
+                  <button
+                    className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-gray-900 font-bold rounded-xl"
                     onClick={() => {
                       setSelectedCard(null);
                       setIsScratching(false);
@@ -576,10 +576,10 @@ const ScratchCard = ({ user }) => {
                     }}
                   >
                     Play Again
-                  </Button>
+                  </button>
                 </div>
               )}
-            </Card>
+            </div>
           </div>
         )}
       </div>
