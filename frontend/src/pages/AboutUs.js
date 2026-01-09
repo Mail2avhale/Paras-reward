@@ -92,7 +92,7 @@ const AboutUs = () => {
               <span className="text-amber-400 font-semibold">PARAS REWARD</span> is India&apos;s first mining-based rewards platform where users can earn digital coins simply by being active daily.
             </p>
             <p>
-              Our platform is designed for Indians who want to earn extra income without any investment. Whether you're a student, homemaker, or professional, we offer you an opportunity to turn your daily digital activity into real rewards.
+              Our platform is designed for Indians who want to earn extra income without any investment. Whether you&apos;re a student, homemaker, or professional, we offer you an opportunity to turn your daily digital activity into real rewards.
             </p>
             <p>
               With over <span className="text-emerald-400">10,000+ active users</span> and <span className="text-emerald-400">₹50L+ rewards distributed</span>, we have established ourselves as a trusted platform for digital earnings in India.
