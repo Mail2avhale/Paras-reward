@@ -53,7 +53,7 @@ const BillPayments = ({ user, onLogout }) => {
     // Check VIP membership
     if (user.membership_type !== 'vip') {
       toast.error('VIP membership required to use bill payment services');
-      setTimeout(() => navigate('/vip-membership'), 2000);
+      setTimeout(() => navigate('/dashboard'), 2000);
       return;
     }
     
