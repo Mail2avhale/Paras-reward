@@ -52,7 +52,7 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
     
     if (user.membership_type !== 'vip') {
       toast.error('VIP membership required to access marketplace');
-      setTimeout(() => navigate('/vip-membership'), 2000);
+      setTimeout(() => navigate('/dashboard'), 2000);
       return;
     }
     
