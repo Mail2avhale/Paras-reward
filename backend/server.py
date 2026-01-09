@@ -276,17 +276,31 @@ async def is_system_locked(feature: str = None) -> bool:
 
 # MongoDB connection with Atlas-compatible settings
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(
-    mongo_url,
-    serverSelectionTimeoutMS=30000,  # 30 second timeout for Atlas
-    connectTimeoutMS=20000,  # 20 second connection timeout
-    socketTimeoutMS=20000,  # 20 second socket timeout
-    maxPoolSize=50,  # Connection pool for production
-    minPoolSize=10,
-    retryWrites=True,  # Enable retryable writes for Atlas
-    retryReads=True,  # Enable retryable reads for Atlas
-    w='majority'  # Write concern for data durability
-)
+
+# Detect if using MongoDB Atlas (contains mongodb+srv or mongodb.net)
+is_atlas = 'mongodb+srv' in mongo_url or 'mongodb.net' in mongo_url
+
+# Configure connection options based on environment
+connection_options = {
+    'serverSelectionTimeoutMS': 60000,  # 60 second timeout for Atlas initial connection
+    'connectTimeoutMS': 30000,  # 30 second connection timeout
+    'socketTimeoutMS': 30000,  # 30 second socket timeout
+    'maxPoolSize': 50,  # Connection pool for production
+    'minPoolSize': 5,
+    'retryWrites': True,  # Enable retryable writes for Atlas
+    'retryReads': True,  # Enable retryable reads for Atlas
+}
+
+# Add Atlas-specific options
+if is_atlas:
+    connection_options['w'] = 'majority'  # Write concern for data durability
+    connection_options['tls'] = True  # Enable TLS for Atlas
+    connection_options['tlsAllowInvalidCertificates'] = False  # Enforce valid certs
+    logging.info("🔒 MongoDB Atlas detected - using TLS connection")
+else:
+    logging.info("🏠 Local MongoDB detected")
+
+client = AsyncIOMotorClient(mongo_url, **connection_options)
 db = client[os.environ['DB_NAME']]
 
 # Password hashing
