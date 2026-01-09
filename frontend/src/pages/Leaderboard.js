@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import Navbar from '@/components/Navbar';
-import { Card } from '@/components/ui/card';
-import { Trophy, Medal, Award, Crown } from 'lucide-react';
+import { Trophy, Medal, Award, Crown, ArrowLeft, TrendingUp, Users } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const Leaderboard = ({ user, onLogout }) => {
+const Leaderboard = ({ user }) => {
+  const navigate = useNavigate();
   const [leaderboard, setLeaderboard] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [userRank, setUserRank] = useState(null);
 
   useEffect(() => {
     fetchLeaderboard();
@@ -16,170 +18,203 @@ const Leaderboard = ({ user, onLogout }) => {
 
   const fetchLeaderboard = async () => {
     try {
+      setLoading(true);
       const response = await axios.get(`${API}/leaderboard`);
-      // Limit to top 10 earners only
       const top10 = response.data.slice(0, 10);
       setLeaderboard(top10);
+      
+      // Find user's rank
+      if (user?.uid) {
+        const fullList = response.data;
+        const userIndex = fullList.findIndex(u => u.uid === user.uid);
+        if (userIndex !== -1) {
+          setUserRank({
+            rank: userIndex + 1,
+            ...fullList[userIndex]
+          });
+        }
+      }
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getRankIcon = (rank) => {
+  const getRankDisplay = (rank) => {
     switch (rank) {
       case 1:
-        return <Crown className="h-8 w-8 text-yellow-500" />;
+        return (
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
+            <Crown className="h-6 w-6 text-white" />
+          </div>
+        );
       case 2:
-        return <Medal className="h-8 w-8 text-gray-400" />;
+        return (
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 flex items-center justify-center">
+            <Medal className="h-6 w-6 text-white" />
+          </div>
+        );
       case 3:
-        return <Award className="h-8 w-8 text-orange-600" />;
+        return (
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
+            <Award className="h-6 w-6 text-white" />
+          </div>
+        );
       default:
-        return <span className="text-2xl font-bold text-gray-600">#{rank}</span>;
+        return (
+          <div className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center">
+            <span className="text-lg font-bold text-gray-400">#{rank}</span>
+          </div>
+        );
     }
   };
 
-  const getRankBgColor = (rank) => {
+  const getRankBorder = (rank) => {
     switch (rank) {
       case 1:
-        return 'bg-gradient-to-r from-yellow-400 to-orange-500';
+        return 'border-amber-500/50 bg-gradient-to-r from-amber-500/10 to-transparent';
       case 2:
-        return 'bg-gradient-to-r from-gray-300 to-gray-400';
+        return 'border-gray-400/50 bg-gradient-to-r from-gray-400/10 to-transparent';
       case 3:
-        return 'bg-gradient-to-r from-orange-400 to-red-500';
+        return 'border-orange-500/50 bg-gradient-to-r from-orange-500/10 to-transparent';
       default:
-        return 'bg-white';
+        return 'border-gray-800';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 pt-20 pb-24">
-      
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full mb-4">
-            <Trophy className="h-10 w-10 text-white" />
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
+      {/* Header */}
+      <div className="px-5 pt-6 pb-4 sticky top-0 z-10 bg-gray-950/80 backdrop-blur-md">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate('/dashboard')}
+            className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-white" />
+          </button>
+          <div>
+            <h1 className="text-white text-xl font-bold">Leaderboard</h1>
+            <p className="text-gray-500 text-sm">Top 10 Earners</p>
           </div>
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">Leaderboard</h1>
-          <p className="text-lg text-gray-600">Top 10 miners of the month</p>
         </div>
+      </div>
 
-        {/* Top 3 */}
-        {leaderboard.length >= 3 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            {/* 2nd Place */}
-            <Card data-testid="rank-2" className="bg-gradient-to-br from-gray-300 to-gray-400 p-8 rounded-3xl shadow-xl text-center transform md:translate-y-8">
-              <div className="flex justify-center mb-4">
-                <Medal className="h-16 w-16 text-white" />
-              </div>
-              <img
-                src={leaderboard[1].profile_picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(leaderboard[1].name)}`}
-                alt={leaderboard[1].name}
-                className="w-20 h-20 rounded-full mx-auto mb-4 border-4 border-white"
-              />
-              <h3 className="text-xl font-bold text-white mb-2">{leaderboard[1].name}</h3>
-              <p className="text-3xl font-bold text-white mb-1">{leaderboard[1].total_prc.toFixed(2)}</p>
-              <p className="text-sm text-white opacity-90">PRC Mined</p>
-              {leaderboard[1].is_vip && (
-                <div className="mt-3">
-                  <span className="inline-block px-3 py-1 bg-white/30 rounded-full text-xs font-semibold text-white">
-                    VIP
-                  </span>
-                </div>
-              )}
-            </Card>
-
-            {/* 1st Place */}
-            <Card data-testid="rank-1" className="bg-gradient-to-br from-yellow-400 to-orange-500 p-8 rounded-3xl shadow-2xl text-center">
-              <div className="flex justify-center mb-4">
-                <Crown className="h-20 w-20 text-white" />
-              </div>
-              <img
-                src={leaderboard[0].profile_picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(leaderboard[0].name)}`}
-                alt={leaderboard[0].name}
-                className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-white"
-              />
-              <h3 className="text-2xl font-bold text-white mb-2">{leaderboard[0].name}</h3>
-              <p className="text-4xl font-bold text-white mb-1">{leaderboard[0].total_prc.toFixed(2)}</p>
-              <p className="text-sm text-white opacity-90">PRC Mined</p>
-              {leaderboard[0].is_vip && (
-                <div className="mt-3">
-                  <span className="inline-block px-3 py-1 bg-white/30 rounded-full text-xs font-semibold text-white">
-                    VIP
-                  </span>
-                </div>
-              )}
-            </Card>
-
-            {/* 3rd Place */}
-            <Card data-testid="rank-3" className="bg-gradient-to-br from-orange-400 to-red-500 p-8 rounded-3xl shadow-xl text-center transform md:translate-y-8">
-              <div className="flex justify-center mb-4">
-                <Award className="h-16 w-16 text-white" />
-              </div>
-              <img
-                src={leaderboard[2].profile_picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(leaderboard[2].name)}`}
-                alt={leaderboard[2].name}
-                className="w-20 h-20 rounded-full mx-auto mb-4 border-4 border-white"
-              />
-              <h3 className="text-xl font-bold text-white mb-2">{leaderboard[2].name}</h3>
-              <p className="text-3xl font-bold text-white mb-1">{leaderboard[2].total_prc.toFixed(2)}</p>
-              <p className="text-sm text-white opacity-90">PRC Mined</p>
-              {leaderboard[2].is_vip && (
-                <div className="mt-3">
-                  <span className="inline-block px-3 py-1 bg-white/30 rounded-full text-xs font-semibold text-white">
-                    VIP
-                  </span>
-                </div>
-              )}
-            </Card>
-          </div>
-        )}
-
-        {/* Top 10 Rankings */}
-        <Card data-testid="leaderboard-list" className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Top 10 Rankings</h2>
+      {/* Trophy Header */}
+      <div className="px-5 mb-6">
+        <div className="relative overflow-hidden rounded-3xl p-6 text-center" style={{
+          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%)',
+        }}>
+          <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-amber-500/20 to-transparent rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-purple-500/10 to-transparent rounded-full blur-2xl" />
           
-          <div className="space-y-3">
-            {leaderboard.map((entry, index) => (
+          <div className="relative">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
+              <Trophy className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-1">Top Earners</h2>
+            <p className="text-gray-400 text-sm">Compete and climb the ranks!</p>
+          </div>
+        </div>
+      </div>
+
+      {/* User's Rank (if not in top 10) */}
+      {userRank && userRank.rank > 10 && (
+        <div className="px-5 mb-4">
+          <div className="bg-amber-500/10 rounded-xl p-4 border border-amber-500/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-amber-400 font-semibold">Your Rank</p>
+                  <p className="text-white text-lg font-bold">#{userRank.rank}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-gray-500 text-xs">Total Mined</p>
+                <p className="text-amber-500 font-bold">{userRank.total_mined?.toFixed(2) || 0} PRC</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Leaderboard List */}
+      <div className="px-5">
+        <div className="space-y-3">
+          {leaderboard.map((entry, index) => {
+            const rank = index + 1;
+            const isCurrentUser = user?.uid === entry.uid;
+            
+            return (
               <div
-                key={entry.uid}
-                data-testid={`leaderboard-entry-${index}`}
-                className={`flex items-center justify-between p-4 rounded-xl ${getRankBgColor(entry.rank)} ${entry.rank <= 3 ? 'text-white' : 'bg-gray-50 hover:bg-gray-100'} transition-all`}
+                key={entry.uid || index}
+                className={`rounded-xl p-4 border transition-all ${getRankBorder(rank)} ${isCurrentUser ? 'ring-2 ring-amber-500' : ''}`}
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 flex items-center justify-center">
-                    {getRankIcon(entry.rank)}
-                  </div>
-                  <img
-                    src={entry.profile_picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(entry.name)}`}
-                    alt={entry.name}
-                    className="w-12 h-12 rounded-full border-2 border-white"
-                  />
-                  <div>
-                    <p className={`font-bold ${entry.rank <= 3 ? 'text-white' : 'text-gray-900'}`}>
-                      {entry.name}
-                      {entry.is_vip && (
-                        <span className="ml-2 text-xs px-2 py-1 bg-yellow-400 text-yellow-900 rounded-full font-semibold">
-                          VIP
+                  {getRankDisplay(rank)}
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className={`font-semibold truncate ${rank <= 3 ? 'text-white' : 'text-gray-300'}`}>
+                        {entry.name || 'Anonymous'}
+                      </p>
+                      {isCurrentUser && (
+                        <span className="px-2 py-0.5 bg-amber-500 text-gray-900 text-xs font-bold rounded-full">
+                          YOU
                         </span>
                       )}
-                    </p>
-                    <p className={`text-sm ${entry.rank <= 3 ? 'text-white opacity-90' : 'text-gray-500'}`}>
-                      {entry.uid.substring(0, 8)}...
+                    </div>
+                    <p className="text-gray-500 text-sm">
+                      {entry.membership_type === 'vip' ? '👑 VIP Member' : 'Free Member'}
                     </p>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className={`text-2xl font-bold ${entry.rank <= 3 ? 'text-white' : 'text-gray-900'}`}>
-                    {entry.total_prc.toFixed(2)}
-                  </p>
-                  <p className={`text-sm ${entry.rank <= 3 ? 'text-white opacity-90' : 'text-gray-500'}`}>
-                    PRC
-                  </p>
+
+                  <div className="text-right">
+                    <p className={`font-bold ${rank === 1 ? 'text-amber-400 text-lg' : rank <= 3 ? 'text-white' : 'text-gray-400'}`}>
+                      {(entry.total_mined || 0).toFixed(2)}
+                    </p>
+                    <p className="text-gray-600 text-xs">PRC Mined</p>
+                  </div>
                 </div>
               </div>
-            ))}
+            );
+          })}
+
+          {leaderboard.length === 0 && (
+            <div className="text-center py-12">
+              <Trophy className="w-16 h-16 mx-auto text-gray-700 mb-4" />
+              <p className="text-gray-500">No data available yet</p>
+              <p className="text-gray-600 text-sm">Start mining to appear on the leaderboard!</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Motivation Card */}
+      <div className="px-5 mt-6">
+        <div className="bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 rounded-2xl p-5 border border-emerald-500/20">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-emerald-400 font-semibold">Keep Mining!</p>
+              <p className="text-gray-400 text-sm">Active daily to climb the ranks</p>
+            </div>
           </div>
-        </Card>
+        </div>
       </div>
     </div>
   );
