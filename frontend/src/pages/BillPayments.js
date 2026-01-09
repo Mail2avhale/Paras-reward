@@ -238,7 +238,7 @@ const BillPayments = ({ user, onLogout }) => {
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4 [&_input]:bg-gray-800 [&_input]:border-gray-700 [&_input]:text-white [&_input]:placeholder:text-gray-500 [&_select]:bg-gray-800 [&_select]:border-gray-700 [&_select]:text-white">
+              <form onSubmit={handleSubmit} className="space-y-4 [&_input]:bg-gray-800 [&_input]:border-gray-700 [&_input]:text-white [&_input]:placeholder:text-gray-500 [&_select]:bg-gray-800 [&_select]:border-gray-700 [&_select]:text-white [&_label]:text-gray-300">
                 {/* Amount */}
                 <div>
                   <Label htmlFor="amount" className="text-gray-300">Amount (₹) *</Label>
