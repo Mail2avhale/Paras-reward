@@ -46,52 +46,30 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 - ✅ **Fixed 5 Critical User-Reported Bugs**
 
   **Bug Fixes:**
-  1. **Rewards Session Issue (FIXED)**: 
-     - Created `/api/user/{uid}` endpoint to return user data with `mining_active` flag
-     - Mining session now stays active and displays correctly with timer
-     - Dashboard shows "Session Active" badge
-  
-  2. **Missing Collect PRC Button (FIXED)**:
-     - Created new `/api/mining/collect/{uid}` endpoint for collecting rewards
-     - Frontend Mining.js now shows "Collect Rewards (X.XX PRC)" button
-     - Collection resets session start time for continuous earning
-  
-  3. **Tap Game Not Working (FIXED)**:
-     - Backend `/api/game/tap/{uid}` already allowed free users at 0.01 PRC/tap
-     - Added activity logging for tap game plays
-     - Frontend shows taps, remaining taps, and earned PRC correctly
-  
-  4. **KYC Camera Not Working (FIXED)**:
-     - Fixed ImageCropUpload component prop from `onImageCropped` to `onChange`
-     - KYC page now correctly shows "Take Photo with Camera" button
-     - Form shows for users who haven't submitted documents
-  
-  5. **Recent Activity Incomplete (FIXED)**:
-     - Created `/api/user/{uid}/recent-activity` endpoint
-     - Combines activity_logs and transactions for comprehensive log
-     - Returns activities with icons (⛏️ mining, 👆 tap, 🔓 login, 💰 rewards)
-     - Dashboard Recent Activity section now shows all user actions
+  1. **Rewards Session Issue (FIXED)**: Created `/api/user/{uid}` endpoint, session stays active with timer
+  2. **Missing Collect PRC Button (FIXED)**: Created `/api/mining/collect/{uid}` endpoint, button visible
+  3. **Tap Game Not Working (FIXED)**: Added activity logging, shows taps and earned PRC correctly
+  4. **KYC Camera Not Working (FIXED)**: Fixed ImageCropUpload prop, "Take Photo" button works
+  5. **Recent Activity Incomplete (FIXED)**: Created `/api/user/{uid}/recent-activity` endpoint with icons
 
 - ✅ **App-Wide Dark Theme Redesign (COMPLETED)**
+  Updated 13+ pages: BottomNav, AboutUs, PrivacyPolicy, Orders, BillPayments, FAQ, ContactUs, Leaderboard, GiftVoucherRedemption, TermsAndConditions, TermsConditions, RefundPolicy, ScratchCard
 
-  **Updated Pages to Golden-Black Theme:**
-  - BottomNav.js - Dark navigation with amber accents
-  - AboutUs.js - Complete redesign with stats, features, how-it-works
-  - PrivacyPolicy.js - Dark theme with amber links
-  - Orders.js - Premium order cards with secret code copy
-  - BillPayments.js - Dark form, service selection, history table
-  - FAQ.js - Collapsible FAQ sections with category icons
-  - ContactUs.js - Dark contact form with info cards
-  - Leaderboard.js - Trophy icons, rank displays with gradients
-  - GiftVoucherRedemption.js - Voucher selection with dark theme
-  - TermsAndConditions.js - Detailed legal page (simplified version)
-  - TermsConditions.js - Full terms page with section navigation
-  - RefundPolicy.js - Policy sections with icons
-  - ScratchCard.js - Scratch game with dark UI
+- ✅ **Referrals Page Advanced Update (COMPLETED)**
+  - **Bonus Structure**: Collapsible card showing 5-level bonus percentages (10%/5%/3%/2%/1%)
+  - **Your Network**: 5 expandable level cards with Total/Active user counts
+  - **Active-Only Bonus**: Clear messaging "Bonus only on active referrals" (English + Marathi)
+  - **Maximum Bonus**: Shows +21% total possible bonus
+  - **Expand/Collapse**: Each level shows individual referrals with active/inactive status
 
-  **Backend Test Results:**
-  - 13/13 tests passed (100%)
-  - All API endpoints working correctly
+- ✅ **VIP Subscription Step-by-Step Flow (COMPLETED)**
+  - **Step 1**: Select Plan - VIP benefits grid, plan cards (Monthly/Quarterly/Half-yearly/Yearly)
+  - **Step 2**: Make Payment - Amount display, QR code, payment instructions
+  - **Step 3**: Upload Proof - UTR input, screenshot upload, date/time fields
+  - **Step 4**: Review & Submit - Summary of all details before final submission
+  - **VIP Expiry Display**: For existing VIP users, shows expiry date with days remaining
+  - **Color-coded Alerts**: Red (<7 days), Amber (<30 days), Green (>30 days)
+  - **Renew Button**: Shown when membership is expiring soon
 
 ### January 7, 2026 (Current Session - Part 13)
 - ✅ **AI-Powered Dashboard Redesign - WORKING**
