@@ -637,13 +637,14 @@ const BillPayments = ({ user, onLogout }) => {
                       className="px-3 py-1.5 bg-gray-800 text-gray-300 rounded-lg text-sm disabled:opacity-50"
                     >
                       Next
-                    </Button>
+                      Next
+                    </button>
                   </div>
                 </div>
               )}
             </>
           )}
-        </Card>
+        </div>
       </div>
     </div>
   );
