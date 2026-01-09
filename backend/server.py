@@ -3210,32 +3210,33 @@ async def get_user_redeemed_stats(uid: str):
 # ========== TAP GAME ROUTES ==========
 @api_router.post("/game/tap/{uid}")
 async def play_tap_game(uid: str, tap_data: TapGamePlay):
-    """Play tap game"""
+    """Play tap game - Free users earn 0.01 PRC/tap, VIP users earn 0.1 PRC/tap"""
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Check if user is VIP - only VIP users can earn PRC
+    # Check membership for PRC rate
     membership_type = user.get("membership_type", "free")
-    if membership_type != "vip":
-        raise HTTPException(status_code=403, detail="VIP membership required to earn PRC. Free users cannot accumulate PRC.")
+    prc_per_tap = 0.1 if membership_type == "vip" else 0.01  # VIP: 0.1, Free: 0.01
     
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     current_taps = user.get("taps_today", 0) if user.get("last_tap_date") == today else 0
     
-    # Check if user has taps left
-    remaining_taps = 100 - current_taps
+    # Check if user has taps left (100 for free, 200 for VIP)
+    max_taps = 200 if membership_type == "vip" else 100
+    remaining_taps = max_taps - current_taps
     if remaining_taps <= 0:
         raise HTTPException(status_code=400, detail="Daily tap limit reached")
     
     # Validate tap count
     taps_to_add = min(tap_data.taps, remaining_taps)
+    prc_earned = round(taps_to_add * prc_per_tap, 2)
     
     # Update user
     await db.users.update_one(
         {"uid": uid},
         {
-            "$inc": {"prc_balance": taps_to_add, "total_mined": taps_to_add},
+            "$inc": {"prc_balance": prc_earned, "total_mined": prc_earned},
             "$set": {"taps_today": current_taps + taps_to_add, "last_tap_date": today}
         }
     )
