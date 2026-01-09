@@ -408,6 +408,69 @@ const DashboardModern = ({ user, onLogout }) => {
         </div>
       )}
 
+      {/* Your Activity */}
+      <div className="px-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-white font-bold text-lg">Your Activity</h2>
+          <button 
+            onClick={() => navigate('/transactions')}
+            className="text-amber-500 text-sm font-medium flex items-center gap-1"
+          >
+            View All <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="bg-gray-900/50 rounded-2xl border border-gray-800 overflow-hidden">
+          {recentTransactions.length === 0 ? (
+            <div className="text-center py-8">
+              <Clock className="w-10 h-10 mx-auto mb-2 text-gray-600" />
+              <p className="text-gray-500 text-sm">No activity yet</p>
+              <button 
+                onClick={() => navigate('/daily-rewards')}
+                className="mt-2 text-amber-500 text-sm font-medium"
+              >
+                Start Earning →
+              </button>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-800">
+              {recentTransactions.slice(0, 4).map((tx, index) => (
+                <div key={index} className="flex items-center justify-between p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
+                      tx.amount > 0 ? 'bg-emerald-500/20' : tx.amount < 0 ? 'bg-red-500/20' : 'bg-blue-500/20'
+                    }`}>
+                      {tx.icon ? (
+                        <span>{tx.icon}</span>
+                      ) : tx.amount > 0 ? (
+                        <TrendingUp className="w-5 h-5 text-emerald-500" />
+                      ) : tx.amount < 0 ? (
+                        <ShoppingBag className="w-5 h-5 text-red-400" />
+                      ) : (
+                        <Clock className="w-5 h-5 text-blue-400" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-white text-sm font-medium">
+                        {(tx.description || tx.type || 'Activity').replace(/mining/gi, 'rewards')}
+                      </p>
+                      <p className="text-gray-500 text-xs">
+                        {tx.timestamp ? new Date(tx.timestamp).toLocaleDateString() : 'Today'}
+                      </p>
+                    </div>
+                  </div>
+                  {tx.amount !== undefined && tx.amount !== 0 && (
+                    <p className={`font-bold ${tx.amount > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {tx.amount > 0 ? '+' : ''}{tx.amount?.toFixed(2)} PRC
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Global Live Activity (Bill, Voucher, Shopping) */}
       <div className="px-5 mb-6">
         <div className="flex items-center justify-between mb-4">
@@ -420,30 +483,29 @@ const DashboardModern = ({ user, onLogout }) => {
 
         <div className="bg-gray-900/50 rounded-2xl border border-gray-800 overflow-hidden">
           {globalActivity.length === 0 ? (
-            <div className="text-center py-10">
-              <Clock className="w-12 h-12 mx-auto mb-3 text-gray-600" />
-              <p className="text-gray-500">No recent activity</p>
-              <p className="text-gray-600 text-xs mt-1">Bill payments, vouchers & shopping will appear here</p>
+            <div className="text-center py-8">
+              <Clock className="w-10 h-10 mx-auto mb-2 text-gray-600" />
+              <p className="text-gray-500 text-sm">No recent activity</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-800 max-h-80 overflow-y-auto">
-              {globalActivity.slice(0, 8).map((activity, index) => (
+            <div className="divide-y divide-gray-800 max-h-60 overflow-y-auto">
+              {globalActivity.slice(0, 6).map((activity, index) => (
                 <motion.div 
                   key={index} 
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="flex items-center justify-between p-4"
+                  className="flex items-center justify-between p-3"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-base ${
                       activity.category === 'bill' ? 'bg-blue-500/20' :
                       activity.category === 'voucher' ? 'bg-purple-500/20' : 'bg-amber-500/20'
                     }`}>
                       <span>{activity.icon}</span>
                     </div>
                     <div>
-                      <p className="text-white text-sm font-medium">{activity.description}</p>
+                      <p className="text-white text-sm">{activity.description}</p>
                       <p className="text-gray-500 text-xs">
                         {activity.user} {activity.location && `• ${activity.location}`}
                       </p>
