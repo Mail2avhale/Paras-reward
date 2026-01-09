@@ -152,8 +152,8 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
 
   const quickQuestions = [
     { icon: '🚀', text: "PRC कसे कमवायचे?" },
+    { icon: '🌧️', text: "PRC Rain Drop म्हणजे काय?" },
     { icon: '🎁', text: "रिवॉर्ड कसे redeem करायचे?" },
-    { icon: '👑', text: "VIP चे फायदे काय?" },
     { icon: '💡', text: "How does Paras help me?" }
   ];
 
