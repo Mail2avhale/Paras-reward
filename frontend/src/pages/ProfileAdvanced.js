@@ -29,8 +29,12 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
-    city: '',
-    state: ''
+    address: '',
+    tahsil: '',
+    district: '',
+    state: '',
+    pincode: '',
+    birthday: ''
   });
   
   // Password change
@@ -73,8 +77,12 @@ const ProfileAdvanced = ({ user, onLogout }) => {
       setFormData({
         name: data.name || '',
         phone: data.phone || data.mobile || '',
-        city: data.city || '',
-        state: data.state || ''
+        address: data.address || '',
+        tahsil: data.tahsil || data.taluka || '',
+        district: data.district || '',
+        state: data.state || '',
+        pincode: data.pincode || '',
+        birthday: data.birthday || ''
       });
     } catch (error) {
       console.error('Error fetching user:', error);
@@ -82,8 +90,12 @@ const ProfileAdvanced = ({ user, onLogout }) => {
       setFormData({
         name: user.name || '',
         phone: user.phone || '',
-        city: user.city || '',
-        state: user.state || ''
+        address: user.address || '',
+        tahsil: user.tahsil || '',
+        district: user.district || '',
+        state: user.state || '',
+        pincode: user.pincode || '',
+        birthday: user.birthday || ''
       });
     } finally {
       setLoading(false);
