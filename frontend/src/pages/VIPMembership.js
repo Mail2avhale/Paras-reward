@@ -702,6 +702,62 @@ const VIPMembership = ({ user }) => {
           </div>
         </motion.div>
       )}
+
+      {/* VIP Payment History Section */}
+      {paymentHistory.length > 0 && (
+        <div className="px-5 pb-24 mt-6">
+          <div className="bg-gray-900/50 rounded-2xl border border-gray-800 overflow-hidden">
+            <div className="p-4 border-b border-gray-800">
+              <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                <Clock className="w-5 h-5 text-amber-500" />
+                Payment History
+              </h3>
+            </div>
+            <div className="divide-y divide-gray-800 max-h-80 overflow-y-auto">
+              {paymentHistory.map((payment, index) => (
+                <div key={payment.payment_id || index} className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      payment.status === 'approved' ? 'bg-emerald-500/20' :
+                      payment.status === 'rejected' ? 'bg-red-500/20' :
+                      'bg-amber-500/20'
+                    }`}>
+                      {payment.status === 'approved' ? (
+                        <CheckCircle className="w-5 h-5 text-emerald-500" />
+                      ) : payment.status === 'rejected' ? (
+                        <AlertCircle className="w-5 h-5 text-red-500" />
+                      ) : (
+                        <Clock className="w-5 h-5 text-amber-500" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-white font-medium">{payment.plan_name || 'VIP Membership'}</p>
+                      <p className="text-gray-500 text-xs">
+                        {payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric'
+                        }) : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-white font-bold">₹{payment.amount}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      payment.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400' :
+                      payment.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                      'bg-amber-500/20 text-amber-400'
+                    }`}>
+                      {payment.status === 'approved' ? 'Approved' :
+                       payment.status === 'rejected' ? 'Rejected' : 'Pending'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
