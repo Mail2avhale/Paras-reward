@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://ailedgerplus.preview.emergentagent.com/setup
+   https://finance-ai-35.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
