@@ -42,6 +42,49 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 
 ## What's Been Implemented
 
+### January 9, 2026 (Current Session - Part 14)
+- ✅ **Fixed 5 Critical User-Reported Bugs**
+
+  **Bug Fixes:**
+  1. **Rewards Session Issue (FIXED)**: 
+     - Created `/api/user/{uid}` endpoint to return user data with `mining_active` flag
+     - Mining session now stays active and displays correctly with timer
+     - Dashboard shows "Session Active" badge
+  
+  2. **Missing Collect PRC Button (FIXED)**:
+     - Created new `/api/mining/collect/{uid}` endpoint for collecting rewards
+     - Frontend Mining.js now shows "Collect Rewards (X.XX PRC)" button
+     - Collection resets session start time for continuous earning
+  
+  3. **Tap Game Not Working (FIXED)**:
+     - Backend `/api/game/tap/{uid}` already allowed free users at 0.01 PRC/tap
+     - Added activity logging for tap game plays
+     - Frontend shows taps, remaining taps, and earned PRC correctly
+  
+  4. **KYC Camera Not Working (FIXED)**:
+     - Fixed ImageCropUpload component prop from `onImageCropped` to `onChange`
+     - KYC page now correctly shows "Take Photo with Camera" button
+     - Form shows for users who haven't submitted documents
+  
+  5. **Recent Activity Incomplete (FIXED)**:
+     - Created `/api/user/{uid}/recent-activity` endpoint
+     - Combines activity_logs and transactions for comprehensive log
+     - Returns activities with icons (⛏️ mining, 👆 tap, 🔓 login, 💰 rewards)
+     - Dashboard Recent Activity section now shows all user actions
+
+- ✅ **App-Wide Dark Theme Redesign (Partial)**
+
+  **Updated Pages to Golden-Black Theme:**
+  - BottomNav.js - Dark navigation with amber accents
+  - AboutUs.js - Complete redesign with stats, features, how-it-works
+  - PrivacyPolicy.js - Dark theme with amber links
+  - Orders.js - Premium order cards with secret code copy
+  - BillPayments.js - Dark form, service selection, history table
+
+  **Backend Test Results:**
+  - 13/13 tests passed (100%)
+  - All API endpoints working correctly
+
 ### January 7, 2026 (Current Session - Part 13)
 - ✅ **AI-Powered Dashboard Redesign - WORKING**
   
