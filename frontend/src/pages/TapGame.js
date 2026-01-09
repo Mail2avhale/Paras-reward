@@ -261,7 +261,7 @@ const TapGame = ({ user }) => {
           {/* Glow Ring */}
           {remainingTaps > 0 && (
             <motion.div 
-              className="absolute inset-0 rounded-full bg-pink-500"
+              className="absolute inset-0 rounded-full bg-pink-500 pointer-events-none"
               animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0, 0.3] }}
               transition={{ duration: 2, repeat: Infinity }}
             />
