@@ -29,8 +29,28 @@ const ContactUs = () => {
 
   const fetchContactDetails = async () => {
     try {
-      const response = await axios.get(`${API}/contact-details`);
-      setContactDetails(response.data);
+      const response = await axios.get(`${API}/admin/contact-settings`);
+      if (response.data) {
+        // Map the contact settings to the format expected by the UI
+        const data = response.data;
+        const fullAddress = [
+          data.company_name,
+          data.address_line1,
+          data.address_line2,
+          `${data.city}${data.city && data.state ? ', ' : ''}${data.state} ${data.pincode}`.trim(),
+          data.country
+        ].filter(Boolean).join('\n');
+        
+        setContactDetails({
+          address: fullAddress || "PARAS REWARD\nMaharashtra, India",
+          phone: data.phone_primary || "+91-XXXXXXXXXX",
+          phone_secondary: data.phone_secondary || "",
+          email: data.email_support || "support@parasreward.com",
+          email_business: data.email_business || "",
+          website: "www.parasreward.com",
+          working_hours: data.working_hours || "9:00 AM - 6:00 PM (Mon-Sat)"
+        });
+      }
     } catch (error) {
       console.error('Error fetching contact details:', error);
     }
