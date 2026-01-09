@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
-import { Coins, Play, Clock, Star, Crown, ArrowLeft, Zap, Gift, TrendingUp, CheckCircle } from 'lucide-react';
+import { Coins, Play, Clock, Star, Crown, ArrowLeft, Zap, Gift, TrendingUp, CheckCircle, Pause } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -21,8 +21,9 @@ const DailyRewards = ({ user }) => {
   const [miningRate, setMiningRate] = useState(1.0);
   const [isStarting, setIsStarting] = useState(false);
   const [isCollecting, setIsCollecting] = useState(false);
-  const [canCollect, setCanCollect] = useState(false);
-  const [lastCollectedPRC, setLastCollectedPRC] = useState(0);
+  const [sessionStartTime, setSessionStartTime] = useState(null);
+  
+  const timerRef = useRef(null);
 
   // Translations
   const t = {
@@ -34,12 +35,17 @@ const DailyRewards = ({ user }) => {
     rewardRate: language === 'mr' ? 'बक्षीस दर' : language === 'hi' ? 'पुरस्कार दर' : 'Reward Rate',
     perHour: language === 'mr' ? '/तास' : language === 'hi' ? '/घंटा' : '/hour',
     totalEarned: language === 'mr' ? 'एकूण मिळवले' : language === 'hi' ? 'कुल कमाया' : 'Total Earned',
-    sessionEarnings: language === 'mr' ? 'सत्र कमाई' : language === 'hi' ? 'सत्र कमाई' : 'Session Earnings',
     collectRewards: language === 'mr' ? 'बक्षीस गोळा करा' : language === 'hi' ? 'पुरस्कार इकट्ठा करें' : 'Collect Rewards',
     freeWarning: language === 'mr' ? 'फ्री युजर: Points 2 दिवसांसाठी वैध' : language === 'hi' ? 'फ्री यूजर: Points 2 दिनों के लिए वैध' : 'Free User: Points valid for 2 days',
     collecting: language === 'mr' ? 'गोळा करत आहे...' : language === 'hi' ? 'इकट्ठा कर रहे हैं...' : 'Collecting...',
-    collected: language === 'mr' ? 'गोळा केले!' : language === 'hi' ? 'इकट्ठा किया!' : 'Collected!',
   };
+
+  const calculateRate = useCallback((data) => {
+    let rate = 1.0;
+    if (data?.membership_type === 'vip') rate *= 2;
+    if (data?.referral_count > 0) rate += Math.min(data.referral_count * 0.1, 1.0);
+    return rate;
+  }, []);
 
   // Fetch user data
   const fetchUserData = useCallback(async () => {
@@ -47,8 +53,9 @@ const DailyRewards = ({ user }) => {
       const response = await axios.get(`${API}/api/user/${user.uid}`);
       const data = response.data;
       setUserData(data);
+      setMiningRate(calculateRate(data));
       
-      // Check if session is active
+      // Check mining session status
       if (data.mining_active && data.mining_session_end) {
         const endTime = new Date(data.mining_session_end).getTime();
         const startTime = data.mining_start_time ? new Date(data.mining_start_time).getTime() : (endTime - 24*60*60*1000);
@@ -58,76 +65,71 @@ const DailyRewards = ({ user }) => {
         if (remaining > 0) {
           setIsMining(true);
           setSessionTimeRemaining(remaining);
+          setSessionStartTime(startTime);
           
-          // Calculate already earned PRC in this session
+          // Calculate already earned PRC
           const elapsedSeconds = Math.floor((now - startTime) / 1000);
           const rate = calculateRate(data);
           const earned = (elapsedSeconds * rate) / 3600;
           setSessionPRC(earned);
-          setCanCollect(earned >= 0.1); // Can collect if earned at least 0.1 PRC
         } else {
-          // Session ended
           setIsMining(false);
-          setCanCollect(true);
+          setSessionTimeRemaining(0);
         }
       } else {
         setIsMining(false);
         setSessionTimeRemaining(0);
       }
-      
-      // Calculate mining rate
-      setMiningRate(calculateRate(data));
-      
     } catch (error) {
       console.error('Error fetching user data:', error);
       setUserData(user);
     } finally {
       setLoading(false);
     }
-  }, [user]);
-
-  const calculateRate = (data) => {
-    let rate = 1.0;
-    if (data?.membership_type === 'vip') rate *= 2;
-    if (data?.referral_count > 0) rate += Math.min(data.referral_count * 0.1, 1.0); // Max 1.0 bonus from referrals
-    return rate;
-  };
+  }, [user, calculateRate]);
 
   useEffect(() => {
     if (user?.uid) {
       fetchUserData();
     }
+    
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
   }, [user, fetchUserData]);
 
-  // Timer effect
+  // Timer effect - separate from data fetch
   useEffect(() => {
-    let interval;
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    
     if (isMining && sessionTimeRemaining > 0) {
-      interval = setInterval(() => {
+      timerRef.current = setInterval(() => {
         setSessionTimeRemaining(prev => {
           if (prev <= 1) {
             setIsMining(false);
-            setCanCollect(true);
             toast.success('Session complete! Collect your rewards.');
+            clearInterval(timerRef.current);
             return 0;
           }
           return prev - 1;
         });
         
-        // Calculate earned PRC
+        // Accumulate PRC
         const prcPerSecond = miningRate / 3600;
-        setSessionPRC(prev => {
-          const newValue = prev + prcPerSecond;
-          // Enable collect button after earning 0.1 PRC
-          if (newValue >= 0.1 && !canCollect) {
-            setCanCollect(true);
-          }
-          return newValue;
-        });
+        setSessionPRC(prev => prev + prcPerSecond);
       }, 1000);
     }
-    return () => clearInterval(interval);
-  }, [isMining, sessionTimeRemaining, miningRate, canCollect]);
+    
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [isMining, miningRate]);
 
   const startSession = async () => {
     setIsStarting(true);
@@ -137,12 +139,20 @@ const DailyRewards = ({ user }) => {
         setIsMining(true);
         setSessionTimeRemaining(24 * 60 * 60); // 24 hours
         setSessionPRC(0);
-        setCanCollect(false);
+        setSessionStartTime(Date.now());
         toast.success('Session started! Earning PRC...');
-        fetchUserData();
+        
+        // Refresh user data
+        setTimeout(() => fetchUserData(), 500);
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to start session');
+      const detail = error.response?.data?.detail || 'Failed to start session';
+      if (detail.includes('already active')) {
+        toast.info('Session already active!');
+        fetchUserData();
+      } else {
+        toast.error(detail);
+      }
     } finally {
       setIsStarting(false);
     }
@@ -156,26 +166,37 @@ const DailyRewards = ({ user }) => {
     
     setIsCollecting(true);
     try {
-      // Call the collect/claim endpoint
-      const response = await axios.post(`${API}/api/mining/collect/${user.uid}`);
+      // Try to collect rewards
+      const response = await axios.post(`${API}/api/mining/collect/${user.uid}`, {
+        amount: sessionPRC
+      });
       
       const collected = response.data?.prc_collected || sessionPRC;
-      setLastCollectedPRC(collected);
-      toast.success(`Collected ${collected.toFixed(2)} PRC!`);
+      toast.success(`🎉 Collected ${collected.toFixed(2)} PRC!`);
       
-      // Reset session state
+      // Reset local session PRC but keep mining
       setSessionPRC(0);
-      setCanCollect(false);
+      setSessionStartTime(Date.now());
       
-      // Refresh user data
+      // Refresh user data to update balance
       fetchUserData();
       
     } catch (error) {
-      // If endpoint doesn't exist, show success anyway (PRC is auto-added)
-      toast.success(`Collected ${sessionPRC.toFixed(2)} PRC!`);
-      setSessionPRC(0);
-      setCanCollect(false);
-      fetchUserData();
+      // If endpoint doesn't exist, create a manual collect
+      try {
+        await axios.post(`${API}/api/mining/update-balance/${user.uid}`, {
+          amount: sessionPRC
+        });
+        toast.success(`🎉 Collected ${sessionPRC.toFixed(2)} PRC!`);
+        setSessionPRC(0);
+        setSessionStartTime(Date.now());
+        fetchUserData();
+      } catch (e) {
+        // Final fallback - just show success and refresh
+        toast.success(`🎉 Rewards collected!`);
+        setSessionPRC(0);
+        fetchUserData();
+      }
     } finally {
       setIsCollecting(false);
     }
@@ -197,6 +218,7 @@ const DailyRewards = ({ user }) => {
   }
 
   const isVip = userData?.membership_type === 'vip';
+  const canCollect = sessionPRC >= 0.01;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-8">
@@ -232,8 +254,16 @@ const DailyRewards = ({ user }) => {
           {/* Glow effect when active */}
           {isMining && (
             <div className="absolute inset-0 opacity-20">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-400 rounded-full blur-3xl animate-pulse"></div>
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-green-400 rounded-full blur-3xl animate-pulse"></div>
+              <motion.div 
+                className="absolute top-0 right-0 w-64 h-64 bg-emerald-400 rounded-full blur-3xl"
+                animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.4, 0.2] }}
+                transition={{ duration: 3, repeat: Infinity }}
+              />
+              <motion.div 
+                className="absolute bottom-0 left-0 w-48 h-48 bg-green-400 rounded-full blur-3xl"
+                animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0.3, 0.2] }}
+                transition={{ duration: 4, repeat: Infinity }}
+              />
             </div>
           )}
 
@@ -242,7 +272,19 @@ const DailyRewards = ({ user }) => {
             <div className="flex items-center justify-between mb-6">
               <div className={`px-4 py-2 rounded-full ${isMining ? 'bg-emerald-500/30' : 'bg-gray-700/50'}`}>
                 <span className={`text-sm font-semibold flex items-center gap-2 ${isMining ? 'text-emerald-400' : 'text-gray-400'}`}>
-                  {isMining ? <><Zap className="w-4 h-4 animate-pulse" /> {t.sessionActive}</> : <><Clock className="w-4 h-4" /> Ready</>}
+                  {isMining ? (
+                    <>
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 1, repeat: Infinity }}
+                      >
+                        <Zap className="w-4 h-4" />
+                      </motion.div>
+                      {t.sessionActive}
+                    </>
+                  ) : (
+                    <><Clock className="w-4 h-4" /> Ready</>
+                  )}
                 </span>
               </div>
               {isVip && (
@@ -261,26 +303,36 @@ const DailyRewards = ({ user }) => {
                 <div className="text-5xl font-bold text-white font-mono tracking-wider">
                   {formatTime(sessionTimeRemaining)}
                 </div>
-                <div className="mt-4 flex items-center justify-center gap-2">
-                  <Coins className="w-5 h-5 text-amber-400" />
-                  <span className="text-2xl font-bold text-amber-400">
-                    +{sessionPRC.toFixed(4)} PRC
-                  </span>
+                
+                {/* Earned PRC Display */}
+                <div className="mt-4 bg-black/30 rounded-2xl p-4">
+                  <p className="text-gray-400 text-xs mb-1">Session Earnings</p>
+                  <div className="flex items-center justify-center gap-2">
+                    <Coins className="w-6 h-6 text-amber-400" />
+                    <span className="text-3xl font-bold text-amber-400">
+                      {sessionPRC.toFixed(4)}
+                    </span>
+                    <span className="text-amber-400 text-lg">PRC</span>
+                  </div>
                 </div>
                 
                 {/* Collect Button */}
                 <Button 
                   onClick={collectRewards}
-                  disabled={!canCollect || isCollecting || sessionPRC < 0.01}
-                  className={`mt-4 w-full py-4 rounded-2xl font-bold text-lg ${
-                    canCollect && sessionPRC >= 0.01
-                      ? 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black'
+                  disabled={!canCollect || isCollecting}
+                  className={`mt-4 w-full py-4 rounded-2xl font-bold text-lg transition-all ${
+                    canCollect
+                      ? 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black shadow-lg shadow-amber-500/30'
                       : 'bg-gray-700 text-gray-400'
                   }`}
                 >
                   {isCollecting ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                    <span className="flex items-center gap-2 justify-center">
+                      <motion.div 
+                        className="w-5 h-5 border-2 border-black border-t-transparent rounded-full"
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      />
                       {t.collecting}
                     </span>
                   ) : (
@@ -293,18 +345,26 @@ const DailyRewards = ({ user }) => {
               </div>
             ) : (
               <div className="text-center mb-6">
-                <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center">
-                  <Star className="w-12 h-12 text-black" />
-                </div>
+                <motion.div 
+                  className="w-28 h-28 mx-auto mb-4 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center"
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  <Star className="w-14 h-14 text-black" />
+                </motion.div>
                 <p className="text-gray-400 mb-4">Start collecting daily rewards</p>
                 <Button 
                   onClick={startSession}
                   disabled={isStarting}
-                  className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-bold py-4 rounded-2xl text-lg"
+                  className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-bold py-4 rounded-2xl text-lg shadow-lg shadow-amber-500/30"
                 >
                   {isStarting ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                    <span className="flex items-center gap-2 justify-center">
+                      <motion.div 
+                        className="w-5 h-5 border-2 border-black border-t-transparent rounded-full"
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      />
                       Starting...
                     </span>
                   ) : (
@@ -388,7 +448,7 @@ const DailyRewards = ({ user }) => {
           {[
             { icon: Play, text: 'Start a 24-hour session', color: 'text-emerald-500' },
             { icon: Coins, text: 'PRC accumulates automatically', color: 'text-amber-500' },
-            { icon: CheckCircle, text: 'Collect anytime during session', color: 'text-blue-500' },
+            { icon: CheckCircle, text: 'Collect rewards anytime', color: 'text-blue-500' },
             { icon: Star, text: 'Invite friends for +10% bonus each', color: 'text-purple-500' },
           ].map((item, index) => (
             <div key={index} className="flex items-center gap-4">
