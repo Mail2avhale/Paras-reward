@@ -241,10 +241,9 @@ class TestReferralLevelsAPI:
     
     def test_referral_levels_endpoint(self):
         """Test GET /api/referrals/{uid}/levels returns level-wise data"""
-        # Login as test user
+        # Login as test user using query params
         login_response = requests.post(
-            f"{BASE_URL}/api/auth/login",
-            json={"email": "testuser@test.com", "password": "test123"}
+            f"{BASE_URL}/api/auth/login?identifier=testuser@test.com&password=test123"
         )
         
         if login_response.status_code != 200:
