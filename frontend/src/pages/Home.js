@@ -14,6 +14,11 @@ const API = process.env.REACT_APP_BACKEND_URL || '';
 const Home = ({ user, onLogout }) => {
   const { t } = useTranslation();
   const [hoveredFeature, setHoveredFeature] = useState(null);
+  const [platformStats, setPlatformStats] = useState({
+    activeUsers: 0,
+    totalPrcDistributed: 0,
+    totalProducts: 0
+  });
   const [socialMedia, setSocialMedia] = useState({
     facebook: 'https://facebook.com',
     twitter: 'https://twitter.com',
@@ -26,7 +31,23 @@ const Home = ({ user, onLogout }) => {
 
   useEffect(() => {
     fetchSocialMedia();
+    fetchPlatformStats();
   }, []);
+
+  const fetchPlatformStats = async () => {
+    try {
+      const response = await axios.get(`${API}/api/public/live-stats`);
+      if (response.data) {
+        setPlatformStats({
+          activeUsers: response.data.active_users || 0,
+          totalPrcDistributed: response.data.total_prc_distributed || response.data.today_prc_earned || 0,
+          totalProducts: response.data.total_products || 0
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching platform stats:', error);
+    }
+  };
 
   const fetchSocialMedia = async () => {
     try {
