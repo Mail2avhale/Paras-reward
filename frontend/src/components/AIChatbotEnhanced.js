@@ -130,7 +130,7 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
       console.error('Chatbot error:', error);
       setMessages(prev => [...prev, {
         type: 'bot',
-        text: 'माफ करा, काही तांत्रिक अडचण आली. कृपया पुन्हा प्रयत्न करा. 🔄',
+        text: 'Sorry, there was a technical issue. Please try again. 🔄',
         timestamp: new Date(),
         isError: true
       }]);
