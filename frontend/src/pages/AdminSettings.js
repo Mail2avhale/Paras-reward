@@ -28,6 +28,18 @@ const AdminSettings = ({ user }) => {
   const [registrationMessage, setRegistrationMessage] = useState('New user registrations are currently closed. Please check back later.');
   const [loadingRegistration, setLoadingRegistration] = useState(false);
 
+  // VIP Payment Settings
+  const [paymentConfig, setPaymentConfig] = useState({
+    upi_id: '',
+    qr_code_url: '',
+    bank_name: '',
+    account_number: '',
+    ifsc_code: '',
+    account_holder: '',
+    instructions: ''
+  });
+  const [savingPayment, setSavingPayment] = useState(false);
+
   useEffect(() => {
     // Check if user is admin
     if (!user || user.role !== 'admin') {
