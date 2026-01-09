@@ -278,54 +278,54 @@ const TermsConditions = () => {
               </a>
             ))}
           </div>
-        </Card>
+        </div>
 
         {/* Sections */}
-        <div className="space-y-8">
+        <div className="space-y-4">
           {sections.map((section) => {
             const Icon = section.icon;
             return (
-              <Card key={section.id} id={section.id} className="p-6 scroll-mt-24">
+              <div key={section.id} id={section.id} className="bg-gray-900/50 rounded-2xl p-5 border border-gray-800 scroll-mt-24">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Icon className="h-5 w-5 text-blue-600" />
+                  <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center">
+                    <Icon className="h-5 w-5 text-amber-500" />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">{section.title}</h2>
+                  <h2 className="text-lg font-bold text-white">{section.title}</h2>
                 </div>
                 <div 
-                  className="prose prose-gray max-w-none text-gray-600"
+                  className="prose prose-sm prose-invert max-w-none text-gray-400 [&_a]:text-amber-500 [&_a]:hover:text-amber-400 [&_strong]:text-gray-300 [&_h4]:text-gray-300 [&_ul]:text-gray-400 [&_li]:text-gray-400 [&_.bg-gray-50]:bg-gray-800/50 [&_.bg-gray-50]:border [&_.bg-gray-50]:border-gray-700 [&_.bg-gray-50]:rounded-xl"
                   dangerouslySetInnerHTML={{ __html: section.content }}
                 />
-              </Card>
+              </div>
             );
           })}
         </div>
 
         {/* Footer Note */}
-        <div className="mt-12 p-6 bg-blue-50 rounded-lg text-center">
-          <p className="text-gray-600">
+        <div className="mt-8 p-5 bg-amber-500/10 rounded-2xl border border-amber-500/20 text-center">
+          <p className="text-gray-400 text-sm">
             By using Paras Reward Platform, you acknowledge that you have read, understood, and agree to these Terms & Conditions.
           </p>
-          <Button 
+          <button 
             onClick={() => navigate('/register')}
-            className="mt-4 bg-blue-600 hover:bg-blue-700"
+            className="mt-4 px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-gray-900 font-bold rounded-xl hover:from-amber-400 hover:to-amber-500 transition-all"
           >
             I Accept - Create Account
-          </Button>
+          </button>
         </div>
       </main>
 
       {/* Simple Footer */}
-      <footer className="bg-gray-900 text-gray-400 py-6 px-4 mt-12">
+      <footer className="bg-gray-950 border-t border-gray-800 py-6 px-5 mt-8">
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2">
             <img src={LOGO_URL} alt="Logo" className="h-8 w-8 rounded-full" />
             <span className="text-white font-semibold">Paras Reward</span>
           </div>
-          <div className="flex gap-6 text-sm">
-            <a href="/privacy" className="hover:text-white">Privacy Policy</a>
-            <a href="/refund" className="hover:text-white">Refund Policy</a>
-            <a href="/contact" className="hover:text-white">Contact Us</a>
+          <div className="flex gap-4 text-xs">
+            <a href="/privacy" className="text-gray-500 hover:text-amber-500 transition-colors">Privacy</a>
+            <a href="/refund" className="text-gray-500 hover:text-amber-500 transition-colors">Refund</a>
+            <a href="/contact" className="text-gray-500 hover:text-amber-500 transition-colors">Contact</a>
           </div>
         </div>
       </footer>
