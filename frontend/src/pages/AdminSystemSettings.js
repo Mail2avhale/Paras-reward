@@ -527,8 +527,8 @@ const AdminSystemSettings = ({ user }) => {
 
             <div className="mt-6 p-4 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-800">
-                <strong>कसे काम करते:</strong> जर एखाद्या युजरचे Level 1 वर 5 active referrals असतील आणि Level 1 बोनस 10% असेल, 
-                तर त्याच्या mining rate मध्ये (5 × 10% × Base Rate) बोनस add होतो.
+                <strong>How it works:</strong> If a user has 5 active referrals at Level 1 and Level 1 bonus is 10%, 
+                then (5 × 10% × Base Rate) bonus is added to their mining rate.
               </p>
             </div>
 
