@@ -441,30 +441,42 @@ const Referrals = ({ user }) => {
                               }`}
                             >
                               <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                                   referral.is_active ? 'bg-emerald-500' : 'bg-gray-600'
                                 }`}>
                                   {referral.is_active ? (
-                                    <UserCheck className="w-4 h-4 text-white" />
+                                    <UserCheck className="w-5 h-5 text-white" />
                                   ) : (
-                                    <UserX className="w-4 h-4 text-gray-400" />
+                                    <UserX className="w-5 h-5 text-gray-400" />
                                   )}
                                 </div>
                                 <div>
                                   <p className="text-white text-sm font-medium">
                                     {referral.name || referral.email?.split('@')[0] || 'User'}
+                                    {referral.membership_type === 'vip' && <span className="ml-1 text-amber-400">👑</span>}
                                   </p>
-                                  <p className={`text-xs ${referral.is_active ? 'text-emerald-400' : 'text-gray-500'}`}>
-                                    {referral.is_active ? t.active : t.inactive}
-                                    {referral.membership_type === 'vip' && ' • 👑 VIP'}
-                                  </p>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                                      referral.is_active 
+                                        ? 'bg-emerald-500/20 text-emerald-400' 
+                                        : 'bg-gray-700 text-gray-400'
+                                    }`}>
+                                      {referral.is_active ? '● Session Active' : '○ No Session'}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                               <div className="text-right">
                                 {referral.is_active ? (
-                                  <span className="text-emerald-400 text-xs font-bold">+{levelBonuses[level].percent}%</span>
+                                  <div>
+                                    <span className="text-emerald-400 text-sm font-bold">+{levelBonuses[level].percent}%</span>
+                                    <p className="text-emerald-500/70 text-[10px]">Earning</p>
+                                  </div>
                                 ) : (
-                                  <span className="text-gray-500 text-xs">0%</span>
+                                  <div>
+                                    <span className="text-gray-500 text-sm">0%</span>
+                                    <p className="text-gray-600 text-[10px]">Inactive</p>
+                                  </div>
                                 )}
                               </div>
                             </div>
