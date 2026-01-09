@@ -15,16 +15,28 @@ from datetime import datetime, timezone
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
+# Test credentials
+TEST_EMAIL = "freeuser_1767939928@test.com"
+TEST_PASSWORD = "test123"
+
+
+def login_user(email=TEST_EMAIL, password=TEST_PASSWORD):
+    """Helper function to login and get user data"""
+    # Login uses query parameters
+    login_response = requests.post(
+        f"{BASE_URL}/api/auth/login",
+        params={"identifier": email, "password": password}
+    )
+    return login_response
+
+
 class TestBirthdayCheckEndpoint:
     """Test birthday check endpoint - GET /api/user/{uid}/birthday-check"""
     
     def test_birthday_check_returns_is_birthday_field(self):
         """Verify birthday check endpoint returns is_birthday field"""
-        # First login to get a valid user
-        login_response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "freeuser_1767939928@test.com",
-            "password": "test123"
-        })
+        # Login to get a valid user
+        login_response = login_user()
         
         assert login_response.status_code == 200, f"Login failed: {login_response.text}"
         user_data = login_response.json()
@@ -119,12 +131,9 @@ class TestProfileEndpoint:
     def test_profile_update_with_new_fields(self):
         """Verify profile can be updated with new fields (tahsil, birthday, etc.)"""
         # Login first
-        login_response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "freeuser_1767939928@test.com",
-            "password": "test123"
-        })
+        login_response = login_user()
         
-        assert login_response.status_code == 200
+        assert login_response.status_code == 200, f"Login failed: {login_response.text}"
         user_data = login_response.json()
         uid = user_data.get("uid")
         
@@ -175,12 +184,9 @@ class TestReferralsEndpoint:
     def test_referrals_levels_endpoint(self):
         """Verify referrals levels endpoint returns proper structure"""
         # Login first
-        login_response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "freeuser_1767939928@test.com",
-            "password": "test123"
-        })
+        login_response = login_user()
         
-        assert login_response.status_code == 200
+        assert login_response.status_code == 200, f"Login failed: {login_response.text}"
         user_data = login_response.json()
         uid = user_data.get("uid")
         
@@ -207,12 +213,9 @@ class TestUserEndpoint:
     def test_user_endpoint_returns_profile_fields(self):
         """Verify user endpoint returns all profile fields"""
         # Login first
-        login_response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "freeuser_1767939928@test.com",
-            "password": "test123"
-        })
+        login_response = login_user()
         
-        assert login_response.status_code == 200
+        assert login_response.status_code == 200, f"Login failed: {login_response.text}"
         user_data = login_response.json()
         uid = user_data.get("uid")
         
