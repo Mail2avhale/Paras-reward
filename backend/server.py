@@ -5561,7 +5561,7 @@ Current User Context:
     except Exception as e:
         logging.error(f"Chatbot error: {e}")
         return {
-            "response": "माफ करा, काही तांत्रिक अडचण आली. कृपया पुन्हा प्रयत्न करा किंवा support@paras.com वर संपर्क करा.",
+            "response": "Sorry, there was a technical issue. Please try again or contact support@paras.com for assistance.",
             "session_id": session_id,
             "error": True
         }
