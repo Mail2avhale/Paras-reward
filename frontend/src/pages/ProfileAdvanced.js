@@ -266,41 +266,101 @@ const ProfileAdvanced = ({ user, onLogout }) => {
       {editMode ? (
         <div className="px-5 mb-6">
           <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 space-y-4">
-            <div>
-              <label className="text-gray-400 text-sm mb-1 block">Name</label>
-              <Input 
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                className="bg-gray-800 border-gray-700 text-white"
-              />
-            </div>
-            <div>
-              <label className="text-gray-400 text-sm mb-1 block">Phone</label>
-              <Input 
-                value={formData.phone}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                className="bg-gray-800 border-gray-700 text-white"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-gray-400 text-sm mb-1 block">City</label>
-                <Input 
-                  value={formData.city}
-                  onChange={(e) => setFormData({...formData, city: e.target.value})}
-                  className="bg-gray-800 border-gray-700 text-white"
-                />
+            {/* Personal Info */}
+            <div className="border-b border-gray-800 pb-3 mb-3">
+              <h3 className="text-amber-400 font-semibold text-sm mb-3">Personal Information</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-gray-400 text-sm mb-1 block">Full Name *</label>
+                  <Input 
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    placeholder="Enter your full name"
+                    className="bg-gray-800 border-gray-700 text-white"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-gray-400 text-sm mb-1 block">Phone *</label>
+                    <Input 
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10)})}
+                      placeholder="10-digit mobile"
+                      className="bg-gray-800 border-gray-700 text-white"
+                      maxLength={10}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-gray-400 text-sm mb-1 block">Birthday</label>
+                    <Input 
+                      type="date"
+                      value={formData.birthday}
+                      onChange={(e) => setFormData({...formData, birthday: e.target.value})}
+                      className="bg-gray-800 border-gray-700 text-white"
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="text-gray-400 text-sm mb-1 block">State</label>
-                <Input 
-                  value={formData.state}
-                  onChange={(e) => setFormData({...formData, state: e.target.value})}
-                  className="bg-gray-800 border-gray-700 text-white"
-                />
+            </div>
+            
+            {/* Address Info */}
+            <div>
+              <h3 className="text-amber-400 font-semibold text-sm mb-3">Address Details</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-gray-400 text-sm mb-1 block">Full Address</label>
+                  <Input 
+                    value={formData.address}
+                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                    placeholder="House No, Street, Area"
+                    className="bg-gray-800 border-gray-700 text-white"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-gray-400 text-sm mb-1 block">Tahsil / Taluka</label>
+                    <Input 
+                      value={formData.tahsil}
+                      onChange={(e) => setFormData({...formData, tahsil: e.target.value})}
+                      placeholder="Enter tahsil"
+                      className="bg-gray-800 border-gray-700 text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-gray-400 text-sm mb-1 block">District</label>
+                    <Input 
+                      value={formData.district}
+                      onChange={(e) => setFormData({...formData, district: e.target.value})}
+                      placeholder="Enter district"
+                      className="bg-gray-800 border-gray-700 text-white"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-gray-400 text-sm mb-1 block">State</label>
+                    <Input 
+                      value={formData.state}
+                      onChange={(e) => setFormData({...formData, state: e.target.value})}
+                      placeholder="Enter state"
+                      className="bg-gray-800 border-gray-700 text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-gray-400 text-sm mb-1 block">PIN Code</label>
+                    <Input 
+                      value={formData.pincode}
+                      onChange={(e) => setFormData({...formData, pincode: e.target.value.replace(/\D/g, '').slice(0, 6)})}
+                      placeholder="6-digit PIN"
+                      className="bg-gray-800 border-gray-700 text-white"
+                      maxLength={6}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="flex gap-3">
+            
+            <div className="flex gap-3 pt-2">
               <Button 
                 onClick={() => setEditMode(false)}
                 variant="outline"
