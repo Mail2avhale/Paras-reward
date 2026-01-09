@@ -23,6 +23,7 @@ const VIPMembership = ({ user }) => {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [paymentConfig, setPaymentConfig] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState([]);
   
   // Step-by-step flow: 1=Select Plan, 2=Payment Info, 3=Upload Proof, 4=Submit, 5=Success
   const [currentStep, setCurrentStep] = useState(1);
