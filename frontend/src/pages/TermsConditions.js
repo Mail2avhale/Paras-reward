@@ -243,41 +243,36 @@ const TermsConditions = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950">
       {/* Header */}
-      <header className="bg-blue-900 text-white py-8 px-4">
+      <header className="px-5 pt-6 pb-4 sticky top-0 z-10 bg-gray-950/80 backdrop-blur-md border-b border-gray-800">
         <div className="max-w-4xl mx-auto">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate(-1)}
-            className="text-white hover:bg-white/10 mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
-              <FileText className="h-6 w-6" />
-            </div>
+            <button 
+              onClick={() => navigate(-1)}
+              className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5 text-white" />
+            </button>
             <div>
-              <h1 className="text-3xl font-bold">Terms & Conditions</h1>
-              <p className="text-blue-200">Last Updated: {lastUpdated}</p>
+              <h1 className="text-xl font-bold text-white">Terms & Conditions</h1>
+              <p className="text-gray-500 text-sm">Last Updated: {lastUpdated}</p>
             </div>
           </div>
         </div>
       </header>
 
       {/* Content */}
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-4xl mx-auto px-5 py-6">
         {/* Quick Navigation */}
-        <Card className="p-6 mb-8">
-          <h2 className="font-semibold text-gray-900 mb-4">Quick Navigation</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        <div className="bg-gray-900/50 rounded-2xl p-4 mb-6 border border-gray-800">
+          <h2 className="font-semibold text-white mb-3 text-sm">Quick Navigation</h2>
+          <div className="grid grid-cols-2 gap-2">
             {sections.map((section) => (
               <a
                 key={section.id}
                 href={`#${section.id}`}
-                className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                className="text-xs text-amber-500 hover:text-amber-400 hover:underline truncate"
               >
                 {section.title}
               </a>
