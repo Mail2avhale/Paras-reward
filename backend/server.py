@@ -419,6 +419,12 @@ async def health_check():
         # Still return 200 to allow pod to start - DB might be warming up
         return {"status": "starting", "database": "connecting", "message": str(e)[:100]}
 
+# Also expose health check under /api prefix for ingress routing
+@api_router.get("/health")
+async def api_health_check():
+    """Health check endpoint under /api prefix"""
+    return await health_check()
+
 @app.get("/")
 async def root():
     """Root endpoint"""
