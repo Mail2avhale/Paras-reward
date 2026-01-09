@@ -347,6 +347,68 @@ const Referrals = ({ user }) => {
         </AnimatePresence>
       </div>
 
+      {/* Live Referral Bonus Speed - NEW SECTION */}
+      {miningRate && (
+        <div className="px-5 mb-6">
+          <div className="bg-gradient-to-br from-emerald-900/30 to-emerald-800/10 border border-emerald-500/30 rounded-2xl p-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-white font-bold">Live Referral Bonus Speed</h3>
+                <p className="text-emerald-400 text-xs">Real-time bonus from active referrals</p>
+              </div>
+            </div>
+            
+            {/* Level-wise Breakdown */}
+            <div className="space-y-2">
+              {[1, 2, 3, 4, 5].map((level) => {
+                const levelKey = `level_${level}`;
+                const breakdown = referralBreakdown[levelKey] || { count: 0, bonus: 0, percentage: 0 };
+                const levelData = referralLevels.find(l => l.level === level);
+                const activeCount = breakdown.count || levelData?.active_count || 0;
+                const bonusRate = breakdown.bonus || 0;
+                
+                return (
+                  <div key={level} className="flex items-center justify-between bg-gray-900/50 rounded-xl p-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${levelBonuses[level].color} flex items-center justify-center`}>
+                        <span className="text-white font-bold text-sm">L{level}</span>
+                      </div>
+                      <div>
+                        <p className="text-white text-sm font-medium">Level {level}</p>
+                        <p className="text-gray-500 text-[10px]">
+                          {activeCount} active × {levelBonuses[level].percent}%
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-bold ${activeCount > 0 ? 'text-emerald-400' : 'text-gray-600'}`}>
+                        +{bonusRate.toFixed(2)} PRC/hr
+                      </p>
+                      <p className="text-[10px] text-gray-500">
+                        {activeCount > 0 ? '● Active' : '○ No active'}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* Total Bonus */}
+            <div className="mt-4 pt-4 border-t border-emerald-500/20">
+              <div className="flex items-center justify-between">
+                <span className="text-emerald-300 font-semibold">Total Referral Bonus:</span>
+                <span className="text-emerald-400 text-xl font-bold">
+                  +{(miningRate?.mining_rate_per_hour || 0).toFixed(2)} PRC/hr
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 5-Level Network - Collapsible */}
       <div className="px-5 mb-6">
         <button 
