@@ -412,36 +412,13 @@ const DashboardModern = ({ user, onLogout }) => {
                 </div>
               </div>
               
-              {/* Live Session Indicator + EMV Chip */}
-              <div className="flex items-center gap-3">
-                {/* Live Blinking Dot */}
-                <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-full">
-                  <div className="relative">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                    <div className="absolute inset-0 w-2 h-2 bg-emerald-400 rounded-full animate-ping"></div>
-                  </div>
-                  <span className="text-emerald-400 text-[9px] font-semibold tracking-wide">ACTIVE</span>
+              {/* Live Session Indicator */}
+              <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-full">
+                <div className="relative">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                  <div className="absolute inset-0 w-2 h-2 bg-emerald-400 rounded-full animate-ping"></div>
                 </div>
-                
-                {/* EMV Chip - More realistic */}
-                <div 
-                  className="w-11 h-8 rounded-md overflow-hidden"
-                  style={{
-                    background: 'linear-gradient(145deg, #d4af37 0%, #aa8c2c 40%, #f0d875 60%, #c9a227 100%)',
-                    boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.4), inset 0 -1px 2px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.3)'
-                  }}
-                >
-                  <div className="w-full h-full p-[3px]">
-                    <div className="w-full h-full grid grid-cols-3 gap-[1px]">
-                      <div className="col-span-2 row-span-2 bg-amber-700/30 rounded-sm"></div>
-                      <div className="bg-amber-800/40 rounded-sm"></div>
-                      <div className="bg-amber-800/40 rounded-sm"></div>
-                      <div className="bg-amber-800/40 rounded-sm"></div>
-                      <div className="bg-amber-800/40 rounded-sm"></div>
-                      <div className="bg-amber-800/40 rounded-sm"></div>
-                    </div>
-                  </div>
-                </div>
+                <span className="text-emerald-400 text-[9px] font-semibold tracking-wide">ACTIVE</span>
               </div>
             </div>
 
