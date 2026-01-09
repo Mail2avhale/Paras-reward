@@ -294,6 +294,7 @@ const AdvancedDocumentUpload = ({
               ref={videoRef} 
               autoPlay 
               playsInline
+              muted
               className="w-full h-full object-cover"
             />
             {/* Document frame guide */}
