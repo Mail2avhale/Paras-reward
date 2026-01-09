@@ -251,13 +251,65 @@ const DashboardModern = ({ user, onLogout }) => {
             background: 'linear-gradient(145deg, #1c1c1c 0%, #0d0d0d 30%, #1a1a1a 70%, #0a0a0a 100%)',
             boxShadow: `
               0 25px 50px -12px rgba(0, 0, 0, 0.8),
-              0 0 0 1px rgba(212, 175, 55, 0.15),
               inset 0 1px 0 rgba(255, 255, 255, 0.05)
             `,
             transformStyle: 'preserve-3d',
-            aspectRatio: '1.586'
+            aspectRatio: '1.586',
+            border: '1.5px solid rgba(212, 175, 55, 0.3)'
           }}
         >
+          {/* Animated gold border glow */}
+          <div 
+            className="absolute inset-0 rounded-2xl pointer-events-none"
+            style={{
+              background: 'transparent',
+              boxShadow: '0 0 20px rgba(212, 175, 55, 0.15), inset 0 0 20px rgba(212, 175, 55, 0.05)',
+              animation: 'borderPulse 3s ease-in-out infinite'
+            }}
+          />
+
+          {/* Background Graphics - Geometric Pattern */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {/* Large circle */}
+            <div 
+              className="absolute -right-16 -top-16 w-48 h-48 rounded-full opacity-10"
+              style={{
+                background: 'radial-gradient(circle, rgba(212, 175, 55, 0.4) 0%, transparent 70%)'
+              }}
+            />
+            {/* Small circles */}
+            <div 
+              className="absolute right-20 bottom-10 w-24 h-24 rounded-full opacity-10"
+              style={{
+                background: 'radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 70%)'
+              }}
+            />
+            <div 
+              className="absolute left-10 bottom-20 w-16 h-16 rounded-full opacity-5"
+              style={{
+                background: 'radial-gradient(circle, rgba(255, 255, 255, 0.5) 0%, transparent 70%)'
+              }}
+            />
+            {/* Diagonal lines */}
+            <svg className="absolute inset-0 w-full h-full opacity-[0.03]" preserveAspectRatio="none">
+              <defs>
+                <pattern id="diagonalLines" patternUnits="userSpaceOnUse" width="30" height="30" patternTransform="rotate(45)">
+                  <line x1="0" y1="0" x2="0" y2="30" stroke="#d4af37" strokeWidth="1"/>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#diagonalLines)" />
+            </svg>
+            {/* World map outline hint */}
+            <div 
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-32 h-20 opacity-[0.04]"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 50'%3E%3Cellipse cx='50' cy='25' rx='45' ry='20' fill='none' stroke='%23d4af37' stroke-width='0.5'/%3E%3Cellipse cx='50' cy='25' rx='30' ry='20' fill='none' stroke='%23d4af37' stroke-width='0.5'/%3E%3Cellipse cx='50' cy='25' rx='15' ry='20' fill='none' stroke='%23d4af37' stroke-width='0.5'/%3E%3Cline x1='5' y1='25' x2='95' y2='25' stroke='%23d4af37' stroke-width='0.5'/%3E%3Cline x1='50' y1='5' x2='50' y2='45' stroke='%23d4af37' stroke-width='0.5'/%3E%3C/svg%3E")`,
+                backgroundSize: 'contain',
+                backgroundRepeat: 'no-repeat'
+              }}
+            />
+          </div>
+
           {/* Realistic card texture */}
           <div 
             className="absolute inset-0 opacity-[0.03]"
@@ -277,7 +329,7 @@ const DashboardModern = ({ user, onLogout }) => {
 
           {/* Card Content */}
           <div className="relative z-10 p-5 h-full flex flex-col justify-between">
-            {/* Top Row - Logo & Toggle */}
+            {/* Top Row - Logo & Live Session Indicator */}
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2">
                 <div 
@@ -295,22 +347,34 @@ const DashboardModern = ({ user, onLogout }) => {
                 </div>
               </div>
               
-              {/* EMV Chip - More realistic */}
-              <div 
-                className="w-11 h-8 rounded-md overflow-hidden"
-                style={{
-                  background: 'linear-gradient(145deg, #d4af37 0%, #aa8c2c 40%, #f0d875 60%, #c9a227 100%)',
-                  boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.4), inset 0 -1px 2px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.3)'
-                }}
-              >
-                <div className="w-full h-full p-[3px]">
-                  <div className="w-full h-full grid grid-cols-3 gap-[1px]">
-                    <div className="col-span-2 row-span-2 bg-amber-700/30 rounded-sm"></div>
-                    <div className="bg-amber-800/40 rounded-sm"></div>
-                    <div className="bg-amber-800/40 rounded-sm"></div>
-                    <div className="bg-amber-800/40 rounded-sm"></div>
-                    <div className="bg-amber-800/40 rounded-sm"></div>
-                    <div className="bg-amber-800/40 rounded-sm"></div>
+              {/* Live Session Indicator + EMV Chip */}
+              <div className="flex items-center gap-3">
+                {/* Live Blinking Dot */}
+                <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-full">
+                  <div className="relative">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                    <div className="absolute inset-0 w-2 h-2 bg-emerald-400 rounded-full animate-ping"></div>
+                  </div>
+                  <span className="text-emerald-400 text-[9px] font-semibold tracking-wide">ACTIVE</span>
+                </div>
+                
+                {/* EMV Chip - More realistic */}
+                <div 
+                  className="w-11 h-8 rounded-md overflow-hidden"
+                  style={{
+                    background: 'linear-gradient(145deg, #d4af37 0%, #aa8c2c 40%, #f0d875 60%, #c9a227 100%)',
+                    boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.4), inset 0 -1px 2px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.3)'
+                  }}
+                >
+                  <div className="w-full h-full p-[3px]">
+                    <div className="w-full h-full grid grid-cols-3 gap-[1px]">
+                      <div className="col-span-2 row-span-2 bg-amber-700/30 rounded-sm"></div>
+                      <div className="bg-amber-800/40 rounded-sm"></div>
+                      <div className="bg-amber-800/40 rounded-sm"></div>
+                      <div className="bg-amber-800/40 rounded-sm"></div>
+                      <div className="bg-amber-800/40 rounded-sm"></div>
+                      <div className="bg-amber-800/40 rounded-sm"></div>
+                    </div>
                   </div>
                 </div>
               </div>
