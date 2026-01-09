@@ -378,7 +378,7 @@ const AdminSystemSettings = ({ user }) => {
               Multi-Level Referral Bonus Settings
             </h2>
             <p className="text-sm text-gray-500 mb-6">
-              प्रत्येक लेव्हलसाठी रेफरल बोनस टक्केवारी सेट करा. Active referral असल्यास हा बोनस mining rate मध्ये add होतो.
+              Set referral bonus percentage for each level. This bonus is added to the mining rate when the referral has an active session.
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
