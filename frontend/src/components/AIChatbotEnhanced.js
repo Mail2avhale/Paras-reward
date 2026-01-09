@@ -381,7 +381,7 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                           />
                         ))}
                       </div>
-                      <span className="text-sm text-gray-500">विचार करत आहे...</span>
+                      <span className="text-sm text-gray-500">Thinking...</span>
                     </div>
                   </div>
                 </div>
