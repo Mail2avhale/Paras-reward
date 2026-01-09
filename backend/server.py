@@ -5603,7 +5603,7 @@ Compare the extracted data with user-entered data and respond in this JSON forma
     "confidence": 0-100,
     "is_valid_document": true/false,
     "verification_status": "approved" or "manual_review" or "rejected",
-    "reason": "explanation in Marathi"
+    "reason": "explanation in English"
 }}
 
 If the image is not clear or not an Aadhaar card, set is_valid_document to false."""
@@ -5627,7 +5627,7 @@ Compare the extracted data with user-entered data and respond in this JSON forma
     "confidence": 0-100,
     "is_valid_document": true/false,
     "verification_status": "approved" or "manual_review" or "rejected",
-    "reason": "explanation in Marathi"
+    "reason": "explanation in English"
 }}
 
 If the image is not clear or not a PAN card, set is_valid_document to false."""
