@@ -26784,17 +26784,20 @@ async def initialize_database_indexes():
 @app.on_event("startup")
 async def startup_db():
     """Initialize database with default data and start scheduled tasks"""
+    global db_ready
     print("🚀 Starting database initialization...")
     
     # Verify MongoDB connection with retry logic for Atlas
-    max_retries = 3
-    retry_delay = 2
+    # Atlas connections can take longer, especially on cold starts
+    max_retries = 10  # More retries for Atlas
+    retry_delay = 5   # Longer delay between retries
     
     for attempt in range(max_retries):
         try:
             # Ping database to verify connection
             await client.admin.command('ping')
             print(f"✅ MongoDB connection successful (attempt {attempt + 1}/{max_retries})")
+            db_ready = True
             break
         except Exception as e:
             if attempt < max_retries - 1:
@@ -26802,35 +26805,38 @@ async def startup_db():
                 print(f"   Retrying in {retry_delay} seconds...")
                 await asyncio.sleep(retry_delay)
             else:
-                print(f"❌ MongoDB connection failed after {max_retries} attempts: {e}")
-                raise HTTPException(
-                    status_code=503,
-                    detail="Database connection failed. Please check MONGO_URL configuration."
-                )
+                # Don't raise exception - let the app start anyway
+                # The health endpoint will report DB status
+                print(f"⚠️ MongoDB initial connection pending after {max_retries} attempts")
+                print(f"   App will continue to retry in background")
+                # Start background task to keep trying
+                asyncio.create_task(retry_db_connection())
+                break
     
-    try:
-        # Create indexes with error handling
-        await initialize_database_indexes()
-        print("✅ Database indexes initialized")
-    except Exception as e:
-        print(f"⚠️ Error initializing indexes (non-critical): {e}")
-    
-    try:
-        # Initialize treasure hunts (creates if not exists)
-        await initialize_treasure_hunts()
-        print("✅ Treasure hunts initialized")
-    except Exception as e:
-        print(f"⚠️ Error initializing treasure hunts (non-critical): {e}")
-    
-    try:
-        # Check if video_ads collection exists, if not create sample
-        video_ads_count = await db.video_ads.count_documents({})
-        if video_ads_count == 0:
-            print("📹 No video ads found, database ready for admin to create videos")
-    except Exception as e:
-        print(f"⚠️ Error checking video ads (non-critical): {e}")
-    
-    print("✅ Database initialization complete!")
+    if db_ready:
+        try:
+            # Create indexes with error handling
+            await initialize_database_indexes()
+            print("✅ Database indexes initialized")
+        except Exception as e:
+            print(f"⚠️ Error initializing indexes (non-critical): {e}")
+        
+        try:
+            # Initialize treasure hunts (creates if not exists)
+            await initialize_treasure_hunts()
+            print("✅ Treasure hunts initialized")
+        except Exception as e:
+            print(f"⚠️ Error initializing treasure hunts (non-critical): {e}")
+        
+        try:
+            # Check if video_ads collection exists, if not create sample
+            video_ads_count = await db.video_ads.count_documents({})
+            if video_ads_count == 0:
+                print("📹 No video ads found, database ready for admin to create videos")
+        except Exception as e:
+            print(f"⚠️ Error checking video ads (non-critical): {e}")
+        
+        print("✅ Database initialization complete!")
     
     # Start scheduler for automated tasks
     print("⏰ Starting scheduled tasks...")
