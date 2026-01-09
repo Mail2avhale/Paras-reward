@@ -1789,15 +1789,8 @@ async def login(
     
     # Verify password - check both password_hash (new format) and password (legacy format)
     stored_password = user.get("password_hash") or user.get("password")
-    print(f"DEBUG LOGIN: User {identifier}, stored_password: {stored_password[:30] if stored_password else 'None'}..., password param: {password}")
     if stored_password:
-        try:
-            is_valid = verify_password(password, stored_password)
-            print(f"DEBUG LOGIN: Password verification result: {is_valid}")
-        except Exception as e:
-            print(f"DEBUG LOGIN: Password verification error: {e}")
-            is_valid = False
-        if not is_valid:
+        if not verify_password(password, stored_password):
             record_login_attempt(identifier, False)
             # Create security alert for failed password
             alert_severity = "medium" if attempts_left <= 2 else "low"
