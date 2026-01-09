@@ -312,12 +312,12 @@ const BillPayments = ({ user, onLogout }) => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="card_type">Card Type *</Label>
+                      <Label htmlFor="card_type" className="text-gray-300">Card Type *</Label>
                       <select
                         id="card_type"
                         value={formData.card_type}
                         onChange={(e) => setFormData({ ...formData, card_type: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-700 rounded-md bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                         required
                       >
                         <option value="">Select card type</option>
