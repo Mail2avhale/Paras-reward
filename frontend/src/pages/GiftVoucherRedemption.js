@@ -78,7 +78,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
 
     setLoading(true);
     try {
-      await axios.post(`${API}/api/gift-voucher/redeem`, {
+      await axios.post(`${API}/api/gift-voucher/request`, {
         user_id: user.uid,
         denomination: selectedDenomination
       });
