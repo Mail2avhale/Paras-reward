@@ -207,31 +207,16 @@ const BillPayments = ({ user, onLogout }) => {
             <p className="text-gray-500 text-sm">Pay bills using your PRC balance</p>
             </div>
           </div>
-          <Button
-            onClick={() => {
-              if (window.confirm('Are you sure you want to logout?')) {
-                onLogout();
-                navigate('/login');
-              }
-            }}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            <span className="hidden sm:inline">Logout</span>
-          </Button>
-        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Create Request Form */}
           <div className="lg:col-span-2">
-            <Card className="p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Create New Request</h2>
+            <div className="bg-gray-900/50 rounded-2xl p-5 border border-gray-800">
+              <h2 className="text-lg font-bold text-white mb-4">Create New Request</h2>
 
               {/* Service Type Selection */}
               <div className="mb-6">
-                <Label className="mb-3 block">Select Service Type</Label>
+                <label className="mb-3 block text-gray-400 text-sm">Select Service Type</label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {requestTypes.map((type) => {
                     const Icon = type.icon;
@@ -239,14 +224,14 @@ const BillPayments = ({ user, onLogout }) => {
                       <button
                         key={type.id}
                         onClick={() => setSelectedType(type.id)}
-                        className={`p-4 rounded-lg border-2 transition-all ${
+                        className={`p-4 rounded-xl border transition-all ${
                           selectedType === type.id
-                            ? `border-${type.color}-500 bg-${type.color}-50`
-                            : 'border-gray-200 hover:border-gray-300'
+                            ? 'border-amber-500 bg-amber-500/10'
+                            : 'border-gray-800 bg-gray-800/50 hover:border-gray-700'
                         }`}
                       >
-                        <Icon className={`h-6 w-6 mx-auto mb-2 text-${type.color}-600`} />
-                        <p className="text-xs font-medium text-gray-900">{type.label}</p>
+                        <Icon className={`h-6 w-6 mx-auto mb-2 ${selectedType === type.id ? 'text-amber-500' : 'text-gray-500'}`} />
+                        <p className={`text-xs font-medium ${selectedType === type.id ? 'text-amber-400' : 'text-gray-400'}`}>{type.label}</p>
                       </button>
                     );
                   })}
