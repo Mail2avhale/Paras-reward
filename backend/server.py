@@ -17790,41 +17790,54 @@ async def get_referral_earnings(user_id: str):
 
 @api_router.get("/referrals/{user_id}/levels")
 async def get_referral_levels(user_id: str):
-    """Get referral count by level (5 levels deep)"""
+    """Get referral count by level (5 levels deep) with user details"""
     
     level_counts = await count_active_referrals_by_level(user_id)
-    
-    # Also get active vs inactive counts
-    total_active = 0
-    total_inactive = 0
-    
     referrals_by_level = await get_multi_level_referrals(user_id, max_levels=5)
     
-    for level, users in referrals_by_level.items():
-        for user in users:
-            # Check if user has been active (mined or made transactions in last 30 days)
-            from datetime import datetime, timedelta, timezone
+    levels = []
+    for level_num in range(1, 6):
+        level_key = f"level_{level_num}"
+        users = referrals_by_level.get(level_num, [])
+        
+        # Get detailed user info and activity status
+        user_details = []
+        active_count = 0
+        
+        for u in users:
+            # Check if user has been active (last 30 days)
             thirty_days_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
             
             recent_activity = await db.transactions.count_documents({
-                "user_id": user.get("uid"),
+                "user_id": u.get("uid"),
                 "created_at": {"$gte": thirty_days_ago}
             })
             
-            if recent_activity > 0 or user.get("mining_active"):
-                total_active += 1
-            else:
-                total_inactive += 1
+            is_active = recent_activity > 0 or u.get("mining_active", False)
+            if is_active:
+                active_count += 1
+            
+            user_details.append({
+                "uid": u.get("uid"),
+                "name": u.get("name") or u.get("email", "").split("@")[0] or "User",
+                "email": u.get("email"),
+                "is_active": is_active,
+                "membership_type": u.get("membership_type", "free"),
+                "joined_at": u.get("created_at")
+            })
+        
+        levels.append({
+            "level": level_num,
+            "count": len(users),
+            "active_count": active_count,
+            "users": user_details,
+            "bonus_percent": {1: 10, 2: 5, 3: 3, 4: 2, 5: 1}.get(level_num, 0)
+        })
     
     return {
-        "level_1": level_counts.get("level_1", 0),
-        "level_2": level_counts.get("level_2", 0),
-        "level_3": level_counts.get("level_3", 0),
-        "level_4": level_counts.get("level_4", 0),
-        "level_5": level_counts.get("level_5", 0),
-        "active_count": total_active,
-        "inactive_count": total_inactive,
-        "total": sum(level_counts.values())
+        "levels": levels,
+        "total": sum(l["count"] for l in levels),
+        "total_active": sum(l["active_count"] for l in levels)
     }
 
 
