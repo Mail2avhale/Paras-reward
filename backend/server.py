@@ -407,23 +407,27 @@ async def retry_db_connection():
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for Kubernetes liveness/readiness probes"""
+    """Health check endpoint for Kubernetes liveness/readiness probes
+    MUST return 200 immediately - no DB operations here"""
     global db_ready
-    try:
-        # Try a simple DB operation if not yet confirmed ready
-        if not db_ready:
-            await db.command("ping")
-            db_ready = True
-        return {"status": "healthy", "database": "connected" if db_ready else "connecting"}
-    except Exception as e:
-        # Still return 200 to allow pod to start - DB might be warming up
-        return {"status": "starting", "database": "connecting", "message": str(e)[:100]}
+    # Return immediately without any DB operations
+    # This ensures health check passes even during DB warmup
+    return {
+        "status": "healthy",
+        "database": "connected" if db_ready else "connecting",
+        "service": "paras-reward-api"
+    }
 
 # Also expose health check under /api prefix for ingress routing
 @api_router.get("/health")
 async def api_health_check():
     """Health check endpoint under /api prefix"""
-    return await health_check()
+    global db_ready
+    return {
+        "status": "healthy",
+        "database": "connected" if db_ready else "connecting",
+        "service": "paras-reward-api"
+    }
 
 @app.get("/")
 async def root():
