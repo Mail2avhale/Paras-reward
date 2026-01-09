@@ -23312,12 +23312,33 @@ async def get_live_platform_stats():
         ]).to_list(1)
         total_prc = round(total_prc_result[0].get("total", 0), 2) if total_prc_result else 0
         
+        # Get total products count
+        total_products = await db.products.count_documents({"is_active": True})
+        if total_products == 0:
+            total_products = await db.products.count_documents({})
+        
+        # Get total PRC distributed (sum of all credits)
+        total_distributed_result = await db.transactions.aggregate([
+            {"$match": {"amount": {"$gt": 0}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        total_prc_distributed = round(total_distributed_result[0].get("total", 0), 2) if total_distributed_result else 0
+        
+        # Fallback from user totals
+        if total_prc_distributed == 0:
+            user_totals = await db.users.aggregate([
+                {"$group": {"_id": None, "total": {"$sum": "$total_mined"}}}
+            ]).to_list(1)
+            total_prc_distributed = round(user_totals[0].get("total", 0), 2) if user_totals else 0
+        
         return {
             "today_prc_earned": today_prc_earned,
             "today_prc_burned": today_prc_burned,
             "redeems_today": redeems_today,
             "active_users": active_users,
             "total_prc_in_system": total_prc,
+            "total_prc_distributed": total_prc_distributed,
+            "total_products": total_products,
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     except Exception as e:
