@@ -187,7 +187,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   const isVip = userData?.membership_type === 'vip';
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-8">
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
       {/* Header */}
       <div className="px-5 pt-6 pb-4">
         <div className="flex items-center gap-4">
