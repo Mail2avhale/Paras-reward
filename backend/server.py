@@ -1789,7 +1789,7 @@ async def login(
     
     # Verify password - check both password_hash (new format) and password (legacy format)
     stored_password = user.get("password_hash") or user.get("password")
-    print(f"DEBUG LOGIN: User {identifier}, stored_password exists: {bool(stored_password)}, password param: {password[:3]}***")
+    print(f"DEBUG LOGIN: User {identifier}, stored_password: {stored_password[:30] if stored_password else 'None'}..., password param: {password}")
     if stored_password:
         try:
             is_valid = verify_password(password, stored_password)
