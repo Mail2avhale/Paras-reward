@@ -336,11 +336,33 @@ const Referrals = ({ user }) => {
 
       {/* 5-Level Network - Collapsible */}
       <div className="px-5 mb-6">
-        <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5 text-amber-500" />
-          {t.yourNetwork}
-        </h2>
-        <div className="space-y-3">
+        <button 
+          onClick={() => setNetworkExpanded(!networkExpanded)}
+          className="w-full flex items-center justify-between mb-4"
+        >
+          <h2 className="text-white font-bold text-lg flex items-center gap-2">
+            <Users className="w-5 h-5 text-amber-500" />
+            {t.yourNetwork}
+          </h2>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500 text-xs">{networkExpanded ? 'Collapse' : 'Expand'}</span>
+            {networkExpanded ? (
+              <ChevronDown className="w-5 h-5 text-amber-500" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-gray-500" />
+            )}
+          </div>
+        </button>
+        
+        <AnimatePresence>
+          {networkExpanded && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-3 overflow-hidden"
+            >
           {[1, 2, 3, 4, 5].map((level) => {
             const levelData = referralLevels.find(l => l.level === level) || { 
               level, 
