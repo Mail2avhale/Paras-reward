@@ -179,8 +179,8 @@ const KYCVerification = ({ user }) => {
         </div>
       </div>
 
-      {/* Status Card for Verified/Pending */}
-      {(isVerified || isPending) && (
+      {/* Status Card for Verified/Pending Review */}
+      {(isVerified || isPendingReview) && (
         <div className="px-5 mb-6">
           <div className={`rounded-2xl p-5 ${isVerified ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-amber-500/10 border border-amber-500/30'}`}>
             <div className="flex items-center gap-4">
@@ -204,8 +204,8 @@ const KYCVerification = ({ user }) => {
         </div>
       )}
 
-      {/* KYC Form - Only show if not verified */}
-      {!isVerified && !isPending && (
+      {/* KYC Form - Show if not verified and not pending review */}
+      {!isVerified && !isPendingReview && (
         <>
           {/* Document Type Selection */}
           <div className="px-5 mb-6">
