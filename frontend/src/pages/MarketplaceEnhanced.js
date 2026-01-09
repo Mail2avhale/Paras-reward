@@ -243,7 +243,7 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
       
       if (freshUserData?.membership_type !== 'vip') {
         toast.error('VIP membership required to shop!');
-        navigate('/vip');
+        navigate('/dashboard');
         return;
       }
 
