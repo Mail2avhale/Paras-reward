@@ -268,96 +268,111 @@ const DashboardModern = ({ user, onLogout }) => {
             }}
           />
 
-          {/* Background Graphics - HIGHLY VISIBLE */}
+          {/* Artistic Line Art Background - Reward/Finance Theme */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {/* Large golden circle - top right */}
-            <div 
-              className="absolute -right-10 -top-10 w-48 h-48 rounded-full"
-              style={{
-                background: 'radial-gradient(circle, rgba(212, 175, 55, 0.5) 0%, rgba(212, 175, 55, 0.25) 40%, transparent 70%)',
-              }}
-            />
-            
-            {/* Medium circle - bottom right */}
-            <div 
-              className="absolute right-8 -bottom-8 w-36 h-36 rounded-full"
-              style={{
-                background: 'radial-gradient(circle, rgba(255, 215, 0, 0.4) 0%, rgba(255, 215, 0, 0.2) 50%, transparent 70%)',
-              }}
-            />
-            
-            {/* Small accent circle - left */}
-            <div 
-              className="absolute -left-6 top-1/2 -translate-y-1/2 w-24 h-24 rounded-full"
-              style={{
-                background: 'radial-gradient(circle, rgba(212, 175, 55, 0.35) 0%, transparent 60%)',
-              }}
-            />
-            
-            {/* Additional circle - center-left area */}
-            <div 
-              className="absolute left-1/4 top-1/4 w-28 h-28 rounded-full"
-              style={{
-                background: 'radial-gradient(circle, rgba(255, 215, 0, 0.25) 0%, transparent 60%)',
-              }}
-            />
-
-            {/* Horizontal gold line - thicker and more visible */}
-            <div 
-              className="absolute left-0 right-0 top-[45%] h-[2px]"
-              style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(212, 175, 55, 0.4) 20%, rgba(212, 175, 55, 0.6) 50%, rgba(212, 175, 55, 0.4) 80%, transparent 100%)'
-              }}
-            />
-            
-            {/* Diagonal gold line 1 - more prominent */}
-            <div 
-              className="absolute w-full h-[2px] top-1/3 -rotate-12 origin-left"
-              style={{
-                background: 'linear-gradient(90deg, rgba(212, 175, 55, 0.45) 0%, rgba(212, 175, 55, 0.2) 50%, transparent 100%)'
-              }}
-            />
-            
-            {/* Diagonal gold line 2 - more prominent */}
-            <div 
-              className="absolute w-full h-[2px] bottom-1/4 rotate-6 origin-right"
-              style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(212, 175, 55, 0.2) 50%, rgba(212, 175, 55, 0.4) 100%)'
-              }}
-            />
-            
-            {/* Additional diagonal line 3 */}
-            <div 
-              className="absolute w-full h-[1.5px] top-2/3 -rotate-3 origin-center"
-              style={{
-                background: 'linear-gradient(90deg, rgba(255, 215, 0, 0.3) 0%, rgba(212, 175, 55, 0.15) 50%, rgba(255, 215, 0, 0.25) 100%)'
-              }}
-            />
-
-            {/* Corner accent - top left - more visible */}
-            <div 
-              className="absolute top-0 left-0 w-32 h-32"
-              style={{
-                background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, transparent 50%)'
-              }}
-            />
-            
-            {/* Corner accent - bottom right - more visible */}
-            <div 
-              className="absolute bottom-0 right-0 w-40 h-40"
-              style={{
-                background: 'linear-gradient(315deg, rgba(212, 175, 55, 0.25) 0%, transparent 50%)'
-              }}
-            />
-
-            {/* Grid pattern overlay - more visible */}
-            <svg className="absolute inset-0 w-full h-full opacity-[0.15]" preserveAspectRatio="none">
+            {/* SVG Illustration Pattern */}
+            <svg 
+              className="absolute inset-0 w-full h-full" 
+              viewBox="0 0 400 252" 
+              preserveAspectRatio="xMidYMid slice"
+              style={{ opacity: 0.35 }}
+            >
               <defs>
-                <pattern id="cardGrid" patternUnits="userSpaceOnUse" width="40" height="40">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#d4af37" strokeWidth="0.8"/>
-                </pattern>
+                <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#ffd700" />
+                  <stop offset="50%" stopColor="#d4af37" />
+                  <stop offset="100%" stopColor="#b8860b" />
+                </linearGradient>
               </defs>
-              <rect width="100%" height="100%" fill="url(#cardGrid)" />
+              <g fill="none" stroke="url(#goldGradient)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                {/* Large Coin - top left */}
+                <circle cx="60" cy="50" r="35" />
+                <circle cx="60" cy="50" r="28" />
+                <text x="60" y="58" textAnchor="middle" fill="#d4af37" fontSize="24" fontWeight="bold" stroke="none">₹</text>
+                
+                {/* Stack of Coins - bottom left */}
+                <ellipse cx="45" cy="200" rx="30" ry="8" />
+                <ellipse cx="45" cy="192" rx="30" ry="8" />
+                <ellipse cx="45" cy="184" rx="30" ry="8" />
+                <path d="M15 184 L15 200" />
+                <path d="M75 184 L75 200" />
+                
+                {/* Gift Box - center */}
+                <rect x="160" y="100" width="50" height="45" rx="3" />
+                <path d="M160 115 L210 115" />
+                <path d="M185 100 L185 145" />
+                <path d="M170 100 Q185 85 200 100" />
+                <path d="M175 100 Q185 90 195 100" />
+                
+                {/* Trophy - right side */}
+                <path d="M320 60 L320 40 Q320 25 335 25 L345 25 Q360 25 360 40 L360 60" />
+                <path d="M325 60 L355 60 L350 80 L330 80 Z" />
+                <rect x="332" y="80" width="16" height="8" />
+                <rect x="328" y="88" width="24" height="5" />
+                <path d="M320 45 Q305 45 305 55 Q305 65 320 60" />
+                <path d="M360 45 Q375 45 375 55 Q375 65 360 60" />
+                
+                {/* Star - top right */}
+                <path d="M370 130 L375 145 L390 145 L378 155 L383 170 L370 160 L357 170 L362 155 L350 145 L365 145 Z" />
+                
+                {/* Small Stars scattered */}
+                <path d="M120 30 L123 38 L131 38 L125 43 L127 51 L120 46 L113 51 L115 43 L109 38 L117 38 Z" />
+                <path d="M280 180 L282 186 L288 186 L283 190 L285 196 L280 192 L275 196 L277 190 L272 186 L278 186 Z" />
+                
+                {/* Wallet - bottom center */}
+                <rect x="230" y="190" width="55" height="40" rx="5" />
+                <path d="M230 205 L285 205" />
+                <circle cx="270" cy="215" r="8" />
+                <circle cx="270" cy="215" r="4" />
+                
+                {/* Rising Arrow/Chart - top center */}
+                <path d="M180 50 L200 35 L220 45 L240 20" />
+                <path d="M230 20 L240 20 L240 30" />
+                
+                {/* Decorative curves and waves */}
+                <path d="M0 130 Q50 110 100 130 Q150 150 200 130" strokeWidth="0.8" />
+                <path d="M200 180 Q250 160 300 180 Q350 200 400 180" strokeWidth="0.8" />
+                
+                {/* Diamond shapes */}
+                <path d="M100 160 L115 175 L100 190 L85 175 Z" />
+                <path d="M310 100 L320 112 L310 124 L300 112 Z" />
+                
+                {/* Floating Circles/Bubbles */}
+                <circle cx="140" cy="70" r="6" />
+                <circle cx="155" cy="85" r="4" />
+                <circle cx="250" cy="70" r="5" />
+                <circle cx="90" cy="120" r="4" />
+                <circle cx="350" cy="200" r="6" />
+                
+                {/* Percentage symbol */}
+                <circle cx="30" cy="130" r="8" />
+                <circle cx="55" cy="155" r="8" />
+                <path d="M25 160 L60 125" strokeWidth="2" />
+                
+                {/* Credit Card icon - small */}
+                <rect x="320" y="220" width="40" height="25" rx="3" />
+                <path d="M320 230 L360 230" />
+                <rect x="325" y="235" width="15" height="5" rx="1" />
+                
+                {/* Arrows pointing up */}
+                <path d="M390 230 L390 200 M383 210 L390 200 L397 210" />
+                
+                {/* Plant/Growth symbol */}
+                <path d="M10 250 L10 200 Q10 180 25 185 Q10 175 10 160" />
+                <path d="M10 190 Q25 185 20 175" />
+                <path d="M10 210 Q-5 205 0 195" />
+              </g>
+            </svg>
+            
+            {/* Subtle glow overlays */}
+            <div 
+              className="absolute -right-10 -top-10 w-40 h-40 rounded-full"
+              style={{ background: 'radial-gradient(circle, rgba(212, 175, 55, 0.2) 0%, transparent 70%)' }}
+            />
+            <div 
+              className="absolute -left-10 -bottom-10 w-32 h-32 rounded-full"
+              style={{ background: 'radial-gradient(circle, rgba(255, 215, 0, 0.15) 0%, transparent 70%)' }}
+            />
             </svg>
           </div>
 
