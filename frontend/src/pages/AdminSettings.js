@@ -487,15 +487,49 @@ const AdminSettings = ({ user }) => {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">QR Code URL</label>
-                <input
-                  type="url"
-                  placeholder="https://example.com/qr-code.png"
-                  value={paymentConfig.qr_code_url}
-                  onChange={(e) => handlePaymentConfigChange('qr_code_url', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                <label className="text-sm font-medium text-gray-700 mb-2 block">QR Code Image</label>
+                <input 
+                  ref={qrInputRef}
+                  type="file" 
+                  accept="image/*"
+                  onChange={handleQRUpload}
+                  className="hidden"
                 />
-                <p className="text-xs text-gray-500 mt-1">Upload QR code image and paste URL here</p>
+                <div className="flex items-start gap-4">
+                  <button
+                    onClick={() => qrInputRef.current?.click()}
+                    disabled={uploadingQR}
+                    className="flex items-center gap-2 px-4 py-3 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg transition-colors"
+                  >
+                    {uploadingQR ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5" />
+                        Upload QR Code
+                      </>
+                    )}
+                  </button>
+                  {paymentConfig.qr_code_url && (
+                    <div className="relative">
+                      <img 
+                        src={paymentConfig.qr_code_url} 
+                        alt="QR Code Preview" 
+                        className="w-24 h-24 object-contain border rounded-lg bg-white"
+                      />
+                      <button
+                        onClick={() => handlePaymentConfigChange('qr_code_url', '')}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">Max 2MB • JPG, PNG supported</p>
               </div>
             </div>
 
