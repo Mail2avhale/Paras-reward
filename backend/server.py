@@ -3249,9 +3249,9 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
         "user_id": uid,
         "type": "credit",
         "wallet_type": "prc",
-        "amount": taps_to_add,
+        "amount": prc_earned,
         "description": f"Tap game rewards ({taps_to_add} taps)",
-        "balance_after": user.get("prc_balance", 0) + taps_to_add,
+        "balance_after": user.get("prc_balance", 0) + prc_earned,
         "created_at": now.isoformat()
     })
     
@@ -3260,13 +3260,19 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
         "transaction_id": str(uuid.uuid4()),
         "user_id": uid,
         "type": "tap_game",
-        "amount": taps_to_add,
+        "amount": prc_earned,
         "description": f"Tap game rewards ({taps_to_add} taps)",
         "timestamp": now.isoformat(),
         "status": "completed"
     })
     
-    return {"taps_added": taps_to_add, "remaining_taps": remaining_taps - taps_to_add, "prc_earned": taps_to_add}
+    return {
+        "taps_added": taps_to_add, 
+        "remaining_taps": remaining_taps - taps_to_add, 
+        "prc_earned": prc_earned,
+        "prc_per_tap": prc_per_tap,
+        "is_vip": membership_type == "vip"
+    }
 
 # ========== REFERRAL ROUTES ==========
 @api_router.get("/referral/code/{uid}")
