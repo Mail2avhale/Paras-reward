@@ -251,6 +251,7 @@ const BillPayments = ({ user, onLogout }) => {
                     min="1"
                     step="0.01"
                     required
+                    className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
                   />
                   {formData.amount_inr && (
                     <p className="text-xs text-gray-600 mt-1">
