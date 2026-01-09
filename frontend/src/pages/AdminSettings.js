@@ -161,6 +161,49 @@ const AdminSettings = ({ user }) => {
     }
   };
 
+  const handleQRUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Check file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image size must be less than 2MB');
+      return;
+    }
+
+    setUploadingQR(true);
+    try {
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64 = event.target.result;
+        setPaymentConfig(prev => ({ ...prev, qr_code_url: base64 }));
+        toast.success('QR Code uploaded! Click Save to apply.');
+        setUploadingQR(false);
+      };
+      reader.onerror = () => {
+        toast.error('Failed to read image');
+        setUploadingQR(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload QR code');
+      setUploadingQR(false);
+    }
+    
+    // Reset input
+    if (qrInputRef.current) {
+      qrInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
       <div className="container mx-auto px-4 py-8">
