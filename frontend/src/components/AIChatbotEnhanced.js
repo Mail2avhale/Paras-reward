@@ -20,8 +20,8 @@ const getAISuggestions = (userStats, userName) => {
   if (userStats?.prcBalance > 1000) {
     suggestions.push({
       icon: '🛒',
-      text: 'You have enough PRC to redeem gifts!',
-      action: 'Marketplace बघा',
+      text: 'You have enough PRC to redeem rewards!',
+      action: 'View Marketplace',
       type: 'reward'
     });
   }
@@ -29,8 +29,8 @@ const getAISuggestions = (userStats, userName) => {
   if (userStats?.membershipType !== 'vip') {
     suggestions.push({
       icon: '👑',
-      text: 'VIP membership ने 2x mining speed मिळेल',
-      action: 'VIP बघा',
+      text: 'VIP membership offers enhanced features',
+      action: 'Learn More',
       type: 'upgrade'
     });
   }
@@ -38,16 +38,16 @@ const getAISuggestions = (userStats, userName) => {
   if (userStats?.referralCount < 5) {
     suggestions.push({
       icon: '👥',
-      text: 'Refer friends & earn 100 PRC each!',
-      action: 'Share करा',
+      text: 'Invite friends to earn referral rewards',
+      action: 'Share Now',
       type: 'referral'
     });
   }
   
   suggestions.push({
-    icon: '⛏️',
-    text: 'Daily mining ने consistent income मिळतो',
-    action: 'Mining सुरू करा',
+    icon: '🎯',
+    text: 'Check your daily tasks and rewards',
+    action: 'View Tasks',
     type: 'mining'
   });
   
