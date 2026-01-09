@@ -5501,7 +5501,36 @@ PRC is the reward currency of Paras Reward Platform. Users earn PRC through vari
    - Level 5: 1% bonus
    - Total potential: Up to 21% extra earnings!
 4. **Tap Game**: Play the tap game in the "Play" section to earn bonus PRC
-5. **Complete KYC**: Verified users get access to more features and better rewards
+5. **PRC Rain Drop**: Special surprise rain event with collectible drops!
+6. **Complete KYC**: Verified users get access to more features and better rewards
+
+**🌧️ PRC RAIN DROP FEATURE:**
+PRC Rain Drop is an exciting surprise feature on Paras Reward Platform!
+
+How it works:
+- Randomly, colorful PRC drops will start falling on your screen like rain
+- Each drop is a teardrop-shaped collectible with beautiful water effects
+- TAP on the falling drops quickly to collect them!
+- When you tap a drop, you get instant feedback:
+  - 🎉 GREEN = WIN! You gained PRC (shows +X.X PRC)
+  - 💔 RED = LOSS! You lost some PRC (shows -X.X PRC)
+- The rain lasts for a limited time (usually 30 seconds)
+- You can tap multiple drops during one rain event
+- Rain events happen multiple times per day (surprise timing!)
+
+Tips for PRC Rain:
+- Stay alert! Rain can start anytime when you're using the app
+- Tap quickly on as many drops as you can
+- Not all drops are winners - some may reduce your PRC
+- It's a fun game of chance with potential rewards
+- Keep the app open to catch more rain events
+
+Rain Settings (controlled by admin):
+- Maximum rain events per day
+- Gap between rain events
+- Duration of each rain
+- Number of taps allowed per rain
+- Mix of positive and negative drops
 
 **HOW TO CLAIM REWARDS:**
 1. Go to Dashboard → Your PRC balance is shown on the card
@@ -5532,6 +5561,7 @@ PRC is the reward currency of Paras Reward Platform. Users earn PRC through vari
 4. **Gift Vouchers**: Get vouchers for popular platforms
 5. **Passive Income through Referrals**: Build a network and earn from 5 levels
 6. **Financial Discipline**: Track your rewards and spending
+7. **Fun & Entertainment**: Enjoy games like Tap Game and PRC Rain Drop
 
 **LIFE IMPACT:**
 1. **Reduced Monthly Expenses**: Use PRC for bills and recharges
@@ -5540,6 +5570,7 @@ PRC is the reward currency of Paras Reward Platform. Users earn PRC through vari
 4. **Skill Development**: Learn about reward systems and digital platforms
 5. **Family Benefits**: Help family members save on bills and shopping
 6. **Financial Awareness**: Better understanding of rewards and budgeting
+7. **Entertainment Value**: Fun games make earning enjoyable
 
 **GETTING STARTED STEPS:**
 1. Register on Paras Reward Platform
@@ -5548,7 +5579,8 @@ PRC is the reward currency of Paras Reward Platform. Users earn PRC through vari
 4. Complete KYC verification
 5. Invite friends using your referral code
 6. Check daily for bonuses and rewards
-7. Upgrade to VIP for maximum benefits
+7. Watch for PRC Rain events!
+8. Upgrade to VIP for maximum benefits
 
 === END PLATFORM INFORMATION ===
 
@@ -5558,7 +5590,8 @@ Guidelines:
 - Never make guarantees about specific earnings amounts
 - If unsure, say "Please contact our support team" (in user's language)
 - Encourage users to explore features but don't pressure them
-- Remind that rewards are for platform engagement, not guaranteed income"""
+- Remind that rewards are for platform engagement, not guaranteed income
+- Make PRC Rain sound fun and exciting when explaining it"""
 
 # Store chat sessions in memory (for demo - production should use DB)
 chat_sessions = {}
