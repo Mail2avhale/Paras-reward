@@ -1570,6 +1570,47 @@ async def update_mined_coins(uid: str):
         return mined_amount
     return 0
 
+# ========== BIRTHDAY CHECK ==========
+@api_router.get("/user/{uid}/birthday-check")
+async def check_user_birthday(uid: str):
+    """
+    Check if today is the user's birthday
+    Returns greeting message if it's their birthday
+    """
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "name": 1, "birthday": 1})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    birthday = user.get("birthday")
+    if not birthday:
+        return {"is_birthday": False, "message": None}
+    
+    try:
+        # Parse birthday - could be ISO date or just MM-DD
+        if len(birthday) == 10:  # YYYY-MM-DD format
+            birth_date = datetime.fromisoformat(birthday)
+            birth_month = birth_date.month
+            birth_day = birth_date.day
+        else:
+            return {"is_birthday": False, "message": None}
+        
+        today = datetime.now(timezone.utc)
+        
+        if today.month == birth_month and today.day == birth_day:
+            user_name = user.get("name", "User")
+            return {
+                "is_birthday": True,
+                "message": f"🎂 Happy Birthday, {user_name}! 🎉",
+                "greeting": f"Wishing you a wonderful birthday filled with joy and happiness!",
+                "bonus_message": "Enjoy your special day with PARAS REWARD!"
+            }
+        
+        return {"is_birthday": False, "message": None}
+        
+    except Exception as e:
+        logging.error(f"Birthday check error: {e}")
+        return {"is_birthday": False, "message": None}
+
 # ========== AUTH ROUTES ==========
 @api_router.post("/auth/register/simple")
 async def simple_register(request: Request):
