@@ -307,7 +307,7 @@ const Referrals = ({ user }) => {
                 <div className="flex items-start gap-2 bg-amber-500/10 p-3 rounded-xl border border-amber-500/20">
                   <Info className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
                   <p className="text-amber-300 text-xs">
-                    बोनस फक्त <span className="font-bold">सक्रिय (Active)</span> रेफरलवर मिळतो. निष्क्रिय रेफरलवर बोनस नाही.
+                    Bonus is given only for <span className="font-bold">Active</span> referrals who have a running session. No bonus for inactive referrals.
                   </p>
                 </div>
                 
@@ -325,7 +325,7 @@ const Referrals = ({ user }) => {
                 
                 <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20 text-center">
                   <p className="text-emerald-400 text-sm font-semibold">
-                    Maximum Bonus: +21% (सर्व लेव्हल मिळून)
+                    Maximum Bonus: +21% (All levels combined)
                   </p>
                 </div>
               </div>
