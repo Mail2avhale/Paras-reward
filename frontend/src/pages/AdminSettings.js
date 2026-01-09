@@ -419,6 +419,135 @@ const AdminSettings = ({ user }) => {
             </ul>
           </div>
         </Card>
+
+        {/* VIP Payment Settings */}
+        <Card className="p-8 shadow-xl mt-8">
+          <h2 className="text-2xl font-bold mb-6 text-gray-800">💳 VIP Payment Settings</h2>
+          <p className="text-gray-600 mb-8">Configure payment details for VIP membership purchases. Users will see these details when purchasing VIP.</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* UPI Settings */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">UPI Payment</h3>
+              
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">UPI ID</label>
+                <input
+                  type="text"
+                  placeholder="yourname@upi"
+                  value={paymentConfig.upi_id}
+                  onChange={(e) => handlePaymentConfigChange('upi_id', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">QR Code URL</label>
+                <input
+                  type="url"
+                  placeholder="https://example.com/qr-code.png"
+                  value={paymentConfig.qr_code_url}
+                  onChange={(e) => handlePaymentConfigChange('qr_code_url', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">Upload QR code image and paste URL here</p>
+              </div>
+            </div>
+
+            {/* Bank Transfer Settings */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">Bank Transfer</h3>
+              
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Account Holder Name</label>
+                <input
+                  type="text"
+                  placeholder="PARAS REWARD PVT LTD"
+                  value={paymentConfig.account_holder}
+                  onChange={(e) => handlePaymentConfigChange('account_holder', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Bank Name</label>
+                <input
+                  type="text"
+                  placeholder="State Bank of India"
+                  value={paymentConfig.bank_name}
+                  onChange={(e) => handlePaymentConfigChange('bank_name', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Account Number</label>
+                <input
+                  type="text"
+                  placeholder="1234567890"
+                  value={paymentConfig.account_number}
+                  onChange={(e) => handlePaymentConfigChange('account_number', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">IFSC Code</label>
+                <input
+                  type="text"
+                  placeholder="SBIN0001234"
+                  value={paymentConfig.ifsc_code}
+                  onChange={(e) => handlePaymentConfigChange('ifsc_code', e.target.value.toUpperCase())}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Instructions */}
+          <div className="mt-6">
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Payment Instructions</label>
+            <textarea
+              rows={3}
+              placeholder="Enter instructions for users making VIP payment..."
+              value={paymentConfig.instructions}
+              onChange={(e) => handlePaymentConfigChange('instructions', e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+            />
+          </div>
+
+          {/* Save Button */}
+          <div className="mt-6 pt-6 border-t">
+            <Button
+              onClick={handleSavePaymentConfig}
+              disabled={savingPayment}
+              className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 font-semibold"
+            >
+              {savingPayment ? (
+                'Saving...'
+              ) : (
+                <>
+                  <Save className="h-5 w-5 mr-2" />
+                  Save Payment Settings
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Preview Box */}
+          {(paymentConfig.upi_id || paymentConfig.account_number) && (
+            <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-green-900 mb-2">✅ Preview - Users will see:</h3>
+              <div className="text-sm text-green-800 space-y-1">
+                {paymentConfig.upi_id && <p>• UPI: {paymentConfig.upi_id}</p>}
+                {paymentConfig.account_holder && <p>• Account Name: {paymentConfig.account_holder}</p>}
+                {paymentConfig.bank_name && <p>• Bank: {paymentConfig.bank_name}</p>}
+                {paymentConfig.account_number && <p>• Account: {paymentConfig.account_number}</p>}
+                {paymentConfig.ifsc_code && <p>• IFSC: {paymentConfig.ifsc_code}</p>}
+              </div>
+            </div>
+          )}
+        </Card>
       </div>
     </div>
   );
