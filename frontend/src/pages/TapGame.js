@@ -235,23 +235,30 @@ const TapGame = ({ user }) => {
 
           {/* Main Tap Button */}
           <motion.button
-            onClick={handleTap}
+            onPointerDown={handleTap}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              handleTap();
+            }}
             disabled={remainingTaps <= 0}
             whileTap={{ scale: 0.85 }}
             animate={animating ? { scale: 1.15 } : { scale: 1 }}
             transition={{ type: "spring", stiffness: 400, damping: 17 }}
-            className={`w-44 h-44 rounded-full flex items-center justify-center shadow-2xl ${
+            className={`w-44 h-44 rounded-full flex items-center justify-center shadow-2xl select-none touch-none ${
               remainingTaps > 0 
-                ? 'bg-gradient-to-br from-pink-500 via-rose-500 to-red-600'
+                ? 'bg-gradient-to-br from-pink-500 via-rose-500 to-red-600 active:scale-95'
                 : 'bg-gray-700'
             }`}
             style={{
               boxShadow: remainingTaps > 0 
                 ? '0 0 60px rgba(236, 72, 153, 0.5), 0 20px 40px rgba(0,0,0,0.3)'
-                : 'none'
+                : 'none',
+              WebkitTapHighlightColor: 'transparent',
+              touchAction: 'manipulation'
             }}
+            data-testid="tap-button"
           >
-            <Hand className={`w-20 h-20 ${remainingTaps > 0 ? 'text-white' : 'text-gray-500'}`} />
+            <Hand className={`w-20 h-20 ${remainingTaps > 0 ? 'text-white' : 'text-gray-500'} pointer-events-none`} />
           </motion.button>
 
           {/* Glow Ring */}
