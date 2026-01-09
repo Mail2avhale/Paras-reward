@@ -41,6 +41,7 @@ const DashboardModern = ({ user, onLogout }) => {
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
+  const [activityTab, setActivityTab] = useState('yours');
   const [miningHistory, setMiningHistory] = useState([]);
   const [birthdayGreeting, setBirthdayGreeting] = useState(null);
 
