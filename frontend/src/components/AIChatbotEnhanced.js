@@ -215,7 +215,7 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
         >
           <span className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-yellow-400" />
-            मदत हवी? Ask me! 🤖
+            Need help? Ask me! 🤖
           </span>
           <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-gray-900 rotate-45" />
         </motion.div>
