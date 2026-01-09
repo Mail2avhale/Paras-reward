@@ -731,7 +731,7 @@ async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
 async def count_active_referrals_by_level(user_id: str):
     """
     Count active referrals at each level (up to 5 levels)
-    Active = logged in within last 24 hours
+    Active = has an active mining session (mining_active = True and session not expired)
     Returns: {
         'level_1': count,
         'level_2': count,
@@ -749,37 +749,42 @@ async def count_active_referrals_by_level(user_id: str):
         'level_5': 0
     }
     
-    # Time threshold for active users (24 hours ago)
+    # Current time for session check
     now = datetime.now(timezone.utc)
-    active_threshold = now - timedelta(hours=24)
     
     print(f"🔍 Checking active referrals for user {user_id}")
     
     for level, users in referrals_by_level.items():
         print(f"  Level {level}: {len(users)} total referrals")
         for user in users:
-            last_login = user.get("last_login")
-            if last_login:
+            # Check if user has active mining session
+            mining_active = user.get("mining_active", False)
+            session_end = user.get("mining_session_end")
+            
+            is_session_active = False
+            
+            if mining_active and session_end:
                 try:
-                    if isinstance(last_login, str):
-                        last_login = datetime.fromisoformat(last_login.replace('Z', '+00:00'))
-                    elif isinstance(last_login, datetime):
-                        pass  # Already a datetime object
+                    if isinstance(session_end, str):
+                        session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+                    elif isinstance(session_end, datetime):
+                        session_end_dt = session_end
                     else:
-                        continue
+                        session_end_dt = None
                     
-                    if last_login >= active_threshold:
-                        active_counts[level] += 1
-                        print(f"    ✅ Active referral: {user.get('email')} (last login: {last_login})")
-                    else:
-                        print(f"    ⏰ Inactive referral: {user.get('email')} (last login: {last_login})")
+                    # Session is active if mining_active=True AND session hasn't expired
+                    if session_end_dt and session_end_dt > now:
+                        is_session_active = True
                 except Exception as e:
-                    print(f"    ❌ Error processing referral: {e}")
-                    pass
+                    print(f"    ❌ Error processing session end: {e}")
+            
+            if is_session_active:
+                active_counts[level] += 1
+                print(f"    ✅ Active referral (session running): {user.get('email')} (session ends: {session_end})")
             else:
-                print(f"    ⚠️ No last_login for referral: {user.get('email')}")
+                print(f"    ⏰ Inactive referral (no session): {user.get('email')} (mining_active: {mining_active}, session_end: {session_end})")
     
-    print(f"✅ Active referrals count: {active_counts}")
+    print(f"✅ Active referrals count (session-based): {active_counts}")
     return active_counts
 async def calculate_profile_completion(user: Dict) -> float:
     """Calculate profile completion percentage"""
