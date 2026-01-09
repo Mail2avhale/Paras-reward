@@ -5529,7 +5529,7 @@ Current User Context:
 - Membership: {user.get('membership_type', 'free').upper()}
 - PRC Balance: {user.get('prc_balance', 0):.2f}
 - KYC Status: {user.get('kyc_status', 'pending')}
-- Mining Active: {'हो' if user.get('mining_active') else 'नाही'}
+- Session Active: {'Yes' if user.get('mining_active') else 'No'}
 """
         chat = LlmChat(
             api_key=EMERGENT_LLM_KEY,
