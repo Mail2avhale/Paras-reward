@@ -389,25 +389,96 @@ const VIPMembership = ({ user }) => {
               <p className="text-gray-500 text-sm">{selectedPlan?.plan_type} Plan - {selectedPlan?.duration_days} days</p>
             </div>
 
-            {/* QR Code */}
-            {paymentConfig?.qr_code_url && (
-              <div className="bg-white p-4 rounded-xl text-center mb-4">
-                <img 
-                  src={paymentConfig.qr_code_url} 
-                  alt="Payment QR"
-                  className="w-48 h-48 mx-auto"
-                />
-                <p className="text-gray-900 text-sm mt-2 font-mono bg-gray-100 py-2 px-3 rounded-lg">
-                  {paymentConfig.upi_id}
-                </p>
+            {/* Check if payment details are configured */}
+            {(!paymentConfig?.upi_id && !paymentConfig?.bank_name) ? (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-4 text-center">
+                <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-2" />
+                <p className="text-red-400 font-semibold mb-1">Payment Details Not Available</p>
+                <p className="text-gray-400 text-sm">Please contact admin to get payment details.</p>
               </div>
+            ) : (
+              <>
+                {/* UPI Payment Section */}
+                {paymentConfig?.upi_id && (
+                  <div className="mb-4">
+                    <h4 className="text-emerald-400 font-semibold mb-3 flex items-center gap-2">
+                      <Zap className="w-4 h-4" /> UPI Payment
+                    </h4>
+                    
+                    {paymentConfig?.qr_code_url && (
+                      <div className="bg-white p-4 rounded-xl text-center mb-3">
+                        <img 
+                          src={paymentConfig.qr_code_url} 
+                          alt="Payment QR"
+                          className="w-40 h-40 mx-auto"
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="bg-gray-800/50 rounded-xl p-3">
+                      <p className="text-gray-500 text-xs mb-1">UPI ID</p>
+                      <p className="text-white font-mono text-lg">{paymentConfig.upi_id}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Bank Transfer Section */}
+                {paymentConfig?.bank_name && (
+                  <div className="mb-4">
+                    <h4 className="text-blue-400 font-semibold mb-3 flex items-center gap-2">
+                      <CreditCard className="w-4 h-4" /> Bank Transfer
+                    </h4>
+                    <div className="bg-gray-800/50 rounded-xl p-4 space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 text-sm">Bank Name</span>
+                        <span className="text-white font-medium">{paymentConfig.bank_name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 text-sm">Account Holder</span>
+                        <span className="text-white font-medium">{paymentConfig.account_holder}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 text-sm">Account Number</span>
+                        <span className="text-white font-mono">{paymentConfig.account_number}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 text-sm">IFSC Code</span>
+                        <span className="text-white font-mono">{paymentConfig.ifsc_code}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Payment Instructions */}
-            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
-              <h4 className="text-blue-400 font-semibold mb-2">Payment Instructions</h4>
-              <ol className="text-gray-400 text-sm space-y-2">
-                <li className="flex items-start gap-2">
+            {paymentConfig?.instructions && (
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+                <h4 className="text-blue-400 font-semibold mb-2">Instructions</h4>
+                <p className="text-gray-400 text-sm">{paymentConfig.instructions}</p>
+              </div>
+            )}
+            
+            {/* Default Instructions */}
+            {!paymentConfig?.instructions && (paymentConfig?.upi_id || paymentConfig?.bank_name) && (
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+                <h4 className="text-blue-400 font-semibold mb-2">Payment Instructions</h4>
+                <ol className="text-gray-400 text-sm space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center flex-shrink-0">1</span>
+                    <span>Pay ₹{selectedPlan?.final_price} using UPI or Bank Transfer</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center flex-shrink-0">2</span>
+                    <span>Note down UTR/Transaction ID</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center flex-shrink-0">3</span>
+                    <span>Take screenshot of payment confirmation</span>
+                  </li>
+                </ol>
+              </div>
+            )}
                   <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center flex-shrink-0">1</span>
                   <span>Scan QR code with any UPI app</span>
                 </li>
