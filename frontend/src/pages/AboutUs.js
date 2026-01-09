@@ -1,9 +1,10 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import Footer from '../components/Footer';
-import { Award, Users, TrendingUp, Heart } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Award, Users, TrendingUp, Heart, Shield, Zap } from 'lucide-react';
 
 const AboutUs = () => {
+  const navigate = useNavigate();
+  
   const features = [
     {
       icon: Award,
@@ -27,95 +28,143 @@ const AboutUs = () => {
     }
   ];
 
+  const stats = [
+    { value: '10,000+', label: 'Active Users' },
+    { value: '₹50L+', label: 'Rewards Distributed' },
+    { value: '24/7', label: 'Support' },
+    { value: '99.9%', label: 'Uptime' }
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <Link to="/" className="inline-flex items-center text-purple-600 hover:text-purple-700 mb-4">
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Home
-          </Link>
-          <h1 className="text-4xl font-bold text-gray-900">About PARAS REWARD</h1>
-          <p className="text-gray-600 mt-2">India's First Mining-Based Rewards Platform</p>
+      <div className="px-5 pt-6 pb-4 sticky top-0 z-10 bg-gray-950/80 backdrop-blur-md">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate(-1)}
+            className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-white" />
+          </button>
+          <h1 className="text-white text-xl font-bold">About Us</h1>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Hero Section */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-12">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full mb-4">
+      {/* Hero Section */}
+      <div className="px-5 mb-8">
+        <div className="relative overflow-hidden rounded-3xl p-6" style={{
+          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%)',
+        }}>
+          {/* Gold Accent */}
+          <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-amber-500/20 to-transparent rounded-full blur-3xl" />
+          
+          <div className="relative text-center">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
               <Award className="w-10 h-10 text-white" />
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Who We Are</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">PARAS REWARD</h2>
+            <p className="text-amber-400 text-sm">India's First Mining-Based Rewards Platform</p>
           </div>
-          
-          <div className="space-y-4 text-gray-700 leading-relaxed">
+        </div>
+      </div>
+
+      {/* Stats Section */}
+      <div className="px-5 mb-8">
+        <div className="grid grid-cols-4 gap-2">
+          {stats.map((stat, index) => (
+            <div key={index} className="bg-gray-900/50 rounded-xl p-3 text-center border border-gray-800">
+              <p className="text-amber-500 font-bold text-lg">{stat.value}</p>
+              <p className="text-gray-500 text-xs">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Who We Are */}
+      <div className="px-5 mb-8">
+        <div className="bg-gray-900/50 rounded-2xl p-5 border border-gray-800">
+          <h3 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
+            <Shield className="w-5 h-5 text-amber-500" />
+            Who We Are
+          </h3>
+          <div className="space-y-3 text-gray-400 text-sm leading-relaxed">
             <p>
-              <strong>PARAS REWARD</strong> is India's first mining-based rewards platform where users can earn digital coins simply by being active daily. We revolutionize the way people earn online by making it simple, transparent, and accessible to everyone.
+              <span className="text-amber-400 font-semibold">PARAS REWARD</span> is India's first mining-based rewards platform where users can earn digital coins simply by being active daily.
             </p>
             <p>
-              Our platform is designed for Indians who want to earn extra income without any investment. Whether you're a student, homemaker, or professional, PARAS REWARD offers you an opportunity to turn your daily digital activity into real rewards.
+              Our platform is designed for Indians who want to earn extra income without any investment. Whether you're a student, homemaker, or professional, we offer you an opportunity to turn your daily digital activity into real rewards.
             </p>
             <p>
-              With over 10,000+ active users and ₹50L+ rewards distributed, we have established ourselves as a trusted platform for digital earnings in India.
+              With over <span className="text-emerald-400">10,000+ active users</span> and <span className="text-emerald-400">₹50L+ rewards distributed</span>, we have established ourselves as a trusted platform for digital earnings in India.
             </p>
           </div>
         </div>
+      </div>
 
-
-        {/* Mission & Values */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+      {/* Features */}
+      <div className="px-5 mb-8">
+        <h3 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
+          <Zap className="w-5 h-5 text-amber-500" />
+          Why Choose Us
+        </h3>
+        <div className="space-y-3">
           {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
-              <div key={index} className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mb-4">
-                  <Icon className="w-6 h-6 text-white" />
+              <div key={index} className="bg-gray-900/50 rounded-xl p-4 border border-gray-800 hover:border-amber-500/30 transition-colors">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold text-sm mb-1">{feature.title}</h4>
+                    <p className="text-gray-500 text-xs leading-relaxed">{feature.description}</p>
+                  </div>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
               </div>
             );
           })}
         </div>
+      </div>
 
-        {/* Our Mission */}
-        <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg shadow-lg p-8 text-white mb-12">
-          <h2 className="text-3xl font-bold mb-6 text-center">Our Mission</h2>
-          <p className="text-lg leading-relaxed text-center max-w-3xl mx-auto">
-            Our mission is to create a trusted digital earning ecosystem in India where every user can earn rewards for their time and participation. We believe in empowering individuals with financial opportunities that are free, transparent, and accessible to all.
-          </p>
-        </div>
-
-        {/* What We Believe */}
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">What We Believe In</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center p-6 bg-purple-50 rounded-lg">
-              <div className="text-4xl mb-4">💎</div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Transparency</h3>
-              <p className="text-gray-600">Clear rules, no hidden fees, complete visibility into your earnings</p>
+      {/* How It Works */}
+      <div className="px-5 mb-8">
+        <div className="bg-gradient-to-r from-amber-500/10 to-amber-600/5 rounded-2xl p-5 border border-amber-500/20">
+          <h3 className="text-white font-bold text-lg mb-4">How It Works</h3>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-amber-500 text-gray-900 font-bold flex items-center justify-center text-sm">1</div>
+              <p className="text-gray-300 text-sm">Register for free and start your rewards journey</p>
             </div>
-            <div className="text-center p-6 bg-pink-50 rounded-lg">
-              <div className="text-4xl mb-4">🚀</div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Innovation</h3>
-              <p className="text-gray-600">Pioneering new ways for Indians to earn through digital platforms</p>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-amber-500 text-gray-900 font-bold flex items-center justify-center text-sm">2</div>
+              <p className="text-gray-300 text-sm">Activate daily rewards and earn PRC coins passively</p>
             </div>
-            <div className="text-center p-6 bg-purple-50 rounded-lg">
-              <div className="text-4xl mb-4">🤝</div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Trust</h3>
-              <p className="text-gray-600">Building long-term relationships with our user community</p>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-amber-500 text-gray-900 font-bold flex items-center justify-center text-sm">3</div>
+              <p className="text-gray-300 text-sm">Play games, invite friends, and multiply your earnings</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-amber-500 text-gray-900 font-bold flex items-center justify-center text-sm">4</div>
+              <p className="text-gray-300 text-sm">Redeem rewards or upgrade to VIP for UPI withdrawals</p>
             </div>
           </div>
         </div>
       </div>
 
-      <Footer />
+      {/* Contact */}
+      <div className="px-5 pb-8">
+        <div className="bg-gray-900/50 rounded-2xl p-5 border border-gray-800">
+          <h3 className="text-white font-bold text-lg mb-3">Contact Us</h3>
+          <p className="text-gray-400 text-sm mb-4">Have questions? We're here to help!</p>
+          <Link 
+            to="/contact" 
+            className="inline-flex items-center justify-center w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-gray-900 font-bold rounded-xl hover:from-amber-400 hover:to-amber-500 transition-all"
+          >
+            Get in Touch
+          </Link>
+        </div>
+      </div>
     </div>
   );
 };
