@@ -10,7 +10,7 @@ import {
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
-import ImageCropUpload from '@/components/ImageCropUpload';
+import AdvancedDocumentUpload from '@/components/AdvancedDocumentUpload';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -285,7 +285,7 @@ const KYCVerification = ({ user }) => {
                       </button>
                     </div>
                   ) : (
-                    <ImageCropUpload
+                    <AdvancedDocumentUpload
                       onChange={(data) => setKycData({...kycData, aadhaar_front: data})}
                       aspectRatio={1.6}
                       label="Aadhaar Front Side"
@@ -314,7 +314,7 @@ const KYCVerification = ({ user }) => {
                       </button>
                     </div>
                   ) : (
-                    <ImageCropUpload
+                    <AdvancedDocumentUpload
                       onChange={(data) => setKycData({...kycData, aadhaar_back: data})}
                       aspectRatio={1.6}
                       label="Aadhaar Back Side"
@@ -360,7 +360,7 @@ const KYCVerification = ({ user }) => {
                       </button>
                     </div>
                   ) : (
-                    <ImageCropUpload
+                    <AdvancedDocumentUpload
                       onChange={(data) => setKycData({...kycData, pan_front: data})}
                       aspectRatio={1.6}
                       label="PAN Card Image"
