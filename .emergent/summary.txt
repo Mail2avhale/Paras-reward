@@ -1,63 +1,61 @@
 <analysis>**original_problem_statement:**
-The initial goal was to build a fintech accounting system. This was expanded to include admin security, AI features (Chatbot, KYC Auto-Fill/Verification), a 5-level AI referral system, and a complete visual overhaul.
+The initial goal was a fintech accounting system, which expanded to include AI features (Chatbot, KYC), a 5-level referral system, and a complete visual overhaul for Google AdMob compliance.
 
-The current set of tasks originated from user requests to:
-1.  Implement an AI Contextual Help feature on various pages.
-2.  Redesign the user dashboard to be AI-powered and adhere to industry standards.
-3.  Ensure the entire application is compliant with Google AdMob policies, which involves removing all misleading financial language, mining terminology, and direct monetary symbols (e.g., ₹).
-4.  Fix bugs reported by the user, including a page crash on the Daily Rewards (formerly Mining) page.
+Recent user requests have driven the latest work:
+1.  Implement an AI Contextual Help feature. (Completed)
+2.  Redesign the user dashboard for AdMob compliance and a better AI-powered UX. (Completed, then fully redesigned again)
+3.  Implement a user-requested Account Deletion feature. (Completed)
+4.  Set English as the default app language and remove a PRC Statement Card. (Completed)
+5.  Redesign the entire user-facing application with a premium Golden Black Credit Card dark theme. (In Progress)
+6.  Fix a list of critical bugs reported via screen recording, including issues with the rewards session, tap game, KYC, and recent activity log. (In Progress)
 
 **PRODUCT REQUIREMENTS:**
-Refer to . Key pending items include:
--   **[IN PROGRESS]** Finalize AdMob Policy Compliance across all pages.
+Refer to . Key pending items are:
+-   **[IN PROGRESS]** Complete the app-wide redesign to the new dark theme.
 -   **[NOT STARTED]** AdMob + Unity Ads integration.
--   **[NOT STARTED]** AI-powered features for users (Smart Financial Advisor, Product Recommendations, etc.).
+-   **[NOT STARTED]** AI-powered features for users (Smart Financial Advisor, Product Recommendations).
 -   **[NOT STARTED]** Automated monthly financial reports.
 
 **User's preferred language**: The user communicates in a mix of English and Marathi. The next agent MUST respond in English for technical clarity but be prepared to understand and address requests in Marathi. For example: 
 
 **what currently exists?**
-The application is a full-stack fintech platform (FastAPI backend, React frontend). It has recently undergone significant refactoring to achieve Google AdMob policy compliance.
-
--   **Backend ():** An endpoint  has been added. The hardcoded help tips within this endpoint have been updated to use AdMob-compliant language (e.g., Daily Rewards instead of Mining).
--   **Frontend ():**
-    -   **AI Contextual Help**: A new global  component has been created and integrated into . It displays a help icon and provides page-specific tips without causing the circular dependency issues seen previously.
-    -   **AI-Powered Dashboard**:  has been completely redesigned using a bento grid layout and several new AI-focused components: , , , and .
-    -   **AdMob Compliance**: A large-scale refactoring was performed across numerous files (, , , , , , , ) to replace terms like Mining, Mine, ₹, and other financial language with compliant terms like Daily Rewards, Points, and Activity. The  page and its route have been renamed to reflect this change.
+The application is a full-stack platform (FastAPI backend, React frontend). AdMob compliance has been verified. A user account deletion feature is fully implemented. The UI has been partially migrated to a new, premium Golden Black dark theme, with several key pages like the Dashboard, Daily Rewards, Referrals, and Profile already overwritten with the new design. The backend for the Tap Game was modified to allow free users to earn PRC at a reduced rate, which was previously a VIP-only feature.
 
 **Last working item**:
--   **Last item agent was working**: Fixing the remaining AdMob policy violations on the  page, as identified by the testing agent. The agent had just finished a series of edits on the file to remove the last instances of non-compliant terminology (mining power, mining speed, etc.).
+-   **Last item agent was working**: Addressing a list of 5 critical issues reported by the user via a screen recording:
+    1.  The rewards session starts but then immediately stops/pauses.
+    2.  No Collect PRC button appears after a rewards session.
+    3.  The Tap Game does not add PRC to the user's balance on tap.
+    4.  The KYC document upload page does not activate the camera and needs more advanced image handling.
+    5.  The Recent Activity log on the dashboard is incomplete and not showing all user actions.
+    The agent had just modified the backend  to allow free users to earn from the tap game and was in the process of fixing the frontend components.
 -   **Status**: IN PROGRESS
--   **Agent Testing Done**: N (The agent completed the code changes but has not yet re-run the testing agent to verify the fix.)
--   **Which testing method agent to use?**: Frontend testing agent. The agent MUST run the test to verify that all AdMob compliance issues reported in the last test run have been resolved.
+-   **Agent Testing Done**: N
+-   **Which testing method agent to use?**: both. Use the backend testing agent to verify the API logic for rewards sessions, PRC collection, tap game earnings, and activity logging. Use the frontend testing agent to conduct a full E2E test of all 5 reported user flows.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Finalize AdMob Compliance (P0 - HIGHEST)**
--   **Issue 2: Draggable cards UX (P2)**
--   **Issue 3: Pagination Verification on History Pages (P2)**
+-   **Issue 1: Fix 5 Critical User-Reported Bugs (P0 - HIGHEST)**
+-   **Issue 2: Pagination Verification on History Pages (P2)**
 
 **Issues Detail:**
--   **Issue 1: Finalize AdMob Compliance (P0 - HIGHEST)**
-    -   **Attempted fixes**: The agent performed a massive, app-wide refactor of terminology. However, the last testing agent run revealed that the  page still contained several violations (e.g., Boost Mining Power, Mining speed bonus). The agent has just applied fixes for these.
+-   **Issue 1: Fix 5 Critical User-Reported Bugs (P0 - HIGHEST)**
+    -   **Attempted fixes**:
+        -   **Tap Game**: The agent found the  endpoint was VIP-only and modified  to allow free users to earn 0.01 PRC per tap. It also overwrote . The fix is incomplete and untested.
+        -   **Rewards Session/Collect Button**: The agent identified the issue is in  and overwrote the file, but the user reported the issue persists.
+        -   **Recent Activity**: The agent found the  endpoint was failing. The user wants a comprehensive log (logins, game play, etc.), which requires a new backend implementation.
+        -   **KYC Camera**: The agent created a new  page but did not implement the requested advanced camera/upload functionality.
     -   **Next debug checklist**:
-        1.  Invoke the  with the same AdMob compliance task to confirm the latest fixes on  are effective and that no new regressions have been introduced.
-        2.  Carefully review the test report for any remaining violations.
-        3.  Address any new findings.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a mandatory requirement from the user. The app cannot be submitted for AdMob approval until all policy violations are removed.
+        1.  **Rewards/Collect**: Review  to ensure session logic is sound. Create a  endpoint. Rewrite  to correctly manage session state, display a timer, and show a Collect button on completion.
+        2.  **Tap Game**: Test the  endpoint for both free and VIP users. Ensure  sends requests and updates the UI balance correctly.
+        3.  **KYC Camera**: In , integrate an advanced image upload component (e.g., ) that supports camera access and image adjustments.
+        4.  **Recent Activity**: Create a new MongoDB collection () and a new endpoint in  (e.g., ) to log and fetch all user actions. Update  to use this new endpoint.
     -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: frontend
+    -   **Should Test frontend/backend/both after fix?**: both
     -   **Blocked on other issue**: None
 
--   **Issue 2: Draggable cards UX (P2)**
-    -   **Description**: The draggable cards on the dashboard are far down the page, requiring significant scrolling. User may think the feature is broken. This was reported before the dashboard redesign and may or may not still be relevant.
-    -   **Status**: NOT STARTED
-    -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: frontend
-    -   **Blocked on other issue**: None
-
--   **Issue 3: Pagination Verification on History Pages (P2)**
+-   **Issue 2: Pagination Verification on History Pages (P2)**
     -   **Description**: A long-standing task to verify that pagination works correctly on the **Voucher history** () and **Bill Payments history** () pages.
     -   **Status**: NOT STARTED
     -   **Is recurring issue?**: Y
@@ -65,104 +63,118 @@ The application is a full-stack fintech platform (FastAPI backend, React fronten
     -   **Blocked on other issue**: None
 
 **In progress Task List**:
--   **Task 1: AdMob Policy Compliance (P0)**
-    -   **Where to resume**: The fixes for  are complete. The immediate next step is to run the frontend testing agent to verify that the app is now fully compliant.
-    -   **What will be achieved with this?**: A fully AdMob-compliant application, ready for submission.
+-   **Task 1: Complete App-Wide Redesign (P1)**
+    -   **Where to resume**: The user stated that many pages in the menu still have the old design. The agent needs to systematically identify the remaining user-facing pages (e.g., , , , , ) and overwrite/update them with the new Golden Black dark theme for UI consistency.
+    -   **What will be achieved with this?**: A consistent, modern UI/UX across the entire application as requested by the user.
     -   **Status**: IN PROGRESS
     -   **Should Test frontend/backend/both after fix?**: frontend
     -   **Blocked on something**: None.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   **P1: AdMob Integration:** Integrate AdMob + Unity Ads to automate income tracking.
-    -   **P2: AI for Users - Smart Financial Advisor:** Provide users with personalized financial tips and recommendations.
-    -   **P2: Automated Monthly Reports:** Add functionality to automatically generate and email monthly financial reports to the admin.
+    -   P1: AdMob + Unity Ads Integration.
+    -   P2: AI for Users - Smart Financial Advisor.
+    -   P2: Automated Monthly Reports.
 -   **Future Tasks:**
     -   AI Product Recommendations for users.
     -   Implement Progressive Web App (PWA) functionality.
     -   Build the Hierarchical Reporting Structure for user referrals/teams.
 
 **Completed work in this session**
--   **AI Contextual Help Feature (DONE)**: Successfully implemented a global help component () in  that provides page-specific AI-powered tips, fixing the previous circular dependency error. Verified by the testing agent.
--   **AI-Powered Dashboard Redesign (DONE)**: Overhauled  with a new bento-grid layout and new components (, , , ) for a modern, AI-centric user experience. Verified by the testing agent.
--   **AdMob Compliance Refactoring (IN PROGRESS, mostly DONE)**: Performed an extensive, app-wide refactor to remove non-compliant language. Updated dozens of components, pages, translations, and configuration files.
+-   **AdMob Compliance Verification (DONE)**: Verified 100% compliance using the frontend testing agent.
+-   **Account Deletion Feature (DONE)**: Implemented a full user account deletion flow (soft delete + 30-day auto hard-delete) on both backend and frontend. Verified with testing agents.
+-   **Default Language & UI Cleanup (DONE)**: Set English as the default language and removed the PRC Statement Card from the dashboard.
+-   **Mine Button Fix (DONE)**: Replaced all user-facing instances of Mine with Rewards, particularly in the bottom navigation.
+-   **Dashboard Redesign to Golden-Black Theme (DONE)**: Completely overwrote  to create a premium, non-draggable, credit-card-style dark theme dashboard.
+-   **Initial Dark Theme Page Migration (PARTIALLY DONE)**: Rewrote several key pages with the new dark theme, including , , , , , , , and .
+-   **Referral Levels UI (DONE)**: Updated the  page to display the 5-level referral structure.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Draggable cards UX**: The dashboard cards may be too far down the page. This was not addressed.
--   **Issue 2: Pagination Verification on History Pages**: This task to check pagination on history pages has not been started.
+-   **Issue 1: Pagination Verification on History Pages**: This task to check pagination on  and  has not been started.
 
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in previous fork**: Circular Dependency Causes Runtime Errors
 -   **Recurrence count**: 1
--   **Status**: RESOLVED. The agent fixed this by implementing the  feature as a global component in  rather than importing it into individual lazy-loaded pages.
+-   **Status**: RESOLVED (No new recurrence in this session).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend**: FastAPI, MongoDB (), Pydantic.
--   **Frontend**: React, , , , , .
--   **Architecture**: Global component state management in  was used to solve the circular dependency. The UI now heavily features a bento grid layout on the dashboard.
+-   **Backend**: FastAPI, MongoDB, APScheduler for scheduled jobs.
+-   **Frontend**: React, , , extensive use of TailwindCSS for styling.
+-   **Development**: The agent has heavily used the  approach to implement UI redesigns quickly.
 
 **key DB schema**
--   No schema changes in this session.
+-   No schema changes were made, but a new collection  should be created to properly implement the Recent Activity feature.
 
 **changes in tech stack**
--   No new dependencies were added.
+-   None.
 
 **All files of reference**
--    (The redesigned AI dashboard)
--    (The page most heavily refactored for AdMob compliance)
--    (The main landing page, also updated for compliance)
--    &  (Referral pages updated for compliance)
--    (Contains all text changes)
--    (Contains the new contextual help endpoint)
+-   
+-   
+-   
+-   
+-   
+-   
+
+**Areas that need refactoring**:
+-   The Recent Activity feature needs a proper backend implementation instead of relying on parsing transaction/mining history. A dedicated activity logging system is required.
+-   The numerous pages rewritten via  may have lint warnings or suboptimal code. They should be reviewed once their functionality is stable.
 
 **key api endpoints**
--    (NEW: Provides AI-powered, page-specific help tips)
+-    (NEW)
+-    (NEW)
+-    (MODIFIED)
+-   **(NEEDS REVIEW)** 
+-   **(NEEDS CREATION)** 
+-   **(NEEDS CREATION)** 
 
 **Critical Info for New Agent**
--   **Top Priority**: Your first and only immediate task is to verify that the application is **fully compliant with AdMob policies**. The previous agent just finished applying a round of fixes to . You MUST run the frontend testing agent to confirm these fixes are successful and that no violations remain anywhere in the app. Do not proceed to any other task until the testing agent gives a clean report for AdMob compliance.
--   **User Communication**: The user is highly focused on the AdMob compliance task. Keep them updated on the testing status. Remember to communicate in English, but be prepared to understand Marathi.
--   **Code State**: The codebase has been heavily modified. Be aware that the term Mining has been programmatically and textually replaced with Daily Rewards or similar concepts.
+-   **TOP PRIORITY**: Address the 5 critical bugs the user reported. Do not move on to other tasks until these core functionalities are working and verified.
+-   **SECOND PRIORITY**: Continue the app-wide redesign. Identify all remaining user-facing pages and apply the new Golden Black theme for a consistent user experience.
+-   **USER COMMUNICATION**: The user is highly engaged and provides feedback in a mix of English and Marathi. Acknowledge their requests with  and then proceed with technical explanations in English.
+-   **TESTING**: The agent has been overwriting entire files. You must thoroughly test each of the 5 bug-related features from end-to-end (backend and frontend) after implementing fixes. Do not assume a fix works without verification.
 
 **documents and test reports created in this job**
--    (Updated to include AI Contextual Help and the AI-Powered Dashboard as completed features).
--    (Updated multiple times to test the new features and AdMob compliance).
+-   
+-    (Updated for AdMob & Account Deletion tests).
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User**: Confirms to proceed with all suggested AdMob compliance changes. (COMPLETED)
-9.  **User**: Provides credits. (ACKNOWLEDGED)
-8.  **User**: Asks to check the main homepage for AdMob compliance. (COMPLETED)
-7.  **User**: Reports errors on the  page and asks to check the  and  pages for AdMob issues. (IN PROGRESS)
-6.  **User**: Asks for an AI-powered, well-designed dashboard. (COMPLETED)
-5.  **User**: Asks for a summary. (COMPLETED)
-4.  **User**: Selects the AI Contextual Help task to be worked on. (COMPLETED)
-3.  **User**: (From previous session) Requests an AI-powered referral system with 5 levels and social media sharing. (COMPLETED)
-2.  **User**: (From previous session) Requests an AI-powered way to improve the user dashboard view and notes the chatbot icon is missing. (COMPLETED)
-1.  **User**: (From previous session) Reports the chatbot button overlaps another button and the chat window is too large on mobile. (COMPLETED)
+10. **User**: Reward session starts but then immediately pauses. No collect reward button. Many pages in the menu are still the old design. Recent activity not showing. (IN PROGRESS)
+9.  **User**: KYC document upload missing. Invite levels also missing. (IN PROGRESS)
+8.  **User**: Dashboard is too complex. Redesign for a beautiful look. Can you make a credit card style golden-black design? (COMPLETED)
+7.  **User**: Remove Quick action card. There is a duplicate card, remove the one below. Move recent activity to the bottom. (COMPLETED)
+6.  **User**: Will the AI user dashboard have any problems with Google AdMob? Remove card movement and arrange cards for better user experience. (COMPLETED)
+5.  **User**: The mine button is still visible in the bottom menu on some pages. (COMPLETED)
+4.  **User**: Delete PRC STATEMENT CARD FROM USER DASHBOARD. SET ENGLISH LANGUAGE DEFAULT FOR ALL APP. (COMPLETED)
+3.  **User**: User confirms choices for the account deletion feature: 1. first a and after 30 days b auto, 2. a with warning, 3. a (COMPLETED)
+2.  **User**: User asks about the account deletion feature in Marathi. (COMPLETED)
+1.  **User**: Account delete features to user with confirmation. (COMPLETED)
 
 **Project Health Check:**
--   **Broken**: The application may still contain AdMob policy violations. The  page was crashing before the last fix, and the fix has not been verified.
+-   **Broken**: Core application functionality is broken. The rewards/mining cycle, tap-to-earn game, KYC upload, and recent activity log are all non-functional as per the latest user report.
 -   **Mocked**: AdMob/Unity Ads integration is not yet implemented.
 
 **3rd Party Integrations**
--   **OpenAI GPT-5.2**: Used for AI Chatbot and AI Contextual Help via . Uses Emergent LLM Key.
--   **Gemini Pro**: Used for AI Document Scanning (KYC) via . Uses Emergent LLM Key.
--   **@dnd-kit/core**: Used for draggable dashboard cards.
+-   **OpenAI**: Used for AI Chatbot and AI Contextual Help. (Uses Emergent LLM Key)
+-   **Gemini Pro**: Used for AI Document Scanning (KYC). (Uses Emergent LLM Key)
+-   **@dnd-kit/core**: No longer in use since the draggable dashboard was removed.
 -   **lottie-react, framer-motion**: Used for UI animations.
 -   **html2canvas**: Used to generate shareable images for the referral card.
 
 **Testing status**
--   **Testing agent used after significant changes**: YES. The testing agent was used to verify the AI Contextual Help, the AI-Powered Dashboard, and to find AdMob compliance violations. The last run reported **CRITICAL FAILURES** related to AdMob policy, which the previous agent was in the process of fixing.
+-   **Testing agent used after significant changes**: YES (For AdMob compliance and Account Deletion).
 -   **Troubleshoot agent used after agent stuck in loop**: NO.
--   **Test files created**:  was updated multiple times.
--   **Known regressions**: None currently, but the latest fixes for AdMob compliance need to be verified to ensure no new regressions were introduced.
+-   **Test files created**: None.  was updated.
+-   **Known regressions**: Major regressions in core features (Rewards, Tap Game, KYC, Activity Log) were introduced during the rapid redesign.
 
 **Credentials to test flow:**
 -   **Admin**:  / 
--   **Regular User**:  / 
+-   **Regular User**: A new user must be registered for testing, as previous test users may have been deleted or have inconsistent data. The agent previously used  / .
 
 **What agent forgot to execute**
--   The agent did not run a final verification test (via testing agent or screenshot) after applying the last set of AdMob compliance fixes to . This is the immediate next step.
--   The long-standing issues ( and ) were not addressed.</analysis>
+-   The agent did not complete the implementation or verification for the 5 critical bugs reported by the user.
+-   The agent did not complete the redesign of all user-facing pages to the new dark theme.
+-   The long-standing task to verify pagination on history pages remains unaddressed.</analysis>
