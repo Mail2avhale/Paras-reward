@@ -247,85 +247,83 @@ const PrivacyPolicy = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950">
       {/* Header */}
-      <header className="bg-blue-900 text-white py-8 px-4">
+      <header className="px-5 pt-6 pb-4 sticky top-0 z-10 bg-gray-950/80 backdrop-blur-md border-b border-gray-800">
         <div className="max-w-4xl mx-auto">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate(-1)}
-            className="text-white hover:bg-white/10 mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
-              <Shield className="h-6 w-6" />
-            </div>
+            <button 
+              onClick={() => navigate(-1)}
+              className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5 text-white" />
+            </button>
             <div>
-              <h1 className="text-3xl font-bold">Privacy Policy</h1>
-              <p className="text-blue-200">Last Updated: {lastUpdated}</p>
+              <h1 className="text-xl font-bold text-white">Privacy Policy</h1>
+              <p className="text-gray-500 text-sm">Last Updated: {lastUpdated}</p>
             </div>
           </div>
         </div>
       </header>
 
       {/* Content */}
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-4xl mx-auto px-5 py-6">
         {/* Quick Navigation */}
-        <Card className="p-6 mb-8">
-          <h2 className="font-semibold text-gray-900 mb-4">Quick Navigation</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        <div className="bg-gray-900/50 rounded-2xl p-4 mb-6 border border-gray-800">
+          <h2 className="font-semibold text-white mb-3 text-sm">Quick Navigation</h2>
+          <div className="grid grid-cols-2 gap-2">
             {sections.map((section) => (
-              <a key={section.id} href={`#${section.id}`} className="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+              <a key={section.id} href={`#${section.id}`} className="text-xs text-amber-500 hover:text-amber-400 hover:underline truncate">
                 {section.title}
               </a>
             ))}
           </div>
-        </Card>
+        </div>
 
         {/* Sections */}
-        <div className="space-y-8">
+        <div className="space-y-4">
           {sections.map((section) => {
             const Icon = section.icon;
             return (
-              <Card key={section.id} id={section.id} className="p-6 scroll-mt-24">
+              <div key={section.id} id={section.id} className="bg-gray-900/50 rounded-2xl p-5 border border-gray-800 scroll-mt-24">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Icon className="h-5 w-5 text-blue-600" />
+                  <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center">
+                    <Icon className="h-5 w-5 text-amber-500" />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">{section.title}</h2>
+                  <h2 className="text-lg font-bold text-white">{section.title}</h2>
                 </div>
-                <div className="prose prose-gray max-w-none text-gray-600" dangerouslySetInnerHTML={{ __html: section.content }} />
-              </Card>
+                <div 
+                  className="prose prose-sm prose-invert max-w-none text-gray-400 [&_a]:text-amber-500 [&_a]:hover:text-amber-400 [&_strong]:text-gray-300 [&_h4]:text-gray-300 [&_ul]:text-gray-400 [&_li]:text-gray-400" 
+                  dangerouslySetInnerHTML={{ __html: section.content.replace(/bg-gray-50/g, 'bg-gray-800/50').replace(/text-blue-600/g, 'text-amber-500') }} 
+                />
+              </div>
             );
           })}
         </div>
 
         {/* Footer Note */}
-        <div className="mt-12 p-6 bg-green-50 rounded-lg">
+        <div className="mt-8 p-5 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
           <div className="flex items-start gap-4">
-            <Lock className="h-6 w-6 text-green-600 flex-shrink-0" />
+            <Lock className="h-6 w-6 text-emerald-500 flex-shrink-0" />
             <div>
-              <h3 className="font-semibold text-green-900">Your Privacy Matters</h3>
-              <p className="text-green-700 mt-1">We are committed to protecting your personal information. Contact us with any questions.</p>
+              <h3 className="font-semibold text-emerald-400">Your Privacy Matters</h3>
+              <p className="text-gray-400 text-sm mt-1">We are committed to protecting your personal information. Contact us with any questions.</p>
             </div>
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-gray-400 py-6 px-4 mt-12">
+      <footer className="bg-gray-950 border-t border-gray-800 py-6 px-5 mt-8">
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2">
             <img src={LOGO_URL} alt="Logo" className="h-8 w-8 rounded-full" />
             <span className="text-white font-semibold">Paras Reward</span>
           </div>
-          <div className="flex gap-6 text-sm">
-            <a href="/terms" className="hover:text-white">Terms & Conditions</a>
-            <a href="/refund" className="hover:text-white">Refund Policy</a>
-            <a href="/contact" className="hover:text-white">Contact Us</a>
+          <div className="flex gap-4 text-xs">
+            <a href="/terms" className="text-gray-500 hover:text-amber-500 transition-colors">Terms</a>
+            <a href="/refund" className="text-gray-500 hover:text-amber-500 transition-colors">Refund</a>
+            <a href="/contact" className="text-gray-500 hover:text-amber-500 transition-colors">Contact</a>
           </div>
         </div>
       </footer>
