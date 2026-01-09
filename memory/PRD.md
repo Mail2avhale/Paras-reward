@@ -72,7 +72,7 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
      - Returns activities with icons (⛏️ mining, 👆 tap, 🔓 login, 💰 rewards)
      - Dashboard Recent Activity section now shows all user actions
 
-- ✅ **App-Wide Dark Theme Redesign (Partial)**
+- ✅ **App-Wide Dark Theme Redesign (COMPLETED)**
 
   **Updated Pages to Golden-Black Theme:**
   - BottomNav.js - Dark navigation with amber accents
@@ -80,6 +80,14 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
   - PrivacyPolicy.js - Dark theme with amber links
   - Orders.js - Premium order cards with secret code copy
   - BillPayments.js - Dark form, service selection, history table
+  - FAQ.js - Collapsible FAQ sections with category icons
+  - ContactUs.js - Dark contact form with info cards
+  - Leaderboard.js - Trophy icons, rank displays with gradients
+  - GiftVoucherRedemption.js - Voucher selection with dark theme
+  - TermsAndConditions.js - Detailed legal page (simplified version)
+  - TermsConditions.js - Full terms page with section navigation
+  - RefundPolicy.js - Policy sections with icons
+  - ScratchCard.js - Scratch game with dark UI
 
   **Backend Test Results:**
   - 13/13 tests passed (100%)
