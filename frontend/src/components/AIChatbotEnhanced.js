@@ -270,7 +270,7 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                   </h3>
                   <p className="text-xs text-purple-200 flex items-center gap-1">
                     <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                    Online • AI Powered
+                    Online • English, हिंदी, मराठी
                   </p>
                 </div>
               </div>
