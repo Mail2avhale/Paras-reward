@@ -240,7 +240,7 @@ const TapGame = ({ user }) => {
             whileTap={{ scale: 0.85 }}
             animate={animating ? { scale: 1.15 } : { scale: 1 }}
             transition={{ type: "spring", stiffness: 400, damping: 17 }}
-            className={`w-44 h-44 rounded-full flex items-center justify-center shadow-2xl select-none ${
+            className={`relative z-10 w-44 h-44 rounded-full flex items-center justify-center shadow-2xl select-none ${
               remainingTaps > 0 
                 ? 'bg-gradient-to-br from-pink-500 via-rose-500 to-red-600 active:scale-95 cursor-pointer'
                 : 'bg-gray-700 cursor-not-allowed'
