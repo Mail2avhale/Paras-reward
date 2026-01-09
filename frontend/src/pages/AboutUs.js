@@ -63,7 +63,7 @@ const AboutUs = () => {
               <Award className="w-10 h-10 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">PARAS REWARD</h2>
-            <p className="text-amber-400 text-sm">India's First Mining-Based Rewards Platform</p>
+            <p className="text-amber-400 text-sm">India&apos;s First Mining-Based Rewards Platform</p>
           </div>
         </div>
       </div>
