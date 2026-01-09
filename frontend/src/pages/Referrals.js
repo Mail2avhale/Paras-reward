@@ -129,6 +129,17 @@ const Referrals = ({ user }) => {
         }
       }
       
+      // Fetch mining rate with breakdown
+      try {
+        const miningRes = await axios.get(`${API}/api/mining/status/${user.uid}`);
+        setMiningRate(miningRes.data);
+        if (miningRes.data.referral_breakdown) {
+          setReferralBreakdown(miningRes.data.referral_breakdown);
+        }
+      } catch (e) {
+        console.log('Mining rate fetch error:', e);
+      }
+      
     } catch (error) {
       console.error('Error fetching data:', error);
       setUserData(user);
