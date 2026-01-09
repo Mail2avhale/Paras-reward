@@ -373,7 +373,6 @@ const DashboardModern = ({ user, onLogout }) => {
               className="absolute -left-10 -bottom-10 w-32 h-32 rounded-full"
               style={{ background: 'radial-gradient(circle, rgba(255, 215, 0, 0.15) 0%, transparent 70%)' }}
             />
-            </svg>
           </div>
 
           {/* Realistic card texture */}
