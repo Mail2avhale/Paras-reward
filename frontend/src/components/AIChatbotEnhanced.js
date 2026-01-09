@@ -82,10 +82,11 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
   // Add welcome message when chat opens
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      const greeting = new Date().getHours() < 12 ? 'शुभ सकाळ' : new Date().getHours() < 17 ? 'शुभ दुपार' : 'शुभ संध्याकाळ';
+      const hour = new Date().getHours();
+      const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
       setMessages([{
         type: 'bot',
-        text: `${greeting} ${user?.name || 'User'}! 👋\n\nमी Paras Reward चा AI Assistant आहे. मी तुम्हाला कशी मदत करू शकतो?`,
+        text: `${greeting} ${user?.name || 'User'}! 👋\n\nI'm Paras Assistant, your AI-powered helper. How can I assist you today?\n\n⚠️ *Disclaimer: I provide general information only. This is not financial advice.*`,
         timestamp: new Date(),
         suggestions: getAISuggestions(userStats, user?.name)
       }]);
