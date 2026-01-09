@@ -2881,6 +2881,14 @@ async def start_mining(uid: str):
         }
     )
     
+    # Log to activity_logs for comprehensive activity tracking
+    await log_activity(
+        user_id=uid,
+        action_type="mining_started",
+        description="Started 24-hour rewards session",
+        metadata={"session_start": now.isoformat(), "session_end": session_end.isoformat()}
+    )
+    
     return {
         "message": "Mining started successfully",
         "session_active": True,
