@@ -17,11 +17,20 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const getAISuggestions = (userStats, userName) => {
   const suggestions = [];
   
-  if (userStats?.prcBalance > 1000) {
+  if (!userStats?.mining_active) {
     suggestions.push({
-      icon: '🛒',
-      text: 'You have enough PRC to redeem rewards!',
-      action: 'View Marketplace',
+      icon: '🎯',
+      text: 'Start your reward session to earn PRC!',
+      action: 'Start Session',
+      type: 'mining'
+    });
+  }
+  
+  if (userStats?.prcBalance > 500) {
+    suggestions.push({
+      icon: '🎁',
+      text: 'You have PRC to redeem for rewards!',
+      action: 'View Rewards',
       type: 'reward'
     });
   }
@@ -29,7 +38,7 @@ const getAISuggestions = (userStats, userName) => {
   if (userStats?.membershipType !== 'vip') {
     suggestions.push({
       icon: '👑',
-      text: 'VIP membership offers enhanced features',
+      text: 'VIP unlocks shopping, vouchers & bill payments',
       action: 'Learn More',
       type: 'upgrade'
     });
@@ -38,18 +47,20 @@ const getAISuggestions = (userStats, userName) => {
   if (userStats?.referralCount < 5) {
     suggestions.push({
       icon: '👥',
-      text: 'Invite friends to earn referral rewards',
-      action: 'Share Now',
+      text: 'Earn up to 21% bonus through referrals!',
+      action: 'Invite Friends',
       type: 'referral'
     });
   }
   
-  suggestions.push({
-    icon: '🎯',
-    text: 'Check your daily tasks and rewards',
-    action: 'View Tasks',
-    type: 'mining'
-  });
+  if (userStats?.kyc_status !== 'approved') {
+    suggestions.push({
+      icon: '📋',
+      text: 'Complete KYC for full platform access',
+      action: 'Verify Now',
+      type: 'kyc'
+    });
+  }
   
   return suggestions.slice(0, 3);
 };
