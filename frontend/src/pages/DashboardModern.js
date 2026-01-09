@@ -383,7 +383,7 @@ const DashboardModern = ({ user, onLogout }) => {
       </div>
 
       {/* Quick Actions */}
-      <div className="px-5 mb-6">
+      <div className="px-5 mb-4">
         <div className="grid grid-cols-4 gap-3">
           {[
             { icon: Star, label: 'Rewards', route: '/daily-rewards', gradient: 'from-purple-600 to-violet-700' },
@@ -395,45 +395,85 @@ const DashboardModern = ({ user, onLogout }) => {
               key={action.label}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.05 }}
               onClick={() => navigate(action.route)}
-              className={`flex flex-col items-center justify-center p-4 rounded-2xl bg-gradient-to-br ${action.gradient} shadow-lg`}
+              className={`flex flex-col items-center justify-center p-3 rounded-xl bg-gradient-to-br ${action.gradient} shadow-lg`}
             >
-              <action.icon className="w-6 h-6 text-white mb-2" />
-              <span className="text-[11px] font-semibold text-white">{action.label}</span>
+              <action.icon className="w-5 h-5 text-white mb-1" />
+              <span className="text-[10px] font-semibold text-white">{action.label}</span>
             </motion.button>
           ))}
         </div>
       </div>
 
-      {/* VIP Upgrade Banner (for non-VIP users) */}
+      {/* Horizontal Scrollable Cards - VIP Upgrade + Offers */}
       {stats.membershipType !== 'vip' && (
-        <div className="px-5 mb-6">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="relative overflow-hidden rounded-2xl p-5"
-            style={{
-              background: 'linear-gradient(135deg, #92400e 0%, #78350f 50%, #451a03 100%)'
-            }}
-          >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/20 rounded-full blur-2xl"></div>
-            <div className="relative z-10 flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Crown className="w-5 h-5 text-yellow-400" />
-                  <span className="text-yellow-400 font-bold">Upgrade to VIP</span>
-                </div>
-                <p className="text-amber-100/80 text-sm">2x Rewards • No Expiry • Premium Features</p>
-              </div>
-              <button 
-                onClick={() => navigate('/vip')}
-                className="bg-gradient-to-r from-yellow-400 to-amber-500 text-black px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-1"
+        <div className="mb-4 overflow-hidden">
+          <div className="px-5 flex gap-3 overflow-x-auto scrollbar-hide pb-2" style={{ scrollSnapType: 'x mandatory' }}>
+            {/* VIP Upgrade Card */}
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              onClick={() => navigate('/vip')}
+              className="flex-shrink-0 w-[85%] cursor-pointer"
+              style={{ scrollSnapAlign: 'start' }}
+            >
+              <div 
+                className="relative overflow-hidden rounded-xl p-4"
+                style={{
+                  background: 'linear-gradient(135deg, #92400e 0%, #78350f 50%, #451a03 100%)'
+                }}
               >
-                ₹299 <ArrowUpRight className="w-4 h-4" />
-              </button>
-            </div>
-          </motion.div>
+                <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-400/20 rounded-full blur-2xl"></div>
+                <div className="relative z-10 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-yellow-400/20 flex items-center justify-center">
+                      <Crown className="w-5 h-5 text-yellow-400" />
+                    </div>
+                    <div>
+                      <p className="text-yellow-400 font-bold text-sm">Upgrade to VIP</p>
+                      <p className="text-amber-200/60 text-xs">2x Rewards • No Expiry</p>
+                    </div>
+                  </div>
+                  <div className="bg-yellow-400 text-black px-3 py-1.5 rounded-lg font-bold text-sm">
+                    ₹299
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Stats Card */}
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className="flex-shrink-0 w-[85%]"
+              style={{ scrollSnapAlign: 'start' }}
+            >
+              <div className="bg-gray-900/80 rounded-xl p-4 border border-gray-800">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="text-white font-bold text-sm">Your Progress</p>
+                      <p className="text-gray-400 text-xs">Total: {stats.totalMined.toFixed(0)} PRC</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-emerald-400 font-bold text-lg">{stats.referralCount}</p>
+                    <p className="text-gray-500 text-xs">Referrals</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+          {/* Scroll indicator dots */}
+          <div className="flex justify-center gap-1.5 mt-1">
+            <div className="w-4 h-1 bg-amber-500 rounded-full"></div>
+            <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
+          </div>
         </div>
       )}
 
