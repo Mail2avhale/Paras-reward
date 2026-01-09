@@ -580,7 +580,7 @@ const BillPayments = ({ user, onLogout }) => {
           
           {requests.length === 0 ? (
             <div className="text-center py-12">
-              <Receipt className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+              <Receipt className="h-16 w-16 mx-auto text-gray-700 mb-4" />
               <p className="text-gray-500">No requests yet</p>
             </div>
           ) : (
@@ -588,24 +588,24 @@ const BillPayments = ({ user, onLogout }) => {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Type</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Amount</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">PRC Deducted</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Status</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Date</th>
+                    <tr className="border-b border-gray-800">
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Type</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Amount</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">PRC</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Status</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Date</th>
                     </tr>
                   </thead>
                   <tbody>
                     {requests
                       .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                       .map((req) => (
-                      <tr key={req.request_id} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-4 text-sm">{getTypeLabel(req.request_type)}</td>
-                        <td className="py-3 px-4 text-sm font-medium">₹{req.amount_inr}</td>
-                        <td className="py-3 px-4 text-sm">{req.total_prc_deducted.toFixed(2)} PRC</td>
+                      <tr key={req.request_id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
+                        <td className="py-3 px-4 text-sm text-gray-300">{getTypeLabel(req.request_type)}</td>
+                        <td className="py-3 px-4 text-sm font-medium text-white">₹{req.amount_inr}</td>
+                        <td className="py-3 px-4 text-sm text-amber-500">{req.total_prc_deducted.toFixed(2)}</td>
                         <td className="py-3 px-4">{getStatusBadge(req.status)}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600">
+                        <td className="py-3 px-4 text-sm text-gray-500">
                           {new Date(req.created_at).toLocaleDateString()}
                         </td>
                       </tr>
@@ -616,27 +616,25 @@ const BillPayments = ({ user, onLogout }) => {
               
               {/* Pagination */}
               {requests.length > itemsPerPage && (
-                <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                  <p className="text-sm text-gray-600">
-                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, requests.length)} of {requests.length} records
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-800">
+                  <p className="text-sm text-gray-500">
+                    {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, requests.length)} of {requests.length}
                   </p>
                   <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
+                    <button
                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
+                      className="px-3 py-1.5 bg-gray-800 text-gray-300 rounded-lg text-sm disabled:opacity-50"
                     >
-                      Previous
-                    </Button>
-                    <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium">
-                      {currentPage} / {Math.ceil(requests.length / itemsPerPage)}
+                      Prev
+                    </button>
+                    <span className="px-3 py-1.5 bg-amber-500/20 text-amber-500 rounded-lg text-sm font-medium">
+                      {currentPage}/{Math.ceil(requests.length / itemsPerPage)}
                     </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
+                    <button
                       onClick={() => setCurrentPage(p => Math.min(Math.ceil(requests.length / itemsPerPage), p + 1))}
                       disabled={currentPage >= Math.ceil(requests.length / itemsPerPage)}
+                      className="px-3 py-1.5 bg-gray-800 text-gray-300 rounded-lg text-sm disabled:opacity-50"
                     >
                       Next
                     </Button>
