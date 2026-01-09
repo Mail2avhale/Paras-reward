@@ -266,11 +266,11 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                 <div>
                   <h3 className="font-bold text-lg flex items-center gap-2">
                     Paras AI
-                    <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Beta</span>
+                    <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Assistant</span>
                   </h3>
                   <p className="text-xs text-purple-200 flex items-center gap-1">
                     <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                    Online • मराठी & English
+                    Online • AI Powered
                   </p>
                 </div>
               </div>
