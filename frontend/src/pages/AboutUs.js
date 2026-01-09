@@ -89,7 +89,7 @@ const AboutUs = () => {
           </h3>
           <div className="space-y-3 text-gray-400 text-sm leading-relaxed">
             <p>
-              <span className="text-amber-400 font-semibold">PARAS REWARD</span> is India's first mining-based rewards platform where users can earn digital coins simply by being active daily.
+              <span className="text-amber-400 font-semibold">PARAS REWARD</span> is India&apos;s first mining-based rewards platform where users can earn digital coins simply by being active daily.
             </p>
             <p>
               Our platform is designed for Indians who want to earn extra income without any investment. Whether you're a student, homemaker, or professional, we offer you an opportunity to turn your daily digital activity into real rewards.
