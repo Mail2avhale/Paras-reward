@@ -43,7 +43,7 @@ const AdvancedDocumentUpload = ({
       
       // Check if mediaDevices is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        toast.error('कॅमेरा या डिव्हाइसवर उपलब्ध नाही. फाइल अपलोड वापरा.');
+        toast.error('Camera not available on this device. Please use file upload.');
         setShowCamera(false);
         return;
       }
@@ -92,11 +92,11 @@ const AdvancedDocumentUpload = ({
       setShowCamera(false);
       
       if (error.name === 'NotAllowedError') {
-        toast.error('कॅमेरा परवानगी नाकारली. कृपया ब्राउझर सेटिंग्जमध्ये कॅमेरा परवानगी द्या.');
+        toast.error('Camera permission denied. Please allow camera access in browser settings.');
       } else if (error.name === 'NotFoundError') {
-        toast.error('कॅमेरा सापडला नाही. कृपया फाइल अपलोड वापरा.');
+        toast.error('Camera not found. Please use file upload.');
       } else {
-        toast.error('कॅमेरा सुरू करता आला नाही. फाइल अपलोड वापरा.');
+        toast.error('Could not start camera. Please use file upload.');
       }
     }
   };
@@ -150,7 +150,7 @@ const AdvancedDocumentUpload = ({
 
     // Check file type
     if (!file.type.startsWith('image/')) {
-      toast.error('कृपया इमेज फाइल निवडा');
+      toast.error('Please select an image file');
       return;
     }
 
@@ -164,7 +164,7 @@ const AdvancedDocumentUpload = ({
       autoAdjustImage(compressedImage);
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('इमेज प्रोसेस करता आली नाही');
+      toast.error('Could not process image');
     } finally {
       setProcessing(false);
       // Reset input
@@ -280,7 +280,7 @@ const AdvancedDocumentUpload = ({
         zoom: 1
       });
       
-      toast.success('इमेज ऑटो-ऑप्टिमाइज झाली!');
+      toast.success('Image auto-optimized!');
     } catch (error) {
       console.error('Auto adjust error:', error);
       setAdjustedImage(imageData);
@@ -339,7 +339,7 @@ const AdvancedDocumentUpload = ({
     const finalImage = adjustedImage || image;
     if (finalImage && onChange) {
       onChange(finalImage);
-      toast.success('डॉक्युमेंट सेव्ह झाला!');
+      toast.success('Document saved!');
     }
     setShowEditor(false);
     setImage(null);
