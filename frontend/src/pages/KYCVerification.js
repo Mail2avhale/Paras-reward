@@ -117,6 +117,9 @@ const KYCVerification = ({ user }) => {
 
   const getStatusBadge = () => {
     const status = userData?.kyc_status;
+    // Check if documents were actually submitted
+    const hasSubmittedDocs = userData?.aadhaar_number || userData?.pan_number;
+    
     if (status === 'verified') {
       return (
         <div className="flex items-center gap-2 bg-emerald-500/20 px-4 py-2 rounded-full">
@@ -124,7 +127,7 @@ const KYCVerification = ({ user }) => {
           <span className="text-emerald-400 font-semibold">{t.verified}</span>
         </div>
       );
-    } else if (status === 'pending') {
+    } else if (status === 'pending' && hasSubmittedDocs) {
       return (
         <div className="flex items-center gap-2 bg-amber-500/20 px-4 py-2 rounded-full">
           <Clock className="w-5 h-5 text-amber-500" />
@@ -151,7 +154,9 @@ const KYCVerification = ({ user }) => {
   }
 
   const isVerified = userData?.kyc_status === 'verified';
-  const isPending = userData?.kyc_status === 'pending';
+  // Only show "Under Review" if documents were actually submitted
+  const hasSubmittedDocs = userData?.aadhaar_number || userData?.pan_number;
+  const isPendingReview = userData?.kyc_status === 'pending' && hasSubmittedDocs;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-8">
