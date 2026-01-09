@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import Navbar from '@/components/Navbar';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Package, Clock, CheckCircle, Truck, ShoppingBag, Trash2, AlertCircle } from 'lucide-react';
+import { Package, Clock, CheckCircle, Truck, ShoppingBag, Trash2, AlertCircle, ArrowLeft, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -20,7 +18,9 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const Orders = ({ user, onLogout }) => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [deleteOrderId, setDeleteOrderId] = useState(null);
 
   useEffect(() => {
@@ -29,11 +29,14 @@ const Orders = ({ user, onLogout }) => {
 
   const fetchOrders = async () => {
     try {
+      setLoading(true);
       const response = await axios.get(`${API}/orders/user/${user.uid}`);
       setOrders(response.data);
     } catch (error) {
       console.error('Error fetching orders:', error);
       setOrders([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -57,160 +60,173 @@ const Orders = ({ user, onLogout }) => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'pending':
-        return <Clock className="h-5 w-5 text-yellow-600" />;
+        return <Clock className="h-4 w-4 text-amber-500" />;
       case 'verified':
-        return <CheckCircle className="h-5 w-5 text-blue-600" />;
+        return <CheckCircle className="h-4 w-4 text-blue-500" />;
       case 'delivered':
-        return <Truck className="h-5 w-5 text-green-600" />;
+        return <Truck className="h-4 w-4 text-emerald-500" />;
       case 'cancelled':
-        return <AlertCircle className="h-5 w-5 text-red-600" />;
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
       default:
-        return <Package className="h-5 w-5 text-gray-600" />;
+        return <Package className="h-4 w-4 text-gray-500" />;
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending':
-        return 'bg-yellow-100 text-yellow-700';
+        return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
       case 'verified':
-        return 'bg-blue-100 text-blue-700';
+        return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
       case 'delivered':
-        return 'bg-green-100 text-green-700';
+        return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
       case 'cancelled':
-        return 'bg-red-100 text-red-700';
+        return 'bg-red-500/20 text-red-400 border-red-500/30';
       default:
-        return 'bg-gray-100 text-gray-700';
+        return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 pt-20 pb-24">
-      
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-8">My Orders</h1>
+  const copySecretCode = (code) => {
+    navigator.clipboard.writeText(code);
+    toast.success('Secret code copied!');
+  };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-8">
+      {/* Header */}
+      <div className="px-5 pt-6 pb-4 sticky top-0 z-10 bg-gray-950/80 backdrop-blur-md">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate('/dashboard')}
+            className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-white" />
+          </button>
+          <h1 className="text-white text-xl font-bold">My Orders</h1>
+        </div>
+      </div>
+
+      <div className="px-5">
         {orders.length === 0 ? (
-          <Card data-testid="no-orders" className="bg-white/80 backdrop-blur-sm p-12 rounded-3xl shadow-xl text-center">
-            <Package className="h-20 w-20 text-gray-300 mx-auto mb-4" />
-            <p className="text-xl text-gray-500 mb-4">No orders yet</p>
-            <p className="text-gray-400">Visit the marketplace to redeem your first product!</p>
-          </Card>
+          <div data-testid="no-orders" className="bg-gray-900/50 rounded-2xl p-8 border border-gray-800 text-center">
+            <Package className="h-16 w-16 text-gray-700 mx-auto mb-4" />
+            <p className="text-gray-400 text-lg mb-2">No orders yet</p>
+            <p className="text-gray-600 text-sm mb-6">Visit the marketplace to redeem your first product!</p>
+            <button 
+              onClick={() => navigate('/marketplace')}
+              className="px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-gray-900 font-bold rounded-xl hover:from-amber-400 hover:to-amber-500 transition-all"
+            >
+              Browse Marketplace
+            </button>
+          </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {orders.map((order, index) => (
-              <Card
+              <div
                 key={order.order_id}
                 data-testid={`order-${index}`}
-                className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all"
+                className="bg-gray-900/50 rounded-2xl p-5 border border-gray-800"
               >
-                <div className="flex flex-col gap-6">
-                  {/* Order Header */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <ShoppingBag className="h-6 w-6 text-purple-600" />
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-900">Order #{order.order_id.slice(0, 8)}</h3>
-                        <p className="text-sm text-gray-500">
-                          {new Date(order.created_at).toLocaleDateString()} at {new Date(order.created_at).toLocaleTimeString()}
-                        </p>
-                      </div>
+                {/* Order Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                      <ShoppingBag className="h-5 w-5 text-amber-500" />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-semibold ${getStatusColor(order.status)}`}>
-                        {getStatusIcon(order.status)}
-                        <span className="capitalize">{order.status}</span>
-                      </div>
-                      {canCancelOrder(order) && (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => setDeleteOrderId(order.order_id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Cancel
-                        </Button>
-                      )}
+                    <div>
+                      <h3 className="text-white font-semibold">#{order.order_id.slice(0, 8)}</h3>
+                      <p className="text-gray-500 text-xs">
+                        {new Date(order.created_at).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${getStatusColor(order.status)}`}>
+                    {getStatusIcon(order.status)}
+                    <span className="capitalize">{order.status}</span>
+                  </div>
+                </div>
 
-                  {/* Order Items */}
-                  <div className="border-t pt-4">
-                    <h4 className="font-semibold text-gray-900 mb-3">Items ({order.items?.length || 1})</h4>
-                    <div className="space-y-2">
-                      {order.items && order.items.length > 0 ? (
-                        order.items.map((item, idx) => (
-                          <div key={idx} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <Package className="h-5 w-5 text-purple-400" />
-                              <div>
-                                <p className="font-medium text-gray-900">{item.product_name}</p>
-                                <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
-                              </div>
-                            </div>
-                            <p className="font-semibold text-purple-600">{item.prc_price * item.quantity} PRC</p>
+                {/* Order Items */}
+                <div className="space-y-2 mb-4">
+                  {order.items && order.items.length > 0 ? (
+                    order.items.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-gray-800/50 p-3 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <Package className="h-4 w-4 text-gray-500" />
+                          <div>
+                            <p className="text-white text-sm font-medium">{item.product_name}</p>
+                            <p className="text-gray-500 text-xs">Qty: {item.quantity}</p>
                           </div>
-                        ))
-                      ) : (
-                        <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <Package className="h-5 w-5 text-purple-400" />
-                            <p className="font-medium text-gray-900">{order.product_name || 'Product'}</p>
-                          </div>
-                          <p className="font-semibold text-purple-600">{order.prc_amount || order.total_prc} PRC</p>
                         </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Order Summary */}
-                  <div className="border-t pt-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                      <div>
-                        <p className="text-sm text-gray-500">Total PRC</p>
-                        <p className="font-bold text-gray-900 text-lg">{order.total_prc || order.prc_amount} PRC</p>
+                        <p className="text-amber-500 font-semibold text-sm">{item.prc_price * item.quantity} PRC</p>
                       </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Cashback Earned</p>
-                        <p className="font-bold text-green-600 text-lg">+₹{(order.cashback_amount || 0).toFixed(2)}</p>
+                    ))
+                  ) : (
+                    <div className="flex items-center justify-between bg-gray-800/50 p-3 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <Package className="h-4 w-4 text-gray-500" />
+                        <p className="text-white text-sm font-medium">{order.product_name || 'Product'}</p>
                       </div>
-                      {order.delivery_address && (
-                        <div className="col-span-2">
-                          <p className="text-sm text-gray-500">Delivery Address</p>
-                          <p className="font-medium text-gray-900">{order.delivery_address}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Secret Code */}
-                  {order.status !== 'cancelled' && (
-                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl border-2 border-purple-200">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-600 mb-1">Secret Code</p>
-                          <p data-testid={`secret-code-${index}`} className="text-3xl font-bold text-purple-600 tracking-wider font-mono">
-                            {order.secret_code}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-2">
-                            👉 Show this code at the outlet to collect your products
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          {order.status === 'delivered' && order.delivered_at && (
-                            <div>
-                              <p className="text-xs text-gray-500">Delivered</p>
-                              <p className="text-sm font-semibold text-green-600">
-                                {new Date(order.delivered_at).toLocaleDateString()}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      <p className="text-amber-500 font-semibold text-sm">{order.prc_amount || order.total_prc} PRC</p>
                     </div>
                   )}
                 </div>
-              </Card>
+
+                {/* Order Summary */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-gray-800/30 rounded-xl p-3">
+                    <p className="text-gray-500 text-xs mb-1">Total PRC</p>
+                    <p className="text-white font-bold">{order.total_prc || order.prc_amount} PRC</p>
+                  </div>
+                  <div className="bg-gray-800/30 rounded-xl p-3">
+                    <p className="text-gray-500 text-xs mb-1">Cashback</p>
+                    <p className="text-emerald-400 font-bold">+₹{(order.cashback_amount || 0).toFixed(2)}</p>
+                  </div>
+                </div>
+
+                {/* Secret Code */}
+                {order.status !== 'cancelled' && order.secret_code && (
+                  <div className="bg-gradient-to-r from-amber-500/10 to-amber-600/5 p-4 rounded-xl border border-amber-500/20">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-gray-400 text-xs mb-1">Secret Code</p>
+                        <p data-testid={`secret-code-${index}`} className="text-2xl font-bold text-amber-500 tracking-wider font-mono">
+                          {order.secret_code}
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => copySecretCode(order.secret_code)}
+                        className="p-2 bg-amber-500/20 rounded-lg hover:bg-amber-500/30 transition-colors"
+                      >
+                        <Copy className="h-5 w-5 text-amber-500" />
+                      </button>
+                    </div>
+                    <p className="text-gray-500 text-xs mt-2">
+                      Show this code at the outlet to collect your products
+                    </p>
+                  </div>
+                )}
+
+                {/* Cancel Button */}
+                {canCancelOrder(order) && (
+                  <button
+                    onClick={() => setDeleteOrderId(order.order_id)}
+                    className="mt-4 w-full py-2.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-red-500/20 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Cancel Order
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         )}
@@ -218,17 +234,22 @@ const Orders = ({ user, onLogout }) => {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteOrderId} onOpenChange={() => setDeleteOrderId(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-gray-900 border-gray-800">
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Order?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to cancel this order? Your PRC will be refunded. This action cannot be undone.
+            <AlertDialogTitle className="text-white">Cancel Order?</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Are you sure you want to cancel this order? This action cannot be undone and your PRC will be refunded.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>No, Keep Order</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteOrder} className="bg-red-600 hover:bg-red-700">
-              Yes, Cancel Order
+            <AlertDialogCancel className="bg-gray-800 text-white border-gray-700 hover:bg-gray-700">
+              Keep Order
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteOrder}
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              Yes, Cancel
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
