@@ -67,6 +67,24 @@ const AdminSettings = ({ user }) => {
     } catch (error) {
       console.error('Error fetching registration status:', error);
     }
+
+    // Fetch payment config
+    try {
+      const paymentResponse = await axios.get(`${API}/api/admin/payment-config`);
+      if (paymentResponse.data) {
+        setPaymentConfig({
+          upi_id: paymentResponse.data.upi_id || '',
+          qr_code_url: paymentResponse.data.qr_code_url || '',
+          bank_name: paymentResponse.data.bank_name || '',
+          account_number: paymentResponse.data.account_number || '',
+          ifsc_code: paymentResponse.data.ifsc_code || '',
+          account_holder: paymentResponse.data.account_holder || '',
+          instructions: paymentResponse.data.instructions || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching payment config:', error);
+    }
   };
 
   const handleChange = (field, value) => {
