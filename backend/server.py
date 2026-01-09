@@ -3401,6 +3401,14 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
         "status": "completed"
     })
     
+    # Log activity for comprehensive activity log
+    await log_activity(
+        user_id=uid,
+        action_type="tap_game",
+        description=f"Played tap game: {taps_to_add} taps, earned {prc_earned} PRC",
+        metadata={"taps": taps_to_add, "prc_earned": prc_earned, "prc_per_tap": prc_per_tap}
+    )
+    
     return {
         "taps_added": taps_to_add, 
         "remaining_taps": remaining_taps - taps_to_add, 
