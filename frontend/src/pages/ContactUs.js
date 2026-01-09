@@ -84,19 +84,19 @@ const ContactUs = () => {
     {
       icon: Phone,
       title: 'Phone',
-      value: contactDetails.phone,
+      value: contactDetails.phone + (contactDetails.phone_secondary ? `\n${contactDetails.phone_secondary}` : ''),
       color: 'emerald'
     },
     {
       icon: Mail,
       title: 'Email',
-      value: contactDetails.email,
+      value: contactDetails.email + (contactDetails.email_business ? `\n${contactDetails.email_business}` : ''),
       color: 'blue'
     },
     {
-      icon: Globe,
-      title: 'Website',
-      value: contactDetails.website,
+      icon: Clock,
+      title: 'Working Hours',
+      value: contactDetails.working_hours || '9:00 AM - 6:00 PM',
       color: 'purple'
     }
   ];
