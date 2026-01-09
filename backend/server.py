@@ -17798,7 +17798,7 @@ async def get_referral_levels(user_id: str):
     levels = []
     for level_num in range(1, 6):
         level_key = f"level_{level_num}"
-        users = referrals_by_level.get(level_num, [])
+        users = referrals_by_level.get(level_key, [])  # Fixed: use level_key string
         
         # Get detailed user info and activity status
         user_details = []
