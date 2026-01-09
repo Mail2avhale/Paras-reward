@@ -95,22 +95,37 @@ const DashboardModern = ({ user, onLogout }) => {
         });
       }
 
-      // Fetch transactions - try multiple sources
+      // Fetch comprehensive recent activity
       try {
-        const txResponse = await axios.get(`${API}/api/transactions/${user.uid}?page=1&per_page=5`);
-        const transactions = txResponse.data.transactions || txResponse.data || [];
-        setRecentTransactions(transactions);
-      } catch (txError) {
-        // Fallback to mining history if transactions API fails
-        console.log('Transactions API failed, using mining history');
-        const miningHistory = userData?.mining_history || user?.mining_history || [];
-        const formattedHistory = miningHistory.slice(0, 5).map((h, i) => ({
-          type: 'mining_reward',
-          description: 'Daily Rewards',
-          amount: h.prc_earned || h.amount || 0,
-          timestamp: h.timestamp || h.date || new Date().toISOString()
+        const activityResponse = await axios.get(`${API}/api/user/${user.uid}/recent-activity?limit=10`);
+        const activities = activityResponse.data.activities || [];
+        // Format activities for display
+        const formattedActivities = activities.map(activity => ({
+          type: activity.type,
+          description: activity.description,
+          amount: activity.amount || 0,
+          timestamp: activity.timestamp || new Date().toISOString(),
+          icon: activity.icon
         }));
-        setRecentTransactions(formattedHistory);
+        setRecentTransactions(formattedActivities);
+      } catch (activityError) {
+        // Fallback to transactions if activity API fails
+        try {
+          const txResponse = await axios.get(`${API}/api/transactions/${user.uid}?page=1&per_page=5`);
+          const transactions = txResponse.data.transactions || txResponse.data || [];
+          setRecentTransactions(transactions);
+        } catch (txError) {
+          // Final fallback to mining history
+          console.log('Activity APIs failed, using mining history');
+          const miningHistory = userData?.mining_history || user?.mining_history || [];
+          const formattedHistory = miningHistory.slice(0, 5).map((h, i) => ({
+            type: 'mining_reward',
+            description: 'Daily Rewards',
+            amount: h.prc_earned || h.amount || 0,
+            timestamp: h.timestamp || h.date || new Date().toISOString()
+          }));
+          setRecentTransactions(formattedHistory);
+        }
       }
 
       // Check profile completion
