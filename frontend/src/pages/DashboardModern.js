@@ -268,51 +268,86 @@ const DashboardModern = ({ user, onLogout }) => {
             }}
           />
 
-          {/* Background Graphics - Geometric Pattern */}
+          {/* Background Graphics - More Visible */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {/* Large circle */}
+            {/* Large golden circle - top right */}
             <div 
-              className="absolute -right-16 -top-16 w-48 h-48 rounded-full opacity-10"
+              className="absolute -right-10 -top-10 w-44 h-44 rounded-full"
               style={{
-                background: 'radial-gradient(circle, rgba(212, 175, 55, 0.4) 0%, transparent 70%)'
+                background: 'radial-gradient(circle, rgba(212, 175, 55, 0.25) 0%, rgba(212, 175, 55, 0.1) 40%, transparent 70%)',
               }}
             />
-            {/* Small circles */}
+            
+            {/* Medium circle - bottom right */}
             <div 
-              className="absolute right-20 bottom-10 w-24 h-24 rounded-full opacity-10"
+              className="absolute right-8 -bottom-8 w-32 h-32 rounded-full"
               style={{
-                background: 'radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 70%)'
+                background: 'radial-gradient(circle, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.08) 50%, transparent 70%)',
               }}
             />
+            
+            {/* Small accent circle - left */}
             <div 
-              className="absolute left-10 bottom-20 w-16 h-16 rounded-full opacity-5"
+              className="absolute -left-6 top-1/2 -translate-y-1/2 w-20 h-20 rounded-full"
               style={{
-                background: 'radial-gradient(circle, rgba(255, 255, 255, 0.5) 0%, transparent 70%)'
+                background: 'radial-gradient(circle, rgba(212, 175, 55, 0.15) 0%, transparent 60%)',
               }}
             />
-            {/* Diagonal lines */}
-            <svg className="absolute inset-0 w-full h-full opacity-[0.03]" preserveAspectRatio="none">
+
+            {/* Horizontal gold line */}
+            <div 
+              className="absolute left-0 right-0 top-[45%] h-[1px]"
+              style={{
+                background: 'linear-gradient(90deg, transparent 0%, rgba(212, 175, 55, 0.15) 20%, rgba(212, 175, 55, 0.25) 50%, rgba(212, 175, 55, 0.15) 80%, transparent 100%)'
+              }}
+            />
+            
+            {/* Diagonal gold line 1 */}
+            <div 
+              className="absolute w-full h-[1px] top-1/3 -rotate-12 origin-left"
+              style={{
+                background: 'linear-gradient(90deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.08) 50%, transparent 100%)'
+              }}
+            />
+            
+            {/* Diagonal gold line 2 */}
+            <div 
+              className="absolute w-full h-[1px] bottom-1/4 rotate-6 origin-right"
+              style={{
+                background: 'linear-gradient(90deg, transparent 0%, rgba(212, 175, 55, 0.08) 50%, rgba(212, 175, 55, 0.15) 100%)'
+              }}
+            />
+
+            {/* Corner accent - top left */}
+            <div 
+              className="absolute top-0 left-0 w-24 h-24"
+              style={{
+                background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.12) 0%, transparent 50%)'
+              }}
+            />
+            
+            {/* Corner accent - bottom right */}
+            <div 
+              className="absolute bottom-0 right-0 w-32 h-32"
+              style={{
+                background: 'linear-gradient(315deg, rgba(212, 175, 55, 0.1) 0%, transparent 50%)'
+              }}
+            />
+
+            {/* Grid pattern overlay */}
+            <svg className="absolute inset-0 w-full h-full opacity-[0.06]" preserveAspectRatio="none">
               <defs>
-                <pattern id="diagonalLines" patternUnits="userSpaceOnUse" width="30" height="30" patternTransform="rotate(45)">
-                  <line x1="0" y1="0" x2="0" y2="30" stroke="#d4af37" strokeWidth="1"/>
+                <pattern id="cardGrid" patternUnits="userSpaceOnUse" width="40" height="40">
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#d4af37" strokeWidth="0.5"/>
                 </pattern>
               </defs>
-              <rect width="100%" height="100%" fill="url(#diagonalLines)" />
+              <rect width="100%" height="100%" fill="url(#cardGrid)" />
             </svg>
-            {/* World map outline hint */}
-            <div 
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-32 h-20 opacity-[0.04]"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 50'%3E%3Cellipse cx='50' cy='25' rx='45' ry='20' fill='none' stroke='%23d4af37' stroke-width='0.5'/%3E%3Cellipse cx='50' cy='25' rx='30' ry='20' fill='none' stroke='%23d4af37' stroke-width='0.5'/%3E%3Cellipse cx='50' cy='25' rx='15' ry='20' fill='none' stroke='%23d4af37' stroke-width='0.5'/%3E%3Cline x1='5' y1='25' x2='95' y2='25' stroke='%23d4af37' stroke-width='0.5'/%3E%3Cline x1='50' y1='5' x2='50' y2='45' stroke='%23d4af37' stroke-width='0.5'/%3E%3C/svg%3E")`,
-                backgroundSize: 'contain',
-                backgroundRepeat: 'no-repeat'
-              }}
-            />
           </div>
 
           {/* Realistic card texture */}
           <div 
-            className="absolute inset-0 opacity-[0.03]"
+            className="absolute inset-0 opacity-[0.02]"
             style={{
               backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
             }}
