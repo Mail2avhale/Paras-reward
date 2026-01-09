@@ -167,6 +167,15 @@ code {
     }
 }
 
+@keyframes borderPulse {
+    0%, 100% {
+        box-shadow: 0 0 15px rgba(212, 175, 55, 0.1), inset 0 0 15px rgba(212, 175, 55, 0.03);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(212, 175, 55, 0.25), inset 0 0 25px rgba(212, 175, 55, 0.08);
+    }
+}
+
 .shimmer-effect {
     animation: shimmer 2s infinite;
 }
