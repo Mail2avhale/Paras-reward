@@ -75,11 +75,23 @@ const VIPMembership = ({ user }) => {
       setUserData(userRes.data);
       
       const plansRes = await axios.get(`${API}/api/vip/plans`);
-      const plans = plansRes.data.plans || [];
+      const plans = (plansRes.data.plans || []).map((plan, idx) => ({
+        ...plan,
+        id: plan.id || plan.plan_type || idx,
+        discount: plan.discount_percentage || 0
+      }));
       setVipPlans(plans);
       
-      const configRes = await axios.get(`${API}/api/vip/payment-config`);
-      setPaymentConfig(configRes.data);
+      try {
+        const configRes = await axios.get(`${API}/api/vip/payment-config`);
+        setPaymentConfig(configRes.data);
+      } catch (e) {
+        // Payment config might not exist, use defaults
+        setPaymentConfig({
+          upi_id: 'paras@upi',
+          qr_code_url: null
+        });
+      }
       
     } catch (error) {
       console.error('Error fetching data:', error);
