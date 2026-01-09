@@ -196,11 +196,9 @@ class TestMiningStatusWithReferralBreakdown:
     
     def test_mining_status_returns_referral_breakdown(self):
         """Test GET /api/mining/status/{uid} returns referral_breakdown"""
-        # First, get a test user
-        # Login as test user
+        # Login as test user using query params
         login_response = requests.post(
-            f"{BASE_URL}/api/auth/login",
-            json={"email": "testuser@test.com", "password": "test123"}
+            f"{BASE_URL}/api/auth/login?identifier=testuser@test.com&password=test123"
         )
         
         if login_response.status_code != 200:
