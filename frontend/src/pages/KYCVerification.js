@@ -281,8 +281,10 @@ const KYCVerification = ({ user }) => {
                     </div>
                   ) : (
                     <ImageCropUpload
-                      onImageCropped={(data) => setKycData({...kycData, aadhaar_front: data})}
+                      onChange={(data) => setKycData({...kycData, aadhaar_front: data})}
                       aspectRatio={1.6}
+                      label="Aadhaar Front Side"
+                      maxSizeMB={2}
                     />
                   )}
                 </div>
@@ -308,8 +310,10 @@ const KYCVerification = ({ user }) => {
                     </div>
                   ) : (
                     <ImageCropUpload
-                      onImageCropped={(data) => setKycData({...kycData, aadhaar_back: data})}
+                      onChange={(data) => setKycData({...kycData, aadhaar_back: data})}
                       aspectRatio={1.6}
+                      label="Aadhaar Back Side"
+                      maxSizeMB={2}
                     />
                   )}
                 </div>
