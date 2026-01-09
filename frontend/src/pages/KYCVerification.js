@@ -356,8 +356,10 @@ const KYCVerification = ({ user }) => {
                     </div>
                   ) : (
                     <ImageCropUpload
-                      onImageCropped={(data) => setKycData({...kycData, pan_front: data})}
+                      onChange={(data) => setKycData({...kycData, pan_front: data})}
                       aspectRatio={1.6}
+                      label="PAN Card Image"
+                      maxSizeMB={2}
                     />
                   )}
                 </div>
