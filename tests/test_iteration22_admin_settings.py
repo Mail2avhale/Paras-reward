@@ -274,8 +274,7 @@ class TestAdminLogin:
     def test_admin_login(self):
         """Test admin can login"""
         response = requests.post(
-            f"{BASE_URL}/api/auth/login",
-            json={"email": "admin@paras.com", "password": "admin123"}
+            f"{BASE_URL}/api/auth/login?identifier=admin@paras.com&password=admin123"
         )
         
         if response.status_code == 200:
