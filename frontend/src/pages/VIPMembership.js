@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { 
   Crown, CheckCircle, Upload, ArrowLeft, Star, Zap, ShoppingBag, 
-  Gift, Clock, Shield, QrCode, CreditCard
+  Gift, Clock, Shield, QrCode, CreditCard, ChevronRight, Calendar,
+  AlertCircle, Check
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import ImageUpload from '@/components/ImageUpload';
 
@@ -23,8 +22,11 @@ const VIPMembership = ({ user }) => {
   const [vipPlans, setVipPlans] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [paymentConfig, setPaymentConfig] = useState(null);
-  const [showPayment, setShowPayment] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Step-by-step flow: 1=Select Plan, 2=Payment Info, 3=Upload Proof, 4=Submit, 5=Success
+  const [currentStep, setCurrentStep] = useState(1);
+  
   const [formData, setFormData] = useState({
     utr_number: '',
     screenshot_url: '',
@@ -34,20 +36,31 @@ const VIPMembership = ({ user }) => {
 
   const t = {
     title: language === 'mr' ? 'VIP सदस्यत्व' : language === 'hi' ? 'VIP सदस्यता' : 'VIP Membership',
-    upgrade: language === 'mr' ? 'VIP बना' : language === 'hi' ? 'VIP बनें' : 'Become VIP',
-    benefits: language === 'mr' ? 'फायदे' : language === 'hi' ? 'लाभ' : 'Benefits',
-    selectPlan: language === 'mr' ? 'प्लॅन निवडा' : language === 'hi' ? 'प्लान चुनें' : 'Select Plan',
-    pay: language === 'mr' ? 'पेमेंट करा' : language === 'hi' ? 'भुगतान करें' : 'Pay Now',
-    alreadyVip: language === 'mr' ? 'तुम्ही आधीच VIP आहात!' : language === 'hi' ? 'आप पहले से VIP हैं!' : 'You are already VIP!',
+    step1: language === 'mr' ? 'प्लॅन निवडा' : language === 'hi' ? 'प्लान चुनें' : 'Select Plan',
+    step2: language === 'mr' ? 'पेमेंट करा' : language === 'hi' ? 'भुगतान करें' : 'Make Payment',
+    step3: language === 'mr' ? 'पुरावा अपलोड करा' : language === 'hi' ? 'प्रमाण अपलोड करें' : 'Upload Proof',
+    step4: language === 'mr' ? 'सबमिट करा' : language === 'hi' ? 'जमा करें' : 'Submit',
+    next: language === 'mr' ? 'पुढे' : language === 'hi' ? 'आगे' : 'Next',
+    back: language === 'mr' ? 'मागे' : language === 'hi' ? 'पीछे' : 'Back',
+    alreadyVip: language === 'mr' ? 'तुम्ही VIP आहात!' : language === 'hi' ? 'आप VIP हैं!' : 'You are VIP!',
+    expiresOn: language === 'mr' ? 'समाप्ती तारीख' : language === 'hi' ? 'समाप्ति तिथि' : 'Expires On',
+    daysLeft: language === 'mr' ? 'दिवस बाकी' : language === 'hi' ? 'दिन बाकी' : 'days left',
   };
 
   const benefits = [
-    { icon: Zap, text: '2x Reward Rate', desc: 'Earn double PRC on daily rewards' },
+    { icon: Zap, text: '2x Reward Rate', desc: 'Double PRC on daily rewards' },
     { icon: Clock, text: 'No PRC Expiry', desc: 'Your PRC never expires' },
-    { icon: ShoppingBag, text: 'Marketplace Access', desc: 'Shop exclusive products' },
-    { icon: Gift, text: 'Gift Vouchers', desc: 'Redeem Amazon, Flipkart vouchers' },
+    { icon: ShoppingBag, text: 'Marketplace', desc: 'Shop exclusive products' },
+    { icon: Gift, text: 'Gift Vouchers', desc: 'Amazon, Flipkart vouchers' },
     { icon: CreditCard, text: 'Bill Payments', desc: 'Pay bills with PRC' },
     { icon: Shield, text: 'Priority Support', desc: '24/7 dedicated support' },
+  ];
+
+  const steps = [
+    { num: 1, title: t.step1 },
+    { num: 2, title: t.step2 },
+    { num: 3, title: t.step3 },
+    { num: 4, title: t.step4 },
   ];
 
   useEffect(() => {
@@ -58,22 +71,13 @@ const VIPMembership = ({ user }) => {
     try {
       setLoading(true);
       
-      // Fetch user data
       const userRes = await axios.get(`${API}/api/user/${user.uid}`);
       setUserData(userRes.data);
       
-      // Fetch VIP plans
       const plansRes = await axios.get(`${API}/api/vip/plans`);
       const plans = plansRes.data.plans || [];
       setVipPlans(plans);
       
-      // Auto-select monthly plan
-      const monthlyPlan = plans.find(p => p.plan_type === 'monthly') || plans[0];
-      if (monthlyPlan) {
-        setSelectedPlan(monthlyPlan);
-      }
-      
-      // Fetch payment config
       const configRes = await axios.get(`${API}/api/vip/payment-config`);
       setPaymentConfig(configRes.data);
       
@@ -85,8 +89,12 @@ const VIPMembership = ({ user }) => {
   };
 
   const handlePaymentSubmit = async () => {
-    if (!formData.utr_number || !formData.screenshot_url) {
-      toast.error('Please enter UTR and upload screenshot');
+    if (!formData.utr_number) {
+      toast.error('Please enter UTR / Transaction ID');
+      return;
+    }
+    if (!formData.screenshot_url) {
+      toast.error('Please upload payment screenshot');
       return;
     }
     
@@ -104,9 +112,8 @@ const VIPMembership = ({ user }) => {
         payment_method: 'UPI'
       });
       
-      toast.success('Payment submitted! Verification in 24-48 hours.');
-      setShowPayment(false);
-      navigate('/dashboard');
+      toast.success('Payment submitted successfully!');
+      setCurrentStep(5); // Success step
       
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to submit payment');
@@ -116,6 +123,15 @@ const VIPMembership = ({ user }) => {
   };
 
   const isVip = userData?.membership_type === 'vip';
+  const vipExpiry = userData?.membership_expiry || userData?.vip_expiry;
+  
+  // Calculate days left
+  let daysLeft = 0;
+  if (vipExpiry) {
+    const expiryDate = new Date(vipExpiry);
+    const today = new Date();
+    daysLeft = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+  }
 
   if (loading) {
     return (
@@ -128,203 +144,483 @@ const VIPMembership = ({ user }) => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-8">
       {/* Header */}
-      <div className="px-5 pt-6 pb-4">
+      <div className="px-5 pt-6 pb-4 sticky top-0 z-10 bg-gray-950/80 backdrop-blur-md">
         <div className="flex items-center gap-4">
           <button 
-            onClick={() => navigate('/dashboard')}
-            className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center"
+            onClick={() => currentStep > 1 && !isVip ? setCurrentStep(currentStep - 1) : navigate('/dashboard')}
+            className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition-colors"
           >
             <ArrowLeft className="w-5 h-5 text-white" />
           </button>
           <div>
             <h1 className="text-white text-xl font-bold">{t.title}</h1>
-            <p className="text-gray-400 text-sm">Unlock premium features</p>
+            <p className="text-gray-500 text-sm">Unlock premium features</p>
           </div>
         </div>
       </div>
 
-      {/* Already VIP Banner */}
+      {/* Already VIP - Show Expiry */}
       {isVip && (
         <div className="px-5 mb-6">
-          <div className="bg-gradient-to-r from-amber-500 to-yellow-500 rounded-2xl p-5 text-center">
-            <Crown className="w-12 h-12 text-black mx-auto mb-2" />
-            <h2 className="text-black text-xl font-bold">{t.alreadyVip}</h2>
-            <p className="text-black/70 text-sm mt-1">
-              Valid until: {userData?.vip_expiry ? new Date(userData.vip_expiry).toLocaleDateString() : 'Forever'}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* VIP Card Preview */}
-      {!isVip && (
-        <div className="px-5 mb-6">
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
             className="relative overflow-hidden rounded-3xl p-6"
             style={{
               background: 'linear-gradient(135deg, #92400e 0%, #78350f 50%, #451a03 100%)',
             }}
           >
             <div className="absolute top-0 right-0 w-40 h-40 bg-yellow-400/20 rounded-full blur-3xl"></div>
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-600 flex items-center justify-center">
-                  <Crown className="w-6 h-6 text-black" />
-                </div>
-                <div>
-                  <p className="text-amber-200 text-xs font-semibold tracking-wider">PARAS REWARD</p>
-                  <p className="text-white text-xl font-bold">VIP MEMBER</p>
-                </div>
+            
+            <div className="relative z-10 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-yellow-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                <Crown className="w-8 h-8 text-black" />
               </div>
-              <div className="flex items-center gap-2 mb-6">
+              
+              <h2 className="text-white text-2xl font-bold mb-2">{t.alreadyVip}</h2>
+              
+              <div className="flex items-center justify-center gap-2 mb-4">
                 <Star className="w-5 h-5 text-yellow-400" />
                 <Star className="w-5 h-5 text-yellow-400" />
                 <Star className="w-5 h-5 text-yellow-400" />
               </div>
-              <p className="text-amber-100/80 text-sm">
-                Unlock premium features and maximize your earnings
-              </p>
+
+              {/* Expiry Info */}
+              <div className="bg-black/30 rounded-2xl p-4 mt-4">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Calendar className="w-5 h-5 text-amber-400" />
+                  <span className="text-amber-300 font-medium">{t.expiresOn}</span>
+                </div>
+                
+                <p className="text-white text-2xl font-bold mb-2">
+                  {vipExpiry ? new Date(vipExpiry).toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  }) : 'Lifetime'}
+                </p>
+                
+                {daysLeft > 0 && (
+                  <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
+                    daysLeft <= 7 ? 'bg-red-500/30 text-red-300' : 
+                    daysLeft <= 30 ? 'bg-amber-500/30 text-amber-300' : 
+                    'bg-emerald-500/30 text-emerald-300'
+                  }`}>
+                    <Clock className="w-4 h-4" />
+                    <span className="font-bold">{daysLeft} {t.daysLeft}</span>
+                  </div>
+                )}
+                
+                {daysLeft <= 0 && vipExpiry && (
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/30 text-red-300">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="font-bold">Expired - Renew Now!</span>
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
+          
+          {/* Renew Button for expiring soon */}
+          {(daysLeft <= 7 || daysLeft <= 0) && (
+            <button 
+              onClick={() => setCurrentStep(1)}
+              className="w-full mt-4 py-3 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold rounded-xl"
+            >
+              {daysLeft <= 0 ? 'Renew Now' : 'Extend Membership'}
+            </button>
+          )}
         </div>
       )}
 
-      {/* Benefits */}
-      <div className="px-5 mb-6">
-        <h2 className="text-white font-bold text-lg mb-4">{t.benefits}</h2>
-        <div className="grid grid-cols-2 gap-3">
-          {benefits.map((benefit, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4"
-            >
-              <benefit.icon className="w-8 h-8 text-amber-500 mb-2" />
-              <p className="text-white font-medium text-sm">{benefit.text}</p>
-              <p className="text-gray-500 text-xs mt-1">{benefit.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
-      {/* Plans */}
-      {!isVip && (
+      {/* Step Progress (Non-VIP) */}
+      {!isVip && currentStep < 5 && (
         <div className="px-5 mb-6">
-          <h2 className="text-white font-bold text-lg mb-4">{t.selectPlan}</h2>
-          <div className="space-y-3">
-            {vipPlans.map((plan) => (
-              <button
-                key={plan.id}
-                onClick={() => setSelectedPlan(plan)}
-                className={`w-full p-4 rounded-2xl border-2 transition-all ${
-                  selectedPlan?.id === plan.id
-                    ? 'border-amber-500 bg-amber-500/10'
-                    : 'border-gray-800 bg-gray-900/50'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="text-left">
-                    <p className="text-white font-bold capitalize">{plan.plan_type} Plan</p>
-                    <p className="text-gray-400 text-sm">{plan.duration_days} days</p>
+          <div className="flex items-center justify-between">
+            {steps.map((step, idx) => (
+              <div key={step.num} className="flex items-center">
+                <div className={`flex flex-col items-center`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
+                    currentStep > step.num 
+                      ? 'bg-emerald-500 text-white' 
+                      : currentStep === step.num 
+                        ? 'bg-amber-500 text-black' 
+                        : 'bg-gray-800 text-gray-500'
+                  }`}>
+                    {currentStep > step.num ? <Check className="w-5 h-5" /> : step.num}
                   </div>
-                  <div className="text-right">
-                    {plan.discount > 0 && (
-                      <p className="text-gray-500 text-sm line-through">₹{plan.base_price}</p>
-                    )}
-                    <p className="text-amber-400 text-2xl font-bold">₹{plan.final_price}</p>
-                  </div>
+                  <span className={`text-[10px] mt-1 ${
+                    currentStep >= step.num ? 'text-amber-400' : 'text-gray-600'
+                  }`}>
+                    {step.title}
+                  </span>
                 </div>
-                {plan.discount > 0 && (
-                  <div className="mt-2 bg-green-500/20 px-3 py-1 rounded-full inline-block">
-                    <span className="text-green-400 text-xs font-semibold">Save {plan.discount}%</span>
-                  </div>
+                {idx < steps.length - 1 && (
+                  <div className={`w-8 h-0.5 mx-1 ${
+                    currentStep > step.num ? 'bg-emerald-500' : 'bg-gray-800'
+                  }`} />
                 )}
-              </button>
+              </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Payment Section */}
-      {!isVip && selectedPlan && (
-        <>
-          {!showPayment ? (
-            <div className="px-5">
-              <Button
-                onClick={() => setShowPayment(true)}
-                className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-bold py-4 rounded-2xl text-lg"
-              >
-                <Crown className="w-5 h-5 mr-2" />
-                {t.pay} - ₹{selectedPlan.final_price}
-              </Button>
-            </div>
-          ) : (
-            <div className="px-5">
-              <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 space-y-4">
-                <h3 className="text-white font-bold text-lg">Complete Payment</h3>
-                
-                {/* QR Code */}
-                {paymentConfig?.qr_code_url && (
-                  <div className="bg-white p-4 rounded-xl text-center">
-                    <img 
-                      src={paymentConfig.qr_code_url} 
-                      alt="Payment QR"
-                      className="w-48 h-48 mx-auto"
-                    />
-                    <p className="text-gray-900 text-sm mt-2 font-mono">{paymentConfig.upi_id}</p>
-                  </div>
-                )}
-                
-                <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
-                  <p className="text-amber-400 text-sm font-medium">Amount to Pay</p>
-                  <p className="text-white text-2xl font-bold">₹{selectedPlan.final_price}</p>
+      {/* Step 1: Select Plan */}
+      {!isVip && currentStep === 1 && (
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+        >
+          {/* VIP Card Preview */}
+          <div className="px-5 mb-6">
+            <div className="relative overflow-hidden rounded-3xl p-5"
+              style={{
+                background: 'linear-gradient(135deg, #92400e 0%, #78350f 50%, #451a03 100%)',
+              }}
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/20 rounded-full blur-3xl"></div>
+              <div className="relative z-10 flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-600 flex items-center justify-center">
+                  <Crown className="w-6 h-6 text-black" />
                 </div>
-
-                {/* UTR Number */}
                 <div>
-                  <label className="text-gray-400 text-sm mb-1 block">UTR / Transaction ID *</label>
-                  <Input
-                    value={formData.utr_number}
-                    onChange={(e) => setFormData({...formData, utr_number: e.target.value})}
-                    placeholder="Enter 12-digit UTR number"
-                    className="bg-gray-800 border-gray-700 text-white"
-                  />
-                </div>
-
-                {/* Screenshot Upload */}
-                <div>
-                  <label className="text-gray-400 text-sm mb-1 block">Payment Screenshot *</label>
-                  <ImageUpload
-                    onImageUploaded={(url) => setFormData({...formData, screenshot_url: url})}
-                    existingImage={formData.screenshot_url}
-                    userId={user.uid}
-                  />
-                </div>
-
-                <div className="flex gap-3">
-                  <Button
-                    onClick={() => setShowPayment(false)}
-                    variant="outline"
-                    className="flex-1 bg-gray-800 border-gray-700 text-white"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handlePaymentSubmit}
-                    disabled={submitting || !formData.utr_number || !formData.screenshot_url}
-                    className="flex-1 bg-amber-500 hover:bg-amber-600 text-black font-bold"
-                  >
-                    {submitting ? 'Submitting...' : 'Submit Payment'}
-                  </Button>
+                  <p className="text-amber-200 text-xs font-semibold tracking-wider">PARAS REWARD</p>
+                  <p className="text-white text-lg font-bold">VIP MEMBER CARD</p>
                 </div>
               </div>
             </div>
-          )}
-        </>
+          </div>
+
+          {/* Benefits Grid */}
+          <div className="px-5 mb-6">
+            <h2 className="text-white font-bold mb-3">VIP Benefits</h2>
+            <div className="grid grid-cols-3 gap-2">
+              {benefits.map((benefit, index) => (
+                <div key={index} className="bg-gray-900/50 border border-gray-800 rounded-xl p-3 text-center">
+                  <benefit.icon className="w-6 h-6 text-amber-500 mx-auto mb-1" />
+                  <p className="text-white text-xs font-medium">{benefit.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Plan Selection */}
+          <div className="px-5 mb-6">
+            <h2 className="text-white font-bold mb-3">{t.step1}</h2>
+            <div className="space-y-3">
+              {vipPlans.map((plan) => (
+                <button
+                  key={plan.id}
+                  onClick={() => setSelectedPlan(plan)}
+                  className={`w-full p-4 rounded-2xl border-2 transition-all ${
+                    selectedPlan?.id === plan.id
+                      ? 'border-amber-500 bg-amber-500/10'
+                      : 'border-gray-800 bg-gray-900/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-left">
+                      <p className="text-white font-bold capitalize">{plan.plan_type} Plan</p>
+                      <p className="text-gray-400 text-sm">{plan.duration_days} days validity</p>
+                    </div>
+                    <div className="text-right">
+                      {plan.discount > 0 && (
+                        <p className="text-gray-500 text-sm line-through">₹{plan.base_price}</p>
+                      )}
+                      <p className="text-amber-400 text-2xl font-bold">₹{plan.final_price}</p>
+                    </div>
+                  </div>
+                  {plan.discount > 0 && (
+                    <div className="mt-2 bg-green-500/20 px-3 py-1 rounded-full inline-block">
+                      <span className="text-green-400 text-xs font-semibold">Save {plan.discount}%</span>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Next Button */}
+          <div className="px-5">
+            <button
+              onClick={() => selectedPlan && setCurrentStep(2)}
+              disabled={!selectedPlan}
+              className="w-full py-4 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {t.next}
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Step 2: Payment Info */}
+      {!isVip && currentStep === 2 && (
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          className="px-5"
+        >
+          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 mb-6">
+            <h3 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-amber-500" />
+              {t.step2}
+            </h3>
+            
+            {/* Amount to Pay */}
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-4">
+              <p className="text-amber-400 text-sm">Amount to Pay</p>
+              <p className="text-white text-3xl font-bold">₹{selectedPlan?.final_price}</p>
+              <p className="text-gray-500 text-sm">{selectedPlan?.plan_type} Plan - {selectedPlan?.duration_days} days</p>
+            </div>
+
+            {/* QR Code */}
+            {paymentConfig?.qr_code_url && (
+              <div className="bg-white p-4 rounded-xl text-center mb-4">
+                <img 
+                  src={paymentConfig.qr_code_url} 
+                  alt="Payment QR"
+                  className="w-48 h-48 mx-auto"
+                />
+                <p className="text-gray-900 text-sm mt-2 font-mono bg-gray-100 py-2 px-3 rounded-lg">
+                  {paymentConfig.upi_id}
+                </p>
+              </div>
+            )}
+
+            {/* Payment Instructions */}
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+              <h4 className="text-blue-400 font-semibold mb-2">Payment Instructions</h4>
+              <ol className="text-gray-400 text-sm space-y-2">
+                <li className="flex items-start gap-2">
+                  <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center flex-shrink-0">1</span>
+                  <span>Scan QR code with any UPI app</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center flex-shrink-0">2</span>
+                  <span>Enter amount: ₹{selectedPlan?.final_price}</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center flex-shrink-0">3</span>
+                  <span>Complete payment & note UTR number</span>
+                </li>
+              </ol>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => setCurrentStep(1)}
+              className="flex-1 py-3 bg-gray-800 text-white font-medium rounded-xl"
+            >
+              {t.back}
+            </button>
+            <button
+              onClick={() => setCurrentStep(3)}
+              className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold rounded-xl flex items-center justify-center gap-2"
+            >
+              {t.next}
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Step 3: Upload Proof */}
+      {!isVip && currentStep === 3 && (
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          className="px-5"
+        >
+          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 mb-6 space-y-4">
+            <h3 className="text-white font-bold text-lg flex items-center gap-2">
+              <Upload className="w-5 h-5 text-amber-500" />
+              {t.step3}
+            </h3>
+
+            {/* UTR Number */}
+            <div>
+              <label className="text-gray-400 text-sm mb-2 block">UTR / Transaction ID *</label>
+              <input
+                value={formData.utr_number}
+                onChange={(e) => setFormData({...formData, utr_number: e.target.value})}
+                placeholder="Enter 12-digit UTR number"
+                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:border-amber-500 focus:outline-none"
+              />
+              <p className="text-gray-600 text-xs mt-1">Find this in your UPI app transaction history</p>
+            </div>
+
+            {/* Screenshot Upload */}
+            <div>
+              <label className="text-gray-400 text-sm mb-2 block">Payment Screenshot *</label>
+              <ImageUpload
+                value={formData.screenshot_url}
+                onChange={(url) => setFormData({...formData, screenshot_url: url})}
+                placeholder="Upload payment proof"
+              />
+            </div>
+
+            {/* Payment Date & Time */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-gray-400 text-sm mb-2 block">Payment Date</label>
+                <input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData({...formData, date: e.target.value})}
+                  className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-gray-400 text-sm mb-2 block">Payment Time</label>
+                <input
+                  type="time"
+                  value={formData.time}
+                  onChange={(e) => setFormData({...formData, time: e.target.value})}
+                  className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => setCurrentStep(2)}
+              className="flex-1 py-3 bg-gray-800 text-white font-medium rounded-xl"
+            >
+              {t.back}
+            </button>
+            <button
+              onClick={() => {
+                if (!formData.utr_number || !formData.screenshot_url) {
+                  toast.error('Please fill all required fields');
+                  return;
+                }
+                setCurrentStep(4);
+              }}
+              className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold rounded-xl flex items-center justify-center gap-2"
+            >
+              {t.next}
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Step 4: Review & Submit */}
+      {!isVip && currentStep === 4 && (
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          className="px-5"
+        >
+          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 mb-6">
+            <h3 className="text-white font-bold text-lg mb-4">Review Details</h3>
+            
+            {/* Plan Summary */}
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-amber-400 text-sm">Selected Plan</p>
+                  <p className="text-white font-bold text-lg capitalize">{selectedPlan?.plan_type} - {selectedPlan?.duration_days} days</p>
+                </div>
+                <p className="text-amber-400 text-2xl font-bold">₹{selectedPlan?.final_price}</p>
+              </div>
+            </div>
+
+            {/* Payment Details */}
+            <div className="space-y-3">
+              <div className="flex justify-between py-2 border-b border-gray-800">
+                <span className="text-gray-400">UTR Number</span>
+                <span className="text-white font-mono">{formData.utr_number}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-gray-800">
+                <span className="text-gray-400">Payment Date</span>
+                <span className="text-white">{formData.date}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-gray-800">
+                <span className="text-gray-400">Payment Time</span>
+                <span className="text-white">{formData.time}</span>
+              </div>
+              <div className="flex justify-between py-2">
+                <span className="text-gray-400">Screenshot</span>
+                <span className="text-emerald-400">✓ Uploaded</span>
+              </div>
+            </div>
+
+            {/* Warning */}
+            <div className="mt-4 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
+              <p className="text-amber-300 text-xs">
+                ⚠️ Verification takes 24-48 hours. Your VIP membership will be activated after verification.
+              </p>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => setCurrentStep(3)}
+              className="flex-1 py-3 bg-gray-800 text-white font-medium rounded-xl"
+            >
+              {t.back}
+            </button>
+            <button
+              onClick={handlePaymentSubmit}
+              disabled={submitting}
+              className="flex-1 py-4 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <Crown className="w-5 h-5" />
+              {submitting ? 'Submitting...' : 'Submit Application'}
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Step 5: Success */}
+      {currentStep === 5 && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="px-5"
+        >
+          <div className="bg-gray-900/50 border border-gray-800 rounded-3xl p-8 text-center">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-emerald-500/20 flex items-center justify-center">
+              <CheckCircle className="w-10 h-10 text-emerald-500" />
+            </div>
+            
+            <h2 className="text-white text-2xl font-bold mb-2">Application Submitted!</h2>
+            <p className="text-gray-400 mb-6">
+              Your VIP membership application has been submitted successfully. 
+              Our team will verify your payment within 24-48 hours.
+            </p>
+            
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-6">
+              <p className="text-amber-400 text-sm">Expected Activation</p>
+              <p className="text-white font-bold text-lg">
+                {new Date(Date.now() + 48 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric'
+                })}
+              </p>
+            </div>
+
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="w-full py-3 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold rounded-xl"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        </motion.div>
       )}
     </div>
   );
