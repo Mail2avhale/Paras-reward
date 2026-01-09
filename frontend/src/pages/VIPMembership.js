@@ -94,6 +94,15 @@ const VIPMembership = ({ user }) => {
         });
       }
       
+      // Fetch payment history
+      try {
+        const historyRes = await axios.get(`${API}/api/user/vip-transactions/${user.uid}`);
+        setPaymentHistory(historyRes.data.transactions || historyRes.data || []);
+      } catch (e) {
+        console.log('No payment history found');
+        setPaymentHistory([]);
+      }
+      
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
