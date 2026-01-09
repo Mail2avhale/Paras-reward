@@ -396,20 +396,16 @@ const DashboardModern = ({ user, onLogout }) => {
           <div className="relative z-10 p-5 h-full flex flex-col justify-between">
             {/* Top Row - Logo & Live Session Indicator */}
             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2">
-                <div 
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+              {/* PARAS REWARD Logo */}
+              <div className="flex items-center">
+                <img 
+                  src="https://customer-assets.emergentagent.com/job_finance-ai-35/artifacts/tppmh3uy_IMG-20251230-WA0004.jpg"
+                  alt="PARAS REWARD"
+                  className="h-10 w-auto object-contain rounded"
                   style={{
-                    background: 'linear-gradient(135deg, #ffd700 0%, #b8860b 100%)',
-                    boxShadow: '0 2px 8px rgba(212, 175, 55, 0.4)'
+                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
                   }}
-                >
-                  <CreditCard className="w-5 h-5 text-black" />
-                </div>
-                <div>
-                  <p className="text-amber-400 text-xs font-bold tracking-wider">PARAS</p>
-                  <p className="text-amber-600/50 text-[9px] tracking-widest">REWARD</p>
-                </div>
+                />
               </div>
               
               {/* Live Session Indicator */}
