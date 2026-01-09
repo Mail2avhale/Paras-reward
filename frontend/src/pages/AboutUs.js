@@ -156,7 +156,7 @@ const AboutUs = () => {
       <div className="px-5 pb-8">
         <div className="bg-gray-900/50 rounded-2xl p-5 border border-gray-800">
           <h3 className="text-white font-bold text-lg mb-3">Contact Us</h3>
-          <p className="text-gray-400 text-sm mb-4">Have questions? We're here to help!</p>
+          <p className="text-gray-400 text-sm mb-4">Have questions? We&apos;re here to help!</p>
           <Link 
             to="/contact" 
             className="inline-flex items-center justify-center w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-gray-900 font-bold rounded-xl hover:from-amber-400 hover:to-amber-500 transition-all"
