@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Users, Copy, Check, UserPlus, Share2, ArrowLeft, Gift, Crown, TrendingUp, ChevronDown, ChevronRight } from 'lucide-react';
+import { 
+  Users, Copy, Check, Share2, ArrowLeft, Gift, Crown, TrendingUp, 
+  ChevronDown, ChevronRight, UserCheck, UserX, Zap, Info
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -21,38 +22,36 @@ const Referrals = ({ user }) => {
   const [inputCode, setInputCode] = useState('');
   const [applying, setApplying] = useState(false);
   const [referralLevels, setReferralLevels] = useState([]);
-  const [expandedLevel, setExpandedLevel] = useState(1);
+  const [expandedLevel, setExpandedLevel] = useState(null);
+  const [showBonusInfo, setShowBonusInfo] = useState(false);
 
   const t = {
     title: language === 'mr' ? 'मित्रांना आमंत्रित करा' : language === 'hi' ? 'दोस्तों को आमंत्रित करें' : 'Invite Friends',
-    yourCode: language === 'mr' ? 'तुमचा कोड' : language === 'hi' ? 'आपका कोड' : 'Your Code',
-    copyCode: language === 'mr' ? 'कॉपी करा' : language === 'hi' ? 'कॉपी करें' : 'Copy Code',
+    yourCode: language === 'mr' ? 'तुमचा कोड' : language === 'hi' ? 'आपका कोड' : 'Your Referral Code',
+    copyCode: language === 'mr' ? 'कॉपी करा' : language === 'hi' ? 'कॉपी करें' : 'Copy',
     copied: language === 'mr' ? 'कॉपी झाले!' : language === 'hi' ? 'कॉपी हो गया!' : 'Copied!',
     totalFriends: language === 'mr' ? 'एकूण मित्र' : language === 'hi' ? 'कुल दोस्त' : 'Total Friends',
-    bonusRate: language === 'mr' ? 'बोनस दर' : language === 'hi' ? 'बोनस दर' : 'Bonus Rate',
-    haveCode: language === 'mr' ? 'कोड आहे का?' : language === 'hi' ? 'कोड है?' : 'Have a code?',
+    activeFriends: language === 'mr' ? 'सक्रिय मित्र' : language === 'hi' ? 'सक्रिय दोस्त' : 'Active',
+    vipFriends: language === 'mr' ? 'VIP मित्र' : language === 'hi' ? 'VIP दोस्त' : 'VIP Members',
+    bonusRate: language === 'mr' ? 'बोनस दर' : language === 'hi' ? 'बोनस दर' : 'Active Bonus',
+    haveCode: language === 'mr' ? 'कोड आहे का?' : language === 'hi' ? 'कोड है?' : 'Have a referral code?',
     enterCode: language === 'mr' ? 'कोड टाका' : language === 'hi' ? 'कोड डालें' : 'Enter code',
     apply: language === 'mr' ? 'लागू करा' : language === 'hi' ? 'लागू करें' : 'Apply',
     level: language === 'mr' ? 'लेव्हल' : language === 'hi' ? 'लेवल' : 'Level',
     yourNetwork: language === 'mr' ? 'तुमचे नेटवर्क' : language === 'hi' ? 'आपका नेटवर्क' : 'Your Network',
-    directReferrals: language === 'mr' ? 'थेट रेफरल' : language === 'hi' ? 'सीधा रेफरल' : 'Direct Referrals',
+    bonusStructure: language === 'mr' ? 'बोनस स्ट्रक्चर' : language === 'hi' ? 'बोनस स्ट्रक्चर' : 'Bonus Structure',
+    onlyActiveBonus: language === 'mr' ? 'फक्त सक्रिय रेफरलवर बोनस' : language === 'hi' ? 'केवल सक्रिय रेफरल पर बोनस' : 'Bonus only on active referrals',
+    active: language === 'mr' ? 'सक्रिय' : language === 'hi' ? 'सक्रिय' : 'Active',
+    inactive: language === 'mr' ? 'निष्क्रिय' : language === 'hi' ? 'निष्क्रिय' : 'Inactive',
   };
 
-  // Level bonus percentages
+  // Level bonus percentages (only on active referrals)
   const levelBonuses = {
-    1: 10, // Level 1: 10% bonus
-    2: 5,  // Level 2: 5% bonus
-    3: 3,  // Level 3: 3% bonus
-    4: 2,  // Level 4: 2% bonus
-    5: 1   // Level 5: 1% bonus
-  };
-
-  const levelColors = {
-    1: 'from-purple-600 to-violet-700',
-    2: 'from-blue-600 to-indigo-700',
-    3: 'from-emerald-600 to-teal-700',
-    4: 'from-orange-600 to-amber-700',
-    5: 'from-pink-600 to-rose-700'
+    1: { percent: 10, desc: 'Direct Referrals', color: 'from-amber-500 to-amber-600' },
+    2: { percent: 5, desc: 'Level 2 Network', color: 'from-blue-500 to-blue-600' },
+    3: { percent: 3, desc: 'Level 3 Network', color: 'from-emerald-500 to-emerald-600' },
+    4: { percent: 2, desc: 'Level 4 Network', color: 'from-purple-500 to-purple-600' },
+    5: { percent: 1, desc: 'Level 5 Network', color: 'from-pink-500 to-pink-600' }
   };
 
   useEffect(() => {
@@ -72,15 +71,22 @@ const Referrals = ({ user }) => {
       // Fetch referral levels
       try {
         const levelsResponse = await axios.get(`${API}/api/referrals/${user.uid}/levels`);
-        setReferralLevels(levelsResponse.data.levels || []);
+        const levels = levelsResponse.data.levels || [];
+        setReferralLevels(levels);
         
-        // Calculate stats from levels
-        const totalCount = levelsResponse.data.levels?.reduce((sum, level) => sum + (level.users?.length || 0), 0) || 0;
-        setReferralStats({ 
-          total: totalCount,
-          active: levelsResponse.data.active_count || 0,
-          vip: levelsResponse.data.vip_count || 0
+        // Calculate stats from levels - count active users only for bonus
+        let totalCount = 0;
+        let activeCount = 0;
+        let vipCount = 0;
+        
+        levels.forEach(level => {
+          const users = level.users || [];
+          totalCount += users.length;
+          activeCount += users.filter(u => u.is_active).length;
+          vipCount += users.filter(u => u.membership_type === 'vip').length;
         });
+        
+        setReferralStats({ total: totalCount, active: activeCount, vip: vipCount });
       } catch (e) {
         // Fallback - try regular referrals endpoint
         try {
@@ -97,7 +103,8 @@ const Referrals = ({ user }) => {
             level: parseInt(level),
             users: users,
             count: users.length,
-            bonus: levelBonuses[level]
+            active_count: users.filter(u => u.is_active).length,
+            bonus_percent: levelBonuses[level].percent
           }));
           
           setReferralLevels(levels);
@@ -109,13 +116,13 @@ const Referrals = ({ user }) => {
         } catch (e2) {
           // Use user data as fallback
           setReferralStats({ total: userResponse.data.referral_count || 0, active: 0, vip: 0 });
-          setReferralLevels([
-            { level: 1, users: [], count: userResponse.data.referral_count || 0, bonus: 10 },
-            { level: 2, users: [], count: 0, bonus: 5 },
-            { level: 3, users: [], count: 0, bonus: 3 },
-            { level: 4, users: [], count: 0, bonus: 2 },
-            { level: 5, users: [], count: 0, bonus: 1 },
-          ]);
+          setReferralLevels([1, 2, 3, 4, 5].map(level => ({
+            level,
+            users: [],
+            count: level === 1 ? (userResponse.data.referral_count || 0) : 0,
+            active_count: 0,
+            bonus_percent: levelBonuses[level].percent
+          })));
         }
       }
       
@@ -137,7 +144,7 @@ const Referrals = ({ user }) => {
 
   const shareOnWhatsApp = () => {
     const code = userData?.referral_code || user?.referral_code || '';
-    const message = `Join PARAS REWARD and earn PRC! Use my code: ${code}\n\nDownload now: https://parasreward.com`;
+    const message = `🎁 Join PARAS REWARD and earn PRC daily!\n\n✅ Use my code: ${code}\n✅ Start earning from Day 1\n✅ 5-Level Bonus System\n\n📱 Download now: https://parasreward.com`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
@@ -172,22 +179,27 @@ const Referrals = ({ user }) => {
   }
 
   const referralCode = userData?.referral_code || user?.referral_code || 'N/A';
-  const totalBonus = referralLevels.reduce((sum, level) => sum + ((level.count || 0) * level.bonus), 0);
+  
+  // Calculate total bonus only from ACTIVE referrals
+  const totalActiveBonus = referralLevels.reduce((sum, level) => {
+    const activeUsers = level.active_count || level.users?.filter(u => u.is_active).length || 0;
+    return sum + (activeUsers * levelBonuses[level.level].percent);
+  }, 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-8">
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
       {/* Header */}
-      <div className="px-5 pt-6 pb-4">
+      <div className="px-5 pt-6 pb-4 sticky top-0 z-10 bg-gray-950/80 backdrop-blur-md">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/dashboard')}
-            className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center"
+            className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition-colors"
           >
             <ArrowLeft className="w-5 h-5 text-white" />
           </button>
           <div>
             <h1 className="text-white text-xl font-bold">{t.title}</h1>
-            <p className="text-gray-400 text-sm">5-Level Referral System</p>
+            <p className="text-gray-500 text-sm">5-Level Referral System</p>
           </div>
         </div>
       </div>
@@ -197,41 +209,40 @@ const Referrals = ({ user }) => {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-3xl p-6"
+          className="relative overflow-hidden rounded-3xl p-5"
           style={{
-            background: 'linear-gradient(135deg, #312e81 0%, #4c1d95 50%, #581c87 100%)',
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%)',
           }}
         >
-          <div className="absolute top-0 right-0 w-64 h-64 bg-purple-400/10 rounded-full blur-3xl"></div>
+          <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl"></div>
           
           <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-4">
-              <Gift className="w-5 h-5 text-purple-300" />
-              <span className="text-purple-300 text-sm font-medium">{t.yourCode}</span>
+            <div className="flex items-center gap-2 mb-3">
+              <Gift className="w-5 h-5 text-amber-500" />
+              <span className="text-amber-400 text-sm font-medium">{t.yourCode}</span>
             </div>
             
-            <div className="bg-black/30 rounded-2xl p-4 mb-4">
-              <div className="text-3xl font-bold text-white text-center tracking-widest font-mono">
+            <div className="bg-black/40 rounded-2xl p-4 mb-4 border border-amber-500/20">
+              <div className="text-3xl font-bold text-amber-400 text-center tracking-[0.3em] font-mono">
                 {referralCode}
               </div>
             </div>
             
             <div className="grid grid-cols-2 gap-3">
-              <Button 
+              <button 
                 onClick={copyCode}
-                variant="outline"
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                className="flex items-center justify-center gap-2 py-3 bg-gray-800/80 border border-gray-700 rounded-xl text-white font-medium hover:bg-gray-700 transition-colors"
               >
-                {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+                {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                 {copied ? t.copied : t.copyCode}
-              </Button>
-              <Button 
+              </button>
+              <button 
                 onClick={shareOnWhatsApp}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="flex items-center justify-center gap-2 py-3 bg-emerald-600 rounded-xl text-white font-medium hover:bg-emerald-700 transition-colors"
               >
-                <Share2 className="w-4 h-4 mr-2" />
+                <Share2 className="w-4 h-4" />
                 WhatsApp
-              </Button>
+              </button>
             </div>
           </div>
         </motion.div>
@@ -239,28 +250,108 @@ const Referrals = ({ user }) => {
 
       {/* Stats Overview */}
       <div className="px-5 mb-6">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4">
-            <Users className="w-8 h-8 text-blue-500 mb-2" />
-            <p className="text-gray-400 text-xs">{t.totalFriends}</p>
-            <p className="text-2xl font-bold text-white">{referralStats.total || 0}</p>
+        <div className="grid grid-cols-4 gap-2">
+          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-3 text-center">
+            <Users className="w-5 h-5 text-blue-500 mx-auto mb-1" />
+            <p className="text-xl font-bold text-white">{referralStats.total}</p>
+            <p className="text-gray-500 text-[10px]">{t.totalFriends}</p>
           </div>
-          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4">
-            <TrendingUp className="w-8 h-8 text-emerald-500 mb-2" />
-            <p className="text-gray-400 text-xs">{t.bonusRate}</p>
-            <p className="text-2xl font-bold text-white">+{totalBonus}%</p>
+          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-3 text-center">
+            <UserCheck className="w-5 h-5 text-emerald-500 mx-auto mb-1" />
+            <p className="text-xl font-bold text-emerald-400">{referralStats.active}</p>
+            <p className="text-gray-500 text-[10px]">{t.activeFriends}</p>
+          </div>
+          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-3 text-center">
+            <Crown className="w-5 h-5 text-amber-500 mx-auto mb-1" />
+            <p className="text-xl font-bold text-amber-400">{referralStats.vip}</p>
+            <p className="text-gray-500 text-[10px]">{t.vipFriends}</p>
+          </div>
+          <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/30 rounded-xl p-3 text-center">
+            <TrendingUp className="w-5 h-5 text-amber-500 mx-auto mb-1" />
+            <p className="text-xl font-bold text-amber-400">+{totalActiveBonus}%</p>
+            <p className="text-gray-500 text-[10px]">{t.bonusRate}</p>
           </div>
         </div>
       </div>
 
-      {/* 5-Level Network */}
+      {/* Bonus Structure Card */}
       <div className="px-5 mb-6">
-        <h2 className="text-white font-bold text-lg mb-4">{t.yourNetwork}</h2>
+        <button
+          onClick={() => setShowBonusInfo(!showBonusInfo)}
+          className="w-full bg-gradient-to-r from-amber-500/10 to-amber-600/5 border border-amber-500/30 rounded-2xl p-4"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-amber-500" />
+              </div>
+              <div className="text-left">
+                <p className="text-white font-bold">{t.bonusStructure}</p>
+                <p className="text-amber-400 text-xs">{t.onlyActiveBonus}</p>
+              </div>
+            </div>
+            {showBonusInfo ? <ChevronDown className="w-5 h-5 text-amber-500" /> : <ChevronRight className="w-5 h-5 text-amber-500" />}
+          </div>
+        </button>
+        
+        <AnimatePresence>
+          {showBonusInfo && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 mt-3 space-y-3">
+                <div className="flex items-start gap-2 bg-amber-500/10 p-3 rounded-xl border border-amber-500/20">
+                  <Info className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-amber-300 text-xs">
+                    बोनस फक्त <span className="font-bold">सक्रिय (Active)</span> रेफरलवर मिळतो. निष्क्रिय रेफरलवर बोनस नाही.
+                  </p>
+                </div>
+                
+                {[1, 2, 3, 4, 5].map((level) => (
+                  <div key={level} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${levelBonuses[level].color} flex items-center justify-center`}>
+                        <span className="text-white font-bold text-sm">{level}</span>
+                      </div>
+                      <span className="text-gray-400 text-sm">{levelBonuses[level].desc}</span>
+                    </div>
+                    <span className="text-emerald-400 font-bold">+{levelBonuses[level].percent}%</span>
+                  </div>
+                ))}
+                
+                <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20 text-center">
+                  <p className="text-emerald-400 text-sm font-semibold">
+                    Maximum Bonus: +21% (सर्व लेव्हल मिळून)
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* 5-Level Network - Collapsible */}
+      <div className="px-5 mb-6">
+        <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
+          <Users className="w-5 h-5 text-amber-500" />
+          {t.yourNetwork}
+        </h2>
         <div className="space-y-3">
           {[1, 2, 3, 4, 5].map((level) => {
-            const levelData = referralLevels.find(l => l.level === level) || { level, users: [], count: 0, bonus: levelBonuses[level] };
+            const levelData = referralLevels.find(l => l.level === level) || { 
+              level, 
+              users: [], 
+              count: 0, 
+              active_count: 0 
+            };
             const isExpanded = expandedLevel === level;
-            const hasUsers = levelData.count > 0 || (levelData.users && levelData.users.length > 0);
+            const users = levelData.users || [];
+            const totalCount = levelData.count || users.length;
+            const activeCount = levelData.active_count || users.filter(u => u.is_active).length;
+            const hasUsers = totalCount > 0;
             
             return (
               <motion.div
@@ -271,69 +362,117 @@ const Referrals = ({ user }) => {
               >
                 <button
                   onClick={() => setExpandedLevel(isExpanded ? null : level)}
-                  className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl p-4"
+                  className={`w-full rounded-2xl p-4 transition-all ${
+                    isExpanded 
+                      ? 'bg-gray-800/80 border-2 border-amber-500/50' 
+                      : 'bg-gray-900/50 border border-gray-800 hover:border-gray-700'
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${levelColors[level]} flex items-center justify-center`}>
-                        <span className="text-white font-bold text-lg">{level}</span>
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${levelBonuses[level].color} flex items-center justify-center shadow-lg`}>
+                        <span className="text-white font-bold text-lg">L{level}</span>
                       </div>
                       <div className="text-left">
                         <p className="text-white font-semibold">{t.level} {level}</p>
-                        <p className="text-gray-500 text-sm">
-                          {level === 1 ? t.directReferrals : `${t.level} ${level} Referrals`}
-                        </p>
+                        <p className="text-gray-500 text-xs">{levelBonuses[level].desc}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <p className="text-white font-bold">{levelData.count || levelData.users?.length || 0}</p>
-                        <p className="text-emerald-400 text-xs">+{levelBonuses[level]}%</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-bold text-lg">{totalCount}</span>
+                          <span className="text-gray-600">/</span>
+                          <span className="text-emerald-400 font-semibold">{activeCount}</span>
+                        </div>
+                        <p className="text-gray-500 text-[10px]">Total / Active</p>
                       </div>
-                      {hasUsers ? (
-                        isExpanded ? <ChevronDown className="w-5 h-5 text-gray-500" /> : <ChevronRight className="w-5 h-5 text-gray-500" />
-                      ) : null}
+                      <div className="bg-emerald-500/20 px-2 py-1 rounded-lg">
+                        <span className="text-emerald-400 text-xs font-bold">+{levelBonuses[level].percent}%</span>
+                      </div>
+                      {hasUsers && (
+                        isExpanded ? <ChevronDown className="w-5 h-5 text-amber-500" /> : <ChevronRight className="w-5 h-5 text-gray-500" />
+                      )}
                     </div>
                   </div>
                 </button>
 
                 {/* Expanded Users List */}
                 <AnimatePresence>
-                  {isExpanded && levelData.users && levelData.users.length > 0 && (
+                  {isExpanded && hasUsers && users.length > 0 && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="mt-2 ml-4 space-y-2">
-                        {levelData.users.map((refUser, index) => (
-                          <div 
-                            key={index}
-                            className="bg-gray-800/50 rounded-xl p-3 flex items-center justify-between"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${levelColors[level]} flex items-center justify-center`}>
-                                <span className="text-white text-xs font-bold">
-                                  {(refUser.name || refUser.email || 'U')[0].toUpperCase()}
-                                </span>
+                      <div className="bg-gray-900/30 rounded-xl p-3 mt-2 ml-6 border-l-2 border-amber-500/30">
+                        <div className="space-y-2">
+                          {users.map((referral, idx) => (
+                            <div 
+                              key={referral.uid || idx} 
+                              className={`flex items-center justify-between p-3 rounded-xl ${
+                                referral.is_active 
+                                  ? 'bg-emerald-500/10 border border-emerald-500/30' 
+                                  : 'bg-gray-800/50 border border-gray-700'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                  referral.is_active ? 'bg-emerald-500' : 'bg-gray-600'
+                                }`}>
+                                  {referral.is_active ? (
+                                    <UserCheck className="w-4 h-4 text-white" />
+                                  ) : (
+                                    <UserX className="w-4 h-4 text-gray-400" />
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="text-white text-sm font-medium">
+                                    {referral.name || referral.email?.split('@')[0] || 'User'}
+                                  </p>
+                                  <p className={`text-xs ${referral.is_active ? 'text-emerald-400' : 'text-gray-500'}`}>
+                                    {referral.is_active ? t.active : t.inactive}
+                                    {referral.membership_type === 'vip' && ' • 👑 VIP'}
+                                  </p>
+                                </div>
                               </div>
-                              <div>
-                                <p className="text-white text-sm font-medium">
-                                  {refUser.name || refUser.email?.split('@')[0] || 'Friend'}
-                                </p>
-                                <p className="text-gray-500 text-xs">
-                                  Joined {refUser.created_at ? new Date(refUser.created_at).toLocaleDateString() : 'Recently'}
-                                </p>
+                              <div className="text-right">
+                                {referral.is_active ? (
+                                  <span className="text-emerald-400 text-xs font-bold">+{levelBonuses[level].percent}%</span>
+                                ) : (
+                                  <span className="text-gray-500 text-xs">0%</span>
+                                )}
                               </div>
                             </div>
-                            {refUser.membership_type === 'vip' && (
-                              <div className="bg-amber-500/20 px-2 py-1 rounded-full">
-                                <Crown className="w-3 h-3 text-amber-400" />
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                          ))}
+                        </div>
+                        
+                        {/* Level Summary */}
+                        <div className="mt-3 pt-3 border-t border-gray-700 flex justify-between items-center">
+                          <span className="text-gray-400 text-xs">Level {level} Bonus:</span>
+                          <span className="text-amber-400 font-bold">
+                            +{activeCount * levelBonuses[level].percent}% ({activeCount} active × {levelBonuses[level].percent}%)
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                
+                {/* Empty state for levels with no users */}
+                <AnimatePresence>
+                  {isExpanded && !hasUsers && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="bg-gray-900/30 rounded-xl p-4 mt-2 ml-6 border-l-2 border-gray-700 text-center">
+                        <UserX className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+                        <p className="text-gray-500 text-sm">No referrals at this level yet</p>
+                        <p className="text-gray-600 text-xs mt-1">Share your code to grow your network!</p>
                       </div>
                     </motion.div>
                   )}
@@ -344,50 +483,27 @@ const Referrals = ({ user }) => {
         </div>
       </div>
 
-      {/* Bonus Structure */}
-      <div className="px-5 mb-6">
-        <h2 className="text-white font-bold text-lg mb-4">Bonus Structure</h2>
-        <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4">
-          <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map((level) => (
-              <div key={level} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${levelColors[level]} flex items-center justify-center`}>
-                    <span className="text-white text-xs font-bold">{level}</span>
-                  </div>
-                  <span className="text-gray-400 text-sm">{t.level} {level}</span>
-                </div>
-                <span className="text-emerald-400 font-bold">+{levelBonuses[level]}%</span>
-              </div>
-            ))}
-            <div className="border-t border-gray-700 pt-3 mt-3 flex items-center justify-between">
-              <span className="text-white font-semibold">Max Total Bonus</span>
-              <span className="text-amber-400 font-bold text-lg">+21%</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Apply Referral Code */}
       {!userData?.referred_by && (
-        <div className="px-5 mb-6">
+        <div className="px-5">
           <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5">
-            <h3 className="text-white font-semibold mb-3">{t.haveCode}</h3>
+            <h3 className="text-white font-bold mb-3">{t.haveCode}</h3>
             <div className="flex gap-2">
-              <Input 
+              <input
+                type="text"
                 value={inputCode}
                 onChange={(e) => setInputCode(e.target.value.toUpperCase())}
                 placeholder={t.enterCode}
-                className="bg-gray-800 border-gray-700 text-white uppercase"
+                className="flex-1 px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 uppercase tracking-wider focus:border-amber-500 focus:outline-none"
                 maxLength={8}
               />
-              <Button 
+              <button
                 onClick={applyReferralCode}
-                disabled={applying || !inputCode.trim()}
-                className="bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+                disabled={applying}
+                className="px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-gray-900 font-bold rounded-xl hover:from-amber-400 hover:to-amber-500 transition-all disabled:opacity-50"
               >
                 {applying ? '...' : t.apply}
-              </Button>
+              </button>
             </div>
           </div>
         </div>
