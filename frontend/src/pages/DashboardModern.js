@@ -268,77 +268,93 @@ const DashboardModern = ({ user, onLogout }) => {
             }}
           />
 
-          {/* Background Graphics - More Visible */}
+          {/* Background Graphics - HIGHLY VISIBLE */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             {/* Large golden circle - top right */}
             <div 
-              className="absolute -right-10 -top-10 w-44 h-44 rounded-full"
+              className="absolute -right-10 -top-10 w-48 h-48 rounded-full"
               style={{
-                background: 'radial-gradient(circle, rgba(212, 175, 55, 0.25) 0%, rgba(212, 175, 55, 0.1) 40%, transparent 70%)',
+                background: 'radial-gradient(circle, rgba(212, 175, 55, 0.5) 0%, rgba(212, 175, 55, 0.25) 40%, transparent 70%)',
               }}
             />
             
             {/* Medium circle - bottom right */}
             <div 
-              className="absolute right-8 -bottom-8 w-32 h-32 rounded-full"
+              className="absolute right-8 -bottom-8 w-36 h-36 rounded-full"
               style={{
-                background: 'radial-gradient(circle, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.08) 50%, transparent 70%)',
+                background: 'radial-gradient(circle, rgba(255, 215, 0, 0.4) 0%, rgba(255, 215, 0, 0.2) 50%, transparent 70%)',
               }}
             />
             
             {/* Small accent circle - left */}
             <div 
-              className="absolute -left-6 top-1/2 -translate-y-1/2 w-20 h-20 rounded-full"
+              className="absolute -left-6 top-1/2 -translate-y-1/2 w-24 h-24 rounded-full"
               style={{
-                background: 'radial-gradient(circle, rgba(212, 175, 55, 0.15) 0%, transparent 60%)',
-              }}
-            />
-
-            {/* Horizontal gold line */}
-            <div 
-              className="absolute left-0 right-0 top-[45%] h-[1px]"
-              style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(212, 175, 55, 0.15) 20%, rgba(212, 175, 55, 0.25) 50%, rgba(212, 175, 55, 0.15) 80%, transparent 100%)'
+                background: 'radial-gradient(circle, rgba(212, 175, 55, 0.35) 0%, transparent 60%)',
               }}
             />
             
-            {/* Diagonal gold line 1 */}
+            {/* Additional circle - center-left area */}
             <div 
-              className="absolute w-full h-[1px] top-1/3 -rotate-12 origin-left"
+              className="absolute left-1/4 top-1/4 w-28 h-28 rounded-full"
               style={{
-                background: 'linear-gradient(90deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.08) 50%, transparent 100%)'
-              }}
-            />
-            
-            {/* Diagonal gold line 2 */}
-            <div 
-              className="absolute w-full h-[1px] bottom-1/4 rotate-6 origin-right"
-              style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(212, 175, 55, 0.08) 50%, rgba(212, 175, 55, 0.15) 100%)'
+                background: 'radial-gradient(circle, rgba(255, 215, 0, 0.25) 0%, transparent 60%)',
               }}
             />
 
-            {/* Corner accent - top left */}
+            {/* Horizontal gold line - thicker and more visible */}
             <div 
-              className="absolute top-0 left-0 w-24 h-24"
+              className="absolute left-0 right-0 top-[45%] h-[2px]"
               style={{
-                background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.12) 0%, transparent 50%)'
+                background: 'linear-gradient(90deg, transparent 0%, rgba(212, 175, 55, 0.4) 20%, rgba(212, 175, 55, 0.6) 50%, rgba(212, 175, 55, 0.4) 80%, transparent 100%)'
               }}
             />
             
-            {/* Corner accent - bottom right */}
+            {/* Diagonal gold line 1 - more prominent */}
             <div 
-              className="absolute bottom-0 right-0 w-32 h-32"
+              className="absolute w-full h-[2px] top-1/3 -rotate-12 origin-left"
               style={{
-                background: 'linear-gradient(315deg, rgba(212, 175, 55, 0.1) 0%, transparent 50%)'
+                background: 'linear-gradient(90deg, rgba(212, 175, 55, 0.45) 0%, rgba(212, 175, 55, 0.2) 50%, transparent 100%)'
+              }}
+            />
+            
+            {/* Diagonal gold line 2 - more prominent */}
+            <div 
+              className="absolute w-full h-[2px] bottom-1/4 rotate-6 origin-right"
+              style={{
+                background: 'linear-gradient(90deg, transparent 0%, rgba(212, 175, 55, 0.2) 50%, rgba(212, 175, 55, 0.4) 100%)'
+              }}
+            />
+            
+            {/* Additional diagonal line 3 */}
+            <div 
+              className="absolute w-full h-[1.5px] top-2/3 -rotate-3 origin-center"
+              style={{
+                background: 'linear-gradient(90deg, rgba(255, 215, 0, 0.3) 0%, rgba(212, 175, 55, 0.15) 50%, rgba(255, 215, 0, 0.25) 100%)'
               }}
             />
 
-            {/* Grid pattern overlay */}
-            <svg className="absolute inset-0 w-full h-full opacity-[0.06]" preserveAspectRatio="none">
+            {/* Corner accent - top left - more visible */}
+            <div 
+              className="absolute top-0 left-0 w-32 h-32"
+              style={{
+                background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, transparent 50%)'
+              }}
+            />
+            
+            {/* Corner accent - bottom right - more visible */}
+            <div 
+              className="absolute bottom-0 right-0 w-40 h-40"
+              style={{
+                background: 'linear-gradient(315deg, rgba(212, 175, 55, 0.25) 0%, transparent 50%)'
+              }}
+            />
+
+            {/* Grid pattern overlay - more visible */}
+            <svg className="absolute inset-0 w-full h-full opacity-[0.15]" preserveAspectRatio="none">
               <defs>
                 <pattern id="cardGrid" patternUnits="userSpaceOnUse" width="40" height="40">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#d4af37" strokeWidth="0.5"/>
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#d4af37" strokeWidth="0.8"/>
                 </pattern>
               </defs>
               <rect width="100%" height="100%" fill="url(#cardGrid)" />
