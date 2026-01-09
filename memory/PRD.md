@@ -793,16 +793,12 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 
 ## Pending Tasks (P1/P2)
 
-### P1 - App-Wide Dark Theme Completion
-Pages still needing dark theme update:
-- FAQ.js
-- ContactUs.js
-- GiftVoucherRedemption.js
-- TermsAndConditions.js
-- RefundPolicy.js
-- Leaderboard.js
-- ScratchCard.js
-- RewardsHome.js (if not already updated)
+### P1 - App-Wide Dark Theme Completion ✅ COMPLETED
+All major user-facing pages have been updated to the Golden-Black theme:
+- Dashboard, Mining, TapGame, KYC, Profile
+- FAQ, ContactUs, AboutUs, PrivacyPolicy
+- Terms, Refund, Orders, BillPayments
+- Leaderboard, GiftVoucher, ScratchCard
 
 ### P2 - Pending Features
 - AdMob + Unity Ads Integration
