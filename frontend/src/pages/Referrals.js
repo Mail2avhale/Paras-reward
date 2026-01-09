@@ -25,6 +25,8 @@ const Referrals = ({ user }) => {
   const [expandedLevel, setExpandedLevel] = useState(null);
   const [showBonusInfo, setShowBonusInfo] = useState(false);
   const [networkExpanded, setNetworkExpanded] = useState(true);
+  const [miningRate, setMiningRate] = useState(null);
+  const [referralBreakdown, setReferralBreakdown] = useState({});
 
   const t = {
     title: language === 'mr' ? 'मित्रांना आमंत्रित करा' : language === 'hi' ? 'दोस्तों को आमंत्रित करें' : 'Invite Friends',
