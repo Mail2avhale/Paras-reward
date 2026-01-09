@@ -398,7 +398,7 @@ const AdvancedDocumentUpload = ({
               <div className="absolute inset-0 flex items-center justify-center bg-black/80">
                 <div className="text-center">
                   <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                  <p className="text-white">कॅमेरा सुरू होत आहे...</p>
+                  <p className="text-white">Starting camera...</p>
                 </div>
               </div>
             )}
@@ -423,7 +423,7 @@ const AdvancedDocumentUpload = ({
             )}
             
             <p className="absolute top-4 left-0 right-0 text-center text-white text-sm bg-black/50 py-2">
-              डॉक्युमेंट फ्रेममध्ये ठेवा
+              Place document in frame
             </p>
           </div>
           
@@ -456,7 +456,7 @@ const AdvancedDocumentUpload = ({
             {processing ? (
               <div className="text-center">
                 <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                <p className="text-white">प्रोसेसिंग...</p>
+                <p className="text-white">Processing...</p>
               </div>
             ) : (
               <img 
@@ -523,7 +523,7 @@ const AdvancedDocumentUpload = ({
                 onClick={handleCancel}
                 className="flex-1 py-3 bg-gray-800 text-white rounded-xl font-medium"
               >
-                रद्द करा
+                Cancel
               </button>
               <button 
                 onClick={handleConfirm}
@@ -531,7 +531,7 @@ const AdvancedDocumentUpload = ({
                 className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black rounded-xl font-bold flex items-center justify-center gap-2"
               >
                 <Check className="w-5 h-5" />
-                सेव्ह करा
+                Save
               </button>
             </div>
           </div>
@@ -550,7 +550,7 @@ const AdvancedDocumentUpload = ({
               className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-amber-500/20 to-amber-600/20 border border-amber-500/50 rounded-xl hover:bg-amber-500/30 transition-all"
             >
               <Camera className="w-8 h-8 text-amber-500 mb-2" />
-              <span className="text-amber-400 text-sm font-medium">कॅमेरा वापरा</span>
+              <span className="text-amber-400 text-sm font-medium">Use Camera</span>
             </button>
             
             {/* Gallery Button */}
@@ -564,12 +564,12 @@ const AdvancedDocumentUpload = ({
               ) : (
                 <Upload className="w-8 h-8 text-gray-400 mb-2" />
               )}
-              <span className="text-gray-400 text-sm font-medium">गॅलरी</span>
+              <span className="text-gray-400 text-sm font-medium">Gallery</span>
             </button>
           </div>
           
           <p className="text-gray-600 text-xs text-center">
-            ऑटो इमेज ऑप्टिमायझेशन • मॅक्स {maxSizeMB}MB • JPG, PNG
+            Auto image optimization • Max {maxSizeMB}MB • JPG, PNG
           </p>
         </div>
       )}
