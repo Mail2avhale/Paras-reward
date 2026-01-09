@@ -18852,6 +18852,109 @@ async def get_user_recent_activity(uid: str, limit: int = 10):
         "user_id": uid
     }
 
+@api_router.get("/global/live-activity")
+async def get_global_live_activity(limit: int = 20):
+    """
+    Get live global activity feed showing bill payments, vouchers, and shopping
+    Only shows approved/completed transactions for privacy
+    """
+    activities = []
+    
+    # Get recent bill payment completions
+    bill_payments = await db.bill_payment_requests.find(
+        {"status": {"$in": ["completed", "approved"]}},
+        {"_id": 0, "user_id": 1, "request_type": 1, "amount_inr": 1, "created_at": 1, "processed_at": 1}
+    ).sort("processed_at", -1).limit(limit).to_list(length=limit)
+    
+    for bill in bill_payments:
+        # Get user name (anonymized)
+        user = await db.users.find_one({"uid": bill.get("user_id")}, {"_id": 0, "name": 1, "state": 1})
+        user_name = user.get("name", "User")[:3] + "***" if user else "User***"
+        location = user.get("state", "")[:3] + "..." if user and user.get("state") else ""
+        
+        request_type = bill.get("request_type", "bill")
+        type_labels = {
+            "mobile_recharge": "Mobile Recharge",
+            "dish_recharge": "DTH Recharge", 
+            "electricity_bill": "Electricity Bill",
+            "credit_card_payment": "Credit Card Payment",
+            "loan_emi": "Loan EMI"
+        }
+        
+        activities.append({
+            "type": "bill_payment",
+            "icon": "💳",
+            "user": user_name,
+            "location": location,
+            "description": f"{type_labels.get(request_type, 'Bill Payment')} - ₹{bill.get('amount_inr', 0):.0f}",
+            "timestamp": bill.get("processed_at") or bill.get("created_at"),
+            "category": "bill"
+        })
+    
+    # Get recent gift voucher completions
+    vouchers = await db.gift_voucher_requests.find(
+        {"status": {"$in": ["completed", "approved"]}},
+        {"_id": 0, "user_id": 1, "denomination": 1, "created_at": 1, "processed_at": 1}
+    ).sort("processed_at", -1).limit(limit).to_list(length=limit)
+    
+    for voucher in vouchers:
+        user = await db.users.find_one({"uid": voucher.get("user_id")}, {"_id": 0, "name": 1, "state": 1})
+        user_name = user.get("name", "User")[:3] + "***" if user else "User***"
+        location = user.get("state", "")[:3] + "..." if user and user.get("state") else ""
+        
+        activities.append({
+            "type": "gift_voucher",
+            "icon": "🎁",
+            "user": user_name,
+            "location": location,
+            "description": f"Redeemed ₹{voucher.get('denomination', 0)} Gift Voucher",
+            "timestamp": voucher.get("processed_at") or voucher.get("created_at"),
+            "category": "voucher"
+        })
+    
+    # Get recent product orders
+    orders = await db.orders.find(
+        {"status": {"$in": ["delivered", "shipped", "confirmed"]}},
+        {"_id": 0, "user_id": 1, "total_prc": 1, "created_at": 1, "items": 1}
+    ).sort("created_at", -1).limit(limit).to_list(length=limit)
+    
+    for order in orders:
+        user = await db.users.find_one({"uid": order.get("user_id")}, {"_id": 0, "name": 1, "state": 1})
+        user_name = user.get("name", "User")[:3] + "***" if user else "User***"
+        location = user.get("state", "")[:3] + "..." if user and user.get("state") else ""
+        
+        item_count = len(order.get("items", []))
+        item_text = f"{item_count} item{'s' if item_count > 1 else ''}"
+        
+        activities.append({
+            "type": "shopping",
+            "icon": "🛍️",
+            "user": user_name,
+            "location": location,
+            "description": f"Ordered {item_text} worth {order.get('total_prc', 0):.0f} PRC",
+            "timestamp": order.get("created_at"),
+            "category": "shopping"
+        })
+    
+    # Sort by timestamp
+    def get_ts(item):
+        ts = item.get("timestamp")
+        if not ts:
+            return datetime.min.replace(tzinfo=timezone.utc)
+        if isinstance(ts, str):
+            try:
+                return datetime.fromisoformat(ts.replace('Z', '+00:00'))
+            except:
+                return datetime.min.replace(tzinfo=timezone.utc)
+        return ts
+    
+    activities.sort(key=get_ts, reverse=True)
+    
+    return {
+        "activities": activities[:limit],
+        "total": len(activities)
+    }
+
 # ========== ACTIVITY LOGS ROUTES ==========
 
 @api_router.get("/activity-logs")
