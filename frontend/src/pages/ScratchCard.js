@@ -462,20 +462,19 @@ const ScratchCard = ({ user }) => {
                   </div>
                   
                   <div className="flex gap-4">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
+                    <button
+                      className="flex-1 py-3 bg-gray-800 text-white rounded-xl font-medium"
                       onClick={() => setSelectedCard(null)}
                     >
                       Cancel
-                    </Button>
-                    <Button
-                      className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white"
+                    </button>
+                    <button
+                      className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-gray-900 font-bold rounded-xl"
                       onClick={handlePurchaseAndScratch}
                       disabled={loading}
                     >
                       {loading ? 'Processing...' : `Buy & Scratch (${selectedCard.cost} PRC)`}
-                    </Button>
+                    </button>
                   </div>
                 </div>
               ) : (
