@@ -136,6 +136,24 @@ const DashboardModern = ({ user, onLogout }) => {
       if (!profileComplete && !localStorage.getItem('profile_popup_dismissed')) {
         setShowProfilePopup(true);
       }
+
+      // Fetch global live activity (bill, voucher, shopping)
+      try {
+        const globalResponse = await axios.get(`${API}/api/global/live-activity?limit=10`);
+        setGlobalActivity(globalResponse.data.activities || []);
+      } catch (globalError) {
+        console.log('Global activity fetch failed');
+      }
+
+      // Check for birthday
+      try {
+        const birthdayResponse = await axios.get(`${API}/api/user/${user.uid}/birthday-check`);
+        if (birthdayResponse.data.is_birthday) {
+          setBirthdayGreeting(birthdayResponse.data);
+        }
+      } catch (bdError) {
+        console.log('Birthday check failed');
+      }
       
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
