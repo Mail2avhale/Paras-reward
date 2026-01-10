@@ -1,19 +1,17 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Camera, Upload, RotateCw, RotateCcw, ZoomIn, ZoomOut, Sun, Contrast, Check, X, RefreshCw } from 'lucide-react';
+import React, { useState, useRef, useCallback } from 'react';
+import { Camera, Upload, RotateCw, RotateCcw, Sun, Contrast, Check, X, RefreshCw, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 const AdvancedDocumentUpload = ({ 
   onChange, 
   label = 'Upload Document',
   aspectRatio = 1.6,
-  maxSizeMB = 5  // Increased default
+  maxSizeMB = 5
 }) => {
   const [image, setImage] = useState(null);
   const [adjustedImage, setAdjustedImage] = useState(null);
-  const [showCamera, setShowCamera] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [cameraReady, setCameraReady] = useState(false);
   
   // Image adjustments
   const [adjustments, setAdjustments] = useState({
@@ -23,128 +21,26 @@ const AdvancedDocumentUpload = ({
     zoom: 1
   });
   
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const streamRef = useRef(null);
+  // Separate refs for camera and gallery inputs
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
 
-  // Cleanup camera on unmount
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, []);
-
-  // Start camera with better error handling
-  const startCamera = async () => {
-    try {
-      setCameraReady(false);
-      setShowCamera(true);
-      
-      // Check if mediaDevices is available
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        toast.error('Camera not available on this device. Please use file upload.');
-        setShowCamera(false);
-        return;
-      }
-
-      // Get camera stream - try environment first, then user
-      let stream;
-      const constraints = [
-        { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } },
-        { video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } },
-        { video: true }
-      ];
-
-      for (const constraint of constraints) {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia(constraint);
-          break;
-        } catch (e) {
-          console.log('Camera constraint failed:', constraint, e);
-        }
-      }
-
-      if (!stream) {
-        throw new Error('No camera available');
-      }
-
-      streamRef.current = stream;
-      
-      // Wait for video element to be ready
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        
-        // Wait for video to load
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current.play()
-            .then(() => {
-              setCameraReady(true);
-            })
-            .catch(err => {
-              console.error('Video play error:', err);
-              setCameraReady(true); // Still show UI
-            });
-        };
-      }
-    } catch (error) {
-      console.error('Camera error:', error);
-      setShowCamera(false);
-      
-      if (error.name === 'NotAllowedError') {
-        toast.error('Camera permission denied. Please allow camera access in browser settings.');
-      } else if (error.name === 'NotFoundError') {
-        toast.error('Camera not found. Please use file upload.');
-      } else {
-        toast.error('Could not start camera. Please use file upload.');
-      }
+  // Handle camera capture - uses native device camera
+  const handleCameraCapture = () => {
+    if (cameraInputRef.current) {
+      cameraInputRef.current.click();
     }
   };
 
-  // Stop camera
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => {
-        track.stop();
-      });
-      streamRef.current = null;
+  // Handle gallery selection - opens file picker
+  const handleGallerySelect = () => {
+    if (galleryInputRef.current) {
+      galleryInputRef.current.click();
     }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-    setCameraReady(false);
-    setShowCamera(false);
   };
 
-  // Capture photo from camera
-  const capturePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) {
-      toast.error('कृपया पुन्हा प्रयत्न करा');
-      return;
-    }
-    
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    
-    // Use actual video dimensions
-    const width = video.videoWidth || 1280;
-    const height = video.videoHeight || 720;
-    
-    canvas.width = width;
-    canvas.height = height;
-    
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, width, height);
-    
-    const imageData = canvas.toDataURL('image/jpeg', 0.85);
-    setImage(imageData);
-    stopCamera();
-    setShowEditor(true);
-    autoAdjustImage(imageData);
-  };
-
-  // Handle file upload with auto compression
-  const handleFileUpload = async (e) => {
+  // Process captured/selected image
+  const handleImageSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -167,10 +63,9 @@ const AdvancedDocumentUpload = ({
       toast.error('Could not process image');
     } finally {
       setProcessing(false);
-      // Reset input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      // Reset both inputs to allow re-selection
+      if (cameraInputRef.current) cameraInputRef.current.value = '';
+      if (galleryInputRef.current) galleryInputRef.current.value = '';
     }
   };
 
