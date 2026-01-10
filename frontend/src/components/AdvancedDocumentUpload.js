@@ -255,93 +255,33 @@ const AdvancedDocumentUpload = ({
     setShowEditor(false);
     setImage(null);
     setAdjustedImage(null);
-    stopCamera();
     setAdjustments({ brightness: 100, contrast: 100, rotation: 0, zoom: 1 });
   };
 
   return (
     <div className="w-full">
-      {/* Hidden elements - separate inputs for camera and gallery */}
+      {/* Hidden file inputs - SEPARATE for camera and gallery */}
+      
+      {/* Camera Input - uses native camera app via capture attribute */}
       <input 
-        ref={fileInputRef}
+        ref={cameraInputRef}
         type="file" 
         accept="image/*"
-        onChange={handleFileUpload}
+        capture="environment"
+        onChange={handleImageSelect}
         className="hidden"
+        data-testid="camera-input"
       />
-      <canvas ref={canvasRef} className="hidden" />
-
-      {/* Camera View */}
-      {showCamera && (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col">
-          <div className="flex-1 relative overflow-hidden">
-            <video 
-              ref={videoRef} 
-              autoPlay 
-              playsInline
-              muted
-              style={{ 
-                width: '100%', 
-                height: '100%', 
-                objectFit: 'cover',
-                transform: 'scaleX(1)' 
-              }}
-            />
-            
-            {/* Loading indicator */}
-            {!cameraReady && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-                <div className="text-center">
-                  <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                  <p className="text-white">Starting camera...</p>
-                </div>
-              </div>
-            )}
-            
-            {/* Document frame guide */}
-            {cameraReady && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div 
-                  className="border-2 border-amber-500 rounded-lg relative"
-                  style={{
-                    width: '85%',
-                    aspectRatio: aspectRatio,
-                    boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)'
-                  }}
-                >
-                  <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-amber-400 rounded-tl-lg"></div>
-                  <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-amber-400 rounded-tr-lg"></div>
-                  <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-amber-400 rounded-bl-lg"></div>
-                  <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-amber-400 rounded-br-lg"></div>
-                </div>
-              </div>
-            )}
-            
-            <p className="absolute top-4 left-0 right-0 text-center text-white text-sm bg-black/50 py-2">
-              Place document in frame
-            </p>
-          </div>
-          
-          {/* Camera controls */}
-          <div className="bg-black p-4 flex items-center justify-center gap-8">
-            <button onClick={stopCamera} className="text-gray-400 hover:text-white p-3">
-              <X className="w-8 h-8" />
-            </button>
-            <button 
-              onClick={capturePhoto}
-              disabled={!cameraReady}
-              className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                cameraReady 
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600' 
-                  : 'bg-gray-600'
-              }`}
-            >
-              <Camera className="w-8 h-8 text-white" />
-            </button>
-            <div className="w-14"></div>
-          </div>
-        </div>
-      )}
+      
+      {/* Gallery Input - NO capture attribute, opens file picker */}
+      <input 
+        ref={galleryInputRef}
+        type="file" 
+        accept="image/*"
+        onChange={handleImageSelect}
+        className="hidden"
+        data-testid="gallery-input"
+      />
 
       {/* Editor View */}
       {showEditor && (
@@ -395,18 +335,21 @@ const AdvancedDocumentUpload = ({
               <button 
                 onClick={() => handleAdjustmentChange('rotation', (adjustments.rotation - 90) % 360)}
                 className="p-3 bg-gray-800 rounded-xl text-white hover:bg-gray-700"
+                data-testid="rotate-left-btn"
               >
                 <RotateCcw className="w-5 h-5" />
               </button>
               <button 
                 onClick={() => handleAdjustmentChange('rotation', (adjustments.rotation + 90) % 360)}
                 className="p-3 bg-gray-800 rounded-xl text-white hover:bg-gray-700"
+                data-testid="rotate-right-btn"
               >
                 <RotateCw className="w-5 h-5" />
               </button>
               <button 
                 onClick={handleReset}
                 className="p-3 bg-gray-800 rounded-xl text-white hover:bg-gray-700"
+                data-testid="reset-adjustments-btn"
               >
                 <RefreshCw className="w-5 h-5" />
               </button>
@@ -417,6 +360,7 @@ const AdvancedDocumentUpload = ({
               <button 
                 onClick={handleCancel}
                 className="flex-1 py-3 bg-gray-800 text-white rounded-xl font-medium"
+                data-testid="cancel-edit-btn"
               >
                 Cancel
               </button>
@@ -424,6 +368,7 @@ const AdvancedDocumentUpload = ({
                 onClick={handleConfirm}
                 disabled={processing}
                 className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black rounded-xl font-bold flex items-center justify-center gap-2"
+                data-testid="save-document-btn"
               >
                 <Check className="w-5 h-5" />
                 Save
@@ -434,30 +379,37 @@ const AdvancedDocumentUpload = ({
       )}
 
       {/* Default Upload UI */}
-      {!showCamera && !showEditor && (
+      {!showEditor && (
         <div className="space-y-3">
           <p className="text-gray-400 text-sm font-medium">{label}</p>
           
           <div className="grid grid-cols-2 gap-3">
-            {/* Camera Button */}
+            {/* Camera Button - Opens native camera app */}
             <button
-              onClick={startCamera}
+              onClick={handleCameraCapture}
+              disabled={processing}
               className="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-amber-500/20 to-amber-600/20 border border-amber-500/50 rounded-xl hover:bg-amber-500/30 transition-all"
+              data-testid="use-camera-btn"
             >
-              <Camera className="w-8 h-8 text-amber-500 mb-2" />
+              {processing ? (
+                <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+              ) : (
+                <Camera className="w-8 h-8 text-amber-500 mb-2" />
+              )}
               <span className="text-amber-400 text-sm font-medium">Use Camera</span>
             </button>
             
-            {/* Gallery Button */}
+            {/* Gallery Button - Opens file picker */}
             <button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={handleGallerySelect}
               disabled={processing}
               className="flex flex-col items-center justify-center p-4 bg-gray-800/50 border border-gray-700 rounded-xl hover:bg-gray-700/50 transition-all"
+              data-testid="use-gallery-btn"
             >
               {processing ? (
                 <div className="w-8 h-8 border-2 border-gray-500 border-t-amber-500 rounded-full animate-spin mb-2"></div>
               ) : (
-                <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                <ImageIcon className="w-8 h-8 text-gray-400 mb-2" />
               )}
               <span className="text-gray-400 text-sm font-medium">Gallery</span>
             </button>
