@@ -12,6 +12,7 @@ import PRCExpiryTimer from '@/components/PRCExpiryTimer';
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
 import InteractiveWalkthrough, { useWalkthrough } from '@/components/InteractiveWalkthrough';
 import AIChatbotEnhanced from '@/components/AIChatbotEnhanced';
+import PRCRain from '@/components/PRCRain';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSkeleton } from '@/components/skeletons';
 
