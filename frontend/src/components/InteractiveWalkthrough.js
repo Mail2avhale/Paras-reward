@@ -117,16 +117,23 @@ const ProgressDots = ({ currentStep, totalSteps, onDotClick }) => (
   </div>
 );
 
-// Floating particles animation
+// Floating particles animation - pre-computed positions
+const particlePositions = Array.from({ length: 20 }, (_, i) => ({
+  x: (i * 20) % 400,
+  y: (i * 30) % 600,
+  duration: 3 + (i % 3),
+  delay: (i % 5) * 0.4
+}));
+
 const FloatingParticles = () => (
   <div className="absolute inset-0 overflow-hidden pointer-events-none">
-    {[...Array(20)].map((_, i) => (
+    {particlePositions.map((pos, i) => (
       <motion.div
         key={i}
         className="absolute w-2 h-2 rounded-full bg-white/20"
         initial={{ 
-          x: Math.random() * 400, 
-          y: Math.random() * 600,
+          x: pos.x, 
+          y: pos.y,
           opacity: 0 
         }}
         animate={{ 
@@ -134,9 +141,9 @@ const FloatingParticles = () => (
           opacity: [0, 0.5, 0],
         }}
         transition={{ 
-          duration: 3 + Math.random() * 2,
+          duration: pos.duration,
           repeat: Infinity,
-          delay: Math.random() * 2
+          delay: pos.delay
         }}
       />
     ))}
