@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Camera, Upload, RotateCw, RotateCcw, Sun, Contrast, Check, X, RefreshCw, Image as ImageIcon } from 'lucide-react';
+import { Camera, RotateCw, RotateCcw, Sun, Contrast, Check, RefreshCw, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 const AdvancedDocumentUpload = ({ 
