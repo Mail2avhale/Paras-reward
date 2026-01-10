@@ -23,6 +23,7 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterPeriod, setFilterPeriod] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [error, setError] = useState(null);
   const itemsPerPage = 15;
 
   const levelColors = {
