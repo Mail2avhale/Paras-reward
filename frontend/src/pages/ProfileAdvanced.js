@@ -105,12 +105,13 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await axios.put(`${API}/api/user/${user.uid}`, formData);
+      await axios.put(`${API}/api/user/${user.uid}/profile`, formData);
       toast.success('Profile updated!');
       setEditMode(false);
       fetchUserData();
     } catch (error) {
-      toast.error('Failed to update profile');
+      console.error('Profile update error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to update profile');
     } finally {
       setSaving(false);
     }
