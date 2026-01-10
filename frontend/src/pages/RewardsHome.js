@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, memo } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { 
   Coins, Gift, Users, TrendingUp, Shield, Smartphone, 
@@ -13,6 +13,18 @@ import { useLanguage, LANGUAGES } from '@/contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
+
+// Optimized Image component with lazy loading
+const LazyImage = memo(({ src, alt, className, ...props }) => (
+  <img 
+    src={src} 
+    alt={alt} 
+    className={className}
+    loading="lazy"
+    decoding="async"
+    {...props}
+  />
+));
 
 // Homepage translations
 const homeTranslations = {
