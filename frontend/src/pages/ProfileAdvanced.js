@@ -280,12 +280,24 @@ const ProfileAdvanced = ({ user, onLogout }) => {
                 )}
               </div>
             </div>
-            <button 
-              onClick={() => setShowImageUpload(true)}
-              className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center"
+            {/* Quick upload - hidden input */}
+            <input
+              type="file"
+              id="quick-profile-upload"
+              accept="image/*"
+              onChange={handleQuickImageUpload}
+              className="hidden"
+            />
+            <label 
+              htmlFor="quick-profile-upload"
+              className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center cursor-pointer hover:bg-amber-400 transition-colors"
             >
-              <Camera className="w-4 h-4 text-black" />
-            </button>
+              {saving ? (
+                <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Camera className="w-4 h-4 text-black" />
+              )}
+            </label>
           </div>
 
           <h2 className="text-white text-xl font-bold mb-1">
