@@ -191,8 +191,8 @@ const BillPayments = ({ user, onLogout }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
-      <div className="container mx-auto px-5 py-6 max-w-6xl">
-        {/* Header */}
+      <div className="container mx-auto px-5 max-w-6xl pt-safe-header" style={{ paddingTop: 'max(2rem, env(safe-area-inset-top, 2rem))', paddingBottom: '1.5rem' }}>
+        {/* Header - with safe area padding */}
         <div className="flex items-center gap-4 mb-6">
           <button
             onClick={() => navigate('/dashboard')}
