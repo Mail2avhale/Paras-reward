@@ -170,7 +170,7 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
     if (user?.uid) {
       fetchEarnings();
     }
-  }, [user, fetchEarnings]);
+  }, [user?.uid, filterPeriod]); // Only depend on uid and filterPeriod
 
   const filterOptions = [
     { value: 'all', label: 'All Time' },
