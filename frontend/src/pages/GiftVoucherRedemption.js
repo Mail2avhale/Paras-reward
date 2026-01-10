@@ -111,8 +111,8 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-8">
-      {/* Header */}
-      <div className="px-5 pt-6 pb-4 sticky top-0 z-10 bg-gray-950/80 backdrop-blur-md">
+      {/* Header - with safe area padding */}
+      <div className="px-5 pb-4 sticky top-0 z-10 bg-gray-950/80 backdrop-blur-md pt-safe-header" style={{ paddingTop: 'max(2rem, env(safe-area-inset-top, 2rem))' }}>
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/dashboard')}
