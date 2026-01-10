@@ -64,6 +64,8 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 - **Initial Loader**: Added branded amber spinner in HTML that shows before React loads
 - **Theme Color Update**: Changed to dark theme color (#030712) matching app design
 - **Cache Headers**: Updated meta tags for proper static asset caching
+- **Code Splitting**: Admin, Manager, and Stockist pages split into separate webpack chunks (~30% smaller initial bundle)
+- **Tutorial Removed**: Removed AppTutorialAdvanced - AI Chatbot now handles user guidance
 
 #### AdMob Compliance Updates ✅
 - **Leaderboard Removed**: Removed Leaderboard page and all navigation links for AdMob compliance
