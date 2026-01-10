@@ -34,13 +34,15 @@ const DashboardModern = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
   
+  // Interactive Walkthrough for new users
+  const { showWalkthrough, hideWalkthrough } = useWalkthrough();
+  
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
   const [showBalance, setShowBalance] = useState(true);
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [globalActivity, setGlobalActivity] = useState([]);
   const [showProfilePopup, setShowProfilePopup] = useState(false);
-  // Removed: showTutorial state - AI Chatbot handles user guidance now
   const [activeTab, setActiveTab] = useState('home');
   const [activityTab, setActivityTab] = useState('yours');
   const [miningHistory, setMiningHistory] = useState([]);
@@ -53,8 +55,6 @@ const DashboardModern = ({ user, onLogout }) => {
     referralCount: 0,
     membershipType: 'free'
   });
-
-  // Removed: Tutorial check - AI Chatbot provides guidance instead
 
   // Fetch dashboard data - optimized with parallel requests
   useEffect(() => {
