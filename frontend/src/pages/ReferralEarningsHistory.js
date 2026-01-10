@@ -330,7 +330,7 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
               <Award className="w-4 h-4 text-amber-500" />
               <span className="text-amber-400 text-xs">Total Earned</span>
             </div>
-            <p className="text-2xl font-bold text-amber-400">{summary.total_earned.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-amber-400">{(summary?.total_earned || 0).toFixed(2)}</p>
             <p className="text-gray-500 text-xs">PRC</p>
           </div>
           
@@ -339,7 +339,7 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
               <Calendar className="w-4 h-4 text-blue-500" />
               <span className="text-gray-400 text-xs">This Month</span>
             </div>
-            <p className="text-2xl font-bold text-white">{summary.this_month.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-white">{(summary?.this_month || 0).toFixed(2)}</p>
             <p className="text-gray-500 text-xs">PRC</p>
           </div>
           
@@ -348,7 +348,7 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
               <Clock className="w-4 h-4 text-emerald-500" />
               <span className="text-gray-400 text-xs">This Week</span>
             </div>
-            <p className="text-2xl font-bold text-white">{summary.this_week.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-white">{(summary?.this_week || 0).toFixed(2)}</p>
             <p className="text-gray-500 text-xs">PRC</p>
           </div>
           
@@ -357,7 +357,7 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
               <Zap className="w-4 h-4 text-purple-500" />
               <span className="text-gray-400 text-xs">Today</span>
             </div>
-            <p className="text-2xl font-bold text-white">{summary.today.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-white">{(summary?.today || 0).toFixed(2)}</p>
             <p className="text-gray-500 text-xs">PRC</p>
           </div>
         </div>
