@@ -1,0 +1,96 @@
+{
+  "summary": "Tested KYC Document Upload component (AdvancedDocumentUpload.js) fix for camera/gallery button functionality. All tests PASS - the fix correctly implements TWO separate file inputs: one with capture='environment' for camera (opens native camera app) and one without capture attribute for gallery (opens file picker).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/.screenshots/11_kyc_final.png",
+    "/.screenshots/12_pan_card_selected.png"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "AdvancedDocumentUpload.js: Lines 266-274 - Camera input correctly has capture='environment' attribute which tells mobile browsers to use native camera app",
+    "AdvancedDocumentUpload.js: Lines 277-284 - Gallery input correctly has NO capture attribute, ensuring it opens file picker instead of camera",
+    "AdvancedDocumentUpload.js: Lines 24-26 - Separate refs (cameraInputRef, galleryInputRef) for each input type",
+    "AdvancedDocumentUpload.js: Lines 29-40 - Separate handler functions (handleCameraCapture, handleGallerySelect) that trigger the correct input",
+    "AdvancedDocumentUpload.js: Lines 388-415 - Buttons have correct data-testid attributes (use-camera-btn, use-gallery-btn)"
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (frontend only testing)",
+    "frontend": "100%"
+  },
+  "test_credentials": {
+    "test_user": {
+      "email": "kyctest@test.com",
+      "password": "test123456",
+      "kyc_status": "pending"
+    }
+  },
+  "seed_data_creation": "Created test user kyctest@test.com for KYC testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "KYC Document Upload fix verified. The AdvancedDocumentUpload component now has TWO separate file inputs - camera input with capture='environment' (for native camera) and gallery input without capture attribute (for file picker). This is the standard mobile-web pattern for reliable camera/gallery access. Note: Full camera/gallery functionality can only be tested on actual mobile devices - browser automation can only verify the DOM structure is correct.",
+  "features_verified": {
+    "kyc_page_loads": {
+      "status": "PASS",
+      "route": "/kyc",
+      "requires_auth": true
+    },
+    "advanced_document_upload_component": {
+      "status": "PASS",
+      "camera_button": {
+        "data_testid": "use-camera-btn",
+        "text": "Use Camera",
+        "visible": true,
+        "enabled": true
+      },
+      "gallery_button": {
+        "data_testid": "use-gallery-btn",
+        "text": "Gallery",
+        "visible": true,
+        "enabled": true
+      },
+      "camera_input": {
+        "data_testid": "camera-input",
+        "type": "file",
+        "accept": "image/*",
+        "capture": "environment",
+        "status": "PASS - has capture='environment' for native camera"
+      },
+      "gallery_input": {
+        "data_testid": "gallery-input",
+        "type": "file",
+        "accept": "image/*",
+        "capture": null,
+        "status": "PASS - NO capture attribute for file picker"
+      }
+    },
+    "aadhaar_card_form": {
+      "status": "PASS",
+      "fields": ["Full Name", "Aadhaar Number", "Front Side upload", "Back Side upload"],
+      "upload_components": 2
+    },
+    "pan_card_form": {
+      "status": "PASS",
+      "fields": ["Full Name", "PAN Number", "PAN Card Image upload"],
+      "upload_components": 1
+    },
+    "editor_controls": {
+      "status": "VERIFIED_IN_CODE",
+      "controls": ["brightness", "contrast", "rotation", "zoom"],
+      "buttons": ["Cancel (data-testid='cancel-edit-btn')", "Save (data-testid='save-document-btn')"]
+    }
+  },
+  "fix_verification": {
+    "original_bug": "Camera showed black screen, Gallery button incorrectly opened camera instead of file picker",
+    "fix_applied": "Replaced getUserMedia-based camera implementation with native HTML5 file inputs - one with capture='environment' for camera and one without capture for gallery",
+    "verification_result": "PASS - DOM structure confirms TWO separate file inputs with correct attributes"
+  }
+}
