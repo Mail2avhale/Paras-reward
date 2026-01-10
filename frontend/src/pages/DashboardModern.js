@@ -158,7 +158,14 @@ const DashboardModern = ({ user, onLogout }) => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
       
-      {/* Removed: Tutorial - AI Chatbot provides user guidance now */}
+      {/* Interactive Walkthrough for new users */}
+      {showWalkthrough && (
+        <InteractiveWalkthrough 
+          user={user}
+          onComplete={hideWalkthrough}
+          onSkip={hideWalkthrough}
+        />
+      )}
 
       {/* Profile Completion Popup */}
       {showProfilePopup && (
