@@ -62,34 +62,37 @@ const DashboardModern = ({ user, onLogout }) => {
     }
   }, [user]);
 
-  // Fetch dashboard data
+  // Fetch dashboard data - optimized with parallel requests
   useEffect(() => {
     if (user?.uid) {
       fetchDashboardData();
     }
   }, [user]);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       
-      // Try to fetch user data from API
-      try {
-        const userResponse = await axios.get(`${API}/api/user/${user.uid}`);
-        const fetchedUserData = userResponse.data;
+      // Parallel API calls for faster loading
+      const [userResult, activityResult, globalResult] = await Promise.allSettled([
+        axios.get(`${API}/api/user/${user.uid}`),
+        axios.get(`${API}/api/user/${user.uid}/recent-activity?limit=10`),
+        axios.get(`${API}/api/global/live-activity?limit=10`)
+      ]);
+      
+      // Process user data
+      if (userResult.status === 'fulfilled') {
+        const fetchedUserData = userResult.value.data;
         setUserData(fetchedUserData);
         setMiningHistory(fetchedUserData.mining_history || []);
-        
-        // Set stats from API response
         setStats({
           prcBalance: fetchedUserData.prc_balance || 0,
           totalMined: fetchedUserData.total_mined || 0,
           referralCount: fetchedUserData.referral_count || 0,
           membershipType: fetchedUserData.membership_type || 'free'
         });
-      } catch (apiError) {
-        // Fallback to user prop data if API fails
-        console.log('Using fallback user data');
+      } else {
+        // Fallback to user prop data
         setUserData(user);
         setStats({
           prcBalance: user.prc_balance || 0,
@@ -98,12 +101,10 @@ const DashboardModern = ({ user, onLogout }) => {
           membershipType: user.membership_type || 'free'
         });
       }
-
-      // Fetch comprehensive recent activity
-      try {
-        const activityResponse = await axios.get(`${API}/api/user/${user.uid}/recent-activity?limit=10`);
-        const activities = activityResponse.data.activities || [];
-        // Format activities for display
+      
+      // Process activity data
+      if (activityResult.status === 'fulfilled') {
+        const activities = activityResult.value.data.activities || [];
         const formattedActivities = activities.map(activity => ({
           type: activity.type,
           description: activity.description,
@@ -112,42 +113,21 @@ const DashboardModern = ({ user, onLogout }) => {
           icon: activity.icon
         }));
         setRecentTransactions(formattedActivities);
-      } catch (activityError) {
-        // Fallback to transactions if activity API fails
-        try {
-          const txResponse = await axios.get(`${API}/api/transactions/${user.uid}?page=1&per_page=5`);
-          const transactions = txResponse.data.transactions || txResponse.data || [];
-          setRecentTransactions(transactions);
-        } catch (txError) {
-          // Final fallback to mining history
-          console.log('Activity APIs failed, using mining history');
-          const miningHistory = userData?.mining_history || user?.mining_history || [];
-          const formattedHistory = miningHistory.slice(0, 5).map((h, i) => ({
-            type: 'mining_reward',
-            description: 'Daily Rewards',
-            amount: h.prc_earned || h.amount || 0,
-            timestamp: h.timestamp || h.date || new Date().toISOString()
-          }));
-          setRecentTransactions(formattedHistory);
-        }
+      }
+      
+      // Process global activity
+      if (globalResult.status === 'fulfilled') {
+        setGlobalActivity(globalResult.value.data.activities || []);
       }
 
       // Check profile completion
-      const currentUser = userData || user;
+      const currentUser = userResult.status === 'fulfilled' ? userResult.value.data : user;
       const profileComplete = currentUser?.name && currentUser?.phone && currentUser?.city;
       if (!profileComplete && !localStorage.getItem('profile_popup_dismissed')) {
         setShowProfilePopup(true);
       }
 
-      // Fetch global live activity (bill, voucher, shopping)
-      try {
-        const globalResponse = await axios.get(`${API}/api/global/live-activity?limit=10`);
-        setGlobalActivity(globalResponse.data.activities || []);
-      } catch (globalError) {
-        console.log('Global activity fetch failed');
-      }
-
-      // Check for birthday
+      // Check for birthday (non-blocking)
       try {
         const birthdayResponse = await axios.get(`${API}/api/user/${user.uid}/birthday-check`);
         if (birthdayResponse.data.is_birthday) {
