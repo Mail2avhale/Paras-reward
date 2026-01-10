@@ -171,6 +171,7 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 - `/api/ai/chatbot` - AI chatbot
 - `/api/mining/status/{uid}` - Mining status with referral breakdown
 - `/api/referrals/{user_id}/levels` - Referral network
+- `/api/referral-earnings/{user_id}` - Detailed referral earnings history (NEW)
 - `/api/global/live-activity` - Global activity feed
 - `/api/public/live-stats` - Platform statistics
 
