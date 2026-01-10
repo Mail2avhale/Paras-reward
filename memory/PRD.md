@@ -53,7 +53,19 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 
 ## What's Been Implemented
 
-### January 10, 2026 (Current Session)
+### January 10, 2026 (Latest Session)
+
+#### KYC Document Upload Fix ✅ (P0 - CRITICAL BUG FIX)
+- **Problem**: Camera showed black screen, Gallery button incorrectly opened camera instead of file picker
+- **Root Cause**: getUserMedia-based camera implementation was unreliable on mobile devices
+- **Solution**: Replaced with native HTML5 file inputs
+  - Camera input: `<input type="file" accept="image/*" capture="environment">` - Opens native camera app
+  - Gallery input: `<input type="file" accept="image/*">` - Opens file picker (no capture attribute)
+- **Component**: `frontend/src/components/AdvancedDocumentUpload.js` (rewritten)
+- **Testing**: Verified by testing agent - DOM structure confirms TWO separate file inputs with correct attributes
+- **Status**: FIXED and VERIFIED
+
+### January 10, 2026 (Previous Session)
 
 #### App Loading Speed Optimization ✅
 - **Critical CSS in HTML**: Added inline critical CSS for instant first paint with branded loader
