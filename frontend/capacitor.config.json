@@ -3,7 +3,7 @@
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://finance-ai-35.preview.emergentagent.com",
+    "url": "https://payflex-10.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
