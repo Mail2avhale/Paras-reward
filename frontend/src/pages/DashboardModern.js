@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import PRCExpiryTimer from '@/components/PRCExpiryTimer';
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
-import AppTutorialAdvanced from '@/components/AppTutorialAdvanced';
+// Removed: AppTutorialAdvanced - replaced by AI Chatbot for user guidance
 import AIChatbotEnhanced from '@/components/AIChatbotEnhanced';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSkeleton } from '@/components/skeletons';
@@ -40,7 +40,7 @@ const DashboardModern = ({ user, onLogout }) => {
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [globalActivity, setGlobalActivity] = useState([]);
   const [showProfilePopup, setShowProfilePopup] = useState(false);
-  const [showTutorial, setShowTutorial] = useState(false);
+  // Removed: showTutorial state - AI Chatbot handles user guidance now
   const [activeTab, setActiveTab] = useState('home');
   const [activityTab, setActivityTab] = useState('yours');
   const [miningHistory, setMiningHistory] = useState([]);
@@ -54,13 +54,7 @@ const DashboardModern = ({ user, onLogout }) => {
     membershipType: 'free'
   });
 
-  // Check tutorial on mount
-  useEffect(() => {
-    const tutorialCompleted = localStorage.getItem('tutorial_completed');
-    if (!tutorialCompleted && user?.uid) {
-      setShowTutorial(true);
-    }
-  }, [user]);
+  // Removed: Tutorial check - AI Chatbot provides guidance instead
 
   // Fetch dashboard data - optimized with parallel requests
   useEffect(() => {
@@ -164,16 +158,7 @@ const DashboardModern = ({ user, onLogout }) => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
       
-      {/* Tutorial */}
-      {showTutorial && (
-        <AppTutorialAdvanced 
-          user={user}
-          onComplete={() => {
-            setShowTutorial(false);
-            localStorage.setItem('tutorial_completed', 'true');
-          }}
-        />
-      )}
+      {/* Removed: Tutorial - AI Chatbot provides user guidance now */}
 
       {/* Profile Completion Popup */}
       {showProfilePopup && (
