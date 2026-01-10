@@ -3578,24 +3578,91 @@ async def apply_referral(uid: str, referral_code: str):
     """Apply referral code"""
     # Check if user already has referrer
     user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
     if user.get("referred_by"):
         raise HTTPException(status_code=400, detail="Referral already applied")
     
     # Find referrer
-    referrer = await db.users.find_one({"referral_code": referral_code})
+    referrer = await db.users.find_one({"referral_code": referral_code.upper()})
     if not referrer:
         raise HTTPException(status_code=404, detail="Invalid referral code")
     
     if referrer["uid"] == uid:
         raise HTTPException(status_code=400, detail="Cannot refer yourself")
     
-    # Update user
+    # Update user with referrer info
     await db.users.update_one(
         {"uid": uid},
-        {"$set": {"referred_by": referrer["uid"]}}
+        {"$set": {
+            "referred_by": referrer["uid"],
+            "referred_by_name": referrer.get("name", "A Friend")
+        }}
     )
     
-    return {"message": "Referral applied successfully"}
+    # Update referrer's referral count
+    await db.users.update_one(
+        {"uid": referrer["uid"]},
+        {"$inc": {"referral_count": 1}}
+    )
+    
+    return {"message": "Referral applied successfully", "referrer_name": referrer.get("name")}
+
+
+# New endpoint to match frontend call
+@api_router.post("/referrals/apply")
+async def apply_referral_code(request: Request):
+    """Apply referral code - alternative endpoint for frontend"""
+    try:
+        data = await request.json()
+        uid = data.get("uid")
+        referral_code = data.get("referral_code", "").strip().upper()
+        
+        if not uid or not referral_code:
+            raise HTTPException(status_code=400, detail="Missing uid or referral_code")
+        
+        # Check if user already has referrer
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        if user.get("referred_by"):
+            raise HTTPException(status_code=400, detail="You have already applied a referral code")
+        
+        # Find referrer by code
+        referrer = await db.users.find_one({"referral_code": referral_code})
+        if not referrer:
+            raise HTTPException(status_code=404, detail="Invalid referral code. Please check and try again.")
+        
+        if referrer["uid"] == uid:
+            raise HTTPException(status_code=400, detail="You cannot use your own referral code")
+        
+        # Update user with referrer info
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {
+                "referred_by": referrer["uid"],
+                "referred_by_name": referrer.get("name", "A Friend")
+            }}
+        )
+        
+        # Update referrer's referral count
+        await db.users.update_one(
+            {"uid": referrer["uid"]},
+            {"$inc": {"referral_count": 1}}
+        )
+        
+        logging.info(f"Referral applied: {uid} referred by {referrer['uid']}")
+        
+        return {
+            "message": "Referral code applied successfully!",
+            "referrer_name": referrer.get("name", "A Friend")
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Apply referral error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to apply referral code")
 
 @api_router.get("/referral/list/{uid}")
 async def get_referrals(uid: str):
