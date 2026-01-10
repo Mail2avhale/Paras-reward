@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://payflex-10.preview.emergentagent.com",
+    "url": "https://goldblack-finance.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

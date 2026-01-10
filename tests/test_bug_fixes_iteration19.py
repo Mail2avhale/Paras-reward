@@ -12,7 +12,7 @@ import os
 import uuid
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://payflex-10.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://goldblack-finance.preview.emergentagent.com')
 
 # Test user credentials
 TEST_USER_EMAIL = f"test_bugfix19_{uuid.uuid4().hex[:8]}@test.com"

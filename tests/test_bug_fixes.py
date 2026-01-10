@@ -15,7 +15,7 @@ import requests
 import os
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://payflex-10.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://goldblack-finance.preview.emergentagent.com')
 TEST_USER_UID = "679523f5-4a5c-4778-aa7f-1595f101b29a"
 TEST_USER_EMAIL = "testfix@test.com"
 TEST_USER_PASSWORD = "testpass123"
