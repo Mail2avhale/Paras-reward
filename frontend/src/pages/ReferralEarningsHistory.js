@@ -45,36 +45,48 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
   const fetchEarnings = useCallback(async () => {
     if (!user?.uid) {
       console.log('No user UID available');
+      setLoading(false);
       return;
     }
     
     setLoading(true);
+    setError(null);
+    
     try {
       console.log('Fetching earnings for user:', user.uid);
+      
       // Fetch referral earnings history
       const response = await axios.get(`${API}/api/referral-earnings/${user.uid}`, {
-        params: { period: filterPeriod }
+        params: { period: filterPeriod },
+        timeout: 10000 // 10 second timeout
       });
       
-      console.log('Earnings response:', response.data);
+      console.log('Earnings API response:', response.data);
       
-      if (response.data.earnings && response.data.earnings.length > 0) {
-        setEarnings(response.data.earnings);
-      }
+      // Set earnings data
+      const earningsData = response.data?.earnings || [];
+      const summaryData = response.data?.summary || {
+        total_earned: 0,
+        this_month: 0,
+        this_week: 0,
+        today: 0
+      };
       
-      if (response.data.summary) {
-        setSummary(response.data.summary);
-      }
+      setEarnings(earningsData);
+      setSummary(summaryData);
       
-      // If no earnings from API, try to generate estimated data
-      if (!response.data.earnings || response.data.earnings.length === 0) {
-        console.log('No earnings from API, generating estimated data');
-        await fetchEstimatedEarnings();
-      }
+      console.log('Set earnings:', earningsData.length, 'Summary:', summaryData);
+      
     } catch (error) {
       console.error('Error fetching earnings:', error);
-      // Generate sample data based on user's referral history
-      await fetchEstimatedEarnings();
+      setError('Unable to load earnings data');
+      
+      // Try fallback method
+      try {
+        await fetchEstimatedEarnings();
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+      }
     } finally {
       setLoading(false);
     }
