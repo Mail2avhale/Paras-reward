@@ -556,7 +556,7 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
           )}
 
           {/* Messages */}
-          <div className={`flex-1 overflow-y-auto p-3 sm:p-4 bg-gradient-to-b from-gray-50 to-white space-y-3 ${isExpanded ? '' : 'h-[250px] sm:h-[320px]'}`}>
+          <div className={`flex-1 overflow-y-auto p-3 sm:p-4 bg-gradient-to-b from-gray-50 to-white space-y-3 min-h-0 ${isExpanded ? '' : 'max-h-[200px] sm:max-h-[280px]'}`}>
             {messages.map((msg, index) => (
               <motion.div 
                 key={index}
