@@ -56,7 +56,8 @@ const MarketplaceEnhanced = lazy(() => import("@/pages/MarketplaceEnhanced"));
 const Orders = lazy(() => import("@/pages/Orders"));
 const VIPMembership = lazy(() => import("@/pages/VIPMembership"));
 // Removed: WalletNew (withdrawal functionality removed)
-const Leaderboard = lazy(() => import("@/pages/Leaderboard"));
+// Removed: Leaderboard (feature removed for AdMob compliance)
+const ReferralEarningsHistory = lazy(() => import("@/pages/ReferralEarningsHistory"));
 const ProfileAdvanced = lazy(() => import("@/pages/ProfileAdvanced"));
 const ReferralDashboard = lazy(() => import("@/pages/ReferralDashboard"));
 const ReferralDashboardAI = lazy(() => import("@/pages/ReferralDashboardAI"));
@@ -202,7 +203,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/vip" element={user ? <VIPMembership user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/kyc" element={user ? <KYCVerification user={user} /> : <Navigate to="/login" />} />
             {/* Removed: Wallet/Withdrawal functionality */}
-            <Route path="/leaderboard" element={user ? <Leaderboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            {/* Removed: Leaderboard page for AdMob compliance */}
+            <Route path="/referral-earnings" element={user ? <ReferralEarningsHistory user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/gamification" element={user ? <GamificationDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/profile" element={user ? <ProfileAdvanced user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             {/* Legacy route redirect - keeping for backward compatibility */}

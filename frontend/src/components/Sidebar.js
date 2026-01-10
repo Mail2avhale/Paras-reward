@@ -64,7 +64,7 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
     { id: 'gift-vouchers', label: 'Gift Vouchers', icon: Gift, route: '/gift-vouchers' },
     { id: 'bill-payments', label: 'Bill Payments', icon: FileText, route: '/bill-payments' },
     { id: 'referrals', label: 'Referrals', icon: Users, route: '/referrals' },
-    { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, route: '/leaderboard' },
+    // Removed: Leaderboard for AdMob compliance
     { id: 'vip', label: 'VIP Membership', icon: Crown, route: '/vip' },
     { id: 'gamification', label: 'Achievements', icon: Star, route: '/gamification' },
   ];

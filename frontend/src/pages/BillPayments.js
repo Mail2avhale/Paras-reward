@@ -518,7 +518,7 @@ const BillPayments = ({ user, onLogout }) => {
                   className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-900 font-bold rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
                 >
                   <Send className="h-4 w-4" />
-                  {loading ? 'Submitting...' : 'Submit Request'}
+                  {loading ? 'Processing...' : 'Redeem'}
                 </button>
               </form>
             </div>
