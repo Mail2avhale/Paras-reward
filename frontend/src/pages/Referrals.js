@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   Users, Copy, Check, Share2, ArrowLeft, Gift, Crown, TrendingUp, 
-  ChevronDown, ChevronRight, UserCheck, UserX, Zap, Info
+  ChevronDown, ChevronRight, UserCheck, UserX, Zap, Info, History
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -260,6 +260,26 @@ const Referrals = ({ user }) => {
             </div>
           </div>
         </motion.div>
+      </div>
+
+      {/* View Earnings History Button */}
+      <div className="px-5 mb-4">
+        <button
+          onClick={() => navigate('/referral-earnings')}
+          className="w-full bg-gradient-to-r from-emerald-500/20 to-emerald-600/10 border border-emerald-500/30 rounded-2xl p-4 flex items-center justify-between hover:from-emerald-500/30 hover:to-emerald-600/20 transition-all"
+          data-testid="view-earnings-history"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+              <History className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-white font-bold">View Earnings History</p>
+              <p className="text-emerald-400 text-xs">Track your referral bonus earnings</p>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-emerald-500" />
+        </button>
       </div>
 
       {/* Stats Overview */}
