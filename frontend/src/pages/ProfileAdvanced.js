@@ -166,14 +166,71 @@ const ProfileAdvanced = ({ user, onLogout }) => {
 
   const handleImageUpdate = async (imageData) => {
     try {
-      await axios.put(`${API}/api/user/${user.uid}`, {
-        profile_picture: imageData
+      // Use the correct profile picture upload endpoint
+      const formData = new FormData();
+      
+      // Convert base64 to blob if needed
+      if (imageData.startsWith('data:')) {
+        const response = await fetch(imageData);
+        const blob = await response.blob();
+        formData.append('file', blob, 'profile.jpg');
+      } else {
+        formData.append('profile_picture_url', imageData);
+      }
+      
+      await axios.post(`${API}/api/user/${user.uid}/upload-profile-picture`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
+      
       toast.success('Profile picture updated!');
       setShowImageUpload(false);
       fetchUserData();
     } catch (error) {
-      toast.error('Failed to update picture');
+      console.error('Profile picture upload error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to update picture');
+    }
+  };
+
+  // Auto-upload profile picture with compression
+  const handleQuickImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    
+    setSaving(true);
+    toast.info('Uploading profile picture...');
+    
+    try {
+      // Compress and resize image
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 500,
+        useWebWorker: true,
+        fileType: 'image/jpeg'
+      };
+      
+      const imageCompression = (await import('browser-image-compression')).default;
+      const compressedFile = await imageCompression(file, options);
+      
+      // Upload compressed image
+      const formData = new FormData();
+      formData.append('file', compressedFile, 'profile.jpg');
+      
+      await axios.post(`${API}/api/user/${user.uid}/upload-profile-picture`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      toast.success('Profile picture updated!');
+      fetchUserData();
+    } catch (error) {
+      console.error('Quick upload error:', error);
+      toast.error('Failed to upload picture');
+    } finally {
+      setSaving(false);
     }
   };
 
