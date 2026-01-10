@@ -142,7 +142,7 @@ const DashboardModern = ({ user, onLogout }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   const handleNavigation = (tabName) => {
     setActiveTab(tabName);
