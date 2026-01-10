@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import PRCExpiryTimer from '@/components/PRCExpiryTimer';
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
-// Removed: AppTutorialAdvanced - replaced by AI Chatbot for user guidance
+import InteractiveWalkthrough, { useWalkthrough } from '@/components/InteractiveWalkthrough';
 import AIChatbotEnhanced from '@/components/AIChatbotEnhanced';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSkeleton } from '@/components/skeletons';
