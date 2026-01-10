@@ -469,15 +469,19 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
         className={`fixed z-[9999] ${
           isExpanded 
             ? 'inset-4' 
-            : 'bottom-20 right-2 left-2 sm:left-auto sm:right-4 sm:w-[400px] max-h-[75vh] sm:max-h-[550px]'
+            : 'bottom-24 right-2 left-2 sm:left-auto sm:right-4 sm:w-[400px]'
         }`}
+        style={!isExpanded ? { 
+          maxHeight: 'calc(100vh - 140px)',
+          height: 'auto'
+        } : {}}
         initial={{ scale: 0.8, opacity: 0, y: 50 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.8, opacity: 0, y: 50 }}
         transition={{ type: "spring", stiffness: 300, damping: 25 }}
         data-testid="chatbot-container"
       >
-        <Card className="h-full shadow-2xl border-0 overflow-hidden flex flex-col">
+        <Card className="h-full max-h-[65vh] sm:max-h-[500px] shadow-2xl border-0 overflow-hidden flex flex-col">
           {/* Header */}
           <div 
             className="text-white p-4 flex-shrink-0"
