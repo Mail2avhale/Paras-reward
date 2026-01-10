@@ -415,7 +415,7 @@ const RewardsHome = () => {
                   </div>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center p-3 bg-white/10 rounded-lg">
-                      <span className="text-blue-200">Today's Rewards</span>
+                      <span className="text-blue-200">Today&apos;s Rewards</span>
                       <span className="font-semibold text-green-400">+12.5 PRC</span>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-white/10 rounded-lg">
