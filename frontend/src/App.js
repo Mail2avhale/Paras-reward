@@ -112,26 +112,32 @@ const AdminRedeemSettings = lazy(() => import(/* webpackChunkName: "admin" */ "@
 const AdminPRCRain = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPRCRain"));
 const AdminAccountingDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAccountingDashboard"));
 const PRCEmergencyControls = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/PRCEmergencyControls"));
-const AdminUserControls = lazy(() => import("@/pages/AdminUserControls"));
-const AdvancedUserManagement = lazy(() => import("@/pages/AdvancedUserManagement"));
+const AdminUserControls = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUserControls"));
+const AdvancedUserManagement = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdvancedUserManagement"));
 const BillPayments = lazy(() => import("@/pages/BillPayments"));
 const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption"));
 const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
-const ManagerDashboard = lazy(() => import("@/pages/ManagerDashboard"));
-const ManagerDashboardNew = lazy(() => import("@/pages/manager/ManagerDashboardNew"));
-const ManagerUsers = lazy(() => import("@/pages/manager/ManagerUsers"));
-const ManagerOrders = lazy(() => import("@/pages/manager/ManagerOrders"));
-const ManagerReports = lazy(() => import("@/pages/manager/ManagerReports"));
-const ManagerProducts = lazy(() => import("@/pages/manager/ManagerProducts"));
-const ManagerFinance = lazy(() => import("@/pages/manager/ManagerFinance"));
-const ManagerCommunication = lazy(() => import("@/pages/manager/ManagerCommunication"));
-const ManagerSupport = lazy(() => import("@/pages/manager/ManagerSupport"));
-const ManagerStockists = lazy(() => import("@/pages/manager/ManagerStockists"));
-const MasterStockistDashboard = lazy(() => import("@/pages/MasterStockistDashboard"));
-const SubStockistDashboard = lazy(() => import("@/pages/SubStockistDashboard"));
-const OutletPanel = lazy(() => import("@/pages/OutletPanel"));
-const StockRequestSystem = lazy(() => import("@/pages/StockRequestSystem"));
-const StockistManagementAdmin = lazy(() => import("@/pages/StockistManagementAdmin"));
+
+// ============ MANAGER PAGES - Code Split into separate chunk ============
+const ManagerDashboard = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/ManagerDashboard"));
+const ManagerDashboardNew = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerDashboardNew"));
+const ManagerUsers = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerUsers"));
+const ManagerOrders = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerOrders"));
+const ManagerReports = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerReports"));
+const ManagerProducts = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerProducts"));
+const ManagerFinance = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerFinance"));
+const ManagerCommunication = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerCommunication"));
+const ManagerSupport = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerSupport"));
+const ManagerStockists = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerStockists"));
+
+// ============ STOCKIST PAGES - Code Split into separate chunk ============
+const MasterStockistDashboard = lazy(() => import(/* webpackChunkName: "stockist" */ "@/pages/MasterStockistDashboard"));
+const SubStockistDashboard = lazy(() => import(/* webpackChunkName: "stockist" */ "@/pages/SubStockistDashboard"));
+const OutletPanel = lazy(() => import(/* webpackChunkName: "stockist" */ "@/pages/OutletPanel"));
+const StockRequestSystem = lazy(() => import(/* webpackChunkName: "stockist" */ "@/pages/StockRequestSystem"));
+const StockistManagementAdmin = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/StockistManagementAdmin"));
+
+// ============ STATIC PAGES ============
 const Setup = lazy(() => import("@/pages/Setup"));
 const AboutUs = lazy(() => import("@/pages/AboutUs"));
 const ContactUs = lazy(() => import("@/pages/ContactUs"));
