@@ -149,8 +149,9 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 ### P2 (Medium Priority)
 - AI Product Recommendations
 - PWA functionality
-- Referral earnings history page
+- ~~Referral earnings history page~~ ✅ COMPLETED
 - Pagination on history pages
+- KYC Document Upload Fix (camera/gallery issue)
 
 ### P3 (Low Priority)
 - Hierarchical Reporting Structure
