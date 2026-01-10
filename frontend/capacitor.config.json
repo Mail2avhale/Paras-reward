@@ -3,7 +3,6 @@
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://payflex-10.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
