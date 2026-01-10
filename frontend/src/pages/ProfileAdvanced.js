@@ -188,8 +188,8 @@ const ProfileAdvanced = ({ user, onLogout }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
-      {/* Header */}
-      <div className="px-5 pt-6 pb-4">
+      {/* Header - with safe area padding */}
+      <div className="px-5 pb-4 pt-safe-header" style={{ paddingTop: 'max(2rem, env(safe-area-inset-top, 2rem))' }}>
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/dashboard')}
