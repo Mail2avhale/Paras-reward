@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -13,6 +13,7 @@ import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
 import AppTutorialAdvanced from '@/components/AppTutorialAdvanced';
 import AIChatbotEnhanced from '@/components/AIChatbotEnhanced';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { DashboardSkeleton } from '@/components/skeletons';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
