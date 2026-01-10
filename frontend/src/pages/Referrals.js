@@ -615,11 +615,65 @@ const Referrals = ({ user }) => {
         </AnimatePresence>
       </div>
 
+      {/* No Referrals Yet - Helpful Guide */}
+      {referralStats.total === 0 && (
+        <div className="px-5 mb-6">
+          <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-2xl p-5">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                <Users className="w-6 h-6 text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-white font-bold text-lg">Start Building Your Network</h3>
+                <p className="text-gray-400 text-sm mt-1">Share your referral code to earn bonus PRC!</p>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 bg-gray-900/50 rounded-xl">
+                <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                  <span className="text-emerald-400 font-bold text-sm">1</span>
+                </div>
+                <p className="text-gray-300 text-sm">Share your referral code with friends</p>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-gray-900/50 rounded-xl">
+                <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                  <span className="text-emerald-400 font-bold text-sm">2</span>
+                </div>
+                <p className="text-gray-300 text-sm">They join using your code</p>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-gray-900/50 rounded-xl">
+                <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                  <span className="text-emerald-400 font-bold text-sm">3</span>
+                </div>
+                <p className="text-gray-300 text-sm">Earn <span className="text-amber-400 font-bold">10%</span> bonus when they mine!</p>
+              </div>
+            </div>
+            
+            <button
+              onClick={shareCode}
+              className="w-full mt-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold rounded-xl flex items-center justify-center gap-2"
+            >
+              <Share2 className="w-5 h-5" />
+              Share Your Code Now
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Apply Referral Code */}
       {!userData?.referred_by && (
-        <div className="px-5">
-          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5">
-            <h3 className="text-white font-bold mb-3">{t.haveCode}</h3>
+        <div className="px-5 mb-6">
+          <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-2xl p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                <Gift className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-white font-bold">{t.haveCode}</h3>
+                <p className="text-amber-400 text-xs">Apply code to connect with your referrer!</p>
+              </div>
+            </div>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -631,11 +685,31 @@ const Referrals = ({ user }) => {
               />
               <button
                 onClick={applyReferralCode}
-                disabled={applying}
+                disabled={applying || !inputCode.trim()}
                 className="px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-gray-900 font-bold rounded-xl hover:from-amber-400 hover:to-amber-500 transition-all disabled:opacity-50"
               >
                 {applying ? '...' : t.apply}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Referred By Section - Show who referred this user */}
+      {userData?.referred_by && (
+        <div className="px-5 mb-6">
+          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <UserCheck className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-gray-400 text-xs">You were referred by</p>
+                <p className="text-white font-bold">{userData.referred_by_name || 'A Friend'}</p>
+              </div>
+              <div className="ml-auto">
+                <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-xs rounded-full">Connected</span>
+              </div>
             </div>
           </div>
         </div>
