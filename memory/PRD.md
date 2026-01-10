@@ -67,6 +67,23 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 - **Code Splitting**: Admin, Manager, and Stockist pages split into separate webpack chunks (~30% smaller initial bundle)
 - **Tutorial Removed**: Removed AppTutorialAdvanced - AI Chatbot now handles user guidance
 
+#### Advanced AI Chatbot Features ✅
+- **Quick Action Buttons**: Chatbot responses include clickable action buttons based on intent (Start Session, View VIP, etc.)
+- **Proactive Tips**: AI-powered tips shown based on user's current page and status
+- **Voice Input (STT)**: Users can speak questions using microphone (OpenAI Whisper)
+- **Voice Output (TTS)**: Chatbot can read responses aloud (OpenAI TTS with Nova voice)
+- **Voice Toggle**: Enable/disable voice features with speaker icon
+- **Listen Button**: Each bot message has a "Listen" button to hear the response
+- **Backend Endpoints**: `/api/ai/voice/transcribe`, `/api/ai/voice/speak`, `/api/ai/proactive-tips/{uid}`
+
+#### Interactive Walkthrough ✅
+- **6-Step Animated Tour**: Welcome → Daily Rewards → Referrals → VIP → Marketplace → Complete
+- **Progress Dots**: Visual progress indicator with click-to-navigate
+- **Floating Particles**: Animated background for premium feel
+- **Step-specific Tips**: Pro tips for each feature
+- **Action Buttons**: Direct navigation to features on completion
+- **useWalkthrough Hook**: Easy integration with any page
+
 #### AdMob Compliance Updates ✅
 - **Leaderboard Removed**: Removed Leaderboard page and all navigation links for AdMob compliance
 - **Button Text Change**: Changed "Submit Request" to "Redeem" on Bill Payments page
