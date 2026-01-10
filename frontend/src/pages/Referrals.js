@@ -162,6 +162,31 @@ const Referrals = ({ user }) => {
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
+  const shareCode = async () => {
+    const code = userData?.referral_code || user?.referral_code || '';
+    const shareData = {
+      title: 'PARAS REWARD - Earn PRC Daily!',
+      text: `🎁 Join PARAS REWARD and earn PRC daily!\n\n✅ Use my code: ${code}\n✅ Start earning from Day 1\n✅ 5-Level Bonus System`,
+      url: 'https://parasreward.com'
+    };
+    
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        toast.success('Thanks for sharing!');
+      } else {
+        // Fallback to WhatsApp
+        shareOnWhatsApp();
+      }
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        // Fallback to copy
+        navigator.clipboard.writeText(`${shareData.text}\n\n${shareData.url}`);
+        toast.success('Referral message copied!');
+      }
+    }
+  };
+
   const applyReferralCode = async () => {
     if (!inputCode.trim()) {
       toast.error('Please enter a code');
