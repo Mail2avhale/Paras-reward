@@ -1,6 +1,8 @@
 @tailwind base;
 
 /* Safe area support for mobile browsers */
+/* Note: env(safe-area-inset-top) returns 0 on most Android browsers */
+/* We add a minimum 12px padding for Android browser address bar */
 html {
   /* Ensure content is not hidden behind browser UI */
   padding-top: env(safe-area-inset-top, 0);
@@ -18,15 +20,21 @@ html {
 
 /* Safe area padding utility classes */
 .safe-top {
-  padding-top: env(safe-area-inset-top, 0);
+  padding-top: max(12px, env(safe-area-inset-top, 12px));
 }
 
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
+/* Main page top padding - works on all browsers */
 .pt-safe {
-  padding-top: max(1.5rem, env(safe-area-inset-top, 1.5rem));
+  padding-top: max(1.75rem, env(safe-area-inset-top, 1.75rem));
+}
+
+/* Extra top padding for pages with headers */
+.pt-safe-header {
+  padding-top: max(2rem, env(safe-area-inset-top, 2rem));
 }
 
 
