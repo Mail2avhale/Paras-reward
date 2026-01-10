@@ -363,6 +363,21 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
         </div>
       </div>
 
+      {/* Error Display */}
+      {error && (
+        <div className="px-5 mb-4">
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-center">
+            <p className="text-red-400 text-sm">{error}</p>
+            <button 
+              onClick={() => fetchEarnings()}
+              className="mt-2 px-4 py-1 bg-red-500/20 text-red-400 rounded-lg text-xs"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Level Breakdown */}
       <div className="px-5 mb-6">
         <h2 className="text-white font-bold mb-3 flex items-center gap-2">
@@ -371,9 +386,9 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
         </h2>
         <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
           {[1, 2, 3, 4, 5].map((level) => {
-            const levelEarnings = earnings
-              .filter(e => e.level === level)
-              .reduce((sum, e) => sum + e.prc_earned, 0);
+            const levelEarnings = (earnings || [])
+              .filter(e => e?.level === level)
+              .reduce((sum, e) => sum + (e?.prc_earned || 0), 0);
             
             return (
               <div 
