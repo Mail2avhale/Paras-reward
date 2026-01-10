@@ -5904,6 +5904,197 @@ async def get_chatbot_history(uid: str, limit: int = 50):
     
     return {"history": history}
 
+
+# ========== VOICE AI ENDPOINTS ==========
+# Speech-to-Text (Whisper) and Text-to-Speech (TTS)
+
+@api_router.post("/ai/voice/transcribe")
+async def transcribe_audio(audio_file: UploadFile = File(...)):
+    """Convert speech to text using OpenAI Whisper"""
+    try:
+        from emergentintegrations.llm.openai import OpenAISpeechToText
+        
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Voice API not configured")
+        
+        # Read audio file
+        audio_content = await audio_file.read()
+        
+        # Check file size (25MB limit)
+        if len(audio_content) > 25 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="Audio file too large. Max 25MB.")
+        
+        # Initialize STT
+        stt = OpenAISpeechToText(api_key=api_key)
+        
+        # Create a file-like object
+        import io
+        audio_io = io.BytesIO(audio_content)
+        audio_io.name = audio_file.filename or "audio.webm"
+        
+        # Transcribe
+        response = await stt.transcribe(
+            file=audio_io,
+            model="whisper-1",
+            response_format="json",
+            language="en"  # Auto-detect if not specified
+        )
+        
+        return {
+            "success": True,
+            "text": response.text,
+            "language": "auto"
+        }
+        
+    except Exception as e:
+        logging.error(f"Transcription error: {e}")
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+
+
+@api_router.post("/ai/voice/speak")
+async def text_to_speech(text: str = Form(...), voice: str = Form("nova"), speed: float = Form(1.0)):
+    """Convert text to speech using OpenAI TTS"""
+    try:
+        from emergentintegrations.llm.openai import OpenAITextToSpeech
+        
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Voice API not configured")
+        
+        # Check text length (4096 char limit)
+        if len(text) > 4096:
+            text = text[:4096]
+        
+        # Initialize TTS
+        tts = OpenAITextToSpeech(api_key=api_key)
+        
+        # Generate speech as base64
+        audio_base64 = await tts.generate_speech_base64(
+            text=text,
+            model="tts-1",  # Use standard model for faster response
+            voice=voice,  # nova, alloy, shimmer, echo, fable, onyx
+            speed=speed
+        )
+        
+        return {
+            "success": True,
+            "audio_base64": audio_base64,
+            "format": "mp3",
+            "voice": voice
+        }
+        
+    except Exception as e:
+        logging.error(f"TTS error: {e}")
+        raise HTTPException(status_code=500, detail=f"Text-to-speech failed: {str(e)}")
+
+
+@api_router.get("/ai/proactive-tips/{uid}")
+async def get_proactive_tips(uid: str, current_page: str = "dashboard"):
+    """Get AI-powered proactive tips based on user state and current page"""
+    try:
+        # Get user data
+        user = await db.users.find_one({"uid": uid}, {"_id": 0})
+        if not user:
+            return {"tips": [], "actions": []}
+        
+        tips = []
+        actions = []
+        
+        # Dashboard tips
+        if current_page in ["dashboard", "home"]:
+            if not user.get("mining_active"):
+                tips.append({
+                    "icon": "🎯",
+                    "text": "Start your reward session to earn PRC!",
+                    "priority": "high"
+                })
+                actions.append({
+                    "label": "Start Session",
+                    "route": "/daily-rewards",
+                    "type": "primary"
+                })
+            
+            prc_balance = user.get("prc_balance", 0)
+            if prc_balance >= 500 and user.get("membership_type") == "vip":
+                tips.append({
+                    "icon": "🎁",
+                    "text": f"You have {prc_balance:.0f} PRC! Redeem for rewards.",
+                    "priority": "medium"
+                })
+                actions.append({
+                    "label": "View Rewards",
+                    "route": "/marketplace",
+                    "type": "secondary"
+                })
+        
+        # Referrals page tips
+        elif current_page == "referrals":
+            referral_count = user.get("referral_count", 0)
+            if referral_count < 5:
+                tips.append({
+                    "icon": "👥",
+                    "text": f"Invite {5 - referral_count} more friends to unlock Level 2 bonuses!",
+                    "priority": "high"
+                })
+                actions.append({
+                    "label": "Share Referral Code",
+                    "action": "share_referral",
+                    "type": "primary"
+                })
+        
+        # VIP page tips
+        elif current_page == "vip":
+            if user.get("membership_type") != "vip":
+                tips.append({
+                    "icon": "👑",
+                    "text": "VIP unlocks shopping, bill payments & exclusive rewards!",
+                    "priority": "high"
+                })
+        
+        # KYC tips
+        elif current_page == "kyc":
+            kyc_status = user.get("kyc_status", "pending")
+            if kyc_status == "pending":
+                tips.append({
+                    "icon": "📋",
+                    "text": "Complete KYC to unlock full platform features!",
+                    "priority": "high"
+                })
+            elif kyc_status == "rejected":
+                tips.append({
+                    "icon": "⚠️",
+                    "text": "Your KYC was rejected. Please resubmit with clear documents.",
+                    "priority": "urgent"
+                })
+        
+        # Mining/Daily rewards tips
+        elif current_page in ["mining", "daily-rewards"]:
+            if user.get("mining_active"):
+                tips.append({
+                    "icon": "⚡",
+                    "text": "Session active! Come back in 24 hours to claim rewards.",
+                    "priority": "info"
+                })
+            referral_count = user.get("referral_count", 0)
+            if referral_count > 0:
+                tips.append({
+                    "icon": "🚀",
+                    "text": f"You earn bonus PRC from {referral_count} referrals while mining!",
+                    "priority": "info"
+                })
+        
+        return {
+            "tips": tips[:3],  # Max 3 tips
+            "actions": actions[:2],  # Max 2 actions
+            "page": current_page
+        }
+        
+    except Exception as e:
+        logging.error(f"Proactive tips error: {e}")
+        return {"tips": [], "actions": []}
+
+
 # Page-specific contextual help tips
 CONTEXTUAL_HELP_TIPS = {
     "daily-rewards": {
