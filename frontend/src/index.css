@@ -1,9 +1,32 @@
 @tailwind base;
+
+/* Safe area support for mobile browsers */
+html {
+  /* Ensure content is not hidden behind browser UI */
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
 /* Professional Navigation Spacing */
 .page-content {
-  padding-top: 4rem;
-  padding-bottom: 5rem;
+  padding-top: calc(4rem + env(safe-area-inset-top, 0));
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0));
   min-height: 100vh;
+}
+
+/* Safe area padding utility classes */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.pt-safe {
+  padding-top: max(1.5rem, env(safe-area-inset-top, 1.5rem));
 }
 
 
