@@ -42,21 +42,33 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
   };
 
   const fetchEarnings = useCallback(async () => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      console.log('No user UID available');
+      return;
+    }
     
     setLoading(true);
     try {
+      console.log('Fetching earnings for user:', user.uid);
       // Fetch referral earnings history
       const response = await axios.get(`${API}/api/referral-earnings/${user.uid}`, {
         params: { period: filterPeriod }
       });
       
-      if (response.data.earnings) {
+      console.log('Earnings response:', response.data);
+      
+      if (response.data.earnings && response.data.earnings.length > 0) {
         setEarnings(response.data.earnings);
       }
       
       if (response.data.summary) {
         setSummary(response.data.summary);
+      }
+      
+      // If no earnings from API, try to generate estimated data
+      if (!response.data.earnings || response.data.earnings.length === 0) {
+        console.log('No earnings from API, generating estimated data');
+        await fetchEstimatedEarnings();
       }
     } catch (error) {
       console.error('Error fetching earnings:', error);
@@ -65,7 +77,7 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
     } finally {
       setLoading(false);
     }
-  }, [user, filterPeriod]);
+  }, [user?.uid, filterPeriod]);
 
   // Generate estimated earnings from mining history if API not available
   const fetchEstimatedEarnings = async () => {
