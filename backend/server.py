@@ -3236,6 +3236,13 @@ async def get_user_data(uid: str):
         else:
             user["mining_active"] = False
     
+    # Reset taps_today if last_tap_date is not today (daily reset)
+    today = now.strftime("%Y-%m-%d")
+    last_tap_date = user.get("last_tap_date", "")
+    if last_tap_date != today:
+        # Return 0 taps for a new day
+        user["taps_today"] = 0
+    
     # Get referral count
     referral_count = await db.users.count_documents({"referred_by": uid})
     user["referral_count"] = referral_count
