@@ -1,17 +1,17 @@
 # Paras Reward Platform - PRD
 
 ## Original Problem Statement
-Build a comprehensive reward and loyalty platform with subscription-based membership system, PRC (Platform Reward Currency) mining, marketplace, gift voucher redemption, bill payment services, and multi-level user hierarchy.
+Build a comprehensive reward and loyalty platform with subscription-based membership system, PRC (Platform Reward Currency) mining, marketplace, gift voucher redemption, bill payment services.
 
 ## Core Requirements
 
 ### User Types
 - **Admin**: Full platform control
 - **Manager**: Regional management
-- **Master Stockist**: Distribution head
-- **Sub Stockist**: Sub-distributor
-- **Outlet**: Point of sale
 - **User/Customer**: End user
+
+**REMOVED (Jan 12, 2026):**
+- ~~Master Stockist, Sub Stockist, Outlet~~ - Replaced with Direct Delivery Partner model
 
 ### Key Features
 1. **4-Tier Subscription System** (NEW - Jan 12, 2026)
@@ -31,7 +31,8 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 3. **Marketplace**
    - Product ordering with PRC
    - Paid plans only (Startup/Growth/Elite)
-   - Stock management
+   - **Direct Delivery by Delivery Partner** (NEW - No outlet model)
+   - **NO CASHBACK on shopping** (Removed Jan 12, 2026)
 
 4. **Bill Payment Services**
    - Mobile recharge, Electricity, Credit cards
@@ -55,6 +56,36 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 ## What's Been Implemented
 
 ### January 12, 2026 (Latest Session)
+
+#### Major Refactoring: Stockist & Cashback System Removal ✅
+
+**STOCKIST SYSTEM REMOVED - Direct Delivery Partner Model:**
+
+**Frontend Files Deleted:**
+- `MasterStockistDashboard.js`, `SubStockistDashboard.js`, `OutletPanel.js`
+- `StockRequestSystem.js`, `StockistManagementAdmin.js`
+- `manager/ManagerStockists.js`
+- `components/layouts/StockistLayout.js`, `components/StockistHierarchy.js`
+
+**Routes Removed:**
+- `/master-stockist/*`, `/sub-stockist/*`, `/outlet/*`
+- `/stock-requests`, `/admin/stockists`, `/manager/stockists`
+
+**Backend Changes (server.py):**
+- Removed stockist roles from `RolePermissions.ALL_ROLES`
+- Removed `verify_stockist()` function
+- Updated User model: role options now `user, admin, sub_admin, manager, employee`
+- Checkout: Orders now assigned to `delivery_partner: "pending_assignment"` instead of outlet
+- Checkout: Added `delivery_method: "direct_delivery"` field
+
+**CASHBACK SYSTEM REMOVED:**
+- No 25% cashback on shopping
+- No cashback wallet
+- No monthly ₹99 maintenance fee
+- Removed `cash_wallet_balance`, `last_wallet_maintenance` from User model
+- Simplified `/api/wallet/{uid}` endpoint - returns only PRC balance
+- Removed `/api/wallet/check-maintenance/{uid}` endpoint
+- Updated order cancel - only PRC refund, no cashback deduction
 
 #### VIP Code Refactoring - COMPLETED ✅
 **Removed obsolete VIP system code in favor of new 4-tier subscription system:**
