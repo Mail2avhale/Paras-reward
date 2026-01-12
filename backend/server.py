@@ -1201,9 +1201,116 @@ async def check_withdrawal_eligibility(user_id: str, amount: float, wallet_type:
 
 # ==================== PRC BURN SYSTEM ====================
 
+async def burn_expired_prc_for_explorer_users():
+    """
+    Burn PRC for Explorer (demo) users after 2 days of inactivity
+    NEW RULE: If Last_Active_Mining_Date + 2 days < Current_Date THEN Burn 100% PRC
+    Only burns for users who have NEVER had a paid subscription
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        burn_threshold = now - timedelta(days=2)
+        
+        # Find Explorer users who have never had a paid subscription
+        # and have been inactive for 2+ days
+        explorer_users = db.users.find({
+            "$or": [
+                {"subscription_plan": "explorer"},
+                {"subscription_plan": {"$exists": False}},
+                {"membership_type": {"$ne": "vip"}}
+            ],
+            "prc_balance": {"$gt": 0}
+        })
+        
+        burn_count = 0
+        total_burned = 0.0
+        
+        async for user in explorer_users:
+            uid = user.get("uid")
+            prc_balance = user.get("prc_balance", 0)
+            
+            # Skip if user has/had paid subscription
+            subscription_plan = user.get("subscription_plan", "explorer")
+            if subscription_plan in ["startup", "growth", "elite"]:
+                continue
+            
+            # Check if ever had VIP/paid subscription (legacy check)
+            if user.get("vip_activated_at") or user.get("subscription_expiry"):
+                continue
+            
+            # Check last mining activity
+            last_mining = user.get("mining_session_end") or user.get("mining_start_time")
+            if not last_mining:
+                # Check last transaction
+                last_txn = await db.transactions.find_one(
+                    {"user_id": uid, "type": {"$in": ["mining", "tap_game"]}},
+                    sort=[("timestamp", -1)]
+                )
+                if last_txn:
+                    last_mining = last_txn.get("timestamp")
+            
+            if not last_mining:
+                continue
+            
+            # Parse last mining date
+            try:
+                if isinstance(last_mining, str):
+                    last_mining_dt = datetime.fromisoformat(last_mining.replace('Z', '+00:00'))
+                elif isinstance(last_mining, datetime):
+                    last_mining_dt = last_mining
+                else:
+                    continue
+                
+                if last_mining_dt.tzinfo is None:
+                    last_mining_dt = last_mining_dt.replace(tzinfo=timezone.utc)
+            except:
+                continue
+            
+            # Check if inactive for 2+ days
+            if last_mining_dt + timedelta(days=2) < now:
+                # Burn 100% PRC
+                burned_amount = prc_balance
+                
+                # Update user balance
+                await db.users.update_one(
+                    {"uid": uid},
+                    {"$set": {"prc_balance": 0}}
+                )
+                
+                # Log burn transaction
+                await db.transactions.insert_one({
+                    "transaction_id": str(uuid.uuid4()),
+                    "user_id": uid,
+                    "type": "prc_burn",
+                    "amount": -burned_amount,
+                    "description": "Demo user inactivity burn (2 days)",
+                    "timestamp": now.isoformat(),
+                    "status": "completed",
+                    "burn_reason": "DEMO_INACTIVITY_BURN"
+                })
+                
+                # Log activity
+                await log_activity(
+                    user_id=uid,
+                    action_type="prc_burn",
+                    description=f"Demo user PRC burned due to 2-day inactivity: {burned_amount} PRC",
+                    metadata={"burn_reason": "DEMO_INACTIVITY_BURN", "burned_amount": burned_amount}
+                )
+                
+                burn_count += 1
+                total_burned += burned_amount
+                logging.info(f"Burned {burned_amount} PRC for explorer user {uid} (inactive since {last_mining_dt})")
+        
+        logging.info(f"Explorer burn job complete: {burn_count} users, {total_burned} PRC burned")
+        return {"users_affected": burn_count, "total_burned": total_burned}
+        
+    except Exception as e:
+        logging.error(f"Error burning PRC for explorer users: {e}")
+        return {"error": str(e)}
+
 async def burn_expired_prc_for_free_users():
     """
-    Burn PRC earned by free users after 48 hours (2 days)
+    Legacy: Burn PRC earned by free users after 48 hours (2 days)
     FIFO - First Earned First Burn
     """
     try:
