@@ -4919,8 +4919,8 @@ async def checkout(request: Request):
     prc_cash_value = total_prc / 10  # Convert PRC to ₹
     delivery_charge = round(prc_cash_value * delivery_rate, 2)
     
-    # Calculate cashback (25% of PRC value converted to ₹, 10 PRC = ₹1)
-    cashback_amount = (total_prc * 0.25) / 10
+    # CASHBACK REMOVED - No cashback on shopping
+    # Direct delivery by delivery partner model
     
     # Check if user has enough PRC
     if user.get("prc_balance", 0) < total_prc:
@@ -4929,89 +4929,29 @@ async def checkout(request: Request):
     # Atomic PRC deduction
     new_prc_balance = user["prc_balance"] - total_prc
     
-    # Get current cashback balance (try both field names for backward compatibility)
-    current_cashback = user.get("cashback_balance", user.get("cash_wallet_balance", 0))
-    
-    # Check if user has enough balance for delivery charge, otherwise create lien
-    if current_cashback >= delivery_charge:
-        # Deduct delivery charge immediately
-        new_cashback_balance = current_cashback + cashback_amount - delivery_charge
-        pending_delivery_lien = 0
-    else:
-        # Create lien for delivery charge
-        new_cashback_balance = current_cashback + cashback_amount
-        pending_delivery_lien = delivery_charge
-    
-    # Find nearest outlet based on user location (state/district)
-    # Try to find outlet in same district, then state, then any active outlet
-    nearest_outlet = None
-    user_district = user.get("district", "").strip()
-    user_state = user.get("state", "").strip()
-    
-    logging.info(f"Checkout: Finding outlet for user district='{user_district}', state='{user_state}'")
-    
-    if user_district:
-        # Escape special regex characters and use case-insensitive matching
-        escaped_district = re.escape(user_district)
-        logging.info(f"Checkout: Searching for outlet in district '{escaped_district}' (escaped)")
-        nearest_outlet = await db.users.find_one({
-            "role": "outlet",
-            "district": {"$regex": f"^{escaped_district}$", "$options": "i"}
-        })
-        if nearest_outlet:
-            logging.info(f"Checkout: Found outlet by district: {nearest_outlet.get('uid')}")
-    
-    if not nearest_outlet and user_state:
-        # Escape special regex characters and use case-insensitive matching
-        escaped_state = re.escape(user_state)
-        logging.info(f"Checkout: Searching for outlet in state '{escaped_state}' (escaped)")
-        nearest_outlet = await db.users.find_one({
-            "role": "outlet",
-            "state": {"$regex": f"^{escaped_state}$", "$options": "i"}
-        })
-        if nearest_outlet:
-            logging.info(f"Checkout: Found outlet by state: {nearest_outlet.get('uid')}")
-    
-    if not nearest_outlet:
-        # Fall back to any active outlet
-        logging.info("Checkout: No outlet found by location, using fallback")
-        nearest_outlet = await db.users.find_one({"role": "outlet"})
-        if nearest_outlet:
-            logging.info(f"Checkout: Found outlet via fallback: {nearest_outlet.get('uid')}")
-        else:
-            logging.warning("Checkout: No outlets found in database!")
-    
-    outlet_id = nearest_outlet.get("uid") if nearest_outlet else None
-    logging.info(f"Checkout: Final outlet_id assigned: {outlet_id}")
-    
-    # Create order
+    # Create order - Direct Delivery by Partner Model (no outlet assignment)
     order = Order(
         user_id=user_id,
         items=cart["items"],
         total_prc=total_prc,
         total_cash=total_cash,
         delivery_charge=delivery_charge,
-        cashback_amount=cashback_amount,
+        cashback_amount=0,  # No cashback
         delivery_address=delivery_address or "N/A"
     )
     
     order_dict = order.model_dump()
     order_dict["created_at"] = order_dict["created_at"].isoformat()
-    order_dict["pending_delivery_lien"] = pending_delivery_lien
-    order_dict["outlet_id"] = outlet_id
-    order_dict["assigned_outlet"] = outlet_id  # For backward compatibility
+    order_dict["pending_delivery_lien"] = 0
+    order_dict["outlet_id"] = None  # No outlet - direct delivery
+    order_dict["assigned_outlet"] = None
+    order_dict["delivery_partner"] = "pending_assignment"  # To be assigned by admin
+    order_dict["delivery_method"] = "direct_delivery"
     
-    # Update user balances (use cashback_balance as primary field)
+    # Update user PRC balance only (no cashback)
     update_fields = {
-        "prc_balance": new_prc_balance,
-        "cashback_balance": new_cashback_balance,
-        "cash_wallet_balance": new_cashback_balance  # Keep both for compatibility
+        "prc_balance": new_prc_balance
     }
-    
-    # Add lien if delivery charge couldn't be deducted
-    if pending_delivery_lien > 0:
-        current_lien = user.get("wallet_maintenance_due", 0)
-        update_fields["wallet_maintenance_due"] = current_lien + pending_delivery_lien
     
     await db.users.update_one(
         {"uid": user_id},
@@ -5033,32 +4973,7 @@ async def checkout(request: Request):
         "created_at": datetime.now(timezone.utc).isoformat()
     })
     
-    # Cashback credit transaction
-    transactions.append({
-        "transaction_id": str(uuid.uuid4()),
-        "user_id": user_id,
-        "type": "credit",
-        "wallet_type": "cashback",
-        "amount": cashback_amount,
-        "description": f"Order #{order.order_id[:8]} - 25% cashback",
-        "balance_after": new_cashback_balance if pending_delivery_lien == 0 else current_cashback + cashback_amount,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    })
-    
-    # Delivery charge deduction transaction (if deducted)
-    if pending_delivery_lien == 0 and delivery_charge > 0:
-        transactions.append({
-            "transaction_id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "type": "debit",
-            "wallet_type": "cashback",
-            "amount": delivery_charge,
-            "description": f"Order #{order.order_id[:8]} - Delivery charge",
-            "balance_after": new_cashback_balance,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        })
-    
-    # Insert transactions to the correct collection (transactions, not wallet_transactions)
+    # Insert transactions to the correct collection
     if transactions:
         await db.transactions.insert_many(transactions)
     
@@ -5079,7 +4994,7 @@ async def checkout(request: Request):
     await create_notification(
         user_id=user_id,
         title="Order Placed Successfully! 🎉",
-        message=f"Your order #{order.order_id[:8]} has been placed. Secret code: {order.secret_code}. Cashback earned: ₹{cashback_amount:.2f}",
+        message=f"Your order #{order.order_id[:8]} has been placed. Secret code: {order.secret_code}. Delivery charge: ₹{delivery_charge:.2f}",
         notification_type="order",
         related_id=order.order_id,
         icon="🛒"
@@ -5091,11 +5006,8 @@ async def checkout(request: Request):
         "secret_code": order.secret_code,
         "total_prc": total_prc,
         "delivery_charge": delivery_charge,
-        "delivery_charge_status": "deducted" if pending_delivery_lien == 0 else "pending_lien",
-        "pending_lien": pending_delivery_lien,
-        "cashback_earned": cashback_amount,
-        "new_prc_balance": new_prc_balance,
-        "new_cashback_balance": new_cashback_balance
+        "delivery_method": "direct_delivery",
+        "new_prc_balance": new_prc_balance
     }
 
 # ========== ORDER/REDEEM ROUTES (Legacy Single Product) ==========
