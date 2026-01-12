@@ -440,6 +440,17 @@ const AdminSubscriptionManagement = ({ user }) => {
                   <p className="text-gray-500 text-sm">Burn inactive explorer PRC (2+ days)</p>
                 </div>
               </button>
+              <button
+                onClick={handleCleanDatabase}
+                disabled={processing}
+                className="w-full p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-3 hover:bg-red-500/20 transition-all"
+              >
+                <AlertCircle className="w-5 h-5 text-red-500" />
+                <div className="text-left">
+                  <p className="text-red-400 font-medium">🗑️ Clean Database</p>
+                  <p className="text-gray-500 text-sm">Delete all test users (keeps admin only)</p>
+                </div>
+              </button>
             </div>
           </Card>
         </div>
