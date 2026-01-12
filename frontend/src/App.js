@@ -216,7 +216,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/profile" element={user ? <ProfileAdvanced user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             {/* Legacy route redirect - keeping for backward compatibility */}
             <Route path="/profile-advanced" element={<Navigate to="/profile" replace />} />
-            <Route path="/stock-requests" element={user && ["outlet", "sub_stockist", "master_stockist"].includes(user.role) ? <StockRequestSystem user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            {/* Stock requests removed - stockist system deprecated */}
             <Route path="/admin" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminDashboard user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/users" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdvancedUserManagement /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/analytics" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminAnalytics user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
@@ -259,7 +259,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/payments" element={<Navigate to="/admin/subscriptions" replace />} /> {/* Legacy route redirect */}
             <Route path="/admin/orders" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminOrders user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/marketplace" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminMarketplace user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/stockists" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><StockistManagementAdmin user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            {/* Admin stockists route removed - stockist system deprecated */}
             <Route path="/admin/support" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSupport user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/vip-verification" element={<Navigate to="/admin/subscriptions" replace />} /> {/* Legacy route redirect */}
             <Route path="/admin/subscriptions" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSubscriptionManagement user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
@@ -273,17 +273,12 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/manager/finance" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerFinance user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
             <Route path="/manager/communication" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerCommunication user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
             <Route path="/manager/support" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerSupport user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/manager/stockists" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerStockists user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/master-stockist" element={user && user.role === "master_stockist" ? <StockistLayout user={user} onLogout={handleLogout} role="master_stockist"><MasterStockistDashboard user={user} onLogout={handleLogout} /></StockistLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/master-stockist/*" element={user && user.role === "master_stockist" ? <StockistLayout user={user} onLogout={handleLogout} role="master_stockist"><MasterStockistDashboard user={user} onLogout={handleLogout} /></StockistLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/sub-stockist" element={user && user.role === "sub_stockist" ? <StockistLayout user={user} onLogout={handleLogout} role="sub_stockist"><SubStockistDashboard user={user} onLogout={handleLogout} /></StockistLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/sub-stockist/*" element={user && user.role === "sub_stockist" ? <StockistLayout user={user} onLogout={handleLogout} role="sub_stockist"><SubStockistDashboard user={user} onLogout={handleLogout} /></StockistLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/outlet" element={user && user.role === "outlet" ? <StockistLayout user={user} onLogout={handleLogout} role="outlet"><OutletPanel user={user} onLogout={handleLogout} /></StockistLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/outlet/*" element={user && user.role === "outlet" ? <StockistLayout user={user} onLogout={handleLogout} role="outlet"><OutletPanel user={user} onLogout={handleLogout} /></StockistLayout> : <Navigate to="/dashboard" />} />
+            {/* Manager stockists route removed - stockist system deprecated */}
+            {/* All stockist routes removed - using direct delivery partner model */}
           </Routes>
         </Suspense>
-        {/* Professional Navigation System - Only for regular users, not admin/manager/stockist roles */}
-        {user && !['admin', 'sub_admin', 'manager', 'master_stockist', 'sub_stockist', 'outlet'].includes(user.role) && (
+        {/* Professional Navigation System - Only for regular users, not admin/manager roles */}
+        {user && !['admin', 'sub_admin', 'manager'].includes(user.role) && (
           <>
             <TopBar user={user} onLogout={handleLogout} />
             <BottomNav />
