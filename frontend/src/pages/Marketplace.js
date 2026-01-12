@@ -276,7 +276,7 @@ const Marketplace = ({ user }) => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
           <Input 
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder={t.search}
             className="bg-gray-800 border-gray-700 text-white pl-12 rounded-xl"
           />
@@ -289,7 +289,7 @@ const Marketplace = ({ user }) => {
           {categories.map(cat => (
             <button
               key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
+              onClick={() => handleCategoryChange(cat.id)}
               className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
                 selectedCategory === cat.id
                   ? 'bg-amber-500 text-black'
