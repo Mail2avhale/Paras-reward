@@ -66,7 +66,7 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
     { id: 'referrals', label: 'Referrals', icon: Users, route: '/referrals' },
     // Removed: Leaderboard for AdMob compliance
     // Removed: Achievements for AdMob compliance
-    { id: 'vip', label: 'VIP Membership', icon: Crown, route: '/vip' },
+    { id: 'subscription', label: 'Subscription', icon: Crown, route: '/subscription' },
   ];
 
   const bottomMenuItems = [
