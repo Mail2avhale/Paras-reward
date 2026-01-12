@@ -58,6 +58,7 @@ const Marketplace = lazy(() => import("@/pages/Marketplace"));
 const MarketplaceEnhanced = lazy(() => import("@/pages/MarketplaceEnhanced"));
 const Orders = lazy(() => import("@/pages/Orders"));
 const VIPMembership = lazy(() => import("@/pages/VIPMembership"));
+const SubscriptionPlans = lazy(() => import("@/pages/SubscriptionPlans"));
 // Removed: WalletNew (withdrawal functionality removed)
 // Removed: Leaderboard (feature removed for AdMob compliance)
 const ReferralEarningsHistory = lazy(() => import("@/pages/ReferralEarningsHistory"));
