@@ -5320,6 +5320,28 @@ async def get_delivery_partners(status: str = "all", page: int = 1, limit: int =
         "pages": (total + limit - 1) // limit
     }
 
+@api_router.get("/admin/delivery-partners/stats")
+async def get_delivery_partner_stats():
+    """Get delivery partner statistics"""
+    total_partners = await db.delivery_partners.count_documents({})
+    active_partners = await db.delivery_partners.count_documents({"is_active": True})
+    verified_partners = await db.delivery_partners.count_documents({"is_verified": True})
+    
+    # Orders by status
+    pending_orders = await db.orders.count_documents({
+        "status": "pending",
+        "delivery_partner_id": None
+    })
+    out_for_delivery = await db.orders.count_documents({"status": "out_for_delivery"})
+    
+    return {
+        "total_partners": total_partners,
+        "active_partners": active_partners,
+        "verified_partners": verified_partners,
+        "pending_assignment": pending_orders,
+        "out_for_delivery": out_for_delivery
+    }
+
 @api_router.get("/admin/delivery-partners/{partner_id}")
 async def get_delivery_partner(partner_id: str):
     """Get single delivery partner details"""
