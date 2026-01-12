@@ -193,20 +193,20 @@ const AdminWebSettings = ({ user }) => {
   ];
 
   const LogoUploadCard = ({ title, description, logoType, currentUrl, inputRef }) => (
-    <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 hover:border-purple-300 transition-colors">
+    <div className="border-2 border-dashed border-gray-700 rounded-xl p-6 hover:border-purple-300 transition-colors">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
           <Image className="h-5 w-5 text-purple-600" />
         </div>
         <div>
-          <h4 className="font-semibold text-gray-900">{title}</h4>
+          <h4 className="font-semibold text-white">{title}</h4>
           <p className="text-xs text-gray-500">{description}</p>
         </div>
       </div>
       
       {/* Preview */}
       {currentUrl && (
-        <div className="mb-4 p-4 bg-gray-50 rounded-lg flex items-center justify-between">
+        <div className="mb-4 p-4 bg-gray-800/50 rounded-lg flex items-center justify-between">
           <img 
             src={currentUrl.startsWith('/') ? currentUrl : currentUrl} 
             alt={title} 
@@ -254,7 +254,7 @@ const AdminWebSettings = ({ user }) => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-800/50">
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
@@ -263,7 +263,7 @@ const AdminWebSettings = ({ user }) => {
             Back
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
               <Globe className="h-6 w-6 text-blue-600" />
               Web Settings
             </h1>
@@ -272,7 +272,7 @@ const AdminWebSettings = ({ user }) => {
         </div>
 
         {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mb-6 bg-white p-2 rounded-lg shadow-sm">
+        <div className="flex flex-wrap gap-2 mb-6 bg-gray-900 p-2 rounded-lg shadow-sm">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -282,7 +282,7 @@ const AdminWebSettings = ({ user }) => {
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? 'bg-blue-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    : 'text-gray-400 hover:bg-gray-800'
                 }`}
                 data-testid={`tab-${tab.id}`}
               >
@@ -308,7 +308,7 @@ const AdminWebSettings = ({ user }) => {
                 { key: 'about_us', label: 'About Us' }
               ].map((policy) => (
                 <div key={policy.key}>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  <label className="text-sm font-medium text-gray-300 mb-2 block">
                     {policy.label}
                   </label>
                   <textarea
@@ -340,7 +340,7 @@ const AdminWebSettings = ({ user }) => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                <label className="text-sm font-medium text-gray-300 flex items-center gap-2 mb-2">
                   <Building className="h-4 w-4" />
                   Company Name
                 </label>
@@ -353,7 +353,7 @@ const AdminWebSettings = ({ user }) => {
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Address Line 1</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">Address Line 1</label>
                 <input
                   type="text"
                   value={contactInfo.address_line1}
@@ -364,7 +364,7 @@ const AdminWebSettings = ({ user }) => {
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Address Line 2</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">Address Line 2</label>
                 <input
                   type="text"
                   value={contactInfo.address_line2}
@@ -375,7 +375,7 @@ const AdminWebSettings = ({ user }) => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">City</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">City</label>
                 <input
                   type="text"
                   value={contactInfo.city}
@@ -385,7 +385,7 @@ const AdminWebSettings = ({ user }) => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">State</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">State</label>
                 <input
                   type="text"
                   value={contactInfo.state}
@@ -395,7 +395,7 @@ const AdminWebSettings = ({ user }) => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Pincode</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">Pincode</label>
                 <input
                   type="text"
                   value={contactInfo.pincode}
@@ -405,7 +405,7 @@ const AdminWebSettings = ({ user }) => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Country</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">Country</label>
                 <input
                   type="text"
                   value={contactInfo.country}
@@ -433,7 +433,7 @@ const AdminWebSettings = ({ user }) => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                <label className="text-sm font-medium text-gray-300 flex items-center gap-2 mb-2">
                   <Phone className="h-4 w-4" />
                   Primary Phone
                 </label>
@@ -447,7 +447,7 @@ const AdminWebSettings = ({ user }) => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                <label className="text-sm font-medium text-gray-300 flex items-center gap-2 mb-2">
                   <Phone className="h-4 w-4" />
                   Secondary Phone
                 </label>
@@ -461,7 +461,7 @@ const AdminWebSettings = ({ user }) => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                <label className="text-sm font-medium text-gray-300 flex items-center gap-2 mb-2">
                   <Mail className="h-4 w-4" />
                   Support Email
                 </label>
@@ -475,7 +475,7 @@ const AdminWebSettings = ({ user }) => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                <label className="text-sm font-medium text-gray-300 flex items-center gap-2 mb-2">
                   <Mail className="h-4 w-4" />
                   Business Email
                 </label>
@@ -489,7 +489,7 @@ const AdminWebSettings = ({ user }) => {
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                <label className="text-sm font-medium text-gray-300 flex items-center gap-2 mb-2">
                   <Clock className="h-4 w-4" />
                   Working Hours
                 </label>
@@ -523,7 +523,7 @@ const AdminWebSettings = ({ user }) => {
             {/* App Name & Tagline */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">App Name</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">App Name</label>
                 <input
                   type="text"
                   value={logoSettings.app_name}
@@ -533,7 +533,7 @@ const AdminWebSettings = ({ user }) => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Tagline</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">Tagline</label>
                 <input
                   type="text"
                   value={logoSettings.tagline}

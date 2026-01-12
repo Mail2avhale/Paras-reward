@@ -69,7 +69,7 @@ const AdminSocialMediaSettings = ({ user }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-800/50">
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
@@ -78,7 +78,7 @@ const AdminSocialMediaSettings = ({ user }) => {
             Back
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
               <Share2 className="h-6 w-6 text-pink-600" />
               Social Media Settings
             </h1>
@@ -88,8 +88,8 @@ const AdminSocialMediaSettings = ({ user }) => {
 
         <Card className="p-6">
           <div className="mb-6">
-            <h2 className="text-lg font-bold text-gray-800">Social Media Links</h2>
-            <p className="text-sm text-gray-600">These links will be displayed in the footer and user dashboard.</p>
+            <h2 className="text-lg font-bold text-gray-100">Social Media Links</h2>
+            <p className="text-sm text-gray-400">These links will be displayed in the footer and user dashboard.</p>
           </div>
 
           <div className="space-y-5">
@@ -97,11 +97,11 @@ const AdminSocialMediaSettings = ({ user }) => {
               const Icon = platform.icon;
               return (
                 <div key={platform.key} className="flex items-start gap-4">
-                  <div className={`p-3 rounded-lg bg-gray-100 ${platform.color}`}>
+                  <div className={`p-3 rounded-lg bg-gray-800 ${platform.color}`}>
                     <Icon className="h-6 w-6" />
                   </div>
                   <div className="flex-1">
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">
+                    <label className="text-sm font-medium text-gray-300 mb-1 block">
                       {platform.label}
                     </label>
                     <div className="flex gap-2">
@@ -110,14 +110,14 @@ const AdminSocialMediaSettings = ({ user }) => {
                         placeholder={platform.placeholder}
                         value={socialMedia[platform.key]}
                         onChange={(e) => handleChange(platform.key, e.target.value)}
-                        className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="flex-1 px-4 py-2.5 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       />
                       {socialMedia[platform.key] && (
                         <a
                           href={socialMedia[platform.key]}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-2.5 border border-gray-300 rounded-lg hover:bg-gray-50"
+                          className="p-2.5 border border-gray-600 rounded-lg hover:bg-gray-800/50"
                         >
                           <ExternalLink className="h-5 w-5 text-gray-500" />
                         </a>
@@ -131,8 +131,8 @@ const AdminSocialMediaSettings = ({ user }) => {
 
           {/* Preview Section */}
           <div className="mt-8 pt-6 border-t">
-            <h3 className="text-sm font-medium text-gray-700 mb-4">Preview</h3>
-            <div className="flex flex-wrap gap-3 p-4 bg-gray-100 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-300 mb-4">Preview</h3>
+            <div className="flex flex-wrap gap-3 p-4 bg-gray-800 rounded-lg">
               {socialPlatforms.map((platform) => {
                 const Icon = platform.icon;
                 const hasLink = socialMedia[platform.key];
@@ -142,7 +142,7 @@ const AdminSocialMediaSettings = ({ user }) => {
                     href={hasLink || '#'}
                     className={`p-2 rounded-lg transition-colors ${
                       hasLink 
-                        ? `bg-white shadow-sm hover:shadow ${platform.color}` 
+                        ? `bg-gray-900 shadow-sm hover:shadow ${platform.color}` 
                         : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
                     title={hasLink ? platform.label : `${platform.label} (not configured)`}

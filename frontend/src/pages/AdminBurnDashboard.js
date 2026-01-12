@@ -86,7 +86,7 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <RefreshCw className="w-12 h-12 animate-spin text-purple-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading burn statistics...</p>
+          <p className="text-gray-400">Loading burn statistics...</p>
         </div>
       </div>
     );
@@ -95,7 +95,7 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-gray-900 shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <button
             onClick={() => navigate('/admin')}
@@ -107,11 +107,11 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
           
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <h1 className="text-3xl font-bold text-white flex items-center gap-3">
                 <Flame className="w-8 h-8 text-orange-600" />
                 PRC Burn Management
               </h1>
-              <p className="text-gray-600 mt-2">Monitor and manage PRC burn operations</p>
+              <p className="text-gray-400 mt-2">Monitor and manage PRC burn operations</p>
             </div>
             
             <Button
@@ -145,7 +145,7 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
             <p className="text-3xl font-bold text-red-900">
               {stats.total_burned.toLocaleString()}
             </p>
-            <p className="text-xs text-gray-600 mt-2">
+            <p className="text-xs text-gray-400 mt-2">
               ≈ ₹{(stats.total_burned / 10).toFixed(2)}
             </p>
           </Card>
@@ -157,7 +157,7 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
             <p className="text-3xl font-bold text-orange-900">
               {stats.free_user_burned.toLocaleString()}
             </p>
-            <p className="text-xs text-gray-600 mt-2">
+            <p className="text-xs text-gray-400 mt-2">
               PRC burned after expiry
             </p>
           </Card>
@@ -169,7 +169,7 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
             <p className="text-3xl font-bold text-purple-900">
               {stats.expired_vip_burned.toLocaleString()}
             </p>
-            <p className="text-xs text-gray-600 mt-2">
+            <p className="text-xs text-gray-400 mt-2">
               PRC burned after grace period
             </p>
           </Card>
@@ -181,7 +181,7 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
             <p className="text-3xl font-bold text-blue-900">
               {stats.users_affected}
             </p>
-            <p className="text-xs text-gray-600 mt-2">
+            <p className="text-xs text-gray-400 mt-2">
               With burned PRC
             </p>
           </Card>
@@ -192,16 +192,16 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
           {/* Free Users At Risk */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <AlertTriangle className="w-6 h-6 text-yellow-600" />
                 Free Users At Risk
               </h2>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-400">
                 {atRisk.free_users_at_risk.length} users
               </span>
             </div>
             
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-400 mb-4">
               Users with PRC expiring in less than 12 hours
             </p>
 
@@ -215,8 +215,8 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
                 {atRisk.free_users_at_risk.slice(0, 10).map((user, index) => (
                   <div key={index} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                     <div>
-                      <p className="font-semibold text-gray-900">{user.name || 'Unknown'}</p>
-                      <p className="text-xs text-gray-600">{user.email}</p>
+                      <p className="font-semibold text-white">{user.name || 'Unknown'}</p>
+                      <p className="text-xs text-gray-400">{user.email}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-bold text-yellow-700">
@@ -233,16 +233,16 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
           {/* Expired VIPs At Risk */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <Zap className="w-6 h-6 text-purple-600" />
                 Expired VIPs (Grace Period)
               </h2>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-400">
                 {atRisk.expired_vips_at_risk.length} users
               </span>
             </div>
             
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-400 mb-4">
               Expired VIPs in 5-day grace period before PRC burn
             </p>
 
@@ -256,8 +256,8 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
                 {atRisk.expired_vips_at_risk.map((user, index) => (
                   <div key={index} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200">
                     <div>
-                      <p className="font-semibold text-gray-900">{user.name || 'Unknown'}</p>
-                      <p className="text-xs text-gray-600">{user.email}</p>
+                      <p className="font-semibold text-white">{user.name || 'Unknown'}</p>
+                      <p className="text-xs text-gray-400">{user.email}</p>
                       <p className="text-xs text-purple-600 mt-1">
                         Expired {user.days_expired} days ago
                       </p>
@@ -280,8 +280,8 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
         {/* Recent Burns */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <BarChart3 className="w-6 h-6 text-gray-700" />
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <BarChart3 className="w-6 h-6 text-gray-300" />
               Recent Burn Transactions
             </h2>
             <Button
@@ -303,7 +303,7 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
           ) : (
             <div className="space-y-3">
               {stats.recent_burns.map((burn, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                <div key={index} className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors">
                   <div className="flex items-center gap-4">
                     <div className={`p-2 rounded-full ${
                       burn.transaction_type === 'prc_burn_free_user'
@@ -313,12 +313,12 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
                       <Flame className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-900">
+                      <p className="font-semibold text-white">
                         {burn.transaction_type === 'prc_burn_free_user' 
                           ? 'Free User Burn (48h)' 
                           : 'Expired VIP Burn (5d)'}
                       </p>
-                      <p className="text-xs text-gray-600">
+                      <p className="text-xs text-gray-400">
                         {new Date(burn.timestamp).toLocaleString()}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
@@ -330,7 +330,7 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
                     <p className="text-lg font-bold text-red-600">
                       -{burn.prc_amount?.toFixed(2) || '0.00'} PRC
                     </p>
-                    <p className="text-xs text-gray-600">
+                    <p className="text-xs text-gray-400">
                       Balance: {burn.prc_balance_after?.toFixed(2) || '0.00'}
                     </p>
                   </div>

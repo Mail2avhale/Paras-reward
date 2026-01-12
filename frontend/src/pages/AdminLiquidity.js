@@ -132,7 +132,7 @@ const AdminLiquidity = ({ user }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Wallet className="h-7 w-7 text-purple-600" />
             Liquidity Management
           </h1>
@@ -253,7 +253,7 @@ const AdminLiquidity = ({ user }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Ratios */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <Target className="h-5 w-5 text-purple-600" />
             Key Ratios
           </h3>
@@ -262,7 +262,7 @@ const AdminLiquidity = ({ user }) => {
             {/* Reserve Ratio */}
             <div>
               <div className="flex justify-between mb-2">
-                <span className="text-sm text-gray-600">Reserve Ratio</span>
+                <span className="text-sm text-gray-400">Reserve Ratio</span>
                 <span className={`font-bold ${ratios.reserve_ratio >= 50 ? 'text-green-600' : 'text-red-600'}`}>
                   {ratios.reserve_ratio?.toFixed(1)}%
                 </span>
@@ -279,7 +279,7 @@ const AdminLiquidity = ({ user }) => {
             {/* Liquidity Ratio */}
             <div>
               <div className="flex justify-between mb-2">
-                <span className="text-sm text-gray-600">Liquidity Ratio</span>
+                <span className="text-sm text-gray-400">Liquidity Ratio</span>
                 <span className={`font-bold ${ratios.liquidity_ratio >= 2 ? 'text-green-600' : 'text-red-600'}`}>
                   {ratios.liquidity_ratio?.toFixed(2)}x
                 </span>
@@ -296,7 +296,7 @@ const AdminLiquidity = ({ user }) => {
             {/* PRC Coverage */}
             <div>
               <div className="flex justify-between mb-2">
-                <span className="text-sm text-gray-600">PRC Coverage</span>
+                <span className="text-sm text-gray-400">PRC Coverage</span>
                 <span className={`font-bold ${ratios.prc_coverage >= 100 ? 'text-green-600' : 'text-yellow-600'}`}>
                   {ratios.prc_coverage?.toFixed(1)}%
                 </span>
@@ -314,13 +314,13 @@ const AdminLiquidity = ({ user }) => {
 
         {/* Cash Reserves Breakdown */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-green-600" />
             Cash Reserves
           </h3>
           
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-100 rounded-lg">
                   <DollarSign className="h-5 w-5 text-blue-600" />
@@ -332,7 +332,7 @@ const AdminLiquidity = ({ user }) => {
               </span>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-green-100 rounded-lg">
                   <Wallet className="h-5 w-5 text-green-600" />
@@ -344,7 +344,7 @@ const AdminLiquidity = ({ user }) => {
               </span>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-purple-100 rounded-lg">
                   <Zap className="h-5 w-5 text-purple-600" />
@@ -369,7 +369,7 @@ const AdminLiquidity = ({ user }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Pending Liabilities */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <TrendingDown className="h-5 w-5 text-red-600" />
             Pending Liabilities
           </h3>
@@ -409,28 +409,28 @@ const AdminLiquidity = ({ user }) => {
 
         {/* Daily Averages */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <Activity className="h-5 w-5 text-purple-600" />
             Daily Averages (30 days)
           </h3>
           
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-gray-600">PRC Creation</span>
+              <span className="text-gray-400">PRC Creation</span>
               <span className="font-bold text-green-600">+{daily_averages.prc_creation?.toLocaleString()} PRC/day</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-600">Cash Inflow</span>
+              <span className="text-gray-400">Cash Inflow</span>
               <span className="font-bold text-blue-600">{formatCurrency(daily_averages.cash_inflow)}/day</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-600">Cash Outflow</span>
+              <span className="text-gray-400">Cash Outflow</span>
               <span className="font-bold text-red-600">{formatCurrency(daily_averages.cash_outflow)}/day</span>
             </div>
             
             <div className="pt-4 border-t">
               <div className="flex items-center justify-between">
-                <span className="text-gray-900 font-medium">Runway</span>
+                <span className="text-white font-medium">Runway</span>
                 <span className={`text-2xl font-bold ${daily_averages.runway_days > 90 ? 'text-green-600' : daily_averages.runway_days > 30 ? 'text-yellow-600' : 'text-red-600'}`}>
                   {daily_averages.runway_days} days
                 </span>
@@ -443,7 +443,7 @@ const AdminLiquidity = ({ user }) => {
 
       {/* Cash Flow Chart */}
       <Card className="p-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">30-Day Cash Flow</h3>
+        <h3 className="text-lg font-bold text-white mb-4">30-Day Cash Flow</h3>
         <ResponsiveContainer width="100%" height={350}>
           <AreaChart data={flow_data}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -461,7 +461,7 @@ const AdminLiquidity = ({ user }) => {
       {/* Recommendations */}
       {recommendations.length > 0 && (
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <Info className="h-5 w-5 text-blue-600" />
             Recommendations
           </h3>
@@ -477,8 +477,8 @@ const AdminLiquidity = ({ user }) => {
                     {rec.impact.toUpperCase()}
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900">{rec.title}</h4>
-                    <p className="text-sm text-gray-600 mt-1">{rec.description}</p>
+                    <h4 className="font-semibold text-white">{rec.title}</h4>
+                    <p className="text-sm text-gray-400 mt-1">{rec.description}</p>
                   </div>
                 </div>
               </div>
@@ -494,12 +494,12 @@ const AdminLiquidity = ({ user }) => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold">Update Cash Reserves</h2>
-                <button onClick={() => setShowUpdateReserves(false)} className="text-gray-500 hover:text-gray-700">✕</button>
+                <button onClick={() => setShowUpdateReserves(false)} className="text-gray-500 hover:text-gray-300">✕</button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm text-gray-600">Bank Balance (₹)</label>
+                  <label className="text-sm text-gray-400">Bank Balance (₹)</label>
                   <Input
                     type="number"
                     placeholder="0"
@@ -509,7 +509,7 @@ const AdminLiquidity = ({ user }) => {
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-600">Cash in Hand (₹)</label>
+                  <label className="text-sm text-gray-400">Cash in Hand (₹)</label>
                   <Input
                     type="number"
                     placeholder="0"
@@ -519,7 +519,7 @@ const AdminLiquidity = ({ user }) => {
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-600">Payment Gateway Balance (₹)</label>
+                  <label className="text-sm text-gray-400">Payment Gateway Balance (₹)</label>
                   <Input
                     type="number"
                     placeholder="0"
@@ -529,7 +529,7 @@ const AdminLiquidity = ({ user }) => {
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-600">Notes (optional)</label>
+                  <label className="text-sm text-gray-400">Notes (optional)</label>
                   <Input
                     placeholder="Any notes about this update..."
                     value={reserveForm.notes}

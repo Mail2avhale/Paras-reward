@@ -149,7 +149,7 @@ const PRCEmergencyControls = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Shield className="w-6 h-6 text-red-600" />
             PRC Economy Controls
           </h1>
@@ -231,7 +231,7 @@ const PRCEmergencyControls = () => {
 
       {/* Emergency Mining Control */}
       <Card className="p-6 border-2 border-red-200">
-        <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
           <AlertTriangle className="w-5 h-5 text-red-600" />
           Emergency Mining Control
         </h2>
@@ -265,10 +265,10 @@ const PRCEmergencyControls = () => {
 
           {/* Notification Toggle */}
           <div className="flex items-center gap-2 ml-auto">
-            <span className="text-sm text-gray-600">Notify Users:</span>
+            <span className="text-sm text-gray-400">Notify Users:</span>
             <button
               onClick={() => setBurnSettings(prev => ({ ...prev, sendNotification: !prev.sendNotification }))}
-              className={`p-2 rounded-lg ${burnSettings.sendNotification ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}
+              className={`p-2 rounded-lg ${burnSettings.sendNotification ? 'bg-green-100 text-green-600' : 'bg-gray-800 text-gray-400'}`}
             >
               {burnSettings.sendNotification ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
             </button>
@@ -299,14 +299,14 @@ const PRCEmergencyControls = () => {
 
       {/* PRC Burn Tool */}
       <Card className="p-6 border-2 border-orange-200">
-        <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
           <Flame className="w-5 h-5 text-orange-600" />
           Progressive PRC Burn Tool
         </h2>
 
         {/* Burn Method */}
         <div className="mb-6">
-          <label className="text-sm font-medium text-gray-700 mb-2 block">Burn Method</label>
+          <label className="text-sm font-medium text-gray-300 mb-2 block">Burn Method</label>
           <div className="flex gap-2">
             {['progressive', 'flat', 'cap'].map(method => (
               <button
@@ -315,7 +315,7 @@ const PRCEmergencyControls = () => {
                 className={`px-4 py-2 rounded-lg font-medium capitalize ${
                   burnSettings.method === method
                     ? 'bg-orange-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-gray-800 text-gray-400 hover:bg-gray-200'
                 }`}
               >
                 {method}
@@ -331,7 +331,7 @@ const PRCEmergencyControls = () => {
             <div className="space-y-2">
               {burnSettings.progressiveRates.map((rate, idx) => (
                 <div key={idx} className="flex items-center gap-2 text-sm">
-                  <span className="text-gray-600">Balance ≥ {rate.minBalance.toLocaleString()} PRC:</span>
+                  <span className="text-gray-400">Balance ≥ {rate.minBalance.toLocaleString()} PRC:</span>
                   <span className="font-bold text-orange-600">{rate.percentage}% burn</span>
                 </div>
               ))}
@@ -342,7 +342,7 @@ const PRCEmergencyControls = () => {
         {/* Flat Percentage */}
         {burnSettings.method === 'flat' && (
           <div className="mb-6">
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Burn Percentage</label>
+            <label className="text-sm font-medium text-gray-300 mb-2 block">Burn Percentage</label>
             <input
               type="number"
               value={burnSettings.flatPercentage}
@@ -357,7 +357,7 @@ const PRCEmergencyControls = () => {
 
         {/* Minimum Protected Balance */}
         <div className="mb-6">
-          <label className="text-sm font-medium text-gray-700 mb-2 block">Minimum Protected Balance</label>
+          <label className="text-sm font-medium text-gray-300 mb-2 block">Minimum Protected Balance</label>
           <div className="flex flex-wrap gap-2">
             {[1000, 5000, 10000].map(amount => (
               <button
@@ -370,7 +370,7 @@ const PRCEmergencyControls = () => {
                 className={`px-4 py-2 rounded-lg font-medium ${
                   !burnSettings.useCustomMin && burnSettings.minProtectedBalance === amount
                     ? 'bg-purple-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-gray-800 text-gray-400 hover:bg-gray-200'
                 }`}
               >
                 {amount.toLocaleString()} PRC
@@ -427,19 +427,19 @@ const PRCEmergencyControls = () => {
             <p className="font-bold text-orange-800 mb-3">📊 Burn Preview</p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
-                <p className="text-gray-600">Users Affected</p>
+                <p className="text-gray-400">Users Affected</p>
                 <p className="font-bold text-orange-600">{burnPreview.usersAffected}</p>
               </div>
               <div>
-                <p className="text-gray-600">Total PRC to Burn</p>
+                <p className="text-gray-400">Total PRC to Burn</p>
                 <p className="font-bold text-orange-600">{burnPreview.totalBurn?.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-gray-600">Users Protected</p>
+                <p className="text-gray-400">Users Protected</p>
                 <p className="font-bold text-green-600">{burnPreview.usersProtected}</p>
               </div>
               <div>
-                <p className="text-gray-600">New Total PRC</p>
+                <p className="text-gray-400">New Total PRC</p>
                 <p className="font-bold text-purple-600">{burnPreview.newTotalPrc?.toLocaleString()}</p>
               </div>
             </div>
@@ -471,7 +471,7 @@ const PRCEmergencyControls = () => {
 
       {/* Auto Circuit Breakers */}
       <Card className="p-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
           <Settings className="w-5 h-5 text-blue-600" />
           Auto Circuit Breakers
         </h2>
@@ -480,9 +480,9 @@ const PRCEmergencyControls = () => {
         </p>
         
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
             <div>
-              <p className="font-medium text-gray-800">Daily Mint Limit</p>
+              <p className="font-medium text-gray-100">Daily Mint Limit</p>
               <p className="text-xs text-gray-500">Auto-pause if daily mint exceeds threshold</p>
             </div>
             <div className="flex items-center gap-2">
@@ -495,9 +495,9 @@ const PRCEmergencyControls = () => {
             </div>
           </div>
 
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
             <div>
-              <p className="font-medium text-gray-800">Total PRC Cap</p>
+              <p className="font-medium text-gray-100">Total PRC Cap</p>
               <p className="text-xs text-gray-500">Alert when total PRC exceeds this</p>
             </div>
             <div className="flex items-center gap-2">
@@ -510,9 +510,9 @@ const PRCEmergencyControls = () => {
             </div>
           </div>
 
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
             <div>
-              <p className="font-medium text-gray-800">Per-User Daily Limit</p>
+              <p className="font-medium text-gray-100">Per-User Daily Limit</p>
               <p className="text-xs text-gray-500">Max PRC any user can mine per day</p>
             </div>
             <div className="flex items-center gap-2">

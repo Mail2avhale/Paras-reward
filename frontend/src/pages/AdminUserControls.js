@@ -207,11 +207,11 @@ const AdminUserControls = () => {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-2">
-          <button onClick={() => navigate('/admin')} className="p-2 hover:bg-gray-100 rounded-lg">
+          <button onClick={() => navigate('/admin')} className="p-2 hover:bg-gray-800 rounded-lg">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">User Control Settings</h1>
+            <h1 className="text-2xl font-bold text-white">User Control Settings</h1>
             <p className="text-gray-500">Manage individual user mining and app preferences</p>
           </div>
         </div>
@@ -219,22 +219,22 @@ const AdminUserControls = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-xl p-4 shadow-sm border">
+        <div className="bg-gray-900 rounded-xl p-4 shadow-sm border">
           <Users className="w-8 h-8 text-purple-500 mb-2" />
           <p className="text-2xl font-bold">{stats.totalUsers}</p>
           <p className="text-sm text-gray-500">Total Users</p>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border">
+        <div className="bg-gray-900 rounded-xl p-4 shadow-sm border">
           <Play className="w-8 h-8 text-green-500 mb-2" />
           <p className="text-2xl font-bold">{stats.activeMining}</p>
           <p className="text-sm text-gray-500">Active Mining</p>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border">
+        <div className="bg-gray-900 rounded-xl p-4 shadow-sm border">
           <Pause className="w-8 h-8 text-orange-500 mb-2" />
           <p className="text-2xl font-bold">{stats.pausedMining}</p>
           <p className="text-sm text-gray-500">Paused Mining</p>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm border">
+        <div className="bg-gray-900 rounded-xl p-4 shadow-sm border">
           <Target className="w-8 h-8 text-blue-500 mb-2" />
           <p className="text-2xl font-bold">{stats.capEnabled}</p>
           <p className="text-sm text-gray-500">Cap Enabled</p>
@@ -242,7 +242,7 @@ const AdminUserControls = () => {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border mb-6">
+      <div className="bg-gray-900 rounded-xl p-4 shadow-sm border mb-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -260,14 +260,14 @@ const AdminUserControls = () => {
                 key={status}
                 onClick={() => setFilterStatus(status)}
                 className={`px-4 py-2 rounded-lg font-medium capitalize ${
-                  filterStatus === status ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  filterStatus === status ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-200'
                 }`}
               >
                 {status}
               </button>
             ))}
           </div>
-          <button onClick={fetchUsers} className="p-3 bg-gray-100 rounded-xl hover:bg-gray-200">
+          <button onClick={fetchUsers} className="p-3 bg-gray-800 rounded-xl hover:bg-gray-200">
             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
@@ -290,27 +290,27 @@ const AdminUserControls = () => {
                 <Play className="w-4 h-4" /> Resume Mining
               </button>
               <button onClick={() => handleBulkAction('setCap500')} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Set Cap 500</button>
-              <button onClick={() => handleBulkAction('removeCap')} className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">Remove Cap</button>
-              <button onClick={() => setSelectedUsers([])} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100">Clear</button>
+              <button onClick={() => handleBulkAction('removeCap')} className="px-4 py-2 bg-gray-800/500 text-white rounded-lg hover:bg-gray-600">Remove Cap</button>
+              <button onClick={() => setSelectedUsers([])} className="px-4 py-2 border border-gray-600 rounded-lg hover:bg-gray-800">Clear</button>
             </div>
           </div>
         </motion.div>
       )}
 
       {/* Users Table */}
-      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+      <div className="bg-gray-900 rounded-xl shadow-sm border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-800/50 border-b">
               <tr>
                 <th className="p-4 text-left">
                   <input type="checkbox" checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0} onChange={selectAllVisible} className="w-4 h-4 rounded" />
                 </th>
-                <th className="p-4 text-left text-sm font-medium text-gray-600">User</th>
-                <th className="p-4 text-left text-sm font-medium text-gray-600">Mining Status</th>
-                <th className="p-4 text-left text-sm font-medium text-gray-600">Daily Cap</th>
-                <th className="p-4 text-left text-sm font-medium text-gray-600">PRC Balance</th>
-                <th className="p-4 text-left text-sm font-medium text-gray-600">Actions</th>
+                <th className="p-4 text-left text-sm font-medium text-gray-400">User</th>
+                <th className="p-4 text-left text-sm font-medium text-gray-400">Mining Status</th>
+                <th className="p-4 text-left text-sm font-medium text-gray-400">Daily Cap</th>
+                <th className="p-4 text-left text-sm font-medium text-gray-400">PRC Balance</th>
+                <th className="p-4 text-left text-sm font-medium text-gray-400">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -320,10 +320,10 @@ const AdminUserControls = () => {
                 <tr><td colSpan={6} className="p-8 text-center text-gray-500">No users found</td></tr>
               ) : (
                 filteredUsers.map(user => (
-                  <tr key={user.uid} className="hover:bg-gray-50">
+                  <tr key={user.uid} className="hover:bg-gray-800/50">
                     <td className="p-4"><input type="checkbox" checked={selectedUsers.includes(user.uid)} onChange={() => toggleUserSelection(user.uid)} className="w-4 h-4 rounded" /></td>
                     <td className="p-4">
-                      <p className="font-medium text-gray-900">{user.name || 'Unknown'}</p>
+                      <p className="font-medium text-white">{user.name || 'Unknown'}</p>
                       <p className="text-sm text-gray-500">{user.email}</p>
                     </td>
                     <td className="p-4">
@@ -332,11 +332,11 @@ const AdminUserControls = () => {
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${user.daily_prc_cap > 0 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${user.daily_prc_cap > 0 ? 'bg-blue-100 text-blue-700' : 'bg-gray-800 text-gray-400'}`}>
                         {user.daily_prc_cap > 0 ? `${user.daily_prc_cap} PRC` : 'Unlimited'}
                       </span>
                     </td>
-                    <td className="p-4"><span className="font-medium text-gray-900">{(user.prc_balance || 0).toLocaleString()} PRC</span></td>
+                    <td className="p-4"><span className="font-medium text-white">{(user.prc_balance || 0).toLocaleString()} PRC</span></td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
                         <button onClick={() => updateUserSettings(user.uid, { mining_active: !user.mining_active })} className={`p-2 rounded-lg ${user.mining_active !== false ? 'bg-orange-100 text-orange-600 hover:bg-orange-200' : 'bg-green-100 text-green-600 hover:bg-green-200'}`}>
@@ -358,17 +358,17 @@ const AdminUserControls = () => {
       {/* User Detail Modal */}
       {showUserModal && selectedUser && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-gray-900 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6 rounded-t-2xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center"><UserCog className="w-6 h-6" /></div>
+                  <div className="w-12 h-12 bg-gray-900/20 rounded-full flex items-center justify-center"><UserCog className="w-6 h-6" /></div>
                   <div>
                     <h2 className="text-xl font-bold">{selectedUser.name || 'User'}</h2>
                     <p className="text-sm text-white/80">{selectedUser.email}</p>
                   </div>
                 </div>
-                <button onClick={() => setShowUserModal(false)} className="p-2 hover:bg-white/20 rounded-full"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowUserModal(false)} className="p-2 hover:bg-gray-900/20 rounded-full"><X className="w-5 h-5" /></button>
               </div>
             </div>
 
@@ -381,42 +381,42 @@ const AdminUserControls = () => {
             </div>
 
             <div className="p-6 space-y-6">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+              <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-xl">
                 <div className="flex items-center gap-3">
                   {modalSettings.mining_active ? <Play className="w-5 h-5 text-green-500" /> : <Pause className="w-5 h-5 text-orange-500" />}
                   <div><p className="font-medium">Mining Status</p><p className="text-sm text-gray-500">{modalSettings.mining_active ? 'User can mine PRC' : 'Mining is paused'}</p></div>
                 </div>
                 <button onClick={() => setModalSettings(prev => ({ ...prev, mining_active: !prev.mining_active }))} className={`relative w-14 h-7 rounded-full transition-colors ${modalSettings.mining_active ? 'bg-green-500' : 'bg-gray-300'}`}>
-                  <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-all ${modalSettings.mining_active ? 'left-8' : 'left-1'}`} />
+                  <div className={`absolute top-1 w-5 h-5 bg-gray-900 rounded-full shadow transition-all ${modalSettings.mining_active ? 'left-8' : 'left-1'}`} />
                 </button>
               </div>
 
-              <div className="p-4 bg-gray-50 rounded-xl">
+              <div className="p-4 bg-gray-800/50 rounded-xl">
                 <div className="flex items-center gap-3 mb-4"><Target className="w-5 h-5 text-blue-500" /><div><p className="font-medium">Daily PRC Cap</p><p className="text-sm text-gray-500">Maximum PRC per day</p></div></div>
                 <div className="flex flex-wrap gap-2">
                   {capOptions.map(option => (
-                    <button key={option.value} onClick={() => setModalSettings(prev => ({ ...prev, daily_prc_cap: option.value }))} className={`px-4 py-2 rounded-lg text-sm font-medium ${modalSettings.daily_prc_cap === option.value ? 'bg-purple-600 text-white' : 'bg-white text-gray-600 border hover:border-purple-300'}`}>{option.label}</button>
+                    <button key={option.value} onClick={() => setModalSettings(prev => ({ ...prev, daily_prc_cap: option.value }))} className={`px-4 py-2 rounded-lg text-sm font-medium ${modalSettings.daily_prc_cap === option.value ? 'bg-purple-600 text-white' : 'bg-gray-900 text-gray-400 border hover:border-purple-300'}`}>{option.label}</button>
                   ))}
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+              <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-xl">
                 <div className="flex items-center gap-3"><Zap className="w-5 h-5 text-yellow-500" /><div><p className="font-medium">Utility Only Mode</p><p className="text-sm text-gray-500">Bills only</p></div></div>
                 <button onClick={() => setModalSettings(prev => ({ ...prev, utility_only_mode: !prev.utility_only_mode }))} className={`relative w-14 h-7 rounded-full transition-colors ${modalSettings.utility_only_mode ? 'bg-yellow-500' : 'bg-gray-300'}`}>
-                  <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-all ${modalSettings.utility_only_mode ? 'left-8' : 'left-1'}`} />
+                  <div className={`absolute top-1 w-5 h-5 bg-gray-900 rounded-full shadow transition-all ${modalSettings.utility_only_mode ? 'left-8' : 'left-1'}`} />
                 </button>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+              <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-xl">
                 <div className="flex items-center gap-3"><Bell className="w-5 h-5 text-purple-500" /><div><p className="font-medium">Notifications</p><p className="text-sm text-gray-500">Push alerts</p></div></div>
                 <button onClick={() => setModalSettings(prev => ({ ...prev, notifications_enabled: !prev.notifications_enabled }))} className={`relative w-14 h-7 rounded-full transition-colors ${modalSettings.notifications_enabled ? 'bg-purple-500' : 'bg-gray-300'}`}>
-                  <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-all ${modalSettings.notifications_enabled ? 'left-8' : 'left-1'}`} />
+                  <div className={`absolute top-1 w-5 h-5 bg-gray-900 rounded-full shadow transition-all ${modalSettings.notifications_enabled ? 'left-8' : 'left-1'}`} />
                 </button>
               </div>
             </div>
 
             <div className="p-6 border-t flex gap-3">
-              <button onClick={() => setShowUserModal(false)} className="flex-1 px-4 py-3 border border-gray-300 rounded-xl font-medium hover:bg-gray-50">Cancel</button>
+              <button onClick={() => setShowUserModal(false)} className="flex-1 px-4 py-3 border border-gray-600 rounded-xl font-medium hover:bg-gray-800/50">Cancel</button>
               <button onClick={handleSaveUserSettings} className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 flex items-center justify-center gap-2"><Check className="w-5 h-5" />Save Changes</button>
             </div>
           </motion.div>

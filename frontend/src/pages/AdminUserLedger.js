@@ -137,11 +137,11 @@ const AdminUserLedger = ({ user }) => {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen" data-testid="admin-user-ledger">
+    <div className="p-6 bg-gray-800/50 min-h-screen" data-testid="admin-user-ledger">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Book className="h-6 w-6 text-purple-600" />
             User Wallet Ledger
           </h1>
@@ -238,7 +238,7 @@ const AdminUserLedger = ({ user }) => {
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
-              <label className="text-sm text-gray-600 mb-1 block">User ID</label>
+              <label className="text-sm text-gray-400 mb-1 block">User ID</label>
               <Input
                 placeholder="Enter User ID"
                 value={filters.user_id}
@@ -247,7 +247,7 @@ const AdminUserLedger = ({ user }) => {
               />
             </div>
             <div>
-              <label className="text-sm text-gray-600 mb-1 block">Wallet Type</label>
+              <label className="text-sm text-gray-400 mb-1 block">Wallet Type</label>
               <select
                 className="w-full p-2 border rounded-lg"
                 value={filters.wallet_type}
@@ -260,7 +260,7 @@ const AdminUserLedger = ({ user }) => {
               </select>
             </div>
             <div>
-              <label className="text-sm text-gray-600 mb-1 block">Transaction Type</label>
+              <label className="text-sm text-gray-400 mb-1 block">Transaction Type</label>
               <select
                 className="w-full p-2 border rounded-lg"
                 value={filters.transaction_type}
@@ -273,7 +273,7 @@ const AdminUserLedger = ({ user }) => {
               </select>
             </div>
             <div>
-              <label className="text-sm text-gray-600 mb-1 block">From Date</label>
+              <label className="text-sm text-gray-400 mb-1 block">From Date</label>
               <Input
                 type="date"
                 value={filters.date_from}
@@ -282,7 +282,7 @@ const AdminUserLedger = ({ user }) => {
               />
             </div>
             <div>
-              <label className="text-sm text-gray-600 mb-1 block">To Date</label>
+              <label className="text-sm text-gray-400 mb-1 block">To Date</label>
               <Input
                 type="date"
                 value={filters.date_to}
@@ -306,7 +306,7 @@ const AdminUserLedger = ({ user }) => {
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full" data-testid="ledger-table">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-800/50 border-b">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Transaction ID</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
@@ -336,31 +336,31 @@ const AdminUserLedger = ({ user }) => {
                 transactions.map((txn) => {
                   const Icon = getTypeIcon(txn.type);
                   return (
-                    <tr key={txn.transaction_id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-mono text-gray-600">
+                    <tr key={txn.transaction_id} className="hover:bg-gray-800/50">
+                      <td className="px-4 py-3 text-sm font-mono text-gray-400">
                         {txn.transaction_id?.slice(0, 15)}...
                       </td>
                       <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-gray-900">{txn.user_name}</div>
+                        <div className="text-sm font-medium text-white">{txn.user_name}</div>
                         <div className="text-xs text-gray-500">{txn.user_email}</div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(txn.type)} bg-gray-100`}>
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(txn.type)} bg-gray-800`}>
                           <Icon className="h-3 w-3" />
                           {txn.type?.replace(/_/g, ' ')}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 capitalize">
+                      <td className="px-4 py-3 text-sm text-gray-400 capitalize">
                         {txn.wallet_type?.replace(/_/g, ' ')}
                       </td>
                       <td className={`px-4 py-3 text-sm font-medium text-right ${getTypeColor(txn.type)}`}>
                         {['mining', 'tap_game', 'referral', 'cashback', 'admin_credit'].includes(txn.type) ? '+' : '-'}
                         {txn.amount?.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                      <td className="px-4 py-3 text-sm text-gray-400 text-right">
                         {txn.balance_after?.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
+                      <td className="px-4 py-3 text-sm text-gray-400 max-w-xs truncate">
                         {txn.description}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500">

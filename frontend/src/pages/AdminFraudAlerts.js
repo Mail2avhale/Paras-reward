@@ -94,7 +94,7 @@ const AdminFraudAlerts = ({ user }) => {
       case 'critical': return 'bg-red-100 text-red-700 border-red-200';
       case 'high': return 'bg-orange-100 text-orange-700 border-orange-200';
       case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+      default: return 'bg-gray-800 text-gray-300 border-gray-700';
     }
   };
 
@@ -103,8 +103,8 @@ const AdminFraudAlerts = ({ user }) => {
       case 'pending': return 'bg-yellow-100 text-yellow-700';
       case 'investigating': return 'bg-blue-100 text-blue-700';
       case 'resolved': return 'bg-green-100 text-green-700';
-      case 'false_positive': return 'bg-gray-100 text-gray-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'false_positive': return 'bg-gray-800 text-gray-300';
+      default: return 'bg-gray-800 text-gray-300';
     }
   };
 
@@ -126,11 +126,11 @@ const AdminFraudAlerts = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-800/50 p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Shield className="h-6 w-6 text-red-600" />
             Fraud Detection & Alerts
           </h1>
@@ -156,8 +156,8 @@ const AdminFraudAlerts = ({ user }) => {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <Card className="p-4 cursor-pointer hover:shadow-md" onClick={() => setStatusFilter('')}>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-100 rounded-lg">
-              <AlertTriangle className="h-5 w-5 text-gray-600" />
+            <div className="p-2 bg-gray-800 rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-gray-400" />
             </div>
             <div>
               <p className="text-2xl font-bold">{stats.total_alerts || 0}</p>
@@ -200,11 +200,11 @@ const AdminFraudAlerts = ({ user }) => {
         </Card>
         <Card className={`p-4 cursor-pointer hover:shadow-md ${statusFilter === 'false_positive' ? 'ring-2 ring-gray-500' : ''}`} onClick={() => setStatusFilter('false_positive')}>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-100 rounded-lg">
-              <XCircle className="h-5 w-5 text-gray-600" />
+            <div className="p-2 bg-gray-800 rounded-lg">
+              <XCircle className="h-5 w-5 text-gray-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-600">{stats.false_positive || 0}</p>
+              <p className="text-2xl font-bold text-gray-400">{stats.false_positive || 0}</p>
               <p className="text-xs text-gray-500">False Positive</p>
             </div>
           </div>
@@ -214,7 +214,7 @@ const AdminFraudAlerts = ({ user }) => {
       {/* Alerts List */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-900">Alert Queue</h3>
+          <h3 className="font-semibold text-white">Alert Queue</h3>
           {statusFilter && (
             <Button variant="outline" size="sm" onClick={() => setStatusFilter('')}>
               Clear Filter
@@ -235,7 +235,7 @@ const AdminFraudAlerts = ({ user }) => {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-gray-900">
+                      <h4 className="font-semibold text-white">
                         {alert.alert_type?.replace(/_/g, ' ').toUpperCase()}
                       </h4>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(alert.status)}`}>
@@ -245,7 +245,7 @@ const AdminFraudAlerts = ({ user }) => {
                         {alert.severity}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">{alert.description}</p>
+                    <p className="text-sm text-gray-400 mt-1">{alert.description}</p>
                     
                     {/* Affected Users */}
                     {alert.affected_users && (
@@ -319,14 +319,14 @@ const AdminFraudAlerts = ({ user }) => {
               Review Alert
             </h3>
             
-            <div className="bg-gray-50 p-4 rounded-lg mb-4">
+            <div className="bg-gray-800/50 p-4 rounded-lg mb-4">
               <p className="font-semibold">{selectedAlert.alert_type?.replace(/_/g, ' ')}</p>
-              <p className="text-sm text-gray-600 mt-1">{selectedAlert.description}</p>
+              <p className="text-sm text-gray-400 mt-1">{selectedAlert.description}</p>
             </div>
             
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-700">Update Status</label>
+                <label className="text-sm font-medium text-gray-300">Update Status</label>
                 <select
                   value={actionForm.status}
                   onChange={(e) => setActionForm({...actionForm, status: e.target.value})}
@@ -340,7 +340,7 @@ const AdminFraudAlerts = ({ user }) => {
               </div>
               
               <div>
-                <label className="text-sm font-medium text-gray-700">Action to Take</label>
+                <label className="text-sm font-medium text-gray-300">Action to Take</label>
                 <select
                   value={actionForm.action_taken}
                   onChange={(e) => setActionForm({...actionForm, action_taken: e.target.value})}
@@ -354,7 +354,7 @@ const AdminFraudAlerts = ({ user }) => {
               </div>
               
               <div>
-                <label className="text-sm font-medium text-gray-700">Notes</label>
+                <label className="text-sm font-medium text-gray-300">Notes</label>
                 <textarea
                   value={actionForm.notes}
                   onChange={(e) => setActionForm({...actionForm, notes: e.target.value})}

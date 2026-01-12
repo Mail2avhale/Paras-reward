@@ -79,11 +79,11 @@ const AdminRedeemSettings = ({ user }) => {
   }
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen" data-testid="admin-redeem-settings">
+    <div className="p-6 bg-gray-800/50 min-h-screen" data-testid="admin-redeem-settings">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Shield className="h-6 w-6 text-purple-600" />
             Redemption Safety Settings
           </h1>
@@ -136,7 +136,7 @@ const AdminRedeemSettings = ({ user }) => {
               className="sr-only peer"
               data-testid="toggle-enabled"
             />
-            <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600"></div>
+            <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-gray-900 after:border-gray-600 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600"></div>
           </label>
         </div>
       </Card>
@@ -151,7 +151,7 @@ const AdminRedeemSettings = ({ user }) => {
           
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
                 Per User Daily Limit (INR)
               </label>
               <Input
@@ -165,7 +165,7 @@ const AdminRedeemSettings = ({ user }) => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
                 Global Daily Limit (INR)
               </label>
               <Input
@@ -179,7 +179,7 @@ const AdminRedeemSettings = ({ user }) => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
                 Max Transactions Per User Per Day
               </label>
               <Input
@@ -203,7 +203,7 @@ const AdminRedeemSettings = ({ user }) => {
           
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
                 Manual Approval Threshold (INR)
               </label>
               <Input
@@ -217,7 +217,7 @@ const AdminRedeemSettings = ({ user }) => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
                 Suspicious Amount Threshold (INR)
               </label>
               <Input
@@ -250,7 +250,7 @@ const AdminRedeemSettings = ({ user }) => {
           
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
                 Minimum KYC Status
               </label>
               <select
@@ -267,7 +267,7 @@ const AdminRedeemSettings = ({ user }) => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
                 Minimum VIP Days
               </label>
               <Input
@@ -291,7 +291,7 @@ const AdminRedeemSettings = ({ user }) => {
           
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
                 Cool-off Period (Hours)
               </label>
               <Input

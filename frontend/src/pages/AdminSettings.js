@@ -226,13 +226,13 @@ const AdminSettings = ({ user }) => {
 
         {/* Social Media Settings */}
         <Card className="p-8 shadow-xl">
-          <h2 className="text-2xl font-bold mb-6 text-gray-800">Social Media Links</h2>
-          <p className="text-gray-600 mb-8">Configure your social media profile links. These will be displayed in the footer and dashboard.</p>
+          <h2 className="text-2xl font-bold mb-6 text-gray-100">Social Media Links</h2>
+          <p className="text-gray-400 mb-8">Configure your social media profile links. These will be displayed in the footer and dashboard.</p>
 
           <div className="space-y-6">
             {/* Facebook */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
                 <Facebook className="h-5 w-5 text-blue-600" />
                 Facebook
               </label>
@@ -241,13 +241,13 @@ const AdminSettings = ({ user }) => {
                 placeholder="https://facebook.com/yourpage"
                 value={socialMedia.facebook}
                 onChange={(e) => handleChange('facebook', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
 
             {/* Twitter */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
                 <Twitter className="h-5 w-5 text-blue-400" />
                 Twitter / X
               </label>
@@ -256,13 +256,13 @@ const AdminSettings = ({ user }) => {
                 placeholder="https://twitter.com/yourhandle"
                 value={socialMedia.twitter}
                 onChange={(e) => handleChange('twitter', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
 
             {/* Instagram */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
                 <Instagram className="h-5 w-5 text-pink-600" />
                 Instagram
               </label>
@@ -271,13 +271,13 @@ const AdminSettings = ({ user }) => {
                 placeholder="https://instagram.com/yourprofile"
                 value={socialMedia.instagram}
                 onChange={(e) => handleChange('instagram', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
 
             {/* LinkedIn */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
                 <Linkedin className="h-5 w-5 text-blue-700" />
                 LinkedIn
               </label>
@@ -286,13 +286,13 @@ const AdminSettings = ({ user }) => {
                 placeholder="https://linkedin.com/company/yourcompany"
                 value={socialMedia.linkedin}
                 onChange={(e) => handleChange('linkedin', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
 
             {/* YouTube */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
                 <Youtube className="h-5 w-5 text-red-600" />
                 YouTube
               </label>
@@ -301,13 +301,13 @@ const AdminSettings = ({ user }) => {
                 placeholder="https://youtube.com/@yourchannel"
                 value={socialMedia.youtube}
                 onChange={(e) => handleChange('youtube', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
 
             {/* Telegram */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
                 <Send className="h-5 w-5 text-blue-500" />
                 Telegram
               </label>
@@ -316,13 +316,13 @@ const AdminSettings = ({ user }) => {
                 placeholder="https://t.me/yourchannel"
                 value={socialMedia.telegram}
                 onChange={(e) => handleChange('telegram', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
 
             {/* WhatsApp */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
                 <MessageCircle className="h-5 w-5 text-green-600" />
                 WhatsApp
               </label>
@@ -331,7 +331,7 @@ const AdminSettings = ({ user }) => {
                 placeholder="https://wa.me/919876543210"
                 value={socialMedia.whatsapp}
                 onChange={(e) => handleChange('whatsapp', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -353,11 +353,11 @@ const AdminSettings = ({ user }) => {
         <Card className="p-8 shadow-xl mt-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-gray-100 flex items-center gap-2">
                 <Users className="h-7 w-7 text-purple-600" />
                 Registration Control
               </h2>
-              <p className="text-gray-600 mt-2">Enable or disable new user registrations on the platform</p>
+              <p className="text-gray-400 mt-2">Enable or disable new user registrations on the platform</p>
             </div>
           </div>
 
@@ -380,7 +380,7 @@ const AdminSettings = ({ user }) => {
                 </>
               )}
             </div>
-            <p className="text-sm text-gray-700 ml-9">
+            <p className="text-sm text-gray-300 ml-9">
               {registrationEnabled 
                 ? 'New users can register and create accounts on the platform.' 
                 : 'New user registrations are blocked. Existing users can still login.'}
@@ -419,10 +419,10 @@ const AdminSettings = ({ user }) => {
             <div className="flex items-start gap-2 mb-3">
               <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
               <div className="flex-1">
-                <label className="text-sm font-medium text-gray-700 block mb-2">
+                <label className="text-sm font-medium text-gray-300 block mb-2">
                   Custom Message for Disabled Registration
                 </label>
-                <p className="text-xs text-gray-600 mb-3">
+                <p className="text-xs text-gray-400 mb-3">
                   This message will be shown to users when they try to register while registration is disabled.
                 </p>
               </div>
@@ -434,7 +434,7 @@ const AdminSettings = ({ user }) => {
               placeholder="Enter message to display when registration is closed..."
               rows={4}
               maxLength={300}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
             />
             <div className="flex items-center justify-between mt-2">
               <p className="text-xs text-gray-500">
@@ -467,27 +467,27 @@ const AdminSettings = ({ user }) => {
 
         {/* VIP Payment Settings */}
         <Card className="p-8 shadow-xl mt-8">
-          <h2 className="text-2xl font-bold mb-6 text-gray-800">💳 VIP Payment Settings</h2>
-          <p className="text-gray-600 mb-8">Configure payment details for VIP membership purchases. Users will see these details when purchasing VIP.</p>
+          <h2 className="text-2xl font-bold mb-6 text-gray-100">💳 VIP Payment Settings</h2>
+          <p className="text-gray-400 mb-8">Configure payment details for VIP membership purchases. Users will see these details when purchasing VIP.</p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* UPI Settings */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">UPI Payment</h3>
+              <h3 className="text-lg font-semibold text-gray-300 border-b pb-2">UPI Payment</h3>
               
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">UPI ID</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">UPI ID</label>
                 <input
                   type="text"
                   placeholder="yourname@upi"
                   value={paymentConfig.upi_id}
                   onChange={(e) => handlePaymentConfigChange('upi_id', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">QR Code Image</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">QR Code Image</label>
                 <input 
                   ref={qrInputRef}
                   type="file" 
@@ -518,7 +518,7 @@ const AdminSettings = ({ user }) => {
                       <img 
                         src={paymentConfig.qr_code_url} 
                         alt="QR Code Preview" 
-                        className="w-24 h-24 object-contain border rounded-lg bg-white"
+                        className="w-24 h-24 object-contain border rounded-lg bg-gray-900"
                       />
                       <button
                         onClick={() => handlePaymentConfigChange('qr_code_url', '')}
@@ -535,49 +535,49 @@ const AdminSettings = ({ user }) => {
 
             {/* Bank Transfer Settings */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">Bank Transfer</h3>
+              <h3 className="text-lg font-semibold text-gray-300 border-b pb-2">Bank Transfer</h3>
               
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Account Holder Name</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">Account Holder Name</label>
                 <input
                   type="text"
                   placeholder="PARAS REWARD PVT LTD"
                   value={paymentConfig.account_holder}
                   onChange={(e) => handlePaymentConfigChange('account_holder', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Bank Name</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">Bank Name</label>
                 <input
                   type="text"
                   placeholder="State Bank of India"
                   value={paymentConfig.bank_name}
                   onChange={(e) => handlePaymentConfigChange('bank_name', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Account Number</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">Account Number</label>
                 <input
                   type="text"
                   placeholder="1234567890"
                   value={paymentConfig.account_number}
                   onChange={(e) => handlePaymentConfigChange('account_number', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">IFSC Code</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">IFSC Code</label>
                 <input
                   type="text"
                   placeholder="SBIN0001234"
                   value={paymentConfig.ifsc_code}
                   onChange={(e) => handlePaymentConfigChange('ifsc_code', e.target.value.toUpperCase())}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -585,13 +585,13 @@ const AdminSettings = ({ user }) => {
 
           {/* Instructions */}
           <div className="mt-6">
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Payment Instructions</label>
+            <label className="text-sm font-medium text-gray-300 mb-2 block">Payment Instructions</label>
             <textarea
               rows={3}
               placeholder="Enter instructions for users making VIP payment..."
               value={paymentConfig.instructions}
               onChange={(e) => handlePaymentConfigChange('instructions', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
             />
           </div>
 

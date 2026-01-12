@@ -138,8 +138,8 @@ const AdminProfitLoss = ({ user }) => {
     <Card className={`p-5 ${color}`}>
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className={`text-2xl font-bold mt-1 ${isProfit !== undefined ? (isProfit ? 'text-green-600' : 'text-red-600') : 'text-gray-900'}`}>
+          <p className="text-sm font-medium text-gray-400">{title}</p>
+          <p className={`text-2xl font-bold mt-1 ${isProfit !== undefined ? (isProfit ? 'text-green-600' : 'text-red-600') : 'text-white'}`}>
             {formatCurrency(value)}
           </p>
           {change !== undefined && (
@@ -149,8 +149,8 @@ const AdminProfitLoss = ({ user }) => {
             </div>
           )}
         </div>
-        <div className={`p-3 rounded-xl ${isProfit !== undefined ? (isProfit ? 'bg-green-100' : 'bg-red-100') : 'bg-gray-100'}`}>
-          <Icon className={`h-6 w-6 ${isProfit !== undefined ? (isProfit ? 'text-green-600' : 'text-red-600') : 'text-gray-600'}`} />
+        <div className={`p-3 rounded-xl ${isProfit !== undefined ? (isProfit ? 'bg-green-100' : 'bg-red-100') : 'bg-gray-800'}`}>
+          <Icon className={`h-6 w-6 ${isProfit !== undefined ? (isProfit ? 'text-green-600' : 'text-red-600') : 'text-gray-400'}`} />
         </div>
       </div>
     </Card>
@@ -186,7 +186,7 @@ const AdminProfitLoss = ({ user }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <DollarSign className="h-7 w-7 text-green-600" />
             Profit & Loss Statement
           </h1>
@@ -293,7 +293,7 @@ const AdminProfitLoss = ({ user }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Breakdown */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-green-600" />
             Revenue Breakdown
           </h3>
@@ -328,7 +328,7 @@ const AdminProfitLoss = ({ user }) => {
 
         {/* Expense Breakdown */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <TrendingDown className="h-5 w-5 text-red-600" />
             Expense Breakdown
           </h3>
@@ -365,7 +365,7 @@ const AdminProfitLoss = ({ user }) => {
       {/* Monthly Trend */}
       {data?.monthly_trend?.length > 0 && (
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">6-Month Trend</h3>
+          <h3 className="text-lg font-bold text-white mb-4">6-Month Trend</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={data.monthly_trend}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -384,7 +384,7 @@ const AdminProfitLoss = ({ user }) => {
       {/* Expense Management */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
             <Receipt className="h-5 w-5 text-purple-600" />
             Expense Management
           </h3>
@@ -395,7 +395,7 @@ const AdminProfitLoss = ({ user }) => {
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-800/50">
               <tr>
                 <th className="text-left py-3 px-4 text-xs font-semibold">Date</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold">Category</th>
@@ -414,14 +414,14 @@ const AdminProfitLoss = ({ user }) => {
                 </tr>
               ) : (
                 expenses.map((exp) => (
-                  <tr key={exp.expense_id} className="border-b hover:bg-gray-50">
+                  <tr key={exp.expense_id} className="border-b hover:bg-gray-800/50">
                     <td className="py-3 px-4 text-sm">
                       {new Date(exp.date).toLocaleDateString()}
                     </td>
                     <td className="py-3 px-4 text-sm font-medium">
                       {exp.category?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-600 max-w-xs truncate">
+                    <td className="py-3 px-4 text-sm text-gray-400 max-w-xs truncate">
                       {exp.description || '-'}
                     </td>
                     <td className="py-3 px-4 text-sm">{exp.vendor || '-'}</td>
@@ -465,12 +465,12 @@ const AdminProfitLoss = ({ user }) => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold">Add New Expense</h2>
-                <button onClick={() => setShowAddExpense(false)} className="text-gray-500 hover:text-gray-700">✕</button>
+                <button onClick={() => setShowAddExpense(false)} className="text-gray-500 hover:text-gray-300">✕</button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm text-gray-600">Category *</label>
+                  <label className="text-sm text-gray-400">Category *</label>
                   <select
                     className="w-full px-3 py-2 border rounded-lg"
                     value={expenseForm.category}
@@ -484,7 +484,7 @@ const AdminProfitLoss = ({ user }) => {
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-600">Amount (₹) *</label>
+                  <label className="text-sm text-gray-400">Amount (₹) *</label>
                   <Input
                     type="number"
                     placeholder="0"
@@ -494,7 +494,7 @@ const AdminProfitLoss = ({ user }) => {
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-600">Date</label>
+                  <label className="text-sm text-gray-400">Date</label>
                   <Input
                     type="date"
                     value={expenseForm.date}
@@ -503,7 +503,7 @@ const AdminProfitLoss = ({ user }) => {
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-600">Description</label>
+                  <label className="text-sm text-gray-400">Description</label>
                   <Input
                     placeholder="What was this expense for?"
                     value={expenseForm.description}
@@ -512,7 +512,7 @@ const AdminProfitLoss = ({ user }) => {
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-600">Vendor/Payee</label>
+                  <label className="text-sm text-gray-400">Vendor/Payee</label>
                   <Input
                     placeholder="Who did you pay?"
                     value={expenseForm.vendor}

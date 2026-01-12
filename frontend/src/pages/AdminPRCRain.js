@@ -175,27 +175,27 @@ const AdminPRCRain = ({ user }) => {
       {/* Today's Stats */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <Card className="p-4 bg-white/10 backdrop-blur border-white/20">
+          <Card className="p-4 bg-gray-900/10 backdrop-blur border-white/20">
             <Droplets className="h-6 w-6 text-blue-400 mb-2" />
             <div className="text-2xl font-bold text-white">{stats.rain_events}</div>
             <div className="text-xs text-blue-200">Rain Events Today</div>
           </Card>
-          <Card className="p-4 bg-white/10 backdrop-blur border-white/20">
+          <Card className="p-4 bg-gray-900/10 backdrop-blur border-white/20">
             <TrendingUp className="h-6 w-6 text-green-400 mb-2" />
             <div className="text-2xl font-bold text-green-400">+{stats.total_prc_given?.toFixed(1)}</div>
             <div className="text-xs text-green-200">PRC Given</div>
           </Card>
-          <Card className="p-4 bg-white/10 backdrop-blur border-white/20">
+          <Card className="p-4 bg-gray-900/10 backdrop-blur border-white/20">
             <TrendingDown className="h-6 w-6 text-red-400 mb-2" />
             <div className="text-2xl font-bold text-red-400">-{stats.total_prc_taken?.toFixed(1)}</div>
             <div className="text-xs text-red-200">PRC Taken</div>
           </Card>
-          <Card className="p-4 bg-white/10 backdrop-blur border-white/20">
+          <Card className="p-4 bg-gray-900/10 backdrop-blur border-white/20">
             <Target className="h-6 w-6 text-yellow-400 mb-2" />
             <div className="text-2xl font-bold text-white">{stats.total_taps}</div>
             <div className="text-xs text-yellow-200">Total Taps</div>
           </Card>
-          <Card className="p-4 bg-white/10 backdrop-blur border-white/20">
+          <Card className="p-4 bg-gray-900/10 backdrop-blur border-white/20">
             <Users className="h-6 w-6 text-purple-400 mb-2" />
             <div className="text-2xl font-bold text-white">{stats.unique_users}</div>
             <div className="text-xs text-purple-200">Users Participated</div>
@@ -204,7 +204,7 @@ const AdminPRCRain = ({ user }) => {
       )}
 
       {/* Enable/Disable Toggle */}
-      <Card className="p-6 mb-6 bg-white/10 backdrop-blur border-white/20">
+      <Card className="p-6 mb-6 bg-gray-900/10 backdrop-blur border-white/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {settings.enabled ? (
@@ -231,7 +231,7 @@ const AdminPRCRain = ({ user }) => {
               className="sr-only peer"
               data-testid="toggle-enabled"
             />
-            <div className="w-14 h-7 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-600"></div>
+            <div className="w-14 h-7 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-gray-900 after:border-gray-600 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-600"></div>
           </label>
         </div>
         
@@ -245,7 +245,7 @@ const AdminPRCRain = ({ user }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Rain Frequency Settings */}
-        <Card className="p-6 bg-white/10 backdrop-blur border-white/20">
+        <Card className="p-6 bg-gray-900/10 backdrop-blur border-white/20">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <Clock className="h-5 w-5 text-blue-400" />
             Rain Frequency
@@ -257,7 +257,7 @@ const AdminPRCRain = ({ user }) => {
                 type="number"
                 value={settings.max_rain_events_per_day}
                 onChange={(e) => setSettings(prev => ({ ...prev, max_rain_events_per_day: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
-                className="bg-white/10 border-white/20 text-white"
+                className="bg-gray-900/10 border-white/20 text-white"
                 data-testid="max-events-input"
                 placeholder="e.g. 10, 30, 50"
               />
@@ -269,7 +269,7 @@ const AdminPRCRain = ({ user }) => {
                 type="number"
                 value={settings.min_gap_between_rains_minutes}
                 onChange={(e) => setSettings(prev => ({ ...prev, min_gap_between_rains_minutes: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
-                className="bg-white/10 border-white/20 text-white"
+                className="bg-gray-900/10 border-white/20 text-white"
                 data-testid="min-gap-input"
                 placeholder="e.g. 30, 60, 120"
               />
@@ -281,7 +281,7 @@ const AdminPRCRain = ({ user }) => {
                 type="number"
                 value={settings.rain_duration_seconds}
                 onChange={(e) => setSettings(prev => ({ ...prev, rain_duration_seconds: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
-                className="bg-white/10 border-white/20 text-white"
+                className="bg-gray-900/10 border-white/20 text-white"
                 data-testid="duration-input"
                 placeholder="e.g. 20, 30, 60"
               />
@@ -293,7 +293,7 @@ const AdminPRCRain = ({ user }) => {
                 type="number"
                 value={settings.max_taps_per_rain}
                 onChange={(e) => setSettings(prev => ({ ...prev, max_taps_per_rain: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
-                className="bg-white/10 border-white/20 text-white"
+                className="bg-gray-900/10 border-white/20 text-white"
                 data-testid="max-taps-input"
                 placeholder="e.g. 10, 20, 30"
               />
@@ -303,7 +303,7 @@ const AdminPRCRain = ({ user }) => {
         </Card>
 
         {/* PRC & Negative Settings */}
-        <Card className="p-6 bg-white/10 backdrop-blur border-white/20">
+        <Card className="p-6 bg-gray-900/10 backdrop-blur border-white/20">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <Zap className="h-5 w-5 text-yellow-400" />
             PRC Settings (Random!)
@@ -316,7 +316,7 @@ const AdminPRCRain = ({ user }) => {
                   type="number"
                   value={settings.prc_range?.min ?? 1}
                   onChange={(e) => setSettings(prev => ({ ...prev, prc_range: { ...prev.prc_range, min: e.target.value === '' ? '' : parseFloat(e.target.value) } }))}
-                  className="bg-white/10 border-white/20 text-white"
+                  className="bg-gray-900/10 border-white/20 text-white"
                   placeholder="e.g. 1, 5"
                 />
               </div>
@@ -326,7 +326,7 @@ const AdminPRCRain = ({ user }) => {
                   type="number"
                   value={settings.prc_range?.max ?? 25}
                   onChange={(e) => setSettings(prev => ({ ...prev, prc_range: { ...prev.prc_range, max: e.target.value === '' ? '' : parseFloat(e.target.value) } }))}
-                  className="bg-white/10 border-white/20 text-white"
+                  className="bg-gray-900/10 border-white/20 text-white"
                   placeholder="e.g. 10, 25, 50"
                 />
               </div>
@@ -337,7 +337,7 @@ const AdminPRCRain = ({ user }) => {
                 type="number"
                 value={settings.max_prc_gain_per_day ?? 50}
                 onChange={(e) => setSettings(prev => ({ ...prev, max_prc_gain_per_day: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                className="bg-white/10 border-white/20 text-white"
+                className="bg-gray-900/10 border-white/20 text-white"
                 placeholder="e.g. 50, 100"
               />
               <p className="text-xs text-gray-500 mt-1">User दररोज maximum किती PRC gain करू शकतो</p>
@@ -348,7 +348,7 @@ const AdminPRCRain = ({ user }) => {
                 type="number"
                 value={settings.max_prc_loss_per_day ?? 20}
                 onChange={(e) => setSettings(prev => ({ ...prev, max_prc_loss_per_day: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                className="bg-white/10 border-white/20 text-white"
+                className="bg-gray-900/10 border-white/20 text-white"
                 placeholder="e.g. 20, 30"
               />
               <p className="text-xs text-gray-500 mt-1">User दररोज maximum किती PRC lose करू शकतो</p>
@@ -366,7 +366,7 @@ const AdminPRCRain = ({ user }) => {
                     onChange={(e) => setSettings(prev => ({ ...prev, enable_negative_drops: e.target.checked }))}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                  <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-900 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
                 </label>
               </div>
               {settings.enable_negative_drops && (
@@ -379,7 +379,7 @@ const AdminPRCRain = ({ user }) => {
                     type="number"
                     value={settings.negative_drop_probability}
                     onChange={(e) => setSettings(prev => ({ ...prev, negative_drop_probability: e.target.value === '' ? '' : parseInt(e.target.value) || 0 }))}
-                    className="bg-white/10 border-white/20 text-white"
+                    className="bg-gray-900/10 border-white/20 text-white"
                     data-testid="negative-prob-input"
                     placeholder="e.g. 10, 20, 30"
                   />
@@ -392,7 +392,7 @@ const AdminPRCRain = ({ user }) => {
       </div>
 
       {/* Drop Colors */}
-      <Card className="p-6 bg-white/10 backdrop-blur border-white/20">
+      <Card className="p-6 bg-gray-900/10 backdrop-blur border-white/20">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <Palette className="h-5 w-5 text-pink-400" />
           Drop Colors (Random Selection)
@@ -403,7 +403,7 @@ const AdminPRCRain = ({ user }) => {
         
         <div className="flex flex-wrap gap-3 mb-4">
           {(settings.drop_colors || DEFAULT_COLORS).map((color, index) => (
-            <div key={index} className="flex items-center gap-2 bg-white/5 p-2 rounded-lg">
+            <div key={index} className="flex items-center gap-2 bg-gray-900/5 p-2 rounded-lg">
               <input
                 type="color"
                 value={color}
@@ -423,7 +423,7 @@ const AdminPRCRain = ({ user }) => {
           <Button
             variant="outline"
             onClick={addColor}
-            className="border-dashed border-white/30 text-white hover:bg-white/10"
+            className="border-dashed border-white/30 text-white hover:bg-gray-900/10"
           >
             + Add Color
           </Button>

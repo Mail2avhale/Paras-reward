@@ -181,7 +181,7 @@ const AdminSystemSettings = ({ user }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-800/50">
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
@@ -190,7 +190,7 @@ const AdminSystemSettings = ({ user }) => {
             Back
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
               <Settings className="h-6 w-6 text-purple-600" />
               System Settings
             </h1>
@@ -199,7 +199,7 @@ const AdminSystemSettings = ({ user }) => {
         </div>
 
         {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mb-6 bg-white p-2 rounded-lg shadow-sm">
+        <div className="flex flex-wrap gap-2 mb-6 bg-gray-900 p-2 rounded-lg shadow-sm">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -209,7 +209,7 @@ const AdminSystemSettings = ({ user }) => {
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? 'bg-purple-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    : 'text-gray-400 hover:bg-gray-800'
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -228,11 +228,11 @@ const AdminSystemSettings = ({ user }) => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {Object.entries(vipPlans).map(([key, plan]) => (
-                <div key={key} className="border rounded-lg p-4 bg-gray-50">
+                <div key={key} className="border rounded-lg p-4 bg-gray-800/50">
                   <h3 className="font-semibold capitalize mb-3">{key.replace('_', ' ')} Plan</h3>
                   <div className="space-y-3">
                     <div>
-                      <label className="text-sm text-gray-600">Price (₹)</label>
+                      <label className="text-sm text-gray-400">Price (₹)</label>
                       <input
                         type="number"
                         value={plan.price}
@@ -244,7 +244,7 @@ const AdminSystemSettings = ({ user }) => {
                       />
                     </div>
                     <div>
-                      <label className="text-sm text-gray-600">Duration (days)</label>
+                      <label className="text-sm text-gray-400">Duration (days)</label>
                       <input
                         type="number"
                         value={plan.duration}
@@ -256,7 +256,7 @@ const AdminSystemSettings = ({ user }) => {
                       />
                     </div>
                     <div>
-                      <label className="text-sm text-gray-600">Discount (%)</label>
+                      <label className="text-sm text-gray-400">Discount (%)</label>
                       <input
                         type="number"
                         value={plan.discount}
@@ -289,7 +289,7 @@ const AdminSystemSettings = ({ user }) => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
                   <TrendingUp className="h-4 w-4" />
                   Base Mining Rate (PRC/hour)
                 </label>
@@ -305,7 +305,7 @@ const AdminSystemSettings = ({ user }) => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
                   <Award className="h-4 w-4" />
                   VIP Multiplier (0-10)
                 </label>
@@ -322,7 +322,7 @@ const AdminSystemSettings = ({ user }) => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
                   <Clock className="h-4 w-4" />
                   Max Daily Mining Hours (1-24)
                 </label>
@@ -338,7 +338,7 @@ const AdminSystemSettings = ({ user }) => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
                   <DollarSign className="h-4 w-4" />
                   PRC to INR Ratio (PRC per ₹1)
                 </label>
@@ -504,7 +504,7 @@ const AdminSystemSettings = ({ user }) => {
             </div>
 
             {/* Summary */}
-            <div className="mt-6 p-4 bg-gray-100 rounded-lg">
+            <div className="mt-6 p-4 bg-gray-800 rounded-lg">
               <h4 className="font-semibold mb-2">Bonus Summary</h4>
               <div className="grid grid-cols-5 gap-2 text-center text-sm">
                 <div className="bg-purple-100 p-2 rounded">
@@ -601,7 +601,7 @@ const AdminSystemSettings = ({ user }) => {
             </Button>
 
             <div className="mt-6">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+              <label className="text-sm font-medium text-gray-300 flex items-center gap-2 mb-2">
                 <AlertCircle className="h-4 w-4" />
                 Custom Message (shown when disabled)
               </label>
@@ -630,7 +630,7 @@ const AdminSystemSettings = ({ user }) => {
                 <h3 className="font-semibold mb-3">Bill Payment Charges</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="text-sm text-gray-600">Charge Type</label>
+                    <label className="text-sm text-gray-400">Charge Type</label>
                     <select
                       value={serviceCharges.bill_payment_charge_type}
                       onChange={(e) => setServiceCharges(prev => ({ ...prev, bill_payment_charge_type: e.target.value }))}
@@ -641,7 +641,7 @@ const AdminSystemSettings = ({ user }) => {
                     </select>
                   </div>
                   <div>
-                    <label className="text-sm text-gray-600">Percentage (%)</label>
+                    <label className="text-sm text-gray-400">Percentage (%)</label>
                     <input
                       type="number"
                       step="0.1"
@@ -651,7 +651,7 @@ const AdminSystemSettings = ({ user }) => {
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-gray-600">Fixed Amount (PRC)</label>
+                    <label className="text-sm text-gray-400">Fixed Amount (PRC)</label>
                     <input
                       type="number"
                       value={serviceCharges.bill_payment_charge_fixed}
@@ -667,7 +667,7 @@ const AdminSystemSettings = ({ user }) => {
                 <h3 className="font-semibold mb-3">Gift Voucher Charges</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="text-sm text-gray-600">Charge Type</label>
+                    <label className="text-sm text-gray-400">Charge Type</label>
                     <select
                       value={serviceCharges.gift_voucher_charge_type}
                       onChange={(e) => setServiceCharges(prev => ({ ...prev, gift_voucher_charge_type: e.target.value }))}
@@ -678,7 +678,7 @@ const AdminSystemSettings = ({ user }) => {
                     </select>
                   </div>
                   <div>
-                    <label className="text-sm text-gray-600">Percentage (%)</label>
+                    <label className="text-sm text-gray-400">Percentage (%)</label>
                     <input
                       type="number"
                       step="0.1"
@@ -688,7 +688,7 @@ const AdminSystemSettings = ({ user }) => {
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-gray-600">Fixed Amount (PRC)</label>
+                    <label className="text-sm text-gray-400">Fixed Amount (PRC)</label>
                     <input
                       type="number"
                       value={serviceCharges.gift_voucher_charge_fixed}
@@ -704,7 +704,7 @@ const AdminSystemSettings = ({ user }) => {
                 <h3 className="font-semibold mb-3">Delivery Charges</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm text-gray-600">VIP Users (₹)</label>
+                    <label className="text-sm text-gray-400">VIP Users (₹)</label>
                     <input
                       type="number"
                       value={serviceCharges.delivery_charge_vip}
@@ -713,7 +713,7 @@ const AdminSystemSettings = ({ user }) => {
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-gray-600">Free Users (₹)</label>
+                    <label className="text-sm text-gray-400">Free Users (₹)</label>
                     <input
                       type="number"
                       value={serviceCharges.delivery_charge_free}
