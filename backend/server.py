@@ -4261,6 +4261,12 @@ async def get_admin_subscription_pricing():
     pricing = await get_subscription_pricing()
     return {"pricing": pricing}
 
+@api_router.post("/admin/run-explorer-burn")
+async def run_explorer_burn_job():
+    """Admin: Manually trigger Explorer user PRC burn job"""
+    result = await burn_expired_prc_for_explorer_users()
+    return {"success": True, "result": result}
+
 # ========== VIP MEMBERSHIP ROUTES ==========
 @api_router.post("/membership/payment/{uid}", response_model=VIPPayment)
 async def submit_vip_payment(uid: str, payment: VIPPaymentCreate):
