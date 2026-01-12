@@ -270,6 +270,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/stockists" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><StockistManagementAdmin user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/support" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSupport user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/vip-verification" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminVIPPaymentVerification user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/subscriptions" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSubscriptionManagement user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/bill-payments" element={user ? <BillPayments user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/gift-vouchers" element={user ? <GiftVoucherRedemption user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
             <Route path="/manager" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerDashboardNew user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
