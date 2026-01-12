@@ -1,7 +1,7 @@
 # Paras Reward Platform - PRD
 
 ## Original Problem Statement
-Build a comprehensive reward and loyalty platform with VIP membership system, PRC (Platform Reward Currency) mining, marketplace, gift voucher redemption, bill payment services, and multi-level user hierarchy.
+Build a comprehensive reward and loyalty platform with subscription-based membership system, PRC (Platform Reward Currency) mining, marketplace, gift voucher redemption, bill payment services, and multi-level user hierarchy.
 
 ## Core Requirements
 
@@ -14,38 +14,39 @@ Build a comprehensive reward and loyalty platform with VIP membership system, PR
 - **User/Customer**: End user
 
 ### Key Features
-1. **VIP Membership System**
-   - Monthly/Quarterly/Yearly plans
-   - Access to premium features (marketplace, gift vouchers, bill payments)
-   - Expiry-based restrictions
+1. **4-Tier Subscription System** (NEW - Jan 12, 2026)
+   | Plan | Multiplier | Tap Limit | Ref Weight | Can Redeem | Price |
+   |------|------------|-----------|------------|------------|-------|
+   | Explorer | 1.0x | 100 | 1.0x | ❌ | FREE |
+   | Startup | 1.5x | 200 | 1.2x | ✅ | ₹299/mo |
+   | Growth | 2.0x | 300 | 1.5x | ✅ | ₹549/mo |
+   | Elite | 3.0x | 400 | 2.0x | ✅ | ₹799/mo |
 
 2. **PRC (Platform Reward Currency)**
-   - Mining system for earning PRC
-   - Expiry rules (Free: 48hrs, VIP expired: 5 days post-expiry)
-   - Burn mechanisms
+   - Mining system with subscription multiplier
+   - NEW: Daily_Reward = Day × ((BR × User_Multiplier) + Referral_Bonus)
+   - Explorer users: PRC burns after 2 days inactivity
+   - Paid users: PRC never burns
 
 3. **Marketplace**
    - Product ordering with PRC
-   - VIP-only access
+   - Paid plans only (Startup/Growth/Elite)
    - Stock management
 
 4. **Bill Payment Services**
-   - Mobile recharge
-   - Electricity bills
-   - Credit card payments
-   - VIP-only feature
+   - Mobile recharge, Electricity, Credit cards
+   - Paid plans only
 
 5. **Gift Voucher Redemption**
    - Various platform vouchers
-   - Multiple denominations
-   - VIP-only feature
+   - Paid plans only
 
-6. **5-Level Referral System**
-   - Level 1: 10% bonus
-   - Level 2: 5% bonus
-   - Level 3: 3% bonus
-   - Level 4: 2% bonus
-   - Level 5: 1% bonus
+6. **5-Level Referral System with Subscription Weights**
+   - Level 1: 10% × referral_subscription_weight
+   - Level 2: 5% × referral_subscription_weight
+   - Level 3: 2.5% × referral_subscription_weight
+   - Level 4: 1.5% × referral_subscription_weight
+   - Level 5: 1% × referral_subscription_weight
 
 7. **AI Features**
    - AI Chatbot (Multilingual: English, Hindi, Marathi)
