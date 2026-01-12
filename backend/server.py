@@ -758,6 +758,111 @@ class GiftVoucherProcess(BaseModel):
     voucher_details: Optional[Dict] = None
     admin_notes: Optional[str] = None
 
+# ========== SUBSCRIPTION PLAN CONFIGURATION ==========
+# New 4-tier subscription system
+SUBSCRIPTION_PLANS = {
+    "explorer": {
+        "name": "Explorer",
+        "multiplier": 1.0,
+        "referral_weight": 1.0,
+        "tap_limit": 100,
+        "can_redeem": False,
+        "is_free": True,
+        "default_price": 0
+    },
+    "startup": {
+        "name": "Startup",
+        "multiplier": 1.5,
+        "referral_weight": 1.2,
+        "tap_limit": 200,
+        "can_redeem": True,
+        "is_free": False,
+        "default_price": 299
+    },
+    "growth": {
+        "name": "Growth",
+        "multiplier": 2.0,
+        "referral_weight": 1.5,
+        "tap_limit": 300,
+        "can_redeem": True,
+        "is_free": False,
+        "default_price": 549
+    },
+    "elite": {
+        "name": "Elite",
+        "multiplier": 3.0,
+        "referral_weight": 2.0,
+        "tap_limit": 400,
+        "can_redeem": True,
+        "is_free": False,
+        "default_price": 799
+    }
+}
+
+SUBSCRIPTION_DURATIONS = {
+    "monthly": 30,
+    "quarterly": 90,
+    "half_yearly": 180,
+    "yearly": 365
+}
+
+async def get_subscription_pricing():
+    """Get subscription pricing from database or return defaults"""
+    settings = await db.settings.find_one({}, {"_id": 0, "subscription_pricing": 1})
+    
+    default_pricing = {
+        "startup": {"monthly": 299, "quarterly": 897, "half_yearly": 1495, "yearly": 2990},
+        "growth": {"monthly": 549, "quarterly": 1647, "half_yearly": 2745, "yearly": 5490},
+        "elite": {"monthly": 799, "quarterly": 2397, "half_yearly": 3995, "yearly": 7990}
+    }
+    
+    if settings and "subscription_pricing" in settings:
+        return settings["subscription_pricing"]
+    return default_pricing
+
+async def get_user_subscription_info(user: dict) -> dict:
+    """Get user's current subscription status and benefits"""
+    now = datetime.now(timezone.utc)
+    
+    # Check new subscription system first, then legacy
+    subscription_plan = user.get("subscription_plan", "explorer")
+    subscription_expiry_str = user.get("subscription_expiry") or user.get("vip_expiry")
+    
+    # Legacy VIP migration check
+    if user.get("membership_type") == "vip" and subscription_plan == "explorer":
+        subscription_plan = "startup"  # Migrated VIP users get Startup
+    
+    is_expired = False
+    days_remaining = 0
+    
+    if subscription_expiry_str and subscription_plan != "explorer":
+        try:
+            expiry = datetime.fromisoformat(subscription_expiry_str.replace('Z', '+00:00'))
+            if expiry.tzinfo is None:
+                expiry = expiry.replace(tzinfo=timezone.utc)
+            
+            if expiry < now:
+                is_expired = True
+                subscription_plan = "explorer"  # Downgrade to explorer
+            else:
+                days_remaining = (expiry - now).days
+        except:
+            pass
+    
+    plan_config = SUBSCRIPTION_PLANS.get(subscription_plan, SUBSCRIPTION_PLANS["explorer"])
+    
+    return {
+        "plan": subscription_plan,
+        "plan_name": plan_config["name"],
+        "multiplier": plan_config["multiplier"],
+        "referral_weight": plan_config["referral_weight"],
+        "tap_limit": plan_config["tap_limit"],
+        "can_redeem": plan_config["can_redeem"],
+        "is_expired": is_expired,
+        "days_remaining": days_remaining,
+        "expiry_date": subscription_expiry_str
+    }
+
 # ========== HELPER FUNCTIONS ==========
 async def get_base_rate():
     """Calculate mining base rate based on total users"""
