@@ -969,6 +969,59 @@ async def count_active_referrals_by_level(user_id: str):
     
     print(f"✅ Active referrals count (session-based): {active_counts}")
     return active_counts
+
+async def count_active_referrals_by_level_with_weights(user_id: str):
+    """
+    Count active referrals at each level with subscription weights
+    Returns: {
+        'level_1': {'count': X, 'weighted_count': Y},
+        'level_2': {'count': X, 'weighted_count': Y},
+        ...
+    }
+    """
+    referrals_by_level = await get_multi_level_referrals(user_id, max_levels=5)
+    level_data = {
+        'level_1': {'count': 0, 'weighted_count': 0},
+        'level_2': {'count': 0, 'weighted_count': 0},
+        'level_3': {'count': 0, 'weighted_count': 0},
+        'level_4': {'count': 0, 'weighted_count': 0},
+        'level_5': {'count': 0, 'weighted_count': 0}
+    }
+    
+    now = datetime.now(timezone.utc)
+    
+    for level, users in referrals_by_level.items():
+        for user in users:
+            # Check if user has active mining session
+            mining_active = user.get("mining_active", False)
+            session_end = user.get("mining_session_end")
+            
+            is_session_active = False
+            
+            if mining_active and session_end:
+                try:
+                    if isinstance(session_end, str):
+                        session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+                    elif isinstance(session_end, datetime):
+                        session_end_dt = session_end
+                    else:
+                        session_end_dt = None
+                    
+                    if session_end_dt and session_end_dt > now:
+                        is_session_active = True
+                except:
+                    pass
+            
+            if is_session_active:
+                # Get referral's subscription weight
+                sub_info = await get_user_subscription_info(user)
+                referral_weight = sub_info.get("referral_weight", 1.0)
+                
+                level_data[level]['count'] += 1
+                level_data[level]['weighted_count'] += referral_weight
+    
+    return level_data
+
 async def calculate_profile_completion(user: Dict) -> float:
     """Calculate profile completion percentage"""
     required_fields = [
