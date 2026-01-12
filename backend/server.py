@@ -446,7 +446,7 @@ class User(BaseModel):
     last_name: Optional[str] = None
     mobile: Optional[str] = None
     profile_picture: Optional[str] = None
-    role: str = "user"  # user, admin, master_stockist, sub_stockist, outlet
+    role: str = "user"  # user, admin, sub_admin, manager, employee
     password_hash: Optional[str] = None
     reset_token: Optional[str] = None
     reset_token_expiry: Optional[datetime] = None
@@ -481,11 +481,11 @@ class User(BaseModel):
     vip_days_expired: Optional[int] = None  # Legacy - Days since VIP expired
     vip_expiry_message: Optional[str] = None  # Legacy - Renewal message for expired VIP
     
-    # Wallets
+    # Wallets - CASHBACK WALLET REMOVED
     prc_balance: float = 0.0
-    cash_wallet_balance: float = 0.0
+    # cash_wallet_balance removed - no cashback system
     wallet_status: str = "active"  # active, frozen
-    last_wallet_maintenance: Optional[datetime] = None
+    # last_wallet_maintenance removed - no monthly maintenance fee
     
     # KYC Status
     kyc_status: str = "pending"  # pending, verified, rejected
