@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://vigorous-brattain-1.preview.emergentagent.com",
+    "url": "https://naughty-sammet.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
