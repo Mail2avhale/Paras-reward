@@ -141,6 +141,7 @@ const StockistManagementAdmin = lazy(() => import(/* webpackChunkName: "admin" *
 // ============ STATIC PAGES ============
 const Setup = lazy(() => import("@/pages/Setup"));
 const AboutUs = lazy(() => import("@/pages/AboutUs"));
+const Disclaimer = lazy(() => import("@/pages/Disclaimer"));
 const ContactUs = lazy(() => import("@/pages/ContactUs"));
 const TermsAndConditions = lazy(() => import("@/pages/TermsAndConditions"));
 const TermsConditions = lazy(() => import("@/pages/TermsConditions"));
