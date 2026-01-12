@@ -386,7 +386,7 @@ const Referrals = ({ user }) => {
                 
                 <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20 text-center">
                   <p className="text-emerald-400 text-sm font-semibold">
-                    Maximum Bonus: +21% (All levels combined)
+                    Maximum Bonus: +20% (All levels combined)
                   </p>
                 </div>
               </div>
