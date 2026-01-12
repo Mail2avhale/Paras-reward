@@ -64,8 +64,7 @@ const ReferralEarningsHistory = lazy(() => import("@/pages/ReferralEarningsHisto
 const ProfileAdvanced = lazy(() => import("@/pages/ProfileAdvanced"));
 const ReferralDashboard = lazy(() => import("@/pages/ReferralDashboard"));
 const ReferralDashboardAI = lazy(() => import("@/pages/ReferralDashboardAI"));
-const GamificationDashboard = lazy(() => import("@/pages/GamificationDashboard"));
-// Removed: ScratchCard game (feature removed)
+// Removed: GamificationDashboard/Achievements for AdMob compliance
 const FlashSalesPage = lazy(() => import("@/pages/FlashSalesPage"));
 
 // ============ ADMIN PAGES - Code Split into separate chunk ============
