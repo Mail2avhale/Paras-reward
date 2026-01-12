@@ -103,104 +103,51 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon, path: '/admin/support' },
   ];
 
-  // Grouped menu items
+  // Grouped menu items - Simplified structure
   const menuGroups = {
+    subscriptions: {
+      label: 'Subscriptions & Payments',
+      icon: Crown,
+      subItems: [
+        { id: 'subscriptions', label: 'Subscription Management', icon: Crown, path: '/admin/subscriptions' },
+        { id: 'bill-payments', label: 'Bill Payments', icon: FileText, path: '/admin/bill-payments' },
+        { id: 'gift-vouchers', label: 'Gift Vouchers', icon: Gift, path: '/admin/gift-vouchers' },
+      ]
+    },
     finance: {
-      label: 'Finance',
+      label: 'Finance & Accounting',
       icon: DollarSign,
       subItems: [
         { id: 'accounting', label: 'Accounting Dashboard', icon: BarChart2, path: '/admin/accounting' },
-        { id: 'cash-bank-book', label: 'Cash & Bank Book', icon: Wallet, path: '/admin/cash-bank-book' },
-        { id: 'capital-management', label: 'Capital & Equity', icon: Building, path: '/admin/capital-management' },
-        { id: 'trial-balance', label: 'Trial Balance & COA', icon: Activity, path: '/admin/trial-balance' },
-        { id: 'accounts-receivable', label: 'Accounts Receivable (AR)', icon: TrendingUp, path: '/admin/accounts-receivable' },
-        { id: 'accounts-payable', label: 'Accounts Payable (AP)', icon: TrendingUp, path: '/admin/accounts-payable' },
-        { id: 'financial-ratios', label: 'Financial Ratios', icon: Activity, path: '/admin/financial-ratios' },
-        { id: 'prc-ledger', label: 'PRC Ledger (DR/CR)', icon: Activity, path: '/admin/prc-ledger' },
-        { id: 'financial-reports', label: 'Financial Reports', icon: FileText, path: '/admin/financial-reports' },
-        { id: 'profit-loss', label: 'Profit & Loss', icon: TrendingUp, path: '/admin/profit-loss' },
         { id: 'company-wallets', label: 'Company Wallets', icon: Wallet, path: '/admin/company-wallets' },
-        { id: 'user-ledger', label: 'User Ledger', icon: FileText, path: '/admin/user-ledger' },
-        { id: 'ads-income', label: 'Ads Income', icon: Smartphone, path: '/admin/ads-income' },
-        { id: 'fixed-expenses', label: 'Fixed Expenses', icon: Building, path: '/admin/fixed-expenses' },
         { id: 'prc-analytics', label: 'PRC Analytics', icon: Activity, path: '/admin/prc-analytics' },
-        { id: 'prc-economy', label: 'PRC Emergency Controls', icon: AlertOctagon, path: '/admin/prc-economy' },
+        { id: 'prc-ledger', label: 'PRC Ledger', icon: Activity, path: '/admin/prc-ledger' },
+        { id: 'profit-loss', label: 'Profit & Loss', icon: TrendingUp, path: '/admin/profit-loss' },
+        { id: 'user-ledger', label: 'User Ledger', icon: FileText, path: '/admin/user-ledger' },
         { id: 'liquidity', label: 'Liquidity', icon: DollarSign, path: '/admin/liquidity' },
-        { id: 'audit', label: 'Audit Service', icon: Shield, path: '/admin/audit' },
       ]
     },
-    security: {
-      label: '🔐 Security',
+    controls: {
+      label: 'Controls & Security',
       icon: Shield,
       subItems: [
-        { 
-          id: 'security-dashboard', 
-          label: 'Security Dashboard', 
-          icon: Shield, 
-          path: '/admin/security',
-          description: 'JWT, Rate Limiting, Sessions, Audit Logs'
-        },
+        { id: 'prc-economy', label: 'PRC Emergency Controls', icon: AlertOctagon, path: '/admin/prc-economy' },
+        { id: 'user-controls', label: 'User Controls', icon: UserCog, path: '/admin/user-controls' },
+        { id: 'security-dashboard', label: 'Security Dashboard', icon: Shield, path: '/admin/security' },
+        { id: 'fraud-alerts', label: 'Fraud Alerts', icon: AlertTriangle, path: '/admin/fraud-alerts' },
+        { id: 'burn-management', label: 'Burn Management', icon: Activity, path: '/admin/burn-management' },
       ]
     },
     settings: {
       label: 'Settings',
       icon: Settings,
       subItems: [
-        { 
-          id: 'system-settings', 
-          label: 'System Settings', 
-          icon: Cpu, 
-          path: '/admin/settings/system',
-          description: 'VIP Plans, Mining Formula, Registration Control, Service Charges'
-        },
-        { 
-          id: 'web-settings', 
-          label: 'Web Settings', 
-          icon: Globe, 
-          path: '/admin/settings/web',
-          description: 'Policy Editor, Address, Phone, Email, Logo'
-        },
-        { 
-          id: 'social-settings', 
-          label: 'Social Media', 
-          icon: Share2, 
-          path: '/admin/settings/social',
-          description: 'Social Media Links & Integrations'
-        },
-        { 
-          id: 'redeem-settings', 
-          label: 'Redeem Safety', 
-          icon: Shield, 
-          path: '/admin/settings/redeem',
-          description: 'Daily Limits, Approval Thresholds'
-        },
-      ]
-    },
-    payments: {
-      label: 'Payments',
-      icon: CreditCard,
-      subItems: [
-        { 
-          id: 'subscriptions', 
-          label: 'Subscription Management', 
-          icon: Crown, 
-          path: '/admin/subscriptions',
-          description: 'Manage Plans, Payments, Pricing & Verification'
-        },
-        { 
-          id: 'bill-payments', 
-          label: 'Bill Payments', 
-          icon: FileText, 
-          path: '/admin/bill-payments',
-          description: 'Recharge & Bill Payment Requests'
-        },
-        { 
-          id: 'gift-vouchers', 
-          label: 'Gift Vouchers', 
-          icon: Gift, 
-          path: '/admin/gift-vouchers',
-          description: 'PhonePe Gift Voucher Requests'
-        },
+        { id: 'system-settings', label: 'System Settings', icon: Cpu, path: '/admin/settings/system' },
+        { id: 'web-settings', label: 'Web Settings', icon: Globe, path: '/admin/settings/web' },
+        { id: 'social-settings', label: 'Social Media', icon: Share2, path: '/admin/settings/social' },
+        { id: 'redeem-settings', label: 'Redeem Safety', icon: Shield, path: '/admin/settings/redeem' },
+        { id: 'video-ads', label: 'Video Ads', icon: Video, path: '/admin/video-ads' },
+        { id: 'prc-rain', label: 'PRC Rain Drop', icon: CloudRain, path: '/admin/prc-rain' },
       ]
     }
   };
