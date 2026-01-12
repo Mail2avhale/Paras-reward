@@ -1668,23 +1668,34 @@ async def get_delivery_charge(user, total_prc: float):
 
 async def calculate_mining_rate(uid: str):
     """
-    Calculate mining rate per minute with multi-level referral bonuses
+    Calculate mining rate per minute with subscription multiplier and multi-level referral bonuses
     
-    Formula:
+    NEW FORMULA:
     - Base Rate: 50 (decreases by 1 per 200 users, min 20)
     - Daily Multiplier: Current day of month
-    - Referral Bonuses (5 levels):
-      * Level 1: +10% per active referral
-      * Level 2: +5% per active referral
-      * Level 3: +2.5% per active referral
-      * Level 4: +1.5% per active referral
-      * Level 5: +1.0% per active referral
+    - Subscription Multiplier: Explorer=1.0x, Startup=1.5x, Growth=2.0x, Elite=3.0x
+    - Referral Bonuses (5 levels) with Referral Subscription Weight:
+      * Level 1: +10% × referral_weight per active referral
+      * Level 2: +5% × referral_weight per active referral
+      * Level 3: +2.5% × referral_weight per active referral
+      * Level 4: +1.5% × referral_weight per active referral
+      * Level 5: +1.0% × referral_weight per active referral
+    
+    Daily_Reward = Day × ((BR × User_Multiplier) + Referral_Bonus)
     """
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        return 0, 0, 0, {}
+    
     base_rate = await get_base_rate()
     current_date = datetime.now(timezone.utc).day
     
-    # Get multi-level active referrals
-    active_referrals_by_level = await count_active_referrals_by_level(uid)
+    # Get user's subscription info
+    sub_info = await get_user_subscription_info(user)
+    user_multiplier = sub_info["multiplier"]
+    
+    # Get multi-level active referrals with their subscription weights
+    active_referrals_by_level = await count_active_referrals_by_level_with_weights(uid)
     
     # Get referral bonus settings from database (or use defaults)
     settings = await db.settings.find_one({}, {"_id": 0, "referral_bonus_settings": 1})
@@ -1709,25 +1720,31 @@ async def calculate_mining_rate(uid: str):
     total_referral_bonus = 0
     referral_breakdown = {}
     
-    for level, count in active_referrals_by_level.items():
+    for level, level_data in active_referrals_by_level.items():
+        count = level_data.get('count', 0)
+        weighted_count = level_data.get('weighted_count', count)  # Sum of referral weights
+        
         if count > 0:
             bonus_percentage = referral_bonus_percentages.get(level, 0)
-            level_bonus = count * bonus_percentage * base_rate
+            # Use weighted count for bonus calculation
+            level_bonus = weighted_count * bonus_percentage * base_rate
             total_referral_bonus += level_bonus
             referral_breakdown[level] = {
                 'count': count,
+                'weighted_count': weighted_count,
                 'percentage': bonus_percentage * 100,
                 'bonus': level_bonus
             }
     
-    # Total daily rate = current_date × (base_rate + referral_bonus)
-    # This ensures referral bonuses also benefit from the daily multiplier
-    effective_base_rate = base_rate + total_referral_bonus
+    # NEW FORMULA: Daily_Reward = Day × ((BR × User_Multiplier) + Referral_Bonus)
+    effective_base_rate = (base_rate * user_multiplier) + total_referral_bonus
     total_rate = current_date * effective_base_rate
     
     # Per minute rate
     per_minute_rate = total_rate / 1440
     
+    # Total active referrals across all levels
+    total_active_referrals = sum(ld.get('count', 0) for ld in active_referrals_by_level.values())
     # Total active referrals across all levels
     total_active_referrals = sum(active_referrals_by_level.values())
     
