@@ -341,7 +341,7 @@ const AdminBillPayments = ({ user }) => {
                     <textarea
                       value={adminNotes}
                       onChange={(e) => setAdminNotes(e.target.value)}
-                      className="w-full border rounded p-2 text-sm"
+                      className="w-full border border-gray-700 rounded bg-gray-800 text-white p-2 text-sm"
                       rows={3}
                       placeholder="Add notes (optional)..."
                     />
