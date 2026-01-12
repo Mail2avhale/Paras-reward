@@ -8,23 +8,23 @@ const AboutUs = () => {
   const features = [
     {
       icon: Award,
-      title: 'Rewarding User Time',
-      description: 'We believe your time is valuable. Earn rewards simply by being active on our platform daily.'
+      title: 'Rewarding Engagement',
+      description: 'We value your time. Earn virtual reward points through daily activities, games, and platform interactions.'
     },
     {
       icon: TrendingUp,
-      title: 'Passive Earnings',
-      description: 'Enable passive earnings without any investment. Start earning from day one, absolutely free.'
+      title: 'Digital Rewards',
+      description: 'Earn promotional reward points through engagement. No investment required - completely free to join and participate.'
     },
     {
       icon: Users,
-      title: 'UPI Withdrawals',
-      description: 'VIP users can withdraw their earnings directly to their bank accounts via UPI within 48-72 hours.'
+      title: 'Reward Redemption',
+      description: 'Paid plan users can redeem their reward points for mobile recharges, bill payments, and in-app shopping.'
     },
     {
       icon: Heart,
-      title: 'Trusted Ecosystem',
-      description: 'Building a trusted digital earning ecosystem in India with transparency and reliability.'
+      title: 'Trusted Platform',
+      description: 'Building a trusted digital engagement ecosystem with transparency, security, and reliability.'
     }
   ];
 
