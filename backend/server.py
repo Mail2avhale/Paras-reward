@@ -4009,6 +4009,151 @@ async def get_multi_level_referral_stats(uid: str):
         "generated_at": now.isoformat()
     }
 
+# ========== SUBSCRIPTION MANAGEMENT ROUTES ==========
+
+@api_router.get("/subscription/plans")
+async def get_subscription_plans():
+    """Get all subscription plans with pricing"""
+    pricing = await get_subscription_pricing()
+    
+    plans = []
+    for plan_id, config in SUBSCRIPTION_PLANS.items():
+        if config["is_free"]:
+            plans.append({
+                "id": plan_id,
+                "name": config["name"],
+                "multiplier": config["multiplier"],
+                "referral_weight": config["referral_weight"],
+                "tap_limit": config["tap_limit"],
+                "can_redeem": config["can_redeem"],
+                "is_free": True,
+                "pricing": None
+            })
+        else:
+            plan_pricing = pricing.get(plan_id, {})
+            plans.append({
+                "id": plan_id,
+                "name": config["name"],
+                "multiplier": config["multiplier"],
+                "referral_weight": config["referral_weight"],
+                "tap_limit": config["tap_limit"],
+                "can_redeem": config["can_redeem"],
+                "is_free": False,
+                "pricing": {
+                    "monthly": plan_pricing.get("monthly", config["default_price"]),
+                    "quarterly": plan_pricing.get("quarterly", config["default_price"] * 3),
+                    "half_yearly": plan_pricing.get("half_yearly", config["default_price"] * 5),
+                    "yearly": plan_pricing.get("yearly", config["default_price"] * 10)
+                }
+            })
+    
+    return {"plans": plans, "durations": SUBSCRIPTION_DURATIONS}
+
+@api_router.get("/subscription/user/{uid}")
+async def get_user_subscription(uid: str):
+    """Get user's current subscription status"""
+    user = await db.users.find_one({"uid": uid}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    sub_info = await get_user_subscription_info(user)
+    
+    return {
+        "user_id": uid,
+        "subscription": sub_info,
+        "benefits": {
+            "mining_multiplier": f"{sub_info['multiplier']}x",
+            "referral_weight": f"{sub_info['referral_weight']}x",
+            "daily_tap_limit": sub_info["tap_limit"],
+            "can_redeem": sub_info["can_redeem"]
+        }
+    }
+
+@api_router.post("/subscription/payment/{uid}")
+async def submit_subscription_payment(uid: str, request: Request):
+    """Submit subscription payment for verification"""
+    data = await request.json()
+    
+    plan = data.get("plan")  # startup, growth, elite
+    duration = data.get("duration")  # monthly, quarterly, half_yearly, yearly
+    amount = data.get("amount")
+    utr_number = data.get("utr_number")
+    screenshot = data.get("screenshot_base64")
+    payment_date = data.get("date")
+    payment_time = data.get("time")
+    
+    if plan not in ["startup", "growth", "elite"]:
+        raise HTTPException(status_code=400, detail="Invalid plan")
+    
+    if duration not in SUBSCRIPTION_DURATIONS:
+        raise HTTPException(status_code=400, detail="Invalid duration")
+    
+    now = datetime.now(timezone.utc)
+    payment_id = str(uuid.uuid4())
+    
+    payment_doc = {
+        "payment_id": payment_id,
+        "user_id": uid,
+        "subscription_plan": plan,
+        "plan_type": duration,
+        "amount": amount,
+        "utr_number": utr_number,
+        "screenshot_url": screenshot,
+        "date": payment_date,
+        "time": payment_time,
+        "status": "pending",
+        "submitted_at": now.isoformat(),
+        "created_at": now.isoformat()
+    }
+    
+    await db.vip_payments.insert_one(payment_doc)
+    
+    return {
+        "success": True,
+        "payment_id": payment_id,
+        "message": "Payment submitted for verification"
+    }
+
+@api_router.post("/admin/subscription/pricing")
+async def update_subscription_pricing(request: Request):
+    """Admin: Update subscription pricing"""
+    data = await request.json()
+    
+    pricing = {
+        "startup": {
+            "monthly": float(data.get("startup", {}).get("monthly", 299)),
+            "quarterly": float(data.get("startup", {}).get("quarterly", 897)),
+            "half_yearly": float(data.get("startup", {}).get("half_yearly", 1495)),
+            "yearly": float(data.get("startup", {}).get("yearly", 2990))
+        },
+        "growth": {
+            "monthly": float(data.get("growth", {}).get("monthly", 549)),
+            "quarterly": float(data.get("growth", {}).get("quarterly", 1647)),
+            "half_yearly": float(data.get("growth", {}).get("half_yearly", 2745)),
+            "yearly": float(data.get("growth", {}).get("yearly", 5490))
+        },
+        "elite": {
+            "monthly": float(data.get("elite", {}).get("monthly", 799)),
+            "quarterly": float(data.get("elite", {}).get("quarterly", 2397)),
+            "half_yearly": float(data.get("elite", {}).get("half_yearly", 3995)),
+            "yearly": float(data.get("elite", {}).get("yearly", 7990))
+        }
+    }
+    
+    await db.settings.update_one(
+        {},
+        {"$set": {"subscription_pricing": pricing}},
+        upsert=True
+    )
+    
+    return {"success": True, "pricing": pricing}
+
+@api_router.get("/admin/subscription/pricing")
+async def get_admin_subscription_pricing():
+    """Admin: Get current subscription pricing"""
+    pricing = await get_subscription_pricing()
+    return {"pricing": pricing}
+
 # ========== VIP MEMBERSHIP ROUTES ==========
 @api_router.post("/membership/payment/{uid}", response_model=VIPPayment)
 async def submit_vip_payment(uid: str, payment: VIPPaymentCreate):
