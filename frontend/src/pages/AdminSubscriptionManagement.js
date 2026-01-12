@@ -1,0 +1,725 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { toast } from 'sonner';
+import { Card } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import {
+  Crown, CheckCircle, XCircle, Clock, Eye, RefreshCw, Settings,
+  Users, TrendingUp, Zap, Rocket, Award, DollarSign, Calendar,
+  Search, Filter, ChevronDown, AlertCircle, Bell, ArrowUpRight,
+  ArrowDownRight, Edit2, Save, X
+} from 'lucide-react';
+
+const API = process.env.REACT_APP_BACKEND_URL;
+
+const AdminSubscriptionManagement = ({ user }) => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+  
+  // Stats
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    explorer: 0,
+    startup: 0,
+    growth: 0,
+    elite: 0,
+    pendingPayments: 0,
+    monthlyRevenue: 0,
+    expiringThisWeek: 0
+  });
+  
+  // Payments
+  const [payments, setPayments] = useState([]);
+  const [paymentFilter, setPaymentFilter] = useState('pending');
+  
+  // Pricing
+  const [pricing, setPricing] = useState({});
+  const [editingPricing, setEditingPricing] = useState(false);
+  const [pricingForm, setPricingForm] = useState({});
+  
+  // Users list
+  const [users, setUsers] = useState([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [userPlanFilter, setUserPlanFilter] = useState('all');
+  
+  // Selected payment for action
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [actionNotes, setActionNotes] = useState('');
+  const [processing, setProcessing] = useState(false);
+
+  const planIcons = {
+    explorer: Users,
+    startup: Rocket,
+    growth: TrendingUp,
+    elite: Crown
+  };
+
+  const planColors = {
+    explorer: 'bg-gray-500',
+    startup: 'bg-blue-500',
+    growth: 'bg-emerald-500',
+    elite: 'bg-amber-500'
+  };
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin') {
+      navigate('/dashboard');
+      return;
+    }
+    fetchAllData();
+  }, [user, navigate]);
+
+  const fetchAllData = async () => {
+    setLoading(true);
+    await Promise.all([
+      fetchStats(),
+      fetchPayments(),
+      fetchPricing(),
+      fetchUsers()
+    ]);
+    setLoading(false);
+  };
+
+  const fetchStats = async () => {
+    try {
+      // Get user counts by subscription plan
+      const usersRes = await axios.get(`${API}/api/admin/users?limit=1000`);
+      const allUsers = usersRes.data.users || usersRes.data || [];
+      
+      const planCounts = {
+        explorer: 0,
+        startup: 0,
+        growth: 0,
+        elite: 0
+      };
+      
+      allUsers.forEach(u => {
+        const plan = u.subscription_plan || 'explorer';
+        if (planCounts[plan] !== undefined) {
+          planCounts[plan]++;
+        } else {
+          planCounts.explorer++;
+        }
+      });
+      
+      // Get pending payments count
+      const pendingRes = await axios.get(`${API}/api/admin/vip-payments?status=pending`);
+      const pendingCount = Array.isArray(pendingRes.data) ? pendingRes.data.length : pendingRes.data.total || 0;
+      
+      setStats({
+        totalUsers: allUsers.length,
+        ...planCounts,
+        pendingPayments: pendingCount,
+        monthlyRevenue: (planCounts.startup * 299) + (planCounts.growth * 549) + (planCounts.elite * 799),
+        expiringThisWeek: 0 // TODO: Calculate from subscription_expiry
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
+  const fetchPayments = async () => {
+    try {
+      const response = await axios.get(`${API}/api/admin/vip-payments?status=${paymentFilter}`);
+      setPayments(Array.isArray(response.data) ? response.data : response.data.payments || []);
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+    }
+  };
+
+  const fetchPricing = async () => {
+    try {
+      const response = await axios.get(`${API}/api/admin/subscription/pricing`);
+      setPricing(response.data.pricing || {});
+      setPricingForm(response.data.pricing || {});
+    } catch (error) {
+      console.error('Error fetching pricing:', error);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get(`${API}/api/admin/users?limit=100`);
+      setUsers(response.data.users || response.data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  const handleApprovePayment = async (payment) => {
+    try {
+      setProcessing(true);
+      await axios.post(`${API}/api/admin/vip-payments/${payment.payment_id}/approve`, {
+        notes: actionNotes
+      });
+      toast.success('Payment approved! User subscription activated.');
+      setSelectedPayment(null);
+      setActionNotes('');
+      fetchPayments();
+      fetchStats();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to approve payment');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleRejectPayment = async (payment) => {
+    try {
+      setProcessing(true);
+      await axios.post(`${API}/api/admin/vip-payments/${payment.payment_id}/reject`, {
+        notes: actionNotes
+      });
+      toast.success('Payment rejected');
+      setSelectedPayment(null);
+      setActionNotes('');
+      fetchPayments();
+      fetchStats();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to reject payment');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleSavePricing = async () => {
+    try {
+      setProcessing(true);
+      await axios.post(`${API}/api/admin/subscription/pricing`, pricingForm);
+      toast.success('Pricing updated successfully!');
+      setPricing(pricingForm);
+      setEditingPricing(false);
+    } catch (error) {
+      toast.error('Failed to update pricing');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleRunBurnJob = async () => {
+    try {
+      setProcessing(true);
+      const response = await axios.post(`${API}/api/admin/run-explorer-burn`);
+      const result = response.data.result || {};
+      toast.success(`Burn job complete: ${result.users_affected || 0} users, ${result.total_burned || 0} PRC burned`);
+    } catch (error) {
+      toast.error('Failed to run burn job');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = !userSearch || 
+      u.email?.toLowerCase().includes(userSearch.toLowerCase()) ||
+      u.name?.toLowerCase().includes(userSearch.toLowerCase());
+    const matchesPlan = userPlanFilter === 'all' || (u.subscription_plan || 'explorer') === userPlanFilter;
+    return matchesSearch && matchesPlan;
+  });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Subscription Management</h1>
+          <p className="text-gray-400">Manage subscription plans, payments, and pricing</p>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleRunBurnJob}
+            disabled={processing}
+            className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+          >
+            <Zap className="w-4 h-4 mr-2" />
+            Run Explorer Burn
+          </Button>
+          <Button onClick={fetchAllData} variant="outline">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <Card className="p-4 bg-gray-900 border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
+              <Users className="w-5 h-5 text-gray-400" />
+            </div>
+            <div>
+              <p className="text-gray-400 text-xs">Explorer</p>
+              <p className="text-xl font-bold text-white">{stats.explorer}</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4 bg-gray-900 border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+              <Rocket className="w-5 h-5 text-blue-500" />
+            </div>
+            <div>
+              <p className="text-gray-400 text-xs">Startup</p>
+              <p className="text-xl font-bold text-white">{stats.startup}</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4 bg-gray-900 border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-gray-400 text-xs">Growth</p>
+              <p className="text-xl font-bold text-white">{stats.growth}</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4 bg-gray-900 border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center">
+              <Crown className="w-5 h-5 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-gray-400 text-xs">Elite</p>
+              <p className="text-xl font-bold text-white">{stats.elite}</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4 bg-gray-900 border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
+              <Clock className="w-5 h-5 text-orange-500" />
+            </div>
+            <div>
+              <p className="text-gray-400 text-xs">Pending</p>
+              <p className="text-xl font-bold text-white">{stats.pendingPayments}</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4 bg-gray-900 border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+              <DollarSign className="w-5 h-5 text-green-500" />
+            </div>
+            <div>
+              <p className="text-gray-400 text-xs">Est. Monthly</p>
+              <p className="text-xl font-bold text-white">₹{stats.monthlyRevenue.toLocaleString()}</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-gray-800 pb-2">
+        {['overview', 'payments', 'pricing', 'users'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              activeTab === tab
+                ? 'bg-amber-500 text-black'
+                : 'text-gray-400 hover:text-white hover:bg-gray-800'
+            }`}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'overview' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent Payments */}
+          <Card className="p-6 bg-gray-900 border-gray-800">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Recent Payments</h3>
+              <button onClick={() => setActiveTab('payments')} className="text-amber-500 text-sm hover:underline">
+                View All →
+              </button>
+            </div>
+            <div className="space-y-3">
+              {payments.slice(0, 5).map((payment, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      payment.status === 'approved' ? 'bg-green-500/20' :
+                      payment.status === 'rejected' ? 'bg-red-500/20' : 'bg-orange-500/20'
+                    }`}>
+                      {payment.status === 'approved' ? <CheckCircle className="w-4 h-4 text-green-500" /> :
+                       payment.status === 'rejected' ? <XCircle className="w-4 h-4 text-red-500" /> :
+                       <Clock className="w-4 h-4 text-orange-500" />}
+                    </div>
+                    <div>
+                      <p className="text-white text-sm">{payment.user_id?.slice(0, 8)}...</p>
+                      <p className="text-gray-500 text-xs">{payment.subscription_plan || payment.plan_type || 'VIP'}</p>
+                    </div>
+                  </div>
+                  <p className="text-amber-500 font-semibold">₹{payment.amount}</p>
+                </div>
+              ))}
+              {payments.length === 0 && (
+                <p className="text-gray-500 text-center py-4">No payments found</p>
+              )}
+            </div>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card className="p-6 bg-gray-900 border-gray-800">
+            <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
+            <div className="space-y-3">
+              <button
+                onClick={() => setActiveTab('pricing')}
+                className="w-full p-4 bg-gray-800/50 rounded-lg flex items-center gap-3 hover:bg-gray-700/50 transition-all"
+              >
+                <Settings className="w-5 h-5 text-amber-500" />
+                <div className="text-left">
+                  <p className="text-white font-medium">Configure Pricing</p>
+                  <p className="text-gray-500 text-sm">Update subscription plan prices</p>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('payments')}
+                className="w-full p-4 bg-gray-800/50 rounded-lg flex items-center gap-3 hover:bg-gray-700/50 transition-all"
+              >
+                <CheckCircle className="w-5 h-5 text-green-500" />
+                <div className="text-left">
+                  <p className="text-white font-medium">Verify Payments</p>
+                  <p className="text-gray-500 text-sm">{stats.pendingPayments} pending approvals</p>
+                </div>
+              </button>
+              <button
+                onClick={handleRunBurnJob}
+                disabled={processing}
+                className="w-full p-4 bg-gray-800/50 rounded-lg flex items-center gap-3 hover:bg-gray-700/50 transition-all"
+              >
+                <Zap className="w-5 h-5 text-red-500" />
+                <div className="text-left">
+                  <p className="text-white font-medium">Run Explorer Burn Job</p>
+                  <p className="text-gray-500 text-sm">Burn inactive explorer PRC (2+ days)</p>
+                </div>
+              </button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {activeTab === 'payments' && (
+        <Card className="p-6 bg-gray-900 border-gray-800">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">Payment Verification</h3>
+            <div className="flex gap-2">
+              {['pending', 'approved', 'rejected'].map(status => (
+                <button
+                  key={status}
+                  onClick={() => { setPaymentFilter(status); fetchPayments(); }}
+                  className={`px-3 py-1 rounded-full text-sm ${
+                    paymentFilter === status
+                      ? 'bg-amber-500 text-black'
+                      : 'bg-gray-800 text-gray-400'
+                  }`}
+                >
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-3">
+            {payments.map((payment, idx) => (
+              <div key={idx} className="p-4 bg-gray-800/50 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      planColors[payment.subscription_plan] || 'bg-amber-500'
+                    }/20`}>
+                      {(() => {
+                        const Icon = planIcons[payment.subscription_plan] || Crown;
+                        return <Icon className={`w-5 h-5 text-${payment.subscription_plan === 'elite' ? 'amber' : payment.subscription_plan === 'growth' ? 'emerald' : 'blue'}-500`} />;
+                      })()}
+                    </div>
+                    <div>
+                      <p className="text-white font-medium">{payment.subscription_plan?.toUpperCase() || 'VIP'} - {payment.plan_type}</p>
+                      <p className="text-gray-500 text-sm">User: {payment.user_id?.slice(0, 12)}...</p>
+                      <p className="text-gray-500 text-sm">UTR: {payment.utr_number}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-amber-500 font-bold text-lg">₹{payment.amount}</p>
+                    <p className="text-gray-500 text-xs">{new Date(payment.submitted_at || payment.created_at).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                {paymentFilter === 'pending' && (
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      onClick={() => setSelectedPayment(payment)}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Review
+                    </Button>
+                    <Button
+                      onClick={() => handleApprovePayment(payment)}
+                      disabled={processing}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Approve
+                    </Button>
+                    <Button
+                      onClick={() => handleRejectPayment(payment)}
+                      disabled={processing}
+                      variant="destructive"
+                      className="flex-1"
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Reject
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+            {payments.length === 0 && (
+              <p className="text-gray-500 text-center py-8">No {paymentFilter} payments</p>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {activeTab === 'pricing' && (
+        <Card className="p-6 bg-gray-900 border-gray-800">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-white">Subscription Pricing</h3>
+            {!editingPricing ? (
+              <Button onClick={() => setEditingPricing(true)} variant="outline">
+                <Edit2 className="w-4 h-4 mr-2" />
+                Edit Pricing
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button onClick={() => { setEditingPricing(false); setPricingForm(pricing); }} variant="outline">
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+                <Button onClick={handleSavePricing} disabled={processing} className="bg-amber-500 hover:bg-amber-600">
+                  <Save className="w-4 h-4 mr-2" />
+                  Save
+                </Button>
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {['startup', 'growth', 'elite'].map(plan => {
+              const planPricing = editingPricing ? pricingForm[plan] || {} : pricing[plan] || {};
+              return (
+                <div key={plan} className={`p-6 rounded-xl border ${
+                  plan === 'elite' ? 'bg-amber-500/10 border-amber-500/30' :
+                  plan === 'growth' ? 'bg-emerald-500/10 border-emerald-500/30' :
+                  'bg-blue-500/10 border-blue-500/30'
+                }`}>
+                  <div className="flex items-center gap-3 mb-4">
+                    {(() => {
+                      const Icon = planIcons[plan];
+                      return <Icon className={`w-6 h-6 ${
+                        plan === 'elite' ? 'text-amber-500' :
+                        plan === 'growth' ? 'text-emerald-500' : 'text-blue-500'
+                      }`} />;
+                    })()}
+                    <h4 className="text-white font-bold text-lg">{plan.charAt(0).toUpperCase() + plan.slice(1)}</h4>
+                  </div>
+                  <div className="space-y-3">
+                    {['monthly', 'quarterly', 'half_yearly', 'yearly'].map(duration => (
+                      <div key={duration} className="flex items-center justify-between">
+                        <span className="text-gray-400 text-sm">{duration.replace('_', ' ').charAt(0).toUpperCase() + duration.replace('_', ' ').slice(1)}</span>
+                        {editingPricing ? (
+                          <Input
+                            type="number"
+                            value={pricingForm[plan]?.[duration] || ''}
+                            onChange={(e) => setPricingForm({
+                              ...pricingForm,
+                              [plan]: { ...pricingForm[plan], [duration]: parseFloat(e.target.value) || 0 }
+                            })}
+                            className="w-24 bg-gray-800 border-gray-700 text-white text-right"
+                          />
+                        ) : (
+                          <span className="text-white font-medium">₹{planPricing[duration] || 0}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {activeTab === 'users' && (
+        <Card className="p-6 bg-gray-900 border-gray-800">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">Subscription Users</h3>
+            <div className="flex gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <Input
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Search users..."
+                  className="pl-10 bg-gray-800 border-gray-700 text-white"
+                />
+              </div>
+              <select
+                value={userPlanFilter}
+                onChange={(e) => setUserPlanFilter(e.target.value)}
+                className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+              >
+                <option value="all">All Plans</option>
+                <option value="explorer">Explorer</option>
+                <option value="startup">Startup</option>
+                <option value="growth">Growth</option>
+                <option value="elite">Elite</option>
+              </select>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-gray-400 text-sm border-b border-gray-800">
+                  <th className="text-left py-3">User</th>
+                  <th className="text-left py-3">Plan</th>
+                  <th className="text-left py-3">Expiry</th>
+                  <th className="text-left py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.slice(0, 20).map((u, idx) => {
+                  const plan = u.subscription_plan || 'explorer';
+                  const expiry = u.subscription_expiry || u.vip_expiry;
+                  const isExpired = expiry && new Date(expiry) < new Date();
+                  
+                  return (
+                    <tr key={idx} className="border-b border-gray-800/50">
+                      <td className="py-3">
+                        <p className="text-white">{u.name || u.email}</p>
+                        <p className="text-gray-500 text-xs">{u.email}</p>
+                      </td>
+                      <td className="py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          plan === 'elite' ? 'bg-amber-500/20 text-amber-400' :
+                          plan === 'growth' ? 'bg-emerald-500/20 text-emerald-400' :
+                          plan === 'startup' ? 'bg-blue-500/20 text-blue-400' :
+                          'bg-gray-500/20 text-gray-400'
+                        }`}>
+                          {plan.charAt(0).toUpperCase() + plan.slice(1)}
+                        </span>
+                      </td>
+                      <td className="py-3 text-gray-400 text-sm">
+                        {expiry ? new Date(expiry).toLocaleDateString() : 'N/A'}
+                      </td>
+                      <td className="py-3">
+                        {plan === 'explorer' ? (
+                          <span className="text-gray-500 text-sm">Free</span>
+                        ) : isExpired ? (
+                          <span className="text-red-400 text-sm">Expired</span>
+                        ) : (
+                          <span className="text-green-400 text-sm">Active</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {/* Payment Review Modal */}
+      {selectedPayment && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-lg p-6 bg-gray-900 border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Review Payment</h3>
+              <button onClick={() => setSelectedPayment(null)} className="text-gray-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-gray-500 text-sm">Plan</p>
+                  <p className="text-white">{selectedPayment.subscription_plan || 'VIP'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm">Duration</p>
+                  <p className="text-white">{selectedPayment.plan_type}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm">Amount</p>
+                  <p className="text-amber-500 font-bold">₹{selectedPayment.amount}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm">UTR Number</p>
+                  <p className="text-white">{selectedPayment.utr_number}</p>
+                </div>
+              </div>
+              {selectedPayment.screenshot_url && (
+                <div>
+                  <p className="text-gray-500 text-sm mb-2">Screenshot</p>
+                  <img 
+                    src={selectedPayment.screenshot_url} 
+                    alt="Payment Screenshot" 
+                    className="w-full rounded-lg border border-gray-700"
+                  />
+                </div>
+              )}
+              <div>
+                <p className="text-gray-500 text-sm mb-2">Notes (Optional)</p>
+                <Input
+                  value={actionNotes}
+                  onChange={(e) => setActionNotes(e.target.value)}
+                  placeholder="Add notes..."
+                  className="bg-gray-800 border-gray-700 text-white"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => handleApprovePayment(selectedPayment)}
+                  disabled={processing}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Approve
+                </Button>
+                <Button
+                  onClick={() => handleRejectPayment(selectedPayment)}
+                  disabled={processing}
+                  variant="destructive"
+                  className="flex-1"
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Reject
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AdminSubscriptionManagement;
