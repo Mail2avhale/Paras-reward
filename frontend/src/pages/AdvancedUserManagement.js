@@ -298,53 +298,53 @@ const AdvancedUserManagement = () => {
 
       {/* Users Table */}
       {loading ? (
-        <Card className="p-12 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading users...</p>
+        <Card className="p-12 text-center bg-gray-900/50 border-gray-800">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading users...</p>
         </Card>
       ) : users.length === 0 ? (
-        <Card className="p-12 text-center">
-          <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">No Users Found</h3>
-          <p className="text-gray-600">Try adjusting your filters</p>
+        <Card className="p-12 text-center bg-gray-900/50 border-gray-800">
+          <Users className="h-16 w-16 text-gray-600 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-white mb-2">No Users Found</h3>
+          <p className="text-gray-400">Try adjusting your filters</p>
         </Card>
       ) : (
         <div className="space-y-3">
           {users.map((user) => (
-            <Card key={user.uid} className="p-4 hover:shadow-md transition-shadow">
+            <Card key={user.uid} className="p-4 bg-gray-900/50 border-gray-800 hover:border-gray-700 transition-colors">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">{user.name}</h3>
+                  <div className="flex items-center gap-3 mb-2 flex-wrap">
+                    <h3 className="text-lg font-semibold text-white">{user.name}</h3>
                     <span className={`px-2 py-1 rounded text-xs font-semibold ${getRoleBadge(user.role)}`}>
                       {user.role?.replace('_', ' ').toUpperCase()}
                     </span>
                     <span className={`px-2 py-1 rounded text-xs font-semibold ${getMembershipBadge(user.membership_type)}`}>
-                      {user.membership_type?.toUpperCase()}
-                      {user.membership_type === 'vip' && user.membership_expiry && (
+                      {user.subscription_plan?.toUpperCase() || user.membership_type?.toUpperCase() || 'EXPLORER'}
+                      {(user.membership_type === 'vip' || user.subscription_plan) && user.membership_expiry && (
                         <span className="ml-1 font-normal">
                           (→ {new Date(user.membership_expiry).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })})
                         </span>
                       )}
                     </span>
                     <span className={`px-2 py-1 rounded text-xs font-semibold ${getKYCBadge(user.kyc_status)}`}>
-                      KYC: {user.kyc_status?.toUpperCase()}
+                      KYC: {(user.kyc_status || 'NOT_SUBMITTED').toUpperCase().replace('_', ' ')}
                     </span>
                     {user.is_active === false && (
-                      <span className="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-700">
+                      <span className="px-2 py-1 rounded text-xs font-semibold bg-red-500/20 text-red-400">
                         DELETED
                       </span>
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                    <div><strong>Email:</strong> {user.email}</div>
-                    <div><strong>Mobile:</strong> {user.mobile || 'N/A'}</div>
-                    <div><strong>PRC:</strong> {(user.prc_balance || 0).toFixed(2)}</div>
-                    <div><strong>Plan:</strong> {user.subscription_plan || 'Explorer'}</div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-gray-300">
+                    <div><span className="text-gray-500">Email:</span> {user.email}</div>
+                    <div><span className="text-gray-500">Mobile:</span> {user.mobile || 'N/A'}</div>
+                    <div><span className="text-gray-500">PRC:</span> <span className="text-emerald-400 font-medium">{(user.prc_balance || 0).toFixed(2)}</span></div>
+                    <div><span className="text-gray-500">Plan:</span> <span className="text-purple-400">{user.subscription_plan || 'Explorer'}</span></div>
                   </div>
                   
-                  <div className="mt-2 text-xs text-gray-500">
+                  <div className="mt-2 text-xs text-gray-600">
                     UID: {user.uid} | Created: {new Date(user.created_at).toLocaleDateString()}
                   </div>
                 </div>
@@ -355,6 +355,7 @@ const AdvancedUserManagement = () => {
                     variant="outline"
                     onClick={() => openEditModal(user)}
                     title="Edit User"
+                    className="border-gray-700 text-gray-300 hover:bg-gray-800"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -363,6 +364,7 @@ const AdvancedUserManagement = () => {
                       size="sm"
                       variant="outline"
                       onClick={() => { setSelectedUser(user); setShowPermissionsModal(true); }}
+                      className="border-gray-700 text-gray-300 hover:bg-gray-800"
                       title="Manage Permissions"
                       className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
                     >
