@@ -1905,8 +1905,6 @@ async def calculate_mining_rate(uid: str):
     
     # Total active referrals across all levels
     total_active_referrals = sum(ld.get('count', 0) for ld in active_referrals_by_level.values())
-    # Total active referrals across all levels
-    total_active_referrals = sum(active_referrals_by_level.values())
     
     return per_minute_rate, base_rate, total_active_referrals, referral_breakdown
 
