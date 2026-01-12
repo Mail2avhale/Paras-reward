@@ -8178,6 +8178,271 @@ async def get_admin_stats():
         }
     }
 
+@api_router.get("/admin/charts/user-growth")
+async def get_user_growth_chart():
+    """Get user registration data for the last 30 days"""
+    from datetime import timedelta
+    
+    end_date = datetime.now(timezone.utc)
+    start_date = end_date - timedelta(days=30)
+    
+    # Aggregate users by registration date
+    pipeline = [
+        {
+            "$match": {
+                "created_at": {
+                    "$gte": start_date.isoformat(),
+                    "$lte": end_date.isoformat()
+                }
+            }
+        },
+        {
+            "$addFields": {
+                "date_parsed": {
+                    "$dateFromString": {
+                        "dateString": "$created_at",
+                        "onError": None
+                    }
+                }
+            }
+        },
+        {
+            "$match": {"date_parsed": {"$ne": None}}
+        },
+        {
+            "$group": {
+                "_id": {
+                    "$dateToString": {"format": "%Y-%m-%d", "date": "$date_parsed"}
+                },
+                "count": {"$sum": 1}
+            }
+        },
+        {"$sort": {"_id": 1}}
+    ]
+    
+    result = await db.users.aggregate(pipeline).to_list(None)
+    
+    # Fill in missing dates with 0
+    date_counts = {item["_id"]: item["count"] for item in result}
+    chart_data = []
+    
+    for i in range(30):
+        date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
+        chart_data.append({
+            "date": date,
+            "name": (start_date + timedelta(days=i)).strftime("%d %b"),
+            "users": date_counts.get(date, 0)
+        })
+    
+    return {"data": chart_data}
+
+@api_router.get("/admin/charts/prc-circulation")
+async def get_prc_circulation_chart():
+    """Get PRC circulation trend for the last 30 days"""
+    from datetime import timedelta
+    
+    end_date = datetime.now(timezone.utc)
+    start_date = end_date - timedelta(days=30)
+    
+    # Get PRC transactions grouped by date
+    pipeline = [
+        {
+            "$match": {
+                "created_at": {
+                    "$gte": start_date.isoformat(),
+                    "$lte": end_date.isoformat()
+                },
+                "wallet_type": "prc"
+            }
+        },
+        {
+            "$addFields": {
+                "date_parsed": {
+                    "$dateFromString": {
+                        "dateString": "$created_at",
+                        "onError": None
+                    }
+                }
+            }
+        },
+        {
+            "$match": {"date_parsed": {"$ne": None}}
+        },
+        {
+            "$group": {
+                "_id": {
+                    "$dateToString": {"format": "%Y-%m-%d", "date": "$date_parsed"}
+                },
+                "earned": {
+                    "$sum": {
+                        "$cond": [{"$eq": ["$type", "credit"]}, "$amount", 0]
+                    }
+                },
+                "spent": {
+                    "$sum": {
+                        "$cond": [{"$eq": ["$type", "debit"]}, "$amount", 0]
+                    }
+                }
+            }
+        },
+        {"$sort": {"_id": 1}}
+    ]
+    
+    result = await db.transactions.aggregate(pipeline).to_list(None)
+    
+    # Fill in missing dates
+    date_data = {item["_id"]: {"earned": item["earned"], "spent": item["spent"]} for item in result}
+    chart_data = []
+    
+    for i in range(30):
+        date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
+        data = date_data.get(date, {"earned": 0, "spent": 0})
+        chart_data.append({
+            "date": date,
+            "name": (start_date + timedelta(days=i)).strftime("%d %b"),
+            "earned": round(data["earned"], 2),
+            "spent": round(data["spent"], 2)
+        })
+    
+    return {"data": chart_data}
+
+@api_router.get("/admin/charts/orders")
+async def get_orders_chart():
+    """Get orders trend for the last 30 days"""
+    from datetime import timedelta
+    
+    end_date = datetime.now(timezone.utc)
+    start_date = end_date - timedelta(days=30)
+    
+    pipeline = [
+        {
+            "$match": {
+                "created_at": {
+                    "$gte": start_date.isoformat(),
+                    "$lte": end_date.isoformat()
+                }
+            }
+        },
+        {
+            "$addFields": {
+                "date_parsed": {
+                    "$dateFromString": {
+                        "dateString": "$created_at",
+                        "onError": None
+                    }
+                }
+            }
+        },
+        {
+            "$match": {"date_parsed": {"$ne": None}}
+        },
+        {
+            "$group": {
+                "_id": {
+                    "$dateToString": {"format": "%Y-%m-%d", "date": "$date_parsed"}
+                },
+                "orders": {"$sum": 1},
+                "delivered": {
+                    "$sum": {"$cond": [{"$eq": ["$status", "delivered"]}, 1, 0]}
+                },
+                "revenue": {"$sum": "$total_prc"}
+            }
+        },
+        {"$sort": {"_id": 1}}
+    ]
+    
+    result = await db.orders.aggregate(pipeline).to_list(None)
+    
+    date_data = {item["_id"]: item for item in result}
+    chart_data = []
+    
+    for i in range(30):
+        date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
+        data = date_data.get(date, {"orders": 0, "delivered": 0, "revenue": 0})
+        chart_data.append({
+            "date": date,
+            "name": (start_date + timedelta(days=i)).strftime("%d %b"),
+            "orders": data.get("orders", 0),
+            "delivered": data.get("delivered", 0),
+            "revenue": round(data.get("revenue", 0), 2)
+        })
+    
+    return {"data": chart_data}
+
+@api_router.get("/admin/charts/subscriptions")
+async def get_subscriptions_chart():
+    """Get subscription distribution and recent purchases"""
+    from datetime import timedelta
+    
+    # Current distribution
+    explorer = await db.users.count_documents({"$or": [
+        {"subscription_plan": "explorer"},
+        {"subscription_plan": {"$exists": False}}
+    ]})
+    startup = await db.users.count_documents({"subscription_plan": "startup"})
+    growth = await db.users.count_documents({"subscription_plan": "growth"})
+    elite = await db.users.count_documents({"subscription_plan": "elite"})
+    
+    distribution = [
+        {"name": "Explorer", "value": explorer, "fill": "#6b7280"},
+        {"name": "Startup", "value": startup, "fill": "#3b82f6"},
+        {"name": "Growth", "value": growth, "fill": "#8b5cf6"},
+        {"name": "Elite", "value": elite, "fill": "#f59e0b"}
+    ]
+    
+    # Recent subscription purchases (last 7 days trend)
+    end_date = datetime.now(timezone.utc)
+    start_date = end_date - timedelta(days=7)
+    
+    pipeline = [
+        {
+            "$match": {
+                "created_at": {"$gte": start_date.isoformat()},
+                "status": "approved"
+            }
+        },
+        {
+            "$addFields": {
+                "date_parsed": {
+                    "$dateFromString": {"dateString": "$created_at", "onError": None}
+                }
+            }
+        },
+        {
+            "$match": {"date_parsed": {"$ne": None}}
+        },
+        {
+            "$group": {
+                "_id": {
+                    "$dateToString": {"format": "%Y-%m-%d", "date": "$date_parsed"}
+                },
+                "count": {"$sum": 1},
+                "revenue": {"$sum": "$amount"}
+            }
+        },
+        {"$sort": {"_id": 1}}
+    ]
+    
+    purchases = await db.subscription_payments.aggregate(pipeline).to_list(None)
+    
+    date_data = {item["_id"]: item for item in purchases}
+    trend_data = []
+    
+    for i in range(7):
+        date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
+        data = date_data.get(date, {"count": 0, "revenue": 0})
+        trend_data.append({
+            "date": date,
+            "name": (start_date + timedelta(days=i)).strftime("%a"),
+            "purchases": data.get("count", 0),
+            "revenue": data.get("revenue", 0)
+        })
+    
+    return {
+        "distribution": distribution,
+        "trend": trend_data
+    }
+
 # ========== ADMIN USER MANAGEMENT ROUTES ==========
 
 @api_router.get("/admin/check-admin-exists")
