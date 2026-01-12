@@ -4100,13 +4100,18 @@ async def approve_vip_payment(payment_id: str, request: Request):
         
         vip_expiry = (now + timedelta(days=duration_days)).isoformat()
         
-        # Update user to VIP
+        # Get subscription plan from payment (default to startup for legacy)
+        subscription_plan = payment.get("subscription_plan", "startup")
+        
+        # Update user with new subscription system
         await db.users.update_one(
             {"uid": user_id},
             {
                 "$set": {
-                    "membership_type": "vip",
-                    "vip_expiry": vip_expiry,
+                    "membership_type": "vip",  # Legacy compatibility
+                    "subscription_plan": subscription_plan,
+                    "subscription_expiry": vip_expiry,
+                    "vip_expiry": vip_expiry,  # Legacy compatibility
                     "vip_activated_at": now.isoformat()
                 }
             }
