@@ -190,7 +190,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         } ${
           active
             ? 'bg-purple-600 text-white'
-            : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+            : 'text-gray-300 hover:bg-gray-800 hover:text-white'
         }`}
         title={sidebarCollapsed ? item.label : ''}
       >
@@ -218,7 +218,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
           className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${
             groupActive
               ? 'bg-purple-900/50 text-purple-300 border-l-2 border-purple-500'
-              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+              : 'text-gray-300 hover:bg-gray-800 hover:text-white'
           }`}
           title={sidebarCollapsed ? group.label : ''}
         >
@@ -235,7 +235,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         
         {/* Sub-items */}
         {!sidebarCollapsed && isExpanded && (
-          <div className="bg-slate-950/50">
+          <div className="bg-gray-950/50">
             {filteredSubItems.map((subItem) => {
               const SubIcon = subItem.icon;
               const active = isActive(subItem.path);
@@ -246,7 +246,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
                   className={`w-full flex items-center gap-3 pl-10 pr-4 py-2.5 transition-colors ${
                     active
                       ? 'bg-purple-600 text-white'
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                   }`}
                 >
                   <SubIcon className="h-4 w-4 flex-shrink-0" />
@@ -278,7 +278,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
           className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${
             groupActive
               ? 'bg-purple-900/50 text-purple-300 border-l-2 border-purple-500'
-              : 'text-slate-300 hover:bg-slate-800'
+              : 'text-gray-300 hover:bg-gray-800'
           }`}
         >
           <div className="flex items-center gap-3">
@@ -291,7 +291,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         </button>
         
         {isExpanded && (
-          <div className="bg-slate-950/50">
+          <div className="bg-gray-950/50">
             {filteredSubItems.map((subItem) => {
               const SubIcon = subItem.icon;
               const active = isActive(subItem.path);
@@ -302,7 +302,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
                   className={`w-full flex items-center gap-3 pl-10 pr-4 py-2.5 transition-colors ${
                     active
                       ? 'bg-purple-600 text-white'
-                      : 'text-slate-400 hover:bg-slate-800'
+                      : 'text-gray-400 hover:bg-gray-800'
                   }`}
                 >
                   <SubIcon className="h-4 w-4" />
@@ -343,7 +343,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
           {filteredMenuItems.map((item) => renderMenuItem(item))}
           
           {/* Divider */}
-          <div className="my-2 mx-4 border-t border-slate-700"></div>
+          <div className="my-2 mx-4 border-t border-gray-800"></div>
           
           {/* Subscriptions & Payments Group */}
           {renderMenuGroup('subscriptions')}
@@ -361,7 +361,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         {/* Collapse Toggle */}
         <button
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="p-4 border-t border-slate-700 flex items-center justify-center hover:bg-slate-800"
+          className="p-4 border-t border-gray-800 flex items-center justify-center hover:bg-gray-800"
         >
           {sidebarCollapsed ? (
             <ChevronRight className="h-5 w-5" />
@@ -371,17 +371,17 @@ const AdminLayout = ({ children, user, onLogout }) => {
         </button>
 
         {/* User & Logout */}
-        <div className="p-4 border-t border-slate-700">
+        <div className="p-4 border-t border-gray-800">
           {!sidebarCollapsed && (
             <div className="mb-3">
               <p className="text-sm font-medium truncate">{user?.name || 'Admin'}</p>
-              <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+              <p className="text-xs text-gray-400 truncate">{user?.email}</p>
             </div>
           )}
           <div className="flex gap-2">
             <button
               onClick={() => navigate('/dashboard')}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm"
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm"
               title="Switch to User View"
             >
               <Zap className="h-4 w-4" />
@@ -402,17 +402,17 @@ const AdminLayout = ({ children, user, onLogout }) => {
       {mobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-slate-900 text-white overflow-y-auto">
+          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-gray-900 text-white overflow-y-auto">
             {/* Mobile Header */}
-            <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+            <div className="p-4 border-b border-gray-800 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <img src={LOGO_URL} alt="Logo" className="h-10 w-10 rounded-xl" />
                 <div>
                   <h1 className="font-bold">PARAS REWARD</h1>
-                  <p className="text-xs text-slate-400">Admin Panel</p>
+                  <p className="text-xs text-gray-400">Admin Panel</p>
                 </div>
               </div>
-              <button onClick={() => setMobileMenuOpen(false)} className="p-2 hover:bg-slate-800 rounded-lg">
+              <button onClick={() => setMobileMenuOpen(false)} className="p-2 hover:bg-gray-800 rounded-lg">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -430,7 +430,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
                     className={`w-full flex items-center gap-3 px-4 py-3 transition-colors ${
                       active
                         ? 'bg-purple-600 text-white'
-                        : 'text-slate-300 hover:bg-slate-800'
+                        : 'text-gray-300 hover:bg-gray-800'
                     }`}
                   >
                     <Icon className="h-5 w-5" />
@@ -440,7 +440,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
               })}
               
               {/* Divider */}
-              <div className="my-2 mx-4 border-t border-slate-700"></div>
+              <div className="my-2 mx-4 border-t border-gray-800"></div>
               
               {/* Subscriptions & Payments Group */}
               {renderMobileMenuGroup('subscriptions')}
@@ -456,15 +456,15 @@ const AdminLayout = ({ children, user, onLogout }) => {
             </nav>
 
             {/* Mobile User & Logout */}
-            <div className="p-4 border-t border-slate-700">
+            <div className="p-4 border-t border-gray-800">
               <div className="mb-3">
                 <p className="text-sm font-medium">{user?.name || 'Admin'}</p>
-                <p className="text-xs text-slate-400">{user?.email}</p>
+                <p className="text-xs text-gray-400">{user?.email}</p>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => { navigate('/dashboard'); setMobileMenuOpen(false); }}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm"
                 >
                   <Zap className="h-4 w-4" />
                   <span>User View</span>
