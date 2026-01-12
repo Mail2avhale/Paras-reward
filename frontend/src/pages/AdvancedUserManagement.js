@@ -181,29 +181,30 @@ const AdvancedUserManagement = () => {
 
   const getKYCBadge = (status) => {
     const colors = {
-      verified: 'bg-green-100 text-green-700',
-      pending: 'bg-yellow-100 text-yellow-700',
-      rejected: 'bg-red-100 text-red-700'
+      verified: 'bg-green-500/20 text-green-400',
+      pending: 'bg-yellow-500/20 text-yellow-400',
+      rejected: 'bg-red-500/20 text-red-400',
+      not_submitted: 'bg-gray-500/20 text-gray-400'
     };
-    return colors[status] || colors.pending;
+    return colors[status?.toLowerCase()] || colors.pending;
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Advanced User Management</h2>
-          <p className="text-gray-600">Manage all users, roles, and balances</p>
+          <h2 className="text-2xl font-bold text-white">Advanced User Management</h2>
+          <p className="text-gray-400">Manage all users, roles, and balances</p>
         </div>
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
+      <Card className="p-4 bg-gray-900/50 border-gray-800">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Search</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
               <Input
                 type="text"
                 placeholder="Name, email, mobile, UID..."
@@ -212,15 +213,15 @@ const AdvancedUserManagement = () => {
                   setSearchTerm(e.target.value);
                   setPage(1);
                 }}
-                className="pl-10"
+                className="pl-10 bg-gray-800 border-gray-700 text-white placeholder-gray-500"
               />
             </div>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Role</label>
             <select
-              className="w-full border rounded p-2"
+              className="w-full border border-gray-700 rounded p-2 bg-gray-800 text-white"
               value={filterRole}
               onChange={(e) => {
                 setFilterRole(e.target.value);
