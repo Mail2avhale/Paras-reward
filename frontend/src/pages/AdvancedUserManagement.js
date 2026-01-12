@@ -337,7 +337,7 @@ const AdvancedUserManagement = () => {
                     <div><strong>Email:</strong> {user.email}</div>
                     <div><strong>Mobile:</strong> {user.mobile || 'N/A'}</div>
                     <div><strong>PRC:</strong> {(user.prc_balance || 0).toFixed(2)}</div>
-                    <div><strong>Cashback:</strong> ₹{(user.cashback_wallet_balance || 0).toFixed(2)}</div>
+                    <div><strong>Plan:</strong> {user.subscription_plan || 'Explorer'}</div>
                   </div>
                   
                   <div className="mt-2 text-xs text-gray-500">
