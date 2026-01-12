@@ -685,13 +685,14 @@ const AdvancedUserManagement = () => {
                   value={balanceForm.amount}
                   onChange={(e) => setBalanceForm({...balanceForm, amount: e.target.value})}
                   placeholder="Enter amount"
+                  className="bg-gray-800 border-gray-700 text-white"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Notes (Optional)</label>
                 <textarea
-                  className="w-full border rounded p-2"
+                  className="w-full border border-gray-700 rounded p-2 bg-gray-800 text-white placeholder-gray-500"
                   rows="3"
                   value={balanceForm.notes}
                   onChange={(e) => setBalanceForm({...balanceForm, notes: e.target.value})}
@@ -704,14 +705,14 @@ const AdvancedUserManagement = () => {
                   type="button"
                   onClick={() => setShowBalanceModal(false)}
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-800"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
                   {loading ? 'Adjusting...' : 'Adjust Balance'}
                 </Button>
@@ -723,8 +724,8 @@ const AdvancedUserManagement = () => {
 
       {/* Manager Permissions Modal */}
       {showPermissionsModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 bg-gray-900 border-gray-800">
             <ManagerPermissions
               userId={selectedUser.uid}
               userName={selectedUser.name || selectedUser.email}
