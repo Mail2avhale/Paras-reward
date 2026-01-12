@@ -8100,9 +8100,17 @@ async def get_admin_stats():
             "vip": vip_users,
             "free": free_users,
             "managers": managers,
-            "master_stockists": master_stockists,
-            "sub_stockists": sub_stockists,
-            "outlets": outlets
+            "new_today": new_users_today
+        },
+        "subscription_stats": {
+            "explorer": explorer_users,
+            "startup": startup_users,
+            "growth": growth_users,
+            "elite": elite_users
+        },
+        "subscription_payments": {
+            "pending": pending_subscription_payments,
+            "approved": approved_subscription_payments
         },
         "orders": {
             "total": total_orders,
