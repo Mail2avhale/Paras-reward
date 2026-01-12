@@ -193,7 +193,8 @@ class TestSubscriptionPayment:
             params={"identifier": ADMIN_EMAIL, "password": ADMIN_PASSWORD}
         )
         if response.status_code == 200:
-            return response.json().get("user", {}).get("uid")
+            data = response.json()
+            return data.get("uid")
         return None
     
     def test_submit_payment_success(self, admin_uid):
