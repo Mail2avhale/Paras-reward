@@ -442,14 +442,17 @@ const AdminLayout = ({ children, user, onLogout }) => {
               {/* Divider */}
               <div className="my-2 mx-4 border-t border-slate-700"></div>
               
+              {/* Subscriptions & Payments Group */}
+              {renderMobileMenuGroup('subscriptions')}
+              
               {/* Finance Group */}
               {renderMobileMenuGroup('finance')}
               
+              {/* Controls & Security Group */}
+              {renderMobileMenuGroup('controls')}
+              
               {/* Settings Group */}
               {renderMobileMenuGroup('settings')}
-              
-              {/* Payments Group */}
-              {renderMobileMenuGroup('payments')}
             </nav>
 
             {/* Mobile User & Logout */}
