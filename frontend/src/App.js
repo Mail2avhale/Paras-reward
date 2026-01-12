@@ -216,7 +216,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/marketplace" element={user ? <MarketplaceEnhanced user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/flash-sales" element={user ? <FlashSalesPage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/orders" element={user ? <Orders user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-            <Route path="/vip" element={user ? <VIPMembership user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/vip" element={<Navigate to="/subscription" replace />} /> {/* Legacy VIP route redirects to new subscription system */}
             <Route path="/subscription" element={user ? <SubscriptionPlans user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/kyc" element={user ? <KYCVerification user={user} /> : <Navigate to="/login" />} />
             {/* Removed: Wallet/Withdrawal functionality */}
@@ -259,19 +259,19 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/financial-ratios" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminFinancialRatios user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/prc-economy" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><PRCEmergencyControls user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/user-controls" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminUserControls user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/vip-plans" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminVIPPlans user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/vip-plans" element={<Navigate to="/admin/subscriptions" replace />} /> {/* Legacy route redirect */}
             <Route path="/admin/burn-management" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminBurnDashboard user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/bill-payments" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminBillPayments user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/gift-vouchers" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminGiftVouchers user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/service-charges" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminServiceCharges user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/policies" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminPolicies user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/kyc" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminKYC user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/payments" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminVIPPlans user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/payments" element={<Navigate to="/admin/subscriptions" replace />} /> {/* Legacy route redirect */}
             <Route path="/admin/orders" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminOrders user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/marketplace" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminMarketplace user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/stockists" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><StockistManagementAdmin user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/support" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSupport user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/vip-verification" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminVIPPaymentVerification user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/vip-verification" element={<Navigate to="/admin/subscriptions" replace />} /> {/* Legacy route redirect */}
             <Route path="/admin/subscriptions" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSubscriptionManagement user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/bill-payments" element={user ? <BillPayments user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/gift-vouchers" element={user ? <GiftVoucherRedemption user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
