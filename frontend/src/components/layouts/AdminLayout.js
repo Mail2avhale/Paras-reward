@@ -100,9 +100,9 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'kyc', label: 'KYC Verification', icon: FileText, path: '/admin/kyc' },
     { id: 'orders', label: 'Orders', icon: ShoppingCart, path: '/admin/orders' },
     { id: 'marketplace', label: 'Marketplace', icon: Store, path: '/admin/marketplace' },
+    { id: 'delivery-partners', label: 'Delivery Partners', icon: Truck, path: '/admin/delivery-partners' },
     { id: 'video-ads', label: 'Video Ads', icon: Video, path: '/admin/video-ads' },
     { id: 'prc-rain', label: 'PRC Rain Drop', icon: CloudRain, path: '/admin/prc-rain' },
-    // Stockist Management removed - using direct delivery partner model
     { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon, path: '/admin/support' },
     { id: 'fraud-alerts', label: 'Fraud Alerts', icon: AlertTriangle, path: '/admin/fraud-alerts' },
   ];
