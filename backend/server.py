@@ -7913,8 +7913,26 @@ async def get_admin_stats():
     """Get comprehensive admin dashboard KPIs"""
     # User Statistics
     total_users = await db.users.count_documents({})
-    vip_users = await db.users.count_documents({"membership_type": "vip"})
-    free_users = await db.users.count_documents({"membership_type": {"$ne": "vip"}})
+    
+    # NEW: Subscription Statistics (4-tier system)
+    explorer_users = await db.users.count_documents({"$or": [
+        {"subscription_plan": "explorer"},
+        {"subscription_plan": {"$exists": False}},
+        {"membership_type": "free"}
+    ]})
+    startup_users = await db.users.count_documents({"subscription_plan": "startup"})
+    growth_users = await db.users.count_documents({"subscription_plan": "growth"})
+    elite_users = await db.users.count_documents({"subscription_plan": "elite"})
+    
+    # Legacy VIP count (for backward compatibility)
+    vip_users = startup_users + growth_users + elite_users
+    free_users = explorer_users
+    
+    # Calculate new users today
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    new_users_today = await db.users.count_documents({
+        "created_at": {"$gte": today_start.isoformat()}
+    })
     
     # Calculate Total PRC in circulation (sum of all user balances)
     prc_pipeline = [
@@ -7923,11 +7941,8 @@ async def get_admin_stats():
     prc_result = await db.users.aggregate(prc_pipeline).to_list(1)
     total_prc_in_circulation = prc_result[0]["total_prc"] if prc_result else 0
     
-    # Staff & Stockist Statistics
+    # Staff Statistics (stockist roles removed)
     managers = await db.users.count_documents({"role": "manager"})
-    master_stockists = await db.users.count_documents({"role": "master_stockist"})
-    sub_stockists = await db.users.count_documents({"role": "sub_stockist"})
-    outlets = await db.users.count_documents({"role": "outlet"})
     
     # Orders Statistics
     total_orders = await db.orders.count_documents({})
@@ -7940,7 +7955,11 @@ async def get_admin_stats():
     verified_kyc = await db.kyc_documents.count_documents({"status": "verified"})
     rejected_kyc = await db.kyc_documents.count_documents({"status": "rejected"})
     
-    # VIP Payments Statistics with Total Amount
+    # Subscription Payments Statistics (replaces VIP payments)
+    pending_subscription_payments = await db.subscription_payments.count_documents({"status": "pending"})
+    approved_subscription_payments = await db.subscription_payments.count_documents({"status": "approved"})
+    
+    # Legacy VIP Payments Statistics (for backward compatibility)
     total_vip_requests = await db.vip_payments.count_documents({})
     pending_vip_approvals = await db.vip_payments.count_documents({"status": "pending"})
     approved_vip = await db.vip_payments.count_documents({"status": "approved"})
