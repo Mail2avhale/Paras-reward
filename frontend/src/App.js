@@ -128,14 +128,9 @@ const ManagerProducts = lazy(() => import(/* webpackChunkName: "manager" */ "@/p
 const ManagerFinance = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerFinance"));
 const ManagerCommunication = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerCommunication"));
 const ManagerSupport = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerSupport"));
-const ManagerStockists = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerStockists"));
+// ManagerStockists removed - stockist system deprecated
 
-// ============ STOCKIST PAGES - Code Split into separate chunk ============
-const MasterStockistDashboard = lazy(() => import(/* webpackChunkName: "stockist" */ "@/pages/MasterStockistDashboard"));
-const SubStockistDashboard = lazy(() => import(/* webpackChunkName: "stockist" */ "@/pages/SubStockistDashboard"));
-const OutletPanel = lazy(() => import(/* webpackChunkName: "stockist" */ "@/pages/OutletPanel"));
-const StockRequestSystem = lazy(() => import(/* webpackChunkName: "stockist" */ "@/pages/StockRequestSystem"));
-const StockistManagementAdmin = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/StockistManagementAdmin"));
+// ============ STOCKIST PAGES REMOVED - Direct Delivery by Partner Model ============
 
 // ============ STATIC PAGES ============
 const Setup = lazy(() => import("@/pages/Setup"));
