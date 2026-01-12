@@ -371,14 +371,29 @@ const Register = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Referral Code (Optional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {hasReferral ? (
+                        <span className="flex items-center gap-2">
+                          <Gift className="w-4 h-4 text-green-600" />
+                          <span className="text-green-600">Referral Code Applied!</span>
+                        </span>
+                      ) : (
+                        'Referral Code (Optional)'
+                      )}
+                    </label>
                     <Input
                       data-testid="reg-referral"
                       placeholder="Enter referral code"
                       value={userForm.referral_code}
                       onChange={(e) => setUserForm({...userForm, referral_code: e.target.value.toUpperCase()})}
-                      className="py-5"
+                      className={`py-5 ${hasReferral ? 'border-green-500 bg-green-50' : ''}`}
+                      readOnly={hasReferral}
                     />
+                    {hasReferral && (
+                      <p className="text-xs text-green-600 mt-1">
+                        You'll be connected to your referrer after registration!
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
