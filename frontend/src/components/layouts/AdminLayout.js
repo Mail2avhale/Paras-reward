@@ -185,18 +185,18 @@ const AdminLayout = ({ children, user, onLogout }) => {
       icon: CreditCard,
       subItems: [
         { 
-          id: 'vip-verification', 
-          label: 'VIP Verification', 
-          icon: Award, 
-          path: '/admin/vip-verification',
-          description: 'Approve/Reject VIP Payments'
+          id: 'subscriptions', 
+          label: 'Subscription Management', 
+          icon: Crown, 
+          path: '/admin/subscriptions',
+          description: 'Manage Plans, Payments & Pricing'
         },
         { 
-          id: 'vip-plans', 
-          label: 'VIP Plans', 
-          icon: Crown, 
-          path: '/admin/payments',
-          description: 'Manage VIP Plan Pricing'
+          id: 'vip-verification', 
+          label: 'Payment Verification', 
+          icon: Award, 
+          path: '/admin/vip-verification',
+          description: 'Approve/Reject Payments'
         },
         { 
           id: 'bill-payments', 
