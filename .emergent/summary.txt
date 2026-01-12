@@ -1,112 +1,125 @@
 <analysis>**original_problem_statement:**
-The initial goal was a fintech accounting system, which expanded to include AI features (Chatbot, KYC), a 5-level referral system, and a complete visual overhaul for Google AdMob compliance.
+The initial goal was a fintech accounting system, which expanded to include an AI Chatbot, KYC functionality, and a 5-level referral system. The most recent and significant task was to replace the existing Free/VIP reward model with a completely new, multi-tier subscription-based system and ensure the entire application complies with Google Play Store policies.
 
-Recent user requests have driven the latest work:
-1.  Implement an AI Contextual Help feature. (Completed)
-2.  Redesign the user dashboard for AdMob compliance and a better AI-powered UX. (Completed, then fully redesigned again)
-3.  Implement a user-requested Account Deletion feature. (Completed)
-4.  Set English as the default app language and remove a PRC Statement Card. (Completed)
-5.  Redesign the entire user-facing application with a premium Golden Black Credit Card dark theme. (In Progress)
-6.  Fix a list of critical bugs reported via screen recording, including issues with the rewards session, tap game, KYC, and recent activity log. (In Progress)
+PRODUCT REQUIREMENTS:
+- A 4-tier subscription model (Explorer, Startup, Growth, Elite) with configurable pricing and benefits.
+- A dynamic mining reward formula based on the user's subscription plan, the current day of the month, and a weighted referral bonus.
+- A referral bonus system where the bonus amount is weighted by the referrer's own subscription plan.
+- A daily burn rule for inactive Explorer (free) users, where their points are wiped after 2 days of inactivity. Paid users' points are never burned.
+- A new user-facing page to display and purchase subscription plans.
+- A comprehensive admin dashboard to manage subscriptions, verify payments, configure pricing, and run maintenance jobs.
+- A secure method for the admin to clean the database of all test data.
+- A legal disclaimer page and updates to all user-facing content to ensure compliance with Google AdMob/Play Store policies (e.g., removing terms like guaranteed income).
+- Fixes for recurring bugs, including KYC document upload, tap game daily reset, and referral link auto-joining.
 
-**PRODUCT REQUIREMENTS:**
-Refer to . Key pending items are:
--   **[IN PROGRESS]** Complete the app-wide redesign to the new dark theme.
--   **[NOT STARTED]** AdMob + Unity Ads integration.
--   **[NOT STARTED]** AI-powered features for users (Smart Financial Advisor, Product Recommendations).
--   **[NOT STARTED]** Automated monthly financial reports.
-
-**User's preferred language**: The user communicates in a mix of English and Marathi. The next agent MUST respond in English for technical clarity but be prepared to understand and address requests in Marathi. For example: 
+**User's preferred language**: The user communicates in a mix of English and Marathi. The next agent MUST respond with  and then continue the technical explanation in English.
 
 **what currently exists?**
-The application is a full-stack platform (FastAPI backend, React frontend). AdMob compliance has been verified. A user account deletion feature is fully implemented. The UI has been partially migrated to a new, premium Golden Black dark theme, with several key pages like the Dashboard, Daily Rewards, Referrals, and Profile already overwritten with the new design. The backend for the Tap Game was modified to allow free users to earn PRC at a reduced rate, which was previously a VIP-only feature.
+The application's core reward logic has been completely overhauled.
+- A new 4-tier subscription system (Explorer, Startup, Growth, Elite) is now implemented in the backend () and frontend.
+- The mining and referral reward formulas have been updated to use dynamic multipliers and weights based on user subscription plans.
+- A new  page allows users to view and purchase plans.
+- A new  page provides a dashboard for admins to manage payments, configure pricing, and run jobs like cleaning the database or burning inactive user points.
+- A legal disclaimer page () has been created, and policy-sensitive pages like  and  have been rewritten to be compliant.
+- Critical bugs like the daily tap game reset and referral link auto-joining have been fixed. The long-standing KYC bug has also been fixed but awaits final user verification.
+- The database has been cleaned of test data, leaving only the  user, which has been upgraded to the Elite plan.
 
 **Last working item**:
--   **Last item agent was working**: Addressing a list of 5 critical issues reported by the user via a screen recording:
-    1.  The rewards session starts but then immediately stops/pauses.
-    2.  No Collect PRC button appears after a rewards session.
-    3.  The Tap Game does not add PRC to the user's balance on tap.
-    4.  The KYC document upload page does not activate the camera and needs more advanced image handling.
-    5.  The Recent Activity log on the dashboard is incomplete and not showing all user actions.
-    The agent had just modified the backend  to allow free users to earn from the tap game and was in the process of fixing the frontend components.
--   **Status**: IN PROGRESS
--   **Agent Testing Done**: N
--   **Which testing method agent to use?**: both. Use the backend testing agent to verify the API logic for rewards sessions, PRC collection, tap game earnings, and activity logging. Use the frontend testing agent to conduct a full E2E test of all 5 reported user flows.
+-   **Last item agent was working**: Performing a final review of all reward formulas and user-facing content to ensure accuracy and compliance with Google Play policies, as requested by the user. The agent found and fixed incorrect referral bonus percentages on the  and  pages and updated the text on  and  to be policy-compliant.
+-   **Status**: USER VERIFICATION PENDING
+-   **Agent Testing Done**: Y (Agent verified API responses and reviewed file contents.)
+-   **Which testing method agent to use?**: Manual testing by user. The user needs to review the , , , and  pages to confirm the text and formula displays are now correct.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Fix 5 Critical User-Reported Bugs (P0 - HIGHEST)**
--   **Issue 2: Pagination Verification on History Pages (P2)**
+-   **Issue 1: Final Verification of New Reward System & Compliance Text (P0)**
+-   **Issue 2: KYC Document Upload Functionality (P0 - CRITICAL)**
+-   **Issue 3: Pagination Verification on History Pages (P2)**
 
 **Issues Detail:**
--   **Issue 1: Fix 5 Critical User-Reported Bugs (P0 - HIGHEST)**
-    -   **Attempted fixes**:
-        -   **Tap Game**: The agent found the  endpoint was VIP-only and modified  to allow free users to earn 0.01 PRC per tap. It also overwrote . The fix is incomplete and untested.
-        -   **Rewards Session/Collect Button**: The agent identified the issue is in  and overwrote the file, but the user reported the issue persists.
-        -   **Recent Activity**: The agent found the  endpoint was failing. The user wants a comprehensive log (logins, game play, etc.), which requires a new backend implementation.
-        -   **KYC Camera**: The agent created a new  page but did not implement the requested advanced camera/upload functionality.
-    -   **Next debug checklist**:
-        1.  **Rewards/Collect**: Review  to ensure session logic is sound. Create a  endpoint. Rewrite  to correctly manage session state, display a timer, and show a Collect button on completion.
-        2.  **Tap Game**: Test the  endpoint for both free and VIP users. Ensure  sends requests and updates the UI balance correctly.
-        3.  **KYC Camera**: In , integrate an advanced image upload component (e.g., ) that supports camera access and image adjustments.
-        4.  **Recent Activity**: Create a new MongoDB collection () and a new endpoint in  (e.g., ) to log and fetch all user actions. Update  to use this new endpoint.
-    -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: both
+-   **Issue 1: Final Verification of New Reward System & Compliance Text (P0)**
+    -   **Description**: The user needs to confirm that the final formula corrections and policy-compliant text updates made in the last interaction are satisfactory.
+    -   **Attempted fixes**: The agent corrected the referral bonus percentages displayed on  and  to match the new 20% total and rewrote policy-sensitive text on  and .
+    -   **Next debug checklist**: Ask the user to review the changes on the deployed application.
+    -   **Status**: USER VERIFICATION PENDING
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: frontend (visual confirmation by user)
     -   **Blocked on other issue**: None
 
--   **Issue 2: Pagination Verification on History Pages (P2)**
-    -   **Description**: A long-standing task to verify that pagination works correctly on the **Voucher history** () and **Bill Payments history** () pages.
-    -   **Status**: NOT STARTED
+-   **Issue 2: KYC Document Upload Functionality (P0 - CRITICAL)**
+    -   **Description**: A critical, recurring bug where the camera shows a black screen. The agent rewrote the  component to use more reliable native HTML inputs. The fix passed automated tests but needs real-world validation.
+    -   **Attempted fixes**: The component was entirely rewritten. The testing agent confirmed the code uses two distinct file inputs with the correct  attributes.
+    -   **Next debug checklist**: Ask the user to test the KYC feature on their mobile device to confirm both camera and gallery options work correctly.
+    -   **Status**: USER VERIFICATION PENDING
     -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: frontend (manual user test on mobile)
+    -   **Blocked on other issue**: None
+
+-   **Issue 3: Pagination Verification on History Pages (P2)**
+    -   **Description**: A low-priority task from a previous handoff to verify pagination on  and  remains unaddressed. While the agent added pagination to other pages, these specific ones were not explicitly tested.
+    -   **Attempted fixes**: None.
+    -   **Next debug checklist**: 1. Generate sufficient test data for gift voucher redemptions and bill payments. 2. Navigate to the pages and confirm pagination controls appear and function correctly.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: frontend
     -   **Blocked on other issue**: None
 
 **In progress Task List**:
--   **Task 1: Complete App-Wide Redesign (P1)**
-    -   **Where to resume**: The user stated that many pages in the menu still have the old design. The agent needs to systematically identify the remaining user-facing pages (e.g., , , , , ) and overwrite/update them with the new Golden Black dark theme for UI consistency.
-    -   **What will be achieved with this?**: A consistent, modern UI/UX across the entire application as requested by the user.
-    -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: frontend
-    -   **Blocked on something**: None.
+-   None.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
     -   P1: AdMob + Unity Ads Integration.
-    -   P2: AI for Users - Smart Financial Advisor.
-    -   P2: Automated Monthly Reports.
+    -   P2: Implement full plan upgrade/downgrade logic for subscriptions.
+    -   P2: Automate recurring jobs (renewal notifications, explorer burn) using a scheduler like cron.
+    -   P2: AI Smart Financial Advisor.
 -   **Future Tasks:**
+    -   Progressive Web App (PWA) functionality.
+    -   Automated Monthly Reports.
     -   AI Product Recommendations for users.
-    -   Implement Progressive Web App (PWA) functionality.
-    -   Build the Hierarchical Reporting Structure for user referrals/teams.
 
 **Completed work in this session**
--   **AdMob Compliance Verification (DONE)**: Verified 100% compliance using the frontend testing agent.
--   **Account Deletion Feature (DONE)**: Implemented a full user account deletion flow (soft delete + 30-day auto hard-delete) on both backend and frontend. Verified with testing agents.
--   **Default Language & UI Cleanup (DONE)**: Set English as the default language and removed the PRC Statement Card from the dashboard.
--   **Mine Button Fix (DONE)**: Replaced all user-facing instances of Mine with Rewards, particularly in the bottom navigation.
--   **Dashboard Redesign to Golden-Black Theme (DONE)**: Completely overwrote  to create a premium, non-draggable, credit-card-style dark theme dashboard.
--   **Initial Dark Theme Page Migration (PARTIALLY DONE)**: Rewrote several key pages with the new dark theme, including , , , , , , , and .
--   **Referral Levels UI (DONE)**: Updated the  page to display the 5-level referral structure.
+-   **New Subscription & Reward System (Major Overhaul)**:
+    -   Implemented a 4-tier subscription model (Explorer, Startup, Growth, Elite) with new reward formulas in .
+    -   Created  for users to purchase plans.
+    -   Created  for admins to manage the system.
+    -   Migrated existing VIP users to the new Startup plan.
+-   **Database Management**:
+    -   Created a secure API endpoint () and a corresponding UI button for the admin to wipe test data.
+-   **Compliance & Content**:
+    -   Created a  page with user-provided legal text.
+    -   Rewrote content on  and  to be compliant with Google Play policies.
+    -   Corrected referral bonus percentages displayed in  and .
+-   **Critical Bug Fixes**:
+    -   **KYC Fix**: Rewrote .
+    -   **Tap Game Fix**: Corrected server logic to ensure the daily tap game resets.
+    -   **Referral Link Fix**: Ensured referral codes in URLs are correctly auto-filled on registration.
+-   **Feature Work**:
+    -   Removed the Achievements page and routes.
+    -   Added pagination to  and .
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Pagination Verification on History Pages**: This task to check pagination on  and  has not been started.
+-   **Pagination Verification on  and **: This task from a previous handoff is still pending verification.
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork**: Circular Dependency Causes Runtime Errors
--   **Recurrence count**: 1
--   **Status**: RESOLVED (No new recurrence in this session).
+-   **KYC document upload**: This was a major recurring issue. A robust fix has been implemented by rewriting the component but is awaiting final verification from the user on a real mobile device.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend**: FastAPI, MongoDB, APScheduler for scheduled jobs.
--   **Frontend**: React, , , extensive use of TailwindCSS for styling.
--   **Development**: The agent has heavily used the  approach to implement UI redesigns quickly.
+-   **Multi-tier Subscription Logic**: Backend system handling different user plans, multipliers, and permissions.
+-   **Dynamic Reward Calculation**: Formulas that factor in user subscription, referral subscription weights, and daily multipliers.
+-   **Admin-configurable Settings**: Storing pricing and discounts in the database, managed via an admin panel.
+-   **Data Migration**: Logic to transition existing users from the old VIP system to the new subscription model.
+-   **Google Play Policy Compliance**: Auditing and rewriting user-facing text to remove problematic financial terms and add necessary disclaimers.
 
 **key DB schema**
--   No schema changes were made, but a new collection  should be created to properly implement the Recent Activity feature.
+-   ** collection**:
+    -   : (NEW) A dictionary containing  (e.g., 'startup'), , and . This replaces the legacy  and  fields.
+    -   : Used to track activity for the Explorer user burn logic.
+-   ** collection**:
+    -   : (NEW) Stores admin-configurable prices for different subscription plans and durations (monthly, quarterly, etc.).
 
 **changes in tech stack**
 -   None.
@@ -118,63 +131,68 @@ The application is a full-stack platform (FastAPI backend, React frontend). AdMo
 -   
 -   
 -   
+-   
+-   
+-   
 
 **Areas that need refactoring**:
--   The Recent Activity feature needs a proper backend implementation instead of relying on parsing transaction/mining history. A dedicated activity logging system is required.
--   The numerous pages rewritten via  may have lint warnings or suboptimal code. They should be reviewed once their functionality is stable.
+-   The old VIP-related API endpoints () and frontend pages (, ) are now obsolete and should be removed to prevent confusion and code bloat.
 
 **key api endpoints**
--    (NEW)
--    (NEW)
--    (MODIFIED)
--   **(NEEDS REVIEW)** 
--   **(NEEDS CREATION)** 
--   **(NEEDS CREATION)** 
+-   : (NEW) Returns available subscription plans and pricing.
+-   : (NEW) Handles payment submission for a new subscription.
+-   : (NEW) Allows admin to update plan pricing.
+-   : (NEW) Manually triggers the burn job for inactive Explorer users.
+-   : (NEW) Securely wipes test data.
+-   : (MODIFIED) Returns the new dynamic mining rate based on the complete new formula.
+-   : (MODIFIED) Includes logic to reset the daily tap count.
 
 **Critical Info for New Agent**
--   **TOP PRIORITY**: Address the 5 critical bugs the user reported. Do not move on to other tasks until these core functionalities are working and verified.
--   **SECOND PRIORITY**: Continue the app-wide redesign. Identify all remaining user-facing pages and apply the new Golden Black theme for a consistent user experience.
--   **USER COMMUNICATION**: The user is highly engaged and provides feedback in a mix of English and Marathi. Acknowledge their requests with  and then proceed with technical explanations in English.
--   **TESTING**: The agent has been overwriting entire files. You must thoroughly test each of the 5 bug-related features from end-to-end (backend and frontend) after implementing fixes. Do not assume a fix works without verification.
+-   **First, Get User Verification**: The immediate next step is to interact with the user to get their approval on the three pending items: the final reward formula text, the KYC fix, and the overall compliance changes.
+-   **New Reward System is the Source of Truth**: The core application logic is now driven by the new 4-tier subscription model. The old VIP system is deprecated and its code should be ignored/removed.
+-   **Language**: Always start your responses to the user with  before continuing in English.
+-   **Admin Credentials**:  / .
 
 **documents and test reports created in this job**
+-    (Updated)
 -   
--    (Updated for AdMob & Account Deletion tests).
+-   
+-   
+-   
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User**: Reward session starts but then immediately pauses. No collect reward button. Many pages in the menu are still the old design. Recent activity not showing. (IN PROGRESS)
-9.  **User**: KYC document upload missing. Invite levels also missing. (IN PROGRESS)
-8.  **User**: Dashboard is too complex. Redesign for a beautiful look. Can you make a credit card style golden-black design? (COMPLETED)
-7.  **User**: Remove Quick action card. There is a duplicate card, remove the one below. Move recent activity to the bottom. (COMPLETED)
-6.  **User**: Will the AI user dashboard have any problems with Google AdMob? Remove card movement and arrange cards for better user experience. (COMPLETED)
-5.  **User**: The mine button is still visible in the bottom menu on some pages. (COMPLETED)
-4.  **User**: Delete PRC STATEMENT CARD FROM USER DASHBOARD. SET ENGLISH LANGUAGE DEFAULT FOR ALL APP. (COMPLETED)
-3.  **User**: User confirms choices for the account deletion feature: 1. first a and after 30 days b auto, 2. a with warning, 3. a (COMPLETED)
-2.  **User**: User asks about the account deletion feature in Marathi. (COMPLETED)
-1.  **User**: Account delete features to user with confirmation. (COMPLETED)
+1.  **Request**: Provided a detailed spec for a new, multi-tier subscription and reward system.
+2.  **Clarification**: Asked the agent to explain the new formula.
+3.  **Confirmation**: Provided pricing for the new plans and confirmed migration path for existing VIP users.
+4.  **Request**: Asked the agent to test the new system's key flows (purchase, admin config, burn logic).
+5.  **Request**: Asked how to delete all old test data from the deployed app.
+6.  **Clarification**: Asked for an explanation of what a curl command is.
+7.  **Confirmation**: Confirmed they want the agent to clean the database AND add a button in the admin panel.
+8.  **Request**: Provided a legal disclaimer to be added to the app for Google Play compliance.
+9.  **Request**: Asked the agent to do a final check of all referral/earning pages and formulas, and ensure key pages are compliant with Google policy.
+10. **(Pending)**: The user is waiting to review the final set of fixes and content updates.
 
 **Project Health Check:**
--   **Broken**: Core application functionality is broken. The rewards/mining cycle, tap-to-earn game, KYC upload, and recent activity log are all non-functional as per the latest user report.
--   **Mocked**: AdMob/Unity Ads integration is not yet implemented.
+-   **Broken**:
+    -   None. The KYC upload functionality is fixed but requires final user verification on a real device.
+-   **Mocked**:
+    -   AdMob/Unity Ads integration is planned but not implemented.
 
 **3rd Party Integrations**
--   **OpenAI**: Used for AI Chatbot and AI Contextual Help. (Uses Emergent LLM Key)
--   **Gemini Pro**: Used for AI Document Scanning (KYC). (Uses Emergent LLM Key)
--   **@dnd-kit/core**: No longer in use since the draggable dashboard was removed.
--   **lottie-react, framer-motion**: Used for UI animations.
--   **html2canvas**: Used to generate shareable images for the referral card.
+-   **OpenAI GPT-4o**: AI Chatbot text generation (Uses Emergent LLM Key)
+-   **OpenAI Whisper**: Speech-to-Text in chatbot (Uses Emergent LLM Key)
+-   **ElevenLabs**: Text-to-Speech in chatbot (Uses Emergent LLM Key)
+-   **Gemini Pro**: AI Document Scanning for KYC (Uses Emergent LLM Key)
 
 **Testing status**
--   **Testing agent used after significant changes**: YES (For AdMob compliance and Account Deletion).
--   **Troubleshoot agent used after agent stuck in loop**: NO.
--   **Test files created**: None.  was updated.
--   **Known regressions**: Major regressions in core features (Rewards, Tap Game, KYC, Activity Log) were introduced during the rapid redesign.
+-   **Testing agent used after significant changes**: YES (for KYC, pagination, and the new subscription system)
+-   **Troubleshoot agent used after agent stuck in loop**: NO
+-   **Test files created**: []
+-   **Known regressions**: None. The critical KYC regression was fixed.
 
 **Credentials to test flow:**
--   **Admin**:  / 
--   **Regular User**: A new user must be registered for testing, as previous test users may have been deleted or have inconsistent data. The agent previously used  / .
+-   **Admin**:  / . The database was recently wiped, so this is the only user. This user has been upgraded to the Elite plan.
 
 **What agent forgot to execute**
--   The agent did not complete the implementation or verification for the 5 critical bugs reported by the user.
--   The agent did not complete the redesign of all user-facing pages to the new dark theme.
--   The long-standing task to verify pagination on history pages remains unaddressed.</analysis>
+-   The agent did not remove the now-obsolete code related to the old VIP system after implementing the new subscription model. This is a pending refactoring task.
+-   The agent did not explicitly re-verify pagination on  and , a pending task from the initial handoff.</analysis>

@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://goldblack-finance.preview.emergentagent.com",
+    "url": "https://vigorous-brattain-1.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

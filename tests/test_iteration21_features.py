@@ -10,7 +10,7 @@ import requests
 import os
 from datetime import datetime, timezone, timedelta
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://goldblack-finance.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://vigorous-brattain-1.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 FREE_USER = {"identifier": "testuser@test.com", "password": "test123"}
