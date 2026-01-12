@@ -189,14 +189,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
           label: 'Subscription Management', 
           icon: Crown, 
           path: '/admin/subscriptions',
-          description: 'Manage Plans, Payments & Pricing'
-        },
-        { 
-          id: 'vip-verification', 
-          label: 'Payment Verification', 
-          icon: Award, 
-          path: '/admin/vip-verification',
-          description: 'Approve/Reject Payments'
+          description: 'Manage Plans, Payments, Pricing & Verification'
         },
         { 
           id: 'bill-payments', 
