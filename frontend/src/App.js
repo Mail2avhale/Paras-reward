@@ -114,6 +114,7 @@ const AdminAccountingDashboard = lazy(() => import(/* webpackChunkName: "admin" 
 const PRCEmergencyControls = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/PRCEmergencyControls"));
 const AdminUserControls = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUserControls"));
 const AdvancedUserManagement = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdvancedUserManagement"));
+const AdminDeliveryPartners = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminDeliveryPartners"));
 const BillPayments = lazy(() => import("@/pages/BillPayments"));
 const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption"));
 const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
