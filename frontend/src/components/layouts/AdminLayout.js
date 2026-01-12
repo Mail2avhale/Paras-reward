@@ -317,10 +317,10 @@ const AdminLayout = ({ children, user, onLogout }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="min-h-screen bg-gray-950 flex">
       {/* Sidebar - Desktop */}
       <aside
-        className={`hidden lg:flex flex-col bg-slate-900 text-white transition-all duration-300 ${
+        className={`hidden lg:flex flex-col bg-gray-900 text-white transition-all duration-300 border-r border-gray-800 ${
           sidebarCollapsed ? 'w-20' : 'w-64'
         }`}
       >
