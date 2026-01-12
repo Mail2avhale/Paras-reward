@@ -9,6 +9,10 @@ import {
   UserCheck, Clock, CheckCircle, XCircle, Eye, ArrowUpRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import {
+  AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+} from 'recharts';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -19,6 +23,13 @@ const AdminDashboard = ({ user }) => {
   const [recentOrders, setRecentOrders] = useState([]);
   const [pendingKYC, setPendingKYC] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Chart data states
+  const [userGrowthData, setUserGrowthData] = useState([]);
+  const [prcData, setPrcData] = useState([]);
+  const [ordersData, setOrdersData] = useState([]);
+  const [subscriptionData, setSubscriptionData] = useState({ distribution: [], trend: [] });
+  const [chartsLoading, setChartsLoading] = useState(true);
 
   const fetchAllData = async () => {
     setLoading(true);
@@ -41,10 +52,35 @@ const AdminDashboard = ({ user }) => {
     }
   };
 
+  const fetchChartData = async () => {
+    setChartsLoading(true);
+    try {
+      const [userGrowth, prc, orders, subs] = await Promise.all([
+        axios.get(`${API}/api/admin/charts/user-growth`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API}/api/admin/charts/prc-circulation`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API}/api/admin/charts/orders`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${API}/api/admin/charts/subscriptions`).catch(() => ({ data: { distribution: [], trend: [] } }))
+      ]);
+      
+      setUserGrowthData(userGrowth.data.data || []);
+      setPrcData(prc.data.data || []);
+      setOrdersData(orders.data.data || []);
+      setSubscriptionData(subs.data);
+    } catch (error) {
+      console.error('Error fetching chart data:', error);
+    } finally {
+      setChartsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchAllData();
+    fetchChartData();
     // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchAllData, 30000);
+    const interval = setInterval(() => {
+      fetchAllData();
+      fetchChartData();
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -58,27 +94,44 @@ const AdminDashboard = ({ user }) => {
 
   const totalPaidUsers = subscriptionStats.startup + subscriptionStats.growth + subscriptionStats.elite;
 
+  // Custom tooltip for charts
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 shadow-xl">
+          <p className="text-gray-400 text-xs mb-1">{label}</p>
+          {payload.map((entry, index) => (
+            <p key={index} className="text-sm" style={{ color: entry.color }}>
+              {entry.name}: {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="space-y-6" data-testid="admin-dashboard">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
-          <p className="text-gray-400 text-sm">Platform overview and quick actions</p>
+          <p className="text-gray-400 text-sm">Platform overview and analytics</p>
         </div>
         <div className="flex items-center gap-3">
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={fetchAllData}
+            onClick={() => { fetchAllData(); fetchChartData(); }}
             className="text-gray-300 border-gray-700"
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading || chartsLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <div className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 text-xs rounded-full flex items-center gap-2">
             <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-            System Online
+            Live Data
           </div>
         </div>
       </div>
@@ -92,33 +145,18 @@ const AdminDashboard = ({ user }) => {
               <h3 className="text-sm font-bold text-amber-400 mb-2">⚡ Action Required</h3>
               <div className="flex flex-wrap gap-3">
                 {stats?.kyc?.pending > 0 && (
-                  <button 
-                    onClick={() => navigate('/admin/kyc')}
-                    className="text-sm text-amber-300 hover:text-amber-200 flex items-center gap-1"
-                  >
-                    <UserCheck className="w-4 h-4" />
-                    {stats.kyc.pending} KYC Pending
-                    <ChevronRight className="w-4 h-4" />
+                  <button onClick={() => navigate('/admin/kyc')} className="text-sm text-amber-300 hover:text-amber-200 flex items-center gap-1">
+                    <UserCheck className="w-4 h-4" /> {stats.kyc.pending} KYC Pending <ChevronRight className="w-4 h-4" />
                   </button>
                 )}
                 {deliveryStats?.pending_assignment > 0 && (
-                  <button 
-                    onClick={() => navigate('/admin/delivery-partners')}
-                    className="text-sm text-amber-300 hover:text-amber-200 flex items-center gap-1"
-                  >
-                    <Truck className="w-4 h-4" />
-                    {deliveryStats.pending_assignment} Orders Need Delivery Partner
-                    <ChevronRight className="w-4 h-4" />
+                  <button onClick={() => navigate('/admin/delivery-partners')} className="text-sm text-amber-300 hover:text-amber-200 flex items-center gap-1">
+                    <Truck className="w-4 h-4" /> {deliveryStats.pending_assignment} Orders Need Partner <ChevronRight className="w-4 h-4" />
                   </button>
                 )}
                 {stats?.subscription_payments?.pending > 0 && (
-                  <button 
-                    onClick={() => navigate('/admin/subscriptions')}
-                    className="text-sm text-amber-300 hover:text-amber-200 flex items-center gap-1"
-                  >
-                    <CreditCard className="w-4 h-4" />
-                    {stats.subscription_payments.pending} Payments to Verify
-                    <ChevronRight className="w-4 h-4" />
+                  <button onClick={() => navigate('/admin/subscriptions')} className="text-sm text-amber-300 hover:text-amber-200 flex items-center gap-1">
+                    <CreditCard className="w-4 h-4" /> {stats.subscription_payments.pending} Payments Pending <ChevronRight className="w-4 h-4" />
                   </button>
                 )}
               </div>
@@ -149,9 +187,7 @@ const AdminDashboard = ({ user }) => {
             <div>
               <p className="text-gray-400 text-xs mb-1">Paid Subscribers</p>
               <p className="text-2xl font-bold text-white">{totalPaidUsers.toLocaleString()}</p>
-              <p className="text-xs text-purple-400 mt-1">
-                {subscriptionStats.elite} Elite • {subscriptionStats.growth} Growth
-              </p>
+              <p className="text-xs text-purple-400 mt-1">{subscriptionStats.elite} Elite • {subscriptionStats.growth} Growth</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
               <Crown className="w-6 h-6 text-purple-400" />
@@ -188,100 +224,190 @@ const AdminDashboard = ({ user }) => {
         </Card>
       </div>
 
+      {/* Charts Row 1 - User Growth & PRC Circulation */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* User Growth Chart */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-white flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-400" />
+              User Growth (30 Days)
+            </h3>
+          </div>
+          <div className="h-64">
+            {chartsLoading ? (
+              <div className="h-full flex items-center justify-center">
+                <RefreshCw className="w-8 h-8 text-gray-500 animate-spin" />
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={userGrowthData}>
+                  <defs>
+                    <linearGradient id="userGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="name" stroke="#9ca3af" fontSize={10} tickLine={false} />
+                  <YAxis stroke="#9ca3af" fontSize={10} tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area type="monotone" dataKey="users" name="New Users" stroke="#3b82f6" fill="url(#userGradient)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </Card>
+
+        {/* PRC Circulation Chart */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-white flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-emerald-400" />
+              PRC Flow (30 Days)
+            </h3>
+          </div>
+          <div className="h-64">
+            {chartsLoading ? (
+              <div className="h-full flex items-center justify-center">
+                <RefreshCw className="w-8 h-8 text-gray-500 animate-spin" />
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={prcData}>
+                  <defs>
+                    <linearGradient id="earnedGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="spentGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="name" stroke="#9ca3af" fontSize={10} tickLine={false} />
+                  <YAxis stroke="#9ca3af" fontSize={10} tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Area type="monotone" dataKey="earned" name="Earned" stroke="#10b981" fill="url(#earnedGradient)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="spent" name="Spent" stroke="#ef4444" fill="url(#spentGradient)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </Card>
+      </div>
+
+      {/* Charts Row 2 - Orders & Subscription Distribution */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Orders Chart */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-white flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5 text-amber-400" />
+              Orders (30 Days)
+            </h3>
+          </div>
+          <div className="h-64">
+            {chartsLoading ? (
+              <div className="h-full flex items-center justify-center">
+                <RefreshCw className="w-8 h-8 text-gray-500 animate-spin" />
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={ordersData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="name" stroke="#9ca3af" fontSize={10} tickLine={false} />
+                  <YAxis stroke="#9ca3af" fontSize={10} tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Bar dataKey="orders" name="Total Orders" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="delivered" name="Delivered" fill="#10b981" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </Card>
+
+        {/* Subscription Distribution */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-white flex items-center gap-2">
+              <Crown className="w-5 h-5 text-purple-400" />
+              Subscription Distribution
+            </h3>
+          </div>
+          <div className="h-64 flex items-center">
+            {chartsLoading ? (
+              <div className="w-full flex items-center justify-center">
+                <RefreshCw className="w-8 h-8 text-gray-500 animate-spin" />
+              </div>
+            ) : (
+              <div className="flex w-full">
+                <div className="w-1/2">
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={subscriptionData.distribution}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {subscriptionData.distribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="w-1/2 flex flex-col justify-center space-y-2">
+                  {subscriptionData.distribution.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.fill }} />
+                        <span className="text-gray-400 text-sm">{item.name}</span>
+                      </div>
+                      <span className="text-white font-medium">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
+
       {/* Quick Actions Grid */}
       <div>
         <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          <QuickActionCard 
-            icon={Users} 
-            label="Users" 
-            color="blue"
-            onClick={() => navigate('/admin/users')}
-          />
-          <QuickActionCard 
-            icon={Crown} 
-            label="Subscriptions" 
-            color="purple"
-            onClick={() => navigate('/admin/subscriptions')}
-          />
-          <QuickActionCard 
-            icon={FileText} 
-            label="KYC" 
-            badge={stats?.kyc?.pending}
-            color="cyan"
-            onClick={() => navigate('/admin/kyc')}
-          />
-          <QuickActionCard 
-            icon={ShoppingCart} 
-            label="Orders" 
-            badge={stats?.orders?.pending}
-            color="amber"
-            onClick={() => navigate('/admin/orders')}
-          />
-          <QuickActionCard 
-            icon={Truck} 
-            label="Delivery" 
-            badge={deliveryStats?.pending_assignment}
-            color="emerald"
-            onClick={() => navigate('/admin/delivery-partners')}
-          />
-          <QuickActionCard 
-            icon={Store} 
-            label="Marketplace" 
-            color="pink"
-            onClick={() => navigate('/admin/marketplace')}
-          />
-          <QuickActionCard 
-            icon={BarChart3} 
-            label="Analytics" 
-            color="indigo"
-            onClick={() => navigate('/admin/analytics')}
-          />
-          <QuickActionCard 
-            icon={Wallet} 
-            label="Wallets" 
-            color="teal"
-            onClick={() => navigate('/admin/company-wallets')}
-          />
-          <QuickActionCard 
-            icon={Shield} 
-            label="Security" 
-            color="red"
-            onClick={() => navigate('/admin/security')}
-          />
-          <QuickActionCard 
-            icon={AlertTriangle} 
-            label="PRC Controls" 
-            color="orange"
-            onClick={() => navigate('/admin/prc-economy')}
-          />
-          <QuickActionCard 
-            icon={Activity} 
-            label="Accounting" 
-            color="lime"
-            onClick={() => navigate('/admin/accounting')}
-          />
-          <QuickActionCard 
-            icon={Settings} 
-            label="Settings" 
-            color="gray"
-            onClick={() => navigate('/admin/settings/system')}
-          />
+        <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-12 gap-2">
+          <QuickActionCard icon={Users} label="Users" color="blue" onClick={() => navigate('/admin/users')} />
+          <QuickActionCard icon={Crown} label="Subs" color="purple" onClick={() => navigate('/admin/subscriptions')} />
+          <QuickActionCard icon={FileText} label="KYC" badge={stats?.kyc?.pending} color="cyan" onClick={() => navigate('/admin/kyc')} />
+          <QuickActionCard icon={ShoppingCart} label="Orders" badge={stats?.orders?.pending} color="amber" onClick={() => navigate('/admin/orders')} />
+          <QuickActionCard icon={Truck} label="Delivery" badge={deliveryStats?.pending_assignment} color="emerald" onClick={() => navigate('/admin/delivery-partners')} />
+          <QuickActionCard icon={Store} label="Market" color="pink" onClick={() => navigate('/admin/marketplace')} />
+          <QuickActionCard icon={BarChart3} label="Analytics" color="indigo" onClick={() => navigate('/admin/analytics')} />
+          <QuickActionCard icon={Wallet} label="Wallets" color="teal" onClick={() => navigate('/admin/company-wallets')} />
+          <QuickActionCard icon={Shield} label="Security" color="red" onClick={() => navigate('/admin/security')} />
+          <QuickActionCard icon={AlertTriangle} label="PRC Ctrl" color="orange" onClick={() => navigate('/admin/prc-economy')} />
+          <QuickActionCard icon={Activity} label="Account" color="lime" onClick={() => navigate('/admin/accounting')} />
+          <QuickActionCard icon={Settings} label="Settings" color="gray" onClick={() => navigate('/admin/settings/system')} />
         </div>
       </div>
 
-      {/* Two Column Layout */}
+      {/* Recent Activity Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Orders */}
         <Card className="p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-white">Recent Orders</h3>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => navigate('/admin/orders')}
-              className="text-blue-400 hover:text-blue-300"
-            >
+            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/orders')} className="text-blue-400 hover:text-blue-300">
               View All <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
@@ -292,27 +418,27 @@ const AdminDashboard = ({ user }) => {
               <p>No orders yet</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {recentOrders.slice(0, 5).map((order) => (
                 <div key={order.order_id} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                       order.status === 'delivered' ? 'bg-emerald-500/20' :
                       order.status === 'out_for_delivery' ? 'bg-blue-500/20' :
                       order.status === 'cancelled' ? 'bg-red-500/20' : 'bg-amber-500/20'
                     }`}>
-                      {order.status === 'delivered' ? <CheckCircle className="w-5 h-5 text-emerald-400" /> :
-                       order.status === 'out_for_delivery' ? <Truck className="w-5 h-5 text-blue-400" /> :
-                       order.status === 'cancelled' ? <XCircle className="w-5 h-5 text-red-400" /> :
-                       <Clock className="w-5 h-5 text-amber-400" />}
+                      {order.status === 'delivered' ? <CheckCircle className="w-4 h-4 text-emerald-400" /> :
+                       order.status === 'out_for_delivery' ? <Truck className="w-4 h-4 text-blue-400" /> :
+                       order.status === 'cancelled' ? <XCircle className="w-4 h-4 text-red-400" /> :
+                       <Clock className="w-4 h-4 text-amber-400" />}
                     </div>
                     <div>
                       <p className="text-white text-sm font-medium">#{order.order_id?.slice(0, 8)}</p>
-                      <p className="text-gray-400 text-xs">{order.items?.length || 0} items</p>
+                      <p className="text-gray-500 text-xs">{order.items?.length || 0} items</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-white text-sm font-medium">{order.total_prc?.toLocaleString()} PRC</p>
+                    <p className="text-white text-sm">{order.total_prc?.toLocaleString()} PRC</p>
                     <p className={`text-xs ${
                       order.status === 'delivered' ? 'text-emerald-400' :
                       order.status === 'cancelled' ? 'text-red-400' : 'text-amber-400'
@@ -324,121 +450,63 @@ const AdminDashboard = ({ user }) => {
           )}
         </Card>
 
-        {/* Pending KYC */}
+        {/* Delivery Overview */}
         <Card className="p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-white">Pending KYC</h3>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => navigate('/admin/kyc')}
-              className="text-blue-400 hover:text-blue-300"
-            >
-              View All <ChevronRight className="w-4 h-4 ml-1" />
+            <h3 className="font-semibold text-white">Delivery Overview</h3>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/delivery-partners')} className="text-blue-400 hover:text-blue-300">
+              Manage <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
+          <div className="grid grid-cols-5 gap-2">
+            <div className="text-center p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xl font-bold text-white">{deliveryStats?.total_partners || 0}</p>
+              <p className="text-xs text-gray-500">Partners</p>
+            </div>
+            <div className="text-center p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xl font-bold text-emerald-400">{deliveryStats?.active_partners || 0}</p>
+              <p className="text-xs text-gray-500">Active</p>
+            </div>
+            <div className="text-center p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xl font-bold text-purple-400">{deliveryStats?.verified_partners || 0}</p>
+              <p className="text-xs text-gray-500">Verified</p>
+            </div>
+            <div className="text-center p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xl font-bold text-amber-400">{deliveryStats?.pending_assignment || 0}</p>
+              <p className="text-xs text-gray-500">Pending</p>
+            </div>
+            <div className="text-center p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xl font-bold text-blue-400">{deliveryStats?.out_for_delivery || 0}</p>
+              <p className="text-xs text-gray-500">In Transit</p>
+            </div>
+          </div>
           
-          {pendingKYC.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <FileText className="w-10 h-10 mx-auto mb-2 opacity-50" />
-              <p>No pending KYC</p>
+          {/* Pending KYC Preview */}
+          <div className="mt-4 pt-4 border-t border-gray-800">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium text-gray-400">Pending KYC</h4>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/admin/kyc')} className="text-cyan-400 hover:text-cyan-300 text-xs">
+                View All
+              </Button>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {pendingKYC.slice(0, 5).map((kyc) => (
-                <div key={kyc.document_id || kyc._id} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
-                      <UserCheck className="w-5 h-5 text-cyan-400" />
+            {pendingKYC.length === 0 ? (
+              <p className="text-gray-500 text-sm text-center py-4">No pending KYC</p>
+            ) : (
+              <div className="space-y-2">
+                {pendingKYC.slice(0, 3).map((kyc) => (
+                  <div key={kyc.document_id || kyc._id} className="flex items-center justify-between p-2 bg-gray-800/30 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="w-4 h-4 text-cyan-400" />
+                      <span className="text-white text-sm">{kyc.user_name || 'Unknown'}</span>
                     </div>
-                    <div>
-                      <p className="text-white text-sm font-medium">{kyc.user_name || 'Unknown'}</p>
-                      <p className="text-gray-400 text-xs">{kyc.document_type || 'Document'}</p>
-                    </div>
+                    <span className="text-gray-500 text-xs">{kyc.document_type || 'Document'}</span>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate('/admin/kyc')}
-                    className="text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/10"
-                  >
-                    <Eye className="w-4 h-4 mr-1" />
-                    Review
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </Card>
       </div>
-
-      {/* Subscription Distribution */}
-      <Card className="p-4">
-        <h3 className="font-semibold text-white mb-4">Subscription Distribution</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <SubscriptionCard 
-            plan="Explorer" 
-            count={subscriptionStats.explorer} 
-            color="gray" 
-            price="Free"
-          />
-          <SubscriptionCard 
-            plan="Startup" 
-            count={subscriptionStats.startup} 
-            color="blue" 
-            price="₹299/mo"
-          />
-          <SubscriptionCard 
-            plan="Growth" 
-            count={subscriptionStats.growth} 
-            color="purple" 
-            price="₹549/mo"
-          />
-          <SubscriptionCard 
-            plan="Elite" 
-            count={subscriptionStats.elite} 
-            color="amber" 
-            price="₹799/mo"
-          />
-        </div>
-      </Card>
-
-      {/* Delivery Stats */}
-      <Card className="p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-white">Delivery Overview</h3>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => navigate('/admin/delivery-partners')}
-            className="text-blue-400 hover:text-blue-300"
-          >
-            Manage Partners <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="text-center p-3 bg-gray-800/50 rounded-lg">
-            <p className="text-2xl font-bold text-white">{deliveryStats?.total_partners || 0}</p>
-            <p className="text-xs text-gray-400">Partners</p>
-          </div>
-          <div className="text-center p-3 bg-gray-800/50 rounded-lg">
-            <p className="text-2xl font-bold text-emerald-400">{deliveryStats?.active_partners || 0}</p>
-            <p className="text-xs text-gray-400">Active</p>
-          </div>
-          <div className="text-center p-3 bg-gray-800/50 rounded-lg">
-            <p className="text-2xl font-bold text-purple-400">{deliveryStats?.verified_partners || 0}</p>
-            <p className="text-xs text-gray-400">Verified</p>
-          </div>
-          <div className="text-center p-3 bg-gray-800/50 rounded-lg">
-            <p className="text-2xl font-bold text-amber-400">{deliveryStats?.pending_assignment || 0}</p>
-            <p className="text-xs text-gray-400">Pending</p>
-          </div>
-          <div className="text-center p-3 bg-gray-800/50 rounded-lg">
-            <p className="text-2xl font-bold text-blue-400">{deliveryStats?.out_for_delivery || 0}</p>
-            <p className="text-xs text-gray-400">In Transit</p>
-          </div>
-        </div>
-      </Card>
     </div>
   );
 };
@@ -446,62 +514,34 @@ const AdminDashboard = ({ user }) => {
 // Quick Action Card Component
 const QuickActionCard = ({ icon: Icon, label, badge, color, onClick }) => {
   const colorClasses = {
-    blue: 'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 text-blue-400',
-    purple: 'bg-purple-500/10 border-purple-500/30 hover:bg-purple-500/20 text-purple-400',
-    emerald: 'bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-400',
-    amber: 'bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20 text-amber-400',
-    cyan: 'bg-cyan-500/10 border-cyan-500/30 hover:bg-cyan-500/20 text-cyan-400',
-    pink: 'bg-pink-500/10 border-pink-500/30 hover:bg-pink-500/20 text-pink-400',
-    indigo: 'bg-indigo-500/10 border-indigo-500/30 hover:bg-indigo-500/20 text-indigo-400',
-    teal: 'bg-teal-500/10 border-teal-500/30 hover:bg-teal-500/20 text-teal-400',
-    red: 'bg-red-500/10 border-red-500/30 hover:bg-red-500/20 text-red-400',
-    orange: 'bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20 text-orange-400',
-    lime: 'bg-lime-500/10 border-lime-500/30 hover:bg-lime-500/20 text-lime-400',
-    gray: 'bg-gray-500/10 border-gray-500/30 hover:bg-gray-500/20 text-gray-400',
+    blue: 'bg-blue-500/10 border-blue-500/20 hover:bg-blue-500/20 text-blue-400',
+    purple: 'bg-purple-500/10 border-purple-500/20 hover:bg-purple-500/20 text-purple-400',
+    emerald: 'bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-400',
+    amber: 'bg-amber-500/10 border-amber-500/20 hover:bg-amber-500/20 text-amber-400',
+    cyan: 'bg-cyan-500/10 border-cyan-500/20 hover:bg-cyan-500/20 text-cyan-400',
+    pink: 'bg-pink-500/10 border-pink-500/20 hover:bg-pink-500/20 text-pink-400',
+    indigo: 'bg-indigo-500/10 border-indigo-500/20 hover:bg-indigo-500/20 text-indigo-400',
+    teal: 'bg-teal-500/10 border-teal-500/20 hover:bg-teal-500/20 text-teal-400',
+    red: 'bg-red-500/10 border-red-500/20 hover:bg-red-500/20 text-red-400',
+    orange: 'bg-orange-500/10 border-orange-500/20 hover:bg-orange-500/20 text-orange-400',
+    lime: 'bg-lime-500/10 border-lime-500/20 hover:bg-lime-500/20 text-lime-400',
+    gray: 'bg-gray-500/10 border-gray-500/20 hover:bg-gray-500/20 text-gray-400',
   };
 
   return (
     <button
       onClick={onClick}
-      className={`relative p-4 rounded-xl border transition-all ${colorClasses[color]} text-center`}
-      data-testid={`quick-action-${label.toLowerCase().replace(' ', '-')}`}
+      className={`relative p-2 rounded-lg border transition-all ${colorClasses[color]} text-center`}
+      data-testid={`quick-action-${label.toLowerCase()}`}
     >
       {badge > 0 && (
-        <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
           {badge > 9 ? '9+' : badge}
         </span>
       )}
-      <Icon className="w-6 h-6 mx-auto mb-2" />
-      <p className="text-xs font-medium">{label}</p>
+      <Icon className="w-5 h-5 mx-auto mb-1" />
+      <p className="text-[10px] font-medium truncate">{label}</p>
     </button>
-  );
-};
-
-// Subscription Card Component
-const SubscriptionCard = ({ plan, count, color, price }) => {
-  const colorClasses = {
-    gray: 'border-gray-500/30 bg-gray-500/10',
-    blue: 'border-blue-500/30 bg-blue-500/10',
-    purple: 'border-purple-500/30 bg-purple-500/10',
-    amber: 'border-amber-500/30 bg-amber-500/10',
-  };
-
-  const textColors = {
-    gray: 'text-gray-400',
-    blue: 'text-blue-400',
-    purple: 'text-purple-400',
-    amber: 'text-amber-400',
-  };
-
-  return (
-    <div className={`p-4 rounded-xl border ${colorClasses[color]}`}>
-      <div className="flex items-center justify-between mb-2">
-        <span className={`text-xs font-medium ${textColors[color]}`}>{plan}</span>
-        <span className="text-xs text-gray-500">{price}</span>
-      </div>
-      <p className="text-2xl font-bold text-white">{count.toLocaleString()}</p>
-      <p className="text-xs text-gray-500">users</p>
-    </div>
   );
 };
 
