@@ -3664,20 +3664,19 @@ async def get_user_redeemed_stats(uid: str):
 # ========== TAP GAME ROUTES ==========
 @api_router.post("/game/tap/{uid}")
 async def play_tap_game(uid: str, tap_data: TapGamePlay):
-    """Play tap game - Free users earn 0.01 PRC/tap, VIP users earn 0.1 PRC/tap"""
+    """Play tap game - 0.01 PRC/tap for all users, tap limits based on subscription plan"""
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Check membership for PRC rate
-    membership_type = user.get("membership_type", "free")
-    prc_per_tap = 0.1 if membership_type == "vip" else 0.01  # VIP: 0.1, Free: 0.01
+    # Get user's subscription info for tap limit
+    sub_info = await get_user_subscription_info(user)
+    prc_per_tap = 0.01  # Same for all plans
+    max_taps = sub_info["tap_limit"]  # Explorer:100, Startup:200, Growth:300, Elite:400
     
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     current_taps = user.get("taps_today", 0) if user.get("last_tap_date") == today else 0
     
-    # Check if user has taps left (100 for free, 200 for VIP)
-    max_taps = 200 if membership_type == "vip" else 100
     remaining_taps = max_taps - current_taps
     if remaining_taps <= 0:
         raise HTTPException(status_code=400, detail="Daily tap limit reached")
@@ -3725,7 +3724,7 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
         user_id=uid,
         action_type="tap_game",
         description=f"Played tap game: {taps_to_add} taps, earned {prc_earned} PRC",
-        metadata={"taps": taps_to_add, "prc_earned": prc_earned, "prc_per_tap": prc_per_tap}
+        metadata={"taps": taps_to_add, "prc_earned": prc_earned, "prc_per_tap": prc_per_tap, "plan": sub_info["plan"]}
     )
     
     return {
@@ -3733,7 +3732,8 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
         "remaining_taps": remaining_taps - taps_to_add, 
         "prc_earned": prc_earned,
         "prc_per_tap": prc_per_tap,
-        "is_vip": membership_type == "vip"
+        "max_taps": max_taps,
+        "subscription_plan": sub_info["plan"]
     }
 
 # ========== REFERRAL ROUTES ==========
