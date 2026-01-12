@@ -361,7 +361,8 @@ class TestTapGameLimits:
             params={"identifier": ADMIN_EMAIL, "password": ADMIN_PASSWORD}
         )
         if response.status_code == 200:
-            return response.json().get("user", {}).get("uid")
+            data = response.json()
+            return data.get("uid")
         return None
     
     def test_tap_game_returns_subscription_info(self, admin_uid):
