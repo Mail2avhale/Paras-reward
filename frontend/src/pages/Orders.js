@@ -139,7 +139,7 @@ const Orders = ({ user, onLogout }) => {
           </div>
         ) : (
           <div className="space-y-4">
-            {orders.map((order, index) => (
+            {paginatedOrders.map((order, index) => (
               <div
                 key={order.order_id}
                 data-testid={`order-${index}`}
