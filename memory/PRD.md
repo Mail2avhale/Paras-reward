@@ -120,7 +120,7 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 - **Tutorial Removed**: Removed AppTutorialAdvanced - AI Chatbot now handles user guidance
 
 #### Advanced AI Chatbot Features ✅
-- **Quick Action Buttons**: Chatbot responses include clickable action buttons based on intent (Start Session, View VIP, etc.)
+- **Quick Action Buttons**: Chatbot responses include clickable action buttons based on intent (Start Session, View Subscription, etc.)
 - **Proactive Tips**: AI-powered tips shown based on user's current page and status
 - **Voice Input (STT)**: Users can speak questions using microphone (OpenAI Whisper)
 - **Voice Output (TTS)**: Chatbot can read responses aloud (OpenAI TTS with Nova voice)
