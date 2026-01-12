@@ -616,7 +616,7 @@ const AdvancedUserManagement = () => {
             <div className="mb-4 p-3 bg-gray-50 rounded">
               <p className="text-sm text-gray-600">User: <strong>{selectedUser.name}</strong></p>
               <p className="text-sm text-gray-600">Current PRC: <strong>{(selectedUser.prc_balance || 0).toFixed(2)}</strong></p>
-              <p className="text-sm text-gray-600">Current Cashback: <strong>₹{(selectedUser.cashback_wallet_balance || 0).toFixed(2)}</strong></p>
+              <p className="text-sm text-gray-600">Plan: <strong>{selectedUser.subscription_plan || 'Explorer'}</strong></p>
             </div>
             
             <form onSubmit={handleAdjustBalance} className="space-y-4">
