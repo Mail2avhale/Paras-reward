@@ -483,32 +483,32 @@ const AdminLayout = ({ children, user, onLogout }) => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen">
-        {/* Top Bar */}
-        <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
+        {/* Top Bar - Dark Theme */}
+        <header className="bg-gray-900 border-b border-gray-800 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
+              className="lg:hidden p-2 hover:bg-gray-800 rounded-lg text-gray-300"
             >
               <Menu className="h-5 w-5" />
             </button>
-            <h2 className="text-lg font-semibold text-gray-900">Admin Dashboard</h2>
+            <h2 className="text-lg font-semibold text-white">Admin Dashboard</h2>
           </div>
 
           <div className="flex items-center gap-3">
-            <button className="p-2 hover:bg-gray-100 rounded-lg relative">
-              <Bell className="h-5 w-5 text-gray-600" />
+            <button className="p-2 hover:bg-gray-800 rounded-lg relative">
+              <Bell className="h-5 w-5 text-gray-400" />
               <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
             </button>
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-purple-100 rounded-full">
-              <Shield className="h-4 w-4 text-purple-600" />
-              <span className="text-sm font-medium text-purple-700">Admin</span>
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-purple-500/20 rounded-full">
+              <Shield className="h-4 w-4 text-purple-400" />
+              <span className="text-sm font-medium text-purple-300">Admin</span>
             </div>
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-auto">
+        {/* Page Content - Dark Background */}
+        <main className="flex-1 overflow-auto bg-gray-950 p-6">
           {children}
         </main>
       </div>
