@@ -345,17 +345,17 @@ const AdminLayout = ({ children, user, onLogout }) => {
           {/* Divider */}
           <div className="my-2 mx-4 border-t border-slate-700"></div>
           
+          {/* Subscriptions & Payments Group */}
+          {renderMenuGroup('subscriptions')}
+          
           {/* Finance Group */}
           {renderMenuGroup('finance')}
           
-          {/* Security Group */}
-          {renderMenuGroup('security')}
+          {/* Controls & Security Group */}
+          {renderMenuGroup('controls')}
           
           {/* Settings Group */}
           {renderMenuGroup('settings')}
-          
-          {/* Payments Group */}
-          {renderMenuGroup('payments')}
         </nav>
 
         {/* Collapse Toggle */}
