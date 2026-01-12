@@ -325,13 +325,13 @@ const AdminLayout = ({ children, user, onLogout }) => {
         }`}
       >
         {/* Logo */}
-        <div className="p-4 border-b border-slate-700">
+        <div className="p-4 border-b border-gray-800">
           <div className="flex items-center gap-3">
             <img src={LOGO_URL} alt="Logo" className="h-10 w-10 rounded-xl" />
             {!sidebarCollapsed && (
               <div>
                 <h1 className="font-bold text-lg">PARAS REWARD</h1>
-                <p className="text-xs text-slate-400">Admin Panel</p>
+                <p className="text-xs text-gray-500">Admin Panel</p>
               </div>
             )}
           </div>
