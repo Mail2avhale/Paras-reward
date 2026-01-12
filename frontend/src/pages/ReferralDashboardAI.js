@@ -71,7 +71,7 @@ function ReferralDashboardAI({ user, onLogout }) {
         setActiveTab('share');
         break;
       case 'Go VIP':
-        window.location.href = '/vip';
+        window.location.href = '/subscription';
         break;
       case 'Send Reminder':
         toast.info('Reminder feature coming soon!');

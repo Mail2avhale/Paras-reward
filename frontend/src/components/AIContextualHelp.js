@@ -19,7 +19,7 @@ const getPageKeyFromPath = (pathname) => {
     '/referrals/ai': 'referrals',
     '/network': 'referrals',
     '/marketplace': 'marketplace',
-    '/vip': 'vip',
+    '/subscription': 'subscription',
     '/profile': 'profile',
     '/game': 'game',
     '/bill-payments': 'bill-payments',

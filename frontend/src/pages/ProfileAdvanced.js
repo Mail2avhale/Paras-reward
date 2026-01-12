@@ -469,7 +469,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
         {/* VIP Membership */}
         {!isVip && (
           <button 
-            onClick={() => navigate('/vip')}
+            onClick={() => navigate('/subscription')}
             className="w-full bg-gradient-to-r from-amber-600 to-yellow-600 rounded-2xl p-4 flex items-center justify-between"
           >
             <span className="flex items-center gap-3 text-black font-semibold">

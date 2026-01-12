@@ -261,7 +261,7 @@ const Marketplace = ({ user }) => {
           </div>
           {!isVip && (
             <button 
-              onClick={() => navigate('/vip')}
+              onClick={() => navigate('/subscription')}
               className="bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-2 rounded-xl text-black text-sm font-bold flex items-center gap-1"
             >
               <Crown className="w-4 h-4" /> Get VIP

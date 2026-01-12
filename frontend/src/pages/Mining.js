@@ -403,7 +403,7 @@ const DailyRewards = ({ user }) => {
               <div>
                 <p className="text-amber-500 font-medium text-sm">{t.freeWarning}</p>
                 <button 
-                  onClick={() => navigate('/vip')}
+                  onClick={() => navigate('/subscription')}
                   className="text-amber-400 text-xs mt-1 underline"
                 >
                   Upgrade to VIP for lifetime validity →

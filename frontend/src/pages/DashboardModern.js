@@ -487,7 +487,7 @@ const DashboardModern = ({ user, onLogout }) => {
             <motion.div 
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              onClick={() => navigate('/vip')}
+              onClick={() => navigate('/subscription')}
               className="flex-shrink-0 w-[85%] cursor-pointer"
               style={{ scrollSnapAlign: 'start' }}
             >

@@ -165,7 +165,7 @@ const QuickActionsGrid = ({ isVip = false, onVipRequired }) => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/vip')}
+              onClick={() => navigate('/subscription')}
               className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold rounded-lg"
             >
               Upgrade

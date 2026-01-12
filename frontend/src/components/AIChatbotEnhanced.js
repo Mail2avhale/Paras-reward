@@ -65,7 +65,7 @@ const getAISuggestions = (userStats, userName) => {
       icon: '👑',
       text: 'VIP unlocks shopping, vouchers & bill payments',
       action: 'Learn More',
-      route: '/vip',
+      route: '/subscription',
       type: 'upgrade'
     });
   }
@@ -107,7 +107,7 @@ const parseResponseForActions = (text) => {
     actions.push({ label: 'Invite Friends', route: '/referrals', icon: Users, variant: 'default' });
   }
   if (lowerText.includes('vip') || lowerText.includes('upgrade') || lowerText.includes('premium')) {
-    actions.push({ label: 'View VIP Plans', route: '/vip', icon: Crown, variant: 'success' });
+    actions.push({ label: 'View VIP Plans', route: '/subscription', icon: Crown, variant: 'success' });
   }
   if (lowerText.includes('marketplace') || lowerText.includes('shop') || lowerText.includes('redeem') || lowerText.includes('product')) {
     actions.push({ label: 'Browse Marketplace', route: '/marketplace', icon: ShoppingBag, variant: 'default' });

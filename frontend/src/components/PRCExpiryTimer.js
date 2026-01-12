@@ -109,7 +109,7 @@ const PRCExpiryTimer = ({ miningHistory, isFreeUser }) => {
               🛒 Use Now in Marketplace
             </button>
             <button
-              onClick={() => window.location.href = '/vip'}
+              onClick={() => window.location.href = '/subscription'}
               className="flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-white/30 transition-all border border-white/30"
             >
               <Zap className="w-4 h-4" />
