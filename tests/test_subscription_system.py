@@ -133,7 +133,9 @@ class TestUserSubscription:
             params={"identifier": ADMIN_EMAIL, "password": ADMIN_PASSWORD}
         )
         if response.status_code == 200:
-            return response.json().get("user", {}).get("uid")
+            data = response.json()
+            # UID is returned directly, not nested in 'user'
+            return data.get("uid")
         return None
     
     def test_get_user_subscription_status(self, admin_uid):
