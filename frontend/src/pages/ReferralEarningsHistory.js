@@ -37,8 +37,8 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
   const levelBonuses = {
     1: { percent: 10, desc: 'Direct Referrals' },
     2: { percent: 5, desc: 'Level 2' },
-    3: { percent: 3, desc: 'Level 3' },
-    4: { percent: 2, desc: 'Level 4' },
+    3: { percent: 2.5, desc: 'Level 3' },
+    4: { percent: 1.5, desc: 'Level 4' },
     5: { percent: 1, desc: 'Level 5' }
   };
 
