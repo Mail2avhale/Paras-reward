@@ -597,14 +597,14 @@ const AdvancedUserManagement = () => {
                   type="button"
                   onClick={() => setShowEditModal(false)}
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-800"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   {loading ? 'Updating...' : 'Update User'}
                 </Button>
@@ -616,26 +616,26 @@ const AdvancedUserManagement = () => {
 
       {/* Balance Adjustment Modal */}
       {showBalanceModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md p-6">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md p-6 bg-gray-900 border-gray-800">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-gray-900">Adjust Balance</h2>
-              <Button onClick={() => setShowBalanceModal(false)} variant="ghost" size="sm">
+              <h2 className="text-2xl font-bold text-white">Adjust Balance</h2>
+              <Button onClick={() => setShowBalanceModal(false)} variant="ghost" size="sm" className="text-gray-400 hover:text-white">
                 <X className="h-4 w-4" />
               </Button>
             </div>
             
-            <div className="mb-4 p-3 bg-gray-50 rounded">
-              <p className="text-sm text-gray-600">User: <strong>{selectedUser.name}</strong></p>
-              <p className="text-sm text-gray-600">Current PRC: <strong>{(selectedUser.prc_balance || 0).toFixed(2)}</strong></p>
-              <p className="text-sm text-gray-600">Plan: <strong>{selectedUser.subscription_plan || 'Explorer'}</strong></p>
+            <div className="mb-4 p-3 bg-gray-800 rounded-lg">
+              <p className="text-sm text-gray-300">User: <strong className="text-white">{selectedUser.name}</strong></p>
+              <p className="text-sm text-gray-300">Current PRC: <strong className="text-emerald-400">{(selectedUser.prc_balance || 0).toFixed(2)}</strong></p>
+              <p className="text-sm text-gray-300">Plan: <strong className="text-purple-400">{selectedUser.subscription_plan || 'Explorer'}</strong></p>
             </div>
             
             <form onSubmit={handleAdjustBalance} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Balance Type</label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Balance Type</label>
                 <select
-                  className="w-full border rounded p-2"
+                  className="w-full border border-gray-700 rounded p-2 bg-gray-800 text-white"
                   value={balanceForm.balance_type}
                   onChange={(e) => setBalanceForm({...balanceForm, balance_type: e.target.value})}
                 >
@@ -644,13 +644,13 @@ const AdvancedUserManagement = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Operation</label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Operation</label>
                 <div className="grid grid-cols-3 gap-2">
                   <Button
                     type="button"
                     variant={balanceForm.operation === 'add' ? 'default' : 'outline'}
                     onClick={() => setBalanceForm({...balanceForm, operation: 'add'})}
-                    className="w-full"
+                    className={`w-full ${balanceForm.operation === 'add' ? 'bg-emerald-600 hover:bg-emerald-700' : 'border-gray-700 text-gray-300 hover:bg-gray-800'}`}
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     Add
@@ -659,7 +659,7 @@ const AdvancedUserManagement = () => {
                     type="button"
                     variant={balanceForm.operation === 'deduct' ? 'default' : 'outline'}
                     onClick={() => setBalanceForm({...balanceForm, operation: 'deduct'})}
-                    className="w-full"
+                    className={`w-full ${balanceForm.operation === 'deduct' ? 'bg-red-600 hover:bg-red-700' : 'border-gray-700 text-gray-300 hover:bg-gray-800'}`}
                   >
                     <Minus className="h-4 w-4 mr-1" />
                     Deduct
@@ -668,7 +668,7 @@ const AdvancedUserManagement = () => {
                     type="button"
                     variant={balanceForm.operation === 'set' ? 'default' : 'outline'}
                     onClick={() => setBalanceForm({...balanceForm, operation: 'set'})}
-                    className="w-full"
+                    className={`w-full ${balanceForm.operation === 'set' ? 'bg-blue-600 hover:bg-blue-700' : 'border-gray-700 text-gray-300 hover:bg-gray-800'}`}
                   >
                     <Settings className="h-4 w-4 mr-1" />
                     Set
@@ -677,7 +677,7 @@ const AdvancedUserManagement = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Amount</label>
                 <Input
                   type="number"
                   step="0.01"
