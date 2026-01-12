@@ -470,13 +470,18 @@ class User(BaseModel):
     pan_number: Optional[str] = None
     upi_id: Optional[str] = None
     
-    # Membership
-    membership_type: str = "free"  # free, vip
-    membership_expiry: Optional[datetime] = None
-    vip_expiry: Optional[str] = None  # VIP expiry date as ISO string
-    vip_expired: Optional[bool] = None  # True if VIP membership is expired
-    vip_days_expired: Optional[int] = None  # Days since VIP expired
-    vip_expiry_message: Optional[str] = None  # Renewal message for expired VIP
+    # Membership - NEW SUBSCRIPTION SYSTEM
+    membership_type: str = "free"  # free, vip (legacy) OR explorer, startup, growth, elite (new)
+    subscription_plan: str = "explorer"  # explorer, startup, growth, elite
+    subscription_expiry: Optional[str] = None  # Subscription expiry date as ISO string
+    subscription_expired: Optional[bool] = None  # True if subscription is expired
+    subscription_days_expired: Optional[int] = None  # Days since subscription expired
+    subscription_expiry_message: Optional[str] = None  # Renewal message
+    membership_expiry: Optional[datetime] = None  # Legacy field
+    vip_expiry: Optional[str] = None  # Legacy - VIP expiry date as ISO string
+    vip_expired: Optional[bool] = None  # Legacy - True if VIP membership is expired
+    vip_days_expired: Optional[int] = None  # Legacy - Days since VIP expired
+    vip_expiry_message: Optional[str] = None  # Legacy - Renewal message for expired VIP
     
     # Wallets
     prc_balance: float = 0.0
