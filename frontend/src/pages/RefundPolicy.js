@@ -50,19 +50,8 @@ const RefundPolicy = () => {
         { text: 'Damaged Products: Report damaged products within 48 hours of delivery for PRC refund.' },
         { text: 'Non-Delivery: Full PRC refund if product is not delivered within 30 days.' }
       ]
-    },
-    {
-      id: 4,
-      title: 'Cashback Wallet',
-      icon: Wallet,
-      color: 'blue',
-      policies: [
-        { text: 'Non-Transferable: Cashback wallet balance cannot be transferred to another user.' },
-        { text: 'Monthly Fee: ₹99 monthly maintenance fee is non-refundable.' },
-        { text: 'Withdrawal Fee: ₹5 withdrawal processing fee is non-refundable.' },
-        { text: 'Account Closure: Cashback balance will be forfeited upon account closure.' }
-      ]
     }
+    // Cashback Wallet section removed - cashback system deprecated
   ];
 
   const refundProcess = [
