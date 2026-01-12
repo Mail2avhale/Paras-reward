@@ -437,62 +437,65 @@ const AdvancedUserManagement = () => {
             <form onSubmit={handleEditUser} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Name</label>
                   <Input
                     type="text"
                     value={editForm.name}
                     onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                    className="bg-gray-800 border-gray-700 text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
                   <Input
                     type="email"
                     value={editForm.email}
                     onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                    className="bg-gray-800 border-gray-700 text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Mobile</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Mobile</label>
                   <Input
                     type="text"
                     value={editForm.mobile}
                     onChange={(e) => setEditForm({...editForm, mobile: e.target.value})}
+                    className="bg-gray-800 border-gray-700 text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Role</label>
                   <select
-                    className="w-full border rounded p-2"
+                    className="w-full border border-gray-700 rounded p-2 bg-gray-800 text-white"
                     value={editForm.role}
                     onChange={(e) => setEditForm({...editForm, role: e.target.value})}
                   >
                     <option value="user">User</option>
                     <option value="manager">Manager</option>
                     <option value="admin">Admin</option>
-                    <option value="master_stockist">Master Stockist</option>
-                    <option value="sub_stockist">Sub Stockist</option>
-                    <option value="outlet">Outlet</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Membership</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Subscription Plan</label>
                   <select
-                    className="w-full border rounded p-2"
+                    className="w-full border border-gray-700 rounded p-2 bg-gray-800 text-white"
                     value={editForm.membership_type}
                     onChange={(e) => setEditForm({...editForm, membership_type: e.target.value})}
                   >
-                    <option value="free">Free</option>
-                    <option value="vip">VIP</option>
+                    <option value="explorer">Explorer (Free)</option>
+                    <option value="startup">Startup</option>
+                    <option value="growth">Growth</option>
+                    <option value="elite">Elite</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">KYC Status</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">KYC Status</label>
                   <select
-                    className="w-full border rounded p-2"
+                    className="w-full border border-gray-700 rounded p-2 bg-gray-800 text-white"
                     value={editForm.kyc_status}
                     onChange={(e) => setEditForm({...editForm, kyc_status: e.target.value})}
                   >
+                    <option value="not_submitted">Not Submitted</option>
                     <option value="pending">Pending</option>
                     <option value="verified">Verified</option>
                     <option value="rejected">Rejected</option>
