@@ -59,16 +59,30 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 
 #### Admin Dashboard & Menu Redesign ✅
 
-**AdminDashboard.js - Complete Redesign:**
+**AdminDashboard.js - Complete Redesign with Real-Time Charts:**
 - Clean, dark-themed modern dashboard
 - Stats Cards: Total Users, Paid Subscribers, Total PRC, Total Orders
 - Action Required Alert: Shows pending KYC, orders needing delivery partner, pending payments
 - Quick Actions Grid: 12 quick access buttons (Users, Subscriptions, KYC, Orders, Delivery, Marketplace, Analytics, Wallets, Security, PRC Controls, Accounting, Settings)
-- Recent Orders section with status indicators
-- Pending KYC section with review buttons
-- Subscription Distribution cards (Explorer, Startup, Growth, Elite)
-- Delivery Overview stats
+
+**Real-Time Charts (NEW):**
+- **User Growth (30 Days)**: Area chart showing daily new user registrations with gradient fill and tooltips
+- **PRC Flow (30 Days)**: Dual-line area chart showing Earned (green) vs Spent (red) PRC with legend
+- **Orders (30 Days)**: Bar chart showing Total Orders vs Delivered orders daily
+- **Subscription Distribution**: Pie chart with Explorer/Startup/Growth/Elite breakdown and legend
+
+**Backend Chart APIs (NEW):**
+- `GET /api/admin/charts/user-growth` - 30-day user registration trend
+- `GET /api/admin/charts/prc-circulation` - 30-day PRC earned vs spent
+- `GET /api/admin/charts/orders` - 30-day orders and delivery stats
+- `GET /api/admin/charts/subscriptions` - Current plan distribution + 7-day purchase trend
+
+**Features:**
 - Auto-refresh every 30 seconds
+- "Live Data" indicator
+- Custom tooltips for all charts
+- Loading states with spinners
+- Responsive grid layout
 
 **AdminLayout.js - Simplified Menu Structure:**
 - Main Menu: Dashboard, Users, KYC Verification, Orders, Delivery Partners, Marketplace, Analytics, Support Tickets
