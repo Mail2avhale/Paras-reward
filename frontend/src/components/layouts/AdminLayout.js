@@ -102,7 +102,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'marketplace', label: 'Marketplace', icon: Store, path: '/admin/marketplace' },
     { id: 'video-ads', label: 'Video Ads', icon: Video, path: '/admin/video-ads' },
     { id: 'prc-rain', label: 'PRC Rain Drop', icon: CloudRain, path: '/admin/prc-rain' },
-    { id: 'stockists', label: 'Stockist Management', icon: UserCog, path: '/admin/stockists' },
+    // Stockist Management removed - using direct delivery partner model
     { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon, path: '/admin/support' },
     { id: 'fraud-alerts', label: 'Fraud Alerts', icon: AlertTriangle, path: '/admin/fraud-alerts' },
   ];
