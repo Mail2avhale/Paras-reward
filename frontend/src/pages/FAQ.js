@@ -13,11 +13,11 @@ const FAQ = () => {
       questions: [
         {
           question: "What is Paras Reward?",
-          answer: "PARAS REWARD is India's first mining-based rewards platform where users earn PRC (Paras Reward Coins) through daily activities like mining, tap games, and referrals. These coins can be redeemed for real products or gift vouchers."
+          answer: "PARAS REWARD is a digital engagement platform where users earn virtual reward points (PRC) through activities like daily engagement, tap games, and referrals. The term 'mining' refers to our virtual reward system - NOT cryptocurrency mining. Points can be redeemed for services like mobile recharges and bill payments through our partners."
         },
         {
           question: "Is there any joining fee?",
-          answer: "No! Joining PARAS REWARD is completely free. You can start earning PRC coins immediately after registration without any investment."
+          answer: "No! Joining PARAS REWARD is completely free. You can start earning promotional reward points immediately after registration. Note: Reward points are promotional in nature and have no guaranteed monetary value."
         }
       ]
     },
@@ -26,34 +26,34 @@ const FAQ = () => {
       icon: Coins,
       questions: [
         {
-          question: "How do I earn PRC coins?",
-          answer: "You can earn PRC coins through multiple ways: Daily mining (click mine button every hour), Tap game (play daily to earn bonus coins), Referrals (invite friends and earn when they join), and Daily login rewards."
+          question: "How do I earn PRC points?",
+          answer: "You can earn PRC points through: Daily engagement (virtual mining feature), Tap game (play daily for bonus points), Referrals (earn when friends join and engage), and Daily login activities."
         },
         {
-          question: "How to increase mining speed?",
-          answer: "You can increase your mining rate by: Referring more friends to join the platform, Becoming a VIP member for enhanced benefits, Completing daily tasks and maintaining consistent activity."
+          question: "How to increase reward rate?",
+          answer: "You can increase your reward rate by: Referring friends to join, Upgrading to a paid plan (Startup/Growth/Elite), and Maintaining consistent daily activity."
         },
         {
           question: "What is the Tap Game?",
-          answer: "The Tap Game is a daily interactive feature where you tap the screen to earn bonus PRC coins. Play once per day to maximize your earnings."
+          answer: "The Tap Game is a daily interactive feature where you tap the screen to earn bonus PRC points. Free users get 100 taps/day, paid plans get up to 400 taps/day."
         }
       ]
     },
     {
-      category: 'VIP Membership',
+      category: 'Subscription Plans',
       icon: Crown,
       questions: [
         {
-          question: "What is VIP membership and how much does it cost?",
-          answer: "VIP membership costs ₹1,000 per year and unlocks unlimited PRC validity, full redemption access, priority support, exclusive marketplace access, and higher mining rates."
+          question: "What subscription plans are available?",
+          answer: "We offer 4 plans: Explorer (Free), Startup (₹299/month), Growth (₹549/month), and Elite (₹799/month). Paid plans include higher reward rates, more daily taps, and redemption access."
         },
         {
-          question: "Do free users' PRC coins expire?",
-          answer: "Yes, free users have a 24-hour PRC validity period. Coins earned through mining and tap games will expire after 24 hours. VIP members have unlimited coin validity."
+          question: "Do free users' PRC points expire?",
+          answer: "Yes, Explorer (free) users' PRC points expire after 2 days of inactivity. Paid plan users (Startup/Growth/Elite) have permanent point validity."
         },
         {
-          question: "Can free users redeem products?",
-          answer: "No, only VIP members can redeem products and rewards. Free users can earn and accumulate PRC but must upgrade to VIP to access redemption features."
+          question: "Can free users redeem rewards?",
+          answer: "No, only paid plan members (Startup/Growth/Elite) can redeem rewards. Free users can earn PRC but must upgrade to access redemption features."
         }
       ]
     },
