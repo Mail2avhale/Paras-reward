@@ -194,6 +194,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
             
             {/* Static Pages */}
             <Route path="/about" element={<AboutUs />} />
+            <Route path="/disclaimer" element={<Disclaimer />} />
+            <Route path="/terms" element={<Disclaimer />} />
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/terms" element={<TermsConditions />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
