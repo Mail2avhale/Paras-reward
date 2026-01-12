@@ -49,11 +49,12 @@ const Referrals = ({ user }) => {
   };
 
   // Level bonus percentages (only on active referrals)
+  // NEW FORMULA: L1=10%, L2=5%, L3=2.5%, L4=1.5%, L5=1% (Total: 20%)
   const levelBonuses = {
     1: { percent: 10, desc: 'Direct Referrals', color: 'from-amber-500 to-amber-600' },
     2: { percent: 5, desc: 'Level 2 Network', color: 'from-blue-500 to-blue-600' },
-    3: { percent: 3, desc: 'Level 3 Network', color: 'from-emerald-500 to-emerald-600' },
-    4: { percent: 2, desc: 'Level 4 Network', color: 'from-purple-500 to-purple-600' },
+    3: { percent: 2.5, desc: 'Level 3 Network', color: 'from-emerald-500 to-emerald-600' },
+    4: { percent: 1.5, desc: 'Level 4 Network', color: 'from-purple-500 to-purple-600' },
     5: { percent: 1, desc: 'Level 5 Network', color: 'from-pink-500 to-pink-600' }
   };
 
