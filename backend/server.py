@@ -4265,6 +4265,103 @@ async def run_explorer_burn_job():
     result = await burn_expired_prc_for_explorer_users()
     return {"success": True, "result": result}
 
+@api_router.post("/admin/database/cleanup")
+async def cleanup_database(request: Request):
+    """
+    Admin: Clean up test data from database
+    WARNING: This will delete all users except admin accounts!
+    Requires confirmation code: 'CONFIRM_DELETE_ALL'
+    """
+    data = await request.json()
+    confirmation = data.get("confirmation")
+    keep_emails = data.get("keep_emails", ["admin@paras.com"])  # Emails to keep
+    
+    if confirmation != "CONFIRM_DELETE_ALL":
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid confirmation. Send {'confirmation': 'CONFIRM_DELETE_ALL'} to proceed"
+        )
+    
+    try:
+        # Count before deletion
+        total_users = await db.users.count_documents({})
+        admin_users = await db.users.count_documents({"email": {"$in": keep_emails}})
+        
+        # Delete all users EXCEPT those in keep_emails
+        delete_result = await db.users.delete_many({
+            "email": {"$nin": keep_emails}
+        })
+        
+        # Clean up related collections
+        deleted_transactions = await db.transactions.delete_many({})
+        deleted_orders = await db.orders.delete_many({})
+        deleted_payments = await db.vip_payments.delete_many({})
+        deleted_wallet_txns = await db.wallet_transactions.delete_many({})
+        deleted_notifications = await db.notifications.delete_many({})
+        deleted_activity = await db.activity_logs.delete_many({})
+        
+        # Reset admin user's data (optional - keep the account but reset stats)
+        for email in keep_emails:
+            await db.users.update_one(
+                {"email": email},
+                {
+                    "$set": {
+                        "prc_balance": 0,
+                        "cash_balance": 0,
+                        "total_mined": 0,
+                        "taps_today": 0,
+                        "mining_history": [],
+                        "subscription_plan": "elite",  # Keep admin as elite
+                        "subscription_expiry": (datetime.now(timezone.utc) + timedelta(days=365)).isoformat()
+                    }
+                }
+            )
+        
+        return {
+            "success": True,
+            "message": "Database cleaned successfully",
+            "deleted": {
+                "users": delete_result.deleted_count,
+                "transactions": deleted_transactions.deleted_count,
+                "orders": deleted_orders.deleted_count,
+                "payments": deleted_payments.deleted_count,
+                "wallet_transactions": deleted_wallet_txns.deleted_count,
+                "notifications": deleted_notifications.deleted_count,
+                "activity_logs": deleted_activity.deleted_count
+            },
+            "kept_users": keep_emails,
+            "before_count": total_users,
+            "after_count": await db.users.count_documents({})
+        }
+        
+    except Exception as e:
+        logging.error(f"Database cleanup error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/database/stats")
+async def get_database_stats():
+    """Get database statistics"""
+    stats = {
+        "users": await db.users.count_documents({}),
+        "transactions": await db.transactions.count_documents({}),
+        "orders": await db.orders.count_documents({}),
+        "vip_payments": await db.vip_payments.count_documents({}),
+        "wallet_transactions": await db.wallet_transactions.count_documents({}),
+        "notifications": await db.notifications.count_documents({}),
+        "products": await db.products.count_documents({}),
+        "activity_logs": await db.activity_logs.count_documents({})
+    }
+    
+    # User breakdown by subscription
+    subscription_counts = {}
+    for plan in ["explorer", "startup", "growth", "elite"]:
+        subscription_counts[plan] = await db.users.count_documents({"subscription_plan": plan})
+    subscription_counts["no_plan"] = await db.users.count_documents({"subscription_plan": {"$exists": False}})
+    
+    stats["subscription_breakdown"] = subscription_counts
+    
+    return stats
+
 @api_router.get("/settings/public")
 async def get_public_settings():
     """Get public settings (payment UPI, company info, etc.)"""
