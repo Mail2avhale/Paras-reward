@@ -14,7 +14,7 @@ import FloatingActionButton from "@/components/FloatingActionButton";
 import AIContextualHelp from "@/components/AIContextualHelp";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import ManagerLayout from "@/components/layouts/ManagerLayout";
-import StockistLayout from "@/components/layouts/StockistLayout";
+// StockistLayout removed - stockist system deprecated
 
 // Helper function to check if user can access admin pages
 const canAccessAdmin = (user) => {
