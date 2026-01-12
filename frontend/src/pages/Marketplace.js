@@ -186,6 +186,24 @@ const Marketplace = ({ user }) => {
     return matchesSearch && matchesCategory && p.is_active !== false;
   });
 
+  // Pagination
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset page when filters change
+  const handleCategoryChange = (cat) => {
+    setSelectedCategory(cat);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (query) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+  };
+
   const cartTotal = cart.items.reduce((sum, item) => {
     const product = products.find(p => p.id === item.product_id) || item.product;
     return sum + (product?.prc_price || 0) * item.quantity;
