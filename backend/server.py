@@ -4265,6 +4265,18 @@ async def run_explorer_burn_job():
     result = await burn_expired_prc_for_explorer_users()
     return {"success": True, "result": result}
 
+@api_router.get("/settings/public")
+async def get_public_settings():
+    """Get public settings (payment UPI, company info, etc.)"""
+    settings = await db.settings.find_one({}, {"_id": 0})
+    
+    return {
+        "payment_upi_id": settings.get("payment_upi_id", "paras@upi") if settings else "paras@upi",
+        "company_name": settings.get("company_name", "PARAS REWARD") if settings else "PARAS REWARD",
+        "support_email": settings.get("support_email", "support@parasreward.com") if settings else "support@parasreward.com",
+        "support_phone": settings.get("support_phone", "+91 9876543210") if settings else "+91 9876543210"
+    }
+
 # ========== VIP MEMBERSHIP ROUTES ==========
 @api_router.post("/membership/payment/{uid}", response_model=VIPPayment)
 async def submit_vip_payment(uid: str, payment: VIPPaymentCreate):
