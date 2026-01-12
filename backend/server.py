@@ -5193,31 +5193,20 @@ async def cancel_order(order_id: str):
     # Get order details
     user_id = order.get("user_id")
     total_prc = order.get("total_prc", 0)
-    cashback_amount = order.get("cashback_amount", 0)
-    
-    # Calculate cashback in ₹ (already calculated during checkout, but recalculate if missing)
-    if cashback_amount == 0:
-        cashback_amount = (total_prc * 0.25) / 10  # 25% of PRC, converted to ₹
     
     # Get user to check current balances
     user = await db.users.find_one({"uid": user_id})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Get current cashback balance (check all possible field names)
-    current_cashback = user.get("cashback_balance", user.get("cash_wallet_balance", 0))
-    
-    # Calculate new balances
+    # Calculate new PRC balance (refund)
     new_prc_balance = user.get("prc_balance", 0) + total_prc
-    new_cashback_balance = max(0, current_cashback - cashback_amount)  # Don't go negative
     
-    # Update user balances (both PRC refund and cashback deduction)
+    # Update user PRC balance only (no cashback involved)
     await db.users.update_one(
         {"uid": user_id},
         {"$set": {
-            "prc_balance": new_prc_balance,
-            "cashback_balance": new_cashback_balance,
-            "cash_wallet_balance": new_cashback_balance  # Keep both fields in sync
+            "prc_balance": new_prc_balance
         }}
     )
     
@@ -5241,9 +5230,7 @@ async def cancel_order(order_id: str):
     return {
         "message": "Order cancelled successfully",
         "refunded_prc": total_prc,
-        "deducted_cashback": round(cashback_amount, 2),
-        "new_prc_balance": new_prc_balance,
-        "new_cashback_balance": new_cashback_balance
+        "new_prc_balance": new_prc_balance
     }
 
 
