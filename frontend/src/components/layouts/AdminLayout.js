@@ -55,10 +55,10 @@ const AdminLayout = ({ children, user, onLogout }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({
-    settings: false,
-    payments: false,
+    subscriptions: false,
     finance: false,
-    security: false
+    controls: false,
+    settings: false
   });
   const [userPermissions, setUserPermissions] = useState([]);
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
