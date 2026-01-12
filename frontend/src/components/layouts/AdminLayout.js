@@ -25,7 +25,7 @@ const MENU_TO_PERMISSION = {
   'marketplace': 'marketplace',
   'video-ads': 'video_ads',
   'prc-rain': 'prc_rain',
-  'stockists': 'stockist',
+  // 'stockists': 'stockist', // Removed - stockist system deprecated
   'support': 'support',
   'fraud-alerts': 'fraud',
   'accounting': 'accounting',
