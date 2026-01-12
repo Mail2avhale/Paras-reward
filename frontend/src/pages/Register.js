@@ -1,20 +1,22 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { UserPlus, Store, Mail, Phone, Lock, MapPin, CreditCard, FileText } from 'lucide-react';
+import { UserPlus, Store, Mail, Phone, Lock, MapPin, CreditCard, FileText, Gift } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const Register = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('user');
+  const [hasReferral, setHasReferral] = useState(false);
   
   // User Registration Form
   const [userForm, setUserForm] = useState({
@@ -35,6 +37,16 @@ const Register = () => {
     upi_id: '',
     referral_code: ''
   });
+
+  // Auto-fill referral code from URL parameter
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      setUserForm(prev => ({ ...prev, referral_code: refCode.toUpperCase() }));
+      setHasReferral(true);
+      toast.success(`Referral code ${refCode.toUpperCase()} applied!`);
+    }
+  }, [searchParams]);
 
   // Stockist Registration Form
   const [stockistForm, setStockistForm] = useState({
