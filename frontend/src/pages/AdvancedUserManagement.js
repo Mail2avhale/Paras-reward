@@ -364,9 +364,8 @@ const AdvancedUserManagement = () => {
                       size="sm"
                       variant="outline"
                       onClick={() => { setSelectedUser(user); setShowPermissionsModal(true); }}
-                      className="border-gray-700 text-gray-300 hover:bg-gray-800"
+                      className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
                       title="Manage Permissions"
-                      className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
                     >
                       <Shield className="h-4 w-4" />
                     </Button>
@@ -376,15 +375,17 @@ const AdvancedUserManagement = () => {
                     variant="outline"
                     onClick={() => openBalanceModal(user)}
                     title="Adjust Balance"
+                    className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
                   >
                     <DollarSign className="h-4 w-4" />
                   </Button>
                   <Button
                     size="sm"
-                    variant="destructive"
+                    variant="outline"
                     onClick={() => handleDeleteUser(user.uid)}
                     title="Delete User"
                     disabled={user.is_active === false}
+                    className="border-red-500/30 text-red-400 hover:bg-red-500/10 disabled:opacity-50"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -402,17 +403,19 @@ const AdvancedUserManagement = () => {
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
             variant="outline"
+            className="border-gray-700 text-gray-300 hover:bg-gray-800 disabled:opacity-50"
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
             Previous
           </Button>
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-gray-400">
             Page {page} of {totalPages}
           </span>
           <Button
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
             variant="outline"
+            className="border-gray-700 text-gray-300 hover:bg-gray-800 disabled:opacity-50"
           >
             Next
             <ChevronRight className="h-4 w-4 ml-2" />
@@ -422,11 +425,11 @@ const AdvancedUserManagement = () => {
 
       {/* Edit User Modal */}
       {showEditModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 bg-gray-900 border-gray-800">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-gray-900">Edit User</h2>
-              <Button onClick={() => setShowEditModal(false)} variant="ghost" size="sm">
+              <h2 className="text-2xl font-bold text-white">Edit User</h2>
+              <Button onClick={() => setShowEditModal(false)} variant="ghost" size="sm" className="text-gray-400 hover:text-white">
                 <X className="h-4 w-4" />
               </Button>
             </div>
