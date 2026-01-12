@@ -5264,74 +5264,13 @@ async def get_wallet(uid: str):
         else:
             days_until_maintenance = (next_maintenance - now).days
     
-    # Get cashback balance - prioritize cashback_wallet_balance as the primary field
-    cashback_balance = user.get("cashback_wallet_balance", 0)
-    if cashback_balance == 0:
-        # Fall back to legacy field names if cashback_wallet_balance is not set
-        cashback_balance = user.get("cashback_balance", user.get("cash_wallet_balance", 0))
-    
+    # Cashback wallet removed - return PRC balance only
     return {
-        "cashback_balance": cashback_balance,
-        "profit_balance": user.get("profit_wallet_balance", 0),
         "prc_balance": user.get("prc_balance", 0),
-        "wallet_status": user.get("wallet_status", "active"),
-        "pending_lien": user.get("wallet_maintenance_due", 0),
-        "last_maintenance": user.get("last_wallet_maintenance"),
-        "maintenance_due": maintenance_due,
-        "days_until_maintenance": days_until_maintenance,
-        "maintenance_fee": 99.0
+        "wallet_status": user.get("wallet_status", "active")
     }
 
-@api_router.post("/wallet/check-maintenance/{uid}")
-async def check_and_apply_maintenance(uid: str):
-    """Check and apply monthly maintenance fee (₹99) - called when adding cashback"""
-    user = await db.users.find_one({"uid": uid})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # Only for VIP users
-    if user.get("membership_type") != "vip":
-        return {"maintenance_applied": False, "message": "Not a VIP user"}
-    
-    vip_activation = user.get("vip_activation_date")
-    if not vip_activation:
-        return {"maintenance_applied": False, "message": "VIP activation date not set"}
-    
-    if isinstance(vip_activation, str):
-        vip_activation = datetime.fromisoformat(vip_activation)
-    
-    last_maintenance = user.get("last_wallet_maintenance")
-    if last_maintenance:
-        if isinstance(last_maintenance, str):
-            last_maintenance = datetime.fromisoformat(last_maintenance)
-        next_maintenance_due = last_maintenance + timedelta(days=30)
-    else:
-        next_maintenance_due = vip_activation + timedelta(days=30)
-    
-    now = datetime.now(timezone.utc)
-    
-    # Check if 30 days have passed
-    if now >= next_maintenance_due:
-        pending_lien = user.get("wallet_maintenance_due", 0)
-        new_lien = pending_lien + 99.0
-        
-        await db.users.update_one(
-            {"uid": uid},
-            {"$set": {
-                "wallet_maintenance_due": new_lien,
-                "last_wallet_maintenance": now.isoformat(),
-                "wallet_status": "lien_pending" if new_lien > 0 else "active"
-            }}
-        )
-        
-        return {
-            "maintenance_applied": True,
-            "amount": 99.0,
-            "total_lien": new_lien,
-            "message": f"₹99 maintenance fee applied. Total pending lien: ₹{new_lien}"
-        }
-    
-    return {"maintenance_applied": False, "message": "Maintenance not yet due"}
+# check_and_apply_maintenance endpoint removed - no monthly maintenance fee
 
 @api_router.post("/admin/profit-wallet/credit")
 async def admin_credit_profit_wallet(request: Request):
