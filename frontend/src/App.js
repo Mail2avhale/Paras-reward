@@ -57,7 +57,7 @@ const Referrals = lazy(() => import("@/pages/Referrals"));
 const Marketplace = lazy(() => import("@/pages/Marketplace"));
 const MarketplaceEnhanced = lazy(() => import("@/pages/MarketplaceEnhanced"));
 const Orders = lazy(() => import("@/pages/Orders"));
-const VIPMembership = lazy(() => import("@/pages/VIPMembership"));
+// VIPMembership removed - replaced by SubscriptionPlans (new 4-tier system)
 const SubscriptionPlans = lazy(() => import("@/pages/SubscriptionPlans"));
 // Removed: WalletNew (withdrawal functionality removed)
 // Removed: Leaderboard (feature removed for AdMob compliance)
@@ -97,8 +97,7 @@ const AdminSupport = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/
 const AdminMarketplace = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminMarketplace"));
 const AdminSettings = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSettings"));
 const AdminSecurityDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSecurityDashboard"));
-const AdminVIPPlans = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminVIPPlans"));
-const AdminVIPPaymentVerification = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminVIPPaymentVerification"));
+// AdminVIPPlans and AdminVIPPaymentVerification removed - replaced by AdminSubscriptionManagement (new 4-tier system)
 const AdminSubscriptionManagement = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSubscriptionManagement"));
 const AdminBurnDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminBurnDashboard"));
 const AdminBillPayments = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminBillPayments"));
