@@ -324,8 +324,8 @@ class RolePermissions:
     ADMIN_ROLES = ["admin", "sub_admin"]
     MANAGEMENT_ROLES = ["admin", "sub_admin", "manager"]
     EMPLOYEE_ROLES = ["admin", "sub_admin", "manager", "employee"]
-    STOCKIST_ROLES = ["master_stockist", "sub_stockist", "outlet"]
-    ALL_ROLES = ["admin", "sub_admin", "manager", "employee", "master_stockist", "sub_stockist", "outlet", "user"]
+    # STOCKIST_ROLES removed - direct delivery partner model
+    ALL_ROLES = ["admin", "sub_admin", "manager", "employee", "user"]
 
 async def get_user_from_uid(uid: str):
     """Get user from database by UID"""
@@ -355,9 +355,7 @@ async def verify_management(uid: str):
     """Verify user is admin, sub_admin, or manager"""
     return await verify_role(uid, RolePermissions.MANAGEMENT_ROLES)
 
-async def verify_stockist(uid: str):
-    """Verify user is master_stockist, sub_stockist, or outlet"""
-    return await verify_role(uid, RolePermissions.STOCKIST_ROLES)
+# verify_stockist removed - stockist system deprecated
 
 def check_region_access(user: dict, target_region: str = None) -> bool:
     """Check if user has access to target region (for sub_admin)"""
