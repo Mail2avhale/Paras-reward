@@ -228,6 +228,34 @@ const AdminSubscriptionManagement = ({ user }) => {
     );
   }
 
+  const handleCleanDatabase = async () => {
+    if (!window.confirm('⚠️ WARNING: This will delete ALL users except admin!\n\nAre you sure?')) {
+      return;
+    }
+    
+    const confirmCode = window.prompt('Type "DELETE" to confirm:');
+    if (confirmCode !== 'DELETE') {
+      toast.error('Cleanup cancelled');
+      return;
+    }
+    
+    try {
+      setProcessing(true);
+      const response = await axios.post(`${API}/api/admin/database/cleanup`, {
+        confirmation: 'CONFIRM_DELETE_ALL',
+        keep_emails: ['admin@paras.com']
+      });
+      
+      const deleted = response.data.deleted || {};
+      toast.success(`Database cleaned! Deleted: ${deleted.users} users, ${deleted.transactions} transactions`);
+      fetchAllData();
+    } catch (error) {
+      toast.error('Failed to clean database');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
