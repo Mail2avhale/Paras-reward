@@ -22,6 +22,15 @@ const Orders = ({ user, onLogout }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleteOrderId, setDeleteOrderId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Pagination calculations
+  const totalPages = Math.ceil(orders.length / itemsPerPage);
+  const paginatedOrders = orders.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   useEffect(() => {
     fetchOrders();
