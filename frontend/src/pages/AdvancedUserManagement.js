@@ -238,9 +238,9 @@ const AdvancedUserManagement = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Membership</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Membership</label>
             <select
-              className="w-full border rounded p-2"
+              className="w-full border border-gray-700 rounded p-2 bg-gray-800 text-white"
               value={filterMembership}
               onChange={(e) => {
                 setFilterMembership(e.target.value);
@@ -248,15 +248,17 @@ const AdvancedUserManagement = () => {
               }}
             >
               <option value="">All Types</option>
-              <option value="free">Free</option>
-              <option value="vip">VIP</option>
+              <option value="explorer">Explorer</option>
+              <option value="startup">Startup</option>
+              <option value="growth">Growth</option>
+              <option value="elite">Elite</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">KYC Status</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">KYC Status</label>
             <select
-              className="w-full border rounded p-2"
+              className="w-full border border-gray-700 rounded p-2 bg-gray-800 text-white"
               value={filterKYC}
               onChange={(e) => {
                 setFilterKYC(e.target.value);
@@ -267,6 +269,7 @@ const AdvancedUserManagement = () => {
               <option value="pending">Pending</option>
               <option value="verified">Verified</option>
               <option value="rejected">Rejected</option>
+              <option value="not_submitted">Not Submitted</option>
             </select>
           </div>
         </div>
@@ -281,13 +284,13 @@ const AdvancedUserManagement = () => {
                 setShowDeleted(e.target.checked);
                 setPage(1);
               }}
-              className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+              className="w-4 h-4 text-purple-600 border-gray-600 rounded focus:ring-purple-500 bg-gray-800"
             />
-            <label htmlFor="showDeleted" className="text-sm font-medium text-gray-700 cursor-pointer">
+            <label htmlFor="showDeleted" className="text-sm font-medium text-gray-400 cursor-pointer">
               Show Deleted Users
             </label>
           </div>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-400">
             Showing {users.length} of {total} users
           </div>
         </div>
