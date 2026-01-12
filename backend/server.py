@@ -4277,6 +4277,191 @@ async def get_public_settings():
         "support_phone": settings.get("support_phone", "+91 9876543210") if settings else "+91 9876543210"
     }
 
+# ========== AUTO-RENEWAL NOTIFICATIONS ==========
+
+@api_router.post("/admin/send-renewal-notifications")
+async def send_renewal_notifications():
+    """Send renewal notifications to users whose subscription is expiring within 7 days"""
+    now = datetime.now(timezone.utc)
+    expiry_threshold = now + timedelta(days=7)
+    
+    # Find users with expiring subscriptions
+    expiring_users = []
+    async for user in db.users.find({
+        "subscription_plan": {"$in": ["startup", "growth", "elite"]},
+        "subscription_expiry": {"$exists": True}
+    }):
+        expiry_str = user.get("subscription_expiry")
+        if expiry_str:
+            try:
+                expiry = datetime.fromisoformat(expiry_str.replace('Z', '+00:00'))
+                if expiry.tzinfo is None:
+                    expiry = expiry.replace(tzinfo=timezone.utc)
+                
+                # Check if expiring within 7 days
+                if now < expiry <= expiry_threshold:
+                    days_left = (expiry - now).days
+                    expiring_users.append({
+                        "uid": user.get("uid"),
+                        "email": user.get("email"),
+                        "plan": user.get("subscription_plan"),
+                        "days_left": days_left,
+                        "expiry_date": expiry_str
+                    })
+            except:
+                pass
+    
+    # Create notifications for each expiring user
+    notifications_sent = 0
+    for u in expiring_users:
+        # Create in-app notification
+        await create_notification(
+            user_id=u["uid"],
+            title=f"Subscription Expiring in {u['days_left']} days!",
+            message=f"Your {u['plan'].capitalize()} subscription will expire on {u['expiry_date'][:10]}. Renew now to continue enjoying premium benefits!",
+            notification_type="subscription"
+        )
+        notifications_sent += 1
+    
+    return {
+        "success": True,
+        "expiring_users": len(expiring_users),
+        "notifications_sent": notifications_sent,
+        "users": expiring_users
+    }
+
+@api_router.get("/subscription/expiring")
+async def get_expiring_subscriptions():
+    """Get list of subscriptions expiring within 7 days"""
+    now = datetime.now(timezone.utc)
+    expiry_threshold = now + timedelta(days=7)
+    
+    expiring_users = []
+    async for user in db.users.find({
+        "subscription_plan": {"$in": ["startup", "growth", "elite"]},
+        "subscription_expiry": {"$exists": True}
+    }, {"_id": 0, "password_hash": 0}):
+        expiry_str = user.get("subscription_expiry")
+        if expiry_str:
+            try:
+                expiry = datetime.fromisoformat(expiry_str.replace('Z', '+00:00'))
+                if expiry.tzinfo is None:
+                    expiry = expiry.replace(tzinfo=timezone.utc)
+                
+                if now < expiry <= expiry_threshold:
+                    user["days_until_expiry"] = (expiry - now).days
+                    expiring_users.append(user)
+            except:
+                pass
+    
+    return {"expiring_users": expiring_users, "count": len(expiring_users)}
+
+# ========== PLAN UPGRADE/DOWNGRADE ==========
+
+@api_router.post("/subscription/upgrade/{uid}")
+async def upgrade_subscription(uid: str, request: Request):
+    """Admin: Upgrade user's subscription plan"""
+    data = await request.json()
+    new_plan = data.get("plan")
+    extend_days = data.get("extend_days", 0)
+    
+    if new_plan not in ["startup", "growth", "elite"]:
+        raise HTTPException(status_code=400, detail="Invalid plan")
+    
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    now = datetime.now(timezone.utc)
+    current_expiry = user.get("subscription_expiry")
+    
+    # Calculate new expiry
+    if current_expiry:
+        try:
+            expiry_dt = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
+            if expiry_dt.tzinfo is None:
+                expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+            # Extend from current expiry
+            new_expiry = (expiry_dt + timedelta(days=extend_days)).isoformat() if extend_days > 0 else current_expiry
+        except:
+            new_expiry = (now + timedelta(days=30)).isoformat()
+    else:
+        new_expiry = (now + timedelta(days=30)).isoformat()
+    
+    # Update user subscription
+    await db.users.update_one(
+        {"uid": uid},
+        {
+            "$set": {
+                "subscription_plan": new_plan,
+                "subscription_expiry": new_expiry,
+                "membership_type": "vip"  # Legacy compatibility
+            }
+        }
+    )
+    
+    # Log activity
+    await log_activity(
+        user_id=uid,
+        action_type="subscription_change",
+        description=f"Subscription changed to {new_plan}",
+        metadata={"new_plan": new_plan, "new_expiry": new_expiry, "extend_days": extend_days}
+    )
+    
+    # Create notification
+    await create_notification(
+        user_id=uid,
+        title="Subscription Updated!",
+        message=f"Your subscription has been upgraded to {new_plan.capitalize()}. Enjoy your new benefits!",
+        notification_type="subscription"
+    )
+    
+    return {
+        "success": True,
+        "uid": uid,
+        "new_plan": new_plan,
+        "new_expiry": new_expiry
+    }
+
+@api_router.post("/subscription/downgrade/{uid}")
+async def downgrade_subscription(uid: str, request: Request):
+    """Admin: Downgrade user to Explorer (free) plan"""
+    data = await request.json()
+    reason = data.get("reason", "Manual downgrade by admin")
+    
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    old_plan = user.get("subscription_plan", "explorer")
+    
+    # Downgrade to explorer
+    await db.users.update_one(
+        {"uid": uid},
+        {
+            "$set": {
+                "subscription_plan": "explorer",
+                "subscription_expiry": None,
+                "membership_type": "free"
+            }
+        }
+    )
+    
+    # Log activity
+    await log_activity(
+        user_id=uid,
+        action_type="subscription_downgrade",
+        description=f"Subscription downgraded from {old_plan} to explorer: {reason}",
+        metadata={"old_plan": old_plan, "reason": reason}
+    )
+    
+    return {
+        "success": True,
+        "uid": uid,
+        "old_plan": old_plan,
+        "new_plan": "explorer"
+    }
+
 # ========== VIP MEMBERSHIP ROUTES ==========
 @api_router.post("/membership/payment/{uid}", response_model=VIPPayment)
 async def submit_vip_payment(uid: str, payment: VIPPaymentCreate):
