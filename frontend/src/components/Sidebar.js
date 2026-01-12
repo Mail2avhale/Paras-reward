@@ -65,8 +65,8 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
     { id: 'bill-payments', label: 'Bill Payments', icon: FileText, route: '/bill-payments' },
     { id: 'referrals', label: 'Referrals', icon: Users, route: '/referrals' },
     // Removed: Leaderboard for AdMob compliance
+    // Removed: Achievements for AdMob compliance
     { id: 'vip', label: 'VIP Membership', icon: Crown, route: '/vip' },
-    { id: 'gamification', label: 'Achievements', icon: Star, route: '/gamification' },
   ];
 
   const bottomMenuItems = [
