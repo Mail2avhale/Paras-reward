@@ -217,7 +217,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             {/* Removed: Wallet/Withdrawal functionality */}
             {/* Removed: Leaderboard page for AdMob compliance */}
             <Route path="/referral-earnings" element={user ? <ReferralEarningsHistory user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-            <Route path="/gamification" element={user ? <GamificationDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            {/* Removed: Gamification/Achievements page for AdMob compliance */}
             <Route path="/profile" element={user ? <ProfileAdvanced user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             {/* Legacy route redirect - keeping for backward compatibility */}
             <Route path="/profile-advanced" element={<Navigate to="/profile" replace />} />
