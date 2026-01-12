@@ -605,8 +605,11 @@ class OrderSingleProduct(BaseModel):
     delivery_fee: float
     total_cash_fee: float
     secret_code: str = Field(default_factory=lambda: ''.join(secrets.choice(string.digits) for _ in range(6)))
-    status: str = "pending"  # pending, verified, delivered, cancelled
-    outlet_id: Optional[str] = None
+    status: str = "pending"  # pending, verified, out_for_delivery, delivered, cancelled
+    outlet_id: Optional[str] = None  # Legacy - deprecated
+    delivery_partner_id: Optional[str] = None  # NEW - assigned delivery partner
+    delivery_partner_name: Optional[str] = None  # Cached for quick display
+    tracking_number: Optional[str] = None  # Delivery tracking number
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     delivered_at: Optional[datetime] = None
 
@@ -616,6 +619,42 @@ class OrderCreate(BaseModel):
 class OrderVerify(BaseModel):
     secret_code: str
 
+# Delivery Partner Model - NEW
+class DeliveryPartner(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    partner_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    company_name: Optional[str] = None
+    phone: str
+    email: Optional[str] = None
+    # Service areas
+    service_states: List[str] = []  # States they deliver to
+    service_districts: List[str] = []  # Specific districts (optional)
+    # Status
+    is_active: bool = True
+    is_verified: bool = False
+    # Stats
+    total_deliveries: int = 0
+    successful_deliveries: int = 0
+    rating: float = 5.0
+    # Commission
+    commission_type: str = "percentage"  # percentage or fixed
+    commission_rate: float = 10.0  # % or fixed amount per delivery
+    # Timestamps
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class DeliveryPartnerCreate(BaseModel):
+    name: str
+    company_name: Optional[str] = None
+    phone: str
+    email: Optional[str] = None
+    service_states: List[str] = []
+    service_districts: List[str] = []
+    commission_type: str = "percentage"
+    commission_rate: float = 10.0
+
+# Outlet model deprecated - kept for backward compatibility
 class Outlet(BaseModel):
     model_config = ConfigDict(extra="ignore")
     outlet_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
