@@ -39,7 +39,7 @@ const MENU_TO_PERMISSION = {
   'prc-economy': 'prc_economy',
   'liquidity': 'liquidity',
   'audit': 'audit',
-  'vip-payment': 'vip_payment',
+  'subscriptions': 'subscription_payment',  // Replaces vip_payment
   'withdrawals': 'withdrawals',
   'gift-voucher': 'gift_voucher',
   'bill-payment': 'bill_payment',
@@ -72,7 +72,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
           setUserPermissions(response.data.permissions || []);
         } catch (error) {
           console.error('Error fetching permissions:', error);
-          setUserPermissions(['users', 'vip_payment', 'kyc']); // Default permissions
+          setUserPermissions(['users', 'subscription_payment', 'kyc']); // Default permissions
         }
       } else if (user?.role === 'admin') {
         // Admin has all permissions
