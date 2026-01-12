@@ -112,7 +112,7 @@ const AdminSupport = ({ user }) => {
       'open': <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> Open</span>,
       'in_progress': <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full flex items-center gap-1"><MessageCircle className="h-3 w-3" /> In Progress</span>,
       'resolved': <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Resolved</span>,
-      'closed': <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full flex items-center gap-1"><XCircle className="h-3 w-3" /> Closed</span>
+      'closed': <span className="px-2 py-1 bg-gray-800 text-gray-300 text-xs rounded-full flex items-center gap-1"><XCircle className="h-3 w-3" /> Closed</span>
     };
     return badges[status] || badges['open'];
   };
@@ -121,7 +121,7 @@ const AdminSupport = ({ user }) => {
     const badges = {
       'high': <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">High</span>,
       'medium': <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">Medium</span>,
-      'low': <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">Low</span>
+      'low': <span className="px-2 py-1 bg-gray-800 text-gray-300 text-xs rounded-full">Low</span>
     };
     return badges[priority] || badges['medium'];
   };
@@ -137,7 +137,7 @@ const AdminSupport = ({ user }) => {
     <div className="p-4 lg:p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Support Tickets</h1>
+        <h1 className="text-2xl font-bold text-white">Support Tickets</h1>
         <p className="text-gray-500">Manage customer support requests</p>
       </div>
 
@@ -216,7 +216,7 @@ const AdminSupport = ({ user }) => {
                       <Ticket className="h-6 w-6 text-purple-600" />
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900">{ticket.subject}</p>
+                    <p className="font-semibold text-white">{ticket.subject}</p>
                     <p className="text-sm text-gray-500">{ticket.user_name || ticket.user_id}</p>
                     <p className="text-xs text-gray-400 mt-1">
                       {ticket.category} • {new Date(ticket.created_at).toLocaleDateString()}
@@ -253,7 +253,7 @@ const AdminSupport = ({ user }) => {
                   <h2 className="text-xl font-bold">{selectedTicket.subject}</h2>
                   <p className="text-sm text-gray-500">#{selectedTicket.ticket_id?.slice(-8)}</p>
                 </div>
-                <button onClick={() => setSelectedTicket(null)} className="text-gray-500 hover:text-gray-700 text-2xl">
+                <button onClick={() => setSelectedTicket(null)} className="text-gray-500 hover:text-gray-300 text-2xl">
                   ✕
                 </button>
               </div>
@@ -283,8 +283,8 @@ const AdminSupport = ({ user }) => {
               {/* Description */}
               <div className="mb-6">
                 <p className="text-xs text-gray-500 mb-2">Description</p>
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <p className="text-gray-700 whitespace-pre-wrap">{selectedTicket.description}</p>
+                <div className="p-4 bg-gray-800/50 rounded-lg">
+                  <p className="text-gray-300 whitespace-pre-wrap">{selectedTicket.description}</p>
                 </div>
               </div>
 
@@ -293,13 +293,13 @@ const AdminSupport = ({ user }) => {
                 <p className="text-xs text-gray-500 mb-2">Conversation</p>
                 <div className="space-y-3 max-h-64 overflow-y-auto">
                   {selectedTicket.messages?.map((msg, idx) => (
-                    <div key={idx} className={`p-3 rounded-lg ${msg.is_admin ? 'bg-purple-50 ml-8' : 'bg-gray-50 mr-8'}`}>
+                    <div key={idx} className={`p-3 rounded-lg ${msg.is_admin ? 'bg-purple-50 ml-8' : 'bg-gray-800/50 mr-8'}`}>
                       <div className="flex items-center gap-2 mb-1">
                         <User className="h-4 w-4" />
                         <span className="text-sm font-medium">{msg.is_admin ? 'Admin' : 'Customer'}</span>
                         <span className="text-xs text-gray-400">{new Date(msg.created_at).toLocaleString()}</span>
                       </div>
-                      <p className="text-sm text-gray-700">{msg.message}</p>
+                      <p className="text-sm text-gray-300">{msg.message}</p>
                     </div>
                   ))}
                 </div>

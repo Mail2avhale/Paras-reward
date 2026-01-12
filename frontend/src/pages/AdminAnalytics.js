@@ -72,7 +72,7 @@ function AdminAnalytics({ user, onLogout }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-800/50">
         <Navbar user={user} onLogout={onLogout} />
         
         <div className="container mx-auto px-4 py-8">
@@ -83,7 +83,7 @@ function AdminAnalytics({ user, onLogout }) {
           </div>
 
           {/* Filters Skeleton */}
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-8 animate-pulse">
+          <div className="bg-gray-900 rounded-lg shadow-sm p-6 mb-8 animate-pulse">
             <div className="flex gap-4">
               <div className="h-10 bg-gray-200 rounded w-32"></div>
               <div className="h-10 bg-gray-200 rounded w-40"></div>
@@ -113,25 +113,25 @@ function AdminAnalytics({ user, onLogout }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-800/50">
       <Navbar user={user} onLogout={onLogout} />
       
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Analytics Dashboard</h1>
-          <p className="text-gray-600">Comprehensive insights and performance metrics</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Analytics Dashboard</h1>
+          <p className="text-gray-400">Comprehensive insights and performance metrics</p>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+        <div className="bg-gray-900 rounded-lg shadow-sm p-6 mb-8">
           <div className="flex flex-wrap items-center gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Period</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Period</label>
               <select
                 value={period}
                 onChange={(e) => setPeriod(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="px-4 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
@@ -140,11 +140,11 @@ function AdminAnalytics({ user, onLogout }) {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Time Range</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Time Range</label>
               <select
                 value={days}
                 onChange={(e) => setDays(Number(e.target.value))}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="px-4 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value={7}>Last 7 Days</option>
                 <option value={30}>Last 30 Days</option>
@@ -166,12 +166,12 @@ function AdminAnalytics({ user, onLogout }) {
         {/* Overview Cards */}
         {overview && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="bg-gray-900 rounded-lg shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-gray-600">Total Users</h3>
+                <h3 className="text-sm font-medium text-gray-400">Total Users</h3>
                 <Users className="w-8 h-8 text-purple-600" />
               </div>
-              <p className="text-3xl font-bold text-gray-900">{overview.users.total}</p>
+              <p className="text-3xl font-bold text-white">{overview.users.total}</p>
               <p className="text-sm text-gray-500 mt-2">
                 VIP: {overview.users.vip} | Free: {overview.users.free}
               </p>
@@ -180,34 +180,34 @@ function AdminAnalytics({ user, onLogout }) {
               </p>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="bg-gray-900 rounded-lg shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-gray-600">Total Revenue</h3>
+                <h3 className="text-sm font-medium text-gray-400">Total Revenue</h3>
                 <DollarSign className="w-8 h-8 text-green-600" />
               </div>
-              <p className="text-3xl font-bold text-gray-900">₹{overview.revenue.total.toFixed(2)}</p>
+              <p className="text-3xl font-bold text-white">₹{overview.revenue.total.toFixed(2)}</p>
               <p className="text-sm text-gray-500 mt-2">
                 Last 30 days: ₹{overview.revenue.last_30d.toFixed(2)}
               </p>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="bg-gray-900 rounded-lg shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-gray-600">Total Orders</h3>
+                <h3 className="text-sm font-medium text-gray-400">Total Orders</h3>
                 <ShoppingCart className="w-8 h-8 text-blue-600" />
               </div>
-              <p className="text-3xl font-bold text-gray-900">{overview.orders.total}</p>
+              <p className="text-3xl font-bold text-white">{overview.orders.total}</p>
               <p className="text-sm text-gray-500 mt-2">
                 Last 30 days: {overview.orders.last_30d}
               </p>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="bg-gray-900 rounded-lg shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-gray-600">Pending Withdrawals</h3>
+                <h3 className="text-sm font-medium text-gray-400">Pending Withdrawals</h3>
                 <TrendingUp className="w-8 h-8 text-orange-600" />
               </div>
-              <p className="text-3xl font-bold text-gray-900">{overview.withdrawals.pending_count}</p>
+              <p className="text-3xl font-bold text-white">{overview.withdrawals.pending_count}</p>
               <p className="text-sm text-gray-500 mt-2">
                 Amount: ₹{overview.withdrawals.pending_amount.toFixed(2)}
               </p>
@@ -216,12 +216,12 @@ function AdminAnalytics({ user, onLogout }) {
         )}
 
         {/* Revenue Trends Chart */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+        <div className="bg-gray-900 rounded-lg shadow-sm p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Revenue Trends</h2>
+            <h2 className="text-xl font-bold text-white">Revenue Trends</h2>
             <button
               onClick={() => exportToCSV(revenueTrends, 'revenue-trends')}
-              className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+              className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-200 transition"
             >
               <Download className="w-4 h-4" />
               Export CSV
@@ -249,12 +249,12 @@ function AdminAnalytics({ user, onLogout }) {
         {/* Two Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* User Growth Chart */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-gray-900 rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">User Growth</h2>
+              <h2 className="text-xl font-bold text-white">User Growth</h2>
               <button
                 onClick={() => exportToCSV(userGrowth, 'user-growth')}
-                className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-200 transition"
               >
                 <Download className="w-4 h-4" />
                 Export
@@ -275,12 +275,12 @@ function AdminAnalytics({ user, onLogout }) {
           </div>
 
           {/* Withdrawal Patterns */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-gray-900 rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Withdrawal Patterns</h2>
+              <h2 className="text-xl font-bold text-white">Withdrawal Patterns</h2>
               <button
                 onClick={() => exportToCSV(withdrawalPatterns, 'withdrawal-patterns')}
-                className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-200 transition"
               >
                 <Download className="w-4 h-4" />
                 Export
@@ -303,12 +303,12 @@ function AdminAnalytics({ user, onLogout }) {
         </div>
 
         {/* Product Performance */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-gray-900 rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Top Performing Products</h2>
+            <h2 className="text-xl font-bold text-white">Top Performing Products</h2>
             <button
               onClick={() => exportToCSV(productPerformance, 'product-performance')}
-              className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+              className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-200 transition"
             >
               <Download className="w-4 h-4" />
               Export CSV
@@ -353,7 +353,7 @@ function AdminAnalytics({ user, onLogout }) {
           {/* Product Table */}
           <div className="mt-6 overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-800/50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity Sold</th>
@@ -361,18 +361,18 @@ function AdminAnalytics({ user, onLogout }) {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Orders</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-gray-900 divide-y divide-gray-200">
                 {productPerformance.map((product, index) => (
                   <tr key={product.product_id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="w-2 h-2 rounded-full mr-3" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                        <span className="text-sm font-medium text-gray-900">{product.name}</span>
+                        <span className="text-sm font-medium text-white">{product.name}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.quantity_sold}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">₹{product.revenue.toFixed(2)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.orders}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">{product.quantity_sold}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">₹{product.revenue.toFixed(2)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">{product.orders}</td>
                   </tr>
                 ))}
               </tbody>

@@ -130,7 +130,7 @@ const AdminMarketplace = ({ user }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Marketplace Management</h1>
+          <h1 className="text-2xl font-bold text-white">Marketplace Management</h1>
           <p className="text-gray-500">Manage products in the marketplace</p>
         </div>
         <Button onClick={() => setShowAddModal(true)} className="bg-purple-600 hover:bg-purple-700">
@@ -202,7 +202,7 @@ const AdminMarketplace = ({ user }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {paginatedProducts.map((product) => (
               <Card key={product.product_id} className="overflow-hidden">
-                <div className="aspect-square bg-gray-100 relative">
+                <div className="aspect-square bg-gray-800 relative">
                   {product.image_url ? (
                     <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                   ) : (
@@ -219,7 +219,7 @@ const AdminMarketplace = ({ user }) => {
                 </div>
               </div>
               <div className="p-4">
-                <h3 className="font-semibold text-gray-900 truncate">{product.name}</h3>
+                <h3 className="font-semibold text-white truncate">{product.name}</h3>
                 <p className="text-xs text-gray-500 mb-2">{product.category}</p>
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-lg font-bold text-purple-600">{product.prc_price?.toLocaleString()} PRC</span>
@@ -267,12 +267,12 @@ const AdminMarketplace = ({ user }) => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold">Add New Product</h2>
-                <button onClick={() => setShowAddModal(false)} className="text-gray-500 hover:text-gray-700">✕</button>
+                <button onClick={() => setShowAddModal(false)} className="text-gray-500 hover:text-gray-300">✕</button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm text-gray-600">Product Name *</label>
+                  <label className="text-sm text-gray-400">Product Name *</label>
                   <Input
                     placeholder="Enter product name"
                     value={formData.name}
@@ -280,7 +280,7 @@ const AdminMarketplace = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-gray-600">Description</label>
+                  <label className="text-sm text-gray-400">Description</label>
                   <textarea
                     className="w-full px-3 py-2 border rounded-lg"
                     placeholder="Product description"
@@ -290,7 +290,7 @@ const AdminMarketplace = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-gray-600">Category *</label>
+                  <label className="text-sm text-gray-400">Category *</label>
                   <select
                     className="w-full px-3 py-2 border rounded-lg"
                     value={formData.category}
@@ -304,7 +304,7 @@ const AdminMarketplace = ({ user }) => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm text-gray-600">PRC Price *</label>
+                    <label className="text-sm text-gray-400">PRC Price *</label>
                     <Input
                       type="number"
                       placeholder="0"
@@ -313,7 +313,7 @@ const AdminMarketplace = ({ user }) => {
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-gray-600">Cash Price (₹)</label>
+                    <label className="text-sm text-gray-400">Cash Price (₹)</label>
                     <Input
                       type="number"
                       placeholder="0"
@@ -323,7 +323,7 @@ const AdminMarketplace = ({ user }) => {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-600">Stock Quantity *</label>
+                  <label className="text-sm text-gray-400">Stock Quantity *</label>
                   <Input
                     type="number"
                     placeholder="0"
@@ -332,7 +332,7 @@ const AdminMarketplace = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-gray-600">Image URL</label>
+                  <label className="text-sm text-gray-400">Image URL</label>
                   <Input
                     placeholder="https://..."
                     value={formData.image_url}
@@ -365,7 +365,7 @@ const AdminMarketplace = ({ user }) => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold">Edit Product</h2>
-                <button onClick={() => setSelectedProduct(null)} className="text-gray-500 hover:text-gray-700">✕</button>
+                <button onClick={() => setSelectedProduct(null)} className="text-gray-500 hover:text-gray-300">✕</button>
               </div>
 
               <div className="space-y-4">
@@ -374,7 +374,7 @@ const AdminMarketplace = ({ user }) => {
                   <p className="font-semibold">{selectedProduct.name}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-600">Update Stock</label>
+                  <label className="text-sm text-gray-400">Update Stock</label>
                   <div className="flex gap-2">
                     <Input
                       type="number"

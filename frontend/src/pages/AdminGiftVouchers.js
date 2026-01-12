@@ -92,7 +92,7 @@ const AdminGiftVouchers = ({ user }) => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-800/50">
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -101,8 +101,8 @@ const AdminGiftVouchers = ({ user }) => {
               Back to Admin
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Gift Voucher Requests</h1>
-              <p className="text-sm text-gray-600">Manage PhonePe gift voucher redemptions</p>
+              <h1 className="text-3xl font-bold text-white">Gift Voucher Requests</h1>
+              <p className="text-sm text-gray-400">Manage PhonePe gift voucher redemptions</p>
             </div>
           </div>
         </div>
@@ -110,19 +110,19 @@ const AdminGiftVouchers = ({ user }) => {
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card className="p-4 bg-yellow-50">
-            <p className="text-sm text-gray-600">Pending</p>
+            <p className="text-sm text-gray-400">Pending</p>
             <p className="text-2xl font-bold text-yellow-700">{stats.pending || 0}</p>
           </Card>
           <Card className="p-4 bg-green-50">
-            <p className="text-sm text-gray-600">Completed</p>
+            <p className="text-sm text-gray-400">Completed</p>
             <p className="text-2xl font-bold text-green-700">{stats.completed || 0}</p>
           </Card>
           <Card className="p-4 bg-blue-50">
-            <p className="text-sm text-gray-600">Pending Value</p>
+            <p className="text-sm text-gray-400">Pending Value</p>
             <p className="text-2xl font-bold text-blue-700">₹{stats.total_value_pending || 0}</p>
           </Card>
           <Card className="p-4 bg-purple-50">
-            <p className="text-sm text-gray-600">Completed Value</p>
+            <p className="text-sm text-gray-400">Completed Value</p>
             <p className="text-2xl font-bold text-purple-700">₹{stats.total_value_completed || 0}</p>
           </Card>
         </div>
@@ -176,21 +176,21 @@ const AdminGiftVouchers = ({ user }) => {
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
-                        <p className="text-gray-600">User</p>
+                        <p className="text-gray-400">User</p>
                         <p className="font-semibold">{req.user_name}</p>
                         <p className="text-xs text-gray-500">{req.user_role}</p>
                       </div>
                       <div>
-                        <p className="text-gray-600">PRC Deducted</p>
+                        <p className="text-gray-400">PRC Deducted</p>
                         <p className="font-semibold">{req.total_prc_deducted.toFixed(2)}</p>
                       </div>
                       <div>
-                        <p className="text-gray-600">Date</p>
+                        <p className="text-gray-400">Date</p>
                         <p className="font-semibold">{new Date(req.created_at).toLocaleDateString()}</p>
                       </div>
                       {req.voucher_code && (
                         <div>
-                          <p className="text-gray-600">Voucher Code</p>
+                          <p className="text-gray-400">Voucher Code</p>
                           <p className="font-mono font-bold text-green-700">{req.voucher_code}</p>
                         </div>
                       )}
@@ -221,15 +221,15 @@ const AdminGiftVouchers = ({ user }) => {
 
         {/* Process Modal */}
         {selectedRequest && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
             <Card className="max-w-lg w-full p-6">
               <h2 className="text-2xl font-bold mb-4">Process Voucher Request</h2>
               
               <div className="space-y-4">
                 <div className="bg-purple-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600">User: <span className="font-semibold">{selectedRequest.user_name}</span></p>
-                  <p className="text-sm text-gray-600">Denomination: <span className="font-semibold text-lg">₹{selectedRequest.denomination}</span></p>
-                  <p className="text-sm text-gray-600">PRC Deducted: <span className="font-semibold">{selectedRequest.total_prc_deducted.toFixed(2)} PRC</span></p>
+                  <p className="text-sm text-gray-400">User: <span className="font-semibold">{selectedRequest.user_name}</span></p>
+                  <p className="text-sm text-gray-400">Denomination: <span className="font-semibold text-lg">₹{selectedRequest.denomination}</span></p>
+                  <p className="text-sm text-gray-400">PRC Deducted: <span className="font-semibold">{selectedRequest.total_prc_deducted.toFixed(2)} PRC</span></p>
                 </div>
 
                 <div>

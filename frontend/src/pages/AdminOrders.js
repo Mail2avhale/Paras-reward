@@ -102,7 +102,7 @@ const AdminOrders = ({ user }) => {
     <div className="p-4 lg:p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Order Management</h1>
+        <h1 className="text-2xl font-bold text-white">Order Management</h1>
         <p className="text-gray-500">Manage and track all customer orders</p>
       </div>
 
@@ -179,7 +179,7 @@ const AdminOrders = ({ user }) => {
                       <Package className="h-6 w-6 text-purple-600" />
                     </div>
                     <div>
-                    <p className="font-semibold text-gray-900">#{order.order_id?.slice(-8)}</p>
+                    <p className="font-semibold text-white">#{order.order_id?.slice(-8)}</p>
                     <p className="text-sm text-gray-500">{order.user_name || order.user_id}</p>
                     <p className="text-xs text-gray-400 mt-1">
                       {new Date(order.created_at).toLocaleString()}
@@ -223,7 +223,7 @@ const AdminOrders = ({ user }) => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold">Order Details</h2>
-                <button onClick={() => setSelectedOrder(null)} className="text-gray-500 hover:text-gray-700">
+                <button onClick={() => setSelectedOrder(null)} className="text-gray-500 hover:text-gray-300">
                   ✕
                 </button>
               </div>
@@ -254,7 +254,7 @@ const AdminOrders = ({ user }) => {
                   <p className="text-sm text-gray-500 mb-2">Items</p>
                   <div className="space-y-2">
                     {selectedOrder.items?.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
                         <div className="flex items-center gap-3">
                           {item.image && <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded" />}
                           <div>
@@ -272,11 +272,11 @@ const AdminOrders = ({ user }) => {
                 {selectedOrder.shipping_address && (
                   <div>
                     <p className="text-sm text-gray-500 mb-2">Shipping Address</p>
-                    <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="p-3 bg-gray-800/50 rounded-lg">
                       <p className="font-medium">{selectedOrder.shipping_address.name}</p>
-                      <p className="text-sm text-gray-600">{selectedOrder.shipping_address.address}</p>
-                      <p className="text-sm text-gray-600">{selectedOrder.shipping_address.city}, {selectedOrder.shipping_address.state} - {selectedOrder.shipping_address.pincode}</p>
-                      <p className="text-sm text-gray-600">Phone: {selectedOrder.shipping_address.phone}</p>
+                      <p className="text-sm text-gray-400">{selectedOrder.shipping_address.address}</p>
+                      <p className="text-sm text-gray-400">{selectedOrder.shipping_address.city}, {selectedOrder.shipping_address.state} - {selectedOrder.shipping_address.pincode}</p>
+                      <p className="text-sm text-gray-400">Phone: {selectedOrder.shipping_address.phone}</p>
                     </div>
                   </div>
                 )}

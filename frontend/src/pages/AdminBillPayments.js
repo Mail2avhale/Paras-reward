@@ -96,7 +96,7 @@ const AdminBillPayments = ({ user }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-800/50">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -106,8 +106,8 @@ const AdminBillPayments = ({ user }) => {
               Back to Admin
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Bill Payment Requests</h1>
-              <p className="text-sm text-gray-600">Manage user bill payment and recharge requests</p>
+              <h1 className="text-3xl font-bold text-white">Bill Payment Requests</h1>
+              <p className="text-sm text-gray-400">Manage user bill payment and recharge requests</p>
             </div>
           </div>
         </div>
@@ -117,7 +117,7 @@ const AdminBillPayments = ({ user }) => {
           <Card className="p-4 bg-yellow-50 border-yellow-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Pending</p>
+                <p className="text-sm text-gray-400">Pending</p>
                 <p className="text-2xl font-bold text-yellow-700">{stats.pending || 0}</p>
               </div>
               <Clock className="h-8 w-8 text-yellow-600" />
@@ -126,7 +126,7 @@ const AdminBillPayments = ({ user }) => {
           <Card className="p-4 bg-green-50 border-green-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Completed</p>
+                <p className="text-sm text-gray-400">Completed</p>
                 <p className="text-2xl font-bold text-green-700">{stats.completed || 0}</p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-600" />
@@ -135,7 +135,7 @@ const AdminBillPayments = ({ user }) => {
           <Card className="p-4 bg-red-50 border-red-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Rejected</p>
+                <p className="text-sm text-gray-400">Rejected</p>
                 <p className="text-2xl font-bold text-red-700">{stats.rejected || 0}</p>
               </div>
               <XCircle className="h-8 w-8 text-red-600" />
@@ -207,11 +207,11 @@ const AdminBillPayments = ({ user }) => {
               </thead>
               <tbody>
                 {paginatedRequests.map((req) => (
-                  <tr key={req.request_id} className="border-b hover:bg-gray-50">
+                  <tr key={req.request_id} className="border-b hover:bg-gray-800/50">
                     <td className="py-3 px-4">
                       <div>
                         <p className="text-sm font-medium">{req.user_name}</p>
-                        <p className="text-xs text-gray-600">{req.user_email}</p>
+                        <p className="text-xs text-gray-400">{req.user_email}</p>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-sm">{getTypeLabel(req.request_type)}</td>
@@ -257,81 +257,81 @@ const AdminBillPayments = ({ user }) => {
 
         {/* Detail Modal */}
         {selectedRequest && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
             <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
               <h2 className="text-2xl font-bold mb-4">Request Details</h2>
               
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">User</p>
+                    <p className="text-sm text-gray-400">User</p>
                     <p className="font-semibold">{selectedRequest.user_name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Type</p>
+                    <p className="text-sm text-gray-400">Type</p>
                     <p className="font-semibold">{getTypeLabel(selectedRequest.request_type)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Amount</p>
+                    <p className="text-sm text-gray-400">Amount</p>
                     <p className="font-semibold text-lg">₹{selectedRequest.amount_inr}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">PRC Deducted</p>
+                    <p className="text-sm text-gray-400">PRC Deducted</p>
                     <p className="font-semibold">{selectedRequest.total_prc_deducted.toFixed(2)} PRC</p>
                   </div>
                 </div>
 
-                <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="bg-gray-800/50 p-4 rounded-lg">
                   <p className="text-sm font-semibold mb-3">Request Details</p>
                   
                   {/* Loan/EMI specific formatted display */}
                   {selectedRequest.request_type === 'loan_emi' ? (
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-white p-3 rounded border">
+                        <div className="bg-gray-900 p-3 rounded border">
                           <p className="text-xs text-gray-500">Loan Account Number</p>
                           <p className="font-semibold">{selectedRequest.details?.loan_account || '-'}</p>
                         </div>
-                        <div className="bg-white p-3 rounded border">
+                        <div className="bg-gray-900 p-3 rounded border">
                           <p className="text-xs text-gray-500">Bank/NBFC Name</p>
                           <p className="font-semibold">{selectedRequest.details?.bank_name || '-'}</p>
                         </div>
-                        <div className="bg-white p-3 rounded border">
+                        <div className="bg-gray-900 p-3 rounded border">
                           <p className="text-xs text-gray-500">IFSC Code</p>
                           <p className="font-semibold font-mono">{selectedRequest.details?.ifsc_code || '-'}</p>
                         </div>
-                        <div className="bg-white p-3 rounded border">
+                        <div className="bg-gray-900 p-3 rounded border">
                           <p className="text-xs text-gray-500">Customer ID</p>
                           <p className="font-semibold">{selectedRequest.details?.customer_id || '-'}</p>
                         </div>
-                        <div className="bg-white p-3 rounded border">
+                        <div className="bg-gray-900 p-3 rounded border">
                           <p className="text-xs text-gray-500">Borrower Name</p>
                           <p className="font-semibold">{selectedRequest.details?.borrower_name || '-'}</p>
                         </div>
-                        <div className="bg-white p-3 rounded border">
+                        <div className="bg-gray-900 p-3 rounded border">
                           <p className="text-xs text-gray-500">Registered Mobile</p>
                           <p className="font-semibold">{selectedRequest.details?.registered_mobile || '-'}</p>
                         </div>
-                        <div className="bg-white p-3 rounded border">
+                        <div className="bg-gray-900 p-3 rounded border">
                           <p className="text-xs text-gray-500">Loan Type</p>
                           <p className="font-semibold capitalize">{selectedRequest.details?.loan_type?.replace('_', ' ') || '-'}</p>
                         </div>
-                        <div className="bg-white p-3 rounded border">
+                        <div className="bg-gray-900 p-3 rounded border">
                           <p className="text-xs text-gray-500">Remaining Tenure</p>
                           <p className="font-semibold">{selectedRequest.details?.loan_tenure || '-'}</p>
                         </div>
-                        <div className="bg-white p-3 rounded border">
+                        <div className="bg-gray-900 p-3 rounded border">
                           <p className="text-xs text-gray-500">EMI Due Date</p>
                           <p className="font-semibold">{selectedRequest.details?.emi_due_date || '-'}</p>
                         </div>
-                        <div className="bg-white p-3 rounded border">
+                        <div className="bg-gray-900 p-3 rounded border">
                           <p className="text-xs text-gray-500">Monthly EMI Amount</p>
                           <p className="font-semibold">₹{selectedRequest.details?.emi_amount || '-'}</p>
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <pre className="text-xs bg-white p-3 rounded border overflow-x-auto">{JSON.stringify(selectedRequest.details, null, 2)}</pre>
+                    <pre className="text-xs bg-gray-900 p-3 rounded border overflow-x-auto">{JSON.stringify(selectedRequest.details, null, 2)}</pre>
                   )}
                 </div>
 

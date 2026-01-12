@@ -58,7 +58,7 @@ const AdminSubscriptionManagement = ({ user }) => {
   };
 
   const planColors = {
-    explorer: 'bg-gray-500',
+    explorer: 'bg-gray-800/500',
     startup: 'bg-blue-500',
     growth: 'bg-emerald-500',
     elite: 'bg-amber-500'
@@ -660,7 +660,7 @@ const AdminSubscriptionManagement = ({ user }) => {
                           plan === 'elite' ? 'bg-amber-500/20 text-amber-400' :
                           plan === 'growth' ? 'bg-emerald-500/20 text-emerald-400' :
                           plan === 'startup' ? 'bg-blue-500/20 text-blue-400' :
-                          'bg-gray-500/20 text-gray-400'
+                          'bg-gray-800/500/20 text-gray-400'
                         }`}>
                           {plan.charAt(0).toUpperCase() + plan.slice(1)}
                         </span>

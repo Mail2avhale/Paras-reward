@@ -102,7 +102,7 @@ const AdminKYC = ({ user }) => {
     <div className="p-4 lg:p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">KYC Verification</h1>
+        <h1 className="text-2xl font-bold text-white">KYC Verification</h1>
         <p className="text-gray-500">Review and verify user KYC documents</p>
       </div>
 
@@ -176,7 +176,7 @@ const AdminKYC = ({ user }) => {
                       <User className="h-6 w-6 text-purple-600" />
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900">{doc.user_id}</p>
+                    <p className="font-semibold text-white">{doc.user_id}</p>
                     <p className="text-sm text-gray-500">
                       {doc.document_type === 'aadhaar' ? `Aadhaar: ${doc.aadhaar_number}` : `PAN: ${doc.pan_number}`}
                     </p>
@@ -218,7 +218,7 @@ const AdminKYC = ({ user }) => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold">KYC Document Details</h2>
-                <button onClick={() => setSelectedDoc(null)} className="text-gray-500 hover:text-gray-700">
+                <button onClick={() => setSelectedDoc(null)} className="text-gray-500 hover:text-gray-300">
                   ✕
                 </button>
               </div>
@@ -247,7 +247,7 @@ const AdminKYC = ({ user }) => {
                   <>
                     <div>
                       <p className="text-sm text-gray-500 mb-2">Aadhaar Number</p>
-                      <p className="font-mono bg-gray-100 p-2 rounded">{selectedDoc.aadhaar_number}</p>
+                      <p className="font-mono bg-gray-800 p-2 rounded">{selectedDoc.aadhaar_number}</p>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       {selectedDoc.aadhaar_front && (
@@ -270,7 +270,7 @@ const AdminKYC = ({ user }) => {
                   <>
                     <div>
                       <p className="text-sm text-gray-500 mb-2">PAN Number</p>
-                      <p className="font-mono bg-gray-100 p-2 rounded">{selectedDoc.pan_number}</p>
+                      <p className="font-mono bg-gray-800 p-2 rounded">{selectedDoc.pan_number}</p>
                     </div>
                     {selectedDoc.pan_front && (
                       <div>
