@@ -5240,31 +5240,7 @@ async def get_wallet(uid: str):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Check if maintenance is due (30 days after VIP activation)
-    maintenance_due = False
-    days_until_maintenance = None
-    
-    if user.get("vip_activation_date") and user.get("membership_type") == "vip":
-        vip_activation = user["vip_activation_date"]
-        if isinstance(vip_activation, str):
-            vip_activation = datetime.fromisoformat(vip_activation)
-        
-        last_maintenance = user.get("last_wallet_maintenance")
-        if last_maintenance:
-            if isinstance(last_maintenance, str):
-                last_maintenance = datetime.fromisoformat(last_maintenance)
-            next_maintenance = last_maintenance + timedelta(days=30)
-        else:
-            next_maintenance = vip_activation + timedelta(days=30)
-        
-        now = datetime.now(timezone.utc)
-        if now >= next_maintenance:
-            maintenance_due = True
-            days_until_maintenance = 0
-        else:
-            days_until_maintenance = (next_maintenance - now).days
-    
-    # Cashback wallet removed - return PRC balance only
+    # Cashback wallet and maintenance fee removed - return PRC balance only
     return {
         "prc_balance": user.get("prc_balance", 0),
         "wallet_status": user.get("wallet_status", "active")
