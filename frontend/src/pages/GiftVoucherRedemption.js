@@ -289,6 +289,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
                       className="px-3 py-1.5 bg-gray-800 text-gray-300 rounded-lg text-sm disabled:opacity-50"
+                      data-testid="gift-vouchers-prev-page"
                     >
                       Prev
                     </button>
@@ -299,6 +300,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
                       onClick={() => setCurrentPage(p => Math.min(Math.ceil(requests.length / itemsPerPage), p + 1))}
                       disabled={currentPage >= Math.ceil(requests.length / itemsPerPage)}
                       className="px-3 py-1.5 bg-gray-800 text-gray-300 rounded-lg text-sm disabled:opacity-50"
+                      data-testid="gift-vouchers-next-page"
                     >
                       Next
                     </button>
