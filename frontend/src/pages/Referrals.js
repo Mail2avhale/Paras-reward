@@ -158,16 +158,18 @@ const Referrals = ({ user }) => {
 
   const shareOnWhatsApp = () => {
     const code = userData?.referral_code || user?.referral_code || '';
-    const message = `🎁 Join PARAS REWARD and earn PRC daily!\n\n✅ Use my code: ${code}\n✅ Start earning from Day 1\n✅ 5-Level Bonus System\n\n📱 Download now: https://parasreward.com`;
+    const referralLink = `https://parasreward.com/register?ref=${code}`;
+    const message = `🎁 Join PARAS REWARD and earn PRC daily!\n\n✅ Use my code: ${code}\n✅ Start earning from Day 1\n✅ 5-Level Bonus System\n\n📱 Join now: ${referralLink}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const shareCode = async () => {
     const code = userData?.referral_code || user?.referral_code || '';
+    const referralLink = `https://parasreward.com/register?ref=${code}`;
     const shareData = {
       title: 'PARAS REWARD - Earn PRC Daily!',
       text: `🎁 Join PARAS REWARD and earn PRC daily!\n\n✅ Use my code: ${code}\n✅ Start earning from Day 1\n✅ 5-Level Bonus System`,
-      url: 'https://parasreward.com'
+      url: referralLink
     };
     
     try {
