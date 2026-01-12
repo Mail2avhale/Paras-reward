@@ -99,6 +99,7 @@ const AdminSettings = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages
 const AdminSecurityDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSecurityDashboard"));
 const AdminVIPPlans = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminVIPPlans"));
 const AdminVIPPaymentVerification = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminVIPPaymentVerification"));
+const AdminSubscriptionManagement = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSubscriptionManagement"));
 const AdminBurnDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminBurnDashboard"));
 const AdminBillPayments = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminBillPayments"));
 const AdminGiftVouchers = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminGiftVouchers"));
