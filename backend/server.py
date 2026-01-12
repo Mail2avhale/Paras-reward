@@ -5388,6 +5388,9 @@ async def create_delivery_partner(partner: DeliveryPartnerCreate):
     
     await db.delivery_partners.insert_one(partner_dict)
     
+    # Remove _id before returning
+    partner_dict.pop("_id", None)
+    
     return {
         "message": "Delivery partner created successfully",
         "partner_id": partner_data.partner_id,
