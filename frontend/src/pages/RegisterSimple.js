@@ -219,6 +219,14 @@ const RegisterSimple = () => {
             )}
           </div>
 
+          {/* Terms Acceptance */}
+          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <p className="text-xs text-gray-600 leading-relaxed">
+              By registering, I understand that <span className="font-semibold text-amber-600">Paras Reward</span> is a digital engagement platform. The "mining" feature is for virtual rewards only and does not involve cryptocurrency or real money. 
+              <Link to="/disclaimer" className="text-purple-600 ml-1 hover:underline">Read full disclaimer →</Link>
+            </p>
+          </div>
+
           {/* Submit Button */}
           <Button
             type="submit"
@@ -242,7 +250,7 @@ const RegisterSimple = () => {
         {/* Terms */}
         <div className="mt-6 text-center text-xs text-gray-500">
           By creating an account, you agree to our{' '}
-          <Link to="/terms" className="text-purple-600 hover:underline">Terms & Conditions</Link>
+          <Link to="/disclaimer" className="text-purple-600 hover:underline">Terms & Disclaimer</Link>
           {' '}and{' '}
           <Link to="/privacy" className="text-purple-600 hover:underline">Privacy Policy</Link>
         </div>
