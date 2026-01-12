@@ -5287,6 +5287,297 @@ async def get_wallet(uid: str):
 
 # check_and_apply_maintenance endpoint removed - no monthly maintenance fee
 
+# ========== DELIVERY PARTNER MANAGEMENT ==========
+
+@api_router.get("/admin/delivery-partners")
+async def get_delivery_partners(status: str = "all", page: int = 1, limit: int = 20):
+    """Get all delivery partners with optional filtering"""
+    query = {}
+    if status == "active":
+        query["is_active"] = True
+    elif status == "inactive":
+        query["is_active"] = False
+    elif status == "verified":
+        query["is_verified"] = True
+    
+    skip = (page - 1) * limit
+    
+    partners = await db.delivery_partners.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(None)
+    total = await db.delivery_partners.count_documents(query)
+    
+    # Convert ObjectId and datetime
+    for partner in partners:
+        partner.pop("_id", None)
+        if isinstance(partner.get("created_at"), datetime):
+            partner["created_at"] = partner["created_at"].isoformat()
+        if isinstance(partner.get("updated_at"), datetime):
+            partner["updated_at"] = partner["updated_at"].isoformat()
+    
+    return {
+        "partners": partners,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit
+    }
+
+@api_router.get("/admin/delivery-partners/{partner_id}")
+async def get_delivery_partner(partner_id: str):
+    """Get single delivery partner details"""
+    partner = await db.delivery_partners.find_one({"partner_id": partner_id})
+    if not partner:
+        raise HTTPException(status_code=404, detail="Delivery partner not found")
+    
+    partner.pop("_id", None)
+    if isinstance(partner.get("created_at"), datetime):
+        partner["created_at"] = partner["created_at"].isoformat()
+    if isinstance(partner.get("updated_at"), datetime):
+        partner["updated_at"] = partner["updated_at"].isoformat()
+    
+    # Get recent orders assigned to this partner
+    recent_orders = await db.orders.find(
+        {"delivery_partner_id": partner_id}
+    ).sort("created_at", -1).limit(10).to_list(None)
+    
+    for order in recent_orders:
+        order.pop("_id", None)
+    
+    return {
+        "partner": partner,
+        "recent_orders": recent_orders
+    }
+
+@api_router.post("/admin/delivery-partners")
+async def create_delivery_partner(partner: DeliveryPartnerCreate):
+    """Create a new delivery partner"""
+    partner_data = DeliveryPartner(
+        name=partner.name,
+        company_name=partner.company_name,
+        phone=partner.phone,
+        email=partner.email,
+        service_states=partner.service_states,
+        service_districts=partner.service_districts,
+        commission_type=partner.commission_type,
+        commission_rate=partner.commission_rate
+    )
+    
+    partner_dict = partner_data.model_dump()
+    partner_dict["created_at"] = partner_dict["created_at"].isoformat()
+    partner_dict["updated_at"] = partner_dict["updated_at"].isoformat()
+    
+    await db.delivery_partners.insert_one(partner_dict)
+    
+    return {
+        "message": "Delivery partner created successfully",
+        "partner_id": partner_data.partner_id,
+        "partner": partner_dict
+    }
+
+@api_router.put("/admin/delivery-partners/{partner_id}")
+async def update_delivery_partner(partner_id: str, request: Request):
+    """Update delivery partner details"""
+    data = await request.json()
+    
+    partner = await db.delivery_partners.find_one({"partner_id": partner_id})
+    if not partner:
+        raise HTTPException(status_code=404, detail="Delivery partner not found")
+    
+    # Fields that can be updated
+    allowed_fields = [
+        "name", "company_name", "phone", "email", 
+        "service_states", "service_districts",
+        "is_active", "is_verified",
+        "commission_type", "commission_rate"
+    ]
+    
+    update_data = {k: v for k, v in data.items() if k in allowed_fields}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.delivery_partners.update_one(
+        {"partner_id": partner_id},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Delivery partner updated successfully"}
+
+@api_router.delete("/admin/delivery-partners/{partner_id}")
+async def delete_delivery_partner(partner_id: str):
+    """Delete a delivery partner (soft delete - set inactive)"""
+    partner = await db.delivery_partners.find_one({"partner_id": partner_id})
+    if not partner:
+        raise HTTPException(status_code=404, detail="Delivery partner not found")
+    
+    # Check if partner has pending orders
+    pending_orders = await db.orders.count_documents({
+        "delivery_partner_id": partner_id,
+        "status": {"$in": ["pending", "verified", "out_for_delivery"]}
+    })
+    
+    if pending_orders > 0:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot delete partner with {pending_orders} pending orders. Reassign orders first."
+        )
+    
+    # Soft delete
+    await db.delivery_partners.update_one(
+        {"partner_id": partner_id},
+        {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": "Delivery partner deactivated successfully"}
+
+@api_router.get("/admin/delivery-partners/available/{state}")
+async def get_available_partners_for_state(state: str):
+    """Get delivery partners available for a specific state"""
+    partners = await db.delivery_partners.find({
+        "is_active": True,
+        "$or": [
+            {"service_states": {"$in": [state, "All India", "all"]}},
+            {"service_states": {"$size": 0}}  # Partners with no state restriction
+        ]
+    }).to_list(None)
+    
+    for partner in partners:
+        partner.pop("_id", None)
+    
+    return {"partners": partners}
+
+@api_router.post("/admin/orders/{order_id}/assign-partner")
+async def assign_delivery_partner(order_id: str, request: Request):
+    """Assign a delivery partner to an order"""
+    data = await request.json()
+    partner_id = data.get("partner_id")
+    tracking_number = data.get("tracking_number")
+    
+    if not partner_id:
+        raise HTTPException(status_code=400, detail="Partner ID required")
+    
+    # Get order
+    order = await db.orders.find_one({"order_id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    if order.get("status") not in ["pending", "verified"]:
+        raise HTTPException(status_code=400, detail="Can only assign partner to pending/verified orders")
+    
+    # Get partner
+    partner = await db.delivery_partners.find_one({"partner_id": partner_id})
+    if not partner:
+        raise HTTPException(status_code=404, detail="Delivery partner not found")
+    
+    if not partner.get("is_active"):
+        raise HTTPException(status_code=400, detail="Delivery partner is not active")
+    
+    # Update order
+    update_data = {
+        "delivery_partner_id": partner_id,
+        "delivery_partner_name": partner.get("name"),
+        "status": "out_for_delivery",
+        "delivery_status": "out_for_delivery",
+        "assigned_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    if tracking_number:
+        update_data["tracking_number"] = tracking_number
+    
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {"$set": update_data}
+    )
+    
+    # Update partner stats
+    await db.delivery_partners.update_one(
+        {"partner_id": partner_id},
+        {"$inc": {"total_deliveries": 1}}
+    )
+    
+    # Get user for notification
+    user = await db.users.find_one({"uid": order.get("user_id")})
+    if user:
+        await create_notification(
+            user_id=order.get("user_id"),
+            title="Order Shipped! 🚚",
+            message=f"Your order #{order_id[:8]} has been assigned to {partner.get('name')} for delivery." + (f" Tracking: {tracking_number}" if tracking_number else ""),
+            notification_type="order",
+            related_id=order_id,
+            icon="📦"
+        )
+    
+    return {
+        "message": "Delivery partner assigned successfully",
+        "partner_name": partner.get("name"),
+        "tracking_number": tracking_number
+    }
+
+@api_router.post("/admin/orders/{order_id}/mark-delivered")
+async def mark_order_delivered_by_partner(order_id: str, request: Request):
+    """Mark order as delivered by delivery partner"""
+    data = await request.json()
+    
+    order = await db.orders.find_one({"order_id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    if order.get("status") == "delivered":
+        raise HTTPException(status_code=400, detail="Order already delivered")
+    
+    if order.get("status") == "cancelled":
+        raise HTTPException(status_code=400, detail="Cannot deliver cancelled order")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Update order
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {"$set": {
+            "status": "delivered",
+            "delivery_status": "delivered",
+            "delivered_at": now.isoformat()
+        }}
+    )
+    
+    # Update partner stats
+    partner_id = order.get("delivery_partner_id")
+    if partner_id:
+        await db.delivery_partners.update_one(
+            {"partner_id": partner_id},
+            {"$inc": {"successful_deliveries": 1}}
+        )
+    
+    # Notify user
+    await create_notification(
+        user_id=order.get("user_id"),
+        title="Order Delivered! 🎉",
+        message=f"Your order #{order_id[:8]} has been delivered successfully!",
+        notification_type="order",
+        related_id=order_id,
+        icon="✅"
+    )
+    
+    return {"message": "Order marked as delivered"}
+
+@api_router.get("/admin/delivery-partners/stats")
+async def get_delivery_partner_stats():
+    """Get delivery partner statistics"""
+    total_partners = await db.delivery_partners.count_documents({})
+    active_partners = await db.delivery_partners.count_documents({"is_active": True})
+    verified_partners = await db.delivery_partners.count_documents({"is_verified": True})
+    
+    # Orders by status
+    pending_orders = await db.orders.count_documents({
+        "status": "pending",
+        "delivery_partner_id": None
+    })
+    out_for_delivery = await db.orders.count_documents({"status": "out_for_delivery"})
+    
+    return {
+        "total_partners": total_partners,
+        "active_partners": active_partners,
+        "verified_partners": verified_partners,
+        "pending_assignment": pending_orders,
+        "out_for_delivery": out_for_delivery
+    }
+
 @api_router.post("/admin/profit-wallet/credit")
 async def admin_credit_profit_wallet(request: Request):
     """Admin: Credit amount to user's profit wallet"""
