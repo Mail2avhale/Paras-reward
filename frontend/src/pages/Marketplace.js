@@ -374,6 +374,36 @@ const Marketplace = ({ user }) => {
             <p className="text-gray-400">No products found</p>
           </div>
         )}
+
+        {/* Pagination */}
+        {filteredProducts.length > itemsPerPage && (
+          <div className="mt-6 flex items-center justify-between bg-gray-900/50 rounded-xl p-4 border border-gray-800">
+            <span className="text-gray-400 text-sm">
+              {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredProducts.length)} of {filteredProducts.length}
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 transition-colors text-sm"
+                data-testid="marketplace-prev-page"
+              >
+                Prev
+              </button>
+              <span className="px-3 py-2 text-amber-500 font-medium text-sm">
+                {currentPage}/{totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 transition-colors text-sm"
+                data-testid="marketplace-next-page"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Cart Drawer */}
