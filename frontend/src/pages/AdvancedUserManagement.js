@@ -35,11 +35,8 @@ const AdvancedUserManagement = () => {
     name: '',
     email: '',
     mobile: '',
-    role: '',
-    membership_type: '',
-    membership_expiry: '',
-    vip_plan_type: '',
-    kyc_status: ''
+    role: 'user',
+    kyc_status: 'not_submitted'
   });
   
   const [balanceForm, setBalanceForm] = useState({
