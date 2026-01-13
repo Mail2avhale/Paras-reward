@@ -85,7 +85,8 @@ const DashboardModern = ({ user, onLogout }) => {
           prcBalance: fetchedUserData.prc_balance || 0,
           totalMined: fetchedUserData.total_mined || 0,
           referralCount: fetchedUserData.referral_count || 0,
-          membershipType: fetchedUserData.membership_type || 'free'
+          membershipType: fetchedUserData.membership_type || 'free',
+          subscriptionPlan: fetchedUserData.subscription_plan || 'explorer'
         });
       } else {
         // Fallback to user prop data
@@ -94,7 +95,8 @@ const DashboardModern = ({ user, onLogout }) => {
           prcBalance: user.prc_balance || 0,
           totalMined: user.total_mined || 0,
           referralCount: user.referral_count || 0,
-          membershipType: user.membership_type || 'free'
+          membershipType: user.membership_type || 'free',
+          subscriptionPlan: user.subscription_plan || 'explorer'
         });
       }
       
