@@ -1014,6 +1014,116 @@ const AdvancedUserManagement = () => {
                 </Button>
               </div>
             </div>
+            )}
+            
+            {/* History Tab */}
+            {showHistoryTab && (
+              <div className="space-y-4">
+                {historyLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full"></div>
+                  </div>
+                ) : subscriptionHistory.length === 0 ? (
+                  <div className="text-center py-8">
+                    <History className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                    <p className="text-gray-400">No subscription history found</p>
+                    <p className="text-gray-500 text-sm mt-1">This user has no past subscription records</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                    {subscriptionHistory.map((entry, index) => (
+                      <div 
+                        key={entry.payment_id || index} 
+                        className="bg-gray-800/50 border border-gray-700 rounded-lg p-4"
+                        data-testid={`history-entry-${index}`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                              entry.plan === 'elite' ? 'bg-amber-500/20 text-amber-400' :
+                              entry.plan === 'growth' ? 'bg-emerald-500/20 text-emerald-400' :
+                              entry.plan === 'startup' ? 'bg-blue-500/20 text-blue-400' :
+                              'bg-gray-700 text-gray-300'
+                            }`}>
+                              {(entry.plan || 'VIP').toUpperCase()}
+                            </span>
+                            {entry.is_free ? (
+                              <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400">
+                                FREE
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400">
+                                ₹{entry.amount || 0}
+                              </span>
+                            )}
+                          </div>
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            entry.status === 'approved' ? 'bg-green-500/20 text-green-400' :
+                            entry.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                            'bg-red-500/20 text-red-400'
+                          }`}>
+                            {entry.status?.toUpperCase() || 'APPROVED'}
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-gray-500 text-xs">Date</p>
+                            <p className="text-white">
+                              {entry.date ? new Date(entry.date).toLocaleDateString('en-IN', {
+                                day: '2-digit', month: 'short', year: 'numeric'
+                              }) : 'N/A'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500 text-xs">Duration</p>
+                            <p className="text-white">{entry.days ? `${entry.days} days` : entry.duration || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500 text-xs">Payment Method</p>
+                            <p className="text-white capitalize">{entry.payment_method?.replace('_', ' ') || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500 text-xs">Expiry Date</p>
+                            <p className="text-white">
+                              {entry.expiry_date ? new Date(entry.expiry_date).toLocaleDateString('en-IN', {
+                                day: '2-digit', month: 'short', year: 'numeric'
+                              }) : 'N/A'}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {(entry.approved_by || entry.admin_notes) && (
+                          <div className="mt-3 pt-3 border-t border-gray-700">
+                            {entry.approved_by && (
+                              <p className="text-xs text-gray-500">
+                                Updated by: <span className="text-gray-400">{entry.approved_by}</span>
+                              </p>
+                            )}
+                            {entry.admin_notes && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Notes: <span className="text-gray-400">{entry.admin_notes}</span>
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Close Button for History Tab */}
+                <div className="pt-2">
+                  <Button
+                    onClick={() => setShowSubscriptionModal(false)}
+                    variant="outline"
+                    className="w-full bg-gray-800 border-gray-700 text-white"
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            )}
           </Card>
         </div>
       )}
