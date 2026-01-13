@@ -264,6 +264,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/delivery-partners" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminDeliveryPartners user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             {/* Admin stockists route removed - stockist system deprecated */}
             <Route path="/admin/support" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSupport user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/contact-submissions" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminContactSubmissions user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/vip-verification" element={<Navigate to="/admin/subscriptions" replace />} /> {/* Legacy route redirect */}
             <Route path="/admin/subscriptions" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSubscriptionManagement user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/bill-payments" element={user ? <BillPayments user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
