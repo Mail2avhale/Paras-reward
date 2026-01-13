@@ -9409,31 +9409,100 @@ class Order(BaseModel):
 
 @api_router.post("/admin/products")
 async def create_product(request: Request):
-    """Create new product (Admin)"""
+    """Create new product (Admin) with image upload support"""
     data = await request.json()
     
     # Validate required fields
-    required = ["name", "sku", "prc_price", "cash_price", "type"]
+    required = ["name", "prc_price", "type"]
     for field in required:
         if field not in data:
             raise HTTPException(status_code=400, detail=f"{field} is required")
+    
+    # Auto-generate SKU if not provided
+    if not data.get("sku"):
+        category_prefix = (data.get("category", "GEN")[:3]).upper()
+        random_suffix = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
+        data["sku"] = f"{category_prefix}-{random_suffix}"
     
     # Check if SKU already exists
     existing = await db.products.find_one({"sku": data["sku"]})
     if existing:
         raise HTTPException(status_code=400, detail="SKU already exists")
     
-    product = Product(**data)
-    product_dict = product.model_dump()
+    # Handle image upload (base64)
+    if data.get("image_base64"):
+        try:
+            # Decode and save image
+            image_data = data["image_base64"]
+            if "," in image_data:
+                image_data = image_data.split(",")[1]
+            
+            image_bytes = base64.b64decode(image_data)
+            
+            # Save to file
+            upload_dir = "/app/uploads/products"
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            filename = f"product_{data['sku']}_{int(datetime.now().timestamp())}.jpg"
+            filepath = os.path.join(upload_dir, filename)
+            
+            with open(filepath, "wb") as f:
+                f.write(image_bytes)
+            
+            # Set image URL (relative path for frontend)
+            data["image_url"] = f"/uploads/products/{filename}"
+            del data["image_base64"]
+        except Exception as e:
+            logging.error(f"Error saving product image: {e}")
+            # Continue without image if upload fails
     
-    # Convert datetime fields
-    for field in ["created_at", "updated_at", "visible_from", "visible_till"]:
-        if product_dict.get(field):
-            product_dict[field] = product_dict[field].isoformat() if isinstance(product_dict[field], datetime) else product_dict[field]
+    # Auto-calculate INR equivalent (assuming 1 PRC = 1 INR for simplicity, adjust ratio as needed)
+    prc_to_inr_ratio = 1.0  # Configure this ratio
+    data["inr_equivalent"] = round(data["prc_price"] * prc_to_inr_ratio, 2)
     
-    await db.products.insert_one(product_dict)
+    # Auto-calculate margin if cost_to_company is provided
+    if data.get("cost_to_company", 0) > 0 and data.get("cash_price", 0) > 0:
+        cost = data["cost_to_company"]
+        selling_price = data.get("cash_price", 0) + data["inr_equivalent"]
+        if selling_price > 0:
+            data["margin_percent"] = round(((selling_price - cost) / selling_price) * 100, 2)
     
-    return {"message": "Product created successfully", "product_id": product.product_id}
+    # Set stock status based on quantity
+    stock_qty = data.get("total_stock", 0) or data.get("available_stock", 0)
+    if stock_qty == 0:
+        data["stock_status"] = "out_of_stock"
+    elif stock_qty <= 10:
+        data["stock_status"] = "limited"
+    else:
+        data["stock_status"] = "in_stock"
+    
+    # Sync available_stock with total_stock if not set
+    if "available_stock" not in data:
+        data["available_stock"] = data.get("total_stock", 0)
+    
+    # Set timestamps
+    now = datetime.now(timezone.utc)
+    data["created_at"] = now.isoformat()
+    data["updated_at"] = now.isoformat()
+    
+    # Generate product_id
+    data["product_id"] = f"PRD-{now.strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+    
+    # Set defaults
+    data.setdefault("product_status", "active")
+    data.setdefault("is_active", True)
+    data.setdefault("visible", True)
+    data.setdefault("delivery_charge_type", "fixed")
+    data.setdefault("delivery_charge_value", 0)
+    
+    await db.products.insert_one(data)
+    
+    return {
+        "message": "Product created successfully", 
+        "product_id": data["product_id"],
+        "sku": data["sku"],
+        "inr_equivalent": data["inr_equivalent"]
+    }
 
 @api_router.get("/admin/products")
 async def get_all_products_admin(
