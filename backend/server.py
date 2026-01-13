@@ -20166,7 +20166,7 @@ async def get_unread_count(uid: str):
 
 # ========== USER SEARCH & DISCOVERY ==========
 
-@api_router.get("/users/search")
+@api_router.get("/social/search-users")
 async def search_users(q: str, page: int = 1, limit: int = 20):
     """Search for users by name or referral code"""
     if not q or len(q) < 2:
