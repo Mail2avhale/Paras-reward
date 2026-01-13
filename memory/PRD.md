@@ -75,12 +75,19 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 - CRUD operations with multipart form data for image upload
 - Pagination support
 
+**Admin Settings - Marketplace Settings UI ✅:**
+- PRC to INR Conversion Rate input with live preview
+- Free Delivery Threshold setting
+- Min/Max Order limits
+- Quick Conversion Reference table (100, 500, 1000, 5000 PRC)
+- Save Marketplace Settings button
+
 **User Marketplace (`Marketplace.js`) - SBI Rewardz Style:**
 - **Blue header** with gradient (from-blue-800 to-blue-900)
-- **Points balance card** with "Upgrade" button for free users
+- **PRC balance card** with "Upgrade" button for free users
 - **Search bar** with white background
 - **Category tabs** with icons: All, Electronics, Home & Kitchen, Fashion, etc.
-- **"Redeem Your Points" section** with 3 cards:
+- **"Redeem Your PRC" section** with 3 cards:
   - Merchandise (blue gradient) → /marketplace
   - E-vouchers (purple gradient) → /gift-vouchers
   - Recharge & Bills (green gradient) → /bill-payments
@@ -92,13 +99,22 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 - **Product cards** with:
   - Image with hover zoom effect
   - Badge display (NEW, Trending, Hot Deal, etc.)
-  - Discount percentage badge
-  - Out of Stock overlay
-  - Points price + INR equivalent
+  - PRC price + INR equivalent
   - Free Delivery indicator
   - "Redeem Now" button
-- **Cart drawer** with quantity controls
+- **Cart drawer** positioned above bottom nav
 - **Pagination** for all products grid
+
+**Sample Products Added ✅:**
+- 10 new products with badges: Trending, New, Hot Deal, Bestseller, Limited
+- Categories: Electronics, Home & Kitchen, Fashion, Beauty, Sports, Accessories
+
+**UI/UX Fixes ✅:**
+- Fixed top menu overlap on all user pages (added pt-16 padding)
+- Replaced "Pts/Points" with "PRC" throughout marketplace
+- Replaced "Mining" with "Reward" in activity feeds and buttons
+- Removed FloatingActionButton that was causing obstruction
+- Cart drawer positioned correctly above bottom navigation
 
 **Backend Updates (`server.py`):**
 - `POST /api/admin/products` - Multipart form data with image upload
@@ -106,9 +122,6 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 - `GET /api/admin/settings/marketplace` - PRC to INR rate (default 4.0)
 - `PUT /api/admin/settings/marketplace` - Update marketplace settings
 - Cart API v2: `/api/v2/cart/{uid}/add`, `/api/v2/cart/{uid}`, `/api/v2/cart/{uid}/item/{product_id}`
-
-**App.js Route Updated:**
-- `/marketplace` now uses new `Marketplace.js` (SBI Rewardz style) instead of `MarketplaceEnhanced.js`
 
 #### Landing Page - Removed CTA Section ✅
 - Removed "Ready to Start Earning?" section from Home.js
