@@ -574,23 +574,55 @@ class KYCSubmit(BaseModel):
 
 class Product(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    product_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    product_id: str = Field(default_factory=lambda: f"PRD-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}")
     name: str
     description: str
     prc_price: float
+    inr_price: float = 0  # Auto-calculated from PRC
     image_url: Optional[str] = None
     category: str
+    
+    # New fields
+    badge: Optional[str] = None  # New, Trending, Hot Deal, Limited Offer
+    show_on_home: bool = False
     stock_quantity: int = 0
-    is_active: bool = True
+    stock_status: str = "in_stock"  # in_stock, out_of_stock, limited
+    
+    # Delivery configuration
+    delivery_charge_type: str = "fixed"  # fixed, percentage
+    delivery_charge_value: float = 0  # Amount or percentage
+    
+    # Admin & Audit fields (hidden from users)
+    cost_to_company: float = 0  # Cost in INR
+    margin_percent: float = 0  # Profit margin
+    created_by: Optional[str] = None  # Admin ID
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: Optional[datetime] = None
+    product_status: str = "active"  # active, inactive, deleted
+    
+    is_active: bool = True  # Legacy field for backward compatibility
 
 class ProductCreate(BaseModel):
     name: str
     description: str
     prc_price: float
+    inr_price: Optional[float] = None
     image_base64: Optional[str] = None
     category: str
+    
+    # New fields
+    badge: Optional[str] = None
+    show_on_home: bool = False
     stock_quantity: int = 0
+    stock_status: str = "in_stock"
+    
+    # Delivery configuration
+    delivery_charge_type: str = "fixed"
+    delivery_charge_value: float = 0
+    
+    # Admin fields
+    cost_to_company: float = 0
+    margin_percent: float = 0
 
 class OrderSingleProduct(BaseModel):
     """Legacy model for single product orders (deprecated - use Order for multi-item carts)"""
