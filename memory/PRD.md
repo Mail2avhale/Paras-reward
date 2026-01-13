@@ -643,6 +643,32 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 - ✅ Empty state shows when no history
 - ✅ Records update after new subscription changes
 
+#### Plan Status Display Fix - COMPLETED ✅ (Jan 13, 2026)
+**Issue:** UI was showing "VIP" instead of actual plan names (Explorer/Startup/Growth/Elite)
+
+**Files Updated:**
+1. **DashboardModern.js:**
+   - Header badge now shows actual plan name with plan-specific colors
+   - Credit card STATUS now shows "★ Elite", "★ Growth", "★ Startup" or "FREE"
+   - Added `hasPaidPlan` and `getPlanDisplayName` helpers
+
+2. **ProfileAdvanced.js:**
+   - Profile card badge now shows "{Plan} Member" (e.g., "Elite Member")
+   - Badge colors: Elite=amber, Growth=emerald, Startup=blue
+   - "Upgrade Your Plan" button only shows for free (Explorer) users
+
+3. **Mining.js:**
+   - Bonus badge now shows actual multiplier: "1.5x BONUS", "2x BONUS", "3x BONUS"
+   - Badge colors match plan (Elite=amber, Growth=emerald, Startup=blue)
+   - Reward Rate now fetched from backend `/api/mining/status` instead of local calculation
+   - Displays actual mining rate with subscription multiplier applied
+
+**Color Scheme:**
+- Elite: amber/gold gradient
+- Growth: emerald/green gradient  
+- Startup: blue/cyan gradient
+- Explorer: gray (no badge shown)
+
 ### P3 (Low Priority)
 - Hierarchical Reporting Structure
 - Advanced analytics dashboard
