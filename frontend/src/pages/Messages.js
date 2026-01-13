@@ -7,11 +7,13 @@ import {
   ArrowLeft, Send, Search, MessageCircle, CheckCircle, Crown,
   MoreVertical, Trash2, User
 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
 const Messages = ({ user }) => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { recipientUid } = useParams();
   const [conversations, setConversations] = useState([]);
   const [activeConversation, setActiveConversation] = useState(null);
@@ -167,8 +169,8 @@ const Messages = ({ user }) => {
               <ArrowLeft className="w-5 h-5 text-white" />
             </button>
             <div>
-              <h1 className="text-white text-xl font-bold">Messages</h1>
-              <p className="text-gray-500 text-sm">{conversations.length} conversations</p>
+              <h1 className="text-white text-xl font-bold">{t('messages')}</h1>
+              <p className="text-gray-500 text-sm">{conversations.length} {t('conversations')}</p>
             </div>
           </div>
 
@@ -177,7 +179,7 @@ const Messages = ({ user }) => {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
             <input
               type="text"
-              placeholder="Search conversations..."
+              placeholder={t('searchConversations')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
@@ -204,13 +206,13 @@ const Messages = ({ user }) => {
           ) : filteredConversations.length === 0 ? (
             <div className="text-center py-16">
               <MessageCircle className="w-16 h-16 text-gray-700 mx-auto mb-4" />
-              <h3 className="text-white font-bold mb-2">No messages yet</h3>
-              <p className="text-gray-500 text-sm mb-4">Start a conversation from someone's profile</p>
+              <h3 className="text-white font-bold mb-2">{t('noMessagesYet')}</h3>
+              <p className="text-gray-500 text-sm mb-4">{t('startConversation')}</p>
               <button
                 onClick={() => navigate('/network')}
                 className="px-6 py-3 bg-purple-500 text-white font-semibold rounded-xl"
               >
-                Find People
+                {t('findPeople')}
               </button>
             </div>
           ) : (
@@ -294,7 +296,7 @@ const Messages = ({ user }) => {
           </div>
           <div>
             <h2 className="text-white font-semibold">{otherUser?.name || 'User'}</h2>
-            <p className="text-gray-500 text-xs">Tap to view profile</p>
+            <p className="text-gray-500 text-xs">{t('tapToViewProfile')}</p>
           </div>
         </button>
       </div>
@@ -304,7 +306,7 @@ const Messages = ({ user }) => {
         {messages.length === 0 ? (
           <div className="text-center py-12">
             <User className="w-16 h-16 text-gray-700 mx-auto mb-4" />
-            <p className="text-gray-500">Start a conversation with {otherUser?.name}</p>
+            <p className="text-gray-500">{t('startConversationWith').replace('{name}', otherUser?.name)}</p>
           </div>
         ) : (
           messages.map((msg, index) => {
