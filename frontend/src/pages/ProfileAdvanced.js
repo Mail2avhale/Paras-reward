@@ -703,6 +703,11 @@ const ProfileAdvanced = ({ user, onLogout }) => {
           </span>
           <ChevronRight className="w-5 h-5 text-gray-500" />
         </button>
+
+        {/* Language Selector */}
+        <div className="mt-6">
+          <LanguageSelectorFull />
+        </div>
       </div>
 
       {/* Image Upload Modal */}
