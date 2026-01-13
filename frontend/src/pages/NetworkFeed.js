@@ -7,11 +7,13 @@ import {
   ArrowLeft, Globe, Users, Search, UserPlus, Award, TrendingUp,
   MessageCircle, RefreshCw, Sparkles, Crown, CheckCircle
 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
 const NetworkFeed = ({ user }) => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('global');
   const [globalFeed, setGlobalFeed] = useState([]);
   const [networkFeed, setNetworkFeed] = useState([]);
@@ -256,7 +258,7 @@ const NetworkFeed = ({ user }) => {
           onClick={() => handleFollow(userItem.uid)}
           className="px-4 py-2 bg-purple-500 text-white text-sm font-semibold rounded-lg hover:bg-purple-600 transition-colors flex-shrink-0"
         >
-          Follow
+          {t('follow')}
         </button>
       )}
     </motion.div>
@@ -275,8 +277,8 @@ const NetworkFeed = ({ user }) => {
               <ArrowLeft className="w-5 h-5 text-white" />
             </button>
             <div>
-              <h1 className="text-white text-xl font-bold">Network</h1>
-              <p className="text-gray-500 text-sm">Discover & Connect</p>
+              <h1 className="text-white text-xl font-bold">{t('network')}</h1>
+              <p className="text-gray-500 text-sm">{t('discoverAndConnect')}</p>
             </div>
           </div>
           <button
@@ -292,7 +294,7 @@ const NetworkFeed = ({ user }) => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
           <input
             type="text"
-            placeholder="Search by name, city, or state..."
+            placeholder={t('searchUsers')}
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
             className="w-full pl-12 pr-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
@@ -317,13 +319,13 @@ const NetworkFeed = ({ user }) => {
       {searchQuery.length >= 2 && (
         <div className="px-5 mb-4">
           <div className="bg-gray-900/70 border border-gray-800 rounded-xl p-4">
-            <p className="text-gray-400 text-sm mb-3">Search results</p>
+            <p className="text-gray-400 text-sm mb-3">{t('searchResults')}</p>
             {searching ? (
               <div className="text-center py-4">
                 <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
               </div>
             ) : searchResults.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">No users found</p>
+              <p className="text-gray-500 text-center py-4">{t('noUsersFound')}</p>
             ) : (
               <div className="space-y-2">
                 {searchResults.map(u => renderUserCard(u))}
@@ -343,7 +345,7 @@ const NetworkFeed = ({ user }) => {
             }`}
           >
             <Globe className="w-4 h-4" />
-            Global
+            {t('global')}
           </button>
           <button
             onClick={() => setActiveTab('network')}
@@ -352,7 +354,7 @@ const NetworkFeed = ({ user }) => {
             }`}
           >
             <Users className="w-4 h-4" />
-            Following
+            {t('following')}
           </button>
         </div>
       </div>
@@ -361,8 +363,8 @@ const NetworkFeed = ({ user }) => {
       {user?.uid && suggestedUsers.length > 0 && activeTab === 'global' && (
         <div className="px-5 mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-white font-bold">Suggested for You</h3>
-            <button className="text-purple-400 text-sm">See all</button>
+            <h3 className="text-white font-bold">{t('suggestedForYou')}</h3>
+            <button className="text-purple-400 text-sm">{t('seeAll')}</button>
           </div>
           <div className="space-y-2">
             {suggestedUsers.slice(0, 3).map(u => renderUserCard(u))}
@@ -374,7 +376,7 @@ const NetworkFeed = ({ user }) => {
       <div className="px-5">
         <h3 className="text-white font-bold mb-3 flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-amber-400" />
-          {activeTab === 'global' ? 'Global Activity' : 'Your Network'}
+          {activeTab === 'global' ? t('globalActivity') : t('yourNetwork')}
         </h3>
 
         {loading ? (
@@ -397,13 +399,13 @@ const NetworkFeed = ({ user }) => {
               globalFeed.length === 0 ? (
                 <div className="text-center py-12">
                   <Globe className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                  <p className="text-gray-500">No activity yet</p>
+                  <p className="text-gray-500">{t('noActivityYet')}</p>
                 </div>
               ) : (
                 <>
                   {/* Activity count */}
                   <div className="text-center text-gray-500 text-sm mb-4">
-                    Showing {globalFeed.length} activities
+                    {t('showingActivities').replace('{count}', globalFeed.length)}
                   </div>
                   
                   {globalFeed.map((activity, index) => renderActivityItem(activity, index))}
@@ -420,13 +422,13 @@ const NetworkFeed = ({ user }) => {
                       ) : (
                         <>
                           <RefreshCw className="w-4 h-4" />
-                          Load More
+                          {t('loadMore')}
                         </>
                       )}
                     </button>
                   ) : globalFeed.length > 0 && (
                     <p className="text-center text-gray-600 text-sm mt-4 py-3">
-                      — All {globalFeed.length} activities loaded —
+                      — {t('allActivitiesLoaded')} ({globalFeed.length}) —
                     </p>
                   )}
                 </>
@@ -435,14 +437,14 @@ const NetworkFeed = ({ user }) => {
               networkFeed.length === 0 ? (
                 <div className="text-center py-12">
                   <Users className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                  <p className="text-gray-500 mb-2">No activity from your network</p>
-                  <p className="text-gray-600 text-sm">Follow users to see their activity here</p>
+                  <p className="text-gray-500 mb-2">{t('noActivityFromNetwork')}</p>
+                  <p className="text-gray-600 text-sm">{t('followUsersToSee')}</p>
                 </div>
               ) : (
                 <>
                   {/* Activity count */}
                   <div className="text-center text-gray-500 text-sm mb-4">
-                    Showing {networkFeed.length} activities
+                    {t('showingActivities').replace('{count}', networkFeed.length)}
                   </div>
                   
                   {networkFeed.map((activity, index) => renderActivityItem(activity, index))}
@@ -459,13 +461,13 @@ const NetworkFeed = ({ user }) => {
                       ) : (
                         <>
                           <RefreshCw className="w-4 h-4" />
-                          Load More
+                          {t('loadMore')}
                         </>
                       )}
                     </button>
                   ) : networkFeed.length > 0 && (
                     <p className="text-center text-gray-600 text-sm mt-4 py-3">
-                      — All {networkFeed.length} activities loaded —
+                      — {t('allActivitiesLoaded')} ({networkFeed.length}) —
                     </p>
                   )}
                 </>
