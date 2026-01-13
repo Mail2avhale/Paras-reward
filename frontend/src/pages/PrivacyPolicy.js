@@ -1,14 +1,40 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Shield, Eye, Lock, Database, Bell, Users, Globe, FileText, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import axios from 'axios';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
+const API = process.env.REACT_APP_BACKEND_URL;
 
 const PrivacyPolicy = () => {
   const navigate = useNavigate();
   const lastUpdated = "January 1, 2026";
+  const [contactInfo, setContactInfo] = useState({
+    email: 'privacy@parasreward.com',
+    phone: '+91 98765 43210',
+    address: 'Mumbai, Maharashtra, India'
+  });
+
+  useEffect(() => {
+    fetchContactInfo();
+  }, []);
+
+  const fetchContactInfo = async () => {
+    try {
+      const response = await axios.get(`${API}/api/admin/contact-settings`);
+      const data = response.data;
+      const addressParts = [data.city, data.state, data.country].filter(Boolean);
+      setContactInfo({
+        email: data.email_support || 'privacy@parasreward.com',
+        phone: data.phone_primary || '+91 98765 43210',
+        address: addressParts.join(', ') || 'Mumbai, Maharashtra, India'
+      });
+    } catch (error) {
+      console.error('Error fetching contact info:', error);
+    }
+  };
 
   const sections = [
     {
