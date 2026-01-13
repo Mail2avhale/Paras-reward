@@ -75,6 +75,37 @@ const ReferralsEnhanced = ({ user }) => {
     });
   }, []);
 
+  // Milestone configuration
+  const milestones = [
+    { count: 1, badge: '🌱', title: 'First Steps', subtitle: 'Welcome to the network!', color: 'emerald' },
+    { count: 5, badge: '⭐', title: 'Rising Star', subtitle: '5 friends invited', color: 'blue' },
+    { count: 10, badge: '🔥', title: 'On Fire', subtitle: '10 friends strong', color: 'orange' },
+    { count: 25, badge: '💎', title: 'Diamond', subtitle: '25 friends network', color: 'purple' },
+    { count: 50, badge: '👑', title: 'Legend', subtitle: '50 friends empire', color: 'amber' },
+    { count: 100, badge: '🏆', title: 'Champion', subtitle: '100 friends dynasty', color: 'pink' },
+  ];
+
+  // Get current milestone and next milestone
+  const getCurrentMilestone = (total) => {
+    let current = null;
+    let next = milestones[0];
+    
+    for (let i = milestones.length - 1; i >= 0; i--) {
+      if (total >= milestones[i].count) {
+        current = milestones[i];
+        next = milestones[i + 1] || null;
+        break;
+      }
+    }
+    
+    if (!current && total > 0) {
+      current = milestones[0];
+      next = milestones[1];
+    }
+    
+    return { current, next };
+  };
+
   // Level configuration
   const levelConfig = {
     1: { percent: 10, label: 'Direct', color: 'amber', icon: '👤' },
@@ -84,11 +115,52 @@ const ReferralsEnhanced = ({ user }) => {
     5: { percent: 1, label: 'Level 5', color: 'pink', icon: '🏆' }
   };
 
+  // State for milestone celebration
+  const [celebratingMilestone, setCelebratingMilestone] = useState(null);
+  const [liveActivity, setLiveActivity] = useState([]);
+
   useEffect(() => {
     if (user?.uid) {
       fetchData();
+      fetchLiveActivity();
     }
   }, [user]);
+
+  // Fetch live activity (recent referral achievements)
+  const fetchLiveActivity = async () => {
+    try {
+      const response = await axios.get(`${API}/api/referrals/live-activity`);
+      setLiveActivity(response.data.activities || []);
+    } catch (e) {
+      // Fallback to mock data if API doesn't exist yet
+      setLiveActivity([]);
+    }
+  };
+
+  // Check for milestone achievements
+  const checkMilestoneAchievement = (total) => {
+    const milestone = milestones.find(m => m.count === total);
+    if (milestone) {
+      const celebrationKey = `milestone_${user?.uid}_${milestone.count}`;
+      const hasCelebrated = localStorage.getItem(celebrationKey);
+      
+      if (!hasCelebrated) {
+        setCelebratingMilestone(milestone);
+        triggerConfetti();
+        localStorage.setItem(celebrationKey, 'true');
+        
+        // Add to live activity locally
+        const newActivity = {
+          id: Date.now(),
+          type: 'milestone',
+          user_name: userData?.name || 'You',
+          milestone: milestone,
+          timestamp: new Date().toISOString()
+        };
+        setLiveActivity(prev => [newActivity, ...prev.slice(0, 9)]);
+      }
+    }
+  };
 
   const fetchData = async () => {
     try {
