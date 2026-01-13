@@ -4,11 +4,13 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Users, UserPlus, CheckCircle, Crown } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
 const FollowersList = ({ user, type = 'followers' }) => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { uid } = useParams();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -93,7 +95,7 @@ const FollowersList = ({ user, type = 'followers' }) => {
     }
   };
 
-  const title = type === 'followers' ? 'Followers' : 'Following';
+  const title = type === 'followers' ? t('followers') : t('following');
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24 pt-16">
@@ -132,18 +134,18 @@ const FollowersList = ({ user, type = 'followers' }) => {
         ) : users.length === 0 ? (
           <div className="text-center py-16">
             <Users className="w-16 h-16 text-gray-700 mx-auto mb-4" />
-            <h3 className="text-white font-bold mb-2">No {title.toLowerCase()} yet</h3>
+            <h3 className="text-white font-bold mb-2">{t('noUsersFound')}</h3>
             <p className="text-gray-500 text-sm">
               {type === 'followers' 
-                ? "When people follow this user, they'll appear here."
-                : "Users this person follows will appear here."}
+                ? t('followUsersToSee')
+                : t('followUsersToSee')}
             </p>
           </div>
         ) : (
           <div className="space-y-2">
             {/* Count indicator */}
             <div className="text-center text-gray-500 text-sm mb-4">
-              Showing {users.length} {type}
+              {t('showingActivities').replace('{count}', users.length)}
             </div>
             
             {users.map((item, index) => (
@@ -188,7 +190,7 @@ const FollowersList = ({ user, type = 'followers' }) => {
                     onClick={() => handleFollow(item.uid)}
                     className="px-4 py-2 bg-purple-500 text-white text-sm font-semibold rounded-lg hover:bg-purple-600 transition-colors"
                   >
-                    Follow
+                    {t('follow')}
                   </button>
                 )}
               </motion.div>
@@ -204,12 +206,12 @@ const FollowersList = ({ user, type = 'followers' }) => {
                 {loadingMore ? (
                   <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  'Load More'
+                  t('loadMore')
                 )}
               </button>
             ) : users.length > 0 && (
               <p className="text-center text-gray-600 text-sm mt-4 py-3">
-                — All {users.length} {type} loaded —
+                — {t('allActivitiesLoaded')} ({users.length}) —
               </p>
             )}
           </div>
