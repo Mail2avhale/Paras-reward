@@ -821,6 +821,265 @@ const AdvancedUserManagement = () => {
           </Card>
         </div>
       )}
+
+      {/* Subscription Edit Modal */}
+      {showSubscriptionModal && selectedUser && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-lg p-6 bg-gray-900 border-gray-700 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Update Subscription</h3>
+              <button onClick={() => setShowSubscriptionModal(false)} className="text-gray-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* User Info */}
+            <div className="bg-gray-800 rounded-lg p-4 mb-4">
+              <p className="text-white font-medium">{selectedUser.name || 'User'}</p>
+              <p className="text-gray-400 text-sm">{selectedUser.email}</p>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-gray-500 text-xs">Current Plan:</span>
+                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                  selectedUser.subscription_plan === 'elite' ? 'bg-amber-500/20 text-amber-400' :
+                  selectedUser.subscription_plan === 'growth' ? 'bg-emerald-500/20 text-emerald-400' :
+                  selectedUser.subscription_plan === 'startup' ? 'bg-blue-500/20 text-blue-400' :
+                  'bg-gray-700 text-gray-400'
+                }`}>
+                  {(selectedUser.subscription_plan || 'explorer').charAt(0).toUpperCase() + (selectedUser.subscription_plan || 'explorer').slice(1)}
+                </span>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Step 1: Select Plan */}
+              <div>
+                <label className="text-gray-400 text-sm block mb-2">Step 1: Select Plan</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['explorer', 'startup', 'growth', 'elite'].map(plan => (
+                    <button
+                      key={plan}
+                      onClick={() => setSubscriptionForm({...subscriptionForm, plan})}
+                      className={`p-3 rounded-lg border text-xs font-medium transition-colors ${
+                        subscriptionForm.plan === plan 
+                          ? plan === 'elite' ? 'bg-amber-500/20 border-amber-500 text-amber-400' :
+                            plan === 'growth' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' :
+                            plan === 'startup' ? 'bg-blue-500/20 border-blue-500 text-blue-400' :
+                            'bg-gray-700 border-gray-600 text-gray-300'
+                          : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
+                      }`}
+                    >
+                      {plan.charAt(0).toUpperCase() + plan.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Step 2: Set Duration */}
+              <div>
+                <label className="text-gray-400 text-sm block mb-2">Step 2: Set Duration (Days)</label>
+                <div className="grid grid-cols-4 gap-2 mb-3">
+                  {[
+                    { days: 30, label: '30 Days' },
+                    { days: 90, label: '90 Days' },
+                    { days: 180, label: '180 Days' },
+                    { days: 365, label: '1 Year' }
+                  ].map(({ days, label }) => (
+                    <button
+                      key={days}
+                      onClick={() => setSubscriptionForm({
+                        ...subscriptionForm, 
+                        days, 
+                        use_manual_expiry: false,
+                        manual_expiry_date: calculateExpiryDate(days)
+                      })}
+                      className={`px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+                        subscriptionForm.days === days && !subscriptionForm.use_manual_expiry
+                          ? 'bg-purple-500/20 border-purple-500 text-purple-400'
+                          : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                
+                <div className="flex gap-2 items-center">
+                  <span className="text-gray-500 text-sm">Custom:</span>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="3650"
+                    value={subscriptionForm.days}
+                    onChange={(e) => {
+                      const days = parseInt(e.target.value) || 30;
+                      setSubscriptionForm({
+                        ...subscriptionForm, 
+                        days,
+                        use_manual_expiry: false,
+                        manual_expiry_date: calculateExpiryDate(days)
+                      });
+                    }}
+                    className="w-20 bg-gray-800 border-gray-700 text-white text-center h-8"
+                  />
+                  <span className="text-gray-500 text-sm">days</span>
+                </div>
+              </div>
+              
+              {/* Step 3: Expiry Date */}
+              <div>
+                <label className="text-gray-400 text-sm block mb-2">Step 3: Expiry Date</label>
+                <div className="flex items-center gap-3 mb-3">
+                  <button
+                    onClick={() => setSubscriptionForm({...subscriptionForm, use_manual_expiry: false})}
+                    className={`flex-1 p-3 rounded-lg border text-sm transition-colors ${
+                      !subscriptionForm.use_manual_expiry
+                        ? 'bg-green-500/20 border-green-500 text-green-400'
+                        : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      <span>Auto: {calculateExpiryDate(subscriptionForm.days)}</span>
+                    </div>
+                    <p className="text-xs opacity-70 mt-1">Today + {subscriptionForm.days} days</p>
+                  </button>
+                  
+                  <button
+                    onClick={() => setSubscriptionForm({...subscriptionForm, use_manual_expiry: true})}
+                    className={`flex-1 p-3 rounded-lg border text-sm transition-colors ${
+                      subscriptionForm.use_manual_expiry
+                        ? 'bg-blue-500/20 border-blue-500 text-blue-400'
+                        : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <Edit2 className="w-4 h-4" />
+                      <span>Manual Date</span>
+                    </div>
+                    <p className="text-xs opacity-70 mt-1">Set specific date</p>
+                  </button>
+                </div>
+                
+                {subscriptionForm.use_manual_expiry && (
+                  <Input
+                    type="date"
+                    value={subscriptionForm.manual_expiry_date}
+                    onChange={(e) => setSubscriptionForm({...subscriptionForm, manual_expiry_date: e.target.value})}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full bg-gray-800 border-gray-700 text-white"
+                  />
+                )}
+              </div>
+              
+              {/* Free Subscription Toggle */}
+              <div className="flex items-center justify-between bg-gray-800 p-3 rounded-lg">
+                <div>
+                  <p className="text-white text-sm">Free Subscription</p>
+                  <p className="text-gray-500 text-xs">Grant without payment</p>
+                </div>
+                <button
+                  onClick={() => setSubscriptionForm({...subscriptionForm, is_free: !subscriptionForm.is_free, amount_paid: 0})}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${
+                    subscriptionForm.is_free ? 'bg-green-500' : 'bg-gray-700'
+                  }`}
+                >
+                  <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                    subscriptionForm.is_free ? 'left-7' : 'left-1'
+                  }`} />
+                </button>
+              </div>
+              
+              {/* Payment Details (only if not free) */}
+              {!subscriptionForm.is_free && (
+                <div className="space-y-3 p-3 bg-gray-800/50 rounded-lg">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-gray-500 text-xs block mb-1">Method</label>
+                      <select
+                        value={subscriptionForm.payment_method}
+                        onChange={(e) => setSubscriptionForm({...subscriptionForm, payment_method: e.target.value})}
+                        className="w-full px-2 py-1.5 bg-gray-800 border border-gray-700 rounded text-white text-sm"
+                      >
+                        <option value="cash">Cash</option>
+                        <option value="upi">UPI</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-gray-500 text-xs block mb-1">Amount (₹)</label>
+                      <Input
+                        type="number"
+                        value={subscriptionForm.amount_paid}
+                        onChange={(e) => setSubscriptionForm({...subscriptionForm, amount_paid: parseFloat(e.target.value) || 0})}
+                        className="bg-gray-800 border-gray-700 text-white h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Notes */}
+              <div>
+                <label className="text-gray-400 text-sm block mb-1">Admin Notes</label>
+                <textarea
+                  value={subscriptionForm.notes}
+                  onChange={(e) => setSubscriptionForm({...subscriptionForm, notes: e.target.value})}
+                  placeholder="Notes about this update..."
+                  rows={2}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm resize-none"
+                />
+              </div>
+              
+              {/* Summary */}
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+                <h4 className="text-purple-400 font-medium mb-2">Summary</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <p className="text-gray-500">Plan</p>
+                    <p className="text-white font-medium">{subscriptionForm.plan.charAt(0).toUpperCase() + subscriptionForm.plan.slice(1)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Duration</p>
+                    <p className="text-white font-medium">{subscriptionForm.days} days</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Expiry Date</p>
+                    <p className="text-white font-medium">
+                      {subscriptionForm.use_manual_expiry 
+                        ? new Date(subscriptionForm.manual_expiry_date).toLocaleDateString('en-IN')
+                        : new Date(calculateExpiryDate(subscriptionForm.days)).toLocaleDateString('en-IN')}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Amount</p>
+                    <p className={`font-medium ${subscriptionForm.is_free ? 'text-green-400' : 'text-amber-400'}`}>
+                      {subscriptionForm.is_free ? 'FREE' : `₹${subscriptionForm.amount_paid}`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  onClick={() => setShowSubscriptionModal(false)}
+                  variant="outline"
+                  className="flex-1 bg-gray-800 border-gray-700 text-white"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpdateSubscription}
+                  disabled={processingSubscription}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700"
+                >
+                  {processingSubscription ? 'Updating...' : 'Update Subscription'}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
