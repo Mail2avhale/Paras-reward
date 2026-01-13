@@ -19698,6 +19698,8 @@ async def follow_user(uid: str, request: Request):
     
     # Record activity
     follower = await db.users.find_one({"uid": follower_uid}, {"_id": 0, "name": 1})
+    follower_name = follower.get("name", "Someone") if follower else "Someone"
+    
     activity = {
         "activity_id": str(uuid.uuid4()),
         "user_uid": follower_uid,
@@ -19707,6 +19709,18 @@ async def follow_user(uid: str, request: Request):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.social_activities.insert_one(activity)
+    
+    # Create notification for the followed user
+    await create_notification(
+        user_uid=uid,
+        notification_type="new_follower",
+        title="New Follower!",
+        message=f"{follower_name} started following you",
+        from_uid=follower_uid,
+        from_name=follower_name,
+        icon="👤",
+        action_url=f"/profile/{follower_uid}"
+    )
     
     return {"success": True, "message": "Now following", "is_following": True}
 
