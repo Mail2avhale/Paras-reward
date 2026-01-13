@@ -323,10 +323,16 @@ const TermsConditions = () => {
                   </div>
                   <h2 className="text-lg font-bold text-white">{section.title}</h2>
                 </div>
-                <div 
-                  className="prose prose-sm prose-invert max-w-none text-gray-400 [&_a]:text-amber-500 [&_a]:hover:text-amber-400 [&_strong]:text-gray-300 [&_h4]:text-gray-300 [&_ul]:text-gray-400 [&_li]:text-gray-400 [&_.bg-gray-50]:bg-gray-800/50 [&_.bg-gray-50]:border [&_.bg-gray-50]:border-gray-700 [&_.bg-gray-50]:rounded-xl"
-                  dangerouslySetInnerHTML={{ __html: section.content }}
-                />
+                {section.dynamicContent ? (
+                  <div className="prose prose-sm prose-invert max-w-none text-gray-400">
+                    {renderContactSection()}
+                  </div>
+                ) : (
+                  <div 
+                    className="prose prose-sm prose-invert max-w-none text-gray-400 [&_a]:text-amber-500 [&_a]:hover:text-amber-400 [&_strong]:text-gray-300 [&_h4]:text-gray-300 [&_ul]:text-gray-400 [&_li]:text-gray-400 [&_.bg-gray-50]:bg-gray-800/50 [&_.bg-gray-50]:border [&_.bg-gray-50]:border-gray-700 [&_.bg-gray-50]:rounded-xl"
+                    dangerouslySetInnerHTML={{ __html: section.content }}
+                  />
+                )}
               </div>
             );
           })}
