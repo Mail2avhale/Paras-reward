@@ -305,7 +305,6 @@ function AppContent({ user, handleLogin, handleLogout }) {
           <>
             <TopBar user={user} onLogout={handleLogout} />
             <BottomNav />
-            <FloatingActionButton />
             <AIContextualHelp user={user} />
           </>
         )}
