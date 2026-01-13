@@ -5,13 +5,14 @@ import { toast } from 'sonner';
 import { 
   User, Lock, ArrowLeft, Eye, EyeOff, Camera, 
   Save, Phone, Mail, Crown, ChevronRight, 
-  LogOut, Trash2, Settings, CreditCard, Shield, FileText
+  LogOut, Trash2, Settings, CreditCard, Shield, FileText, Globe
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import ImageCropUpload from '@/components/ImageCropUpload';
+import { LanguageSelectorFull } from '@/components/LanguageSelector';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
