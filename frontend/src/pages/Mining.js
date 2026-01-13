@@ -413,7 +413,7 @@ const DailyRewards = ({ user }) => {
       </div>
 
       {/* Free User Warning */}
-      {!isVip && (
+      {!hasPaidPlan && (
         <div className="px-5 mb-6">
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4">
             <div className="flex items-start gap-3">
@@ -424,7 +424,7 @@ const DailyRewards = ({ user }) => {
                   onClick={() => navigate('/subscription')}
                   className="text-amber-400 text-xs mt-1 underline"
                 >
-                  Upgrade to VIP for lifetime validity →
+                  Upgrade for higher mining rates →
                 </button>
               </div>
             </div>
