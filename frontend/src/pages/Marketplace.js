@@ -23,7 +23,7 @@ const CATEGORY_CONFIG = {
   'Other': { icon: Package, color: 'from-gray-500 to-slate-500', bgColor: 'bg-gray-500/10' }
 };
 
-// Redemption category cards for "Redeem Your Points" section
+// Redemption category cards for "Redeem Your PRC" section
 const REDEEM_CATEGORIES = [
   { id: 'merchandise', name: 'Merchandise', icon: Package, color: 'from-blue-500 to-cyan-500', path: '/marketplace?cat=all' },
   { id: 'vouchers', name: 'E-vouchers', icon: Gift, color: 'from-purple-500 to-violet-500', path: '/gift-vouchers' },
@@ -223,7 +223,7 @@ const Marketplace = ({ user }) => {
     addToCart: language === 'mr' ? 'कार्टमध्ये जोडा' : language === 'hi' ? 'कार्ट में जोड़ें' : 'Add to Cart',
     vipOnly: language === 'mr' ? 'फक्त VIP साठी' : language === 'hi' ? 'केवल VIP के लिए' : 'VIP Only',
     merchandise: language === 'mr' ? 'उत्पादने' : language === 'hi' ? 'सामान' : 'Merchandise',
-    tagline: language === 'mr' ? 'तुमचे पॉइंट्स वापरा' : language === 'hi' ? 'अपने पॉइंट्स का उपयोग करें' : 'Redeem your points on things you love',
+    tagline: language === 'mr' ? 'तुमचे PRC वापरा' : language === 'hi' ? 'अपने PRC का उपयोग करें' : 'Redeem your PRC on things you love',
   };
 
   // Get unique categories from products
@@ -531,9 +531,9 @@ const Marketplace = ({ user }) => {
         </div>
       )}
 
-      {/* Redeem Your Points Section */}
+      {/* Redeem Your PRC Section */}
       <div className="px-5 mb-8">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">Redeem Your Points</h2>
+        <h2 className="text-lg font-bold text-gray-800 mb-4">Redeem Your PRC</h2>
         <div className="grid grid-cols-3 gap-3">
           {REDEEM_CATEGORIES.map(cat => {
             const Icon = cat.icon;
