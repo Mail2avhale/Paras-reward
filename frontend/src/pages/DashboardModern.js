@@ -211,10 +211,14 @@ const DashboardModern = ({ user, onLogout }) => {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            {stats.membershipType === 'vip' && (
-              <div className="bg-gradient-to-r from-amber-500 to-yellow-500 px-3 py-1 rounded-full">
+            {hasPaidPlan && (
+              <div className={`px-3 py-1 rounded-full ${
+                stats.subscriptionPlan === 'elite' ? 'bg-gradient-to-r from-amber-500 to-yellow-500' :
+                stats.subscriptionPlan === 'growth' ? 'bg-gradient-to-r from-emerald-500 to-green-500' :
+                'bg-gradient-to-r from-blue-500 to-cyan-500'
+              }`}>
                 <span className="text-xs font-bold text-black flex items-center gap-1">
-                  <Crown className="w-3 h-3" /> VIP
+                  <Crown className="w-3 h-3" /> {getPlanDisplayName(stats.subscriptionPlan)}
                 </span>
               </div>
             )}
