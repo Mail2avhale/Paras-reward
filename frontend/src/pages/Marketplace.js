@@ -662,13 +662,13 @@ const Marketplace = ({ user }) => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowCart(false)}
-              className="fixed inset-0 bg-black/60 z-50"
+              className="fixed inset-0 bg-black/60 z-[60]"
             />
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 max-h-[85vh] overflow-hidden shadow-2xl"
+              className="fixed bottom-20 left-0 right-0 bg-white rounded-t-3xl z-[60] max-h-[70vh] overflow-hidden shadow-2xl"
             >
               <div className="p-5">
                 <div className="flex items-center justify-between mb-4">
