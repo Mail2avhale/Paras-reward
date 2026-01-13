@@ -5,7 +5,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Facebook, Twitter, Instagram, Linkedin, Youtube, Send, MessageCircle, Save, ArrowLeft, Users, CheckCircle, XCircle, AlertCircle, Upload, Image } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Linkedin, Youtube, Send, MessageCircle, Save, ArrowLeft, Users, CheckCircle, XCircle, AlertCircle, Upload, Image, ShoppingCart, IndianRupee, Coins, Truck } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
@@ -41,6 +41,15 @@ const AdminSettings = ({ user }) => {
   const [savingPayment, setSavingPayment] = useState(false);
   const [uploadingQR, setUploadingQR] = useState(false);
   const qrInputRef = useRef(null);
+
+  // Marketplace Settings State
+  const [marketplaceSettings, setMarketplaceSettings] = useState({
+    prc_to_inr_rate: 0.1,
+    min_order_prc: 100,
+    max_order_prc: 100000,
+    free_delivery_threshold: 500
+  });
+  const [savingMarketplace, setSavingMarketplace] = useState(false);
 
   useEffect(() => {
     // Check if user is admin
