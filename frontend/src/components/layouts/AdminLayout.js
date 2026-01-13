@@ -137,6 +137,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'security-dashboard', label: 'Security Dashboard', icon: Shield, path: '/admin/security' },
         { id: 'fraud-alerts', label: 'Fraud Alerts', icon: AlertTriangle, path: '/admin/fraud-alerts' },
         { id: 'burn-management', label: 'Burn Management', icon: Activity, path: '/admin/burn-management' },
+        { id: 'data-backup', label: 'Data Backup & Archive', icon: Database, path: '/admin/data-backup' },
       ]
     },
     settings: {
