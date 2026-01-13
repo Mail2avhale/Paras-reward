@@ -871,6 +871,101 @@ const ReferralsEnhanced = ({ user }) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Milestone Celebration Modal */}
+      <AnimatePresence>
+        {celebratingMilestone && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4"
+            onClick={() => setCelebratingMilestone(null)}
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.5, y: 50 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 20 }}
+              transition={{ type: "spring", duration: 0.6 }}
+              className={`bg-gradient-to-br from-${celebratingMilestone.color}-500 via-${celebratingMilestone.color}-600 to-${celebratingMilestone.color}-700 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl`}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Animated badge */}
+              <motion.div
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: [0, 1.3, 1], rotate: 0 }}
+                transition={{ delay: 0.2, duration: 0.8, type: "spring" }}
+                className="w-28 h-28 bg-white/20 rounded-3xl flex items-center justify-center mx-auto mb-6 backdrop-blur-sm border-4 border-white/30"
+              >
+                <motion.span
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ repeat: 3, duration: 0.5 }}
+                  className="text-6xl"
+                >
+                  {celebratingMilestone.badge}
+                </motion.span>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <p className="text-white/80 text-sm mb-1">New Badge Unlocked!</p>
+                <h2 className="text-3xl font-bold text-white mb-2">
+                  {celebratingMilestone.title}
+                </h2>
+                <p className="text-white/90 text-lg mb-6">
+                  {celebratingMilestone.subtitle}
+                </p>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="bg-white/20 rounded-2xl p-4 mb-6 backdrop-blur-sm"
+              >
+                <div className="flex items-center justify-center gap-4">
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-white">{celebratingMilestone.count}</p>
+                    <p className="text-white/70 text-xs">Friends</p>
+                  </div>
+                  <div className="w-px h-10 bg-white/30"></div>
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-white">{celebratingMilestone.badge}</p>
+                    <p className="text-white/70 text-xs">Badge</p>
+                  </div>
+                </div>
+              </motion.div>
+              
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="text-white/70 text-sm mb-4"
+              >
+                {(() => {
+                  const nextMilestone = milestones.find(m => m.count > celebratingMilestone.count);
+                  return nextMilestone 
+                    ? `Next milestone: ${nextMilestone.title} at ${nextMilestone.count} friends!`
+                    : "You've reached the highest level! 🏆";
+                })()}
+              </motion.p>
+              
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                onClick={() => setCelebratingMilestone(null)}
+                className="w-full py-4 bg-white text-gray-900 font-bold rounded-2xl hover:bg-white/90 transition-all shadow-lg"
+              >
+                Awesome! 🎉
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
