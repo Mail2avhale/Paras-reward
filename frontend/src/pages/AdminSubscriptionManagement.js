@@ -238,9 +238,17 @@ const AdminSubscriptionManagement = ({ user }) => {
     
     try {
       setProcessing(true);
+      
+      // Calculate expiry date
+      const expiryDate = manualSubForm.use_manual_expiry 
+        ? manualSubForm.manual_expiry_date 
+        : calculateExpiryDate(manualSubForm.days);
+      
       await axios.post(`${API}/api/admin/users/${editingUser.uid}/subscription`, {
         plan: manualSubForm.plan,
-        duration: manualSubForm.duration,
+        days: manualSubForm.days,
+        expiry_date: expiryDate,
+        use_manual_expiry: manualSubForm.use_manual_expiry,
         payment_method: manualSubForm.is_free ? 'admin_free' : manualSubForm.payment_method,
         payment_reference: manualSubForm.payment_reference,
         amount_paid: manualSubForm.is_free ? 0 : manualSubForm.amount_paid,
@@ -251,11 +259,13 @@ const AdminSubscriptionManagement = ({ user }) => {
       setEditingUser(null);
       setManualSubForm({
         plan: 'explorer',
-        duration: 'monthly',
+        days: 30,
+        use_manual_expiry: false,
+        manual_expiry_date: '',
         payment_method: 'admin_manual',
         payment_reference: '',
         amount_paid: 0,
-        is_free: false,
+        is_free: true,
         notes: ''
       });
       fetchUsers();
@@ -268,14 +278,24 @@ const AdminSubscriptionManagement = ({ user }) => {
   };
 
   const openEditSubscription = (userItem) => {
+    // Calculate remaining days if user has active subscription
+    let remainingDays = 30;
+    if (userItem.subscription_expiry) {
+      const expiry = new Date(userItem.subscription_expiry);
+      const now = new Date();
+      remainingDays = Math.max(0, Math.ceil((expiry - now) / (1000 * 60 * 60 * 24)));
+    }
+    
     setEditingUser(userItem);
     setManualSubForm({
       plan: userItem.subscription_plan || 'explorer',
-      duration: 'monthly',
+      days: remainingDays > 0 ? remainingDays : 30,
+      use_manual_expiry: false,
+      manual_expiry_date: userItem.subscription_expiry ? userItem.subscription_expiry.split('T')[0] : calculateExpiryDate(30),
       payment_method: 'admin_manual',
       payment_reference: '',
       amount_paid: pricing[userItem.subscription_plan || 'explorer']?.monthly || 0,
-      is_free: false,
+      is_free: true,
       notes: ''
     });
   };
