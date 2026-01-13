@@ -469,7 +469,7 @@ const Marketplace = ({ user }) => {
         {/* Balance Card */}
         <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 flex items-center justify-between">
           <div>
-            <p className="text-blue-200 text-xs">Your PRC Balance</p>
+            <p className="text-blue-200 text-xs">{t.prcBalance}</p>
             <p className="text-2xl font-bold">{(userData?.prc_balance || 0).toLocaleString()} PRC</p>
           </div>
           {!isVip && (
@@ -477,7 +477,7 @@ const Marketplace = ({ user }) => {
               onClick={() => navigate('/subscription')}
               className="bg-white px-4 py-2 rounded-xl text-blue-800 text-sm font-bold flex items-center gap-1 shadow-md"
             >
-              <Crown className="w-4 h-4" /> Upgrade
+              <Crown className="w-4 h-4" /> {t.vipOnly}
             </button>
           )}
         </div>
