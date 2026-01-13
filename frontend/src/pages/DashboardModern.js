@@ -477,6 +477,30 @@ const DashboardModern = ({ user, onLogout }) => {
             </motion.button>
           ))}
         </div>
+        
+        {/* Social Quick Actions */}
+        <div className="grid grid-cols-2 gap-3 mt-3">
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            onClick={() => navigate('/network-feed')}
+            className="flex items-center justify-center gap-2 p-3 rounded-xl bg-gradient-to-br from-cyan-600 to-teal-700 shadow-lg"
+          >
+            <Users className="w-5 h-5 text-white" />
+            <span className="text-sm font-semibold text-white">Network</span>
+          </motion.button>
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            onClick={() => navigate('/messages')}
+            className="flex items-center justify-center gap-2 p-3 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 shadow-lg"
+          >
+            <MessageCircle className="w-5 h-5 text-white" />
+            <span className="text-sm font-semibold text-white">Messages</span>
+          </motion.button>
+        </div>
       </div>
 
       {/* Horizontal Scrollable Cards - VIP Upgrade + Offers */}
