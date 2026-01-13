@@ -129,6 +129,59 @@ const AdvancedUserManagement = () => {
     setShowBalanceModal(true);
   };
 
+  const openSubscriptionModal = (user) => {
+    // Calculate remaining days if user has active subscription
+    let remainingDays = 30;
+    if (user.subscription_expiry || user.membership_expiry) {
+      const expiry = new Date(user.subscription_expiry || user.membership_expiry);
+      const now = new Date();
+      remainingDays = Math.max(0, Math.ceil((expiry - now) / (1000 * 60 * 60 * 24)));
+    }
+    
+    setSelectedUser(user);
+    setSubscriptionForm({
+      plan: user.subscription_plan || 'explorer',
+      days: remainingDays > 0 ? remainingDays : 30,
+      use_manual_expiry: false,
+      manual_expiry_date: user.subscription_expiry ? user.subscription_expiry.split('T')[0] : calculateExpiryDate(30),
+      payment_method: 'admin_free',
+      amount_paid: 0,
+      is_free: true,
+      notes: ''
+    });
+    setShowSubscriptionModal(true);
+  };
+
+  const handleUpdateSubscription = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      setProcessingSubscription(true);
+      
+      const expiryDate = subscriptionForm.use_manual_expiry 
+        ? subscriptionForm.manual_expiry_date 
+        : calculateExpiryDate(subscriptionForm.days);
+      
+      await axios.post(`${API}/admin/users/${selectedUser.uid}/subscription`, {
+        plan: subscriptionForm.plan,
+        days: subscriptionForm.days,
+        expiry_date: expiryDate,
+        use_manual_expiry: subscriptionForm.use_manual_expiry,
+        payment_method: subscriptionForm.is_free ? 'admin_free' : subscriptionForm.payment_method,
+        amount_paid: subscriptionForm.is_free ? 0 : subscriptionForm.amount_paid,
+        notes: subscriptionForm.notes
+      });
+      
+      toast.success(`Subscription updated for ${selectedUser.name || selectedUser.email}!`);
+      setShowSubscriptionModal(false);
+      fetchUsers();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to update subscription');
+    } finally {
+      setProcessingSubscription(false);
+    }
+  };
+
   const handleEditUser = async (e) => {
     e.preventDefault();
     setLoading(true);
