@@ -766,7 +766,7 @@ const DashboardModern = ({ user, onLogout }) => {
       {/* AI Chatbot */}
       <AIChatbotEnhanced 
         user={user}
-        isVip={stats.membershipType === 'vip'}
+        isVip={hasPaidPlan}
       />
 
       {/* Bottom Navigation */}
