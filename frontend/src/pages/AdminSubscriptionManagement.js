@@ -54,13 +54,22 @@ const AdminSubscriptionManagement = ({ user }) => {
   const [editingUser, setEditingUser] = useState(null);
   const [manualSubForm, setManualSubForm] = useState({
     plan: 'explorer',
-    duration: 'monthly',
+    days: 30,
+    use_manual_expiry: false,
+    manual_expiry_date: '',
     payment_method: 'admin_manual',
     payment_reference: '',
     amount_paid: 0,
-    is_free: false,
+    is_free: true,
     notes: ''
   });
+
+  // Calculate expiry date from days
+  const calculateExpiryDate = (days) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return date.toISOString().split('T')[0];
+  };
 
   const planIcons = {
     explorer: Users,
