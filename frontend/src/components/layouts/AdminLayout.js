@@ -101,6 +101,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'marketplace', label: 'Marketplace', icon: Store, path: '/admin/marketplace' },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
     { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon, path: '/admin/support' },
+    { id: 'contact-submissions', label: 'Contact Inquiries', icon: Mail, path: '/admin/contact-submissions' },
   ];
 
   // Grouped menu items - Simplified structure
