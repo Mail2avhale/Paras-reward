@@ -25343,6 +25343,53 @@ async def get_live_platform_stats():
         }
 
 
+@api_router.post("/referrals/milestone-achievement")
+async def record_milestone_achievement(request: Request):
+    """Record a milestone achievement for global live activity"""
+    try:
+        data = await request.json()
+        uid = data.get("uid")
+        milestone_count = data.get("milestone_count")
+        milestone_badge = data.get("milestone_badge")
+        milestone_title = data.get("milestone_title")
+        milestone_color = data.get("milestone_color", "amber")
+        
+        if not uid or not milestone_count:
+            raise HTTPException(status_code=400, detail="Missing required fields")
+        
+        # Get user info
+        user = await db.users.find_one({"uid": uid}, {"_id": 0, "name": 1, "city": 1})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Anonymize name
+        name = user.get("name", "User")
+        display_name = name.split()[0][:3] + "***" if name else "User"
+        
+        # Record achievement
+        achievement = {
+            "achievement_id": str(uuid.uuid4()),
+            "uid": uid,
+            "display_name": display_name,
+            "city": user.get("city", "Mumbai"),
+            "milestone_count": milestone_count,
+            "milestone_badge": milestone_badge,
+            "milestone_title": milestone_title,
+            "milestone_color": milestone_color,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.milestone_achievements.insert_one(achievement)
+        
+        return {"success": True, "message": "Achievement recorded"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error recording milestone: {e}")
+        raise HTTPException(status_code=500, detail="Failed to record achievement")
+
+
 @api_router.get("/public/live-activity")
 async def get_live_activity_feed():
     """
@@ -25352,6 +25399,13 @@ async def get_live_activity_feed():
     Format: "User from {city} {action}"
     """
     try:
+        # Get recent milestone achievements (last 24 hours)
+        twenty_four_hours_ago = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+        recent_milestones = await db.milestone_achievements.find(
+            {"created_at": {"$gte": twenty_four_hours_ago}},
+            {"_id": 0}
+        ).sort("created_at", -1).limit(10).to_list(10)
+        
         # Get recent transactions (last 50) - include all activity types
         all_activity_types = [
             "mining", "tap_game", "order", "gift_voucher_request", "bill_payment_request",
