@@ -10,11 +10,13 @@ import {
   ArrowLeft, Smartphone, Tv, Zap, CreditCard, Building,
   Send, Clock, CheckCircle, XCircle, AlertCircle, Receipt
 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
 const BillPayments = ({ user, onLogout }) => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState([]);
   const [currentUser, setCurrentUser] = useState(user);
