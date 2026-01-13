@@ -20303,25 +20303,44 @@ async def clear_all_notifications(uid: str):
 # ========== USER SEARCH & DISCOVERY ==========
 
 @api_router.get("/social/search-users")
-async def search_users(q: str, page: int = 1, limit: int = 20):
-    """Search for users by name or referral code"""
-    if not q or len(q) < 2:
-        return {"users": [], "total": 0}
-    
+async def search_users(
+    q: str = "", 
+    city: str = None, 
+    state: str = None,
+    page: int = 1, 
+    limit: int = 20
+):
+    """
+    Search for users by name, referral code, city or state
+    - q: Search query for name or referral code
+    - city: Filter by city (exact match, case insensitive)
+    - state: Filter by state (exact match, case insensitive)
+    """
     skip = (page - 1) * limit
     
-    # Search by name or referral code
-    query = {
-        "$or": [
+    # Build query
+    query = {"is_public": {"$ne": False}}  # Only public profiles
+    
+    # Name/code search
+    if q and len(q) >= 2:
+        query["$or"] = [
             {"name": {"$regex": q, "$options": "i"}},
             {"referral_code": {"$regex": q, "$options": "i"}}
-        ],
-        "is_public": {"$ne": False}  # Only public profiles
-    }
+        ]
+    
+    # Location filters
+    if city:
+        query["city"] = {"$regex": f"^{city}$", "$options": "i"}
+    if state:
+        query["state"] = {"$regex": f"^{state}$", "$options": "i"}
+    
+    # If no search criteria, return empty
+    if not q and not city and not state:
+        return {"users": [], "total": 0, "page": page, "total_pages": 0}
     
     users = await db.users.find(
         query,
-        {"_id": 0, "uid": 1, "name": 1, "avatar": 1, "kyc_verified": 1, "membership_type": 1, "referral_count": 1, "city": 1}
+        {"_id": 0, "uid": 1, "name": 1, "avatar": 1, "kyc_verified": 1, "membership_type": 1, "referral_count": 1, "city": 1, "state": 1}
     ).skip(skip).limit(limit).to_list(limit)
     
     total = await db.users.count_documents(query)
@@ -20346,6 +20365,7 @@ async def search_users(q: str, page: int = 1, limit: int = 20):
             "name": user.get("name", "User"),
             "avatar": user.get("avatar"),
             "city": user.get("city", ""),
+            "state": user.get("state", ""),
             "is_verified": user.get("kyc_verified", False),
             "membership_type": user.get("membership_type", "free"),
             "badge": badge,
@@ -20363,7 +20383,18 @@ async def search_users(q: str, page: int = 1, limit: int = 20):
 
 @api_router.get("/social/suggested-users/{uid}")
 async def get_suggested_users(uid: str, limit: int = 10):
-    """Get suggested users to follow"""
+    """
+    Get suggested users to follow with smart recommendations:
+    1. Friends of friends (team-based)
+    2. Same city users
+    3. Same state users  
+    4. Popular users (most followers)
+    """
+    # Get current user info
+    current_user = await db.users.find_one({"uid": uid}, {"_id": 0, "city": 1, "state": 1, "referred_by": 1})
+    user_city = current_user.get("city", "") if current_user else ""
+    user_state = current_user.get("state", "") if current_user else ""
+    
     # Get users the current user is already following
     following = await db.follows.find(
         {"follower_uid": uid},
@@ -20373,40 +20404,11 @@ async def get_suggested_users(uid: str, limit: int = 10):
     following_uids = [f["following_uid"] for f in following]
     following_uids.append(uid)  # Exclude self
     
-    # Get suggested users (active users with most followers, not already following)
-    pipeline = [
-        {"$match": {
-            "uid": {"$nin": following_uids},
-            "is_public": {"$ne": False}
-        }},
-        {"$lookup": {
-            "from": "follows",
-            "localField": "uid",
-            "foreignField": "following_uid",
-            "as": "followers"
-        }},
-        {"$addFields": {
-            "followers_count": {"$size": "$followers"}
-        }},
-        {"$sort": {"followers_count": -1, "referral_count": -1}},
-        {"$limit": limit},
-        {"$project": {
-            "_id": 0,
-            "uid": 1,
-            "name": 1,
-            "avatar": 1,
-            "kyc_verified": 1,
-            "membership_type": 1,
-            "referral_count": 1,
-            "city": 1,
-            "followers_count": 1
-        }}
-    ]
+    suggestions = []
+    seen_uids = set(following_uids)
     
-    users = await db.users.aggregate(pipeline).to_list(limit)
-    
-    result = []
-    for user in users:
+    # Helper function to format user
+    async def format_user(user, reason=""):
         team_size = user.get("referral_count", 0)
         badge = None
         if team_size >= 100: badge = "🏆"
@@ -20416,19 +20418,131 @@ async def get_suggested_users(uid: str, limit: int = 10):
         elif team_size >= 5: badge = "⭐"
         elif team_size >= 1: badge = "🌱"
         
-        result.append({
+        followers_count = await db.follows.count_documents({"following_uid": user["uid"]})
+        
+        return {
             "uid": user["uid"],
             "name": user.get("name", "User"),
             "avatar": user.get("avatar"),
             "city": user.get("city", ""),
+            "state": user.get("state", ""),
             "is_verified": user.get("kyc_verified", False),
             "membership_type": user.get("membership_type", "free"),
             "badge": badge,
             "team_size": team_size,
-            "followers_count": user.get("followers_count", 0)
-        })
+            "followers_count": followers_count,
+            "reason": reason
+        }
     
-    return {"suggested_users": result}
+    # 1. FRIENDS OF FRIENDS (Team-based suggestions)
+    # Get people that users I follow also follow
+    if following_uids and len(suggestions) < limit:
+        # Get who my friends follow
+        friends_following = await db.follows.find(
+            {"follower_uid": {"$in": following_uids[:-1]}},  # Exclude self
+            {"_id": 0, "following_uid": 1}
+        ).to_list(500)
+        
+        # Count how many of my friends follow each person
+        fof_counts = {}
+        for f in friends_following:
+            fof_uid = f["following_uid"]
+            if fof_uid not in seen_uids:
+                fof_counts[fof_uid] = fof_counts.get(fof_uid, 0) + 1
+        
+        # Sort by number of mutual connections
+        sorted_fof = sorted(fof_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+        
+        for fof_uid, count in sorted_fof:
+            if len(suggestions) >= limit:
+                break
+            user = await db.users.find_one(
+                {"uid": fof_uid, "is_public": {"$ne": False}},
+                {"_id": 0, "uid": 1, "name": 1, "avatar": 1, "kyc_verified": 1, "membership_type": 1, "referral_count": 1, "city": 1, "state": 1}
+            )
+            if user:
+                formatted = await format_user(user, f"Followed by {count} people you follow")
+                suggestions.append(formatted)
+                seen_uids.add(fof_uid)
+    
+    # 2. SAME CITY users
+    if user_city and len(suggestions) < limit:
+        city_users = await db.users.find(
+            {
+                "uid": {"$nin": list(seen_uids)},
+                "city": {"$regex": f"^{user_city}$", "$options": "i"},
+                "is_public": {"$ne": False}
+            },
+            {"_id": 0, "uid": 1, "name": 1, "avatar": 1, "kyc_verified": 1, "membership_type": 1, "referral_count": 1, "city": 1, "state": 1}
+        ).sort("referral_count", -1).limit(limit - len(suggestions)).to_list(limit - len(suggestions))
+        
+        for user in city_users:
+            if len(suggestions) >= limit:
+                break
+            formatted = await format_user(user, f"From {user_city}")
+            suggestions.append(formatted)
+            seen_uids.add(user["uid"])
+    
+    # 3. SAME STATE users
+    if user_state and len(suggestions) < limit:
+        state_users = await db.users.find(
+            {
+                "uid": {"$nin": list(seen_uids)},
+                "state": {"$regex": f"^{user_state}$", "$options": "i"},
+                "is_public": {"$ne": False}
+            },
+            {"_id": 0, "uid": 1, "name": 1, "avatar": 1, "kyc_verified": 1, "membership_type": 1, "referral_count": 1, "city": 1, "state": 1}
+        ).sort("referral_count", -1).limit(limit - len(suggestions)).to_list(limit - len(suggestions))
+        
+        for user in state_users:
+            if len(suggestions) >= limit:
+                break
+            formatted = await format_user(user, f"From {user_state}")
+            suggestions.append(formatted)
+            seen_uids.add(user["uid"])
+    
+    # 4. POPULAR USERS (fallback - most followers)
+    if len(suggestions) < limit:
+        pipeline = [
+            {"$match": {
+                "uid": {"$nin": list(seen_uids)},
+                "is_public": {"$ne": False}
+            }},
+            {"$lookup": {
+                "from": "follows",
+                "localField": "uid",
+                "foreignField": "following_uid",
+                "as": "followers"
+            }},
+            {"$addFields": {
+                "followers_count": {"$size": "$followers"}
+            }},
+            {"$sort": {"followers_count": -1, "referral_count": -1}},
+            {"$limit": limit - len(suggestions)},
+            {"$project": {
+                "_id": 0,
+                "uid": 1,
+                "name": 1,
+                "avatar": 1,
+                "kyc_verified": 1,
+                "membership_type": 1,
+                "referral_count": 1,
+                "city": 1,
+                "state": 1,
+                "followers_count": 1
+            }}
+        ]
+        
+        popular_users = await db.users.aggregate(pipeline).to_list(limit - len(suggestions))
+        
+        for user in popular_users:
+            if len(suggestions) >= limit:
+                break
+            formatted = await format_user(user, "Popular in the community")
+            suggestions.append(formatted)
+            seen_uids.add(user["uid"])
+    
+    return {"suggested_users": suggestions}
 
 
 # ========== REFERRAL PROGRAM ==========
