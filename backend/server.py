@@ -20225,7 +20225,7 @@ async def search_users(q: str, page: int = 1, limit: int = 20):
     }
 
 
-@api_router.get("/users/suggested/{uid}")
+@api_router.get("/social/suggested-users/{uid}")
 async def get_suggested_users(uid: str, limit: int = 10):
     """Get suggested users to follow"""
     # Get users the current user is already following
