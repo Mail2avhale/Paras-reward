@@ -521,6 +521,101 @@ const ReferralsEnhanced = ({ user }) => {
           </motion.div>
         </div>
       )}
+
+      {/* First Referral Celebration Modal */}
+      <AnimatePresence>
+        {showCelebration && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4"
+            onClick={() => setShowCelebration(false)}
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.5, y: 50 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 20 }}
+              transition={{ type: "spring", duration: 0.6 }}
+              className="bg-gradient-to-br from-amber-500 via-amber-600 to-orange-600 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Animated celebration icon */}
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: [0, 1.2, 1] }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+                className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6"
+              >
+                <motion.div
+                  animate={{ rotate: [0, -10, 10, -10, 10, 0] }}
+                  transition={{ repeat: 2, duration: 0.5 }}
+                >
+                  <PartyPopper className="w-12 h-12 text-white" />
+                </motion.div>
+              </motion.div>
+              
+              <motion.h2 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-3xl font-bold text-white mb-2"
+              >
+                Congratulations! 🎉
+              </motion.h2>
+              
+              <motion.p 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="text-white/90 text-lg mb-6"
+              >
+                Your first friend just joined!<br />
+                You&apos;re now earning <strong>+10% bonus</strong> from their rewards!
+              </motion.p>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="bg-white/20 rounded-2xl p-4 mb-6"
+              >
+                <p className="text-white/80 text-sm mb-1">Your Network</p>
+                <div className="flex items-center justify-center gap-3">
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-white">1</p>
+                    <p className="text-white/70 text-xs">Friend</p>
+                  </div>
+                  <div className="w-px h-10 bg-white/30"></div>
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-white">+10%</p>
+                    <p className="text-white/70 text-xs">Bonus</p>
+                  </div>
+                </div>
+              </motion.div>
+              
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="text-white/70 text-sm mb-4"
+              >
+                Keep inviting to unlock up to <strong>+20% bonus!</strong>
+              </motion.p>
+              
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                onClick={() => setShowCelebration(false)}
+                className="w-full py-4 bg-white text-amber-600 font-bold rounded-2xl hover:bg-white/90 transition-all shadow-lg"
+              >
+                Keep Growing! 🚀
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
