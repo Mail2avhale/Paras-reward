@@ -29,7 +29,7 @@ const LiveActivityFeed = ({ translations = {}, maxItems = 5 }) => {
     redeemed: 'redeemed rewards',
     claimedVoucher: 'claimed a gift voucher',
     placedOrder: 'placed a marketplace order',
-    startedMining: 'started mining',
+    startedMining: 'started earning rewards',
     playedGame: 'played tap game'
   };
 
@@ -41,7 +41,7 @@ const LiveActivityFeed = ({ translations = {}, maxItems = 5 }) => {
   ];
 
   const actionTemplates = [
-    { action: 'mining', icon: Zap, text: 'earned PRC via mining', color: 'text-purple-400' },
+    { action: 'reward', icon: Zap, text: 'earned PRC via rewards', color: 'text-purple-400' },
     { action: 'tap_game', icon: Gamepad2, text: 'played tap game', color: 'text-blue-400' },
     { action: 'redeem', icon: Gift, text: 'redeemed rewards', color: 'text-green-400' },
     { action: 'voucher', icon: Gift, text: 'claimed a gift voucher', color: 'text-pink-400' },
