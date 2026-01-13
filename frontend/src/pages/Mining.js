@@ -40,23 +40,31 @@ const DailyRewards = ({ user }) => {
     collecting: language === 'mr' ? 'गोळा करत आहे...' : language === 'hi' ? 'इकट्ठा कर रहे हैं...' : 'Collecting...',
   };
 
-  const calculateRate = useCallback((data) => {
-    let rate = 1.0;
-    if (data?.membership_type === 'vip') rate *= 2;
-    if (data?.referral_count > 0) rate += Math.min(data.referral_count * 0.1, 1.0);
-    return rate;
-  }, []);
-
-  // Fetch user data
+  // Fetch user data and mining status
   const fetchUserData = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/api/user/${user.uid}`);
-      const data = response.data;
+      // Fetch both user data and mining status in parallel
+      const [userResponse, miningResponse] = await Promise.all([
+        axios.get(`${API}/api/user/${user.uid}`),
+        axios.get(`${API}/api/mining/status/${user.uid}`)
+      ]);
+      
+      const data = userResponse.data;
+      const miningData = miningResponse.data;
+      
       setUserData(data);
-      setMiningRate(calculateRate(data));
+      // Use the actual mining rate from backend (per hour)
+      setMiningRate(miningData.mining_rate_per_hour || miningData.mining_rate || 1.0);
       
       // Check mining session status
-      if (data.mining_active && data.mining_session_end) {
+      if (miningData.session_active && miningData.remaining_hours > 0) {
+        setIsMining(true);
+        setSessionTimeRemaining(Math.floor(miningData.remaining_hours * 3600));
+        setSessionStartTime(new Date(miningData.session_start).getTime());
+        
+        // Use mined_this_session from backend
+        setSessionPRC(miningData.mined_this_session || 0);
+      } else if (data.mining_active && data.mining_session_end) {
         const endTime = new Date(data.mining_session_end).getTime();
         const startTime = data.mining_start_time ? new Date(data.mining_start_time).getTime() : (endTime - 24*60*60*1000);
         const now = Date.now();
@@ -66,12 +74,7 @@ const DailyRewards = ({ user }) => {
           setIsMining(true);
           setSessionTimeRemaining(remaining);
           setSessionStartTime(startTime);
-          
-          // Calculate already earned PRC
-          const elapsedSeconds = Math.floor((now - startTime) / 1000);
-          const rate = calculateRate(data);
-          const earned = (elapsedSeconds * rate) / 3600;
-          setSessionPRC(earned);
+          setSessionPRC(miningData.mined_this_session || 0);
         } else {
           setIsMining(false);
           setSessionTimeRemaining(0);
@@ -86,7 +89,7 @@ const DailyRewards = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  }, [user, calculateRate]);
+  }, [user]);
 
   useEffect(() => {
     if (user?.uid) {
