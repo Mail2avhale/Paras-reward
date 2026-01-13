@@ -8674,6 +8674,7 @@ async def admin_update_user_subscription(uid: str, request: Request):
     """
     Admin endpoint to manually update user subscription.
     Can grant free subscription or record manual payment.
+    Supports both auto-calculated expiry (from days) and manual expiry date.
     """
     data = await request.json()
     
@@ -8683,21 +8684,28 @@ async def admin_update_user_subscription(uid: str, request: Request):
         raise HTTPException(status_code=404, detail="User not found")
     
     plan = data.get("plan", "explorer")
-    duration = data.get("duration", "monthly")
+    days = data.get("days", 30)
+    use_manual_expiry = data.get("use_manual_expiry", False)
+    manual_expiry_date = data.get("expiry_date")
     payment_method = data.get("payment_method", "admin_manual")
     payment_reference = data.get("payment_reference", "")
     amount_paid = data.get("amount_paid", 0)
     notes = data.get("notes", "")
     
-    # Calculate expiry date based on duration
-    duration_days = {
-        "monthly": 30,
-        "quarterly": 90,
-        "half_yearly": 180,
-        "yearly": 365
-    }
-    days = duration_days.get(duration, 30)
-    expiry_date = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
+    # Calculate expiry date
+    if use_manual_expiry and manual_expiry_date:
+        # Use the manual date provided
+        try:
+            expiry_date = datetime.fromisoformat(manual_expiry_date.replace('Z', '+00:00'))
+            if expiry_date.tzinfo is None:
+                expiry_date = expiry_date.replace(tzinfo=timezone.utc)
+            expiry_date = expiry_date.isoformat()
+        except:
+            # If parsing fails, calculate from days
+            expiry_date = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
+    else:
+        # Auto-calculate from days
+        expiry_date = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
     
     # Determine membership type
     membership_type = "vip" if plan != "explorer" else "free"
@@ -8706,7 +8714,7 @@ async def admin_update_user_subscription(uid: str, request: Request):
     update_data = {
         "subscription_plan": plan,
         "subscription_expiry": expiry_date,
-        "subscription_duration": duration,
+        "subscription_days": days,
         "membership_type": membership_type,
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
@@ -8720,7 +8728,8 @@ async def admin_update_user_subscription(uid: str, request: Request):
         "user_email": user.get("email"),
         "user_name": user.get("name"),
         "subscription_plan": plan,
-        "plan_type": duration,
+        "plan_type": f"{days}_days",
+        "days": days,
         "amount": amount_paid,
         "payment_method": payment_method,
         "payment_reference": payment_reference,
@@ -8728,6 +8737,7 @@ async def admin_update_user_subscription(uid: str, request: Request):
         "approved_by": "admin",
         "admin_notes": notes,
         "is_free_grant": amount_paid == 0,
+        "expiry_date": expiry_date,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "approved_at": datetime.now(timezone.utc).isoformat()
     }
@@ -8739,17 +8749,17 @@ async def admin_update_user_subscription(uid: str, request: Request):
         user_uid=uid,
         notification_type="subscription_update",
         title="Subscription Updated! 🎉",
-        message=f"Your subscription has been updated to {plan.capitalize()} ({duration.replace('_', ' ')})",
+        message=f"Your plan has been updated to {plan.capitalize()} for {days} days",
         icon="👑",
         action_url="/subscription"
     )
     
     return {
         "success": True,
-        "message": f"Subscription updated to {plan} ({duration})",
+        "message": f"Subscription updated to {plan} for {days} days",
         "user_uid": uid,
         "plan": plan,
-        "duration": duration,
+        "days": days,
         "expiry": expiry_date,
         "amount_paid": amount_paid,
         "is_free": amount_paid == 0
