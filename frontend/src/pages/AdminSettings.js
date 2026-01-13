@@ -668,6 +668,131 @@ const AdminSettings = ({ user }) => {
             </div>
           )}
         </Card>
+
+        {/* Marketplace Settings */}
+        <Card className="p-8 shadow-xl mt-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
+              <ShoppingCart className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-100">Marketplace Settings</h2>
+              <p className="text-gray-400">Configure PRC conversion rate and marketplace limits</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* PRC to INR Conversion Rate */}
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-5">
+              <label className="flex items-center gap-2 text-sm font-semibold text-amber-800 mb-3">
+                <Coins className="h-5 w-5" />
+                PRC to INR Conversion Rate
+              </label>
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.001"
+                    value={marketplaceSettings.prc_to_inr_rate}
+                    onChange={(e) => handleMarketplaceSettingsChange('prc_to_inr_rate', parseFloat(e.target.value) || 0.1)}
+                    className="w-full px-4 py-3 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white text-gray-800 font-mono text-lg"
+                  />
+                </div>
+              </div>
+              <div className="mt-3 p-3 bg-white rounded-lg border border-amber-200">
+                <p className="text-sm text-amber-700">
+                  <strong>Current Rate:</strong> 1 PRC = ₹{marketplaceSettings.prc_to_inr_rate?.toFixed(2)}
+                </p>
+                <p className="text-sm text-amber-600 mt-1">
+                  Example: <span className="font-semibold">{Math.round(1/marketplaceSettings.prc_to_inr_rate)} PRC = ₹1</span>
+                </p>
+                <p className="text-xs text-amber-500 mt-2">
+                  💡 For 10 PRC = ₹1, set rate to 0.10
+                </p>
+              </div>
+            </div>
+
+            {/* Free Delivery Threshold */}
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-5">
+              <label className="flex items-center gap-2 text-sm font-semibold text-green-800 mb-3">
+                <Truck className="h-5 w-5" />
+                Free Delivery Threshold (PRC)
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={marketplaceSettings.free_delivery_threshold}
+                onChange={(e) => handleMarketplaceSettingsChange('free_delivery_threshold', parseInt(e.target.value) || 0)}
+                className="w-full px-4 py-3 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-800 font-mono text-lg"
+              />
+              <p className="text-sm text-green-600 mt-2">
+                Orders above {marketplaceSettings.free_delivery_threshold} PRC get free delivery
+              </p>
+            </div>
+
+            {/* Min Order PRC */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+                <IndianRupee className="h-4 w-4" />
+                Minimum Order (PRC)
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={marketplaceSettings.min_order_prc}
+                onChange={(e) => handleMarketplaceSettingsChange('min_order_prc', parseInt(e.target.value) || 0)}
+                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Max Order PRC */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+                <IndianRupee className="h-4 w-4" />
+                Maximum Order (PRC)
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={marketplaceSettings.max_order_prc}
+                onChange={(e) => handleMarketplaceSettingsChange('max_order_prc', parseInt(e.target.value) || 0)}
+                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* Conversion Calculator */}
+          <div className="mt-6 p-4 bg-gray-800 rounded-xl">
+            <h3 className="text-sm font-semibold text-gray-300 mb-3">Quick Conversion Reference</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[100, 500, 1000, 5000].map(prc => (
+                <div key={prc} className="bg-gray-700 rounded-lg p-3 text-center">
+                  <p className="text-amber-400 font-bold">{prc} PRC</p>
+                  <p className="text-white text-lg font-semibold">= ₹{(prc * marketplaceSettings.prc_to_inr_rate).toFixed(2)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Save Button */}
+          <div className="mt-6 pt-6 border-t border-gray-700">
+            <Button
+              onClick={handleSaveMarketplaceSettings}
+              disabled={savingMarketplace}
+              className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-600 text-white px-8 py-3 font-semibold"
+            >
+              {savingMarketplace ? (
+                'Saving...'
+              ) : (
+                <>
+                  <Save className="h-5 w-5 mr-2" />
+                  Save Marketplace Settings
+                </>
+              )}
+            </Button>
+          </div>
+        </Card>
       </div>
     </div>
   );
