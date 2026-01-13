@@ -75,6 +75,7 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
       
       setEarnings(earningsData);
       setSummary(summaryData);
+      setIsEstimated(false);
       
       console.log('Set earnings:', earningsData.length, 'Summary:', summaryData);
       
@@ -82,9 +83,10 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
       console.error('Error fetching earnings:', error);
       setError('Unable to load earnings data');
       
-      // Try fallback method
+      // Try fallback method - show estimated earnings
       try {
         await fetchEstimatedEarnings();
+        setIsEstimated(true);
       } catch (fallbackError) {
         console.error('Fallback also failed:', fallbackError);
       }
