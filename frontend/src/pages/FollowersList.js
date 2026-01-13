@@ -18,7 +18,8 @@ const FollowersList = ({ user, type = 'followers' }) => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const ITEMS_PER_PAGE = 20;
+  const [total, setTotal] = useState(0);
+  const ITEMS_PER_PAGE = 10; // Reduced for easier pagination visibility
 
   useEffect(() => {
     fetchData();
@@ -40,6 +41,7 @@ const FollowersList = ({ user, type = 'followers' }) => {
       const response = await axios.get(endpoint);
       const data = type === 'followers' ? response.data.followers : response.data.following;
       setUsers(data || []);
+      setTotal(response.data.total || (data || []).length);
       setHasMore((data || []).length >= ITEMS_PER_PAGE);
       setPage(1);
     } catch (error) {
