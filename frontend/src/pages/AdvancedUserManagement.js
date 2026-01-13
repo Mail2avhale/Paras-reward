@@ -59,11 +59,29 @@ const AdvancedUserManagement = () => {
     notes: ''
   });
   const [processingSubscription, setProcessingSubscription] = useState(false);
+  
+  // Subscription history
+  const [subscriptionHistory, setSubscriptionHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [showHistoryTab, setShowHistoryTab] = useState(false);
 
   const calculateExpiryDate = (days) => {
     const date = new Date();
     date.setDate(date.getDate() + days);
     return date.toISOString().split('T')[0];
+  };
+
+  const fetchSubscriptionHistory = async (uid) => {
+    setHistoryLoading(true);
+    try {
+      const response = await axios.get(`${API}/admin/users/${uid}/subscription-history`);
+      setSubscriptionHistory(response.data.history || []);
+    } catch (error) {
+      console.error('Error fetching history:', error);
+      setSubscriptionHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
   };
 
   useEffect(() => {
