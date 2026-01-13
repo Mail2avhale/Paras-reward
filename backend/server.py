@@ -8766,6 +8766,76 @@ async def admin_update_user_subscription(uid: str, request: Request):
     }
 
 
+@api_router.get("/admin/users/{uid}/subscription-history")
+async def get_user_subscription_history(uid: str, page: int = 1, limit: int = 20):
+    """
+    Get subscription/payment history for a specific user.
+    Returns all past plan changes and payments.
+    """
+    # Verify user exists
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "name": 1, "email": 1})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    skip = (page - 1) * limit
+    
+    # Get payment history from vip_payments collection
+    query = {"$or": [{"user_uid": uid}, {"user_id": uid}]}
+    
+    total = await db.vip_payments.count_documents(query)
+    
+    payments = await db.vip_payments.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Format the history entries
+    history = []
+    for payment in payments:
+        entry = {
+            "payment_id": payment.get("payment_id"),
+            "date": payment.get("created_at") or payment.get("approved_at"),
+            "plan": payment.get("subscription_plan") or payment.get("plan_type", "vip"),
+            "duration": payment.get("plan_type") or f"{payment.get('days', 30)} days",
+            "days": payment.get("days"),
+            "amount": payment.get("amount", 0),
+            "payment_method": payment.get("payment_method", "unknown"),
+            "payment_reference": payment.get("payment_reference", ""),
+            "status": payment.get("status", "approved"),
+            "expiry_date": payment.get("expiry_date"),
+            "is_free": payment.get("is_free_grant", payment.get("amount", 0) == 0),
+            "approved_by": payment.get("approved_by", ""),
+            "admin_notes": payment.get("admin_notes", ""),
+            "created_at": payment.get("created_at")
+        }
+        history.append(entry)
+    
+    # Calculate summary stats
+    total_paid = sum(p.get("amount", 0) for p in payments if p.get("status") == "approved")
+    free_grants = sum(1 for p in payments if p.get("is_free_grant") or p.get("amount", 0) == 0)
+    
+    return {
+        "user": {
+            "uid": uid,
+            "name": user.get("name"),
+            "email": user.get("email")
+        },
+        "history": history,
+        "summary": {
+            "total_transactions": total,
+            "total_paid": total_paid,
+            "free_grants": free_grants,
+            "paid_transactions": total - free_grants
+        },
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "total_pages": (total + limit - 1) // limit if total > 0 else 0
+        }
+    }
+
+
 @api_router.get("/admin/users/all")
 async def get_all_users_admin(
     page: int = 1, 
