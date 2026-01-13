@@ -254,19 +254,24 @@ const TermsConditions = () => {
       id: 'contact',
       title: '11. Contact Information',
       icon: Users,
-      content: `
-        <p>For questions, concerns, or complaints regarding these Terms, please contact us:</p>
-        <div class="mt-3 p-4 bg-gray-50 rounded-lg">
-          <p><strong>Paras Reward Platform</strong></p>
-          <p class="mt-2">Email: legal@parasreward.com</p>
-          <p>Support: support@parasreward.com</p>
-          <p>Phone: +91 98765 43210</p>
-          <p class="mt-2">Address: Mumbai, Maharashtra, India</p>
-        </div>
-        <p class="mt-4 text-sm text-gray-500">Response Time: 24-48 business hours</p>
-      `
+      content: null,
+      dynamicContent: true
     }
   ];
+
+  // Dynamic contact content renderer
+  const renderContactSection = () => (
+    <div>
+      <p>For questions, concerns, or complaints regarding these Terms, please contact us:</p>
+      <div className="mt-3 p-4 bg-gray-800 rounded-lg">
+        <p><strong className="text-white">Paras Reward Platform</strong></p>
+        <p className="mt-2">Email: {contactInfo.email}</p>
+        <p>Phone: {contactInfo.phone}</p>
+        <p className="mt-2">Address: {contactInfo.address}</p>
+      </div>
+      <p className="mt-4 text-sm text-gray-500">Response Time: 24-48 business hours</p>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950">
