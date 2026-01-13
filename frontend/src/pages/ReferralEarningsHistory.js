@@ -366,6 +366,21 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
         </div>
       </div>
 
+      {/* Estimated Data Warning */}
+      {isEstimated && (
+        <div className="px-5 mb-4">
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
+            <p className="text-amber-400 text-sm text-center flex items-center justify-center gap-2">
+              <Clock className="w-4 h-4" />
+              <span><strong>Estimated Earnings</strong> - Based on current referral activity</span>
+            </p>
+            <p className="text-gray-500 text-xs text-center mt-1">
+              Actual earnings are recorded when you collect mining rewards
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Error Display */}
       {error && (
         <div className="px-5 mb-4">
