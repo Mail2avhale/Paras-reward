@@ -224,6 +224,53 @@ const AdminSubscriptionManagement = ({ user }) => {
     }
   };
 
+  const handleManualSubscriptionUpdate = async () => {
+    if (!editingUser) return;
+    
+    try {
+      setProcessing(true);
+      await axios.post(`${API}/api/admin/users/${editingUser.uid}/subscription`, {
+        plan: manualSubForm.plan,
+        duration: manualSubForm.duration,
+        payment_method: manualSubForm.is_free ? 'admin_free' : manualSubForm.payment_method,
+        payment_reference: manualSubForm.payment_reference,
+        amount_paid: manualSubForm.is_free ? 0 : manualSubForm.amount_paid,
+        notes: manualSubForm.notes
+      });
+      
+      toast.success(`Subscription updated for ${editingUser.name || editingUser.email}!`);
+      setEditingUser(null);
+      setManualSubForm({
+        plan: 'explorer',
+        duration: 'monthly',
+        payment_method: 'admin_manual',
+        payment_reference: '',
+        amount_paid: 0,
+        is_free: false,
+        notes: ''
+      });
+      fetchUsers();
+      fetchStats();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to update subscription');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const openEditSubscription = (userItem) => {
+    setEditingUser(userItem);
+    setManualSubForm({
+      plan: userItem.subscription_plan || 'explorer',
+      duration: 'monthly',
+      payment_method: 'admin_manual',
+      payment_reference: '',
+      amount_paid: pricing[userItem.subscription_plan || 'explorer']?.monthly || 0,
+      is_free: false,
+      notes: ''
+    });
+  };
+
   const filteredUsers = users.filter(u => {
     const matchesSearch = !userSearch || 
       u.email?.toLowerCase().includes(userSearch.toLowerCase()) ||
