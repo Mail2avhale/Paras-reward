@@ -29713,6 +29713,280 @@ async def log_audit_event(
         logging.error(f"Error logging audit event: {e}")
 
 
+# ============================================
+# DATA BACKUP & ARCHIVE APIs
+# ============================================
+
+@api_router.get("/admin/backup/export")
+async def export_data_backup(
+    data_type: str = "all",  # all, users, transactions, kyc, messages
+    format: str = "json"  # json, csv
+):
+    """Export data for backup - Admin only"""
+    try:
+        backup_data = {
+            "export_date": datetime.now(timezone.utc).isoformat(),
+            "export_type": data_type,
+            "format": format
+        }
+        
+        if data_type in ["all", "users"]:
+            users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(None)
+            backup_data["users"] = {
+                "count": len(users),
+                "data": users
+            }
+        
+        if data_type in ["all", "transactions"]:
+            transactions = await db.transactions.find({}, {"_id": 0}).to_list(None)
+            backup_data["transactions"] = {
+                "count": len(transactions),
+                "data": transactions
+            }
+        
+        if data_type in ["all", "payments"]:
+            # VIP payments
+            vip_payments = await db.vip_payments.find({}, {"_id": 0}).to_list(None)
+            backup_data["vip_payments"] = {
+                "count": len(vip_payments),
+                "data": vip_payments
+            }
+            
+            # Bill payments
+            bill_payments = await db.bill_payments.find({}, {"_id": 0}).to_list(None)
+            backup_data["bill_payments"] = {
+                "count": len(bill_payments),
+                "data": bill_payments
+            }
+        
+        if data_type in ["all", "kyc"]:
+            kyc_docs = await db.kyc_documents.find({}, {"_id": 0}).to_list(None)
+            backup_data["kyc_documents"] = {
+                "count": len(kyc_docs),
+                "data": kyc_docs
+            }
+        
+        if data_type in ["all", "messages"]:
+            messages = await db.messages.find({}, {"_id": 0}).to_list(None)
+            conversations = await db.conversations.find({}, {"_id": 0}).to_list(None)
+            backup_data["messages"] = {
+                "messages_count": len(messages),
+                "conversations_count": len(conversations),
+                "messages": messages,
+                "conversations": conversations
+            }
+        
+        if data_type in ["all", "referrals"]:
+            referrals = await db.referrals.find({}, {"_id": 0}).to_list(None)
+            backup_data["referrals"] = {
+                "count": len(referrals),
+                "data": referrals
+            }
+        
+        if data_type in ["all", "activities"]:
+            activities = await db.activities.find({}, {"_id": 0}).to_list(None)
+            backup_data["activities"] = {
+                "count": len(activities),
+                "data": activities
+            }
+        
+        # Calculate total records
+        total_records = sum([
+            backup_data.get("users", {}).get("count", 0),
+            backup_data.get("transactions", {}).get("count", 0),
+            backup_data.get("vip_payments", {}).get("count", 0),
+            backup_data.get("bill_payments", {}).get("count", 0),
+            backup_data.get("kyc_documents", {}).get("count", 0),
+            backup_data.get("messages", {}).get("messages_count", 0),
+            backup_data.get("referrals", {}).get("count", 0),
+            backup_data.get("activities", {}).get("count", 0),
+        ])
+        
+        backup_data["summary"] = {
+            "total_records": total_records,
+            "exported_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        return backup_data
+        
+    except Exception as e:
+        logging.error(f"Error exporting backup: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/backup/stats")
+async def get_backup_stats():
+    """Get database statistics for backup planning"""
+    try:
+        stats = {
+            "users": await db.users.count_documents({}),
+            "transactions": await db.transactions.count_documents({}),
+            "vip_payments": await db.vip_payments.count_documents({}),
+            "bill_payments": await db.bill_payments.count_documents({}),
+            "kyc_documents": await db.kyc_documents.count_documents({}),
+            "messages": await db.messages.count_documents({}),
+            "conversations": await db.conversations.count_documents({}),
+            "referrals": await db.referrals.count_documents({}),
+            "activities": await db.activities.count_documents({}),
+            "notifications": await db.notifications.count_documents({})
+        }
+        
+        # Get archivable data count (older than 6 months)
+        six_months_ago = datetime.now(timezone.utc) - timedelta(days=180)
+        six_months_str = six_months_ago.isoformat()
+        
+        archivable = {
+            "transactions": await db.transactions.count_documents({
+                "created_at": {"$lt": six_months_str}
+            }),
+            "activities": await db.activities.count_documents({
+                "created_at": {"$lt": six_months_str}
+            }),
+            "messages": await db.messages.count_documents({
+                "created_at": {"$lt": six_months_str}
+            }),
+            "notifications": await db.notifications.count_documents({
+                "created_at": {"$lt": six_months_str}
+            })
+        }
+        
+        stats["total_records"] = sum(stats.values())
+        stats["archivable_records"] = sum(archivable.values())
+        stats["archivable_breakdown"] = archivable
+        
+        return stats
+        
+    except Exception as e:
+        logging.error(f"Error getting backup stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/archive/execute")
+async def execute_data_archive(months_old: int = 6):
+    """Archive data older than specified months - Admin only"""
+    try:
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=months_old * 30)
+        cutoff_str = cutoff_date.isoformat()
+        
+        archived_counts = {
+            "transactions": 0,
+            "activities": 0,
+            "messages": 0,
+            "notifications": 0
+        }
+        
+        # Archive old transactions
+        old_transactions = await db.transactions.find({
+            "created_at": {"$lt": cutoff_str}
+        }, {"_id": 0}).to_list(None)
+        
+        if old_transactions:
+            await db.archived_transactions.insert_many(old_transactions)
+            result = await db.transactions.delete_many({"created_at": {"$lt": cutoff_str}})
+            archived_counts["transactions"] = result.deleted_count
+        
+        # Archive old activities
+        old_activities = await db.activities.find({
+            "created_at": {"$lt": cutoff_str}
+        }, {"_id": 0}).to_list(None)
+        
+        if old_activities:
+            await db.archived_activities.insert_many(old_activities)
+            result = await db.activities.delete_many({"created_at": {"$lt": cutoff_str}})
+            archived_counts["activities"] = result.deleted_count
+        
+        # Archive old messages (keep conversations intact)
+        old_messages = await db.messages.find({
+            "created_at": {"$lt": cutoff_str}
+        }, {"_id": 0}).to_list(None)
+        
+        if old_messages:
+            await db.archived_messages.insert_many(old_messages)
+            result = await db.messages.delete_many({"created_at": {"$lt": cutoff_str}})
+            archived_counts["messages"] = result.deleted_count
+        
+        # Archive old notifications (keep last 30 days for each user)
+        old_notifications = await db.notifications.find({
+            "created_at": {"$lt": cutoff_str},
+            "is_read": True  # Only archive read notifications
+        }, {"_id": 0}).to_list(None)
+        
+        if old_notifications:
+            await db.archived_notifications.insert_many(old_notifications)
+            result = await db.notifications.delete_many({
+                "created_at": {"$lt": cutoff_str},
+                "is_read": True
+            })
+            archived_counts["notifications"] = result.deleted_count
+        
+        total_archived = sum(archived_counts.values())
+        
+        # Log the archive action
+        await db.archive_logs.insert_one({
+            "archived_at": datetime.now(timezone.utc).isoformat(),
+            "cutoff_date": cutoff_str,
+            "months_old": months_old,
+            "archived_counts": archived_counts,
+            "total_archived": total_archived
+        })
+        
+        return {
+            "success": True,
+            "message": f"Successfully archived {total_archived} records older than {months_old} months",
+            "cutoff_date": cutoff_str,
+            "archived_counts": archived_counts,
+            "total_archived": total_archived
+        }
+        
+    except Exception as e:
+        logging.error(f"Error executing archive: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/archive/history")
+async def get_archive_history():
+    """Get history of archive operations"""
+    try:
+        logs = await db.archive_logs.find({}, {"_id": 0}).sort("archived_at", -1).limit(20).to_list(20)
+        return {
+            "archive_logs": logs,
+            "total_operations": await db.archive_logs.count_documents({})
+        }
+    except Exception as e:
+        logging.error(f"Error getting archive history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/archive/view/{collection}")
+async def view_archived_data(collection: str, page: int = 1, limit: int = 50):
+    """View archived data from a specific collection"""
+    try:
+        valid_collections = ["transactions", "activities", "messages", "notifications"]
+        if collection not in valid_collections:
+            raise HTTPException(status_code=400, detail=f"Invalid collection. Valid: {valid_collections}")
+        
+        archive_collection = db[f"archived_{collection}"]
+        skip = (page - 1) * limit
+        
+        data = await archive_collection.find({}, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        total = await archive_collection.count_documents({})
+        
+        return {
+            "collection": f"archived_{collection}",
+            "data": data,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "total_pages": (total + limit - 1) // limit
+            }
+        }
+        
+    except Exception as e:
+        logging.error(f"Error viewing archived data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Include all API routes (must be after all route definitions)
 app.include_router(api_router)
 
