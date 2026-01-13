@@ -15,7 +15,7 @@ const API = process.env.REACT_APP_BACKEND_URL;
 
 const SubscriptionPlans = ({ user }) => {
   const navigate = useNavigate();
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
@@ -51,10 +51,10 @@ const SubscriptionPlans = ({ user }) => {
   };
 
   const durationLabels = {
-    monthly: { label: 'Monthly', days: 30 },
-    quarterly: { label: 'Quarterly', days: 90, discount: '10% off' },
-    half_yearly: { label: 'Half Yearly', days: 180, discount: '15% off' },
-    yearly: { label: 'Yearly', days: 365, discount: '25% off' }
+    monthly: { label: t('monthly'), days: 30 },
+    quarterly: { label: t('quarterly'), days: 90, discount: '10% off' },
+    half_yearly: { label: t('halfYearly'), days: 180, discount: '15% off' },
+    yearly: { label: t('yearly'), days: 365, discount: '25% off' }
   };
 
   useEffect(() => {
@@ -154,7 +154,7 @@ const SubscriptionPlans = ({ user }) => {
           <button onClick={() => currentStep > 1 ? setCurrentStep(currentStep - 1) : navigate(-1)} className="text-gray-400">
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-xl font-bold text-white">Subscription Plans</h1>
+          <h1 className="text-xl font-bold text-white">{t('subscriptionPlans')}</h1>
         </div>
       </div>
 
@@ -169,14 +169,14 @@ const SubscriptionPlans = ({ user }) => {
               })()}
             </div>
             <div>
-              <p className="text-amber-400 font-semibold">Current Plan: {currentSubscription.plan_name}</p>
+              <p className="text-amber-400 font-semibold">{t('current')} {t('plan')}: {currentSubscription.plan_name}</p>
               <p className="text-gray-400 text-sm">
                 {currentSubscription.is_expired ? (
-                  <span className="text-red-400">Expired - Renew to continue benefits</span>
+                  <span className="text-red-400">{t('expiredRenew')}</span>
                 ) : currentSubscription.days_remaining > 0 ? (
-                  <span>{currentSubscription.days_remaining} days remaining</span>
+                  <span>{t('daysRemaining').replace('{count}', currentSubscription.days_remaining)}</span>
                 ) : (
-                  <span>Free plan - Upgrade for more benefits!</span>
+                  <span>{t('freePlanUpgrade')}</span>
                 )}
               </p>
             </div>
@@ -187,7 +187,7 @@ const SubscriptionPlans = ({ user }) => {
       {/* Step 1: Select Plan */}
       {currentStep === 1 && (
         <div className="px-5 mt-6 space-y-4">
-          <h2 className="text-lg font-semibold text-white mb-4">Choose Your Plan</h2>
+          <h2 className="text-lg font-semibold text-white mb-4">{t('chooseYourPlan')}</h2>
           
           {plans.map((plan, index) => {
             const IconComponent = planIcons[plan.id] || Star;
@@ -215,27 +215,27 @@ const SubscriptionPlans = ({ user }) => {
                     <div className="flex items-center gap-2">
                       <h3 className="text-white font-bold text-lg">{plan.name}</h3>
                       {isCurrentPlan && (
-                        <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded-full">Current</span>
+                        <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded-full">{t('current')}</span>
                       )}
                       {plan.id === 'elite' && (
-                        <span className="px-2 py-0.5 bg-amber-500 text-black text-xs rounded-full font-bold">BEST</span>
+                        <span className="px-2 py-0.5 bg-amber-500 text-black text-xs rounded-full font-bold">{t('best')}</span>
                       )}
                     </div>
                     <p className="text-gray-400 text-sm mt-1">
-                      {plan.multiplier}x Mining Rate • {plan.tap_limit} Daily Taps
+                      {plan.multiplier}x {t('miningRate')} • {plan.tap_limit} {t('dailyTapsLimit')}
                     </p>
                     
                     {/* Benefits */}
                     <div className="flex flex-wrap gap-2 mt-3">
                       <span className="px-2 py-1 bg-gray-800 rounded-lg text-xs text-gray-300 flex items-center gap-1">
-                        <Zap className="w-3 h-3 text-amber-500" /> {plan.multiplier}x Mining
+                        <Zap className="w-3 h-3 text-amber-500" /> {plan.multiplier}x {t('rewards')}
                       </span>
                       <span className="px-2 py-1 bg-gray-800 rounded-lg text-xs text-gray-300 flex items-center gap-1">
-                        <Users className="w-3 h-3 text-blue-500" /> {plan.referral_weight}x Ref Bonus
+                        <Users className="w-3 h-3 text-blue-500" /> {plan.referral_weight}x {t('referralWeight')}
                       </span>
                       {plan.can_redeem && (
                         <span className="px-2 py-1 bg-emerald-500/20 rounded-lg text-xs text-emerald-400 flex items-center gap-1">
-                          <CheckCircle className="w-3 h-3" /> Redeem
+                          <CheckCircle className="w-3 h-3" /> {t('canRedeem')}
                         </span>
                       )}
                     </div>
@@ -264,12 +264,12 @@ const SubscriptionPlans = ({ user }) => {
 
           {/* Plan Comparison */}
           <div className="mt-8 p-4 bg-gray-900/50 rounded-2xl border border-gray-800">
-            <h3 className="text-white font-semibold mb-3">Plan Comparison</h3>
+            <h3 className="text-white font-semibold mb-3">{t('planComparison')}</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-gray-400 border-b border-gray-800">
-                    <th className="text-left py-2">Feature</th>
+                    <th className="text-left py-2">{t('feature')}</th>
                     <th className="text-center py-2">Explorer</th>
                     <th className="text-center py-2">Startup</th>
                     <th className="text-center py-2">Growth</th>
@@ -278,39 +278,39 @@ const SubscriptionPlans = ({ user }) => {
                 </thead>
                 <tbody className="text-gray-300">
                   <tr className="border-b border-gray-800/50">
-                    <td className="py-2">Mining Rate</td>
+                    <td className="py-2">{t('miningRate')}</td>
                     <td className="text-center">1.0x</td>
                     <td className="text-center">1.5x</td>
                     <td className="text-center">2.0x</td>
                     <td className="text-center text-amber-400">3.0x</td>
                   </tr>
                   <tr className="border-b border-gray-800/50">
-                    <td className="py-2">Daily Taps</td>
+                    <td className="py-2">{t('dailyTapsLimit')}</td>
                     <td className="text-center">100</td>
                     <td className="text-center">200</td>
                     <td className="text-center">300</td>
                     <td className="text-center text-amber-400">400</td>
                   </tr>
                   <tr className="border-b border-gray-800/50">
-                    <td className="py-2">Referral Weight</td>
+                    <td className="py-2">{t('referralWeight')}</td>
                     <td className="text-center">1.0x</td>
                     <td className="text-center">1.2x</td>
                     <td className="text-center">1.5x</td>
                     <td className="text-center text-amber-400">2.0x</td>
                   </tr>
                   <tr className="border-b border-gray-800/50">
-                    <td className="py-2">Can Redeem</td>
+                    <td className="py-2">{t('canRedeem')}</td>
                     <td className="text-center text-red-400">✗</td>
                     <td className="text-center text-emerald-400">✓</td>
                     <td className="text-center text-emerald-400">✓</td>
                     <td className="text-center text-emerald-400">✓</td>
                   </tr>
                   <tr>
-                    <td className="py-2">PRC Expires</td>
-                    <td className="text-center text-red-400">2 days</td>
-                    <td className="text-center text-emerald-400">Never</td>
-                    <td className="text-center text-emerald-400">Never</td>
-                    <td className="text-center text-emerald-400">Never</td>
+                    <td className="py-2">{t('prcExpires')}</td>
+                    <td className="text-center text-red-400">2 {t('days')}</td>
+                    <td className="text-center text-emerald-400">{t('never')}</td>
+                    <td className="text-center text-emerald-400">{t('never')}</td>
+                    <td className="text-center text-emerald-400">{t('never')}</td>
                   </tr>
                 </tbody>
               </table>
@@ -322,7 +322,7 @@ const SubscriptionPlans = ({ user }) => {
       {/* Step 2: Select Duration */}
       {currentStep === 2 && selectedPlan && (
         <div className="px-5 mt-6 space-y-4">
-          <h2 className="text-lg font-semibold text-white mb-4">Select Duration - {selectedPlan.name}</h2>
+          <h2 className="text-lg font-semibold text-white mb-4">{t('selectDuration')} - {selectedPlan.name}</h2>
           
           {Object.entries(durationLabels).map(([key, duration], index) => (
             <motion.div
@@ -359,32 +359,32 @@ const SubscriptionPlans = ({ user }) => {
       {currentStep === 3 && (
         <div className="px-5 mt-6 space-y-6">
           <div className="p-4 bg-gray-900/50 rounded-2xl border border-gray-800">
-            <h2 className="text-white font-semibold mb-2">Payment Details</h2>
+            <h2 className="text-white font-semibold mb-2">{t('paymentDetails')}</h2>
             <div className="flex justify-between text-gray-400">
-              <span>Plan:</span>
+              <span>{t('plan')}:</span>
               <span className="text-white">{selectedPlan?.name}</span>
             </div>
             <div className="flex justify-between text-gray-400">
-              <span>Duration:</span>
+              <span>{t('duration')}:</span>
               <span className="text-white">{durationLabels[selectedDuration]?.label}</span>
             </div>
             <div className="flex justify-between text-amber-400 font-bold mt-2 pt-2 border-t border-gray-800">
-              <span>Amount:</span>
+              <span>{t('amount')}:</span>
               <span>₹{getPrice()}</span>
             </div>
           </div>
 
           {/* UPI Payment Info */}
           <div className="p-4 bg-amber-500/10 rounded-2xl border border-amber-500/30">
-            <h3 className="text-amber-400 font-semibold mb-2">Pay via UPI</h3>
+            <h3 className="text-amber-400 font-semibold mb-2">{t('payViaUpi')}</h3>
             <p className="text-white font-mono text-lg mb-2">{paymentConfig?.payment_upi_id || 'paras@upi'}</p>
-            <p className="text-gray-400 text-sm">Or scan QR code in your UPI app</p>
+            <p className="text-gray-400 text-sm">{t('orScanQR')}</p>
           </div>
 
           {/* Payment Form */}
           <div className="space-y-4">
             <div>
-              <label className="block text-gray-400 text-sm mb-2">UTR/Reference Number *</label>
+              <label className="block text-gray-400 text-sm mb-2">{t('utrNumber')} *</label>
               <input
                 type="text"
                 value={formData.utr_number}
@@ -397,7 +397,7 @@ const SubscriptionPlans = ({ user }) => {
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-gray-400 text-sm mb-2">Payment Date</label>
+                <label className="block text-gray-400 text-sm mb-2">{t('paymentDate')}</label>
                 <input
                   type="date"
                   value={formData.date}
@@ -406,7 +406,7 @@ const SubscriptionPlans = ({ user }) => {
                 />
               </div>
               <div>
-                <label className="block text-gray-400 text-sm mb-2">Payment Time</label>
+                <label className="block text-gray-400 text-sm mb-2">{t('paymentTime')}</label>
                 <input
                   type="time"
                   value={formData.time}
@@ -417,7 +417,7 @@ const SubscriptionPlans = ({ user }) => {
             </div>
 
             <div>
-              <label className="block text-gray-400 text-sm mb-2">Payment Screenshot *</label>
+              <label className="block text-gray-400 text-sm mb-2">{t('paymentScreenshot')} *</label>
               <ImageUpload
                 value={formData.screenshot_url}
                 onChange={(url) => setFormData({...formData, screenshot_url: url})}
@@ -438,7 +438,7 @@ const SubscriptionPlans = ({ user }) => {
             ) : (
               <>
                 <Upload className="w-5 h-5" />
-                Submit Payment
+                {t('submitPayment')}
               </>
             )}
           </button>
@@ -455,15 +455,15 @@ const SubscriptionPlans = ({ user }) => {
           >
             <CheckCircle className="w-12 h-12 text-emerald-500" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-white mb-2">Payment Submitted!</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">{t('paymentSubmitted')}</h2>
           <p className="text-gray-400 mb-8">
-            We will verify your payment and activate your {selectedPlan?.name} subscription within 24 hours.
+            {t('verifyAndActivate').replace('{plan}', selectedPlan?.name)}
           </p>
           <button
             onClick={() => navigate('/dashboard')}
             className="px-8 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold rounded-xl"
           >
-            Back to Dashboard
+            {t('backToDashboard')}
           </button>
         </div>
       )}
