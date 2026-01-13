@@ -138,7 +138,7 @@ const ReferralsEnhanced = ({ user }) => {
   };
 
   // Check for milestone achievements
-  const checkMilestoneAchievement = (total) => {
+  const checkMilestoneAchievement = async (total) => {
     const milestone = milestones.find(m => m.count === total);
     if (milestone) {
       const celebrationKey = `milestone_${user?.uid}_${milestone.count}`;
@@ -149,7 +149,21 @@ const ReferralsEnhanced = ({ user }) => {
         triggerConfetti();
         localStorage.setItem(celebrationKey, 'true');
         
-        // Add to live activity locally
+        // Record achievement to global live activity
+        try {
+          await axios.post(`${API}/api/referrals/milestone-achievement`, {
+            uid: user?.uid,
+            milestone_count: milestone.count,
+            milestone_badge: milestone.badge,
+            milestone_title: milestone.title,
+            milestone_color: milestone.color
+          });
+          toast.success(`🎉 Achievement unlocked: ${milestone.title}!`, { duration: 5000 });
+        } catch (e) {
+          console.log('Failed to record milestone achievement:', e);
+        }
+        
+        // Add to local live activity
         const newActivity = {
           id: Date.now(),
           type: 'milestone',
