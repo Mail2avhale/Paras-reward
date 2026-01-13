@@ -89,6 +89,9 @@ const ProfileAdvanced = ({ user, onLogout }) => {
         pincode: data.pincode || '',
         birthday: data.birthday || ''
       });
+      // Set privacy settings
+      setIsProfilePublic(data.is_public !== false);
+      setAllowMessages(data.allow_messages !== false);
     } catch (error) {
       console.error('Error fetching user:', error);
       setUserData(user);
