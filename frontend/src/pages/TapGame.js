@@ -8,6 +8,14 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
+// Plan configurations for tap game
+const PLAN_CONFIG = {
+  explorer: { tapLimit: 100, prcPerTap: 0.01, multiplier: '1x', color: 'gray' },
+  startup: { tapLimit: 200, prcPerTap: 0.015, multiplier: '1.5x', color: 'blue' },
+  growth: { tapLimit: 300, prcPerTap: 0.02, multiplier: '2x', color: 'emerald' },
+  elite: { tapLimit: 400, prcPerTap: 0.03, multiplier: '3x', color: 'amber' }
+};
+
 const TapGame = ({ user }) => {
   const navigate = useNavigate();
   const { language } = useLanguage();
@@ -19,13 +27,17 @@ const TapGame = ({ user }) => {
   const [animating, setAnimating] = useState(false);
   const [earnedPRC, setEarnedPRC] = useState(0);
   const [floatingNumbers, setFloatingNumbers] = useState([]);
-  const [isVip, setIsVip] = useState(false);
+  const [subscriptionPlan, setSubscriptionPlan] = useState('explorer');
   const [prcPerTap, setPrcPerTap] = useState(0.01);
   const [loading, setLoading] = useState(true);
   
   // Batch taps for better performance
   const pendingTapsRef = useRef(0);
   const syncTimeoutRef = useRef(null);
+
+  // Helper functions
+  const hasPaidPlan = ['startup', 'growth', 'elite'].includes(subscriptionPlan);
+  const planConfig = PLAN_CONFIG[subscriptionPlan] || PLAN_CONFIG.explorer;
 
   const t = {
     title: language === 'mr' ? 'टॅप गेम' : language === 'hi' ? 'टैप गेम' : 'Tap Game',
@@ -51,14 +63,14 @@ const TapGame = ({ user }) => {
       const response = await axios.get(`${API}/api/user/${user.uid}`);
       const data = response.data;
       const tapsToday = data.taps_today || 0;
-      const isUserVip = data.membership_type === 'vip';
-      const userMaxTaps = isUserVip ? 200 : 100;
+      const userPlan = data.subscription_plan || 'explorer';
+      const config = PLAN_CONFIG[userPlan] || PLAN_CONFIG.explorer;
       
       setTotalTapsToday(tapsToday);
-      setRemainingTaps(Math.max(0, userMaxTaps - tapsToday));
-      setMaxTaps(userMaxTaps);
-      setIsVip(isUserVip);
-      setPrcPerTap(isUserVip ? 0.1 : 0.01);
+      setRemainingTaps(Math.max(0, config.tapLimit - tapsToday));
+      setMaxTaps(config.tapLimit);
+      setSubscriptionPlan(userPlan);
+      setPrcPerTap(config.prcPerTap);
     } catch (error) {
       console.error('Error fetching tap stats:', error);
     } finally {
