@@ -25435,6 +25435,21 @@ async def get_live_activity_feed():
         }
         
         import random
+        
+        # Add milestone achievements to activity feed
+        for milestone in recent_milestones:
+            city = milestone.get("city", random.choice(cities))
+            activities.append({
+                "city": city,
+                "action": "milestone",  # Special type for milestone
+                "text": f"unlocked {milestone.get('milestone_title', 'badge')} {milestone.get('milestone_badge', '🎉')}",
+                "time_ago": _get_time_ago(milestone.get("created_at")),
+                "is_milestone": True,
+                "milestone_badge": milestone.get("milestone_badge"),
+                "milestone_title": milestone.get("milestone_title"),
+                "milestone_color": milestone.get("milestone_color", "amber")
+            })
+        
         for txn in recent_transactions[:15]:  # Show last 15 for more variety
             city = random.choice(cities)
             txn_type = txn.get("type", "mining")
@@ -25447,11 +25462,30 @@ async def get_live_activity_feed():
                 "time_ago": _get_time_ago(txn.get("created_at"))
             })
         
+        # Sort by time and shuffle slightly to mix milestones with other activities
+        # Keep milestones at top but not all bunched together
+        milestone_activities = [a for a in activities if a.get("is_milestone")]
+        other_activities = [a for a in activities if not a.get("is_milestone")]
+        
+        # Interleave: put one milestone every 3-4 regular activities
+        final_activities = []
+        milestone_idx = 0
+        for i, activity in enumerate(other_activities[:15]):
+            if milestone_idx < len(milestone_activities) and i % 3 == 0:
+                final_activities.append(milestone_activities[milestone_idx])
+                milestone_idx += 1
+            final_activities.append(activity)
+        
+        # Add remaining milestones at the end
+        while milestone_idx < len(milestone_activities):
+            final_activities.append(milestone_activities[milestone_idx])
+            milestone_idx += 1
+        
         # If no real transactions, return empty to trigger frontend fallback
-        if not activities:
+        if not final_activities:
             return {"activities": []}
         
-        return {"activities": activities}
+        return {"activities": final_activities[:20]}
     except Exception as e:
         logging.error(f"Error fetching live activity: {e}")
         return {"activities": []}
