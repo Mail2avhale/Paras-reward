@@ -157,7 +157,7 @@ const TapGame = ({ user }) => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
       {/* Header - with safe area padding */}
-      <div className="px-5 pb-4" style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top, 1.5rem))' }}>
+      <div className="px-5 pb-4 pt-14" style={{ paddingTop: 'max(3.5rem, calc(env(safe-area-inset-top, 0px) + 2rem))' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button 
@@ -171,10 +171,14 @@ const TapGame = ({ user }) => {
               <p className="text-gray-400 text-sm">{t.tapToEarn}</p>
             </div>
           </div>
-          {isVip && (
-            <div className="bg-gradient-to-r from-amber-500 to-yellow-500 px-3 py-1 rounded-full">
+          {hasPaidPlan && (
+            <div className={`px-3 py-1 rounded-full ${
+              subscriptionPlan === 'elite' ? 'bg-gradient-to-r from-amber-500 to-yellow-500' :
+              subscriptionPlan === 'growth' ? 'bg-gradient-to-r from-emerald-500 to-green-500' :
+              'bg-gradient-to-r from-blue-500 to-cyan-500'
+            }`}>
               <span className="text-xs font-bold text-black flex items-center gap-1">
-                <Crown className="w-3 h-3" /> 10x BONUS
+                <Crown className="w-3 h-3" /> {planConfig.multiplier} BONUS
               </span>
             </div>
           )}
@@ -204,11 +208,21 @@ const TapGame = ({ user }) => {
 
       {/* PRC Per Tap Info */}
       <div className="px-5 mb-4">
-        <div className={`rounded-xl p-3 text-center ${isVip ? 'bg-amber-500/20 border border-amber-500/30' : 'bg-gray-800/50 border border-gray-700'}`}>
-          <p className={`text-sm font-medium ${isVip ? 'text-amber-400' : 'text-gray-400'}`}>
-            {isVip ? '🎉 VIP Rate: ' : 'Free Rate: '}
+        <div className={`rounded-xl p-3 text-center ${
+          subscriptionPlan === 'elite' ? 'bg-amber-500/20 border border-amber-500/30' :
+          subscriptionPlan === 'growth' ? 'bg-emerald-500/20 border border-emerald-500/30' :
+          subscriptionPlan === 'startup' ? 'bg-blue-500/20 border border-blue-500/30' :
+          'bg-gray-800/50 border border-gray-700'
+        }`}>
+          <p className={`text-sm font-medium ${
+            subscriptionPlan === 'elite' ? 'text-amber-400' :
+            subscriptionPlan === 'growth' ? 'text-emerald-400' :
+            subscriptionPlan === 'startup' ? 'text-blue-400' :
+            'text-gray-400'
+          }`}>
+            {hasPaidPlan ? `🎉 ${subscriptionPlan.charAt(0).toUpperCase() + subscriptionPlan.slice(1)} Rate: ` : 'Explorer Rate: '}
             <span className="font-bold">{prcPerTap} PRC per tap</span>
-            {!isVip && <span className="text-gray-500"> • VIP gets 0.1 PRC/tap</span>}
+            <span className="text-gray-500"> • {maxTaps} taps/day</span>
           </p>
         </div>
       </div>
