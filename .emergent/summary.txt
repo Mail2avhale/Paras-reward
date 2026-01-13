@@ -1,53 +1,63 @@
 <analysis>**original_problem_statement:**
-The initial goal was a fintech accounting system. This session focused on major refactoring and new feature development.
-
-The user's requests in this session were:
-1.  Verify the previously implemented reward system and compliance text.
-2.  **Refactor 1 (VIP System):** Remove the obsolete VIP membership system and all related frontend code.
-3.  **Refactor 2 (Stockist & Cashback):** Remove a multi-level stockist system (Master, Sub, Outlet), all cashback functionality (including wallets and fees), and change the product delivery model to be direct via a partner.
-4.  **Feature 1 (Delivery Partners):** Create a new admin panel section to manage delivery partners (add, view, edit, delete) and assign them to orders.
-5.  **Feature 2 (Admin UI/UX Overhaul):** Redesign the admin dashboard and menu for better usability and clarity, removing all obsolete elements.
-6.  **Feature 3 (Admin Charts):** Add real-time data visualization charts (User Growth, PRC Flow, Subscription Distribution) to the new admin dashboard.
-7.  **Bug Fix & UI Polish:** Fix issues in the User Management page (duplicate PRC balance, leftover cashback wallet) and convert the entire admin panel to a consistent dark theme for better visibility.
-8.  **Verification:** Check the Forgot Password functionality.
+This session began with several pending items and quickly evolved based on user feedback. The user's requests were:
+1.  Complete the Forgot Password functionality test.
+2.  Fix three issues:
+    - Address not updating on the landing page footer.
+    - Contact Us form submissions not being captured or viewable by the admin.
+    - User-facing pages being overlapped by the top/bottom navigation menus.
+3.  Implement three UI/UX enhancements based on screenshots:
+    - Remove the Ready to Start Earning card from the landing page.
+    - Adjust the color of the Partner card on the admin dashboard to be more vibrant.
+    - Build an enhanced, more user-friendly Invite/Referral page.
+4.  Add an animated confetti effect when a user successfully invites their first friend.
+5.  Enhance the referral page further with milestone celebration badges and a live activity feed.
+6.  Fix a bug in the Admin System Settings where an old VIP Plans button was still visible instead of Subscription Plans.
+7.  Move the milestone achievement notifications from the referral-specific live activity to the global live activity feed visible on the main user dashboard.
+8.  Provide a set of mobile-view screenshots of the user-facing app for marketing purposes.
+9.  Remove the Live Activity card from the referral page after moving milestones to the global feed.
+10. Fix a recurring issue where contact information was hardcoded on several static pages (legal, landing) instead of being fetched from admin settings.
+11. Propose and, upon approval, begin building a new social networking feature resembling Facebook's follow/feed system, compliant with Google Play policies. This includes a public profile, follow/follower system, activity feed, and a messaging feature.
 
 **User's preferred language**: The user communicates in a mix of English and Marathi. The next agent MUST respond with  and then continue the technical explanation in English.
 
 **what currently exists?**
-The application has undergone significant refactoring and enhancement.
--   The legacy VIP system has been completely removed from the frontend (pages, routes, and menu links).
--   The multi-level Stockist hierarchy and the Cashback reward system have been entirely stripped from both the frontend and backend. This includes removing associated pages, API logic, database fields, and wallet functionality.
--   A new **Delivery Partner Management** system has been implemented. This includes backend CRUD APIs and a full-featured admin page to add, view, and manage delivery partners.
--   The **Admin Panel has been completely redesigned**. The dashboard now features a clean layout with relevant stats cards (Users, Subscriptions, PRC, Orders), Quick Actions grid, and **real-time charts** powered by Recharts for user growth, PRC circulation, and subscription distribution.
--   The entire admin section, including the dashboard, user management, KYC, orders, and settings pages, now uses a consistent, high-contrast **dark theme**.
--   Bugs on the  page, such as a duplicate PRC balance display and a leftover cashback wallet option, have been fixed.
+The application is largely stable and has received significant feature enhancements and bug fixes in this session.
+-   The Forgot Password flow is fully tested and verified.
+-   A new Contact Us submission system is in place, with a backend API to receive submissions and a new admin page () to view them.
+-   All hardcoded contact information on the landing page and static legal pages (, ) now dynamically fetches data from the admin settings.
+-   UI padding issues on user-facing pages like  and  have been fixed to prevent content from being obscured by navigation bars.
+-   The user referral experience has been completely overhauled with a new  page, featuring a cleaner UI, a 5-level pyramid visualization, a confetti celebration for the first invite (), and a system for milestone badges.
+-   Milestone achievements (e.g., Rising Star) are now recorded and displayed in the global live activity feed on the main user dashboard (), increasing visibility.
+-   The Admin Panel has been polished: the Delivery Partners card has an improved color scheme, and the System Settings page correctly shows Subscription Plans instead of the obsolete VIP Plans.
+-   The backend infrastructure for a new social networking feature has been built and tested. This includes APIs for public user profiles, follow/unfollow, user search, and activity feeds.
 
 **Last working item**:
--   **Last item agent was working**: The agent was manually testing the multi-step Forgot Password flow by stepping through the process with screenshots. It had successfully verified the first three steps: entering an email, selecting verification methods, and seeing the form to input verification data.
+-   **Last item agent was working**: The agent had just finished building and testing the backend APIs for the new social/follow feature. It then proceeded to create the initial empty frontend page files: , , and . The next step is to build the UI and logic for these pages.
 -   **Status**: IN PROGRESS
--   **Agent Testing Done**: Y (Partial)
--   **Which testing method agent to use?**: Manual testing by screenshot tool. The agent needs to complete the flow by entering valid data for the admin user to confirm a successful password reset.
+-   **Agent Testing Done**: Y (Backend APIs were tested via ). Frontend is not built yet.
+-   **Which testing method agent to use?**: Frontend testing agent to test the new social features once they are implemented.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   Issue 1: Complete Forgot Password functionality check (P0)
+-   Issue 1: Complete Social/Follow Feature Frontend (P0)
 -   Issue 2: KYC Document Upload Functionality (P0 - CRITICAL)
 -   Issue 3: Pagination Verification on History Pages (P2)
 
 **Issues Detail:**
--   **Issue 1: Complete Forgot Password functionality check (P0)**
-    -   **Attempted fixes**: The agent has visually verified the first three UI steps of the flow. The next step is to perform a full end-to-end test.
+-   **Issue 1: Complete Social/Follow Feature Frontend (P0)**
+    -   **Attempted fixes**: Backend APIs have been created and verified. Empty frontend files (, , ) have been created.
     -   **Next debug checklist**:
-        1.  Use the screenshot tool to test the flow with the  user's actual data (e.g., full name, mobile number).
-        2.  Verify the backend API successfully validates the data and proceeds to the password reset step.
-        3.  Enter a new password and confirm the reset is successful by attempting to log in with the new password.
+        1.  Implement the UI for , showing user info, badges, follower counts, and a Follow/Unfollow button.
+        2.  Implement the UI for , fetching and displaying activities from followed users.
+        3.  Implement the UI for  for conversations and sending messages.
+        4.  Integrate these new pages into the  routes and user navigation.
     -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: both
     -   **Blocked on other issue**: None
 
 -   **Issue 2: KYC Document Upload Functionality (P0 - CRITICAL)**
-    -   **Description**: A critical, recurring bug where the camera shows a black screen. A rewritten component () was implemented in a previous session and passed automated tests, but still requires real-world validation from the user on a mobile device.
+    -   **Description**: A critical, recurring bug where the camera shows a black screen on mobile devices. A rewritten component () was implemented in a previous session and passed automated tests, but still requires real-world validation from the user on a mobile device.
     -   **Attempted fixes**: The component was entirely rewritten using native HTML inputs.
     -   **Next debug checklist**: Ask the user to test the KYC feature on their mobile device to confirm both camera and gallery options work correctly.
     -   **Status**: USER VERIFICATION PENDING
@@ -65,43 +75,53 @@ The application has undergone significant refactoring and enhancement.
     -   **Blocked on other issue**: None
 
 **In progress Task List**:
--   **Task 1: Test Forgot Password flow (P0)**
-    -   **Where to resume**: Continue testing the Forgot Password flow from Step 3, where the user needs to input verification details.
-    -   **What will be achieved with this?**: Full verification of the user account recovery process.
+-   **Task 1: Build Social Feature Frontend (P0)**
+    -   **Where to resume**: Start implementing the React components for , , and .
+    -   **What will be achieved with this?**: A fully functional social networking and messaging system within the app.
     -   **Status**: IN PROGRESS
     -   **Should Test frontend/backend/both after fix?**: both
     -   **Blocked on something**: None
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
+    -   P1: Implement Shareable Achievement Cards for the social feature.
     -   P1: AdMob + Unity Ads Integration.
     -   P2: Implement full plan upgrade/downgrade logic for subscriptions.
     -   P2: Automate recurring jobs (renewal notifications, explorer burn) using a scheduler like cron.
-    -   P2: AI Smart Financial Advisor.
 -   **Future Tasks:**
+    -   AI Smart Financial Advisor.
     -   Progressive Web App (PWA) functionality.
     -   Automated Monthly Reports.
     -   AI Product Recommendations for users.
 
 **Completed work in this session**
--   **Major Refactoring (Stockist & Cashback System)**:
-    -   Removed all stockist-related roles, pages, routes, API endpoints, and database logic (, , etc.).
-    -   Removed all cashback wallet logic, API endpoints, and UI elements from the application (, , ).
-    -   Updated order checkout process to use a direct-to-partner delivery model ().
--   **Major Refactoring (VIP System)**:
-    -   Deleted obsolete VIP pages (, , ).
-    -   Removed all VIP routes from  and menu links from .
--   **New Feature (Delivery Partner Management)**:
-    -   Created backend CRUD APIs and Pydantic model for delivery partners in .
-    -   Created a new admin page  to manage partners.
-    -   Added the new page to  routes and  menu.
--   **New Feature (Admin Dashboard Overhaul & Dark Theme)**:
-    -   Completely redesigned  with new stats cards, quick actions, and real-time charts using Recharts.
-    -   Created new backend endpoints in  to serve data for the charts.
-    -   Refactored  for a cleaner, more organized menu structure.
-    -   Converted the entire admin panel to a consistent dark theme by updating  and running a bulk script on all major admin pages.
--   **Bug Fixes**:
-    -   Fixed UI bugs on , removing duplicate PRC balance display and leftover cashback wallet options.
+-   **Forgot Password Flow Verified**: Completed a full end-to-end test of the password recovery process.
+-   **Contact Form System**:
+    -   Created  endpoint in .
+    -   Created  page to view submissions.
+    -   Added route and menu link for the new admin page.
+-   **Dynamic Contact Info**: Refactored , , and  to fetch and display contact details from the  endpoint, removing hardcoded values.
+-   **UI/UX Fixes & Enhancements**:
+    -   Removed the Ready to Start Earning? CTA from .
+    -   Improved the UI of the Delivery Partners card on  with vibrant colors.
+    -   Fixed padding on  and  to prevent overlap with nav bars.
+    -   Fixed the  page to correctly display Subscription Plans instead of the obsolete VIP Plans.
+-   **Referral System Overhaul**:
+    -   Created  to replace the old  page.
+    -   Added  package and implemented a celebration animation for the first successful referral.
+    -   Implemented a milestone badge system and API ().
+-   **Global Live Activity**:
+    -   Moved milestone achievements from the referral page to the global activity feed.
+    -   Updated the  endpoint in  to include milestone events.
+    -   Updated  to render milestone events with special styling.
+-   **Social Feature (Backend)**:
+    -   Implemented a suite of new APIs in  for a social network:
+        -    (renamed from  to avoid route conflict)
+        -   
+        -    and 
+        -    and 
+        -    and 
+        -   And more for messaging and privacy settings.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Pagination Verification on  and **: This task from a previous handoff is still pending verification.
@@ -110,27 +130,25 @@ The application has undergone significant refactoring and enhancement.
 -   **KYC document upload**: A robust fix was implemented in a prior session, but it is still awaiting final verification from the user on a real mobile device.
 
 **Code Architecture**
-recharts
+canvas-confetti
 
 **Key Technical Concepts**
--   **Large-Scale Refactoring**: Removing entire features (Stockist, Cashback, VIP) from both frontend and backend codebases.
--   **Admin Panel UI/UX Redesign**: Complete overhaul of the admin dashboard and navigation for improved usability.
--   **Data Visualization**: Using the  library to display real-time analytics on the admin dashboard.
--   **Dark Theme Implementation**: Applying a consistent dark theme across a multi-page section of a React app using Tailwind CSS.
--   **Efficient Scripting**: Using a  script with  to perform bulk find-and-replace operations across multiple files for the dark theme conversion.
--   **API Design**: Creating dedicated endpoints for statistics and chart data, separate from general CRUD operations.
+-   **End-to-End Feature Implementation**: Built a complete contact submission system from backend API to frontend admin page.
+-   **Component Refactoring**: Replaced hardcoded data in static components (, ) with dynamic data fetching using  and .
+-   **Third-Party Library Integration**: Added and used  for UI special effects.
+-   **Complex API Development**: Designed and implemented a comprehensive set of REST APIs for a new social networking feature, including handling relationships (follow/unfollow) and activity feeds.
+-   **API Route Debugging**: Identified and resolved a route conflict in FastAPI by renaming a path ( to ).
+-   **UI/UX Enhancement**: Redesigned a key user-facing page () based on user feedback to improve usability and engagement.
 
 **key DB schema**
+-   ** (NEW)**: , , , , , , .
+-   ** (NEW)**: , , , .
+-   ** (NEW)**: , , .
 -   ** collection**:
-    -   , : These fields are now obsolete and removed from the logic, though they may still exist on old documents.
-    -   : The roles , , and  are now obsolete.
--   ** collection (NEW)**:
-    -   , , , , , , , , , .
--   ** collection**:
-    -   : Now defaults to a state indicating direct delivery by a partner, instead of assignment to an outlet.
+    -   Added  (boolean),  (int),  (int).
 
 **changes in tech stack**
--   None. The existing  library was utilized.
+-   **Added**:  for frontend animations.
 
 **All files of reference**
 -   
@@ -140,12 +158,20 @@ recharts
 -   
 -   
 -   
+-   **New (Empty) Files**: , , 
 
 **Areas that need refactoring**:
--   The database  collection might still contain obsolete fields like  and . A one-time migration script could be considered in the future to clean this up.
+-   There are two different live activity endpoints ( and ). These could potentially be consolidated to avoid confusion and redundant code.
+-   The old  page is now obsolete and can be deleted.
 
 **key api endpoints**
--   **NEW:**
+-   **NEW (Contact System):**
+    -   
+    -   
+    -   
+-   **NEW (Referral/Milestone System):**
+    -   
+-   **NEW (Social/Follow System):**
     -   
     -   
     -   
@@ -154,53 +180,50 @@ recharts
     -   
     -   
     -   
-    -   
-    -   
-    -   
+    -   (Plus several others for messaging and privacy)
 -   **MODIFIED:**
-    -   : Logic completely changed to remove cashback and outlet assignment.
-    -   : Logic changed to remove cashback refund.
-    -   : Now returns subscription plan distribution.
--   **REMOVED (Implicitly, via Frontend changes):**
-    -   All API endpoints related to the old VIP and Stockist systems are no longer called by the frontend.
+    -   : Now includes milestone achievement events.
 
 **Critical Info for New Agent**
--   **Immediate Priority**: Your first task is to complete the Forgot Password functionality check, which is currently in progress.
--   **User Verification is Key**: Two critical items, the KYC fix and the Forgot Password flow, are pending user-side or final end-to-end verification. Prioritize getting confirmation on these.
--   **Admin Panel is Dark**: The entire admin section has been converted to a dark theme. Any new admin components or pages must follow this theme.
--   **Massive Refactoring Done**: Be aware that the Stockist, Cashback, and VIP systems have been completely removed. Do not refer to or attempt to use any related code.
+-   **Top Priority**: Your immediate task is to build the frontend for the new social features. The backend is already complete and tested. Start with .
+-   **User Verification Pending**: The critical KYC camera bug fix is still awaiting user verification on a mobile device. This must be followed up on.
+-   **New Social APIs**: A comprehensive set of APIs for the social/follow system has been added to  and tested. You should familiarize yourself with them before building the frontend.
+-   **Referral Page is New**: The main referral page is now . Do not edit the old .
+-   **Route Conflict Resolved**: The user search endpoint was moved to  to avoid a conflict with . Use the new path.
 
 **documents and test reports created in this job**
 -    (Continuously updated throughout the session)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **Request:** Remove the stockist and cashback systems entirely.
-2.  **Request:** Create a delivery partner management system.
-3.  **Request:** (In Marathi) Redesign the admin dashboard and menu to be easy to use.
-4.  **Request:** Add real-time charts to the dashboard.
-5.  **Feedback/Bug:** (With screenshots) The admin dashboard colors are bad, and the user management page has a duplicate PRC balance and a leftover cashback wallet.
-6.  **Request:** (In Marathi) Convert other admin pages to dark theme as you see fit.
-7.  **Request:** Check the Forgot Password functionality.
-8.  **Pending:** The user is waiting for the Forgot Password check to be completed.
-9.  **Pending (from previous session):** The user still needs to test the KYC camera fix on a mobile device.
+1.  **Request**: Add milestone celebration special badges and show this in live activity. (COMPLETED)
+2.  **Bug Report**: The old VIP Plan button is showing in admin system settings. (COMPLETED)
+3.  **Request**: When a user achieves a milestone, show this achievement in the global live activity feed, not just on the referral page. (COMPLETED)
+4.  **Request**: Provide mobile app screenshots of the user view for marketing purposes. (COMPLETED)
+5.  **Bug Report**: The Ready to start earning section is not removed from the landing page. (COMPLETED)
+6.  **Request**: Remove the live activity card from the referral page. (COMPLETED)
+7.  **Bug Report**: Contact info is wrong on the landing page (hardcoded) but correct on the contact page (dynamic). Update all pages to use dynamic info. (COMPLETED)
+8.  **Question**: Asks for ideas to develop a follow feature like Facebook for referrals, keeping Google policy in mind. (AGENT RESPONDED WITH A PLAN)
+9.  **Approval**: User approved the agent's proposed plan for the social/follow feature (public profiles, activity feed, sharing cards, messaging).
+10. **Confirmation**: User confirmed to proceed with building the social/follow feature. (IN PROGRESS)
 
 **Project Health Check:**
 -   **Broken**:
-    -   None. The KYC upload functionality is fixed but still requires final user verification on a real device.
+    -   KYC document upload functionality remains unverified by the user on a mobile device, so its status is uncertain.
 -   **Mocked**:
-    -   AdMob/Unity Ads integration is planned but not implemented.
+    -   The social networking feature has a complete backend but the frontend consists of empty placeholder files.
 
 **3rd Party Integrations**
 -   **Recharts**: Used for data visualization on the admin dashboard.
+-   **canvas-confetti**: (NEW) Used for celebration animations on the referral page.
 -   **OpenAI GPT-4o**: AI Chatbot text generation (Uses Emergent LLM Key)
 -   **OpenAI Whisper**: Speech-to-Text in chatbot (Uses Emergent LLM Key)
 -   **ElevenLabs**: Text-to-Speech in chatbot (Uses Emergent LLM Key)
 -   **Gemini Pro**: AI Document Scanning for KYC (Uses Emergent LLM Key)
 
 **Testing status**
--   **Testing agent used after significant changes**: NO (Agent performed extensive manual testing with  and  tools, which was appropriate for the UI/UX and refactoring tasks).
+-   **Testing agent used after significant changes**: NO
 -   **Troubleshoot agent used after agent stuck in loop**: NO
--   **Test files created**: None in this session.
+-   **Test files created**: None.
 -   **Known regressions**: None.
 
 **Credentials to test flow:**
