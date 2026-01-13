@@ -700,6 +700,7 @@ const AdminSubscriptionManagement = ({ user }) => {
                   <th className="text-left py-3">Plan</th>
                   <th className="text-left py-3">Expiry</th>
                   <th className="text-left py-3">Status</th>
+                  <th className="text-left py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
