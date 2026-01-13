@@ -14,7 +14,7 @@ import {
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 const ITEMS_PER_PAGE = 12;
-const DEFAULT_PRC_TO_INR_RATE = 4.0;
+const DEFAULT_PRC_TO_INR_RATE = 0.1; // 10 PRC = ₹1
 
 const BADGES = [
   { value: '', label: 'No Badge' },
@@ -151,7 +151,7 @@ const ProductForm = ({ formData, setFormData, prcToInrRate, imagePreview, handle
           
           <div>
             <label className="text-sm text-gray-400 flex items-center gap-1">
-              INR Price <span className="text-xs text-gray-500">(1 PRC = ₹{prcToInrRate})</span>
+              INR Price <span className="text-xs text-gray-500">(10 PRC = ₹1)</span>
             </label>
             <div className="relative">
               <Input
