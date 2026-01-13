@@ -374,18 +374,20 @@ const Marketplace = ({ user }) => {
 
   // Filter products by search and category
   const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = !searchQuery || p.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          p.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          p.category?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  // Get featured/home products
-  const homeProducts = products.filter(p => p.show_on_home);
+  // Get featured/home products (also filtered by search)
+  const homeProducts = filteredProducts.filter(p => p.show_on_home);
   
-  // Get products by badge
-  const trendingProducts = products.filter(p => p.badge === 'trending');
-  const newProducts = products.filter(p => p.badge === 'new');
-  const hotDeals = products.filter(p => p.badge === 'hot_deal' || p.badge === 'bestseller');
+  // Get products by badge (also filtered by search)
+  const trendingProducts = filteredProducts.filter(p => p.badge === 'trending');
+  const newProducts = filteredProducts.filter(p => p.badge === 'new');
+  const hotDeals = filteredProducts.filter(p => p.badge === 'hot_deal' || p.badge === 'bestseller');
 
   // Pagination for grid view
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
