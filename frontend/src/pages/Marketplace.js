@@ -202,7 +202,7 @@ const ProductCarousel = ({ title, products, isVip, onAddToCart, viewMoreLink }) 
 
 const Marketplace = ({ user }) => {
   const navigate = useNavigate();
-  const { language } = useLanguage();
+  const { language, t: translate } = useLanguage();
   
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState({ items: [] });
@@ -214,16 +214,26 @@ const Marketplace = ({ user }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
 
+  // Use translations from context
   const t = {
-    title: language === 'mr' ? 'मार्केटप्लेस' : language === 'hi' ? 'मार्केटप्लेस' : 'Marketplace',
-    search: language === 'mr' ? 'शोधा...' : language === 'hi' ? 'खोजें...' : 'Search products...',
-    cart: language === 'mr' ? 'कार्ट' : language === 'hi' ? 'कार्ट' : 'Cart',
-    checkout: language === 'mr' ? 'ऑर्डर करा' : language === 'hi' ? 'ऑर्डर करें' : 'Place Order',
-    emptyCart: language === 'mr' ? 'कार्ट रिकामी आहे' : language === 'hi' ? 'कार्ट खाली है' : 'Cart is empty',
-    addToCart: language === 'mr' ? 'कार्टमध्ये जोडा' : language === 'hi' ? 'कार्ट में जोड़ें' : 'Add to Cart',
-    vipOnly: language === 'mr' ? 'फक्त VIP साठी' : language === 'hi' ? 'केवल VIP के लिए' : 'VIP Only',
-    merchandise: language === 'mr' ? 'उत्पादने' : language === 'hi' ? 'सामान' : 'Merchandise',
-    tagline: language === 'mr' ? 'तुमचे PRC वापरा' : language === 'hi' ? 'अपने PRC का उपयोग करें' : 'Redeem your PRC on things you love',
+    title: translate('marketplace'),
+    search: translate('searchProducts'),
+    cart: translate('cart'),
+    checkout: translate('checkout'),
+    emptyCart: translate('emptyCart'),
+    addToCart: translate('addToCart'),
+    vipOnly: translate('upgradeNow'),
+    merchandise: translate('merchandise'),
+    tagline: translate('redeemTagline'),
+    redeemYourPRC: translate('redeemYourPRC'),
+    prcBalance: translate('prcBalance'),
+    outOfStock: translate('outOfStock'),
+    freeDelivery: translate('freeDelivery'),
+    redeemNow: translate('redeemNow'),
+    eVouchers: translate('eVouchers'),
+    rechargeBills: translate('rechargeBills'),
+    all: translate('all'),
+    loading: translate('loading'),
   };
 
   // Get unique categories from products
