@@ -668,7 +668,7 @@ const Marketplace = ({ user }) => {
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              className="fixed bottom-20 left-0 right-0 bg-white rounded-t-3xl z-[60] max-h-[70vh] overflow-hidden shadow-2xl"
+              className="fixed bottom-16 left-0 right-0 bg-white rounded-t-3xl z-[60] max-h-[75vh] overflow-hidden shadow-2xl"
             >
               <div className="p-5">
                 <div className="flex items-center justify-between mb-4">
