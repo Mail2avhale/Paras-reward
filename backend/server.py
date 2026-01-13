@@ -20979,6 +20979,31 @@ async def get_global_live_activity(limit: int = 20):
             "category": "shopping"
         })
     
+    # Get recent milestone achievements (last 24 hours)
+    try:
+        twenty_four_hours_ago = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+        recent_milestones = await db.milestone_achievements.find(
+            {"created_at": {"$gte": twenty_four_hours_ago}},
+            {"_id": 0}
+        ).sort("created_at", -1).limit(10).to_list(10)
+        
+        for milestone in recent_milestones:
+            activities.append({
+                "type": "milestone",
+                "icon": milestone.get("milestone_badge", "🎉"),
+                "user": milestone.get("display_name", "User***"),
+                "location": milestone.get("city", ""),
+                "description": f"Unlocked {milestone.get('milestone_title', 'badge')} badge!",
+                "timestamp": milestone.get("created_at"),
+                "category": "milestone",
+                "is_milestone": True,
+                "milestone_badge": milestone.get("milestone_badge"),
+                "milestone_title": milestone.get("milestone_title"),
+                "milestone_color": milestone.get("milestone_color", "amber")
+            })
+    except Exception as e:
+        logging.error(f"Error fetching milestones: {e}")
+    
     # Sort by timestamp
     def get_ts(item):
         ts = item.get("timestamp")
