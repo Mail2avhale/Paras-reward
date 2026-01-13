@@ -727,36 +727,6 @@ const RewardsHome = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-600 to-blue-700">
-        <div className="max-w-4xl mx-auto text-center text-white">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-6">
-            Ready to Start Earning?
-          </h2>
-          <p className="text-xl text-blue-100 mb-8">
-            Join thousands of users who are already earning rewards every day. Sign up now and get 100 PRC bonus!
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Button 
-              size="lg" 
-              onClick={() => navigate('/register')}
-              className="bg-white text-blue-600 hover:bg-gray-100 font-semibold px-8"
-            >
-              Sign Up Free
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button 
-              size="lg" 
-              variant="outline"
-              onClick={() => navigate('/login')}
-              className="border-white text-white hover:bg-white/10 px-8"
-            >
-              Already have account? Login
-            </Button>
-          </div>
-        </div>
-      </section>
-
       {/* Footer */}
       <footer className="bg-gray-900 text-gray-300 py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
