@@ -9706,6 +9706,34 @@ async def delete_product(product_id: str):
     await db.products.delete_one({"product_id": product_id})
     return {"message": "Product deleted successfully"}
 
+@api_router.get("/admin/settings/marketplace")
+async def get_marketplace_settings():
+    """Get marketplace settings including PRC to INR rate"""
+    settings = await db.marketplace_settings.find_one({"setting_type": "general"}, {"_id": 0})
+    if not settings:
+        settings = {
+            "setting_type": "general",
+            "prc_to_inr_rate": 4.0,  # Default: 1 PRC = ₹4 
+            "min_order_prc": 100,
+            "max_order_prc": 100000,
+            "free_delivery_threshold": 500
+        }
+    return settings
+
+@api_router.put("/admin/settings/marketplace")
+async def update_marketplace_settings(request: Request):
+    """Update marketplace settings"""
+    data = await request.json()
+    data["setting_type"] = "general"
+    data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.marketplace_settings.update_one(
+        {"setting_type": "general"},
+        {"$set": data},
+        upsert=True
+    )
+    return {"message": "Marketplace settings updated"}
+
 # ========== MARKETPLACE (USER) ==========
 
 @api_router.get("/marketplace/products")
