@@ -151,6 +151,27 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     }
   };
 
+  const handlePrivacyToggle = async (field, value) => {
+    setSavingPrivacy(true);
+    try {
+      await axios.put(`${API}/api/users/${user.uid}/privacy-settings`, {
+        [field]: value
+      });
+      
+      if (field === 'is_public') {
+        setIsProfilePublic(value);
+        toast.success(value ? 'Profile is now public' : 'Profile is now private');
+      } else if (field === 'allow_messages') {
+        setAllowMessages(value);
+        toast.success(value ? 'Messages enabled' : 'Messages disabled');
+      }
+    } catch (error) {
+      toast.error('Failed to update privacy settings');
+    } finally {
+      setSavingPrivacy(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (!deletePassword) {
       toast.error('Please enter your password');
