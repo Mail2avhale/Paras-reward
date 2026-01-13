@@ -23,11 +23,11 @@ const CATEGORY_CONFIG = {
   'Other': { icon: Package, color: 'from-gray-500 to-slate-500', bgColor: 'bg-gray-500/10' }
 };
 
-// Redemption category cards for "Redeem Your PRC" section
-const REDEEM_CATEGORIES = [
-  { id: 'merchandise', name: 'Merchandise', icon: Package, color: 'from-blue-500 to-cyan-500', path: '/marketplace?cat=all' },
-  { id: 'vouchers', name: 'E-vouchers', icon: Gift, color: 'from-purple-500 to-violet-500', path: '/gift-vouchers' },
-  { id: 'recharge', name: 'Recharge & Bills', icon: Smartphone, color: 'from-green-500 to-emerald-500', path: '/bill-payments' },
+// Redemption category cards generator (uses translations)
+const getRedeemCategories = (t) => [
+  { id: 'merchandise', name: t('merchandise'), icon: Package, color: 'from-blue-500 to-cyan-500', path: '/marketplace?cat=all' },
+  { id: 'vouchers', name: t('eVouchers'), icon: Gift, color: 'from-purple-500 to-violet-500', path: '/gift-vouchers' },
+  { id: 'recharge', name: t('rechargeBills'), icon: Smartphone, color: 'from-green-500 to-emerald-500', path: '/bill-payments' },
 ];
 
 // Product Card Component - SBI Rewardz style
