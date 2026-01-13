@@ -8081,13 +8081,17 @@ async def get_admin_stats():
     # Get recent VIP payments (last 5)
     recent_vip_payments = await db.vip_payments.find(
         {"status": "approved"},
-        {"_id": 0, "user_id": 1, "amount": 1, "created_at": 1}
+        {"_id": 0, "user_uid": 1, "user_id": 1, "amount": 1, "created_at": 1, "user_name": 1}
     ).sort("created_at", -1).limit(5).to_list(5)
     
     # Enrich with user names
     for payment in recent_vip_payments:
-        user = await db.users.find_one({"uid": payment["user_id"]}, {"name": 1})
-        payment["user_name"] = user.get("name", "Unknown") if user else "Unknown"
+        user_uid = payment.get("user_uid") or payment.get("user_id")
+        if user_uid and not payment.get("user_name"):
+            user = await db.users.find_one({"uid": user_uid}, {"_id": 0, "name": 1})
+            payment["user_name"] = user.get("name", "Unknown") if user else "Unknown"
+        elif not payment.get("user_name"):
+            payment["user_name"] = "Unknown"
     
     # Recent Activity - Get last 5 activities (orders, withdrawals, KYC)
     recent_orders = await db.orders.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
