@@ -141,6 +141,11 @@ const FollowersList = ({ user, type = 'followers' }) => {
           </div>
         ) : (
           <div className="space-y-2">
+            {/* Count indicator */}
+            <div className="text-center text-gray-500 text-sm mb-4">
+              Showing {users.length} of {total} {type}
+            </div>
+            
             {users.map((item, index) => (
               <motion.div
                 key={item.uid}
@@ -189,8 +194,8 @@ const FollowersList = ({ user, type = 'followers' }) => {
               </motion.div>
             ))}
             
-            {/* Load More Button */}
-            {hasMore && (
+            {/* Load More / End of list */}
+            {hasMore ? (
               <button
                 onClick={loadMore}
                 disabled={loadingMore}
@@ -199,9 +204,13 @@ const FollowersList = ({ user, type = 'followers' }) => {
                 {loadingMore ? (
                   <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  'Load More'
+                  `Load More (${users.length}/${total})`
                 )}
               </button>
+            ) : users.length > 0 && (
+              <p className="text-center text-gray-600 text-sm mt-4 py-3">
+                — All {type} loaded —
+              </p>
             )}
           </div>
         )}
