@@ -271,7 +271,28 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     );
   }
 
-  const isVip = userData?.membership_type === 'vip';
+  // Get subscription plan info
+  const subscriptionPlan = userData?.subscription_plan || 'explorer';
+  const hasPaidPlan = ['startup', 'growth', 'elite'].includes(subscriptionPlan);
+  
+  // Helper function to get plan display name
+  const getPlanDisplayName = (plan) => {
+    const planNames = {
+      'explorer': 'Explorer',
+      'startup': 'Startup',
+      'growth': 'Growth',
+      'elite': 'Elite'
+    };
+    return planNames[plan] || 'Explorer';
+  };
+  
+  // Get plan badge gradient
+  const getPlanGradient = (plan) => {
+    if (plan === 'elite') return 'from-amber-500 to-yellow-500';
+    if (plan === 'growth') return 'from-emerald-500 to-green-500';
+    if (plan === 'startup') return 'from-blue-500 to-cyan-500';
+    return 'from-gray-500 to-gray-600';
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
@@ -334,10 +355,10 @@ const ProfileAdvanced = ({ user, onLogout }) => {
           </h2>
           <p className="text-gray-400 text-sm mb-3">{userData?.email || user?.email}</p>
           
-          {isVip && (
-            <div className="inline-flex items-center gap-1 bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-1 rounded-full">
+          {hasPaidPlan && (
+            <div className={`inline-flex items-center gap-1 bg-gradient-to-r ${getPlanGradient(subscriptionPlan)} px-4 py-1 rounded-full`}>
               <Crown className="w-4 h-4 text-black" />
-              <span className="text-black font-bold text-sm">VIP Member</span>
+              <span className="text-black font-bold text-sm">{getPlanDisplayName(subscriptionPlan)} Member</span>
             </div>
           )}
         </motion.div>
