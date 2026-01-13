@@ -528,6 +528,52 @@ const ProfileAdvanced = ({ user, onLogout }) => {
           </div>
         </button>
 
+        {/* Privacy Settings */}
+        <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4">
+          <div className="flex items-center gap-3 mb-4">
+            <Shield className="w-5 h-5 text-cyan-500" />
+            <span className="text-white font-medium">Privacy Settings</span>
+          </div>
+          
+          {/* Public Profile Toggle */}
+          <div className="flex items-center justify-between py-3 border-b border-gray-800">
+            <div>
+              <p className="text-white text-sm">Public Profile</p>
+              <p className="text-gray-500 text-xs">Others can see your profile and activity</p>
+            </div>
+            <button
+              onClick={() => handlePrivacyToggle('is_public', !isProfilePublic)}
+              disabled={savingPrivacy}
+              className={`relative w-12 h-6 rounded-full transition-colors ${
+                isProfilePublic ? 'bg-purple-500' : 'bg-gray-700'
+              }`}
+            >
+              <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                isProfilePublic ? 'left-7' : 'left-1'
+              }`} />
+            </button>
+          </div>
+          
+          {/* Allow Messages Toggle */}
+          <div className="flex items-center justify-between py-3">
+            <div>
+              <p className="text-white text-sm">Allow Messages</p>
+              <p className="text-gray-500 text-xs">Others can send you direct messages</p>
+            </div>
+            <button
+              onClick={() => handlePrivacyToggle('allow_messages', !allowMessages)}
+              disabled={savingPrivacy}
+              className={`relative w-12 h-6 rounded-full transition-colors ${
+                allowMessages ? 'bg-purple-500' : 'bg-gray-700'
+              }`}
+            >
+              <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                allowMessages ? 'left-7' : 'left-1'
+              }`} />
+            </button>
+          </div>
+        </div>
+
         {/* Change Password */}
         <button 
           onClick={() => setShowPasswordSection(!showPasswordSection)}
