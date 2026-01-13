@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   Users, Copy, Check, Share2, ArrowLeft, Gift, Crown, TrendingUp, 
   ChevronRight, UserCheck, Zap, History, MessageCircle, Link2,
-  Award, Sparkles, HelpCircle, ArrowRight
+  Award, Sparkles, HelpCircle, ArrowRight, PartyPopper
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -20,6 +21,59 @@ const ReferralsEnhanced = ({ user }) => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [referralLevels, setReferralLevels] = useState([]);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [previousTotal, setPreviousTotal] = useState(null);
+
+  // Confetti celebration function
+  const triggerConfetti = useCallback(() => {
+    // Fire confetti from multiple angles
+    const count = 200;
+    const defaults = {
+      origin: { y: 0.7 },
+      zIndex: 9999,
+    };
+
+    function fire(particleRatio, opts) {
+      confetti({
+        ...defaults,
+        ...opts,
+        particleCount: Math.floor(count * particleRatio),
+      });
+    }
+
+    // Gold and amber colors for brand consistency
+    fire(0.25, {
+      spread: 26,
+      startVelocity: 55,
+      colors: ['#f59e0b', '#fbbf24', '#d97706'],
+    });
+    
+    fire(0.2, {
+      spread: 60,
+      colors: ['#f59e0b', '#fbbf24', '#fcd34d'],
+    });
+    
+    fire(0.35, {
+      spread: 100,
+      decay: 0.91,
+      scalar: 0.8,
+      colors: ['#f59e0b', '#d97706', '#92400e'],
+    });
+    
+    fire(0.1, {
+      spread: 120,
+      startVelocity: 25,
+      decay: 0.92,
+      scalar: 1.2,
+      colors: ['#fbbf24', '#fcd34d', '#fef3c7'],
+    });
+    
+    fire(0.1, {
+      spread: 120,
+      startVelocity: 45,
+      colors: ['#a855f7', '#7c3aed', '#f59e0b'],
+    });
+  }, []);
 
   // Level configuration
   const levelConfig = {
