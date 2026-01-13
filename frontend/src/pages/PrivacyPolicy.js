@@ -324,10 +324,16 @@ const PrivacyPolicy = () => {
                   </div>
                   <h2 className="text-lg font-bold text-white">{section.title}</h2>
                 </div>
-                <div 
-                  className="prose prose-sm prose-invert max-w-none text-gray-400 [&_a]:text-amber-500 [&_a]:hover:text-amber-400 [&_strong]:text-gray-300 [&_h4]:text-gray-300 [&_ul]:text-gray-400 [&_li]:text-gray-400" 
-                  dangerouslySetInnerHTML={{ __html: section.content.replace(/bg-gray-50/g, 'bg-gray-800/50').replace(/text-blue-600/g, 'text-amber-500') }} 
-                />
+                {section.dynamicContent ? (
+                  <div className="prose prose-sm prose-invert max-w-none text-gray-400">
+                    {renderContactSection()}
+                  </div>
+                ) : (
+                  <div 
+                    className="prose prose-sm prose-invert max-w-none text-gray-400 [&_a]:text-amber-500 [&_a]:hover:text-amber-400 [&_strong]:text-gray-300 [&_h4]:text-gray-300 [&_ul]:text-gray-400 [&_li]:text-gray-400" 
+                    dangerouslySetInnerHTML={{ __html: section.content.replace(/bg-gray-50/g, 'bg-gray-800/50').replace(/text-blue-600/g, 'text-amber-500') }} 
+                  />
+                )}
               </div>
             );
           })}
