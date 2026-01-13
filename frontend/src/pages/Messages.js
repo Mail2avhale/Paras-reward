@@ -333,8 +333,8 @@ const Messages = ({ user }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
-      <div className="p-4 bg-gray-900 border-t border-gray-800" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 1rem))' }}>
+      {/* Message Input - with bottom nav padding */}
+      <div className="p-4 bg-gray-900 border-t border-gray-800 pb-24" style={{ paddingBottom: 'max(6rem, calc(env(safe-area-inset-bottom, 0px) + 5rem))' }}>
         <div className="flex items-center gap-3">
           <input
             type="text"
