@@ -214,10 +214,41 @@ const RewardsHome = () => {
     totalRedeemed: 0
   });
   const [loading, setLoading] = useState(true);
+  const [contactInfo, setContactInfo] = useState({
+    email: 'support@parasreward.com',
+    phone: '+91 98765 43210',
+    address: 'Mumbai, Maharashtra, India'
+  });
 
   useEffect(() => {
     fetchStats();
+    fetchContactInfo();
   }, []);
+
+  const fetchContactInfo = async () => {
+    try {
+      const response = await axios.get(`${API}/api/admin/contact-settings`);
+      const data = response.data;
+      
+      // Build full address from components
+      const addressParts = [
+        data.address_line1,
+        data.address_line2,
+        data.city,
+        data.state,
+        data.pincode,
+        data.country
+      ].filter(Boolean);
+      
+      setContactInfo({
+        email: data.email_support || 'support@parasreward.com',
+        phone: data.phone_primary || '+91 98765 43210',
+        address: addressParts.join(', ') || 'Mumbai, Maharashtra, India'
+      });
+    } catch (error) {
+      console.error('Error fetching contact info:', error);
+    }
+  };
 
   const fetchStats = async () => {
     try {
