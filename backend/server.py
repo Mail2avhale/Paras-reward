@@ -9461,8 +9461,8 @@ async def create_product(
         except Exception as e:
             logging.error(f"Error saving product image: {e}")
     
-    # Auto-calculate INR if not provided (default 4 PRC = 1 INR)
-    prc_to_inr_rate = 4.0
+    # Auto-calculate INR if not provided (default 10 PRC = 1 INR)
+    prc_to_inr_rate = 0.1  # 10 PRC = ₹1
     if inr_price <= 0:
         inr_price = round(prc_price * prc_to_inr_rate, 2)
     
@@ -9713,7 +9713,7 @@ async def get_marketplace_settings():
     if not settings:
         settings = {
             "setting_type": "general",
-            "prc_to_inr_rate": 4.0,  # Default: 1 PRC = ₹4 
+            "prc_to_inr_rate": 0.1,  # Default: 10 PRC = ₹1 (1 PRC = ₹0.10)
             "min_order_prc": 100,
             "max_order_prc": 100000,
             "free_delivery_threshold": 500
