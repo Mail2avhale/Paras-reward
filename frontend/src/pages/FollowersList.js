@@ -204,12 +204,12 @@ const FollowersList = ({ user, type = 'followers' }) => {
                 {loadingMore ? (
                   <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  `Load More (${users.length}/${total})`
+                  'Load More'
                 )}
               </button>
             ) : users.length > 0 && (
               <p className="text-center text-gray-600 text-sm mt-4 py-3">
-                — All {type} loaded —
+                — All {users.length} {type} loaded —
               </p>
             )}
           </div>
