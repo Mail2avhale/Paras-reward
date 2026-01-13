@@ -8664,6 +8664,94 @@ async def delete_user(uid: str):
     
     return {"message": "User deleted successfully", "uid": uid}
 
+
+@api_router.post("/admin/users/{uid}/subscription")
+async def admin_update_user_subscription(uid: str, request: Request):
+    """
+    Admin endpoint to manually update user subscription.
+    Can grant free subscription or record manual payment.
+    """
+    data = await request.json()
+    
+    # Find user
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    plan = data.get("plan", "explorer")
+    duration = data.get("duration", "monthly")
+    payment_method = data.get("payment_method", "admin_manual")
+    payment_reference = data.get("payment_reference", "")
+    amount_paid = data.get("amount_paid", 0)
+    notes = data.get("notes", "")
+    
+    # Calculate expiry date based on duration
+    duration_days = {
+        "monthly": 30,
+        "quarterly": 90,
+        "half_yearly": 180,
+        "yearly": 365
+    }
+    days = duration_days.get(duration, 30)
+    expiry_date = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
+    
+    # Determine membership type
+    membership_type = "vip" if plan != "explorer" else "free"
+    
+    # Update user subscription
+    update_data = {
+        "subscription_plan": plan,
+        "subscription_expiry": expiry_date,
+        "subscription_duration": duration,
+        "membership_type": membership_type,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.users.update_one({"uid": uid}, {"$set": update_data})
+    
+    # Create payment record for tracking
+    payment_record = {
+        "payment_id": str(uuid.uuid4()),
+        "user_uid": uid,
+        "user_email": user.get("email"),
+        "user_name": user.get("name"),
+        "subscription_plan": plan,
+        "plan_type": duration,
+        "amount": amount_paid,
+        "payment_method": payment_method,
+        "payment_reference": payment_reference,
+        "status": "approved",
+        "approved_by": "admin",
+        "admin_notes": notes,
+        "is_free_grant": amount_paid == 0,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "approved_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.vip_payments.insert_one(payment_record)
+    
+    # Create notification for the user
+    await create_social_notification(
+        user_uid=uid,
+        notification_type="subscription_update",
+        title="Subscription Updated! 🎉",
+        message=f"Your subscription has been updated to {plan.capitalize()} ({duration.replace('_', ' ')})",
+        icon="👑",
+        action_url="/subscription"
+    )
+    
+    return {
+        "success": True,
+        "message": f"Subscription updated to {plan} ({duration})",
+        "user_uid": uid,
+        "plan": plan,
+        "duration": duration,
+        "expiry": expiry_date,
+        "amount_paid": amount_paid,
+        "is_free": amount_paid == 0
+    }
+
+
 @api_router.get("/admin/users/all")
 async def get_all_users_admin(
     page: int = 1, 
