@@ -447,6 +447,15 @@ const AdvancedUserManagement = () => {
                   <Button
                     size="sm"
                     variant="outline"
+                    onClick={() => openSubscriptionModal(user)}
+                    title="Edit Subscription"
+                    className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
+                  >
+                    <Award className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => openBalanceModal(user)}
                     title="Adjust Balance"
                     className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
