@@ -173,7 +173,7 @@ const AdminSystemSettings = ({ user }) => {
   };
 
   const tabs = [
-    { id: 'vip-plans', label: 'VIP Plans', icon: Award },
+    { id: 'subscription-plans', label: 'Subscription Plans', icon: Award },
     { id: 'mining', label: 'Mining Formula', icon: Cpu },
     { id: 'referral', label: 'Referral Bonus', icon: Users },
     { id: 'registration', label: 'Registration Control', icon: ToggleLeft },
@@ -194,7 +194,7 @@ const AdminSystemSettings = ({ user }) => {
               <Settings className="h-6 w-6 text-purple-600" />
               System Settings
             </h1>
-            <p className="text-sm text-gray-500">Manage VIP plans, mining formula, registration & service charges</p>
+            <p className="text-sm text-gray-500">Manage subscription plans, mining formula, registration & service charges</p>
           </div>
         </div>
 
@@ -219,12 +219,12 @@ const AdminSystemSettings = ({ user }) => {
           })}
         </div>
 
-        {/* VIP Plans Tab */}
-        {activeTab === 'vip-plans' && (
+        {/* Subscription Plans Tab */}
+        {activeTab === 'subscription-plans' && (
           <Card className="p-6">
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
               <Award className="h-5 w-5 text-purple-600" />
-              VIP Membership Plans
+              Subscription Plans
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {Object.entries(vipPlans).map(([key, plan]) => (
