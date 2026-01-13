@@ -204,7 +204,7 @@ const NotificationBell = ({ user }) => {
                   <Bell className="w-12 h-12 text-gray-700 mx-auto mb-3" />
                   <p className="text-gray-500">No notifications yet</p>
                   <p className="text-gray-600 text-sm mt-1">
-                    You'll see new followers and messages here
+                    You&apos;ll see new followers and messages here
                   </p>
                 </div>
               ) : (
