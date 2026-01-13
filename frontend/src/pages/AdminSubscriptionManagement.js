@@ -49,6 +49,18 @@ const AdminSubscriptionManagement = ({ user }) => {
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [actionNotes, setActionNotes] = useState('');
   const [processing, setProcessing] = useState(false);
+  
+  // Manual subscription update
+  const [editingUser, setEditingUser] = useState(null);
+  const [manualSubForm, setManualSubForm] = useState({
+    plan: 'explorer',
+    duration: 'monthly',
+    payment_method: 'admin_manual',
+    payment_reference: '',
+    amount_paid: 0,
+    is_free: false,
+    notes: ''
+  });
 
   const planIcons = {
     explorer: Users,
