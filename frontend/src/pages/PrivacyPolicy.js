@@ -259,18 +259,24 @@ const PrivacyPolicy = () => {
       id: 'contact',
       title: '11. Contact Us',
       icon: Bell,
-      content: `
-        <p>For privacy-related questions or requests:</p>
-        <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-          <p><strong>Grievance Officer</strong></p>
-          <p class="mt-2">Email: privacy@parasreward.com</p>
-          <p>Phone: +91 98765 43210</p>
-          <p class="mt-2">Address: Mumbai, Maharashtra, India</p>
-        </div>
-        <p class="mt-4">Response Time: Within 30 days of receipt.</p>
-      `
+      content: null,  // Will be rendered dynamically
+      dynamicContent: true
     }
   ];
+
+  // Dynamic contact content renderer
+  const renderContactSection = () => (
+    <div>
+      <p>For privacy-related questions or requests:</p>
+      <div className="mt-4 p-4 bg-gray-800 rounded-lg">
+        <p><strong className="text-white">Grievance Officer</strong></p>
+        <p className="mt-2">Email: {contactInfo.email}</p>
+        <p>Phone: {contactInfo.phone}</p>
+        <p className="mt-2">Address: {contactInfo.address}</p>
+      </div>
+      <p className="mt-4">Response Time: Within 30 days of receipt.</p>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
