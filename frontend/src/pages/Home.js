@@ -526,27 +526,6 @@ const Home = ({ user, onLogout }) => {
         </div>
       </div>
 
-      {/* CTA Section */}
-      <div className="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl sm:text-5xl font-bold text-white mb-6">
-            Ready to Start Earning?
-          </h2>
-          <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
-            Join thousands of users already earning daily rewards. No investment, no risk.
-          </p>
-          <Link to="/register">
-            <Button 
-              size="lg"
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-12 py-7 text-lg rounded-2xl shadow-2xl hover:shadow-purple-500/50 transition-all duration-300 hover:scale-105"
-            >
-              Create Free Account
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
-        </div>
-      </div>
-
       {/* Footer */}
       <Footer />
     </div>
