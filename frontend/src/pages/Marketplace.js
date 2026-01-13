@@ -109,7 +109,7 @@ const ProductCard = ({ product, isVip, onAddToCart }) => {
         
         {/* Pricing */}
         <div className="flex items-end gap-2 mb-3">
-          <span className="text-lg font-bold text-blue-600">{product.prc_price?.toLocaleString()} Pts</span>
+          <span className="text-lg font-bold text-blue-600">{product.prc_price?.toLocaleString()} PRC</span>
           {product.inr_price > 0 && (
             <span className="text-sm text-gray-400">₹ {product.inr_price?.toLocaleString()}</span>
           )}
@@ -457,8 +457,8 @@ const Marketplace = ({ user }) => {
         {/* Balance Card */}
         <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 flex items-center justify-between">
           <div>
-            <p className="text-blue-200 text-xs">Your Points Balance</p>
-            <p className="text-2xl font-bold">{(userData?.prc_balance || 0).toLocaleString()} Pts</p>
+            <p className="text-blue-200 text-xs">Your PRC Balance</p>
+            <p className="text-2xl font-bold">{(userData?.prc_balance || 0).toLocaleString()} PRC</p>
           </div>
           {!isVip && (
             <button 
@@ -701,7 +701,7 @@ const Marketplace = ({ user }) => {
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-gray-800 text-sm font-medium truncate">{product?.name}</p>
-                              <p className="text-blue-600 font-bold text-sm">{product?.prc_price?.toLocaleString()} Pts</p>
+                              <p className="text-blue-600 font-bold text-sm">{product?.prc_price?.toLocaleString()} PRC</p>
                             </div>
                             <div className="flex items-center gap-2">
                               <button 
@@ -726,7 +726,7 @@ const Marketplace = ({ user }) => {
                     <div className="border-t border-gray-200 mt-4 pt-4">
                       <div className="flex items-center justify-between mb-4">
                         <span className="text-gray-500">Total</span>
-                        <span className="text-2xl font-bold text-blue-600">{cartTotal.toLocaleString()} Pts</span>
+                        <span className="text-2xl font-bold text-blue-600">{cartTotal.toLocaleString()} PRC</span>
                       </div>
                       <Button
                         onClick={placeOrder}
