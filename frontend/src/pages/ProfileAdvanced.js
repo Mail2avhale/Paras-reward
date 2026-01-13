@@ -50,6 +50,11 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   const [showDeleteSection, setShowDeleteSection] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
+  
+  // Privacy settings
+  const [isProfilePublic, setIsProfilePublic] = useState(true);
+  const [allowMessages, setAllowMessages] = useState(true);
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
 
   const t = {
     profile: language === 'mr' ? 'प्रोफाइल' : language === 'hi' ? 'प्रोफ़ाइल' : 'Profile',
