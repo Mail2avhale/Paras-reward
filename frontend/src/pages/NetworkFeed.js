@@ -27,7 +27,9 @@ const NetworkFeed = ({ user }) => {
   const [hasMoreGlobal, setHasMoreGlobal] = useState(true);
   const [hasMoreNetwork, setHasMoreNetwork] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const ITEMS_PER_PAGE = 20;
+  const [globalTotal, setGlobalTotal] = useState(0);
+  const [networkTotal, setNetworkTotal] = useState(0);
+  const ITEMS_PER_PAGE = 10; // Reduced for easier pagination visibility
 
   useEffect(() => {
     fetchData();
