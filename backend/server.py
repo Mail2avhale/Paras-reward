@@ -20152,7 +20152,7 @@ async def send_message(request: Request):
     await db.messages.insert_one(message)
     
     # Create notification for receiver
-    await create_notification(
+    await create_social_notification(
         user_uid=receiver_uid,
         notification_type="new_message",
         title="New Message",
