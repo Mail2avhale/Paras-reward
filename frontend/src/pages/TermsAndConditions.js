@@ -1,9 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, AlertTriangle, Shield, Globe, FileText, CheckCircle, XCircle, Info, Coins, Scale } from 'lucide-react';
+import axios from 'axios';
+
+const API = process.env.REACT_APP_BACKEND_URL;
 
 const TermsAndConditions = () => {
   const navigate = useNavigate();
+  const [contactEmail, setContactEmail] = useState('support@parasreward.com');
+
+  useEffect(() => {
+    fetchContactInfo();
+  }, []);
+
+  const fetchContactInfo = async () => {
+    try {
+      const response = await axios.get(`${API}/api/admin/contact-settings`);
+      setContactEmail(response.data.email_support || 'support@parasreward.com');
+    } catch (error) {
+      console.error('Error fetching contact info:', error);
+    }
+  };
 
   const sections = [
     {
