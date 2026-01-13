@@ -217,7 +217,21 @@ const DailyRewards = ({ user }) => {
     );
   }
 
-  const isVip = userData?.membership_type === 'vip';
+  // Get subscription plan info
+  const subscriptionPlan = userData?.subscription_plan || 'explorer';
+  const hasPaidPlan = ['startup', 'growth', 'elite'].includes(subscriptionPlan);
+  
+  // Get multiplier display
+  const getMultiplierDisplay = (plan) => {
+    const multipliers = {
+      'explorer': '1x',
+      'startup': '1.5x',
+      'growth': '2x',
+      'elite': '3x'
+    };
+    return multipliers[plan] || '1x';
+  };
+  
   const canCollect = sessionPRC >= 0.01;
 
   return (
