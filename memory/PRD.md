@@ -28,11 +28,14 @@ Build a comprehensive reward and loyalty platform with subscription-based member
    - Explorer users: PRC burns after 2 days inactivity
    - Paid users: PRC never burns
 
-3. **Marketplace**
+3. **Marketplace** (OVERHAULED - Jan 13, 2026)
+   - **SBI Rewardz-style design with blue header, category tabs, carousels**
    - Product ordering with PRC
    - Paid plans only (Startup/Growth/Elite)
    - **Direct Delivery by Delivery Partner** (NEW - No outlet model)
    - **NO CASHBACK on shopping** (Removed Jan 12, 2026)
+   - **Product Badges**: New, Trending, Hot Deal, Limited Offer, Bestseller
+   - **Redeem Your Points** section with Merchandise, E-vouchers, Recharge & Bills
 
 4. **Bill Payment Services**
    - Mobile recharge, Electricity, Credit cards
@@ -55,7 +58,57 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 
 ## What's Been Implemented
 
-### January 13, 2026 (Current Session)
+### January 13, 2026 (Current Session - Marketplace Overhaul)
+
+#### Marketplace Overhaul - SBI Rewardz Style ✅ (COMPLETED)
+
+**Admin Marketplace (`AdminMarketplace.js`) - Complete Product Management:**
+- Stats cards: Total, Active, In Stock, Out of Stock, On Home, With Badge
+- Filters: Search, Category filter, Status filter (Active/Inactive)
+- Product form with all new fields:
+  - **Basic Info**: Name, Description, Category, Badge (New/Trending/Hot Deal/Limited/Bestseller)
+  - **Pricing**: PRC Price, Auto-calculated INR (1 PRC = ₹4), Cost to Company, Margin %
+  - **Delivery**: Charge Type (Fixed/Percentage/Free), Charge Value
+  - **Stock**: Quantity, Status (In Stock/Limited/Out of Stock), Product Status
+  - **Home Page**: "Show on Home" checkbox
+  - **Image Upload**: Direct file upload to `/uploads/products/`
+- CRUD operations with multipart form data for image upload
+- Pagination support
+
+**User Marketplace (`Marketplace.js`) - SBI Rewardz Style:**
+- **Blue header** with gradient (from-blue-800 to-blue-900)
+- **Points balance card** with "Upgrade" button for free users
+- **Search bar** with white background
+- **Category tabs** with icons: All, Electronics, Home & Kitchen, Fashion, etc.
+- **"Redeem Your Points" section** with 3 cards:
+  - Merchandise (blue gradient) → /marketplace
+  - E-vouchers (purple gradient) → /gift-vouchers
+  - Recharge & Bills (green gradient) → /bill-payments
+- **Product carousels** for:
+  - 🏠 Exclusive Products (show_on_home = true)
+  - 🔥 Trending Now (badge = 'trending')
+  - 🆕 New Arrivals (badge = 'new')
+  - 💥 Hot Deals (badge = 'hot_deal' or 'bestseller')
+- **Product cards** with:
+  - Image with hover zoom effect
+  - Badge display (NEW, Trending, Hot Deal, etc.)
+  - Discount percentage badge
+  - Out of Stock overlay
+  - Points price + INR equivalent
+  - Free Delivery indicator
+  - "Redeem Now" button
+- **Cart drawer** with quantity controls
+- **Pagination** for all products grid
+
+**Backend Updates (`server.py`):**
+- `POST /api/admin/products` - Multipart form data with image upload
+- `PUT /api/admin/products/{product_id}` - Update with image support
+- `GET /api/admin/settings/marketplace` - PRC to INR rate (default 4.0)
+- `PUT /api/admin/settings/marketplace` - Update marketplace settings
+- Cart API v2: `/api/v2/cart/{uid}/add`, `/api/v2/cart/{uid}`, `/api/v2/cart/{uid}/item/{product_id}`
+
+**App.js Route Updated:**
+- `/marketplace` now uses new `Marketplace.js` (SBI Rewardz style) instead of `MarketplaceEnhanced.js`
 
 #### Landing Page - Removed CTA Section ✅
 - Removed "Ready to Start Earning?" section from Home.js
