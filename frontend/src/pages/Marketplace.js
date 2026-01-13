@@ -331,7 +331,7 @@ const Marketplace = ({ user }) => {
 
   const removeFromCart = async (productId) => {
     try {
-      await axios.delete(`${API}/api/cart/${user.uid}/remove/${productId}`);
+      await axios.delete(`${API}/api/v2/cart/${user.uid}/item/${productId}`);
       setCart({
         ...cart,
         items: cart.items.filter(i => i.product_id !== productId)
