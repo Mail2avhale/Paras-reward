@@ -258,7 +258,7 @@ const Marketplace = ({ user }) => {
       
       // Fetch cart
       try {
-        const cartRes = await axios.get(`${API}/api/cart/${user.uid}`);
+        const cartRes = await axios.get(`${API}/api/v2/cart/${user.uid}`);
         setCart(cartRes.data || { items: [] });
       } catch (e) {
         setCart({ items: [] });
@@ -280,14 +280,11 @@ const Marketplace = ({ user }) => {
     }
     
     try {
-      await axios.post(`${API}/api/cart/${user.uid}/add`, {
-        product_id: product.product_id || product.id,
-        quantity: 1
-      });
+      const productId = product.product_id || product.id;
+      await axios.post(`${API}/api/v2/cart/${user.uid}/add?product_id=${productId}&quantity=1`);
       toast.success('Added to cart');
       
       // Update local cart
-      const productId = product.product_id || product.id;
       const existingItem = cart.items.find(i => i.product_id === productId);
       if (existingItem) {
         setCart({
@@ -315,11 +312,12 @@ const Marketplace = ({ user }) => {
       return;
     }
     
+    // For update, we'll remove and re-add with new quantity (since v2 doesn't have update endpoint)
     try {
-      await axios.put(`${API}/api/cart/${user.uid}/update`, {
-        product_id: productId,
-        quantity
-      });
+      // Remove first
+      await axios.delete(`${API}/api/v2/cart/${user.uid}/item/${productId}`);
+      // Add back with new quantity
+      await axios.post(`${API}/api/v2/cart/${user.uid}/add?product_id=${productId}&quantity=${quantity}`);
       setCart({
         ...cart,
         items: cart.items.map(i => 
