@@ -110,13 +110,32 @@ const ReferralsEnhanced = ({ user }) => {
           vipCount += users.filter(u => u.membership_type === 'vip').length;
         });
         
+        // Check for first referral celebration!
+        if (previousTotal !== null && previousTotal === 0 && totalCount === 1) {
+          // First friend joined! Trigger celebration
+          setShowCelebration(true);
+          triggerConfetti();
+          toast.success('🎉 Your first friend joined! Keep inviting!', { duration: 5000 });
+        }
+        setPreviousTotal(totalCount);
+        
         setReferralStats({ total: totalCount, active: activeCount, vip: vipCount });
       } catch (e) {
-        setReferralStats({ total: userResponse.data.referral_count || 0, active: 0, vip: 0 });
+        const refCount = userResponse.data.referral_count || 0;
+        
+        // Check for first referral using user data
+        if (previousTotal !== null && previousTotal === 0 && refCount === 1) {
+          setShowCelebration(true);
+          triggerConfetti();
+          toast.success('🎉 Your first friend joined! Keep inviting!', { duration: 5000 });
+        }
+        setPreviousTotal(refCount);
+        
+        setReferralStats({ total: refCount, active: 0, vip: 0 });
         setReferralLevels([1, 2, 3, 4, 5].map(level => ({
           level,
           users: [],
-          count: level === 1 ? (userResponse.data.referral_count || 0) : 0,
+          count: level === 1 ? refCount : 0,
           active_count: 0
         })));
       }
@@ -128,6 +147,18 @@ const ReferralsEnhanced = ({ user }) => {
       setLoading(false);
     }
   };
+
+  // Check localStorage for first-time celebration (persists across sessions)
+  useEffect(() => {
+    const hasSeenFirstReferralCelebration = localStorage.getItem(`first_referral_${user?.uid}`);
+    if (!hasSeenFirstReferralCelebration && referralStats.total === 1 && !loading) {
+      // First time seeing 1 referral - celebrate!
+      setShowCelebration(true);
+      triggerConfetti();
+      toast.success('🎉 Congratulations! Your first friend joined!', { duration: 5000 });
+      localStorage.setItem(`first_referral_${user?.uid}`, 'true');
+    }
+  }, [referralStats.total, loading, user?.uid, triggerConfetti]);
 
   const referralCode = userData?.referral_code || user?.referral_code || 'N/A';
   const referralLink = `https://parasreward.com/register?ref=${referralCode}`;
