@@ -221,9 +221,9 @@ const DailyRewards = ({ user }) => {
   const canCollect = sessionPRC >= 0.01;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-8">
-      {/* Header */}
-      <div className="px-5 pt-6 pb-4">
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
+      {/* Header - with safe area padding */}
+      <div className="px-5 pb-4" style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top, 1.5rem))' }}>
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/dashboard')}
