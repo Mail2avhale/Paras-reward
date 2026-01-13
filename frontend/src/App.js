@@ -213,7 +213,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/referrals/dashboard" element={user ? <ReferralDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/referrals/ai" element={user ? <ReferralDashboardAI user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/network" element={user ? <ReferralDashboardAI user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-            <Route path="/marketplace" element={user ? <MarketplaceEnhanced user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/marketplace" element={user ? <Marketplace user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/flash-sales" element={user ? <FlashSalesPage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/orders" element={user ? <Orders user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/vip" element={<Navigate to="/subscription" replace />} /> {/* Legacy VIP route redirects to new subscription system */}
