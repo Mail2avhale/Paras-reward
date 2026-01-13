@@ -48,6 +48,26 @@ const AdvancedUserManagement = () => {
     notes: ''
   });
 
+  // Subscription editing
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [subscriptionForm, setSubscriptionForm] = useState({
+    plan: 'explorer',
+    days: 30,
+    use_manual_expiry: false,
+    manual_expiry_date: '',
+    payment_method: 'admin_free',
+    amount_paid: 0,
+    is_free: true,
+    notes: ''
+  });
+  const [processingSubscription, setProcessingSubscription] = useState(false);
+
+  const calculateExpiryDate = (days) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return date.toISOString().split('T')[0];
+  };
+
   useEffect(() => {
     fetchUsers();
   }, [page, searchTerm, filterRole, filterMembership, filterKYC, showDeleted]);
