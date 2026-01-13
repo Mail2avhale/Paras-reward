@@ -403,7 +403,7 @@ const NetworkFeed = ({ user }) => {
                 <>
                   {/* Activity count */}
                   <div className="text-center text-gray-500 text-sm mb-4">
-                    Showing {globalFeed.length} of {globalTotal} activities
+                    Showing {globalFeed.length} activities
                   </div>
                   
                   {globalFeed.map((activity, index) => renderActivityItem(activity, index))}
@@ -420,13 +420,13 @@ const NetworkFeed = ({ user }) => {
                       ) : (
                         <>
                           <RefreshCw className="w-4 h-4" />
-                          Load More ({globalFeed.length}/{globalTotal})
+                          Load More
                         </>
                       )}
                     </button>
                   ) : globalFeed.length > 0 && (
                     <p className="text-center text-gray-600 text-sm mt-4 py-3">
-                      — End of activity feed —
+                      — All {globalFeed.length} activities loaded —
                     </p>
                   )}
                 </>
