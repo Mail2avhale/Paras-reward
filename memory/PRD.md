@@ -556,21 +556,24 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 ## Pending/Future Tasks
 
 ### P0 (Critical - Needs User Verification)
-- **KYC Document Upload**: Component rewritten and tested - **AWAITING USER TESTING on mobile device** (camera/gallery functionality)
+- **KYC Document Upload**: Component rewritten and tested - **CONFIRMED WORKING by user on mobile device** ✅
 
 ### P1 (High Priority)
 - AdMob + Unity Ads Integration
 - AI Smart Financial Advisor
 - Automated Monthly Reports
+- Shareable Achievement Cards for social feature
 
 ### P2 (Medium Priority)
 - AI Product Recommendations
 - PWA functionality
+- Plan upgrade/downgrade logic for subscriptions
 - ~~Referral earnings history page~~ ✅ COMPLETED
 - ~~App Loading Speed Optimization~~ ✅ COMPLETED
 - ~~Pagination on history pages~~ ✅ COMPLETED (GiftVoucherRedemption.js, BillPayments.js)
 - ~~KYC Document Upload Fix (camera/gallery issue)~~ ✅ FIXED (Jan 10, 2026)
 - ~~Forgot Password Flow~~ ✅ VERIFIED (Jan 12, 2026)
+- ~~Social Networking Feature~~ ✅ COMPLETED (Jan 13, 2026)
 
 ### P3 (Low Priority)
 - Hierarchical Reporting Structure
