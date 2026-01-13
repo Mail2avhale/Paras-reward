@@ -96,9 +96,9 @@ const FollowersList = ({ user, type = 'followers' }) => {
   const title = type === 'followers' ? 'Followers' : 'Following';
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24 pt-16">
       {/* Header */}
-      <div className="px-5 pb-4" style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top, 1.5rem))' }}>
+      <div className="px-5 pb-4 pt-4">
         <div className="flex items-center gap-4 mb-4">
           <button 
             onClick={() => navigate(-1)}
