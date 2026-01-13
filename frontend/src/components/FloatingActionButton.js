@@ -7,7 +7,7 @@ const FloatingActionButton = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   const actions = [
-    { icon: Zap, label: 'Start Mining', color: 'from-yellow-500 to-orange-500', route: '/mining' },
+    { icon: Zap, label: 'Earn Rewards', color: 'from-yellow-500 to-orange-500', route: '/mining' },
     { icon: ShoppingBag, label: 'Shop', color: 'from-purple-500 to-pink-500', route: '/marketplace' },
     { icon: CreditCard, label: 'Bill Pay', color: 'from-blue-500 to-cyan-500', route: '/bill-payments' },
     { icon: Gift, label: 'Vouchers', color: 'from-green-500 to-emerald-500', route: '/gift-vouchers' },
