@@ -274,7 +274,7 @@ const AdminSystemSettings = ({ user }) => {
             <div className="mt-6 flex justify-end">
               <Button onClick={handleSaveVIPPlans} disabled={loading}>
                 <Save className="h-4 w-4 mr-2" />
-                Save VIP Plans
+                Save Subscription Plans
               </Button>
             </div>
           </Card>
