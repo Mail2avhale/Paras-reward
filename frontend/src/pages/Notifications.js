@@ -7,11 +7,13 @@ import {
   ArrowLeft, Bell, Trash2, CheckCheck, UserPlus, MessageCircle, 
   Award, Filter, RefreshCw 
 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
 const Notifications = ({ user }) => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, unread
@@ -130,10 +132,10 @@ const Notifications = ({ user }) => {
     const now = new Date();
     const diff = now - date;
     
-    if (diff < 60000) return 'Just now';
-    if (diff < 3600000) return `${Math.floor(diff / 60000)} minutes ago`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)} hours ago`;
-    if (diff < 604800000) return `${Math.floor(diff / 86400000)} days ago`;
+    if (diff < 60000) return t('justNow');
+    if (diff < 3600000) return t('minutesAgo').replace('{count}', Math.floor(diff / 60000));
+    if (diff < 86400000) return t('hoursAgo').replace('{count}', Math.floor(diff / 3600000));
+    if (diff < 604800000) return t('daysAgo').replace('{count}', Math.floor(diff / 86400000));
     return date.toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric',
@@ -156,9 +158,9 @@ const Notifications = ({ user }) => {
               <ArrowLeft className="w-5 h-5 text-white" />
             </button>
             <div>
-              <h1 className="text-white text-xl font-bold">Notifications</h1>
+              <h1 className="text-white text-xl font-bold">{t('notifications')}</h1>
               <p className="text-gray-500 text-sm">
-                {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
+                {unreadCount > 0 ? `${unreadCount} ${t('unread')}` : t('allCaughtUpNotifications')}
               </p>
             </div>
           </div>
@@ -181,7 +183,7 @@ const Notifications = ({ user }) => {
                   : 'bg-gray-800 text-gray-400 hover:text-white'
               }`}
             >
-              All
+              {t('all')}
             </button>
             <button
               onClick={() => setFilter('unread')}
@@ -191,7 +193,7 @@ const Notifications = ({ user }) => {
                   : 'bg-gray-800 text-gray-400 hover:text-white'
               }`}
             >
-              Unread
+              {t('unread')}
             </button>
           </div>
           
@@ -203,7 +205,7 @@ const Notifications = ({ user }) => {
                   className="px-3 py-2 text-purple-400 text-sm font-medium hover:text-purple-300"
                 >
                   <CheckCheck className="w-4 h-4 inline mr-1" />
-                  Read all
+                  {t('readAll')}
                 </button>
               )}
               <button
@@ -211,7 +213,7 @@ const Notifications = ({ user }) => {
                 className="px-3 py-2 text-red-400 text-sm font-medium hover:text-red-300"
               >
                 <Trash2 className="w-4 h-4 inline mr-1" />
-                Clear
+                {t('clear')}
               </button>
             </div>
           )}
@@ -238,11 +240,11 @@ const Notifications = ({ user }) => {
         ) : notifications.length === 0 ? (
           <div className="text-center py-16">
             <Bell className="w-16 h-16 text-gray-700 mx-auto mb-4" />
-            <h3 className="text-white font-bold mb-2">No notifications</h3>
+            <h3 className="text-white font-bold mb-2">{t('noNotifications')}</h3>
             <p className="text-gray-500 text-sm">
               {filter === 'unread' 
-                ? "You've read all your notifications!" 
-                : "You'll see new followers and messages here"}
+                ? t('youveReadAll')
+                : t('youllSeeNotifications')}
             </p>
           </div>
         ) : (
