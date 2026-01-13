@@ -1,10 +1,12 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, Zap, Gamepad2, User } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLanguage();
 
   // Determine active tab based on current route
   const getActiveTab = () => {
@@ -19,10 +21,10 @@ const BottomNav = () => {
   const activeTab = getActiveTab();
 
   const navItems = [
-    { id: 'home', label: 'Home', icon: Home, route: '/dashboard' },
-    { id: 'rewards', label: 'Rewards', icon: Zap, route: '/daily-rewards' },
-    { id: 'game', label: 'Play', icon: Gamepad2, route: '/game' },
-    { id: 'profile', label: 'Profile', icon: User, route: '/profile' },
+    { id: 'home', label: t('home'), icon: Home, route: '/dashboard' },
+    { id: 'rewards', label: t('rewards'), icon: Zap, route: '/daily-rewards' },
+    { id: 'game', label: t('tapGame'), icon: Gamepad2, route: '/game' },
+    { id: 'profile', label: t('profile'), icon: User, route: '/profile' },
   ];
 
   return (
