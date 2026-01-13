@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://communiapp-1.preview.emergentagent.com",
+    "url": "https://netwrkpro-admin.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
