@@ -19472,6 +19472,81 @@ async def get_stockist_profit(stockist_id: str):
     }
 
 
+# ========== REFERRAL LIVE ACTIVITY ==========
+
+@api_router.get("/referrals/live-activity")
+async def get_referral_live_activity(limit: int = 10):
+    """Get recent referral achievements and milestones for live activity feed"""
+    
+    milestones = [
+        {"count": 1, "badge": "🌱", "title": "First Steps", "color": "emerald"},
+        {"count": 5, "badge": "⭐", "title": "Rising Star", "color": "blue"},
+        {"count": 10, "badge": "🔥", "title": "On Fire", "color": "orange"},
+        {"count": 25, "badge": "💎", "title": "Diamond", "color": "purple"},
+        {"count": 50, "badge": "👑", "title": "Legend", "color": "amber"},
+        {"count": 100, "badge": "🏆", "title": "Champion", "color": "pink"},
+    ]
+    
+    activities = []
+    
+    try:
+        # Get recent users with referrals
+        users_with_referrals = await db.users.find(
+            {"referral_count": {"$gt": 0}},
+            {"_id": 0, "name": 1, "referral_count": 1, "created_at": 1}
+        ).sort("created_at", -1).limit(20).to_list(20)
+        
+        import random
+        
+        for user in users_with_referrals:
+            ref_count = user.get("referral_count", 0)
+            name = user.get("name", "User")
+            # Anonymize name
+            display_name = name.split()[0][:3] + "***" if name else "User"
+            
+            # Find the highest achieved milestone
+            achieved_milestone = None
+            for m in reversed(milestones):
+                if ref_count >= m["count"]:
+                    achieved_milestone = m
+                    break
+            
+            if achieved_milestone:
+                activities.append({
+                    "id": f"milestone_{random.randint(1000, 9999)}",
+                    "type": "milestone",
+                    "user_name": display_name,
+                    "milestone": achieved_milestone,
+                    "timestamp": user.get("created_at", datetime.now(timezone.utc).isoformat())
+                })
+        
+        # Also get recent referral joins
+        recent_referrals = await db.users.find(
+            {"referred_by": {"$ne": None}},
+            {"_id": 0, "name": 1, "created_at": 1}
+        ).sort("created_at", -1).limit(10).to_list(10)
+        
+        for ref_user in recent_referrals:
+            name = ref_user.get("name", "User")
+            display_name = name.split()[0][:3] + "***" if name else "User"
+            
+            activities.append({
+                "id": f"join_{random.randint(1000, 9999)}",
+                "type": "referral_join",
+                "user_name": display_name,
+                "timestamp": ref_user.get("created_at", datetime.now(timezone.utc).isoformat())
+            })
+        
+        # Sort by timestamp and limit
+        activities.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+        
+        return {"activities": activities[:limit]}
+        
+    except Exception as e:
+        print(f"Error fetching referral live activity: {e}")
+        return {"activities": []}
+
+
 # ========== REFERRAL PROGRAM ==========
 
 @api_router.get("/referrals/{user_id}/tree")
