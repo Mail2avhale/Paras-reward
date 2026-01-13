@@ -205,7 +205,7 @@ const DashboardModern = ({ user, onLogout }) => {
       <div className="px-5 pb-4 pt-20" style={{ paddingTop: 'max(5rem, calc(env(safe-area-inset-top, 0px) + 4rem))' }}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-gray-400 text-sm">Welcome back,</p>
+            <p className="text-gray-400 text-sm">{t('welcomeBack')}</p>
             <h1 className="text-white text-xl font-bold">
               {userData?.name || user?.email?.split('@')[0] || 'User'}
             </h1>
@@ -637,13 +637,13 @@ const DashboardModern = ({ user, onLogout }) => {
       <div className="px-5 mb-4">
         <div className="grid grid-cols-4 gap-3">
           {[
-            { icon: Star, label: 'Rewards', route: '/daily-rewards', gradient: 'from-purple-600 to-violet-700' },
-            { icon: Gamepad2, label: 'Play', route: '/game', gradient: 'from-pink-600 to-rose-700' },
-            { icon: UserPlus, label: 'Invite', route: '/referrals', gradient: 'from-blue-600 to-indigo-700' },
-            { icon: ShoppingBag, label: 'Shop', route: '/marketplace', gradient: 'from-emerald-600 to-teal-700' },
+            { icon: Star, label: t('rewards'), route: '/daily-rewards', gradient: 'from-purple-600 to-violet-700' },
+            { icon: Gamepad2, label: t('play'), route: '/game', gradient: 'from-pink-600 to-rose-700' },
+            { icon: UserPlus, label: t('invite'), route: '/referrals', gradient: 'from-blue-600 to-indigo-700' },
+            { icon: ShoppingBag, label: t('shop'), route: '/marketplace', gradient: 'from-emerald-600 to-teal-700' },
           ].map((action, index) => (
             <motion.button
-              key={action.label}
+              key={action.route}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
@@ -666,7 +666,7 @@ const DashboardModern = ({ user, onLogout }) => {
             className="flex items-center justify-center gap-2 p-3 rounded-xl bg-gradient-to-br from-cyan-600 to-teal-700 shadow-lg"
           >
             <Users className="w-5 h-5 text-white" />
-            <span className="text-sm font-semibold text-white">Network</span>
+            <span className="text-sm font-semibold text-white">{t('network')}</span>
           </motion.button>
           <motion.button
             initial={{ opacity: 0, y: 20 }}
@@ -676,7 +676,7 @@ const DashboardModern = ({ user, onLogout }) => {
             className="flex items-center justify-center gap-2 p-3 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 shadow-lg"
           >
             <MessageCircle className="w-5 h-5 text-white" />
-            <span className="text-sm font-semibold text-white">Messages</span>
+            <span className="text-sm font-semibold text-white">{t('messages')}</span>
           </motion.button>
         </div>
       </div>
@@ -706,8 +706,8 @@ const DashboardModern = ({ user, onLogout }) => {
                       <Crown className="w-5 h-5 text-yellow-400" />
                     </div>
                     <div>
-                      <p className="text-yellow-400 font-bold text-sm">Upgrade to VIP</p>
-                      <p className="text-amber-200/60 text-xs">2x Rewards • No Expiry</p>
+                      <p className="text-yellow-400 font-bold text-sm">{t('upgradeToVip')}</p>
+                      <p className="text-amber-200/60 text-xs">2x {t('rewards')} • {t('never')} {t('prcExpires')}</p>
                     </div>
                   </div>
                   <div className="bg-yellow-400 text-black px-3 py-1.5 rounded-lg font-bold text-sm">
@@ -732,8 +732,8 @@ const DashboardModern = ({ user, onLogout }) => {
                       <TrendingUp className="w-5 h-5 text-purple-400" />
                     </div>
                     <div>
-                      <p className="text-white font-bold text-sm">Your Progress</p>
-                      <p className="text-gray-400 text-xs">Total: {stats.totalMined.toFixed(0)} PRC</p>
+                      <p className="text-white font-bold text-sm">{t('yourProgress')}</p>
+                      <p className="text-gray-400 text-xs">{t('total')}: {stats.totalMined.toFixed(0)} PRC</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -787,7 +787,7 @@ const DashboardModern = ({ user, onLogout }) => {
                   : 'text-gray-400 hover:text-gray-300'
               }`}
             >
-              Your Activity
+              {t('yourActivity')}
             </button>
             <button
               onClick={() => setActivityTab('live')}
@@ -798,7 +798,7 @@ const DashboardModern = ({ user, onLogout }) => {
               }`}
             >
               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              Live Activity
+              {t('liveActivity')}
             </button>
           </div>
 
@@ -809,12 +809,12 @@ const DashboardModern = ({ user, onLogout }) => {
               recentTransactions.length === 0 ? (
                 <div className="text-center py-8">
                   <Clock className="w-10 h-10 mx-auto mb-2 text-gray-600" />
-                  <p className="text-gray-500 text-sm">No activity yet</p>
+                  <p className="text-gray-500 text-sm">{t('noActivityYet')}</p>
                   <button 
                     onClick={() => navigate('/daily-rewards')}
                     className="mt-2 text-amber-500 text-sm font-medium"
                   >
-                    Start Earning →
+                    {t('startEarning')} →
                   </button>
                 </div>
               ) : (
