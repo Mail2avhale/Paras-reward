@@ -449,8 +449,13 @@ const DashboardModern = ({ user, onLogout }) => {
               </div>
               <div className="text-right">
                 <p className="text-gray-600 text-[8px] tracking-widest mb-0.5">STATUS</p>
-                <p className={`text-sm font-bold ${stats.membershipType === 'vip' ? 'text-amber-400' : 'text-gray-500'}`}>
-                  {stats.membershipType === 'vip' ? '★ VIP' : 'FREE'}
+                <p className={`text-sm font-bold ${
+                  stats.subscriptionPlan === 'elite' ? 'text-amber-400' :
+                  stats.subscriptionPlan === 'growth' ? 'text-emerald-400' :
+                  stats.subscriptionPlan === 'startup' ? 'text-blue-400' :
+                  'text-gray-500'
+                }`}>
+                  {hasPaidPlan ? `★ ${getPlanDisplayName(stats.subscriptionPlan)}` : 'FREE'}
                 </p>
               </div>
             </div>
@@ -466,7 +471,7 @@ const DashboardModern = ({ user, onLogout }) => {
           </div>
 
           {/* PRC Expiry Warning for Free Users */}
-          {stats.membershipType !== 'vip' && stats.prcBalance > 0 && (
+          {!hasPaidPlan && stats.prcBalance > 0 && (
             <div className="relative z-10 px-5 pb-4 -mt-2">
               <PRCExpiryTimer 
                 userId={user?.uid}
