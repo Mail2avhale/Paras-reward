@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { 
   Users, Search, Edit, Trash2, DollarSign, Award, 
-  ChevronLeft, ChevronRight, X, Plus, Minus, Settings, Shield
+  ChevronLeft, ChevronRight, X, Plus, Minus, Settings, Shield,
+  Calendar, Edit2
 } from 'lucide-react';
 import ManagerPermissions from '@/components/ManagerPermissions';
 
