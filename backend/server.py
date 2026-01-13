@@ -9408,100 +9408,107 @@ class Order(BaseModel):
 # ========== PRODUCT MANAGEMENT (ADMIN) ==========
 
 @api_router.post("/admin/products")
-async def create_product(request: Request):
-    """Create new product (Admin) with image upload support"""
-    data = await request.json()
+async def create_product(
+    name: str = Form(...),
+    description: str = Form(""),
+    prc_price: float = Form(...),
+    inr_price: float = Form(0),
+    category: str = Form(...),
+    badge: str = Form(""),
+    show_on_home: bool = Form(False),
+    stock_quantity: int = Form(0),
+    stock_status: str = Form("in_stock"),
+    delivery_charge_type: str = Form("fixed"),
+    delivery_charge_value: float = Form(0),
+    cost_to_company: float = Form(0),
+    margin_percent: float = Form(0),
+    product_status: str = Form("active"),
+    created_by: str = Form("admin"),
+    image: Optional[UploadFile] = File(None)
+):
+    """Create new product (Admin) with multipart form data and image upload"""
     
-    # Validate required fields
-    required = ["name", "prc_price", "type"]
-    for field in required:
-        if field not in data:
-            raise HTTPException(status_code=400, detail=f"{field} is required")
+    # Generate product ID and SKU
+    now = datetime.now(timezone.utc)
+    product_id = f"PRD-{now.strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+    category_prefix = (category[:3] if category else "GEN").upper()
+    random_suffix = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
+    sku = f"{category_prefix}-{random_suffix}"
     
-    # Auto-generate SKU if not provided
-    if not data.get("sku"):
-        category_prefix = (data.get("category", "GEN")[:3]).upper()
-        random_suffix = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
-        data["sku"] = f"{category_prefix}-{random_suffix}"
-    
-    # Check if SKU already exists
-    existing = await db.products.find_one({"sku": data["sku"]})
+    # Check if SKU exists
+    existing = await db.products.find_one({"sku": sku})
     if existing:
-        raise HTTPException(status_code=400, detail="SKU already exists")
+        sku = f"{category_prefix}-{random_suffix}{''.join(secrets.choice(string.digits) for _ in range(2))}"
     
-    # Handle image upload (base64)
-    if data.get("image_base64"):
+    # Handle image upload
+    image_url = None
+    if image and image.filename:
         try:
-            # Decode and save image
-            image_data = data["image_base64"]
-            if "," in image_data:
-                image_data = image_data.split(",")[1]
+            upload_dir = Path("/app/frontend/public/uploads/products")
+            upload_dir.mkdir(parents=True, exist_ok=True)
             
-            image_bytes = base64.b64decode(image_data)
+            # Generate unique filename
+            ext = Path(image.filename).suffix or ".jpg"
+            filename = f"product_{sku}_{int(now.timestamp())}{ext}"
+            filepath = upload_dir / filename
             
-            # Save to file
-            upload_dir = "/app/uploads/products"
-            os.makedirs(upload_dir, exist_ok=True)
-            
-            filename = f"product_{data['sku']}_{int(datetime.now().timestamp())}.jpg"
-            filepath = os.path.join(upload_dir, filename)
-            
+            # Save file
+            content = await image.read()
             with open(filepath, "wb") as f:
-                f.write(image_bytes)
+                f.write(content)
             
-            # Set image URL (relative path for frontend)
-            data["image_url"] = f"/uploads/products/{filename}"
-            del data["image_base64"]
+            image_url = f"/uploads/products/{filename}"
         except Exception as e:
             logging.error(f"Error saving product image: {e}")
-            # Continue without image if upload fails
     
-    # Auto-calculate INR equivalent (assuming 1 PRC = 1 INR for simplicity, adjust ratio as needed)
-    prc_to_inr_ratio = 1.0  # Configure this ratio
-    data["inr_equivalent"] = round(data["prc_price"] * prc_to_inr_ratio, 2)
+    # Auto-calculate INR if not provided (default 4 PRC = 1 INR)
+    prc_to_inr_rate = 4.0
+    if inr_price <= 0:
+        inr_price = round(prc_price * prc_to_inr_rate, 2)
     
-    # Auto-calculate margin if cost_to_company is provided
-    if data.get("cost_to_company", 0) > 0 and data.get("cash_price", 0) > 0:
-        cost = data["cost_to_company"]
-        selling_price = data.get("cash_price", 0) + data["inr_equivalent"]
-        if selling_price > 0:
-            data["margin_percent"] = round(((selling_price - cost) / selling_price) * 100, 2)
+    # Auto-calculate stock status based on quantity
+    if stock_quantity == 0:
+        stock_status = "out_of_stock"
+    elif stock_quantity < 10:
+        stock_status = "limited"
     
-    # Set stock status based on quantity
-    stock_qty = data.get("total_stock", 0) or data.get("available_stock", 0)
-    if stock_qty == 0:
-        data["stock_status"] = "out_of_stock"
-    elif stock_qty <= 10:
-        data["stock_status"] = "limited"
-    else:
-        data["stock_status"] = "in_stock"
+    # Auto-calculate margin if cost is provided
+    if cost_to_company > 0 and inr_price > 0:
+        margin_percent = round(((inr_price - cost_to_company) / inr_price) * 100, 2)
     
-    # Sync available_stock with total_stock if not set
-    if "available_stock" not in data:
-        data["available_stock"] = data.get("total_stock", 0)
+    # Build product document
+    product_data = {
+        "product_id": product_id,
+        "sku": sku,
+        "name": name,
+        "description": description,
+        "prc_price": prc_price,
+        "inr_price": inr_price,
+        "category": category,
+        "badge": badge if badge else None,
+        "show_on_home": show_on_home,
+        "stock_quantity": stock_quantity,
+        "stock_status": stock_status,
+        "delivery_charge_type": delivery_charge_type,
+        "delivery_charge_value": delivery_charge_value,
+        "cost_to_company": cost_to_company,
+        "margin_percent": margin_percent,
+        "product_status": product_status,
+        "created_by": created_by,
+        "image_url": image_url,
+        "is_active": product_status == "active",
+        "visible": True,
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat()
+    }
     
-    # Set timestamps
-    now = datetime.now(timezone.utc)
-    data["created_at"] = now.isoformat()
-    data["updated_at"] = now.isoformat()
-    
-    # Generate product_id
-    data["product_id"] = f"PRD-{now.strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
-    
-    # Set defaults
-    data.setdefault("product_status", "active")
-    data.setdefault("is_active", True)
-    data.setdefault("visible", True)
-    data.setdefault("delivery_charge_type", "fixed")
-    data.setdefault("delivery_charge_value", 0)
-    
-    await db.products.insert_one(data)
+    await db.products.insert_one(product_data)
     
     return {
-        "message": "Product created successfully", 
-        "product_id": data["product_id"],
-        "sku": data["sku"],
-        "inr_equivalent": data["inr_equivalent"]
+        "message": "Product created successfully",
+        "product_id": product_id,
+        "sku": sku,
+        "image_url": image_url
     }
 
 @api_router.get("/admin/products")
@@ -9592,17 +9599,106 @@ async def get_all_products_admin(
     }
 
 @api_router.put("/admin/products/{product_id}")
-async def update_product(product_id: str, request: Request):
-    """Update product (Admin)"""
-    data = await request.json()
-    data["updated_at"] = datetime.now(timezone.utc).isoformat()
+async def update_product(
+    product_id: str,
+    name: str = Form(None),
+    description: str = Form(None),
+    prc_price: float = Form(None),
+    inr_price: float = Form(None),
+    category: str = Form(None),
+    badge: str = Form(None),
+    show_on_home: bool = Form(None),
+    stock_quantity: int = Form(None),
+    stock_status: str = Form(None),
+    delivery_charge_type: str = Form(None),
+    delivery_charge_value: float = Form(None),
+    cost_to_company: float = Form(None),
+    margin_percent: float = Form(None),
+    product_status: str = Form(None),
+    image: Optional[UploadFile] = File(None)
+):
+    """Update product (Admin) with multipart form data"""
+    
+    # Get existing product
+    existing = await db.products.find_one({"product_id": product_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    now = datetime.now(timezone.utc)
+    update_data = {"updated_at": now.isoformat()}
+    
+    # Handle image upload
+    if image and image.filename:
+        try:
+            upload_dir = Path("/app/frontend/public/uploads/products")
+            upload_dir.mkdir(parents=True, exist_ok=True)
+            
+            ext = Path(image.filename).suffix or ".jpg"
+            filename = f"product_{product_id}_{int(now.timestamp())}{ext}"
+            filepath = upload_dir / filename
+            
+            content = await image.read()
+            with open(filepath, "wb") as f:
+                f.write(content)
+            
+            update_data["image_url"] = f"/uploads/products/{filename}"
+            
+            # Delete old image if exists
+            old_image = existing.get("image_url")
+            if old_image and old_image.startswith("/uploads/"):
+                old_path = Path("/app/frontend/public") / old_image.lstrip("/")
+                if old_path.exists():
+                    try:
+                        old_path.unlink()
+                    except:
+                        pass
+        except Exception as e:
+            logging.error(f"Error saving product image: {e}")
+    
+    # Build update data - only include non-None values
+    if name is not None:
+        update_data["name"] = name
+    if description is not None:
+        update_data["description"] = description
+    if prc_price is not None:
+        update_data["prc_price"] = prc_price
+    if inr_price is not None:
+        update_data["inr_price"] = inr_price
+    if category is not None:
+        update_data["category"] = category
+    if badge is not None:
+        update_data["badge"] = badge if badge else None
+    if show_on_home is not None:
+        update_data["show_on_home"] = show_on_home
+    if stock_quantity is not None:
+        update_data["stock_quantity"] = stock_quantity
+        # Auto-update stock status
+        if stock_quantity == 0:
+            update_data["stock_status"] = "out_of_stock"
+        elif stock_quantity < 10:
+            update_data["stock_status"] = "limited"
+        else:
+            update_data["stock_status"] = "in_stock"
+    if stock_status is not None:
+        update_data["stock_status"] = stock_status
+    if delivery_charge_type is not None:
+        update_data["delivery_charge_type"] = delivery_charge_type
+    if delivery_charge_value is not None:
+        update_data["delivery_charge_value"] = delivery_charge_value
+    if cost_to_company is not None:
+        update_data["cost_to_company"] = cost_to_company
+    if margin_percent is not None:
+        update_data["margin_percent"] = margin_percent
+    if product_status is not None:
+        update_data["product_status"] = product_status
+        update_data["is_active"] = product_status == "active"
     
     await db.products.update_one(
         {"product_id": product_id},
-        {"$set": data}
+        {"$set": update_data}
     )
     
-    return {"message": "Product updated successfully"}
+    return {"message": "Product updated successfully", "product_id": product_id}
 
 @api_router.delete("/admin/products/{product_id}")
 async def delete_product(product_id: str):
