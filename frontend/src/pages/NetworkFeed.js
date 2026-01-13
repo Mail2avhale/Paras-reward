@@ -393,8 +393,15 @@ const NetworkFeed = ({ user }) => {
                 </div>
               ) : (
                 <>
+                  {/* Activity count */}
+                  <div className="text-center text-gray-500 text-sm mb-4">
+                    Showing {globalFeed.length} of {globalTotal} activities
+                  </div>
+                  
                   {globalFeed.map((activity, index) => renderActivityItem(activity, index))}
-                  {hasMoreGlobal && (
+                  
+                  {/* Load More / End of list */}
+                  {hasMoreGlobal ? (
                     <button
                       onClick={loadMoreGlobal}
                       disabled={loadingMore}
@@ -405,10 +412,14 @@ const NetworkFeed = ({ user }) => {
                       ) : (
                         <>
                           <RefreshCw className="w-4 h-4" />
-                          Load More
+                          Load More ({globalFeed.length}/{globalTotal})
                         </>
                       )}
                     </button>
+                  ) : globalFeed.length > 0 && (
+                    <p className="text-center text-gray-600 text-sm mt-4 py-3">
+                      — End of activity feed —
+                    </p>
                   )}
                 </>
               )
@@ -421,8 +432,15 @@ const NetworkFeed = ({ user }) => {
                 </div>
               ) : (
                 <>
+                  {/* Activity count */}
+                  <div className="text-center text-gray-500 text-sm mb-4">
+                    Showing {networkFeed.length} of {networkTotal} activities
+                  </div>
+                  
                   {networkFeed.map((activity, index) => renderActivityItem(activity, index))}
-                  {hasMoreNetwork && (
+                  
+                  {/* Load More / End of list */}
+                  {hasMoreNetwork ? (
                     <button
                       onClick={loadMoreNetwork}
                       disabled={loadingMore}
@@ -433,10 +451,14 @@ const NetworkFeed = ({ user }) => {
                       ) : (
                         <>
                           <RefreshCw className="w-4 h-4" />
-                          Load More
+                          Load More ({networkFeed.length}/{networkTotal})
                         </>
                       )}
                     </button>
+                  ) : networkFeed.length > 0 && (
+                    <p className="text-center text-gray-600 text-sm mt-4 py-3">
+                      — End of network feed —
+                    </p>
                   )}
                 </>
               )
