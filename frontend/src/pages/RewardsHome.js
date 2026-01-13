@@ -842,15 +842,15 @@ const RewardsHome = () => {
               <ul className="space-y-3">
                 <li className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-blue-400" />
-                  <span>support@parasreward.com</span>
+                  <span>{contactInfo.email}</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-blue-400" />
-                  <span>+91 98765 43210</span>
+                  <span>{contactInfo.phone}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <MapPin className="h-4 w-4 text-blue-400 mt-1" />
-                  <span>Mumbai, Maharashtra, India</span>
+                  <span>{contactInfo.address}</span>
                 </li>
               </ul>
             </div>
