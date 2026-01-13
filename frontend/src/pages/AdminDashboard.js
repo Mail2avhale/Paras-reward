@@ -451,33 +451,36 @@ const AdminDashboard = ({ user }) => {
         </Card>
 
         {/* Delivery Overview */}
-        <Card className="p-4">
+        <Card className="p-4 bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-white">Delivery Overview</h3>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/delivery-partners')} className="text-blue-400 hover:text-blue-300">
+            <h3 className="font-semibold text-white flex items-center gap-2">
+              <Truck className="w-5 h-5 text-emerald-400" />
+              Delivery Partners
+            </h3>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/delivery-partners')} className="text-emerald-400 hover:text-emerald-300">
               Manage <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
           <div className="grid grid-cols-5 gap-2">
-            <div className="text-center p-3 bg-gray-800/50 rounded-lg">
-              <p className="text-xl font-bold text-white">{deliveryStats?.total_partners || 0}</p>
-              <p className="text-xs text-gray-500">Partners</p>
+            <div className="text-center p-3 bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-lg border border-blue-500/20">
+              <p className="text-xl font-bold text-blue-400">{deliveryStats?.total_partners || 0}</p>
+              <p className="text-xs text-blue-300/70">Partners</p>
             </div>
-            <div className="text-center p-3 bg-gray-800/50 rounded-lg">
+            <div className="text-center p-3 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-lg border border-emerald-500/20">
               <p className="text-xl font-bold text-emerald-400">{deliveryStats?.active_partners || 0}</p>
-              <p className="text-xs text-gray-500">Active</p>
+              <p className="text-xs text-emerald-300/70">Active</p>
             </div>
-            <div className="text-center p-3 bg-gray-800/50 rounded-lg">
+            <div className="text-center p-3 bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-lg border border-purple-500/20">
               <p className="text-xl font-bold text-purple-400">{deliveryStats?.verified_partners || 0}</p>
-              <p className="text-xs text-gray-500">Verified</p>
+              <p className="text-xs text-purple-300/70">Verified</p>
             </div>
-            <div className="text-center p-3 bg-gray-800/50 rounded-lg">
+            <div className="text-center p-3 bg-gradient-to-br from-amber-500/20 to-amber-600/10 rounded-lg border border-amber-500/20">
               <p className="text-xl font-bold text-amber-400">{deliveryStats?.pending_assignment || 0}</p>
-              <p className="text-xs text-gray-500">Pending</p>
+              <p className="text-xs text-amber-300/70">Pending</p>
             </div>
-            <div className="text-center p-3 bg-gray-800/50 rounded-lg">
-              <p className="text-xl font-bold text-blue-400">{deliveryStats?.out_for_delivery || 0}</p>
-              <p className="text-xs text-gray-500">In Transit</p>
+            <div className="text-center p-3 bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 rounded-lg border border-cyan-500/20">
+              <p className="text-xl font-bold text-cyan-400">{deliveryStats?.out_for_delivery || 0}</p>
+              <p className="text-xs text-cyan-300/70">In Transit</p>
             </div>
           </div>
           
