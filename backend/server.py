@@ -20196,7 +20196,7 @@ async def get_unread_count(uid: str):
 
 # ========== IN-APP NOTIFICATIONS ==========
 
-async def create_notification(
+async def create_social_notification(
     user_uid: str,
     notification_type: str,
     title: str,
@@ -20206,7 +20206,7 @@ async def create_notification(
     icon: str = "🔔",
     action_url: str = None
 ):
-    """Helper function to create a notification"""
+    """Helper function to create a social notification"""
     notification = {
         "notification_id": str(uuid.uuid4()),
         "user_uid": user_uid,
