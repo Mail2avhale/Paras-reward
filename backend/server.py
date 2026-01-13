@@ -18276,6 +18276,117 @@ async def update_mining_settings(request: Request):
     
     return {"success": True, "message": "Mining settings updated successfully", "settings": mining_settings}
 
+# ==================== CONTACT FORM SUBMISSIONS ====================
+
+class ContactSubmission(BaseModel):
+    submission_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    email: str
+    subject: Optional[str] = ""
+    message: str
+    status: str = "new"  # new, read, replied, closed
+    admin_notes: Optional[str] = ""
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: Optional[str] = None
+
+@api_router.post("/contact/submit")
+async def submit_contact_form(request: Request):
+    """Submit contact form (public endpoint)"""
+    data = await request.json()
+    
+    name = data.get("name", "").strip()
+    email = data.get("email", "").strip()
+    subject = data.get("subject", "").strip()
+    message = data.get("message", "").strip()
+    
+    if not name or not email or not message:
+        raise HTTPException(status_code=400, detail="Name, email, and message are required")
+    
+    submission = ContactSubmission(
+        name=name,
+        email=email,
+        subject=subject or "No Subject",
+        message=message
+    )
+    
+    await db.contact_submissions.insert_one(submission.model_dump())
+    
+    return {"success": True, "message": "Thank you for your message! We'll get back to you soon."}
+
+@api_router.get("/admin/contact-submissions")
+async def get_contact_submissions(
+    status: Optional[str] = None,
+    page: int = 1,
+    limit: int = 20
+):
+    """Get all contact form submissions (Admin only)"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    skip = (page - 1) * limit
+    total = await db.contact_submissions.count_documents(query)
+    submissions = await db.contact_submissions.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+    
+    return {
+        "submissions": submissions,
+        "total": total,
+        "page": page,
+        "total_pages": (total + limit - 1) // limit
+    }
+
+@api_router.get("/admin/contact-submissions/{submission_id}")
+async def get_contact_submission(submission_id: str):
+    """Get single contact submission"""
+    submission = await db.contact_submissions.find_one({"submission_id": submission_id}, {"_id": 0})
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    return submission
+
+@api_router.put("/admin/contact-submissions/{submission_id}")
+async def update_contact_submission(submission_id: str, request: Request):
+    """Update contact submission status/notes"""
+    data = await request.json()
+    
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    if "status" in data:
+        update_data["status"] = data["status"]
+    if "admin_notes" in data:
+        update_data["admin_notes"] = data["admin_notes"]
+    
+    result = await db.contact_submissions.update_one(
+        {"submission_id": submission_id},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    
+    return {"success": True, "message": "Submission updated"}
+
+@api_router.delete("/admin/contact-submissions/{submission_id}")
+async def delete_contact_submission(submission_id: str):
+    """Delete contact submission"""
+    result = await db.contact_submissions.delete_one({"submission_id": submission_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    return {"success": True, "message": "Submission deleted"}
+
+@api_router.get("/admin/contact-submissions/stats/summary")
+async def get_contact_submissions_stats():
+    """Get contact submissions stats"""
+    total = await db.contact_submissions.count_documents({})
+    new_count = await db.contact_submissions.count_documents({"status": "new"})
+    read_count = await db.contact_submissions.count_documents({"status": "read"})
+    replied_count = await db.contact_submissions.count_documents({"status": "replied"})
+    
+    return {
+        "total": total,
+        "new": new_count,
+        "read": read_count,
+        "replied": replied_count
+    }
+
 # ==================== CONTACT & LOGO SETTINGS ====================
 
 @api_router.get("/admin/contact-settings")
