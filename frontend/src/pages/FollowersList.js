@@ -186,6 +186,21 @@ const FollowersList = ({ user, type = 'followers' }) => {
                 )}
               </motion.div>
             ))}
+            
+            {/* Load More Button */}
+            {hasMore && (
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="w-full py-3 mt-4 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                {loadingMore ? (
+                  <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  'Load More'
+                )}
+              </button>
+            )}
           </div>
         )}
       </div>
