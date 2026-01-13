@@ -230,6 +230,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/network-feed" element={user ? <NetworkFeed user={user} /> : <Navigate to="/login" />} />
             <Route path="/messages" element={user ? <Messages user={user} /> : <Navigate to="/login" />} />
             <Route path="/messages/:recipientUid" element={user ? <Messages user={user} /> : <Navigate to="/login" />} />
+            <Route path="/followers/:uid" element={<FollowersList user={user} type="followers" />} />
+            <Route path="/following/:uid" element={<FollowersList user={user} type="following" />} />
             
             {/* Stock requests removed - stockist system deprecated */}
             <Route path="/admin" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminDashboard user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
