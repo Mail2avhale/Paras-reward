@@ -4,6 +4,7 @@ import { Search, Bell, Menu } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Sidebar from '@/components/Sidebar';
 import NotificationCenter from '@/components/NotificationCenter';
+import { LanguageSelectorCompact } from '@/components/LanguageSelector';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
 
@@ -93,6 +94,9 @@ const TopBar = ({ user, onLogout }) => {
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-2 sm:space-x-3">
+            {/* Language Selector */}
+            <LanguageSelectorCompact />
+
             {/* Search Icon - Mobile */}
             <button
               onClick={() => setShowSearch(!showSearch)}
