@@ -269,9 +269,9 @@ const Messages = ({ user }) => {
   const otherUser = activeConversation.isNew ? activeConversation.recipient : activeConversation.other_user;
 
   return (
-    <div className="h-screen flex flex-col bg-gray-950">
+    <div className="h-screen flex flex-col bg-gray-950 pt-16">
       {/* Chat Header */}
-      <div className="px-4 py-3 bg-gray-900 border-b border-gray-800 flex items-center gap-3" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top, 1rem))' }}>
+      <div className="px-4 py-3 bg-gray-900 border-b border-gray-800 flex items-center gap-3">
         <button 
           onClick={() => setActiveConversation(null)}
           className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center"
