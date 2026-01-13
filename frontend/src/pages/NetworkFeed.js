@@ -40,15 +40,19 @@ const NetworkFeed = ({ user }) => {
     try {
       // Fetch global feed
       const globalRes = await axios.get(`${API}/api/feed/global?limit=${ITEMS_PER_PAGE}&page=1`);
-      setGlobalFeed(globalRes.data.activities || []);
-      setHasMoreGlobal((globalRes.data.activities || []).length >= ITEMS_PER_PAGE);
+      const globalActivities = globalRes.data.activities || [];
+      setGlobalFeed(globalActivities);
+      setGlobalTotal(globalRes.data.total || globalActivities.length);
+      setHasMoreGlobal(globalActivities.length >= ITEMS_PER_PAGE);
       setGlobalPage(1);
 
       // Fetch network feed if logged in
       if (user?.uid) {
         const networkRes = await axios.get(`${API}/api/feed/network/${user.uid}?limit=${ITEMS_PER_PAGE}&page=1`);
-        setNetworkFeed(networkRes.data.activities || []);
-        setHasMoreNetwork((networkRes.data.activities || []).length >= ITEMS_PER_PAGE);
+        const networkActivities = networkRes.data.activities || [];
+        setNetworkFeed(networkActivities);
+        setNetworkTotal(networkRes.data.total || networkActivities.length);
+        setHasMoreNetwork(networkActivities.length >= ITEMS_PER_PAGE);
         setNetworkPage(1);
 
         // Fetch suggested users
