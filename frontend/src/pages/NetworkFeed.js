@@ -73,8 +73,12 @@ const NetworkFeed = ({ user }) => {
       const nextPage = globalPage + 1;
       const res = await axios.get(`${API}/api/feed/global?limit=${ITEMS_PER_PAGE}&page=${nextPage}`);
       const newActivities = res.data.activities || [];
-      setGlobalFeed(prev => [...prev, ...newActivities]);
-      setGlobalPage(nextPage);
+      if (newActivities.length > 0) {
+        setGlobalFeed(prev => [...prev, ...newActivities]);
+        setGlobalPage(nextPage);
+        // Update total if provided by API
+        if (res.data.total) setGlobalTotal(res.data.total);
+      }
       setHasMoreGlobal(newActivities.length >= ITEMS_PER_PAGE);
     } catch (error) {
       console.error('Error loading more global feed:', error);
@@ -90,8 +94,12 @@ const NetworkFeed = ({ user }) => {
       const nextPage = networkPage + 1;
       const res = await axios.get(`${API}/api/feed/network/${user.uid}?limit=${ITEMS_PER_PAGE}&page=${nextPage}`);
       const newActivities = res.data.activities || [];
-      setNetworkFeed(prev => [...prev, ...newActivities]);
-      setNetworkPage(nextPage);
+      if (newActivities.length > 0) {
+        setNetworkFeed(prev => [...prev, ...newActivities]);
+        setNetworkPage(nextPage);
+        // Update total if provided by API
+        if (res.data.total) setNetworkTotal(res.data.total);
+      }
       setHasMoreNetwork(newActivities.length >= ITEMS_PER_PAGE);
     } catch (error) {
       console.error('Error loading more network feed:', error);
