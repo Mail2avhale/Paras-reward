@@ -402,6 +402,183 @@ const ReferralsEnhanced = ({ user }) => {
         </div>
       </div>
 
+      {/* Current Badge & Progress */}
+      {referralStats.total > 0 && (
+        <div className="px-5 mb-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-br from-gray-900 to-gray-950 border border-gray-800 rounded-2xl p-5"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-bold flex items-center gap-2">
+                <Award className="w-5 h-5 text-amber-400" />
+                Your Badge
+              </h3>
+              <span className="text-xs text-gray-500">Milestone Progress</span>
+            </div>
+            
+            {(() => {
+              const { current, next } = getCurrentMilestone(referralStats.total);
+              const progress = next ? ((referralStats.total - (current?.count || 0)) / (next.count - (current?.count || 0))) * 100 : 100;
+              
+              return (
+                <div className="flex items-center gap-4">
+                  {/* Current Badge */}
+                  <motion.div 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", delay: 0.2 }}
+                    className={`w-20 h-20 rounded-2xl flex items-center justify-center text-4xl ${
+                      current ? `bg-${current.color}-500/20 border-2 border-${current.color}-500/50` : 'bg-gray-800'
+                    }`}
+                  >
+                    {current?.badge || '🌱'}
+                  </motion.div>
+                  
+                  {/* Progress Info */}
+                  <div className="flex-1">
+                    <p className="text-white font-bold text-lg">{current?.title || 'Getting Started'}</p>
+                    <p className="text-gray-400 text-sm mb-2">{current?.subtitle || 'Invite your first friend'}</p>
+                    
+                    {next && (
+                      <>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-gray-500">Next: {next.title} {next.badge}</span>
+                          <span className="text-amber-400">{referralStats.total}/{next.count}</span>
+                        </div>
+                        <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.min(progress, 100)}%` }}
+                            transition={{ duration: 1, delay: 0.5 }}
+                            className="h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full"
+                          />
+                        </div>
+                      </>
+                    )}
+                    
+                    {!next && (
+                      <p className="text-amber-400 text-sm font-medium">🎉 Maximum level achieved!</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+          </motion.div>
+        </div>
+      )}
+
+      {/* All Badges Gallery */}
+      <div className="px-5 mb-6">
+        <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-white font-bold flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-400" />
+              Badge Collection
+            </h3>
+            <span className="text-xs text-gray-500">{milestones.filter(m => referralStats.total >= m.count).length}/{milestones.length} Unlocked</span>
+          </div>
+          
+          <div className="grid grid-cols-6 gap-2">
+            {milestones.map((milestone, index) => {
+              const isUnlocked = referralStats.total >= milestone.count;
+              return (
+                <motion.div
+                  key={milestone.count}
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.1 }}
+                  className={`relative aspect-square rounded-xl flex flex-col items-center justify-center ${
+                    isUnlocked 
+                      ? `bg-${milestone.color}-500/20 border-2 border-${milestone.color}-500/50` 
+                      : 'bg-gray-800/50 border border-gray-700/50'
+                  }`}
+                >
+                  <span className={`text-2xl ${!isUnlocked && 'opacity-30 grayscale'}`}>{milestone.badge}</span>
+                  <span className={`text-[10px] mt-1 ${isUnlocked ? 'text-white' : 'text-gray-600'}`}>{milestone.count}</span>
+                  {!isUnlocked && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-4 h-4 rounded-full bg-gray-700 flex items-center justify-center">
+                        <span className="text-gray-500 text-[8px]">🔒</span>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Live Activity */}
+      <div className="px-5 mb-6">
+        <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-white font-bold flex items-center gap-2">
+              <Zap className="w-5 h-5 text-emerald-400" />
+              Live Activity
+            </h3>
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+              <span className="text-xs text-emerald-400">Live</span>
+            </div>
+          </div>
+          
+          {liveActivity.length === 0 ? (
+            <div className="text-center py-6">
+              <div className="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Users className="w-6 h-6 text-gray-600" />
+              </div>
+              <p className="text-gray-500 text-sm">No recent activity</p>
+              <p className="text-gray-600 text-xs">Invite friends to see activity here!</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-48 overflow-y-auto">
+              {liveActivity.slice(0, 5).map((activity, index) => (
+                <motion.div
+                  key={activity.id || index}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-xl"
+                >
+                  {activity.type === 'milestone' ? (
+                    <>
+                      <div className={`w-10 h-10 rounded-xl bg-${activity.milestone?.color || 'amber'}-500/20 flex items-center justify-center text-xl`}>
+                        {activity.milestone?.badge || '🎉'}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-white text-sm font-medium">
+                          {activity.user_name} unlocked <span className="text-amber-400">{activity.milestone?.title}</span>
+                        </p>
+                        <p className="text-gray-500 text-xs">
+                          {new Date(activity.timestamp).toLocaleTimeString()}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                        <UserCheck className="w-5 h-5 text-emerald-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-white text-sm font-medium">
+                          {activity.user_name || 'Someone'} joined via referral
+                        </p>
+                        <p className="text-gray-500 text-xs">
+                          {new Date(activity.timestamp).toLocaleTimeString()}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Bonus Levels - Visual Pyramid */}
       <div className="px-5 mb-6">
         <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5">
