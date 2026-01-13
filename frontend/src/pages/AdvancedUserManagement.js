@@ -153,6 +153,9 @@ const AdvancedUserManagement = () => {
       is_free: true,
       notes: ''
     });
+    setShowHistoryTab(false);
+    setSubscriptionHistory([]);
+    fetchSubscriptionHistory(user.uid);
     setShowSubscriptionModal(true);
   };
 
