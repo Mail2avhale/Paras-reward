@@ -19711,7 +19711,7 @@ async def follow_user(uid: str, request: Request):
     await db.social_activities.insert_one(activity)
     
     # Create notification for the followed user
-    await create_notification(
+    await create_social_notification(
         user_uid=uid,
         notification_type="new_follower",
         title="New Follower!",
