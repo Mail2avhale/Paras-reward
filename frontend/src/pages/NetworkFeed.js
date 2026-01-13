@@ -232,11 +232,24 @@ const NetworkFeed = ({ user }) => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
           <input
             type="text"
-            placeholder="Search users..."
+            placeholder="Search by name, city, or state..."
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
             className="w-full pl-12 pr-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
           />
+        </div>
+        
+        {/* Quick Location Filters */}
+        <div className="flex gap-2 mt-3 overflow-x-auto scrollbar-hide">
+          {['Mumbai', 'Delhi', 'Bangalore', 'Pune', 'Hyderabad', 'Chennai'].map(city => (
+            <button
+              key={city}
+              onClick={() => handleSearch(city)}
+              className="px-3 py-1.5 bg-gray-800 text-gray-400 text-sm rounded-full whitespace-nowrap hover:bg-purple-500/20 hover:text-purple-400 transition-colors"
+            >
+              {city}
+            </button>
+          ))}
         </div>
       </div>
 
