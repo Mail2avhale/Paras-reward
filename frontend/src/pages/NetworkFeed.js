@@ -386,7 +386,25 @@ const NetworkFeed = ({ user }) => {
                   <p className="text-gray-500">No activity yet</p>
                 </div>
               ) : (
-                globalFeed.map((activity, index) => renderActivityItem(activity, index))
+                <>
+                  {globalFeed.map((activity, index) => renderActivityItem(activity, index))}
+                  {hasMoreGlobal && (
+                    <button
+                      onClick={loadMoreGlobal}
+                      disabled={loadingMore}
+                      className="w-full py-3 mt-4 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition-colors flex items-center justify-center gap-2"
+                    >
+                      {loadingMore ? (
+                        <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <RefreshCw className="w-4 h-4" />
+                          Load More
+                        </>
+                      )}
+                    </button>
+                  )}
+                </>
               )
             ) : (
               networkFeed.length === 0 ? (
@@ -396,7 +414,25 @@ const NetworkFeed = ({ user }) => {
                   <p className="text-gray-600 text-sm">Follow users to see their activity here</p>
                 </div>
               ) : (
-                networkFeed.map((activity, index) => renderActivityItem(activity, index))
+                <>
+                  {networkFeed.map((activity, index) => renderActivityItem(activity, index))}
+                  {hasMoreNetwork && (
+                    <button
+                      onClick={loadMoreNetwork}
+                      disabled={loadingMore}
+                      className="w-full py-3 mt-4 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition-colors flex items-center justify-center gap-2"
+                    >
+                      {loadingMore ? (
+                        <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <RefreshCw className="w-4 h-4" />
+                          Load More
+                        </>
+                      )}
+                    </button>
+                  )}
+                </>
               )
             )}
           </div>
