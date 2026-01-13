@@ -67,7 +67,7 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 - Filters: Search, Category filter, Status filter (Active/Inactive)
 - Product form with all new fields:
   - **Basic Info**: Name, Description, Category, Badge (New/Trending/Hot Deal/Limited/Bestseller)
-  - **Pricing**: PRC Price, Auto-calculated INR (1 PRC = ₹4), Cost to Company, Margin %
+  - **Pricing**: PRC Price, Auto-calculated INR (10 PRC = ₹1), Cost to Company, Margin %
   - **Delivery**: Charge Type (Fixed/Percentage/Free), Charge Value
   - **Stock**: Quantity, Status (In Stock/Limited/Out of Stock), Product Status
   - **Home Page**: "Show on Home" checkbox
