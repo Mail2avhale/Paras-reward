@@ -15,14 +15,14 @@ const API = process.env.REACT_APP_BACKEND_URL || '';
 const AdminSystemSettings = ({ user }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('vip-plans');
+  const [activeTab, setActiveTab] = useState('subscription-plans');
   
   // Registration Control State
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
   const [registrationMessage, setRegistrationMessage] = useState('New user registrations are currently closed.');
   const [loadingRegistration, setLoadingRegistration] = useState(false);
 
-  // VIP Plans State
+  // Subscription Plans State (formerly VIP Plans)
   const [vipPlans, setVipPlans] = useState({
     monthly: { price: 299, duration: 30, discount: 0 },
     quarterly: { price: 897, duration: 90, discount: 0 },
