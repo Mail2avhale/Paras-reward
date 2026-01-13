@@ -20164,6 +20164,112 @@ async def get_unread_count(uid: str):
     return {"unread_count": unread}
 
 
+# ========== IN-APP NOTIFICATIONS ==========
+
+async def create_notification(
+    user_uid: str,
+    notification_type: str,
+    title: str,
+    message: str,
+    from_uid: str = None,
+    from_name: str = None,
+    icon: str = "🔔",
+    action_url: str = None
+):
+    """Helper function to create a notification"""
+    notification = {
+        "notification_id": str(uuid.uuid4()),
+        "user_uid": user_uid,
+        "type": notification_type,
+        "title": title,
+        "message": message,
+        "from_uid": from_uid,
+        "from_name": from_name,
+        "icon": icon,
+        "action_url": action_url,
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.notifications.insert_one(notification)
+    return notification
+
+
+@api_router.get("/notifications/{uid}")
+async def get_notifications(uid: str, page: int = 1, limit: int = 20, unread_only: bool = False):
+    """Get user's notifications"""
+    skip = (page - 1) * limit
+    
+    query = {"user_uid": uid}
+    if unread_only:
+        query["read"] = False
+    
+    notifications = await db.notifications.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    total = await db.notifications.count_documents(query)
+    unread_count = await db.notifications.count_documents({"user_uid": uid, "read": False})
+    
+    return {
+        "notifications": notifications,
+        "total": total,
+        "unread_count": unread_count,
+        "page": page,
+        "limit": limit
+    }
+
+
+@api_router.get("/notifications/{uid}/unread-count")
+async def get_notification_unread_count(uid: str):
+    """Get unread notification count"""
+    count = await db.notifications.count_documents({"user_uid": uid, "read": False})
+    return {"unread_count": count}
+
+
+@api_router.put("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str):
+    """Mark a single notification as read"""
+    result = await db.notifications.update_one(
+        {"notification_id": notification_id},
+        {"$set": {"read": True, "read_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    return {"success": True, "message": "Notification marked as read"}
+
+
+@api_router.put("/notifications/{uid}/read-all")
+async def mark_all_notifications_read(uid: str):
+    """Mark all notifications as read for a user"""
+    result = await db.notifications.update_many(
+        {"user_uid": uid, "read": False},
+        {"$set": {"read": True, "read_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"success": True, "marked_count": result.modified_count}
+
+
+@api_router.delete("/notifications/{notification_id}")
+async def delete_notification(notification_id: str):
+    """Delete a notification"""
+    result = await db.notifications.delete_one({"notification_id": notification_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    return {"success": True, "message": "Notification deleted"}
+
+
+@api_router.delete("/notifications/{uid}/clear-all")
+async def clear_all_notifications(uid: str):
+    """Clear all notifications for a user"""
+    result = await db.notifications.delete_many({"user_uid": uid})
+    return {"success": True, "deleted_count": result.deleted_count}
+
+
 # ========== USER SEARCH & DISCOVERY ==========
 
 @api_router.get("/social/search-users")
