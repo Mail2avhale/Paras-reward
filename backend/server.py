@@ -19547,6 +19547,754 @@ async def get_referral_live_activity(limit: int = 10):
         return {"activities": []}
 
 
+# ==================== SOCIAL NETWORK SYSTEM ====================
+
+class FollowRequest(BaseModel):
+    target_uid: str
+
+class MessageRequest(BaseModel):
+    receiver_uid: str
+    text: str
+
+class ConversationMessage(BaseModel):
+    message_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    conversation_id: str
+    sender_uid: str
+    text: str
+    read: bool = False
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+# ========== PUBLIC PROFILE ==========
+
+@api_router.get("/users/{uid}/public-profile")
+async def get_public_profile(uid: str):
+    """Get user's public profile (Google Play compliant - no earnings shown)"""
+    user = await db.users.find_one({"uid": uid}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if profile is private
+    is_public = user.get("is_public", True)  # Default to public
+    
+    # Get followers/following counts
+    followers_count = await db.follows.count_documents({"following_uid": uid})
+    following_count = await db.follows.count_documents({"follower_uid": uid})
+    
+    # Get team size (referral count)
+    team_size = user.get("referral_count", 0)
+    
+    # Get badges earned
+    milestones = [
+        {"count": 1, "badge": "🌱", "title": "First Steps"},
+        {"count": 5, "badge": "⭐", "title": "Rising Star"},
+        {"count": 10, "badge": "🔥", "title": "On Fire"},
+        {"count": 25, "badge": "💎", "title": "Diamond"},
+        {"count": 50, "badge": "👑", "title": "Legend"},
+        {"count": 100, "badge": "🏆", "title": "Champion"},
+    ]
+    
+    earned_badges = [m for m in milestones if team_size >= m["count"]]
+    current_badge = earned_badges[-1] if earned_badges else None
+    
+    # Calculate user level based on activity
+    total_taps = user.get("total_taps", 0)
+    mining_sessions = user.get("total_mining_sessions", 0)
+    level = 1 + (team_size // 5) + (total_taps // 1000) + (mining_sessions // 10)
+    level = min(level, 100)  # Cap at 100
+    
+    # Build public profile response
+    profile = {
+        "uid": uid,
+        "name": user.get("name", "User"),
+        "avatar": user.get("avatar"),
+        "is_public": is_public,
+        "is_verified": user.get("kyc_verified", False),
+        "membership_type": user.get("membership_type", "free"),
+        "joined_date": user.get("created_at", ""),
+        "city": user.get("city", ""),
+        "level": level,
+        "team_size": team_size,
+        "followers_count": followers_count,
+        "following_count": following_count,
+        "current_badge": current_badge,
+        "earned_badges": earned_badges,
+        "total_badges": len(earned_badges),
+        "referral_code": user.get("referral_code") if is_public else None
+    }
+    
+    # If profile is private, limit info for non-followers
+    if not is_public:
+        profile = {
+            "uid": uid,
+            "name": user.get("name", "User"),
+            "avatar": user.get("avatar"),
+            "is_public": False,
+            "is_verified": user.get("kyc_verified", False),
+            "membership_type": user.get("membership_type", "free"),
+            "followers_count": followers_count,
+            "following_count": following_count,
+            "message": "This profile is private"
+        }
+    
+    return profile
+
+
+@api_router.put("/users/{uid}/privacy-settings")
+async def update_privacy_settings(uid: str, request: Request):
+    """Update user privacy settings"""
+    data = await request.json()
+    
+    update_data = {}
+    if "is_public" in data:
+        update_data["is_public"] = data["is_public"]
+    if "show_team_size" in data:
+        update_data["show_team_size"] = data["show_team_size"]
+    if "allow_messages" in data:
+        update_data["allow_messages"] = data["allow_messages"]
+    
+    if update_data:
+        await db.users.update_one({"uid": uid}, {"$set": update_data})
+    
+    return {"success": True, "message": "Privacy settings updated"}
+
+
+# ========== FOLLOW SYSTEM ==========
+
+@api_router.post("/users/{uid}/follow")
+async def follow_user(uid: str, request: Request):
+    """Follow a user"""
+    data = await request.json()
+    follower_uid = data.get("follower_uid")
+    
+    if not follower_uid:
+        raise HTTPException(status_code=400, detail="follower_uid required")
+    
+    if follower_uid == uid:
+        raise HTTPException(status_code=400, detail="Cannot follow yourself")
+    
+    # Check if target user exists
+    target_user = await db.users.find_one({"uid": uid})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if already following
+    existing = await db.follows.find_one({
+        "follower_uid": follower_uid,
+        "following_uid": uid
+    })
+    
+    if existing:
+        return {"success": True, "message": "Already following", "is_following": True}
+    
+    # Create follow relationship
+    follow_doc = {
+        "follow_id": str(uuid.uuid4()),
+        "follower_uid": follower_uid,
+        "following_uid": uid,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.follows.insert_one(follow_doc)
+    
+    # Record activity
+    follower = await db.users.find_one({"uid": follower_uid}, {"_id": 0, "name": 1})
+    activity = {
+        "activity_id": str(uuid.uuid4()),
+        "user_uid": follower_uid,
+        "type": "follow",
+        "target_uid": uid,
+        "target_name": target_user.get("name", "User"),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.social_activities.insert_one(activity)
+    
+    return {"success": True, "message": "Now following", "is_following": True}
+
+
+@api_router.delete("/users/{uid}/unfollow")
+async def unfollow_user(uid: str, request: Request):
+    """Unfollow a user"""
+    data = await request.json()
+    follower_uid = data.get("follower_uid")
+    
+    if not follower_uid:
+        raise HTTPException(status_code=400, detail="follower_uid required")
+    
+    result = await db.follows.delete_one({
+        "follower_uid": follower_uid,
+        "following_uid": uid
+    })
+    
+    if result.deleted_count == 0:
+        return {"success": True, "message": "Was not following", "is_following": False}
+    
+    return {"success": True, "message": "Unfollowed", "is_following": False}
+
+
+@api_router.get("/users/{uid}/check-follow/{target_uid}")
+async def check_follow_status(uid: str, target_uid: str):
+    """Check if user is following another user"""
+    existing = await db.follows.find_one({
+        "follower_uid": uid,
+        "following_uid": target_uid
+    })
+    
+    return {"is_following": existing is not None}
+
+
+@api_router.get("/users/{uid}/followers")
+async def get_followers(uid: str, page: int = 1, limit: int = 20):
+    """Get user's followers list"""
+    skip = (page - 1) * limit
+    
+    # Get follower UIDs
+    follows = await db.follows.find(
+        {"following_uid": uid},
+        {"_id": 0, "follower_uid": 1, "created_at": 1}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    total = await db.follows.count_documents({"following_uid": uid})
+    
+    # Get follower details
+    followers = []
+    for follow in follows:
+        user = await db.users.find_one(
+            {"uid": follow["follower_uid"]},
+            {"_id": 0, "uid": 1, "name": 1, "avatar": 1, "kyc_verified": 1, "membership_type": 1, "referral_count": 1}
+        )
+        if user:
+            # Get badge
+            team_size = user.get("referral_count", 0)
+            badge = "🌱" if team_size >= 1 else None
+            if team_size >= 100: badge = "🏆"
+            elif team_size >= 50: badge = "👑"
+            elif team_size >= 25: badge = "💎"
+            elif team_size >= 10: badge = "🔥"
+            elif team_size >= 5: badge = "⭐"
+            
+            followers.append({
+                "uid": user["uid"],
+                "name": user.get("name", "User"),
+                "avatar": user.get("avatar"),
+                "is_verified": user.get("kyc_verified", False),
+                "membership_type": user.get("membership_type", "free"),
+                "badge": badge,
+                "followed_at": follow.get("created_at")
+            })
+    
+    return {
+        "followers": followers,
+        "total": total,
+        "page": page,
+        "total_pages": (total + limit - 1) // limit
+    }
+
+
+@api_router.get("/users/{uid}/following")
+async def get_following(uid: str, page: int = 1, limit: int = 20):
+    """Get list of users this user is following"""
+    skip = (page - 1) * limit
+    
+    # Get following UIDs
+    follows = await db.follows.find(
+        {"follower_uid": uid},
+        {"_id": 0, "following_uid": 1, "created_at": 1}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    total = await db.follows.count_documents({"follower_uid": uid})
+    
+    # Get following user details
+    following = []
+    for follow in follows:
+        user = await db.users.find_one(
+            {"uid": follow["following_uid"]},
+            {"_id": 0, "uid": 1, "name": 1, "avatar": 1, "kyc_verified": 1, "membership_type": 1, "referral_count": 1}
+        )
+        if user:
+            # Get badge
+            team_size = user.get("referral_count", 0)
+            badge = "🌱" if team_size >= 1 else None
+            if team_size >= 100: badge = "🏆"
+            elif team_size >= 50: badge = "👑"
+            elif team_size >= 25: badge = "💎"
+            elif team_size >= 10: badge = "🔥"
+            elif team_size >= 5: badge = "⭐"
+            
+            following.append({
+                "uid": user["uid"],
+                "name": user.get("name", "User"),
+                "avatar": user.get("avatar"),
+                "is_verified": user.get("kyc_verified", False),
+                "membership_type": user.get("membership_type", "free"),
+                "badge": badge,
+                "followed_at": follow.get("created_at")
+            })
+    
+    return {
+        "following": following,
+        "total": total,
+        "page": page,
+        "total_pages": (total + limit - 1) // limit
+    }
+
+
+# ========== SOCIAL ACTIVITY FEED ==========
+
+@api_router.get("/feed/global")
+async def get_global_feed(page: int = 1, limit: int = 20):
+    """Get global activity feed (public achievements only - Google Play compliant)"""
+    skip = (page - 1) * limit
+    
+    activities = []
+    
+    # Get milestone achievements
+    milestones = await db.milestone_achievements.find(
+        {},
+        {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    for m in milestones:
+        activities.append({
+            "id": m.get("achievement_id"),
+            "type": "milestone",
+            "user_uid": m.get("uid"),
+            "user_name": m.get("display_name", "User"),
+            "badge": m.get("milestone_badge"),
+            "title": m.get("milestone_title"),
+            "text": f"unlocked {m.get('milestone_title')} badge {m.get('milestone_badge')}",
+            "created_at": m.get("created_at")
+        })
+    
+    # Get recent follows
+    recent_follows = await db.social_activities.find(
+        {"type": "follow"},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(10).to_list(10)
+    
+    for f in recent_follows:
+        user = await db.users.find_one({"uid": f.get("user_uid")}, {"_id": 0, "name": 1})
+        user_name = user.get("name", "User") if user else "User"
+        display_name = user_name.split()[0][:3] + "***" if user_name else "User"
+        
+        activities.append({
+            "id": f.get("activity_id"),
+            "type": "follow",
+            "user_uid": f.get("user_uid"),
+            "user_name": display_name,
+            "target_name": f.get("target_name", "someone"),
+            "text": f"started following {f.get('target_name', 'someone')}",
+            "created_at": f.get("created_at")
+        })
+    
+    # Get recent team growth
+    recent_referrals = await db.users.find(
+        {"referred_by": {"$ne": None}},
+        {"_id": 0, "referred_by": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(10).to_list(10)
+    
+    for ref in recent_referrals:
+        referrer = await db.users.find_one({"uid": ref.get("referred_by")}, {"_id": 0, "name": 1, "referral_count": 1})
+        if referrer:
+            referrer_name = referrer.get("name", "User")
+            display_name = referrer_name.split()[0][:3] + "***" if referrer_name else "User"
+            team_size = referrer.get("referral_count", 0)
+            
+            activities.append({
+                "id": str(uuid.uuid4()),
+                "type": "team_growth",
+                "user_uid": ref.get("referred_by"),
+                "user_name": display_name,
+                "team_size": team_size,
+                "text": f"grew their team to {team_size} members",
+                "created_at": ref.get("created_at")
+            })
+    
+    # Sort by timestamp
+    activities.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    
+    total = len(activities)
+    
+    return {
+        "activities": activities[:limit],
+        "total": total,
+        "page": page
+    }
+
+
+@api_router.get("/feed/network/{uid}")
+async def get_network_feed(uid: str, page: int = 1, limit: int = 20):
+    """Get activity feed from users you follow"""
+    skip = (page - 1) * limit
+    
+    # Get list of users this user follows
+    following = await db.follows.find(
+        {"follower_uid": uid},
+        {"_id": 0, "following_uid": 1}
+    ).to_list(1000)
+    
+    following_uids = [f["following_uid"] for f in following]
+    
+    if not following_uids:
+        return {"activities": [], "total": 0, "page": page, "message": "Follow users to see their activity"}
+    
+    activities = []
+    
+    # Get milestone achievements from followed users
+    milestones = await db.milestone_achievements.find(
+        {"uid": {"$in": following_uids}},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    for m in milestones:
+        user = await db.users.find_one({"uid": m.get("uid")}, {"_id": 0, "name": 1, "avatar": 1})
+        activities.append({
+            "id": m.get("achievement_id"),
+            "type": "milestone",
+            "user_uid": m.get("uid"),
+            "user_name": user.get("name", "User") if user else "User",
+            "user_avatar": user.get("avatar") if user else None,
+            "badge": m.get("milestone_badge"),
+            "title": m.get("milestone_title"),
+            "text": f"unlocked {m.get('milestone_title')} badge {m.get('milestone_badge')}",
+            "created_at": m.get("created_at")
+        })
+    
+    # Get social activities from followed users
+    social = await db.social_activities.find(
+        {"user_uid": {"$in": following_uids}},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    for s in social:
+        user = await db.users.find_one({"uid": s.get("user_uid")}, {"_id": 0, "name": 1, "avatar": 1})
+        activities.append({
+            "id": s.get("activity_id"),
+            "type": s.get("type"),
+            "user_uid": s.get("user_uid"),
+            "user_name": user.get("name", "User") if user else "User",
+            "user_avatar": user.get("avatar") if user else None,
+            "text": s.get("text", "did something"),
+            "created_at": s.get("created_at")
+        })
+    
+    # Sort by timestamp
+    activities.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    
+    return {
+        "activities": activities[:limit],
+        "total": len(activities),
+        "page": page
+    }
+
+
+# ========== MESSAGING SYSTEM ==========
+
+@api_router.get("/messages/conversations/{uid}")
+async def get_conversations(uid: str, page: int = 1, limit: int = 20):
+    """Get user's conversations list"""
+    skip = (page - 1) * limit
+    
+    # Find conversations where user is a participant
+    conversations = await db.conversations.find(
+        {"participants": uid},
+        {"_id": 0}
+    ).sort("updated_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    total = await db.conversations.count_documents({"participants": uid})
+    
+    result = []
+    for conv in conversations:
+        # Get other participant
+        other_uid = [p for p in conv.get("participants", []) if p != uid][0] if conv.get("participants") else None
+        
+        if other_uid:
+            other_user = await db.users.find_one(
+                {"uid": other_uid},
+                {"_id": 0, "uid": 1, "name": 1, "avatar": 1, "kyc_verified": 1}
+            )
+            
+            # Get unread count
+            unread_count = await db.messages.count_documents({
+                "conversation_id": conv.get("conversation_id"),
+                "sender_uid": {"$ne": uid},
+                "read": False
+            })
+            
+            result.append({
+                "conversation_id": conv.get("conversation_id"),
+                "other_user": {
+                    "uid": other_user.get("uid") if other_user else other_uid,
+                    "name": other_user.get("name", "User") if other_user else "User",
+                    "avatar": other_user.get("avatar") if other_user else None,
+                    "is_verified": other_user.get("kyc_verified", False) if other_user else False
+                },
+                "last_message": conv.get("last_message"),
+                "last_message_time": conv.get("updated_at"),
+                "unread_count": unread_count
+            })
+    
+    return {
+        "conversations": result,
+        "total": total,
+        "page": page,
+        "total_pages": (total + limit - 1) // limit
+    }
+
+
+@api_router.get("/messages/conversation/{conversation_id}")
+async def get_conversation_messages(conversation_id: str, uid: str, page: int = 1, limit: int = 50):
+    """Get messages in a conversation"""
+    skip = (page - 1) * limit
+    
+    # Verify user is participant
+    conversation = await db.conversations.find_one({"conversation_id": conversation_id})
+    if not conversation or uid not in conversation.get("participants", []):
+        raise HTTPException(status_code=403, detail="Not authorized to view this conversation")
+    
+    # Get messages
+    messages = await db.messages.find(
+        {"conversation_id": conversation_id},
+        {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    total = await db.messages.count_documents({"conversation_id": conversation_id})
+    
+    # Mark messages as read
+    await db.messages.update_many(
+        {"conversation_id": conversation_id, "sender_uid": {"$ne": uid}, "read": False},
+        {"$set": {"read": True}}
+    )
+    
+    # Reverse to show oldest first
+    messages.reverse()
+    
+    return {
+        "messages": messages,
+        "total": total,
+        "page": page,
+        "total_pages": (total + limit - 1) // limit
+    }
+
+
+@api_router.post("/messages/send")
+async def send_message(request: Request):
+    """Send a message to another user"""
+    data = await request.json()
+    
+    sender_uid = data.get("sender_uid")
+    receiver_uid = data.get("receiver_uid")
+    text = data.get("text", "").strip()
+    
+    if not sender_uid or not receiver_uid or not text:
+        raise HTTPException(status_code=400, detail="sender_uid, receiver_uid, and text required")
+    
+    if sender_uid == receiver_uid:
+        raise HTTPException(status_code=400, detail="Cannot message yourself")
+    
+    # Check if receiver allows messages
+    receiver = await db.users.find_one({"uid": receiver_uid})
+    if not receiver:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if not receiver.get("allow_messages", True):
+        raise HTTPException(status_code=403, detail="User does not accept messages")
+    
+    # Find or create conversation
+    participants = sorted([sender_uid, receiver_uid])
+    conversation = await db.conversations.find_one({"participants": participants})
+    
+    if not conversation:
+        conversation = {
+            "conversation_id": str(uuid.uuid4()),
+            "participants": participants,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "last_message": text[:100]
+        }
+        await db.conversations.insert_one(conversation)
+    else:
+        await db.conversations.update_one(
+            {"conversation_id": conversation["conversation_id"]},
+            {"$set": {
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "last_message": text[:100]
+            }}
+        )
+    
+    # Create message
+    message = {
+        "message_id": str(uuid.uuid4()),
+        "conversation_id": conversation["conversation_id"],
+        "sender_uid": sender_uid,
+        "text": text,
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.messages.insert_one(message)
+    
+    return {
+        "success": True,
+        "message_id": message["message_id"],
+        "conversation_id": conversation["conversation_id"]
+    }
+
+
+@api_router.get("/messages/unread-count/{uid}")
+async def get_unread_count(uid: str):
+    """Get total unread message count for user"""
+    # Get all conversations
+    conversations = await db.conversations.find(
+        {"participants": uid},
+        {"_id": 0, "conversation_id": 1}
+    ).to_list(1000)
+    
+    conv_ids = [c["conversation_id"] for c in conversations]
+    
+    if not conv_ids:
+        return {"unread_count": 0}
+    
+    # Count unread messages
+    unread = await db.messages.count_documents({
+        "conversation_id": {"$in": conv_ids},
+        "sender_uid": {"$ne": uid},
+        "read": False
+    })
+    
+    return {"unread_count": unread}
+
+
+# ========== USER SEARCH & DISCOVERY ==========
+
+@api_router.get("/users/search")
+async def search_users(q: str, page: int = 1, limit: int = 20):
+    """Search for users by name or referral code"""
+    if not q or len(q) < 2:
+        return {"users": [], "total": 0}
+    
+    skip = (page - 1) * limit
+    
+    # Search by name or referral code
+    query = {
+        "$or": [
+            {"name": {"$regex": q, "$options": "i"}},
+            {"referral_code": {"$regex": q, "$options": "i"}}
+        ],
+        "is_public": {"$ne": False}  # Only public profiles
+    }
+    
+    users = await db.users.find(
+        query,
+        {"_id": 0, "uid": 1, "name": 1, "avatar": 1, "kyc_verified": 1, "membership_type": 1, "referral_count": 1, "city": 1}
+    ).skip(skip).limit(limit).to_list(limit)
+    
+    total = await db.users.count_documents(query)
+    
+    result = []
+    for user in users:
+        # Get badge
+        team_size = user.get("referral_count", 0)
+        badge = None
+        if team_size >= 100: badge = "🏆"
+        elif team_size >= 50: badge = "👑"
+        elif team_size >= 25: badge = "💎"
+        elif team_size >= 10: badge = "🔥"
+        elif team_size >= 5: badge = "⭐"
+        elif team_size >= 1: badge = "🌱"
+        
+        # Get followers count
+        followers = await db.follows.count_documents({"following_uid": user["uid"]})
+        
+        result.append({
+            "uid": user["uid"],
+            "name": user.get("name", "User"),
+            "avatar": user.get("avatar"),
+            "city": user.get("city", ""),
+            "is_verified": user.get("kyc_verified", False),
+            "membership_type": user.get("membership_type", "free"),
+            "badge": badge,
+            "team_size": team_size,
+            "followers_count": followers
+        })
+    
+    return {
+        "users": result,
+        "total": total,
+        "page": page,
+        "total_pages": (total + limit - 1) // limit
+    }
+
+
+@api_router.get("/users/suggested/{uid}")
+async def get_suggested_users(uid: str, limit: int = 10):
+    """Get suggested users to follow"""
+    # Get users the current user is already following
+    following = await db.follows.find(
+        {"follower_uid": uid},
+        {"_id": 0, "following_uid": 1}
+    ).to_list(1000)
+    
+    following_uids = [f["following_uid"] for f in following]
+    following_uids.append(uid)  # Exclude self
+    
+    # Get suggested users (active users with most followers, not already following)
+    pipeline = [
+        {"$match": {
+            "uid": {"$nin": following_uids},
+            "is_public": {"$ne": False}
+        }},
+        {"$lookup": {
+            "from": "follows",
+            "localField": "uid",
+            "foreignField": "following_uid",
+            "as": "followers"
+        }},
+        {"$addFields": {
+            "followers_count": {"$size": "$followers"}
+        }},
+        {"$sort": {"followers_count": -1, "referral_count": -1}},
+        {"$limit": limit},
+        {"$project": {
+            "_id": 0,
+            "uid": 1,
+            "name": 1,
+            "avatar": 1,
+            "kyc_verified": 1,
+            "membership_type": 1,
+            "referral_count": 1,
+            "city": 1,
+            "followers_count": 1
+        }}
+    ]
+    
+    users = await db.users.aggregate(pipeline).to_list(limit)
+    
+    result = []
+    for user in users:
+        team_size = user.get("referral_count", 0)
+        badge = None
+        if team_size >= 100: badge = "🏆"
+        elif team_size >= 50: badge = "👑"
+        elif team_size >= 25: badge = "💎"
+        elif team_size >= 10: badge = "🔥"
+        elif team_size >= 5: badge = "⭐"
+        elif team_size >= 1: badge = "🌱"
+        
+        result.append({
+            "uid": user["uid"],
+            "name": user.get("name", "User"),
+            "avatar": user.get("avatar"),
+            "city": user.get("city", ""),
+            "is_verified": user.get("kyc_verified", False),
+            "membership_type": user.get("membership_type", "free"),
+            "badge": badge,
+            "team_size": team_size,
+            "followers_count": user.get("followers_count", 0)
+        })
+    
+    return {"suggested_users": result}
+
+
 # ========== REFERRAL PROGRAM ==========
 
 @api_router.get("/referrals/{user_id}/tree")
