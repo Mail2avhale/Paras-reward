@@ -223,6 +223,13 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/profile" element={user ? <ProfileAdvanced user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             {/* Legacy route redirect - keeping for backward compatibility */}
             <Route path="/profile-advanced" element={<Navigate to="/profile" replace />} />
+            
+            {/* Social Feature Routes */}
+            <Route path="/profile/:uid" element={<PublicProfile user={user} />} />
+            <Route path="/network-feed" element={user ? <NetworkFeed user={user} /> : <Navigate to="/login" />} />
+            <Route path="/messages" element={user ? <Messages user={user} /> : <Navigate to="/login" />} />
+            <Route path="/messages/:recipientUid" element={user ? <Messages user={user} /> : <Navigate to="/login" />} />
+            
             {/* Stock requests removed - stockist system deprecated */}
             <Route path="/admin" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminDashboard user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/users" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdvancedUserManagement /></AdminLayout> : <Navigate to="/dashboard" />} />
