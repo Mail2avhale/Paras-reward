@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, LogOut, Bell, Search,
   Menu, X, Shield, Zap, Wallet, TrendingUp, ChevronDown,
   Globe, Phone, Mail, Image, Share2, Cpu, ToggleLeft,
-  AlertTriangle, Smartphone, Building, Crown, CloudRain, AlertOctagon
+  AlertTriangle, Smartphone, Building, Crown, CloudRain, AlertOctagon, Database
 } from 'lucide-react';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
