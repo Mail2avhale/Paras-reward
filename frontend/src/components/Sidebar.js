@@ -57,7 +57,7 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
 
   const menuItems = [
     { id: 'home', label: 'Home', icon: Home, route: '/dashboard' },
-    { id: 'mining', label: 'Mining', icon: Zap, route: '/mining' },
+    { id: 'rewards', label: 'Rewards', icon: Zap, route: '/daily-rewards' },
     { id: 'game', label: 'Tap Game', icon: Gamepad2, route: '/game' },
     { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag, route: '/marketplace' },
     { id: 'orders', label: 'My Orders', icon: Receipt, route: '/orders' },
