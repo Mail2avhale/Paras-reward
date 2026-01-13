@@ -20113,6 +20113,10 @@ async def send_message(request: Request):
     if not receiver.get("allow_messages", True):
         raise HTTPException(status_code=403, detail="User does not accept messages")
     
+    # Get sender info for notification
+    sender = await db.users.find_one({"uid": sender_uid}, {"_id": 0, "name": 1})
+    sender_name = sender.get("name", "Someone") if sender else "Someone"
+    
     # Find or create conversation
     participants = sorted([sender_uid, receiver_uid])
     conversation = await db.conversations.find_one({"participants": participants})
@@ -20146,6 +20150,18 @@ async def send_message(request: Request):
     }
     
     await db.messages.insert_one(message)
+    
+    # Create notification for receiver
+    await create_notification(
+        user_uid=receiver_uid,
+        notification_type="new_message",
+        title="New Message",
+        message=f"{sender_name}: {text[:50]}{'...' if len(text) > 50 else ''}",
+        from_uid=sender_uid,
+        from_name=sender_name,
+        icon="💬",
+        action_url=f"/messages/{sender_uid}"
+    )
     
     return {
         "success": True,
