@@ -185,6 +185,23 @@ const AdminSettings = ({ user }) => {
     }
   };
 
+  const handleMarketplaceSettingsChange = (field, value) => {
+    setMarketplaceSettings(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveMarketplaceSettings = async () => {
+    setSavingMarketplace(true);
+    try {
+      await axios.put(`${API}/api/admin/settings/marketplace`, marketplaceSettings);
+      toast.success('Marketplace settings saved successfully!');
+    } catch (error) {
+      console.error('Error saving marketplace settings:', error);
+      toast.error('Failed to save marketplace settings');
+    } finally {
+      setSavingMarketplace(false);
+    }
+  };
+
   const handleQRUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
