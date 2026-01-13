@@ -143,7 +143,7 @@ const FollowersList = ({ user, type = 'followers' }) => {
           <div className="space-y-2">
             {/* Count indicator */}
             <div className="text-center text-gray-500 text-sm mb-4">
-              Showing {users.length} of {total} {type}
+              Showing {users.length} {type}
             </div>
             
             {users.map((item, index) => (
