@@ -559,19 +559,6 @@ const AdvancedUserManagement = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Subscription Plan</label>
-                  <select
-                    className="w-full border border-gray-700 rounded p-2 bg-gray-800 text-white"
-                    value={editForm.membership_type}
-                    onChange={(e) => setEditForm({...editForm, membership_type: e.target.value})}
-                  >
-                    <option value="explorer">Explorer (Free)</option>
-                    <option value="startup">Startup</option>
-                    <option value="growth">Growth</option>
-                    <option value="elite">Elite</option>
-                  </select>
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">KYC Status</label>
                   <select
                     className="w-full border border-gray-700 rounded p-2 bg-gray-800 text-white"
@@ -586,94 +573,10 @@ const AdvancedUserManagement = () => {
                 </div>
               </div>
 
-              {/* VIP Membership Details Section */}
-              {editForm.membership_type === 'vip' && (
-                <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
-                  <h3 className="text-lg font-semibold text-purple-800 mb-3 flex items-center gap-2">
-                    <Award className="h-5 w-5" />
-                    VIP Membership Settings
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">VIP Plan Type</label>
-                      <select
-                        className="w-full border rounded p-2 bg-white"
-                        value={editForm.vip_plan_type}
-                        onChange={(e) => {
-                          const planType = e.target.value;
-                          let newExpiry = editForm.membership_expiry;
-                          
-                          // Auto-calculate expiry based on plan type from today
-                          if (planType && !editForm.membership_expiry) {
-                            const today = new Date();
-                            const daysMapping = {
-                              'monthly': 30,
-                              'quarterly': 90,
-                              'half_yearly': 180,
-                              'yearly': 365
-                            };
-                            today.setDate(today.getDate() + (daysMapping[planType] || 30));
-                            newExpiry = today.toISOString().split('T')[0];
-                          }
-                          
-                          setEditForm({
-                            ...editForm, 
-                            vip_plan_type: planType,
-                            membership_expiry: newExpiry
-                          });
-                        }}
-                      >
-                        <option value="">Select Plan</option>
-                        <option value="monthly">Monthly (30 days)</option>
-                        <option value="quarterly">Quarterly (90 days)</option>
-                        <option value="half_yearly">Half-Yearly (180 days)</option>
-                        <option value="yearly">Yearly (365 days)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Membership Expiry Date</label>
-                      <Input
-                        type="date"
-                        value={editForm.membership_expiry}
-                        onChange={(e) => setEditForm({...editForm, membership_expiry: e.target.value})}
-                        className="bg-white"
-                      />
-                    </div>
-                  </div>
-                  {editForm.membership_expiry && (
-                    <p className="mt-2 text-sm text-purple-600">
-                      Membership valid until: <strong>{new Date(editForm.membership_expiry).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</strong>
-                    </p>
-                  )}
-                  
-                  {/* Quick Actions */}
-                  <div className="mt-3 flex gap-2 flex-wrap">
-                    <span className="text-xs text-gray-500">Quick Set:</span>
-                    {[
-                      { label: '+30 Days', days: 30 },
-                      { label: '+90 Days', days: 90 },
-                      { label: '+180 Days', days: 180 },
-                      { label: '+365 Days', days: 365 }
-                    ].map((option) => (
-                      <button
-                        key={option.days}
-                        type="button"
-                        onClick={() => {
-                          const newDate = new Date();
-                          newDate.setDate(newDate.getDate() + option.days);
-                          setEditForm({
-                            ...editForm,
-                            membership_expiry: newDate.toISOString().split('T')[0]
-                          });
-                        }}
-                        className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition"
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Note: Subscription management moved to separate modal */}
+              <p className="text-xs text-gray-500 mt-2">
+                To update subscription, use the <Award className="w-3 h-3 inline" /> subscription button in the user list.
+              </p>
 
               <div className="flex gap-3 pt-4">
                 <Button
