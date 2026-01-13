@@ -421,9 +421,9 @@ const Marketplace = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gray-50 pb-24 pt-16">
       {/* Header - SBI Style Blue */}
-      <div className="bg-gradient-to-r from-blue-800 to-blue-900 text-white px-5 pb-6 pt-safe-header" style={{ paddingTop: 'max(2rem, env(safe-area-inset-top, 2rem))' }}>
+      <div className="bg-gradient-to-r from-blue-800 to-blue-900 text-white px-5 pb-6 pt-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             <button 
