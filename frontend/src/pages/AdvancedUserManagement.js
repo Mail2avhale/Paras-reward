@@ -94,24 +94,12 @@ const AdvancedUserManagement = () => {
 
   const openEditModal = (user) => {
     setSelectedUser(user);
-    // Format expiry date for input field
-    let expiryDate = '';
-    if (user.membership_expiry) {
-      try {
-        expiryDate = new Date(user.membership_expiry).toISOString().split('T')[0];
-      } catch (e) {
-        expiryDate = '';
-      }
-    }
     setEditForm({
       name: user.name || '',
       email: user.email || '',
       mobile: user.mobile || '',
       role: user.role || 'user',
-      membership_type: user.membership_type || 'free',
-      membership_expiry: expiryDate,
-      vip_plan_type: user.vip_plan_type || '',
-      kyc_status: user.kyc_status || 'pending'
+      kyc_status: user.kyc_status || 'not_submitted'
     });
     setShowEditModal(true);
   };
