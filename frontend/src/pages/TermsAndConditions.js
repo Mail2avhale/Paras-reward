@@ -218,10 +218,10 @@ const TermsAndConditions = () => {
           </div>
           <p className="text-gray-400 text-sm mb-4">For questions about these terms, contact us:</p>
           <a 
-            href="mailto:support@parasreward.com" 
+            href={`mailto:${contactEmail}`}
             className="inline-flex items-center justify-center w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-gray-900 font-bold rounded-xl hover:from-amber-400 hover:to-amber-500 transition-all"
           >
-            support@parasreward.com
+            {contactEmail}
           </a>
         </div>
       </div>
