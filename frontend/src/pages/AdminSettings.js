@@ -96,6 +96,21 @@ const AdminSettings = ({ user }) => {
     } catch (error) {
       console.error('Error fetching payment config:', error);
     }
+
+    // Fetch marketplace settings
+    try {
+      const marketplaceResponse = await axios.get(`${API}/api/admin/settings/marketplace`);
+      if (marketplaceResponse.data) {
+        setMarketplaceSettings({
+          prc_to_inr_rate: marketplaceResponse.data.prc_to_inr_rate || 0.1,
+          min_order_prc: marketplaceResponse.data.min_order_prc || 100,
+          max_order_prc: marketplaceResponse.data.max_order_prc || 100000,
+          free_delivery_threshold: marketplaceResponse.data.free_delivery_threshold || 500
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching marketplace settings:', error);
+    }
   };
 
   const handleChange = (field, value) => {
