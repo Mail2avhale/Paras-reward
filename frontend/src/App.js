@@ -10,7 +10,6 @@ import ToastContainer from "@/components/ToastContainer";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
-import FloatingActionButton from "@/components/FloatingActionButton";
 import AIContextualHelp from "@/components/AIContextualHelp";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import ManagerLayout from "@/components/layouts/ManagerLayout";
