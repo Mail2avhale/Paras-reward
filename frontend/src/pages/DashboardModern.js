@@ -666,17 +666,22 @@ const DashboardModern = ({ user, onLogout }) => {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className="flex items-center justify-between p-3"
+                      className={`flex items-center justify-between p-3 ${
+                        activity.is_milestone ? 'bg-gradient-to-r from-amber-500/10 to-transparent' : ''
+                      }`}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-9 h-9 rounded-full flex items-center justify-center text-base ${
+                          activity.is_milestone ? 'bg-amber-500/30 ring-2 ring-amber-500/50' :
                           activity.category === 'bill' ? 'bg-blue-500/20' :
                           activity.category === 'voucher' ? 'bg-purple-500/20' : 'bg-amber-500/20'
                         }`}>
                           <span>{activity.icon}</span>
                         </div>
                         <div>
-                          <p className="text-white text-sm">{activity.description}</p>
+                          <p className={`text-sm ${activity.is_milestone ? 'text-amber-400 font-semibold' : 'text-white'}`}>
+                            {activity.description}
+                          </p>
                           <p className="text-gray-500 text-xs">
                             {activity.user} {activity.location && `• ${activity.location}`}
                           </p>
