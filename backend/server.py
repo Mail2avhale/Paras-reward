@@ -9325,33 +9325,49 @@ async def handle_payment_action(payment_id: str, request: Request):
 
 class Product(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    product_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    product_id: str = Field(default_factory=lambda: f"PRD-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}")
     name: str
     sku: str
     description: Optional[str] = None
     prc_price: float  # Price in PRC coins
     cash_price: float  # Delivery/transaction fee in ₹
+    inr_equivalent: float = 0  # Auto-calculated INR value of PRC
     type: str  # physical or digital
     category: Optional[str] = None
     image_url: Optional[str] = None
     
-    # Stock & Allocation
+    # Product Badge
+    badge: Optional[str] = None  # New, Trending, Hot Deal, Limited Offer
+    show_on_home: bool = False
+    
+    # Stock Management
     total_stock: int = 0
     available_stock: int = 0
+    stock_status: str = "in_stock"  # in_stock, out_of_stock, limited
     allocated_to: Optional[str] = None  # master/sub/outlet ID
+    
+    # Delivery Configuration
+    delivery_charge_type: str = "fixed"  # fixed, percentage
+    delivery_charge_value: float = 0  # Amount in ₹ or percentage
     
     # Visibility
     visible: bool = True
-    is_active: bool = True  # Added for product lifecycle management
-    regions: Optional[list] = []  # List of states/regions
+    is_active: bool = True
+    regions: Optional[list] = []
     vip_only: bool = False
     visible_from: Optional[datetime] = None
     visible_till: Optional[datetime] = None
+    
+    # Admin & Audit Fields (hidden from users)
+    cost_to_company: float = 0  # Product cost in ₹
+    margin_percent: float = 0  # Profit margin %
+    product_status: str = "active"  # active, inactive, deleted
     
     # Metadata
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     created_by: Optional[str] = None
+    last_updated_by: Optional[str] = None
 
 class CartItem(BaseModel):
     product_id: str
