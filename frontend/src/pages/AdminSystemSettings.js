@@ -135,9 +135,9 @@ const AdminSystemSettings = ({ user }) => {
     setLoading(true);
     try {
       await axios.post(`${API}/api/admin/vip-plans/update`, vipPlans);
-      toast.success('VIP Plans updated successfully!');
+      toast.success('Subscription Plans updated successfully!');
     } catch (error) {
-      toast.error('Failed to save VIP plans');
+      toast.error('Failed to save subscription plans');
     } finally {
       setLoading(false);
     }
