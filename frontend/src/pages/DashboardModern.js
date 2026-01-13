@@ -193,7 +193,7 @@ const DashboardModern = ({ user, onLogout }) => {
               {userData?.name || user?.email?.split('@')[0] || 'User'}
             </h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {stats.membershipType === 'vip' && (
               <div className="bg-gradient-to-r from-amber-500 to-yellow-500 px-3 py-1 rounded-full">
                 <span className="text-xs font-bold text-black flex items-center gap-1">
@@ -201,6 +201,7 @@ const DashboardModern = ({ user, onLogout }) => {
                 </span>
               </div>
             )}
+            <NotificationBell user={user} />
             <button 
               onClick={() => navigate('/profile')}
               className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center"
