@@ -558,9 +558,9 @@ const Marketplace = ({ user }) => {
 
       {/* Redeem Your PRC Section */}
       <div className="px-5 mb-8">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">Redeem Your PRC</h2>
+        <h2 className="text-lg font-bold text-gray-800 mb-4">{t.redeemYourPRC}</h2>
         <div className="grid grid-cols-3 gap-3">
-          {REDEEM_CATEGORIES.map(cat => {
+          {getRedeemCategories(translate).map(cat => {
             const Icon = cat.icon;
             return (
               <button
