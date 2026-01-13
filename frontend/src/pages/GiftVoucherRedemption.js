@@ -6,11 +6,13 @@ import {
   ArrowLeft, Gift, Clock, CheckCircle, XCircle, AlertCircle,
   Sparkles, Award, TrendingUp, Wallet
 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
 const GiftVoucherRedemption = ({ user, onLogout }) => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState([]);
   const [currentUser, setCurrentUser] = useState(user);
@@ -123,9 +125,9 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
           <div>
             <h1 className="text-white text-xl font-bold flex items-center gap-2">
               <Gift className="w-5 h-5 text-amber-500" />
-              Gift Vouchers
+              {t('giftVouchersTitle')}
             </h1>
-            <p className="text-gray-500 text-sm">Redeem PRC for PhonePe vouchers</p>
+            <p className="text-gray-500 text-sm">{t('redeemPRCForVouchers')}</p>
           </div>
         </div>
       </div>
@@ -135,7 +137,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
         <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 rounded-2xl p-5 border border-amber-500/30">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-400 text-sm mb-1">Available PRC Balance</p>
+              <p className="text-gray-400 text-sm mb-1">{t('availablePrcBalance')}</p>
               <p className="text-3xl font-bold text-amber-500">{currentUser?.prc_balance?.toFixed(2) || '0.00'}</p>
             </div>
             <div className="w-14 h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center">
@@ -147,7 +149,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
 
       {/* Denominations */}
       <div className="px-5 mb-6">
-        <h2 className="text-white font-bold mb-4">Select Voucher Amount</h2>
+        <h2 className="text-white font-bold mb-4">{t('selectVoucherAmount')}</h2>
         <div className="grid grid-cols-3 gap-3">
           {denominations.map((denom) => (
             <button
@@ -161,7 +163,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
             >
               {denom.popular && (
                 <div className="absolute -top-2 -right-2 bg-gradient-to-r from-amber-500 to-amber-600 text-gray-900 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  Popular
+                  {t('popular')}
                 </div>
               )}
               <div className="text-2xl mb-1">{denom.icon}</div>
@@ -178,22 +180,22 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
       {selectedInfo && (
         <div className="px-5 mb-6">
           <div className="bg-gray-900/50 rounded-2xl p-5 border border-gray-800">
-            <h3 className="text-white font-bold mb-3">Order Summary</h3>
+            <h3 className="text-white font-bold mb-3">{t('orderSummary')}</h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-400">Voucher Value:</span>
+                <span className="text-gray-400">{t('voucherValue')}:</span>
                 <span className="text-white font-semibold">₹{selectedInfo.value}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">PRC Required:</span>
+                <span className="text-gray-400">{t('prcRequired')}:</span>
                 <span className="text-white">{selectedInfo.prc} PRC</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Service Charge (~5%):</span>
+                <span className="text-gray-400">{t('serviceCharge')}:</span>
                 <span className="text-white">{estimatedServiceCharge.toFixed(2)} PRC</span>
               </div>
               <div className="border-t border-gray-800 pt-2 flex justify-between">
-                <span className="text-white font-bold">Total:</span>
+                <span className="text-white font-bold">{t('total')}:</span>
                 <span className="text-amber-500 font-bold">{totalPRC.toFixed(2)} PRC</span>
               </div>
             </div>
@@ -209,7 +211,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
           className="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-gray-900 font-bold rounded-xl flex items-center justify-center gap-2 hover:from-amber-400 hover:to-amber-500 transition-all disabled:opacity-50"
         >
           <Gift className="w-5 h-5" />
-          {loading ? 'Processing...' : 'Redeem Voucher'}
+          {loading ? t('processing') + '...' : t('redeemVoucher')}
         </button>
       </div>
 
@@ -218,14 +220,14 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
         <div className="bg-gray-900/50 rounded-2xl p-5 border border-gray-800">
           <h3 className="text-white font-bold mb-3 flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-amber-500" />
-            Why PhonePe Vouchers?
+            {t('whyPhonePeVouchers')}
           </h3>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { icon: Award, text: 'Use anywhere' },
-              { icon: TrendingUp, text: 'Multiple amounts' },
-              { icon: CheckCircle, text: 'Fast processing' },
-              { icon: Gift, text: 'Perfect for gifts' }
+              { icon: Award, text: t('useAnywhere') },
+              { icon: TrendingUp, text: t('multipleAmounts') },
+              { icon: CheckCircle, text: t('fastProcessing') },
+              { icon: Gift, text: t('perfectForGifts') }
             ].map((item, idx) => (
               <div key={idx} className="flex items-center gap-2 text-gray-400 text-sm">
                 <item.icon className="w-4 h-4 text-amber-500" />
@@ -240,14 +242,14 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
       <div className="px-5">
         <div className="bg-gray-900/50 rounded-2xl p-5 border border-gray-800">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-white font-bold">Voucher History</h2>
-            <p className="text-gray-500 text-xs">Processing: 3-7 days</p>
+            <h2 className="text-white font-bold">{t('voucherHistory')}</h2>
+            <p className="text-gray-500 text-xs">{t('processingTime')}</p>
           </div>
           
           {requests.length === 0 ? (
             <div className="text-center py-8">
               <Gift className="w-12 h-12 mx-auto text-gray-700 mb-3" />
-              <p className="text-gray-500">No voucher requests yet</p>
+              <p className="text-gray-500">{t('noVoucherRequestsYet')}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -257,7 +259,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">{denominations.find(d => d.value === req.denomination)?.icon || '🎁'}</span>
                       <div>
-                        <p className="text-white font-semibold">₹{req.denomination} Voucher</p>
+                        <p className="text-white font-semibold">₹{req.denomination} {t('voucher')}</p>
                         <p className="text-gray-500 text-xs">{new Date(req.created_at).toLocaleDateString()}</p>
                       </div>
                     </div>
@@ -265,13 +267,13 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
                   </div>
                   
                   <div className="flex justify-between text-sm mt-2">
-                    <span className="text-gray-500">PRC Deducted:</span>
+                    <span className="text-gray-500">{t('prcDeducted')}:</span>
                     <span className="text-amber-500 font-semibold">{req.total_prc_deducted?.toFixed(2)} PRC</span>
                   </div>
                   
                   {req.voucher_code && (
                     <div className="mt-3 p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/30">
-                      <p className="text-emerald-400 text-xs mb-1">Voucher Code</p>
+                      <p className="text-emerald-400 text-xs mb-1">{t('voucherCode')}</p>
                       <p className="text-emerald-300 font-mono font-bold text-lg">{req.voucher_code}</p>
                     </div>
                   )}
@@ -291,7 +293,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
                       className="px-3 py-1.5 bg-gray-800 text-gray-300 rounded-lg text-sm disabled:opacity-50"
                       data-testid="gift-vouchers-prev-page"
                     >
-                      Prev
+                      {t('prev')}
                     </button>
                     <span className="px-3 py-1.5 bg-amber-500/20 text-amber-500 rounded-lg text-sm font-medium">
                       {currentPage}/{Math.ceil(requests.length / itemsPerPage)}
@@ -302,7 +304,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
                       className="px-3 py-1.5 bg-gray-800 text-gray-300 rounded-lg text-sm disabled:opacity-50"
                       data-testid="gift-vouchers-next-page"
                     >
-                      Next
+                      {t('next')}
                     </button>
                   </div>
                 </div>
