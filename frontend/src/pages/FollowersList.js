@@ -13,6 +13,12 @@ const FollowersList = ({ user, type = 'followers' }) => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [profileName, setProfileName] = useState('');
+  
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const ITEMS_PER_PAGE = 20;
 
   useEffect(() => {
     fetchData();
@@ -28,16 +34,40 @@ const FollowersList = ({ user, type = 'followers' }) => {
       
       // Fetch followers or following
       const endpoint = type === 'followers' 
-        ? `${API}/api/users/${uid}/followers`
-        : `${API}/api/users/${uid}/following`;
+        ? `${API}/api/users/${uid}/followers?page=1&limit=${ITEMS_PER_PAGE}`
+        : `${API}/api/users/${uid}/following?page=1&limit=${ITEMS_PER_PAGE}`;
       
       const response = await axios.get(endpoint);
-      setUsers(type === 'followers' ? response.data.followers : response.data.following);
+      const data = type === 'followers' ? response.data.followers : response.data.following;
+      setUsers(data || []);
+      setHasMore((data || []).length >= ITEMS_PER_PAGE);
+      setPage(1);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      const endpoint = type === 'followers'
+        ? `${API}/api/users/${uid}/followers?page=${nextPage}&limit=${ITEMS_PER_PAGE}`
+        : `${API}/api/users/${uid}/following?page=${nextPage}&limit=${ITEMS_PER_PAGE}`;
+      
+      const response = await axios.get(endpoint);
+      const newData = type === 'followers' ? response.data.followers : response.data.following;
+      setUsers(prev => [...prev, ...(newData || [])]);
+      setPage(nextPage);
+      setHasMore((newData || []).length >= ITEMS_PER_PAGE);
+    } catch (error) {
+      console.error('Error loading more:', error);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
