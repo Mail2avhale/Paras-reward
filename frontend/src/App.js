@@ -72,6 +72,7 @@ const FlashSalesPage = lazy(() => import("@/pages/FlashSalesPage"));
 const PublicProfile = lazy(() => import("@/pages/PublicProfile"));
 const NetworkFeed = lazy(() => import("@/pages/NetworkFeed"));
 const Messages = lazy(() => import("@/pages/Messages"));
+const FollowersList = lazy(() => import("@/pages/FollowersList"));
 
 // ============ ADMIN PAGES - Code Split into separate chunk ============
 // These pages are only loaded when admin users access them (~1% of users)
