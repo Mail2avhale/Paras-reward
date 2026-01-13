@@ -618,6 +618,30 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 - ~~KYC Document Upload Fix (camera/gallery issue)~~ ✅ FIXED (Jan 10, 2026)
 - ~~Forgot Password Flow~~ ✅ VERIFIED (Jan 12, 2026)
 - ~~Social Networking Feature~~ ✅ COMPLETED (Jan 13, 2026)
+- ~~Admin Subscription History~~ ✅ COMPLETED (Jan 13, 2026)
+
+#### Admin Subscription History Feature - COMPLETED ✅ (Jan 13, 2026)
+**Backend API:**
+- `GET /api/admin/users/{uid}/subscription-history` - Fetch user's subscription payment history
+  - Returns: user info, history array, summary stats, pagination
+  - History includes: payment_id, date, plan, duration, days, amount, payment_method, status, expiry_date, is_free, approved_by, admin_notes
+
+**Frontend Implementation (`AdvancedUserManagement.js`):**
+- Subscription Management modal now has two tabs:
+  1. **Update Plan Tab**: Plan selection, duration, expiry date (auto/manual), free/paid toggle, payment details, admin notes
+  2. **History Tab**: Lists all past subscription records with:
+     - Plan badge (Explorer/Startup/Growth/Elite)
+     - FREE/Paid indicator with amount
+     - Status badge (Approved/Pending)
+     - Date, Duration, Payment Method, Expiry Date
+     - Admin who approved and notes (if any)
+     - Empty state with helpful message when no history
+
+**Testing:**
+- ✅ Backend API returns correct data
+- ✅ History tab displays records properly
+- ✅ Empty state shows when no history
+- ✅ Records update after new subscription changes
 
 ### P3 (Low Priority)
 - Hierarchical Reporting Structure
