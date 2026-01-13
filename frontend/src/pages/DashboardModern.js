@@ -202,7 +202,7 @@ const DashboardModern = ({ user, onLogout }) => {
       )}
 
       {/* Header - with safe area padding for mobile browsers */}
-      <div className="px-5 pb-4 pt-safe-header" style={{ paddingTop: 'max(2rem, env(safe-area-inset-top, 2rem))' }}>
+      <div className="px-5 pb-4 pt-20" style={{ paddingTop: 'max(5rem, calc(env(safe-area-inset-top, 0px) + 4rem))' }}>
         <div className="flex items-center justify-between">
           <div>
             <p className="text-gray-400 text-sm">Welcome back,</p>
