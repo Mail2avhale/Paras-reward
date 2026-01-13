@@ -20,6 +20,14 @@ const NetworkFeed = ({ user }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
+  
+  // Pagination state
+  const [globalPage, setGlobalPage] = useState(1);
+  const [networkPage, setNetworkPage] = useState(1);
+  const [hasMoreGlobal, setHasMoreGlobal] = useState(true);
+  const [hasMoreNetwork, setHasMoreNetwork] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const ITEMS_PER_PAGE = 20;
 
   useEffect(() => {
     fetchData();
@@ -29,13 +37,17 @@ const NetworkFeed = ({ user }) => {
     setLoading(true);
     try {
       // Fetch global feed
-      const globalRes = await axios.get(`${API}/api/feed/global?limit=20`);
+      const globalRes = await axios.get(`${API}/api/feed/global?limit=${ITEMS_PER_PAGE}&page=1`);
       setGlobalFeed(globalRes.data.activities || []);
+      setHasMoreGlobal((globalRes.data.activities || []).length >= ITEMS_PER_PAGE);
+      setGlobalPage(1);
 
       // Fetch network feed if logged in
       if (user?.uid) {
-        const networkRes = await axios.get(`${API}/api/feed/network/${user.uid}?limit=20`);
+        const networkRes = await axios.get(`${API}/api/feed/network/${user.uid}?limit=${ITEMS_PER_PAGE}&page=1`);
         setNetworkFeed(networkRes.data.activities || []);
+        setHasMoreNetwork((networkRes.data.activities || []).length >= ITEMS_PER_PAGE);
+        setNetworkPage(1);
 
         // Fetch suggested users
         const suggestedRes = await axios.get(`${API}/api/social/suggested-users/${user.uid}?limit=5`);
@@ -45,6 +57,40 @@ const NetworkFeed = ({ user }) => {
       console.error('Error fetching feed:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMoreGlobal = async () => {
+    if (loadingMore || !hasMoreGlobal) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = globalPage + 1;
+      const res = await axios.get(`${API}/api/feed/global?limit=${ITEMS_PER_PAGE}&page=${nextPage}`);
+      const newActivities = res.data.activities || [];
+      setGlobalFeed(prev => [...prev, ...newActivities]);
+      setGlobalPage(nextPage);
+      setHasMoreGlobal(newActivities.length >= ITEMS_PER_PAGE);
+    } catch (error) {
+      console.error('Error loading more global feed:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const loadMoreNetwork = async () => {
+    if (loadingMore || !hasMoreNetwork) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = networkPage + 1;
+      const res = await axios.get(`${API}/api/feed/network/${user.uid}?limit=${ITEMS_PER_PAGE}&page=${nextPage}`);
+      const newActivities = res.data.activities || [];
+      setNetworkFeed(prev => [...prev, ...newActivities]);
+      setNetworkPage(nextPage);
+      setHasMoreNetwork(newActivities.length >= ITEMS_PER_PAGE);
+    } catch (error) {
+      console.error('Error loading more network feed:', error);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
