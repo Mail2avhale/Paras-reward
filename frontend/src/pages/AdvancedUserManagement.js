@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { 
   Users, Search, Edit, Trash2, DollarSign, Award, 
   ChevronLeft, ChevronRight, X, Plus, Minus, Settings, Shield,
-  Calendar, Edit2
+  Calendar, Edit2, History, Clock, CreditCard, CheckCircle, Gift
 } from 'lucide-react';
 import ManagerPermissions from '@/components/ManagerPermissions';
 
