@@ -156,7 +156,7 @@ const NetworkFeed = ({ user }) => {
     >
       <button 
         onClick={() => navigate(`/profile/${userItem.uid}`)}
-        className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white font-bold relative"
+        className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white font-bold relative flex-shrink-0"
       >
         {userItem.avatar ? (
           <img src={userItem.avatar} alt="" className="w-full h-full rounded-full object-cover" />
@@ -179,15 +179,22 @@ const NetworkFeed = ({ user }) => {
           {userItem.badge && <span>{userItem.badge}</span>}
           {userItem.membership_type === 'vip' && <Crown className="w-4 h-4 text-amber-400" />}
         </button>
-        <p className="text-gray-500 text-sm">
-          {userItem.team_size || 0} team • {userItem.followers_count || 0} followers
+        <p className="text-gray-500 text-sm truncate">
+          {userItem.city && <span>{userItem.city}</span>}
+          {userItem.city && userItem.team_size > 0 && <span> • </span>}
+          {userItem.team_size > 0 && <span>{userItem.team_size} team</span>}
+          {(userItem.city || userItem.team_size > 0) && <span> • </span>}
+          {userItem.followers_count || 0} followers
         </p>
+        {userItem.reason && (
+          <p className="text-purple-400 text-xs mt-0.5">{userItem.reason}</p>
+        )}
       </div>
       
       {showFollowBtn && !userItem.is_following && (
         <button
           onClick={() => handleFollow(userItem.uid)}
-          className="px-4 py-2 bg-purple-500 text-white text-sm font-semibold rounded-lg hover:bg-purple-600 transition-colors"
+          className="px-4 py-2 bg-purple-500 text-white text-sm font-semibold rounded-lg hover:bg-purple-600 transition-colors flex-shrink-0"
         >
           Follow
         </button>
