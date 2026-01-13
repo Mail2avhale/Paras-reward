@@ -481,10 +481,23 @@ const Marketplace = ({ user }) => {
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder={t.search}
-            className="bg-white border-gray-200 text-gray-800 pl-12 rounded-2xl shadow-lg h-12"
+            className="bg-white border-gray-200 text-gray-800 pl-12 pr-12 rounded-2xl shadow-lg h-12"
             data-testid="product-search"
           />
+          {searchQuery && (
+            <button 
+              onClick={() => handleSearchChange('')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-300"
+            >
+              ×
+            </button>
+          )}
         </div>
+        {searchQuery && (
+          <p className="text-sm text-gray-500 mt-2 px-1">
+            Found {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} for "{searchQuery}"
+          </p>
+        )}
       </div>
 
       {/* Category Tabs - Horizontal Scroll */}
