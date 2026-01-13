@@ -55,8 +55,23 @@ const DashboardModern = ({ user, onLogout }) => {
     prcBalance: 0,
     totalMined: 0,
     referralCount: 0,
-    membershipType: 'free'
+    membershipType: 'free',
+    subscriptionPlan: 'explorer'
   });
+
+  // Helper function to get plan display name
+  const getPlanDisplayName = (plan) => {
+    const planNames = {
+      'explorer': 'Explorer',
+      'startup': 'Startup',
+      'growth': 'Growth',
+      'elite': 'Elite'
+    };
+    return planNames[plan] || 'Explorer';
+  };
+
+  // Check if user has a paid plan
+  const hasPaidPlan = ['startup', 'growth', 'elite'].includes(stats.subscriptionPlan);
 
   // Fetch dashboard data - optimized with parallel requests
   useEffect(() => {
