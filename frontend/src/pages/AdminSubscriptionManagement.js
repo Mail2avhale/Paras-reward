@@ -736,6 +736,15 @@ const AdminSubscriptionManagement = ({ user }) => {
                           <span className="text-green-400 text-sm">Active</span>
                         )}
                       </td>
+                      <td className="py-3">
+                        <button
+                          onClick={() => openEditSubscription(u)}
+                          className="px-3 py-1 bg-purple-500/20 text-purple-400 text-xs rounded-lg hover:bg-purple-500/30 transition-colors"
+                        >
+                          <Edit2 className="w-3 h-3 inline mr-1" />
+                          Edit
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -743,6 +752,184 @@ const AdminSubscriptionManagement = ({ user }) => {
             </table>
           </div>
         </Card>
+      )}
+
+      {/* Manual Subscription Update Modal */}
+      {editingUser && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-lg p-6 bg-gray-900 border-gray-700 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Update Subscription</h3>
+              <button onClick={() => setEditingUser(null)} className="text-gray-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* User Info */}
+            <div className="bg-gray-800 rounded-lg p-4 mb-4">
+              <p className="text-white font-medium">{editingUser.name || 'User'}</p>
+              <p className="text-gray-400 text-sm">{editingUser.email}</p>
+              <p className="text-gray-500 text-xs mt-1">Current: {(editingUser.subscription_plan || 'explorer').charAt(0).toUpperCase() + (editingUser.subscription_plan || 'explorer').slice(1)}</p>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Plan Selection */}
+              <div>
+                <label className="text-gray-400 text-sm block mb-2">Select Plan</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {['explorer', 'startup', 'growth', 'elite'].map(plan => (
+                    <button
+                      key={plan}
+                      onClick={() => {
+                        setManualSubForm({
+                          ...manualSubForm, 
+                          plan,
+                          amount_paid: manualSubForm.is_free ? 0 : (pricing[plan]?.[manualSubForm.duration] || 0)
+                        });
+                      }}
+                      className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                        manualSubForm.plan === plan 
+                          ? plan === 'elite' ? 'bg-amber-500/20 border-amber-500 text-amber-400' :
+                            plan === 'growth' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' :
+                            plan === 'startup' ? 'bg-blue-500/20 border-blue-500 text-blue-400' :
+                            'bg-gray-700 border-gray-600 text-gray-300'
+                          : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
+                      }`}
+                    >
+                      {plan.charAt(0).toUpperCase() + plan.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Duration */}
+              <div>
+                <label className="text-gray-400 text-sm block mb-2">Duration</label>
+                <select
+                  value={manualSubForm.duration}
+                  onChange={(e) => setManualSubForm({
+                    ...manualSubForm, 
+                    duration: e.target.value,
+                    amount_paid: manualSubForm.is_free ? 0 : (pricing[manualSubForm.plan]?.[e.target.value] || 0)
+                  })}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                >
+                  <option value="monthly">Monthly (30 days)</option>
+                  <option value="quarterly">Quarterly (90 days)</option>
+                  <option value="half_yearly">Half Yearly (180 days)</option>
+                  <option value="yearly">Yearly (365 days)</option>
+                </select>
+              </div>
+              
+              {/* Free Subscription Toggle */}
+              <div className="flex items-center justify-between bg-gray-800 p-3 rounded-lg">
+                <div>
+                  <p className="text-white text-sm">Free Subscription</p>
+                  <p className="text-gray-500 text-xs">Grant without payment</p>
+                </div>
+                <button
+                  onClick={() => setManualSubForm({
+                    ...manualSubForm, 
+                    is_free: !manualSubForm.is_free,
+                    amount_paid: !manualSubForm.is_free ? 0 : (pricing[manualSubForm.plan]?.[manualSubForm.duration] || 0)
+                  })}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${
+                    manualSubForm.is_free ? 'bg-green-500' : 'bg-gray-700'
+                  }`}
+                >
+                  <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                    manualSubForm.is_free ? 'left-7' : 'left-1'
+                  }`} />
+                </button>
+              </div>
+              
+              {/* Payment Details (only if not free) */}
+              {!manualSubForm.is_free && (
+                <>
+                  <div>
+                    <label className="text-gray-400 text-sm block mb-2">Payment Method</label>
+                    <select
+                      value={manualSubForm.payment_method}
+                      onChange={(e) => setManualSubForm({...manualSubForm, payment_method: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                    >
+                      <option value="admin_manual">Manual Entry</option>
+                      <option value="cash">Cash</option>
+                      <option value="upi">UPI</option>
+                      <option value="bank_transfer">Bank Transfer</option>
+                      <option value="cheque">Cheque</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-gray-400 text-sm block mb-2">Payment Reference / Transaction ID</label>
+                    <Input
+                      value={manualSubForm.payment_reference}
+                      onChange={(e) => setManualSubForm({...manualSubForm, payment_reference: e.target.value})}
+                      placeholder="e.g., UPI ID, Cheque No, etc."
+                      className="bg-gray-800 border-gray-700 text-white"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-gray-400 text-sm block mb-2">Amount Paid (₹)</label>
+                    <Input
+                      type="number"
+                      value={manualSubForm.amount_paid}
+                      onChange={(e) => setManualSubForm({...manualSubForm, amount_paid: parseFloat(e.target.value) || 0})}
+                      className="bg-gray-800 border-gray-700 text-white"
+                    />
+                    <p className="text-gray-500 text-xs mt-1">
+                      Standard price: ₹{pricing[manualSubForm.plan]?.[manualSubForm.duration] || 0}
+                    </p>
+                  </div>
+                </>
+              )}
+              
+              {/* Notes */}
+              <div>
+                <label className="text-gray-400 text-sm block mb-2">Admin Notes</label>
+                <textarea
+                  value={manualSubForm.notes}
+                  onChange={(e) => setManualSubForm({...manualSubForm, notes: e.target.value})}
+                  placeholder="Optional notes about this subscription..."
+                  rows={2}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white resize-none"
+                />
+              </div>
+              
+              {/* Summary */}
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+                <h4 className="text-purple-400 font-medium mb-2">Summary</h4>
+                <div className="space-y-1 text-sm">
+                  <p className="text-gray-300">Plan: <span className="text-white">{manualSubForm.plan.charAt(0).toUpperCase() + manualSubForm.plan.slice(1)}</span></p>
+                  <p className="text-gray-300">Duration: <span className="text-white">{manualSubForm.duration.replace('_', ' ')}</span></p>
+                  <p className="text-gray-300">Amount: <span className={manualSubForm.is_free ? 'text-green-400' : 'text-amber-400'}>
+                    {manualSubForm.is_free ? 'FREE' : `₹${manualSubForm.amount_paid}`}
+                  </span></p>
+                </div>
+              </div>
+              
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  onClick={() => setEditingUser(null)}
+                  variant="outline"
+                  className="flex-1 bg-gray-800 border-gray-700 text-white"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleManualSubscriptionUpdate}
+                  disabled={processing}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700"
+                >
+                  {processing ? 'Updating...' : 'Update Subscription'}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
       )}
 
       {/* Payment Review Modal */}
