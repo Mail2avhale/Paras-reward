@@ -182,6 +182,9 @@ const ReferralsEnhanced = ({ user }) => {
           vipCount += users.filter(u => u.membership_type === 'vip').length;
         });
         
+        // Check for milestone achievements (5, 10, 25, 50, 100)
+        checkMilestoneAchievement(totalCount);
+        
         // Check for first referral celebration!
         if (previousTotal !== null && previousTotal === 0 && totalCount === 1) {
           // First friend joined! Trigger celebration
@@ -194,6 +197,9 @@ const ReferralsEnhanced = ({ user }) => {
         setReferralStats({ total: totalCount, active: activeCount, vip: vipCount });
       } catch (e) {
         const refCount = userResponse.data.referral_count || 0;
+        
+        // Check for milestone achievements
+        checkMilestoneAchievement(refCount);
         
         // Check for first referral using user data
         if (previousTotal !== null && previousTotal === 0 && refCount === 1) {
