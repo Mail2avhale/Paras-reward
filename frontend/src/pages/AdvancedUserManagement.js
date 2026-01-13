@@ -736,7 +736,7 @@ const AdvancedUserManagement = () => {
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-lg p-6 bg-gray-900 border-gray-700 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Update Subscription</h3>
+              <h3 className="text-lg font-semibold text-white">Subscription Management</h3>
               <button onClick={() => setShowSubscriptionModal(false)} className="text-gray-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
@@ -759,15 +759,43 @@ const AdvancedUserManagement = () => {
               </div>
             </div>
             
-            <div className="space-y-4">
-              {/* Step 1: Select Plan */}
-              <div>
-                <label className="text-gray-400 text-sm block mb-2">Step 1: Select Plan</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {['explorer', 'startup', 'growth', 'elite'].map(plan => (
-                    <button
-                      key={plan}
-                      onClick={() => setSubscriptionForm({...subscriptionForm, plan})}
+            {/* Tabs */}
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setShowHistoryTab(false)}
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                  !showHistoryTab 
+                    ? 'bg-purple-500 text-white' 
+                    : 'bg-gray-800 text-gray-400 hover:text-white'
+                }`}
+              >
+                <Edit2 className="w-4 h-4" />
+                Update Plan
+              </button>
+              <button
+                onClick={() => setShowHistoryTab(true)}
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                  showHistoryTab 
+                    ? 'bg-purple-500 text-white' 
+                    : 'bg-gray-800 text-gray-400 hover:text-white'
+                }`}
+              >
+                <History className="w-4 h-4" />
+                History ({subscriptionHistory.length})
+              </button>
+            </div>
+            
+            {/* Update Plan Tab */}
+            {!showHistoryTab && (
+              <div className="space-y-4">
+                {/* Step 1: Select Plan */}
+                <div>
+                  <label className="text-gray-400 text-sm block mb-2">Step 1: Select Plan</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {['explorer', 'startup', 'growth', 'elite'].map(plan => (
+                      <button
+                        key={plan}
+                        onClick={() => setSubscriptionForm({...subscriptionForm, plan})}
                       className={`p-3 rounded-lg border text-xs font-medium transition-colors ${
                         subscriptionForm.plan === plan 
                           ? plan === 'elite' ? 'bg-amber-500/20 border-amber-500 text-amber-400' :
