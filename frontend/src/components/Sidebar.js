@@ -19,12 +19,14 @@ import {
   FileText,
   Shield
 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
 
 const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLanguage();
 
   // Close sidebar on route change
   useEffect(() => {
@@ -56,24 +58,24 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
   };
 
   const menuItems = [
-    { id: 'home', label: 'Home', icon: Home, route: '/dashboard' },
-    { id: 'rewards', label: 'Rewards', icon: Zap, route: '/daily-rewards' },
-    { id: 'game', label: 'Tap Game', icon: Gamepad2, route: '/game' },
-    { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag, route: '/marketplace' },
-    { id: 'orders', label: 'My Orders', icon: Receipt, route: '/orders' },
-    { id: 'gift-vouchers', label: 'Gift Vouchers', icon: Gift, route: '/gift-vouchers' },
-    { id: 'bill-payments', label: 'Bill Payments', icon: FileText, route: '/bill-payments' },
-    { id: 'referrals', label: 'Referrals', icon: Users, route: '/referrals' },
+    { id: 'home', label: t('home'), icon: Home, route: '/dashboard' },
+    { id: 'rewards', label: t('rewards'), icon: Zap, route: '/daily-rewards' },
+    { id: 'game', label: t('tapGame'), icon: Gamepad2, route: '/game' },
+    { id: 'marketplace', label: t('marketplace'), icon: ShoppingBag, route: '/marketplace' },
+    { id: 'orders', label: t('myOrders'), icon: Receipt, route: '/orders' },
+    { id: 'gift-vouchers', label: t('giftVouchers'), icon: Gift, route: '/gift-vouchers' },
+    { id: 'bill-payments', label: t('billPayments'), icon: FileText, route: '/bill-payments' },
+    { id: 'referrals', label: t('referrals'), icon: Users, route: '/referrals' },
     // Removed: Leaderboard for AdMob compliance
     // Removed: Achievements for AdMob compliance
-    { id: 'subscription', label: 'Subscription', icon: Crown, route: '/subscription' },
+    { id: 'subscription', label: t('subscription'), icon: Crown, route: '/subscription' },
   ];
 
   const bottomMenuItems = [
-    { id: 'profile', label: 'My Profile', icon: User, route: '/profile' },
-    { id: 'support', label: 'Support', icon: HelpCircle, route: '/support' },
-    { id: 'terms', label: 'Terms & Conditions', icon: FileText, route: '/terms' },
-    { id: 'privacy', label: 'Privacy Policy', icon: Shield, route: '/privacy' },
+    { id: 'profile', label: t('myProfile'), icon: User, route: '/profile' },
+    { id: 'support', label: t('support'), icon: HelpCircle, route: '/support' },
+    { id: 'terms', label: t('termsAndConditions'), icon: FileText, route: '/terms' },
+    { id: 'privacy', label: t('privacyPolicy'), icon: Shield, route: '/privacy' },
   ];
 
   const isActive = (route) => location.pathname === route;
@@ -161,7 +163,7 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
           {/* Bottom Menu Items */}
           <div className="px-4 space-y-1">
             <p className="px-4 text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">
-              Account & Support
+              {t('accountAndSupport')}
             </p>
             {bottomMenuItems.map((item) => {
               const Icon = item.icon;
@@ -199,7 +201,7 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
             className="w-full flex items-center justify-center space-x-2 px-4 py-3.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-xl transition-all duration-200 border border-white/10"
           >
             <LogOut className="h-5 w-5 text-white" />
-            <span className="font-semibold text-white">Logout</span>
+            <span className="font-semibold text-white">{t('logout')}</span>
           </button>
         </div>
       </div>
