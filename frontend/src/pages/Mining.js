@@ -237,8 +237,8 @@ const DailyRewards = ({ user }) => {
             <ArrowLeft className="w-5 h-5 text-white" />
           </button>
           <div>
-            <h1 className="text-white text-xl font-bold">{t.dailyRewards}</h1>
-            <p className="text-gray-400 text-sm">Collect PRC points daily</p>
+            <h1 className="text-white text-xl font-bold">{globalT('dailyRewards')}</h1>
+            <p className="text-gray-400 text-sm">{globalT('collectRewards')}</p>
           </div>
         </div>
       </div>
@@ -285,7 +285,7 @@ const DailyRewards = ({ user }) => {
                       >
                         <Zap className="w-4 h-4" />
                       </motion.div>
-                      {t.sessionActive}
+                      {globalT('sessionActive')}
                     </>
                   ) : (
                     <><Clock className="w-4 h-4" /> Ready</>
@@ -308,14 +308,14 @@ const DailyRewards = ({ user }) => {
             {/* Timer or Start Button */}
             {isMining ? (
               <div className="text-center mb-6">
-                <p className="text-gray-400 text-sm mb-2">{t.timeRemaining}</p>
+                <p className="text-gray-400 text-sm mb-2">{globalT('timeRemaining')}</p>
                 <div className="text-5xl font-bold text-white font-mono tracking-wider">
                   {formatTime(sessionTimeRemaining)}
                 </div>
                 
                 {/* Earned PRC Display */}
                 <div className="mt-4 bg-black/30 rounded-2xl p-4">
-                  <p className="text-gray-400 text-xs mb-1">Session Earnings</p>
+                  <p className="text-gray-400 text-xs mb-1">{globalT('sessionEarnings')}</p>
                   <div className="flex items-center justify-center gap-2">
                     <Coins className="w-6 h-6 text-amber-400" />
                     <span className="text-3xl font-bold text-amber-400">
@@ -342,12 +342,12 @@ const DailyRewards = ({ user }) => {
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                       />
-                      {t.collecting}
+                      {globalT('collecting')}
                     </span>
                   ) : (
                     <span className="flex items-center gap-2 justify-center">
                       <CheckCircle className="w-5 h-5" />
-                      {t.collectRewards} ({sessionPRC.toFixed(2)} PRC)
+                      {globalT('collectRewards')} ({sessionPRC.toFixed(2)} PRC)
                     </span>
                   )}
                 </Button>
@@ -361,7 +361,7 @@ const DailyRewards = ({ user }) => {
                 >
                   <Star className="w-14 h-14 text-black" />
                 </motion.div>
-                <p className="text-gray-400 mb-4">Start collecting daily rewards</p>
+                <p className="text-gray-400 mb-4">{globalT('startEarning')}</p>
                 <Button 
                   onClick={startSession}
                   disabled={isStarting}
@@ -374,12 +374,12 @@ const DailyRewards = ({ user }) => {
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                       />
-                      Starting...
+                      {globalT('processing')}...
                     </span>
                   ) : (
                     <span className="flex items-center gap-2 justify-center">
                       <Play className="w-5 h-5" />
-                      {t.startSession}
+                      {globalT('startSession')}
                     </span>
                   )}
                 </Button>
@@ -389,14 +389,14 @@ const DailyRewards = ({ user }) => {
             {/* Stats Grid */}
             <div className="grid grid-cols-2 gap-4 mt-6">
               <div className="bg-black/20 rounded-2xl p-4 text-center">
-                <p className="text-gray-400 text-xs mb-1">{t.currentBalance}</p>
+                <p className="text-gray-400 text-xs mb-1">{globalT('currentBalance')}</p>
                 <p className="text-2xl font-bold text-white">{(userData?.prc_balance || 0).toFixed(2)}</p>
                 <p className="text-amber-400 text-sm">PRC</p>
               </div>
               <div className="bg-black/20 rounded-2xl p-4 text-center">
-                <p className="text-gray-400 text-xs mb-1">{t.rewardRate}</p>
+                <p className="text-gray-400 text-xs mb-1">{globalT('rewardRate')}</p>
                 <p className="text-2xl font-bold text-white">{miningRate.toFixed(1)}</p>
-                <p className="text-emerald-400 text-sm">{t.perHour}</p>
+                <p className="text-emerald-400 text-sm">{globalT('perHour')}</p>
               </div>
             </div>
           </div>
@@ -410,12 +410,12 @@ const DailyRewards = ({ user }) => {
             <div className="flex items-start gap-3">
               <Clock className="w-5 h-5 text-amber-500 mt-0.5" />
               <div>
-                <p className="text-amber-500 font-medium text-sm">{t.freeWarning}</p>
+                <p className="text-amber-500 font-medium text-sm">{globalT('freeUserWarning')}</p>
                 <button 
                   onClick={() => navigate('/subscription')}
                   className="text-amber-400 text-xs mt-1 underline"
                 >
-                  Upgrade for higher mining rates →
+                  {globalT('upgradeToVip')} →
                 </button>
               </div>
             </div>
@@ -425,7 +425,7 @@ const DailyRewards = ({ user }) => {
 
       {/* Quick Stats */}
       <div className="px-5 mb-6">
-        <h2 className="text-white font-bold text-lg mb-4">Your Stats</h2>
+        <h2 className="text-white font-bold text-lg mb-4">{globalT('yourStats')}</h2>
         <div className="grid grid-cols-2 gap-3">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -434,7 +434,7 @@ const DailyRewards = ({ user }) => {
             className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4"
           >
             <TrendingUp className="w-8 h-8 text-emerald-500 mb-2" />
-            <p className="text-gray-400 text-xs">{t.totalEarned}</p>
+            <p className="text-gray-400 text-xs">{globalT('totalEarned')}</p>
             <p className="text-xl font-bold text-white">{((userData?.total_mined || 0) + sessionPRC).toFixed(2)}</p>
           </motion.div>
           <motion.div 
@@ -444,7 +444,7 @@ const DailyRewards = ({ user }) => {
             className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4"
           >
             <Gift className="w-8 h-8 text-purple-500 mb-2" />
-            <p className="text-gray-400 text-xs">Referral Bonus</p>
+            <p className="text-gray-400 text-xs">{globalT('referralWeight')}</p>
             <p className="text-xl font-bold text-white">+{Math.min((userData?.referral_count || 0) * 10, 100)}%</p>
           </motion.div>
         </div>
@@ -452,13 +452,13 @@ const DailyRewards = ({ user }) => {
 
       {/* How It Works */}
       <div className="px-5">
-        <h2 className="text-white font-bold text-lg mb-4">How It Works</h2>
+        <h2 className="text-white font-bold text-lg mb-4">{globalT('howToPlay')}</h2>
         <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 space-y-4">
           {[
-            { icon: Play, text: 'Start a 24-hour session', color: 'text-emerald-500' },
-            { icon: Coins, text: 'PRC accumulates automatically', color: 'text-amber-500' },
-            { icon: CheckCircle, text: 'Collect rewards anytime', color: 'text-blue-500' },
-            { icon: Star, text: 'Invite friends for +10% bonus each', color: 'text-purple-500' },
+            { icon: Play, text: globalT('startSession'), color: 'text-emerald-500' },
+            { icon: Coins, text: globalT('collectRewards'), color: 'text-amber-500' },
+            { icon: CheckCircle, text: globalT('rewardRate'), color: 'text-blue-500' },
+            { icon: Star, text: globalT('referralWeight') + ' +10%', color: 'text-purple-500' },
           ].map((item, index) => (
             <div key={index} className="flex items-center gap-4">
               <div className={`w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center`}>
