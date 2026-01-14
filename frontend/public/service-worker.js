@@ -1,18 +1,30 @@
-// Enhanced Service Worker for PARAS REWARD PWA
-// Update version to force cache refresh after bug fixes
-const CACHE_NAME = 'paras-reward-v4';
-const RUNTIME_CACHE = 'paras-runtime-v4';
-const API_CACHE = 'paras-api-v4';
+// Enhanced Service Worker for PARAS REWARD TWA/PWA
+// Update version to force cache refresh after TWA update
+const CACHE_NAME = 'paras-reward-v5';
+const RUNTIME_CACHE = 'paras-runtime-v5';
+const API_CACHE = 'paras-api-v5';
 
-// Static assets to cache
+// Static assets to cache (including new icons)
 const urlsToCache = [
   '/',
   '/dashboard',
-  '/mining',
+  '/daily-rewards',
+  '/game',
   '/marketplace',
   '/wallet',
   '/orders',
   '/profile',
+  '/icons/icon-48x48.png',
+  '/icons/icon-72x72.png',
+  '/icons/icon-96x96.png',
+  '/icons/icon-128x128.png',
+  '/icons/icon-144x144.png',
+  '/icons/icon-152x152.png',
+  '/icons/icon-192x192.png',
+  '/icons/icon-384x384.png',
+  '/icons/icon-512x512.png',
+  '/icons/maskable-icon-192x192.png',
+  '/icons/maskable-icon-512x512.png',
   '/paras-logo.jpg',
   '/manifest.json',
   '/offline.html'
