@@ -113,7 +113,7 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
                   PARAS REWARD
                 </span>
                 <span className="text-xs text-white/70 leading-tight">
-                  India's No.1 Rewards Platform
+                  India&apos;s No.1 Rewards Platform
                 </span>
               </div>
             </div>
