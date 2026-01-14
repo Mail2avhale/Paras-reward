@@ -63,44 +63,55 @@ export const LanguageSelectorCompact = () => {
 // Full Language Selector for Settings Page
 export const LanguageSelectorFull = () => {
   const { language, changeLanguage, t } = useLanguage();
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  const currentLang = LANGUAGES.find(l => l.code === language) || LANGUAGES[0];
 
   return (
-    <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="bg-gray-900/50 rounded-xl border border-gray-800 overflow-hidden">
+      {/* Header - Always visible */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full p-4 flex items-center gap-3"
+      >
         <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
           <Globe className="w-6 h-6 text-white" />
         </div>
-        <div>
-          <h2 className="text-xl font-bold text-white">{t('language')}</h2>
+        <div className="flex-1 text-left">
+          <h2 className="text-lg font-bold text-white">{t('language')}</h2>
           <p className="text-gray-400 text-sm">{t('selectLanguage')}</p>
         </div>
-      </div>
+        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+      </button>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {LANGUAGES.map((lang) => (
-          <button
-            key={lang.code}
-            onClick={() => changeLanguage(lang.code)}
-            className={`p-4 rounded-xl border-2 transition-all duration-200 flex items-center gap-3 ${
-              language === lang.code
-                ? 'border-amber-500 bg-amber-500/10'
-                : 'border-gray-700 bg-gray-800/50 hover:border-gray-600 hover:bg-gray-800'
-            }`}
-          >
-            <span className="text-2xl">{lang.flag}</span>
-            <div className="text-left flex-1">
-              <p className={`font-semibold ${language === lang.code ? 'text-amber-400' : 'text-white'}`}>
-                {lang.nativeName}
-              </p>
-              <p className="text-sm text-gray-500">{lang.name}</p>
-            </div>
-            {language === lang.code && (
-              <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center">
-                <Check className="w-4 h-4 text-black" />
+      {/* Expandable Language List */}
+      <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className="px-4 pb-4 space-y-2">
+          {LANGUAGES.map((lang) => (
+            <button
+              key={lang.code}
+              onClick={() => changeLanguage(lang.code)}
+              className={`w-full p-3 rounded-xl border-2 transition-all duration-200 flex items-center gap-3 ${
+                language === lang.code
+                  ? 'border-amber-500 bg-amber-500/10'
+                  : 'border-gray-700 bg-gray-800/30 hover:border-gray-600 hover:bg-gray-800/50'
+              }`}
+            >
+              <span className="text-2xl">{lang.flag}</span>
+              <div className="text-left flex-1">
+                <p className={`font-semibold ${language === lang.code ? 'text-amber-400' : 'text-white'}`}>
+                  {lang.nativeName}
+                </p>
+                <p className="text-sm text-gray-500">{lang.name}</p>
               </div>
-            )}
-          </button>
-        ))}
+              {language === lang.code && (
+                <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center">
+                  <Check className="w-4 h-4 text-black" />
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
