@@ -924,25 +924,25 @@ const DashboardModern = ({ user, onLogout }) => {
         <div className="flex items-center justify-around py-2 px-4 max-w-lg mx-auto">
           <BottomNavItem 
             icon={Home} 
-            label="Home" 
+            label={t('home')} 
             isActive={activeTab === 'home'} 
             onClick={() => handleNavigation('home')}
           />
           <BottomNavItem 
             icon={Star} 
-            label="Rewards" 
+            label={t('rewards')} 
             isActive={activeTab === 'rewards'} 
             onClick={() => handleNavigation('rewards')}
           />
           <BottomNavItem 
             icon={Gamepad2} 
-            label="Play" 
+            label={t('tapGame')} 
             isActive={activeTab === 'game'} 
             onClick={() => handleNavigation('game')}
           />
           <BottomNavItem 
             icon={User} 
-            label="Profile" 
+            label={t('profile')} 
             isActive={activeTab === 'profile'} 
             onClick={() => handleNavigation('profile')}
           />
