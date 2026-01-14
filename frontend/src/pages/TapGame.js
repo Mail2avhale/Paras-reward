@@ -18,7 +18,7 @@ const PLAN_CONFIG = {
 
 const TapGame = ({ user }) => {
   const navigate = useNavigate();
-  const { language } = useLanguage();
+  const { language, t: globalT } = useLanguage();
   
   const [taps, setTaps] = useState(0);
   const [totalTapsToday, setTotalTapsToday] = useState(0);
@@ -38,15 +38,6 @@ const TapGame = ({ user }) => {
   // Helper functions
   const hasPaidPlan = ['startup', 'growth', 'elite'].includes(subscriptionPlan);
   const planConfig = PLAN_CONFIG[subscriptionPlan] || PLAN_CONFIG.explorer;
-
-  const t = {
-    title: language === 'mr' ? 'टॅप गेम' : language === 'hi' ? 'टैप गेम' : 'Tap Game',
-    tapToEarn: language === 'mr' ? 'टॅप करा आणि कमवा' : language === 'hi' ? 'टैप करें और कमाएं' : 'Tap to Earn',
-    tapsToday: language === 'mr' ? 'आजचे टॅप्स' : language === 'hi' ? 'आज के टैप' : 'Taps Today',
-    remaining: language === 'mr' ? 'बाकी' : language === 'hi' ? 'शेष' : 'Remaining',
-    earned: language === 'mr' ? 'मिळवले' : language === 'hi' ? 'कमाया' : 'Earned',
-    limitReached: language === 'mr' ? 'दैनिक मर्यादा पूर्ण!' : language === 'hi' ? 'दैनिक सीमा पूर्ण!' : 'Daily limit reached!',
-  };
 
   useEffect(() => {
     fetchTapStats();
@@ -167,8 +158,8 @@ const TapGame = ({ user }) => {
               <ArrowLeft className="w-5 h-5 text-white" />
             </button>
             <div>
-              <h1 className="text-white text-xl font-bold">{t.title}</h1>
-              <p className="text-gray-400 text-sm">{t.tapToEarn}</p>
+              <h1 className="text-white text-xl font-bold">{globalT('tapGame')}</h1>
+              <p className="text-gray-400 text-sm">{globalT('tapToEarn')}</p>
             </div>
           </div>
           {hasPaidPlan && (
@@ -191,17 +182,17 @@ const TapGame = ({ user }) => {
           <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 text-center">
             <Target className="w-6 h-6 text-pink-500 mx-auto mb-2" />
             <p className="text-2xl font-bold text-white">{totalTapsToday}</p>
-            <p className="text-gray-500 text-xs">{t.tapsToday}</p>
+            <p className="text-gray-500 text-xs">{globalT('tapsToday')}</p>
           </div>
           <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 text-center">
             <Zap className="w-6 h-6 text-amber-500 mx-auto mb-2" />
             <p className="text-2xl font-bold text-white">{remainingTaps}</p>
-            <p className="text-gray-500 text-xs">{t.remaining}</p>
+            <p className="text-gray-500 text-xs">{globalT('remaining')}</p>
           </div>
           <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 text-center">
             <Star className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
             <p className="text-2xl font-bold text-white">{earnedPRC.toFixed(2)}</p>
-            <p className="text-gray-500 text-xs">{t.earned}</p>
+            <p className="text-gray-500 text-xs">{globalT('earned')}</p>
           </div>
         </div>
       </div>
@@ -220,9 +211,9 @@ const TapGame = ({ user }) => {
             subscriptionPlan === 'startup' ? 'text-blue-400' :
             'text-gray-400'
           }`}>
-            {hasPaidPlan ? `🎉 ${subscriptionPlan.charAt(0).toUpperCase() + subscriptionPlan.slice(1)} Rate: ` : 'Explorer Rate: '}
-            <span className="font-bold">{prcPerTap} PRC per tap</span>
-            <span className="text-gray-500"> • {maxTaps} taps/day</span>
+            {hasPaidPlan ? `🎉 ${subscriptionPlan.charAt(0).toUpperCase() + subscriptionPlan.slice(1)} ${globalT('rate')}: ` : `Explorer ${globalT('rate')}: `}
+            <span className="font-bold">{prcPerTap} PRC/{globalT('tapGame').split(' ')[0].toLowerCase()}</span>
+            <span className="text-gray-500"> • {maxTaps} {globalT('tapsToday')}</span>
           </p>
         </div>
       </div>
@@ -237,7 +228,7 @@ const TapGame = ({ user }) => {
             transition={{ duration: 0.3 }}
           />
         </div>
-        <p className="text-center text-gray-500 text-sm mt-2">{totalTapsToday}/{maxTaps} taps today</p>
+        <p className="text-center text-gray-500 text-sm mt-2">{totalTapsToday}/{maxTaps} {globalT('tapsToday')}</p>
       </div>
 
       {/* Tap Button Area */}
@@ -295,18 +286,18 @@ const TapGame = ({ user }) => {
         </div>
 
         <p className="text-gray-400 mt-8 text-center text-lg">
-          {remainingTaps > 0 ? '👆 Tap fast to earn PRC!' : t.limitReached}
+          {remainingTaps > 0 ? `👆 ${globalT('tapFastToEarn')}` : globalT('dailyLimitReached')}
         </p>
       </div>
 
       {/* How It Works */}
       <div className="px-5 mt-8">
-        <h2 className="text-white font-bold text-lg mb-4">How to Play</h2>
+        <h2 className="text-white font-bold text-lg mb-4">{globalT('howToPlay')}</h2>
         <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 space-y-4">
           {[
-            { icon: Hand, text: 'Tap the button as fast as you can', color: 'text-pink-500' },
-            { icon: Star, text: `Earn ${prcPerTap} PRC per tap`, color: 'text-amber-500' },
-            { icon: Trophy, text: `Max ${maxTaps} taps per day`, color: 'text-emerald-500' },
+            { icon: Hand, text: globalT('tapTheButton'), color: 'text-pink-500' },
+            { icon: Star, text: globalT('earnPerTap').replace('{amount}', prcPerTap), color: 'text-amber-500' },
+            { icon: Trophy, text: globalT('maxTapsPerDay').replace('{count}', maxTaps), color: 'text-emerald-500' },
           ].map((item, index) => (
             <div key={index} className="flex items-center gap-4">
               <div className={`w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center`}>
