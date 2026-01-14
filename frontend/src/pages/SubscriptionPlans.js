@@ -222,7 +222,7 @@ const SubscriptionPlans = ({ user }) => {
                       )}
                     </div>
                     <p className="text-gray-400 text-sm mt-1">
-                      {plan.multiplier}x {t('miningRate')} • {plan.tap_limit} {t('dailyTapsLimit')}
+                      {plan.multiplier}x {t('rewardRate')} • {plan.tap_limit} {t('dailyTapsLimit')}
                     </p>
                     
                     {/* Benefits */}
@@ -278,7 +278,7 @@ const SubscriptionPlans = ({ user }) => {
                 </thead>
                 <tbody className="text-gray-300">
                   <tr className="border-b border-gray-800/50">
-                    <td className="py-2">{t('miningRate')}</td>
+                    <td className="py-2">{t('rewardRate')}</td>
                     <td className="text-center">1.0x</td>
                     <td className="text-center">1.5x</td>
                     <td className="text-center">2.0x</td>
