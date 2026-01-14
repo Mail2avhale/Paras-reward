@@ -24,21 +24,9 @@ const DailyRewards = ({ user }) => {
   const [sessionStartTime, setSessionStartTime] = useState(null);
   
   const timerRef = useRef(null);
-
-  // Translations
-  const t = {
-    dailyRewards: language === 'mr' ? 'दैनिक बक्षिसे' : language === 'hi' ? 'दैनिक पुरस्कार' : 'Daily Rewards',
-    startSession: language === 'mr' ? 'सत्र सुरू करा' : language === 'hi' ? 'सत्र शुरू करें' : 'Start Session',
-    sessionActive: language === 'mr' ? 'सत्र सक्रिय' : language === 'hi' ? 'सत्र सक्रिय' : 'Session Active',
-    timeRemaining: language === 'mr' ? 'उर्वरित वेळ' : language === 'hi' ? 'शेष समय' : 'Time Remaining',
-    currentBalance: language === 'mr' ? 'वर्तमान शिल्लक' : language === 'hi' ? 'वर्तमान बैलेंस' : 'Current Balance',
-    rewardRate: language === 'mr' ? 'बक्षीस दर' : language === 'hi' ? 'पुरस्कार दर' : 'Reward Rate',
-    perHour: language === 'mr' ? '/तास' : language === 'hi' ? '/घंटा' : '/hour',
-    totalEarned: language === 'mr' ? 'एकूण मिळवले' : language === 'hi' ? 'कुल कमाया' : 'Total Earned',
-    collectRewards: language === 'mr' ? 'बक्षीस गोळा करा' : language === 'hi' ? 'पुरस्कार इकट्ठा करें' : 'Collect Rewards',
-    freeWarning: language === 'mr' ? 'फ्री युजर: Points 2 दिवसांसाठी वैध' : language === 'hi' ? 'फ्री यूजर: Points 2 दिनों के लिए वैध' : 'Free User: Points valid for 2 days',
-    collecting: language === 'mr' ? 'गोळा करत आहे...' : language === 'hi' ? 'इकट्ठा कर रहे हैं...' : 'Collecting...',
-  };
+  
+  // Get global translation function
+  const { t: globalT } = useLanguage();
 
   // Fetch user data and mining status
   const fetchUserData = useCallback(async () => {
