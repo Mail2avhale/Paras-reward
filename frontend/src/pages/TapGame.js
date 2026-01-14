@@ -86,14 +86,14 @@ const TapGame = ({ user }) => {
       console.error('Error syncing taps:', error);
       if (error.response?.data?.detail === 'Daily tap limit reached') {
         setRemainingTaps(0);
-        toast.error(t.limitReached);
+        toast.error(globalT('dailyLimitReached'));
       }
     }
   };
 
   const handleTap = () => {
     if (remainingTaps <= 0) {
-      toast.error(t.limitReached);
+      toast.error(globalT('dailyLimitReached'));
       return;
     }
 
