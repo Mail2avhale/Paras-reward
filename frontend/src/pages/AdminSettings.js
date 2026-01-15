@@ -494,9 +494,9 @@ const AdminSettings = ({ user }) => {
           </div>
 
           {/* Info Box */}
-          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-blue-900 mb-2">Important Notes:</h3>
-            <ul className="text-xs text-blue-800 space-y-1">
+          <div className="mt-6 bg-blue-900/30 border border-blue-700 rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-blue-300 mb-2">Important Notes:</h3>
+            <ul className="text-xs text-blue-200 space-y-1">
               <li>• Disabling registration will prevent all new user signups</li>
               <li>• Existing users will continue to have full access</li>
               <li>• Login functionality remains unaffected</li>
