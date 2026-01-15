@@ -65,17 +65,6 @@ Download now & start earning!`;
       }
     }
   };
-        await navigator.share(shareData);
-        toast.success('Thanks for sharing!');
-      } else {
-        setShowModal(true);
-      }
-    } catch (error) {
-      if (error.name !== 'AbortError') {
-        setShowModal(true);
-      }
-    }
-  };
 
   const shareOnWhatsApp = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(shareMessage)}`, '_blank');
