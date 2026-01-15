@@ -4435,9 +4435,35 @@ async def get_database_stats():
 async def get_public_settings():
     """Get public settings (payment UPI, company info, etc.)"""
     settings = await db.settings.find_one({}, {"_id": 0})
+    payment_config = await db.payment_config.find_one({}, {"_id": 0})
+    
+    # Get UPI from payment_config first, then fallback to settings
+    payment_upi = ""
+    qr_code_url = ""
+    bank_details = {}
+    payment_instructions = ""
+    
+    if payment_config:
+        payment_upi = payment_config.get("upi_id", "")
+        qr_code_url = payment_config.get("qr_code_url", "")
+        payment_instructions = payment_config.get("instructions", "")
+        if payment_config.get("account_number"):
+            bank_details = {
+                "bank_name": payment_config.get("bank_name", ""),
+                "account_number": payment_config.get("account_number", ""),
+                "ifsc_code": payment_config.get("ifsc_code", ""),
+                "account_holder": payment_config.get("account_holder", "")
+            }
+    
+    # Fallback to settings if payment_config is empty
+    if not payment_upi and settings:
+        payment_upi = settings.get("payment_upi_id", "paras@upi")
     
     return {
-        "payment_upi_id": settings.get("payment_upi_id", "paras@upi") if settings else "paras@upi",
+        "payment_upi_id": payment_upi or "paras@upi",
+        "qr_code_url": qr_code_url,
+        "bank_details": bank_details,
+        "payment_instructions": payment_instructions,
         "company_name": settings.get("company_name", "PARAS REWARD") if settings else "PARAS REWARD",
         "support_email": settings.get("support_email", "support@parasreward.com") if settings else "support@parasreward.com",
         "support_phone": settings.get("support_phone", "+91 9876543210") if settings else "+91 9876543210"
