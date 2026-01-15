@@ -391,7 +391,7 @@ const AdminSettings = ({ user }) => {
         </Card>
 
         {/* Registration Control */}
-        <Card className="p-8 shadow-xl mt-8">
+        <Card className="p-6 shadow-xl mt-6 bg-gray-900/50 border-gray-800">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-100 flex items-center gap-2">
@@ -507,7 +507,7 @@ const AdminSettings = ({ user }) => {
         </Card>
 
         {/* VIP Payment Settings */}
-        <Card className="p-8 shadow-xl mt-8">
+        <Card className="p-6 shadow-xl mt-6 bg-gray-900/50 border-gray-800">
           <h2 className="text-2xl font-bold mb-6 text-gray-100">💳 VIP Payment Settings</h2>
           <p className="text-gray-400 mb-8">Configure payment details for VIP membership purchases. Users will see these details when purchasing VIP.</p>
 
@@ -670,7 +670,7 @@ const AdminSettings = ({ user }) => {
         </Card>
 
         {/* Marketplace Settings */}
-        <Card className="p-8 shadow-xl mt-8">
+        <Card className="p-6 shadow-xl mt-6 bg-gray-900/50 border-gray-800">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
               <ShoppingCart className="h-6 w-6 text-white" />
