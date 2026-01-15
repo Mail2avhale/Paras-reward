@@ -656,7 +656,7 @@ const AdminSettings = ({ user }) => {
 
           {/* Preview Box */}
           {(paymentConfig.upi_id || paymentConfig.account_number) && (
-            <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="mt-6 bg-green-900/30 border border-green-700 rounded-lg p-4">
               <h3 className="text-sm font-semibold text-green-900 mb-2">✅ Preview - Users will see:</h3>
               <div className="text-sm text-green-800 space-y-1">
                 {paymentConfig.upi_id && <p>• UPI: {paymentConfig.upi_id}</p>}
