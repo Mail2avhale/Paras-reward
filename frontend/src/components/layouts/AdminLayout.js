@@ -43,6 +43,7 @@ const MENU_TO_PERMISSION = {
   'withdrawals': 'withdrawals',
   'gift-voucher': 'gift_voucher',
   'bill-payment': 'bill_payment',
+  'payment-settings': 'system_settings',
   'system-settings': 'system_settings',
   'web-settings': 'system_settings',
   'social-settings': 'system_settings',
