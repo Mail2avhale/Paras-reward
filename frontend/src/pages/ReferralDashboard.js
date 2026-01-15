@@ -89,10 +89,19 @@ function ReferralDashboard({ user, onLogout }) {
   };
 
   const shareWhatsApp = () => {
-    const message = encodeURIComponent(
-      `Join PARAS REWARD and start earning! Use my referral link: ${referralLink}`
-    );
-    window.open(`https://wa.me/?text=${message}`, '_blank');
+    const message = `🎁 Join PARAS REWARD - India's Next-Generation Trusted Reward Platform!
+
+✨ Use my referral code: ${referralCode}
+🔗 ${referralLink}
+
+💰 Earn PRC Daily
+🛒 Shop & Save  
+💳 Pay Bills
+🎁 Redeem Gift Vouchers
+👥 5-Level Referral Bonus
+
+Download now & start earning!`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const shareFacebook = () => {
@@ -103,10 +112,8 @@ function ReferralDashboard({ user, onLogout }) {
   };
 
   const shareTwitter = () => {
-    const message = encodeURIComponent(
-      `Join PARAS REWARD and start earning! ${referralLink}`
-    );
-    window.open(`https://twitter.com/intent/tweet?text=${message}`, '_blank');
+    const message = `🎁 Join PARAS REWARD - India's Next-Generation Trusted Reward Platform! Use my code: ${referralCode} ${referralLink}`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const downloadQR = () => {
