@@ -89,17 +89,8 @@ Download now & start earning!`;
     window.open(`sms:?body=${encodeURIComponent(shareMessage)}`, '_blank');
   };
 
-  // Render the new AppShareCard modal
+  // Render simple modal
   const renderModal = () => {
-    if (useNewCard) {
-      return (
-        <AnimatePresence>
-          {showModal && (
-            <AppShareCard user={user} onClose={() => setShowModal(false)} />
-          )}
-        </AnimatePresence>
-      );
-    }
     return (
       <ShareModal 
         show={showModal} 
