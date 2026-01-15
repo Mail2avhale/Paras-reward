@@ -73,13 +73,21 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 
 **Created `/app/frontend/src/pages/AdminSettingsHub.js`:**
 - Centralized settings management with 7 categories:
-  1. **Payment Settings** - UPI, QR Code, Bank Details
-  2. **System Settings** - Plans, Mining, Referral Bonus, Service Charges
+  1. **Payment Settings** - UPI, QR Code, Bank Details (ONLY payment related)
+  2. **System Settings** - Plans, Mining, Referral Bonus, Registration Control, Service Charges
   3. **Web Settings** - Homepage, SEO, Banners
-  4. **Social Media** - Social Links & Profiles
+  4. **Social Media** - Social Links ONLY (Facebook, Twitter, Instagram, etc.)
   5. **Redeem Safety** - Withdrawal Limits & Security
   6. **Video Ads** - Ad Configuration & Revenue
   7. **PRC Rain Drop** - Rain Events & Distribution
+
+**Created `/app/frontend/src/pages/AdminPaymentSettings.js`:**
+- Clean, focused page with ONLY payment-related settings
+- **UPI Payment**: UPI ID, QR Code upload with preview
+- **Bank Transfer**: Account Holder, Bank Name, Account Number, IFSC Code
+- **Payment Instructions**: Custom instructions for users
+- **Preview Card**: Shows what users will see
+- Dark theme with modern card layout
 
 **Features:**
 - **Card Grid View**: Visual hub showing all settings categories with colorful icons
