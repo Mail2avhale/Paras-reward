@@ -13,6 +13,7 @@ import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import ImageCropUpload from '@/components/ImageCropUpload';
 import { LanguageSelectorFull } from '@/components/LanguageSelector';
+import ShareApp from '@/components/ShareApp';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
