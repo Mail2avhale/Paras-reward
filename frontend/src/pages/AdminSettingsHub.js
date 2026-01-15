@@ -1,12 +1,85 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Settings, CreditCard, Cpu, Globe, Share2, Shield, Video, CloudRain,
-  ChevronRight, ArrowLeft, Check, AlertCircle
+  ChevronRight, ArrowLeft, Sparkles
 } from 'lucide-react';
 
-// Import all settings components
+const settingsCategories = [
+  { 
+    id: 'payment', 
+    label: 'Payment Settings', 
+    icon: CreditCard, 
+    description: 'Configure UPI ID, QR codes, and bank transfer details for subscription payments',
+    path: '/admin/settings-hub?tab=payment',
+    color: 'from-amber-500 to-orange-500',
+    bgColor: 'bg-amber-500/10',
+    borderColor: 'border-amber-500/30'
+  },
+  { 
+    id: 'system', 
+    label: 'System Settings', 
+    icon: Cpu, 
+    description: 'Manage subscription plans, mining rates, referral bonuses & service charges',
+    path: '/admin/settings-hub?tab=system',
+    color: 'from-purple-500 to-violet-500',
+    bgColor: 'bg-purple-500/10',
+    borderColor: 'border-purple-500/30'
+  },
+  { 
+    id: 'web', 
+    label: 'Web Settings', 
+    icon: Globe, 
+    description: 'Homepage content, SEO settings, banners and app configuration',
+    path: '/admin/settings-hub?tab=web',
+    color: 'from-blue-500 to-cyan-500',
+    bgColor: 'bg-blue-500/10',
+    borderColor: 'border-blue-500/30'
+  },
+  { 
+    id: 'social', 
+    label: 'Social Media', 
+    icon: Share2, 
+    description: 'Connect social media profiles and configure sharing options',
+    path: '/admin/settings-hub?tab=social',
+    color: 'from-pink-500 to-rose-500',
+    bgColor: 'bg-pink-500/10',
+    borderColor: 'border-pink-500/30'
+  },
+  { 
+    id: 'redeem', 
+    label: 'Redeem Safety', 
+    icon: Shield, 
+    description: 'Set withdrawal limits, security thresholds and redemption rules',
+    path: '/admin/settings-hub?tab=redeem',
+    color: 'from-emerald-500 to-teal-500',
+    bgColor: 'bg-emerald-500/10',
+    borderColor: 'border-emerald-500/30'
+  },
+  { 
+    id: 'video-ads', 
+    label: 'Video Ads', 
+    icon: Video, 
+    description: 'Manage video advertisements, placements and revenue tracking',
+    path: '/admin/settings-hub?tab=video-ads',
+    color: 'from-red-500 to-orange-500',
+    bgColor: 'bg-red-500/10',
+    borderColor: 'border-red-500/30'
+  },
+  { 
+    id: 'prc-rain', 
+    label: 'PRC Rain Drop', 
+    icon: CloudRain, 
+    description: 'Configure PRC rain events, drop rates and distribution settings',
+    path: '/admin/settings-hub?tab=prc-rain',
+    color: 'from-indigo-500 to-purple-500',
+    bgColor: 'bg-indigo-500/10',
+    borderColor: 'border-indigo-500/30'
+  }
+];
+
+// Import the actual settings pages
 import AdminSettings from './AdminSettings';
 import AdminSystemSettings from './AdminSystemSettings';
 import AdminWebSettings from './AdminWebSettings';
@@ -15,257 +88,160 @@ import AdminRedeemSettings from './AdminRedeemSettings';
 import AdminVideoAds from './AdminVideoAds';
 import AdminPRCRain from './AdminPRCRain';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
-
-const settingsTabs = [
-  { 
-    id: 'payment', 
-    label: 'Payment Settings', 
-    icon: CreditCard, 
-    description: 'UPI, QR Code, Bank Details',
-    color: 'from-amber-500 to-orange-500'
-  },
-  { 
-    id: 'system', 
-    label: 'System Settings', 
-    icon: Cpu, 
-    description: 'Plans, Mining, Referral Bonus',
-    color: 'from-purple-500 to-violet-500'
-  },
-  { 
-    id: 'web', 
-    label: 'Web Settings', 
-    icon: Globe, 
-    description: 'Homepage, SEO, Banners',
-    color: 'from-blue-500 to-cyan-500'
-  },
-  { 
-    id: 'social', 
-    label: 'Social Media', 
-    icon: Share2, 
-    description: 'Social Links & Profiles',
-    color: 'from-pink-500 to-rose-500'
-  },
-  { 
-    id: 'redeem', 
-    label: 'Redeem Safety', 
-    icon: Shield, 
-    description: 'Withdrawal Limits & Security',
-    color: 'from-emerald-500 to-teal-500'
-  },
-  { 
-    id: 'video-ads', 
-    label: 'Video Ads', 
-    icon: Video, 
-    description: 'Ad Configuration & Revenue',
-    color: 'from-red-500 to-orange-500'
-  },
-  { 
-    id: 'prc-rain', 
-    label: 'PRC Rain Drop', 
-    icon: CloudRain, 
-    description: 'Rain Events & Distribution',
-    color: 'from-indigo-500 to-purple-500'
-  }
-];
-
 const AdminSettingsHub = ({ user, onLogout }) => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'payment');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [searchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab');
 
-  useEffect(() => {
-    // Update URL when tab changes
-    setSearchParams({ tab: activeTab });
-  }, [activeTab, setSearchParams]);
+  // If a tab is selected, render that settings page
+  if (activeTab) {
+    const renderSettingsPage = () => {
+      switch (activeTab) {
+        case 'payment':
+          return <AdminSettings user={user} onLogout={onLogout} />;
+        case 'system':
+          return <AdminSystemSettings user={user} />;
+        case 'web':
+          return <AdminWebSettings user={user} />;
+        case 'social':
+          return <AdminSocialMediaSettings user={user} />;
+        case 'redeem':
+          return <AdminRedeemSettings user={user} />;
+        case 'video-ads':
+          return <AdminVideoAds user={user} onLogout={onLogout} />;
+        case 'prc-rain':
+          return <AdminPRCRain user={user} />;
+        default:
+          return null;
+      }
+    };
 
-  useEffect(() => {
-    // Read tab from URL on mount
-    const tabFromUrl = searchParams.get('tab');
-    if (tabFromUrl && settingsTabs.find(t => t.id === tabFromUrl)) {
-      setActiveTab(tabFromUrl);
-    }
-  }, []);
+    const currentCategory = settingsCategories.find(c => c.id === activeTab);
 
-  const handleTabChange = (tabId) => {
-    setActiveTab(tabId);
-    setIsMobileMenuOpen(false);
-  };
-
-  const renderSettingsContent = () => {
-    switch (activeTab) {
-      case 'payment':
-        return <AdminSettings user={user} isEmbedded={true} />;
-      case 'system':
-        return <AdminSystemSettings user={user} isEmbedded={true} />;
-      case 'web':
-        return <AdminWebSettings user={user} isEmbedded={true} />;
-      case 'social':
-        return <AdminSocialMediaSettings user={user} isEmbedded={true} />;
-      case 'redeem':
-        return <AdminRedeemSettings user={user} isEmbedded={true} />;
-      case 'video-ads':
-        return <AdminVideoAds user={user} isEmbedded={true} />;
-      case 'prc-rain':
-        return <AdminPRCRain user={user} isEmbedded={true} />;
-      default:
-        return <AdminSettings user={user} isEmbedded={true} />;
-    }
-  };
-
-  const currentTab = settingsTabs.find(t => t.id === activeTab);
-
-  return (
-    <div className="min-h-screen bg-gray-950">
-      {/* Header */}
-      <div className="sticky top-0 z-30 bg-gray-950/95 backdrop-blur-sm border-b border-gray-800">
-        <div className="px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+    return (
+      <div className="min-h-screen bg-gray-950">
+        {/* Breadcrumb Header */}
+        <div className="sticky top-0 z-30 bg-gray-950/95 backdrop-blur-sm border-b border-gray-800">
+          <div className="px-4 py-3">
+            <div className="flex items-center gap-2 text-sm">
               <button 
-                onClick={() => navigate('/admin')}
-                className="w-10 h-10 rounded-xl bg-gray-800 hover:bg-gray-700 flex items-center justify-center transition-colors"
+                onClick={() => navigate('/admin/settings-hub')}
+                className="text-gray-400 hover:text-white transition-colors flex items-center gap-1"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-400" />
+                <Settings className="w-4 h-4" />
+                Settings
               </button>
-              <div>
-                <h1 className="text-xl font-bold text-white">Settings</h1>
-                <p className="text-gray-500 text-sm">Manage all configurations</p>
-              </div>
+              <ChevronRight className="w-4 h-4 text-gray-600" />
+              <span className="text-white font-medium">{currentCategory?.label}</span>
             </div>
-            
-            {/* Mobile tab selector */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden flex items-center gap-2 px-3 py-2 bg-gray-800 rounded-xl text-white"
-            >
-              <Settings className="w-4 h-4" />
-              <span className="text-sm">{currentTab?.label}</span>
-              <ChevronRight className={`w-4 h-4 transition-transform ${isMobileMenuOpen ? 'rotate-90' : ''}`} />
-            </button>
           </div>
         </div>
-        
-        {/* Desktop Tabs - Horizontal */}
-        <div className="hidden lg:block px-4 pb-2 overflow-x-auto scrollbar-hide">
-          <div className="flex gap-2">
-            {settingsTabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
+
+        {/* Quick Tab Navigation */}
+        <div className="bg-gray-900/50 border-b border-gray-800 overflow-x-auto scrollbar-hide">
+          <div className="px-4 py-2 flex gap-2">
+            {settingsCategories.map((cat) => {
+              const Icon = cat.icon;
+              const isActive = cat.id === activeTab;
               return (
                 <button
-                  key={tab.id}
-                  onClick={() => handleTabChange(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl whitespace-nowrap transition-all ${
+                  key={cat.id}
+                  onClick={() => navigate(cat.path)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg whitespace-nowrap transition-all text-sm ${
                     isActive
-                      ? `bg-gradient-to-r ${tab.color} text-white shadow-lg`
+                      ? `bg-gradient-to-r ${cat.color} text-white`
                       : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
-                  <span className="text-sm font-medium">{tab.label}</span>
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{cat.label}</span>
                 </button>
               );
             })}
+          </div>
+        </div>
+
+        {/* Settings Content */}
+        <div className="p-4">
+          {renderSettingsPage()}
+        </div>
+      </div>
+    );
+  }
+
+  // Main Settings Hub View (no tab selected)
+  return (
+    <div className="min-h-screen bg-gray-950">
+      {/* Header */}
+      <div className="px-4 py-6 border-b border-gray-800">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate('/admin')}
+            className="w-10 h-10 rounded-xl bg-gray-800 hover:bg-gray-700 flex items-center justify-center transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-400" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Settings className="w-6 h-6 text-purple-500" />
+              Settings Hub
+            </h1>
+            <p className="text-gray-500 text-sm mt-1">Manage all system configurations in one place</p>
           </div>
         </div>
       </div>
 
-      {/* Mobile Tab Menu Dropdown */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="lg:hidden fixed inset-x-0 top-[88px] z-40 bg-gray-900 border-b border-gray-800 shadow-xl"
-          >
-            <div className="p-4 grid grid-cols-2 gap-3">
-              {settingsTabs.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => handleTabChange(tab.id)}
-                    className={`flex flex-col items-start p-3 rounded-xl transition-all ${
-                      isActive
-                        ? `bg-gradient-to-r ${tab.color} text-white`
-                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                    }`}
-                  >
-                    <Icon className={`w-5 h-5 mb-2 ${isActive ? 'text-white' : 'text-gray-500'}`} />
-                    <span className="text-sm font-medium">{tab.label}</span>
-                    <span className={`text-xs ${isActive ? 'text-white/70' : 'text-gray-500'}`}>
-                      {tab.description}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Overlay for mobile menu */}
-      {isMobileMenuOpen && (
-        <div 
-          className="lg:hidden fixed inset-0 bg-black/50 z-30"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* Main Content */}
-      <div className="flex">
-        {/* Desktop Sidebar */}
-        <div className="hidden lg:block w-64 min-h-[calc(100vh-120px)] border-r border-gray-800 bg-gray-900/50">
-          <div className="p-4 space-y-2">
-            {settingsTabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => handleTabChange(tab.id)}
-                  className={`w-full flex items-start gap-3 p-3 rounded-xl transition-all text-left ${
-                    isActive
-                      ? `bg-gradient-to-r ${tab.color} text-white shadow-lg`
-                      : 'bg-gray-800/30 text-gray-400 hover:bg-gray-800/50 hover:text-white'
-                  }`}
-                >
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    isActive ? 'bg-white/20' : 'bg-gray-800'
-                  }`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="block text-sm font-medium truncate">{tab.label}</span>
-                    <span className={`block text-xs truncate ${isActive ? 'text-white/70' : 'text-gray-500'}`}>
-                      {tab.description}
-                    </span>
-                  </div>
-                  {isActive && <Check className="w-4 h-4 mt-1" />}
-                </button>
-              );
-            })}
-          </div>
+      {/* Settings Cards Grid */}
+      <div className="p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {settingsCategories.map((category, index) => {
+            const Icon = category.icon;
+            return (
+              <motion.button
+                key={category.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                onClick={() => navigate(category.path)}
+                className={`group relative overflow-hidden rounded-2xl p-5 text-left transition-all hover:scale-[1.02] ${category.bgColor} border ${category.borderColor}`}
+              >
+                {/* Background Gradient on Hover */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${category.color} opacity-0 group-hover:opacity-10 transition-opacity`} />
+                
+                {/* Icon */}
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center mb-4 shadow-lg`}>
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
+                
+                {/* Content */}
+                <h3 className="text-white font-semibold text-lg mb-2 flex items-center gap-2">
+                  {category.label}
+                  <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                </h3>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  {category.description}
+                </p>
+              </motion.button>
+            );
+          })}
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 min-w-0">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-              className="p-4 lg:p-6"
-            >
-              {renderSettingsContent()}
-            </motion.div>
-          </AnimatePresence>
+        {/* Quick Tips */}
+        <div className="mt-8 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-5">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-5 h-5 text-purple-400" />
+            </div>
+            <div>
+              <h3 className="text-white font-semibold mb-2">Quick Tips</h3>
+              <ul className="text-gray-400 text-sm space-y-1">
+                <li>• Use <span className="text-purple-400">Payment Settings</span> to update UPI and bank details</li>
+                <li>• Configure subscription pricing in <span className="text-purple-400">System Settings</span></li>
+                <li>• Set withdrawal limits in <span className="text-purple-400">Redeem Safety</span></li>
+                <li>• Manage PRC distribution events in <span className="text-purple-400">PRC Rain Drop</span></li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </div>
