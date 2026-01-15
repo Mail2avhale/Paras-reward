@@ -715,7 +715,7 @@ const AdminSettings = ({ user }) => {
 
             {/* Free Delivery Threshold */}
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-5">
-              <label className="flex items-center gap-2 text-sm font-semibold text-green-800 mb-3">
+              <label className="flex items-center gap-2 text-sm font-semibold text-green-300 mb-3">
                 <Truck className="h-5 w-5" />
                 Free Delivery Threshold (PRC)
               </label>
