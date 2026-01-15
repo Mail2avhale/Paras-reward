@@ -157,9 +157,23 @@ const AdminLayout = ({ children, user, onLogout }) => {
     }
   };
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => {
+    // Handle paths with query params
+    if (path.includes('?')) {
+      const [pathname, search] = path.split('?');
+      return location.pathname === pathname && location.search.includes(search);
+    }
+    return location.pathname === path;
+  };
+  
   const isGroupActive = (groupKey) => {
-    return menuGroups[groupKey].subItems.some(item => location.pathname === item.path);
+    return menuGroups[groupKey].subItems.some(item => {
+      if (item.path.includes('?')) {
+        const [pathname] = item.path.split('?');
+        return location.pathname === pathname;
+      }
+      return location.pathname === item.path;
+    });
   };
 
   const toggleGroup = (groupKey) => {
