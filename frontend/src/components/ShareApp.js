@@ -3,6 +3,7 @@ import { Share2, Copy, Check, MessageCircle, Send, Link2, X, Smartphone, QrCode 
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
+import AppShareCard from './AppShareCard';
 
 const APP_URL = process.env.REACT_APP_BACKEND_URL || 'https://parasreward.com';
 
@@ -12,8 +13,9 @@ const APP_URL = process.env.REACT_APP_BACKEND_URL || 'https://parasreward.com';
  * @param {Object} user - User object with referral_code
  * @param {string} variant - 'button' | 'fab' | 'card' | 'inline'
  * @param {string} className - Additional CSS classes
+ * @param {boolean} useNewCard - Use the new AppShareCard design
  */
-const ShareApp = ({ user, variant = 'button', className = '' }) => {
+const ShareApp = ({ user, variant = 'button', className = '', useNewCard = true }) => {
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
@@ -40,6 +42,12 @@ const ShareApp = ({ user, variant = 'button', className = '' }) => {
   };
 
   const shareNative = async () => {
+    // Always show the new card modal
+    if (useNewCard) {
+      setShowModal(true);
+      return;
+    }
+    
     const shareData = {
       title: 'Join PARAS REWARD',
       text: `🎁 Earn rewards daily with PARAS REWARD! Use my code: ${referralCode}`,
