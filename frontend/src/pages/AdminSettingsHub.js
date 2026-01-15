@@ -98,7 +98,7 @@ const AdminSettingsHub = ({ user, onLogout }) => {
     const renderSettingsPage = () => {
       switch (activeTab) {
         case 'payment':
-          return <AdminSettings user={user} onLogout={onLogout} />;
+          return <AdminPaymentSettings user={user} />;
         case 'system':
           return <AdminSystemSettings user={user} />;
         case 'web':
