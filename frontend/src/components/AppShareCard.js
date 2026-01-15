@@ -243,7 +243,7 @@ Download now & start earning!`;
 
         {/* Tagline */}
         <p className="text-center text-gray-500 text-sm mt-4">
-          India's #1 Loyalty Rewards Platform
+          India&apos;s #1 Loyalty Rewards Platform
         </p>
       </motion.div>
     </motion.div>
