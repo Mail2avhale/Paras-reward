@@ -914,6 +914,9 @@ const DashboardModern = ({ user, onLogout }) => {
         </div>
       </div>
 
+      {/* Share App FAB - Floating Action Button */}
+      <ShareApp user={userData || user} variant="fab" />
+
       {/* AI Chatbot */}
       <AIChatbotEnhanced 
         user={user}
