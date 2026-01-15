@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { QRCodeSVG } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 
-const APP_URL = process.env.REACT_APP_BACKEND_URL || 'https://parasreward.com';
+const SHARE_DOMAIN = process.env.REACT_APP_SHARE_DOMAIN || 'https://parasreward.com';
 
 const AppShareCard = ({ user, onClose }) => {
   const [copied, setCopied] = useState(false);
