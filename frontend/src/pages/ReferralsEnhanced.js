@@ -286,9 +286,22 @@ Download now & start earning!`;
   };
 
   const shareNative = async () => {
+    const message = `🎁 Join PARAS REWARD - India's Next-Generation Trusted Reward Platform!
+
+✨ Use my referral code: ${referralCode}
+🔗 ${referralLink}
+
+💰 Earn PRC Daily
+🛒 Shop & Save  
+💳 Pay Bills
+🎁 Redeem Gift Vouchers
+👥 5-Level Referral Bonus
+
+Download now & start earning!`;
+    
     const shareData = {
       title: 'Join PARAS REWARD',
-      text: `🎁 Earn PRC daily with PARAS REWARD!\nUse my code: ${referralCode}`,
+      text: message,
       url: referralLink
     };
     
