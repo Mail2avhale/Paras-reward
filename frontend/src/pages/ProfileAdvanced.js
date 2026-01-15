@@ -532,6 +532,9 @@ const ProfileAdvanced = ({ user, onLogout }) => {
           </button>
         )}
 
+        {/* Share App Card */}
+        <ShareApp user={userData || user} variant="card" />
+
         {/* KYC */}
         <button 
           onClick={() => navigate('/kyc')}
