@@ -142,17 +142,6 @@ const ShareApp = ({ user, variant = 'button', className = '', useNewCard = true 
           <Share2 className="w-6 h-6" />
         </motion.button>
         {renderModal()}
-          referralCode={referralCode}
-          referralLink={referralLink}
-          shareMessage={shareMessage}
-          copyLink={copyLink}
-          copied={copied}
-          shareOnWhatsApp={shareOnWhatsApp}
-          shareOnTelegram={shareOnTelegram}
-          shareViaSMS={shareViaSMS}
-          showQR={showQR}
-          setShowQR={setShowQR}
-        />
       </>
     );
   }
@@ -198,6 +187,18 @@ const ShareApp = ({ user, variant = 'button', className = '', useNewCard = true 
               WhatsApp
             </button>
             <button
+              onClick={shareNative}
+              className="flex-1 flex items-center justify-center gap-2 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-medium transition-colors"
+            >
+              <Share2 className="w-4 h-4" />
+              More
+            </button>
+          </div>
+        </motion.div>
+        {renderModal()}
+      </>
+    );
+  }
               onClick={shareNative}
               className="flex-1 flex items-center justify-center gap-2 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-medium transition-colors"
             >
