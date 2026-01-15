@@ -69,6 +69,39 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 
 ### January 15, 2026 (Current Session - Verifications & Cleanup)
 
+#### Settings Hub - Unified Admin Settings Page - NEW ✅
+
+**Created `/app/frontend/src/pages/AdminSettingsHub.js`:**
+- Centralized settings management with 7 categories:
+  1. **Payment Settings** - UPI, QR Code, Bank Details
+  2. **System Settings** - Plans, Mining, Referral Bonus, Service Charges
+  3. **Web Settings** - Homepage, SEO, Banners
+  4. **Social Media** - Social Links & Profiles
+  5. **Redeem Safety** - Withdrawal Limits & Security
+  6. **Video Ads** - Ad Configuration & Revenue
+  7. **PRC Rain Drop** - Rain Events & Distribution
+
+**Features:**
+- **Card Grid View**: Visual hub showing all settings categories with colorful icons
+- **Tab Navigation**: Quick switching between settings via scrollable tabs
+- **Breadcrumb Navigation**: Settings > [Category Name]
+- **URL-based Routing**: `/admin/settings-hub?tab=payment`, etc.
+- **Back to Hub**: "All Settings" button for easy return
+- **Responsive Design**: Works on desktop and mobile
+- **Dark Theme**: Consistent with admin panel styling
+
+**Route Updates (App.js):**
+- `/admin/settings` → Redirects to `/admin/settings-hub?tab=payment`
+- `/admin/settings/system` → Redirects to `/admin/settings-hub?tab=system`
+- `/admin/settings/web` → Redirects to `/admin/settings-hub?tab=web`
+- `/admin/settings/social` → Redirects to `/admin/settings-hub?tab=social`
+- `/admin/settings/redeem` → Redirects to `/admin/settings-hub?tab=redeem`
+
+**AdminLayout Updates:**
+- Settings menu now links to Settings Hub with tab params
+- Added "All Settings" as first item
+- Updated `isActive` function to handle query params
+
 #### Share App Feature with Deep Linking - NEW ✅
 
 **Created `/app/frontend/src/components/ShareApp.js`:**
