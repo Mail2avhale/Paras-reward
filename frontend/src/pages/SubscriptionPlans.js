@@ -376,21 +376,46 @@ const SubscriptionPlans = ({ user }) => {
 
           {/* UPI Payment Info */}
           <div className="p-4 bg-amber-500/10 rounded-2xl border border-amber-500/30">
-            <h3 className="text-amber-400 font-semibold mb-3">{t('payViaUpi')}</h3>
-            <div className="flex items-center gap-4">
+            <h3 className="text-amber-400 font-semibold mb-3 flex items-center gap-2">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20.067 8.478c.492.88.556 2.014.3 3.327-.74 3.806-3.276 5.12-6.514 5.12h-.5a.805.805 0 0 0-.794.68l-.04.22-.63 4.073-.032.17a.804.804 0 0 1-.794.68H7.72a.483.483 0 0 1-.477-.558L7.418 21h1.518l.95-6.02h1.385c4.678 0 7.75-2.203 8.796-6.502Z"/>
+              </svg>
+              {t('payViaUpi')}
+            </h3>
+            
+            <div className="flex flex-col sm:flex-row items-center gap-4">
               {/* QR Code */}
               {paymentConfig?.qr_code_url && (
                 <div className="flex-shrink-0">
                   <img 
                     src={paymentConfig.qr_code_url} 
                     alt="Payment QR" 
-                    className="w-24 h-24 rounded-lg bg-white p-1"
+                    className="w-32 h-32 rounded-xl bg-white p-2 shadow-lg"
                   />
+                  <p className="text-center text-xs text-gray-500 mt-1">Scan to Pay</p>
                 </div>
               )}
-              <div className="flex-1">
-                <p className="text-white font-mono text-lg mb-1">{paymentConfig?.payment_upi_id || 'paras@upi'}</p>
-                <p className="text-gray-400 text-sm">{t('orScanQR')}</p>
+              
+              {/* UPI ID with copy button */}
+              <div className="flex-1 w-full">
+                <p className="text-gray-400 text-xs mb-1">UPI ID</p>
+                <div className="bg-gray-900/50 rounded-xl p-3 flex items-center gap-2">
+                  <p className="text-amber-400 font-mono text-sm break-all flex-1">
+                    {paymentConfig?.payment_upi_id || 'paras@upi'}
+                  </p>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(paymentConfig?.payment_upi_id || 'paras@upi');
+                      toast.success('UPI ID copied!');
+                    }}
+                    className="flex-shrink-0 p-2 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg transition-colors"
+                  >
+                    <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                </div>
+                <p className="text-gray-500 text-xs mt-2">{t('orScanQR')}</p>
               </div>
             </div>
           </div>
@@ -398,23 +423,33 @@ const SubscriptionPlans = ({ user }) => {
           {/* Bank Transfer Info */}
           {paymentConfig?.bank_details?.account_number && (
             <div className="p-4 bg-blue-500/10 rounded-2xl border border-blue-500/30">
-              <h3 className="text-blue-400 font-semibold mb-3">Bank Transfer</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Bank:</span>
-                  <span className="text-white">{paymentConfig.bank_details.bank_name}</span>
+              <h3 className="text-blue-400 font-semibold mb-3 flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11m16-11v11M8 14v3m4-3v3m4-3v3" />
+                </svg>
+                Bank Transfer
+              </h3>
+              
+              <div className="space-y-3">
+                <div className="bg-gray-900/50 rounded-xl p-3">
+                  <p className="text-gray-500 text-xs mb-1">Bank Name</p>
+                  <p className="text-white font-medium">{paymentConfig.bank_details.bank_name}</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">A/C No:</span>
-                  <span className="text-white font-mono">{paymentConfig.bank_details.account_number}</span>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gray-900/50 rounded-xl p-3">
+                    <p className="text-gray-500 text-xs mb-1">Account No.</p>
+                    <p className="text-white font-mono text-sm">{paymentConfig.bank_details.account_number}</p>
+                  </div>
+                  <div className="bg-gray-900/50 rounded-xl p-3">
+                    <p className="text-gray-500 text-xs mb-1">IFSC Code</p>
+                    <p className="text-white font-mono text-sm">{paymentConfig.bank_details.ifsc_code}</p>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">IFSC:</span>
-                  <span className="text-white font-mono">{paymentConfig.bank_details.ifsc_code}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Name:</span>
-                  <span className="text-white">{paymentConfig.bank_details.account_holder}</span>
+                
+                <div className="bg-gray-900/50 rounded-xl p-3">
+                  <p className="text-gray-500 text-xs mb-1">Account Holder</p>
+                  <p className="text-white font-medium">{paymentConfig.bank_details.account_holder}</p>
                 </div>
               </div>
             </div>
@@ -422,8 +457,14 @@ const SubscriptionPlans = ({ user }) => {
 
           {/* Payment Instructions */}
           {paymentConfig?.payment_instructions && (
-            <div className="p-3 bg-gray-800/50 rounded-xl border border-gray-700">
-              <p className="text-gray-400 text-sm">{paymentConfig.payment_instructions}</p>
+            <div className="p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/30">
+              <h3 className="text-emerald-400 font-semibold mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Instructions
+              </h3>
+              <p className="text-gray-300 text-sm">{paymentConfig.payment_instructions}</p>
             </div>
           )}
 
