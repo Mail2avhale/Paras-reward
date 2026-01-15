@@ -17,7 +17,7 @@ const AppShareCard = ({ user, onClose }) => {
   const referralLink = `${APP_URL}/register?ref=${referralCode}`;
   const userName = user?.full_name || user?.name || 'Member';
 
-  const shareMessage = `🎁 Join PARAS REWARD - India's #1 Loyalty Platform!
+  const shareMessage = `🎁 Join PARAS REWARD - India's Next-Generation Trusted Reward Platform!
 
 ✨ Use my code: ${referralCode}
 🔗 ${referralLink}
