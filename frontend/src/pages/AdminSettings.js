@@ -412,7 +412,7 @@ const AdminSettings = ({ user }) => {
               {registrationEnabled ? (
                 <>
                   <CheckCircle className="h-6 w-6 text-green-600" />
-                  <span className="text-lg font-semibold text-green-900">Registration is Currently ENABLED</span>
+                  <span className="text-lg font-semibold text-green-300">Registration is Currently ENABLED</span>
                 </>
               ) : (
                 <>
