@@ -69,6 +69,25 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 
 ### January 15, 2026 (Current Session - Verifications & Cleanup)
 
+#### Share App Feature with Deep Linking - NEW ✅
+
+**Created `/app/frontend/src/components/ShareApp.js`:**
+- Reusable component with 4 variants: `button`, `fab`, `card`, `inline`
+- **QR Code Generation**: Scannable QR code with referral link using `qrcode.react`
+- **Deep Linking**: `{APP_URL}/register?ref={REFERRAL_CODE}`
+- **Share Options**:
+  - WhatsApp - Pre-formatted message with code and link
+  - Telegram - Direct share
+  - SMS - Opens native SMS app
+  - Native Share API - Uses browser's share sheet on mobile
+  - Copy to Clipboard - One-click link copy
+- **Placements**:
+  - Dashboard: Floating Action Button (FAB) in bottom-right
+  - Profile Page: Share & Earn card with referral code display
+
+**New Dependencies:**
+- `qrcode.react@4.2.0` - QR code generation
+
 #### Admin Panel Fixes Verified ✅
 
 **1. Payment Settings Link in Admin Sidebar - VERIFIED**
