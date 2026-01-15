@@ -21,7 +21,7 @@ const ShareApp = ({ user, variant = 'button', className = '' }) => {
   const [showQR, setShowQR] = useState(false);
 
   const referralCode = user?.referral_code || 'PARAS';
-  const referralLink = `${APP_URL}/register?ref=${referralCode}`;
+  const referralLink = `${SHARE_DOMAIN}/register?ref=${referralCode}`;
   
   const shareMessage = `🎁 Join PARAS REWARD - India's Next-Generation Trusted Reward Platform!
 
