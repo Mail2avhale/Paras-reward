@@ -330,8 +330,183 @@ const AdminBillPayments = ({ user }) => {
                         </div>
                       </div>
                     </div>
+                  ) : selectedRequest.request_type === 'electricity' ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Consumer Number</p>
+                        <p className="font-semibold font-mono">{selectedRequest.details?.consumer_number || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Provider</p>
+                        <p className="font-semibold">{selectedRequest.details?.provider || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Consumer Name</p>
+                        <p className="font-semibold">{selectedRequest.details?.consumer_name || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Bill Amount</p>
+                        <p className="font-semibold">₹{selectedRequest.details?.bill_amount || selectedRequest.amount_inr}</p>
+                      </div>
+                      {selectedRequest.details?.billing_unit && (
+                        <div className="bg-gray-900 p-3 rounded border">
+                          <p className="text-xs text-gray-500">Billing Unit</p>
+                          <p className="font-semibold">{selectedRequest.details?.billing_unit}</p>
+                        </div>
+                      )}
+                      {selectedRequest.details?.due_date && (
+                        <div className="bg-gray-900 p-3 rounded border">
+                          <p className="text-xs text-gray-500">Due Date</p>
+                          <p className="font-semibold">{selectedRequest.details?.due_date}</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : selectedRequest.request_type === 'mobile_recharge' ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Mobile Number</p>
+                        <p className="font-semibold font-mono text-lg">{selectedRequest.details?.mobile_number || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Operator</p>
+                        <p className="font-semibold">{selectedRequest.details?.operator || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Circle/State</p>
+                        <p className="font-semibold">{selectedRequest.details?.circle || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Recharge Type</p>
+                        <p className="font-semibold capitalize">{selectedRequest.details?.recharge_type || 'Prepaid'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border col-span-2">
+                        <p className="text-xs text-gray-500">Recharge Amount</p>
+                        <p className="font-semibold text-lg text-green-400">₹{selectedRequest.amount_inr}</p>
+                      </div>
+                    </div>
+                  ) : selectedRequest.request_type === 'dth' ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Subscriber ID</p>
+                        <p className="font-semibold font-mono">{selectedRequest.details?.subscriber_id || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">DTH Provider</p>
+                        <p className="font-semibold">{selectedRequest.details?.provider || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Customer Name</p>
+                        <p className="font-semibold">{selectedRequest.details?.customer_name || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Recharge Amount</p>
+                        <p className="font-semibold text-lg text-green-400">₹{selectedRequest.amount_inr}</p>
+                      </div>
+                    </div>
+                  ) : selectedRequest.request_type === 'gas' ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Consumer Number</p>
+                        <p className="font-semibold font-mono">{selectedRequest.details?.consumer_number || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Gas Provider</p>
+                        <p className="font-semibold">{selectedRequest.details?.provider || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Consumer Name</p>
+                        <p className="font-semibold">{selectedRequest.details?.consumer_name || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Bill Amount</p>
+                        <p className="font-semibold text-lg">₹{selectedRequest.amount_inr}</p>
+                      </div>
+                    </div>
+                  ) : selectedRequest.request_type === 'water' ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Consumer Number</p>
+                        <p className="font-semibold font-mono">{selectedRequest.details?.consumer_number || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Water Board</p>
+                        <p className="font-semibold">{selectedRequest.details?.provider || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Consumer Name</p>
+                        <p className="font-semibold">{selectedRequest.details?.consumer_name || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Bill Amount</p>
+                        <p className="font-semibold text-lg">₹{selectedRequest.amount_inr}</p>
+                      </div>
+                    </div>
+                  ) : selectedRequest.request_type === 'broadband' ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Account Number</p>
+                        <p className="font-semibold font-mono">{selectedRequest.details?.account_number || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">ISP Provider</p>
+                        <p className="font-semibold">{selectedRequest.details?.provider || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Customer Name</p>
+                        <p className="font-semibold">{selectedRequest.details?.customer_name || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Bill Amount</p>
+                        <p className="font-semibold text-lg">₹{selectedRequest.amount_inr}</p>
+                      </div>
+                    </div>
+                  ) : selectedRequest.request_type === 'insurance' ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Policy Number</p>
+                        <p className="font-semibold font-mono">{selectedRequest.details?.policy_number || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Insurance Company</p>
+                        <p className="font-semibold">{selectedRequest.details?.provider || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Policy Holder</p>
+                        <p className="font-semibold">{selectedRequest.details?.policy_holder || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Premium Amount</p>
+                        <p className="font-semibold text-lg">₹{selectedRequest.amount_inr}</p>
+                      </div>
+                    </div>
+                  ) : selectedRequest.request_type === 'fastag' ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">Vehicle Number</p>
+                        <p className="font-semibold font-mono text-lg">{selectedRequest.details?.vehicle_number || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border">
+                        <p className="text-xs text-gray-500">FASTag Provider</p>
+                        <p className="font-semibold">{selectedRequest.details?.provider || '-'}</p>
+                      </div>
+                      <div className="bg-gray-900 p-3 rounded border col-span-2">
+                        <p className="text-xs text-gray-500">Recharge Amount</p>
+                        <p className="font-semibold text-lg text-green-400">₹{selectedRequest.amount_inr}</p>
+                      </div>
+                    </div>
                   ) : (
-                    <pre className="text-xs bg-gray-900 p-3 rounded border overflow-x-auto">{JSON.stringify(selectedRequest.details, null, 2)}</pre>
+                    /* Fallback for unknown types - show formatted key-value pairs */
+                    <div className="grid grid-cols-2 gap-3">
+                      {selectedRequest.details && Object.entries(selectedRequest.details).map(([key, value]) => (
+                        <div key={key} className="bg-gray-900 p-3 rounded border">
+                          <p className="text-xs text-gray-500 capitalize">{key.replace(/_/g, ' ')}</p>
+                          <p className="font-semibold">{value || '-'}</p>
+                        </div>
+                      ))}
+                      {(!selectedRequest.details || Object.keys(selectedRequest.details).length === 0) && (
+                        <p className="text-gray-500 col-span-2">No additional details available</p>
+                      )}
+                    </div>
                   )}
                 </div>
 
