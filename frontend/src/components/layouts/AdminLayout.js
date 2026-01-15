@@ -145,13 +145,14 @@ const AdminLayout = ({ children, user, onLogout }) => {
       label: 'Settings',
       icon: Settings,
       subItems: [
-        { id: 'payment-settings', label: 'Payment Settings', icon: CreditCard, path: '/admin/settings' },
-        { id: 'system-settings', label: 'System Settings', icon: Cpu, path: '/admin/settings/system' },
-        { id: 'web-settings', label: 'Web Settings', icon: Globe, path: '/admin/settings/web' },
-        { id: 'social-settings', label: 'Social Media', icon: Share2, path: '/admin/settings/social' },
-        { id: 'redeem-settings', label: 'Redeem Safety', icon: Shield, path: '/admin/settings/redeem' },
-        { id: 'video-ads', label: 'Video Ads', icon: Video, path: '/admin/video-ads' },
-        { id: 'prc-rain', label: 'PRC Rain Drop', icon: CloudRain, path: '/admin/prc-rain' },
+        { id: 'settings-hub', label: 'All Settings', icon: Settings, path: '/admin/settings-hub' },
+        { id: 'payment-settings', label: 'Payment Settings', icon: CreditCard, path: '/admin/settings-hub?tab=payment' },
+        { id: 'system-settings', label: 'System Settings', icon: Cpu, path: '/admin/settings-hub?tab=system' },
+        { id: 'web-settings', label: 'Web Settings', icon: Globe, path: '/admin/settings-hub?tab=web' },
+        { id: 'social-settings', label: 'Social Media', icon: Share2, path: '/admin/settings-hub?tab=social' },
+        { id: 'redeem-settings', label: 'Redeem Safety', icon: Shield, path: '/admin/settings-hub?tab=redeem' },
+        { id: 'video-ads', label: 'Video Ads', icon: Video, path: '/admin/settings-hub?tab=video-ads' },
+        { id: 'prc-rain', label: 'PRC Rain Drop', icon: CloudRain, path: '/admin/settings-hub?tab=prc-rain' },
       ]
     }
   };
