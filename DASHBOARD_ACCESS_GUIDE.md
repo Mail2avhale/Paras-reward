@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://langswitch-social.preview.emergentagent.com/setup
+   https://translatesocial.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

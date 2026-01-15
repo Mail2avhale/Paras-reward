@@ -4,7 +4,7 @@
 
 ### For Testing & Development:
 ```
-Base URL: https://langswitch-social.preview.emergentagent.com
+Base URL: https://translatesocial.preview.emergentagent.com
 ```
 
 ---
@@ -12,7 +12,7 @@ Base URL: https://langswitch-social.preview.emergentagent.com
 ## 📊 All Dashboard URLs
 
 ### 1. **User Dashboard**
-**URL:** `https://langswitch-social.preview.emergentagent.com/dashboard`
+**URL:** `https://translatesocial.preview.emergentagent.com/dashboard`
 **Role Required:** `user` (default)
 **Access:** All registered users
 
@@ -26,7 +26,7 @@ Base URL: https://langswitch-social.preview.emergentagent.com
 ---
 
 ### 2. **Admin Dashboard** ⭐
-**URL:** `https://langswitch-social.preview.emergentagent.com/admin`
+**URL:** `https://translatesocial.preview.emergentagent.com/admin`
 **Role Required:** `admin`
 **Access:** Admin users only
 
@@ -46,7 +46,7 @@ Base URL: https://langswitch-social.preview.emergentagent.com
 ---
 
 ### 3. **Master Stockist Dashboard** 🏢
-**URL:** `https://langswitch-social.preview.emergentagent.com/master-stockist`
+**URL:** `https://translatesocial.preview.emergentagent.com/master-stockist`
 **Role Required:** `master_stockist`
 **Access:** Master Stockist users only
 
@@ -74,7 +74,7 @@ Base URL: https://langswitch-social.preview.emergentagent.com
 ---
 
 ### 4. **Sub Stockist Dashboard** 🏪
-**URL:** `https://langswitch-social.preview.emergentagent.com/sub-stockist`
+**URL:** `https://translatesocial.preview.emergentagent.com/sub-stockist`
 **Role Required:** `sub_stockist`
 **Access:** Sub Stockist users only
 
@@ -102,7 +102,7 @@ Base URL: https://langswitch-social.preview.emergentagent.com
 ---
 
 ### 5. **Outlet Panel** 🛒
-**URL:** `https://langswitch-social.preview.emergentagent.com/outlet`
+**URL:** `https://translatesocial.preview.emergentagent.com/outlet`
 **Role Required:** `outlet`
 **Access:** Outlet users only
 
