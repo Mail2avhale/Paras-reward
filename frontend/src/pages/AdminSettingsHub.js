@@ -80,7 +80,7 @@ const settingsCategories = [
 ];
 
 // Import the actual settings pages
-import AdminSettings from './AdminSettings';
+import AdminPaymentSettings from './AdminPaymentSettings';
 import AdminSystemSettings from './AdminSystemSettings';
 import AdminWebSettings from './AdminWebSettings';
 import AdminSocialMediaSettings from './AdminSocialMediaSettings';
