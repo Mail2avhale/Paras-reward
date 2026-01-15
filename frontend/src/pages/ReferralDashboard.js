@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
+const SHARE_DOMAIN = process.env.REACT_APP_SHARE_DOMAIN || 'https://parasreward.com';
 const API = `${BACKEND_URL}/api`;
 
 function ReferralDashboard({ user, onLogout }) {
@@ -22,7 +23,8 @@ function ReferralDashboard({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [copied, setCopied] = useState(false);
 
-  const referralLink = `${window.location.origin}/register?ref=${user.uid}`;
+  const referralCode = user?.referral_code || user.uid;
+  const referralLink = `${SHARE_DOMAIN}/register?ref=${referralCode}`;
 
   useEffect(() => {
     fetchReferralData();
