@@ -18956,6 +18956,40 @@ async def upload_logo(file: UploadFile = File(...), logo_type: str = Form("logo"
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Image processing failed: {str(e)}")
 
+
+# ==================== QR CODE UPLOAD ====================
+
+@api_router.post("/upload/qr-code")
+async def upload_qr_code(file: UploadFile = File(...)):
+    """Upload payment QR code image"""
+    try:
+        # Validate file type
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="Only image files are allowed")
+        
+        # Create upload directory
+        upload_dir = Path("/app/frontend/public/uploads/qr-codes")
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Generate unique filename
+        ext = file.filename.split('.')[-1] if '.' in file.filename else 'png'
+        filename = f"payment_qr_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{ext}"
+        filepath = upload_dir / filename
+        
+        # Save file
+        content = await file.read()
+        with open(filepath, "wb") as f:
+            f.write(content)
+        
+        # Return URL
+        image_url = f"/uploads/qr-codes/{filename}"
+        return {"success": True, "url": image_url, "message": "QR code uploaded successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
 # ==================== REFERRAL BONUS SETTINGS ====================
 
 @api_router.get("/admin/referral-bonus-settings")
