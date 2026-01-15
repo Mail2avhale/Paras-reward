@@ -376,10 +376,56 @@ const SubscriptionPlans = ({ user }) => {
 
           {/* UPI Payment Info */}
           <div className="p-4 bg-amber-500/10 rounded-2xl border border-amber-500/30">
-            <h3 className="text-amber-400 font-semibold mb-2">{t('payViaUpi')}</h3>
-            <p className="text-white font-mono text-lg mb-2">{paymentConfig?.payment_upi_id || 'paras@upi'}</p>
-            <p className="text-gray-400 text-sm">{t('orScanQR')}</p>
+            <h3 className="text-amber-400 font-semibold mb-3">{t('payViaUpi')}</h3>
+            <div className="flex items-center gap-4">
+              {/* QR Code */}
+              {paymentConfig?.qr_code_url && (
+                <div className="flex-shrink-0">
+                  <img 
+                    src={paymentConfig.qr_code_url} 
+                    alt="Payment QR" 
+                    className="w-24 h-24 rounded-lg bg-white p-1"
+                  />
+                </div>
+              )}
+              <div className="flex-1">
+                <p className="text-white font-mono text-lg mb-1">{paymentConfig?.payment_upi_id || 'paras@upi'}</p>
+                <p className="text-gray-400 text-sm">{t('orScanQR')}</p>
+              </div>
+            </div>
           </div>
+
+          {/* Bank Transfer Info */}
+          {paymentConfig?.bank_details?.account_number && (
+            <div className="p-4 bg-blue-500/10 rounded-2xl border border-blue-500/30">
+              <h3 className="text-blue-400 font-semibold mb-3">Bank Transfer</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Bank:</span>
+                  <span className="text-white">{paymentConfig.bank_details.bank_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">A/C No:</span>
+                  <span className="text-white font-mono">{paymentConfig.bank_details.account_number}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">IFSC:</span>
+                  <span className="text-white font-mono">{paymentConfig.bank_details.ifsc_code}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Name:</span>
+                  <span className="text-white">{paymentConfig.bank_details.account_holder}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Payment Instructions */}
+          {paymentConfig?.payment_instructions && (
+            <div className="p-3 bg-gray-800/50 rounded-xl border border-gray-700">
+              <p className="text-gray-400 text-sm">{paymentConfig.payment_instructions}</p>
+            </div>
+          )}
 
           {/* Payment Form */}
           <div className="space-y-4">
