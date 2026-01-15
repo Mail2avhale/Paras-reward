@@ -496,10 +496,19 @@ const SocialShareCard = ({ user, referralCode, onShare }) => {
   };
 
   const shareToWhatsApp = () => {
-    const message = encodeURIComponent(
-      `🎁 PARAS REWARD वर Join करा!\n\n✅ Free mining\n✅ Daily rewards\n✅ 50 PRC welcome bonus\n\n👉 ${referralLink}\n\nमाझा referral code: ${referralCode || user?.uid?.slice(0, 8)}`
-    );
-    window.open(`https://wa.me/?text=${message}`, '_blank');
+    const message = `🎁 Join PARAS REWARD - India's Next-Generation Trusted Reward Platform!
+
+✨ Use my referral code: ${userReferralCode}
+🔗 ${referralLink}
+
+💰 Earn PRC Daily
+🛒 Shop & Save  
+💳 Pay Bills
+🎁 Redeem Gift Vouchers
+👥 5-Level Referral Bonus
+
+Download now & start earning!`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const shareToWhatsAppStatus = () => {
