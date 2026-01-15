@@ -12,7 +12,7 @@ const walkthroughSteps = [
   {
     id: 'welcome',
     title: 'Welcome to PARAS REWARD! 🎉',
-    subtitle: 'India\'s No.1 Loyalty Rewards Platform',
+    subtitle: 'India\'s Next-Generation Trusted Reward Platform',
     description: 'Let\'s take a quick tour to help you get started earning PRC points and rewards!',
     icon: Sparkles,
     color: 'from-purple-500 to-indigo-600',
