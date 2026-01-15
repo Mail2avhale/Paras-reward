@@ -659,7 +659,7 @@ Download now & start earning!`;
             {/* Referral Code */}
             <div className="bg-white/20 rounded-xl p-3">
               <p className="text-xs text-white/60 mb-1">Referral Code</p>
-              <p className="text-xl font-bold tracking-wider">{referralCode || user?.uid?.slice(0, 8).toUpperCase()}</p>
+              <p className="text-xl font-bold tracking-wider">{userReferralCode}</p>
             </div>
 
             {/* User info */}
