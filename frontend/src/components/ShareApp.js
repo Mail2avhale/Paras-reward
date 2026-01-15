@@ -3,19 +3,17 @@ import { Share2, Copy, Check, MessageCircle, Send, Link2, X, Smartphone, QrCode 
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
-import AppShareCard from './AppShareCard';
 
 const APP_URL = process.env.REACT_APP_BACKEND_URL || 'https://parasreward.com';
 
 /**
- * ShareApp Component - Enables users to share the app with their referral code
+ * ShareApp Component - Simple text sharing with referral code
  * 
  * @param {Object} user - User object with referral_code
  * @param {string} variant - 'button' | 'fab' | 'card' | 'inline'
  * @param {string} className - Additional CSS classes
- * @param {boolean} useNewCard - Use the new AppShareCard design
  */
-const ShareApp = ({ user, variant = 'button', className = '', useNewCard = true }) => {
+const ShareApp = ({ user, variant = 'button', className = '' }) => {
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
@@ -23,12 +21,18 @@ const ShareApp = ({ user, variant = 'button', className = '', useNewCard = true 
   const referralCode = user?.referral_code || 'PARAS';
   const referralLink = `${APP_URL}/register?ref=${referralCode}`;
   
-  const shareMessage = `🎁 Join PARAS REWARD and start earning rewards daily!
+  const shareMessage = `🎁 Join PARAS REWARD - India's Next-Generation Trusted Reward Platform!
 
-✨ Use my code: ${referralCode}
+✨ Use my referral code: ${referralCode}
 🔗 ${referralLink}
 
-💰 Earn PRC points, redeem gift vouchers, pay bills & shop!`;
+💰 Earn PRC Daily
+🛒 Shop & Save  
+💳 Pay Bills
+🎁 Redeem Gift Vouchers
+👥 5-Level Referral Bonus
+
+Download now & start earning!`;
 
   const copyLink = async () => {
     try {
@@ -42,20 +46,25 @@ const ShareApp = ({ user, variant = 'button', className = '', useNewCard = true 
   };
 
   const shareNative = async () => {
-    // Always show the new card modal
-    if (useNewCard) {
-      setShowModal(true);
-      return;
-    }
-    
     const shareData = {
       title: 'Join PARAS REWARD',
-      text: `🎁 Earn rewards daily with PARAS REWARD! Use my code: ${referralCode}`,
+      text: shareMessage,
       url: referralLink
     };
     
     try {
       if (navigator.share) {
+        await navigator.share(shareData);
+        toast.success('Thanks for sharing!');
+      } else {
+        setShowModal(true);
+      }
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        setShowModal(true);
+      }
+    }
+  };
         await navigator.share(shareData);
         toast.success('Thanks for sharing!');
       } else {
