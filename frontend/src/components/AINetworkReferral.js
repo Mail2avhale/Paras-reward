@@ -529,7 +529,26 @@ Download now & start earning!`;
 
   const shareToFacebook = () => {
     window.open(
-      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}&quote=${encodeURIComponent('Join PARAS REWARD and earn daily! 🎁')}`,
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}&quote=${encodeURIComponent('Join PARAS REWARD - India\'s Next-Generation Trusted Reward Platform! 🎁')}`,
+      '_blank'
+    );
+  };
+
+  const shareToTelegram = () => {
+    const message = `🎁 Join PARAS REWARD - India's Next-Generation Trusted Reward Platform!
+
+✨ Use my referral code: ${userReferralCode}
+🔗 ${referralLink}
+
+💰 Earn PRC Daily
+🛒 Shop & Save  
+💳 Pay Bills
+🎁 Redeem Gift Vouchers
+👥 5-Level Referral Bonus
+
+Download now & start earning!`;
+    window.open(
+      `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(message)}`,
       '_blank'
     );
   };
