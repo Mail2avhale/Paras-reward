@@ -456,12 +456,15 @@ const AIFraudDetection = ({ userId }) => {
 // ============================================
 // SOCIAL SHARE CARD GENERATOR
 // ============================================
+const SHARE_DOMAIN = process.env.REACT_APP_SHARE_DOMAIN || 'https://parasreward.com';
+
 const SocialShareCard = ({ user, referralCode, onShare }) => {
   const cardRef = useRef(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState(null);
 
-  const referralLink = `${window.location.origin}/register?ref=${user?.uid}`;
+  const userReferralCode = referralCode || user?.referral_code || user?.uid?.slice(0, 8).toUpperCase();
+  const referralLink = `${SHARE_DOMAIN}/register?ref=${userReferralCode}`;
 
   const generateShareImage = async () => {
     if (!cardRef.current) return;
