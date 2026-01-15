@@ -16,6 +16,12 @@ const AppShareCard = ({ user, onClose }) => {
   const referralCode = user?.referral_code || 'PARAS2025';
   const referralLink = `${APP_URL}/register?ref=${referralCode}`;
   const userName = user?.full_name || user?.name || 'Member';
+  
+  // Real app usage data
+  const prcBalance = user?.prc_balance?.toLocaleString() || '0';
+  const totalReferrals = user?.direct_referrals || user?.referral_count || 0;
+  const memberSince = user?.created_at ? new Date(user.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : 'Jan 2025';
+  const subscriptionPlan = user?.subscription_plan || user?.membership_type || 'Explorer';
 
   const shareMessage = `🎁 Join PARAS REWARD - India's Next-Generation Trusted Reward Platform!
 
