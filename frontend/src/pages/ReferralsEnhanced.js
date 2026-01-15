@@ -270,7 +270,18 @@ const ReferralsEnhanced = ({ user }) => {
   };
 
   const shareOnWhatsApp = () => {
-    const message = `🎁 Join PARAS REWARD and start earning PRC daily!\n\n✨ Use my code: ${referralCode}\n🔗 Or click: ${referralLink}\n\n💰 Earn rewards just by signing up!`;
+    const message = `🎁 Join PARAS REWARD - India's Next-Generation Trusted Reward Platform!
+
+✨ Use my referral code: ${referralCode}
+🔗 ${referralLink}
+
+💰 Earn PRC Daily
+🛒 Shop & Save  
+💳 Pay Bills
+🎁 Redeem Gift Vouchers
+👥 5-Level Referral Bonus
+
+Download now & start earning!`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
