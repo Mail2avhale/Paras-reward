@@ -16,7 +16,7 @@ const AppShareCard = ({ user, onClose }) => {
   const cardRef = useRef(null);
 
   const referralCode = user?.referral_code || 'PARAS2025';
-  const referralLink = `${APP_URL}/register?ref=${referralCode}`;
+  const referralLink = `${SHARE_DOMAIN}/register?ref=${referralCode}`;
   const userName = user?.full_name || user?.name || 'Member';
   
   // Real app usage data
