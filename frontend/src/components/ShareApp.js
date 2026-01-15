@@ -4,7 +4,9 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 
-const APP_URL = process.env.REACT_APP_BACKEND_URL || 'https://parasreward.com';
+// Use REACT_APP_SHARE_DOMAIN for sharing links (production domain)
+// Falls back to REACT_APP_BACKEND_URL if not set
+const SHARE_DOMAIN = process.env.REACT_APP_SHARE_DOMAIN || process.env.REACT_APP_BACKEND_URL || 'https://parasreward.com';
 
 /**
  * ShareApp Component - Simple text sharing with referral code
