@@ -417,7 +417,7 @@ const AdminSettings = ({ user }) => {
               ) : (
                 <>
                   <XCircle className="h-6 w-6 text-red-600" />
-                  <span className="text-lg font-semibold text-red-900">Registration is Currently DISABLED</span>
+                  <span className="text-lg font-semibold text-red-300">Registration is Currently DISABLED</span>
                 </>
               )}
             </div>
