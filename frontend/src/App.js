@@ -103,6 +103,7 @@ const AdminSupport = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/
 const AdminContactSubmissions = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminContactSubmissions"));
 const AdminMarketplace = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminMarketplace"));
 const AdminSettings = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSettings"));
+const AdminSettingsHub = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSettingsHub"));
 const AdminSecurityDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSecurityDashboard"));
 // AdminVIPPlans and AdminVIPPaymentVerification removed - replaced by AdminSubscriptionManagement (new 4-tier system)
 const AdminSubscriptionManagement = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSubscriptionManagement"));
