@@ -246,27 +246,27 @@ const AdminSettings = ({ user }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gray-950">
+      <div className="container mx-auto px-4 py-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
-              onClick={() => navigate('/admin')}
-              className="flex items-center gap-2"
+              onClick={() => navigate('/admin/settings-hub')}
+              className="flex items-center gap-2 bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Admin
+              All Settings
             </Button>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              Admin Settings
+            <h1 className="text-2xl font-bold text-white">
+              Payment & Social Settings
             </h1>
           </div>
         </div>
 
         {/* Social Media Settings */}
-        <Card className="p-8 shadow-xl">
+        <Card className="p-6 shadow-xl bg-gray-900/50 border-gray-800">
           <h2 className="text-2xl font-bold mb-6 text-gray-100">Social Media Links</h2>
           <p className="text-gray-400 mb-8">Configure your social media profile links. These will be displayed in the footer and dashboard.</p>
 
