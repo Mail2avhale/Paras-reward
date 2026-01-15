@@ -405,8 +405,8 @@ const AdminSettings = ({ user }) => {
           {/* Current Status */}
           <div className={`p-6 rounded-lg border-2 mb-6 ${
             registrationEnabled 
-              ? 'bg-green-50 border-green-200' 
-              : 'bg-red-50 border-red-200'
+              ? 'bg-green-900/30 border-green-700' 
+              : 'bg-red-900/30 border-red-700'
           }`}>
             <div className="flex items-center gap-3 mb-2">
               {registrationEnabled ? (
