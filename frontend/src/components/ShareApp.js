@@ -80,6 +80,35 @@ const ShareApp = ({ user, variant = 'button', className = '', useNewCard = true 
     window.open(`sms:?body=${encodeURIComponent(shareMessage)}`, '_blank');
   };
 
+  // Render the new AppShareCard modal
+  const renderModal = () => {
+    if (useNewCard) {
+      return (
+        <AnimatePresence>
+          {showModal && (
+            <AppShareCard user={user} onClose={() => setShowModal(false)} />
+          )}
+        </AnimatePresence>
+      );
+    }
+    return (
+      <ShareModal 
+        show={showModal} 
+        onClose={() => setShowModal(false)}
+        referralCode={referralCode}
+        referralLink={referralLink}
+        shareMessage={shareMessage}
+        copyLink={copyLink}
+        copied={copied}
+        shareOnWhatsApp={shareOnWhatsApp}
+        shareOnTelegram={shareOnTelegram}
+        shareViaSMS={shareViaSMS}
+        showQR={showQR}
+        setShowQR={setShowQR}
+      />
+    );
+  };
+
   // Button variant
   if (variant === 'button') {
     return (
@@ -92,20 +121,7 @@ const ShareApp = ({ user, variant = 'button', className = '', useNewCard = true 
           <Share2 className="w-4 h-4" />
           <span>Share App</span>
         </button>
-        <ShareModal 
-          show={showModal} 
-          onClose={() => setShowModal(false)}
-          referralCode={referralCode}
-          referralLink={referralLink}
-          shareMessage={shareMessage}
-          copyLink={copyLink}
-          copied={copied}
-          shareOnWhatsApp={shareOnWhatsApp}
-          shareOnTelegram={shareOnTelegram}
-          shareViaSMS={shareViaSMS}
-          showQR={showQR}
-          setShowQR={setShowQR}
-        />
+        {renderModal()}
       </>
     );
   }
@@ -125,9 +141,7 @@ const ShareApp = ({ user, variant = 'button', className = '', useNewCard = true 
         >
           <Share2 className="w-6 h-6" />
         </motion.button>
-        <ShareModal 
-          show={showModal} 
-          onClose={() => setShowModal(false)}
+        {renderModal()}
           referralCode={referralCode}
           referralLink={referralLink}
           shareMessage={shareMessage}
