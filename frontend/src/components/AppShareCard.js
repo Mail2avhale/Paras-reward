@@ -114,7 +114,7 @@ Download now & start earning!`;
             </div>
           </div>
 
-          {/* Mock Credit Card */}
+          {/* Mock Credit Card with Real Usage */}
           <div className="px-6 py-4">
             <div className="relative">
               {/* Card Glow */}
@@ -134,36 +134,56 @@ Download now & start earning!`;
                   </svg>
                 </div>
                 
-                {/* Card Chip */}
-                <div className="flex items-start justify-between mb-6">
+                {/* Card Header - Chip & Plan Badge */}
+                <div className="flex items-start justify-between mb-4">
                   <div className="w-12 h-9 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-md flex items-center justify-center">
                     <div className="w-8 h-6 border-2 border-yellow-600/50 rounded-sm" />
                   </div>
-                  <div className="text-right">
-                    <p className="text-white/80 text-xs font-medium">REWARDS</p>
-                    <Crown className="w-6 h-6 text-white ml-auto" />
+                  <div className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                    <p className="text-white text-xs font-bold uppercase">{subscriptionPlan}</p>
                   </div>
                 </div>
 
-                {/* Card Number Area - Referral Code */}
+                {/* PRC Balance - Main Display */}
                 <div className="mb-4">
-                  <p className="text-white/60 text-xs mb-1">REFERRAL CODE</p>
-                  <p className="text-white text-2xl font-mono tracking-[0.3em] font-bold">
-                    {referralCode}
-                  </p>
+                  <p className="text-white/60 text-xs mb-1">PRC BALANCE</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-white text-3xl font-bold">{prcBalance}</p>
+                    <span className="text-white/70 text-sm">PRC</span>
+                  </div>
                 </div>
 
-                {/* Card Holder */}
+                {/* Stats Row */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2">
+                    <p className="text-white/60 text-[10px]">REFERRALS</p>
+                    <p className="text-white font-bold">{totalReferrals}</p>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2">
+                    <p className="text-white/60 text-[10px]">MEMBER SINCE</p>
+                    <p className="text-white font-bold text-sm">{memberSince}</p>
+                  </div>
+                </div>
+
+                {/* Card Footer - Name & Brand */}
                 <div className="flex items-end justify-between">
                   <div>
-                    <p className="text-white/60 text-xs mb-1">MEMBER</p>
-                    <p className="text-white font-semibold uppercase tracking-wider text-sm">
+                    <p className="text-white/60 text-[10px] mb-0.5">MEMBER</p>
+                    <p className="text-white font-semibold uppercase tracking-wider text-xs">
                       {userName}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-white font-bold text-lg tracking-wider">PARAS</p>
                     <p className="text-white/70 text-xs">REWARD</p>
+                  </div>
+                </div>
+
+                {/* Referral Code Strip */}
+                <div className="mt-3 pt-3 border-t border-white/20">
+                  <div className="flex items-center justify-between">
+                    <span className="text-white/60 text-xs">CODE</span>
+                    <span className="text-white font-mono font-bold tracking-wider">{referralCode}</span>
                   </div>
                 </div>
 
