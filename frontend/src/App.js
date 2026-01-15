@@ -249,12 +249,13 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/profit-loss" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminProfitLoss user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/liquidity" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminLiquidity user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/video-ads" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminVideoAds user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/settings" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSettings user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/settings-hub" element={canAccessAdmin(user) ? <AdminSettingsHub user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/settings" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=payment" replace /> : <Navigate to="/dashboard" />} />
             <Route path="/admin/security" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSecurityDashboard user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/settings/system" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSystemSettings user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/settings/web" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminWebSettings user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/settings/social" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSocialMediaSettings user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/admin/settings/redeem" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminRedeemSettings user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/settings/system" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=system" replace /> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/settings/web" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=web" replace /> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/settings/social" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=social" replace /> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/settings/redeem" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=redeem" replace /> : <Navigate to="/dashboard" />} />
             <Route path="/admin/prc-rain" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminPRCRain user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/user-ledger" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminUserLedger user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/capital" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminCapitalManagement user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
