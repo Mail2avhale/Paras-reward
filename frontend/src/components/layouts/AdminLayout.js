@@ -144,6 +144,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
       label: 'Settings',
       icon: Settings,
       subItems: [
+        { id: 'payment-settings', label: 'Payment Settings', icon: CreditCard, path: '/admin/settings' },
         { id: 'system-settings', label: 'System Settings', icon: Cpu, path: '/admin/settings/system' },
         { id: 'web-settings', label: 'Web Settings', icon: Globe, path: '/admin/settings/web' },
         { id: 'social-settings', label: 'Social Media', icon: Share2, path: '/admin/settings/social' },
