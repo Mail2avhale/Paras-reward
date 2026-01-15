@@ -14,7 +14,6 @@ import InteractiveWalkthrough, { useWalkthrough } from '@/components/Interactive
 import AIChatbotEnhanced from '@/components/AIChatbotEnhanced';
 import PRCRain from '@/components/PRCRain';
 import NotificationBell from '@/components/NotificationBell';
-import ShareApp from '@/components/ShareApp';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSkeleton } from '@/components/skeletons';
 
