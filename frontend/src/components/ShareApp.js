@@ -199,58 +199,36 @@ const ShareApp = ({ user, variant = 'button', className = '', useNewCard = true 
       </>
     );
   }
-              onClick={shareNative}
-              className="flex-1 flex items-center justify-center gap-2 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-medium transition-colors"
-            >
-              <Share2 className="w-4 h-4" />
-              More
-            </button>
-          </div>
-        </motion.div>
-        <ShareModal 
-          show={showModal} 
-          onClose={() => setShowModal(false)}
-          referralCode={referralCode}
-          referralLink={referralLink}
-          shareMessage={shareMessage}
-          copyLink={copyLink}
-          copied={copied}
-          shareOnWhatsApp={shareOnWhatsApp}
-          shareOnTelegram={shareOnTelegram}
-          shareViaSMS={shareViaSMS}
-          showQR={showQR}
-          setShowQR={setShowQR}
-        />
-      </>
-    );
-  }
 
   // Inline variant - compact
   if (variant === 'inline') {
     return (
-      <div className={`flex items-center gap-2 ${className}`} data-testid="share-app-inline">
-        <button
-          onClick={copyLink}
-          className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
-          title="Copy Link"
-        >
-          {copied ? <Check className="w-4 h-4 text-green-400" /> : <Link2 className="w-4 h-4 text-gray-400" />}
-        </button>
-        <button
-          onClick={shareOnWhatsApp}
-          className="p-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-          title="Share on WhatsApp"
-        >
-          <MessageCircle className="w-4 h-4 text-white" />
-        </button>
-        <button
-          onClick={shareNative}
-          className="p-2 bg-amber-500 hover:bg-amber-600 rounded-lg transition-colors"
-          title="Share"
-        >
-          <Share2 className="w-4 h-4 text-white" />
-        </button>
-      </div>
+      <>
+        <div className={`flex items-center gap-2 ${className}`} data-testid="share-app-inline">
+          <button
+            onClick={copyLink}
+            className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+            title="Copy Link"
+          >
+            {copied ? <Check className="w-4 h-4 text-green-400" /> : <Link2 className="w-4 h-4 text-gray-400" />}
+          </button>
+          <button
+            onClick={shareOnWhatsApp}
+            className="p-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+            title="Share on WhatsApp"
+          >
+            <MessageCircle className="w-4 h-4 text-white" />
+          </button>
+          <button
+            onClick={shareNative}
+            className="p-2 bg-amber-500 hover:bg-amber-600 rounded-lg transition-colors"
+            title="Share"
+          >
+            <Share2 className="w-4 h-4 text-white" />
+          </button>
+        </div>
+        {renderModal()}
+      </>
     );
   }
 
