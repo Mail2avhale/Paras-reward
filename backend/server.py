@@ -4840,7 +4840,7 @@ async def approve_vip_payment(payment_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post("/admin/vip-payment/{payment_id}/reject")
 async def reject_vip_payment(payment_id: str, request: Request):
