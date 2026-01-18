@@ -4734,7 +4734,7 @@ async def approve_vip_payment(payment_id: str, request: Request):
         user_id = payment.get("user_id")
         plan_type = payment.get("plan_type")
         
-        # Calculate VIP expiry
+        # Calculate duration days
         now = datetime.now(timezone.utc)
         duration_days = {
             "monthly": 30,
@@ -4743,7 +4743,33 @@ async def approve_vip_payment(payment_id: str, request: Request):
             "yearly": 365
         }.get(plan_type, 30)
         
-        vip_expiry = (now + timedelta(days=duration_days)).isoformat()
+        # Get current user to check existing subscription
+        user = await db.users.find_one({"uid": user_id})
+        
+        # EXTEND LOGIC: Add new days to existing subscription if not expired
+        start_date = now
+        if user:
+            current_expiry = user.get("subscription_expiry") or user.get("vip_expiry")
+            if current_expiry:
+                try:
+                    # Parse current expiry date
+                    if isinstance(current_expiry, str):
+                        current_expiry_dt = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
+                    else:
+                        current_expiry_dt = current_expiry
+                    
+                    # If current subscription is still valid, extend from that date
+                    if current_expiry_dt > now:
+                        start_date = current_expiry_dt
+                        # Log the extension
+                        remaining_days = (current_expiry_dt - now).days
+                        print(f"Extending subscription: {remaining_days} days remaining + {duration_days} new days")
+                except Exception as e:
+                    print(f"Error parsing expiry date: {e}")
+                    start_date = now
+        
+        # Calculate new expiry from start_date
+        new_expiry = (start_date + timedelta(days=duration_days)).isoformat()
         
         # Get subscription plan from payment (default to startup for legacy)
         subscription_plan = payment.get("subscription_plan", "startup")
@@ -4755,9 +4781,10 @@ async def approve_vip_payment(payment_id: str, request: Request):
                 "$set": {
                     "membership_type": "vip",  # Legacy compatibility
                     "subscription_plan": subscription_plan,
-                    "subscription_expiry": vip_expiry,
-                    "vip_expiry": vip_expiry,  # Legacy compatibility
-                    "vip_activated_at": now.isoformat()
+                    "subscription_expiry": new_expiry,
+                    "vip_expiry": new_expiry,  # Legacy compatibility
+                    "vip_activated_at": now.isoformat(),
+                    "last_subscription_renewed": now.isoformat()
                 }
             }
         )
@@ -4770,7 +4797,9 @@ async def approve_vip_payment(payment_id: str, request: Request):
                     "status": "approved",
                     "approved_at": now.isoformat(),
                     "approved_by": admin_id,
-                    "admin_notes": notes
+                    "admin_notes": notes,
+                    "subscription_extended": start_date != now,
+                    "new_expiry": new_expiry
                 }
             }
         )
@@ -4794,14 +4823,24 @@ async def approve_vip_payment(payment_id: str, request: Request):
             "payment_id": payment_id,
             "amount": payment.get("amount"),
             "plan_type": plan_type,
+            "subscription_plan": subscription_plan,
+            "extended": start_date != now,
+            "new_expiry": new_expiry,
             "timestamp": now.isoformat()
         })
         
-        return {"success": True, "message": "Payment approved, VIP membership activated"}
+        # Calculate total days for message
+        if start_date != now:
+            remaining = (start_date - now).days
+            message = f"Payment approved! Subscription extended. {remaining} remaining + {duration_days} new = {remaining + duration_days} total days"
+        else:
+            message = f"Payment approved! {duration_days} days subscription activated"
+        
+        return {"success": True, "message": message, "new_expiry": new_expiry}
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)}
 
 @api_router.post("/admin/vip-payment/{payment_id}/reject")
 async def reject_vip_payment(payment_id: str, request: Request):
