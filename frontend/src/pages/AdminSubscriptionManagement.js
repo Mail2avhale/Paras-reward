@@ -173,7 +173,7 @@ const AdminSubscriptionManagement = ({ user }) => {
   const handleApprovePayment = async (payment) => {
     try {
       setProcessing(true);
-      await axios.post(`${API}/api/admin/vip-payments/${payment.payment_id}/approve`, {
+      await axios.post(`${API}/api/admin/vip-payment/${payment.payment_id}/approve`, {
         notes: actionNotes
       });
       toast.success('Payment approved! User subscription activated.');
@@ -191,7 +191,7 @@ const AdminSubscriptionManagement = ({ user }) => {
   const handleRejectPayment = async (payment) => {
     try {
       setProcessing(true);
-      await axios.post(`${API}/api/admin/vip-payments/${payment.payment_id}/reject`, {
+      await axios.post(`${API}/api/admin/vip-payment/${payment.payment_id}/reject`, {
         notes: actionNotes
       });
       toast.success('Payment rejected');
