@@ -197,6 +197,21 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 - Files: DashboardNew.js, WalletNew.js, Marketplace.js, ScratchCard.js, BillPayments.js, GiftVoucherRedemption.js, etc.
 - These work alongside the new subscription_plan system but could be cleaned up
 
+## Pending Verifications (User Testing Required)
+
+### P0 - Critical
+1. **Subscription "Extend" Logic** - Test on deployed app:
+   - User with existing subscription buys new one
+   - New duration should ADD to existing expiry (not replace)
+   
+2. **KYC Document Upload** - Test on mobile device:
+   - Camera capture and file upload functionality
+   - Document preview and submission
+
+### P1 - Upcoming
+1. **AdMob + Unity Ads Integration**
+2. **TWA APK Generation** (via PWABuilder)
+
 ### January 14, 2026 (Previous Session - TWA/PWA Preparation)
 
 #### PWA/TWA Assets Prepared for APK Generation ✅
