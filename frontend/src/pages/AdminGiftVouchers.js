@@ -109,26 +109,26 @@ const AdminGiftVouchers = ({ user }) => {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card className="p-4 bg-yellow-50">
+          <Card className="p-4 bg-yellow-500/10 border-yellow-500/30">
             <p className="text-sm text-gray-400">Pending</p>
-            <p className="text-2xl font-bold text-yellow-700">{stats.pending || 0}</p>
+            <p className="text-2xl font-bold text-yellow-400">{stats.pending || 0}</p>
           </Card>
-          <Card className="p-4 bg-green-50">
+          <Card className="p-4 bg-green-500/10 border-green-500/30">
             <p className="text-sm text-gray-400">Completed</p>
-            <p className="text-2xl font-bold text-green-700">{stats.completed || 0}</p>
+            <p className="text-2xl font-bold text-green-400">{stats.completed || 0}</p>
           </Card>
-          <Card className="p-4 bg-blue-50">
+          <Card className="p-4 bg-blue-500/10 border-blue-500/30">
             <p className="text-sm text-gray-400">Pending Value</p>
-            <p className="text-2xl font-bold text-blue-700">₹{stats.total_value_pending || 0}</p>
+            <p className="text-2xl font-bold text-blue-400">₹{stats.total_value_pending || 0}</p>
           </Card>
-          <Card className="p-4 bg-purple-50">
+          <Card className="p-4 bg-purple-500/10 border-purple-500/30">
             <p className="text-sm text-gray-400">Completed Value</p>
-            <p className="text-2xl font-bold text-purple-700">₹{stats.total_value_completed || 0}</p>
+            <p className="text-2xl font-bold text-purple-400">₹{stats.total_value_completed || 0}</p>
           </Card>
         </div>
 
         {/* Filters */}
-        <Card className="p-4 mb-6">
+        <Card className="p-4 mb-6 bg-gray-900 border-gray-700">
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
@@ -137,7 +137,7 @@ const AdminGiftVouchers = ({ user }) => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search..."
-                  className="pl-10"
+                  className="pl-10 bg-gray-800 border-gray-700 text-white"
                 />
               </div>
             </div>
@@ -159,17 +159,17 @@ const AdminGiftVouchers = ({ user }) => {
         {/* Requests */}
         <div className="grid gap-4">
           {paginatedRequests.map((req) => (
-            <Card key={req.request_id} className="p-6 hover:shadow-lg transition-shadow">
+            <Card key={req.request_id} className="p-6 hover:shadow-lg transition-shadow bg-gray-900 border-gray-700">
               <div className="flex items-start justify-between">
                 <div className="flex gap-4 flex-1">
                   <div className="text-4xl">🎁</div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-bold text-lg">₹{req.denomination} Voucher</h3>
+                      <h3 className="font-bold text-lg text-white">₹{req.denomination} Voucher</h3>
                       <span className={`px-2 py-1 rounded-full text-xs ${
-                        req.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        req.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        'bg-red-100 text-red-800'
+                        req.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                        req.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                        'bg-red-500/20 text-red-400'
                       }`}>
                         {req.status}
                       </span>
@@ -177,21 +177,21 @@ const AdminGiftVouchers = ({ user }) => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
                         <p className="text-gray-400">User</p>
-                        <p className="font-semibold">{req.user_name}</p>
+                        <p className="font-semibold text-white">{req.user_name}</p>
                         <p className="text-xs text-gray-500">{req.user_role}</p>
                       </div>
                       <div>
                         <p className="text-gray-400">PRC Deducted</p>
-                        <p className="font-semibold">{req.total_prc_deducted.toFixed(2)}</p>
+                        <p className="font-semibold text-purple-400">{req.total_prc_deducted.toFixed(2)}</p>
                       </div>
                       <div>
                         <p className="text-gray-400">Date</p>
-                        <p className="font-semibold">{new Date(req.created_at).toLocaleDateString()}</p>
+                        <p className="font-semibold text-gray-300">{new Date(req.created_at).toLocaleDateString()}</p>
                       </div>
                       {req.voucher_code && (
                         <div>
                           <p className="text-gray-400">Voucher Code</p>
-                          <p className="font-mono font-bold text-green-700">{req.voucher_code}</p>
+                          <p className="font-mono font-bold text-green-400">{req.voucher_code}</p>
                         </div>
                       )}
                     </div>
