@@ -222,38 +222,39 @@ const AdminGiftVouchers = ({ user }) => {
         {/* Process Modal */}
         {selectedRequest && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <Card className="max-w-lg w-full p-6">
-              <h2 className="text-2xl font-bold mb-4">Process Voucher Request</h2>
+            <Card className="max-w-lg w-full p-6 bg-gray-900 border-gray-700">
+              <h2 className="text-2xl font-bold mb-4 text-white">Process Voucher Request</h2>
               
               <div className="space-y-4">
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-400">User: <span className="font-semibold">{selectedRequest.user_name}</span></p>
-                  <p className="text-sm text-gray-400">Denomination: <span className="font-semibold text-lg">₹{selectedRequest.denomination}</span></p>
-                  <p className="text-sm text-gray-400">PRC Deducted: <span className="font-semibold">{selectedRequest.total_prc_deducted.toFixed(2)} PRC</span></p>
+                <div className="bg-purple-500/10 border border-purple-500/30 p-4 rounded-lg">
+                  <p className="text-sm text-gray-400">User: <span className="font-semibold text-white">{selectedRequest.user_name}</span></p>
+                  <p className="text-sm text-gray-400">Denomination: <span className="font-semibold text-lg text-amber-400">₹{selectedRequest.denomination}</span></p>
+                  <p className="text-sm text-gray-400">PRC Deducted: <span className="font-semibold text-purple-400">{selectedRequest.total_prc_deducted.toFixed(2)} PRC</span></p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Voucher Code *</label>
+                  <label className="block text-sm font-medium mb-2 text-white">Voucher Code *</label>
                   <Input
                     value={voucherCode}
                     onChange={(e) => setVoucherCode(e.target.value)}
                     placeholder="Enter PhonePe voucher code"
+                    className="bg-gray-800 border-gray-700 text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Admin Notes (Optional)</label>
+                  <label className="block text-sm font-medium mb-2 text-white">Admin Notes (Optional)</label>
                   <textarea
                     value={adminNotes}
                     onChange={(e) => setAdminNotes(e.target.value)}
-                    className="w-full border border-gray-700 rounded bg-gray-800 text-white p-2 text-sm"
+                    className="w-full border border-gray-700 rounded-lg bg-gray-800 text-white p-3 text-sm"
                     rows={3}
                     placeholder="Add any notes..."
                   />
                 </div>
 
                 <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={() => setSelectedRequest(null)}>
+                  <Button variant="outline" onClick={() => setSelectedRequest(null)} className="border-gray-600 text-white hover:bg-gray-800">
                     Cancel
                   </Button>
                   <Button

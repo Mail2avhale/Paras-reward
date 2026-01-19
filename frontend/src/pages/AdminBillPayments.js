@@ -258,31 +258,31 @@ const AdminBillPayments = ({ user }) => {
         {/* Detail Modal */}
         {selectedRequest && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-              <h2 className="text-2xl font-bold mb-4">Request Details</h2>
+            <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 bg-gray-900 border-gray-700">
+              <h2 className="text-2xl font-bold mb-4 text-white">Request Details</h2>
               
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-400">User</p>
-                    <p className="font-semibold">{selectedRequest.user_name}</p>
+                    <p className="font-semibold text-white">{selectedRequest.user_name}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Type</p>
-                    <p className="font-semibold">{getTypeLabel(selectedRequest.request_type)}</p>
+                    <p className="font-semibold text-white">{getTypeLabel(selectedRequest.request_type)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Amount</p>
-                    <p className="font-semibold text-lg">₹{selectedRequest.amount_inr}</p>
+                    <p className="font-semibold text-lg text-amber-400">₹{selectedRequest.amount_inr}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">PRC Deducted</p>
-                    <p className="font-semibold">{selectedRequest.total_prc_deducted.toFixed(2)} PRC</p>
+                    <p className="font-semibold text-purple-400">{selectedRequest.total_prc_deducted.toFixed(2)} PRC</p>
                   </div>
                 </div>
 
-                <div className="bg-gray-800/50 p-4 rounded-lg">
-                  <p className="text-sm font-semibold mb-3">Request Details</p>
+                <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                  <p className="text-sm font-semibold mb-3 text-white">Request Details</p>
                   
                   {/* Loan/EMI specific formatted display */}
                   {selectedRequest.request_type === 'loan_emi' ? (
@@ -363,24 +363,24 @@ const AdminBillPayments = ({ user }) => {
                     </div>
                   ) : selectedRequest.request_type === 'mobile_recharge' ? (
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Mobile Number</p>
-                        <p className="font-semibold font-mono text-lg">{selectedRequest.details?.mobile_number || '-'}</p>
+                      <div className="bg-gray-800/70 p-3 rounded border border-gray-600">
+                        <p className="text-xs text-gray-400">Mobile Number</p>
+                        <p className="font-semibold font-mono text-lg text-white">{selectedRequest.details?.mobile_number || '-'}</p>
                       </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Operator</p>
-                        <p className="font-semibold">{selectedRequest.details?.operator || '-'}</p>
+                      <div className="bg-gray-800/70 p-3 rounded border border-gray-600">
+                        <p className="text-xs text-gray-400">Operator</p>
+                        <p className="font-semibold text-white">{selectedRequest.details?.operator || '-'}</p>
                       </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Circle/State</p>
-                        <p className="font-semibold">{selectedRequest.details?.circle || '-'}</p>
+                      <div className="bg-gray-800/70 p-3 rounded border border-gray-600">
+                        <p className="text-xs text-gray-400">Circle/State</p>
+                        <p className="font-semibold text-white">{selectedRequest.details?.circle || '-'}</p>
                       </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Recharge Type</p>
-                        <p className="font-semibold capitalize">{selectedRequest.details?.recharge_type || 'Prepaid'}</p>
+                      <div className="bg-gray-800/70 p-3 rounded border border-gray-600">
+                        <p className="text-xs text-gray-400">Recharge Type</p>
+                        <p className="font-semibold capitalize text-white">{selectedRequest.details?.recharge_type || 'Prepaid'}</p>
                       </div>
-                      <div className="bg-gray-900 p-3 rounded border col-span-2">
-                        <p className="text-xs text-gray-500">Recharge Amount</p>
+                      <div className="bg-gray-800/70 p-3 rounded border border-gray-600 col-span-2">
+                        <p className="text-xs text-gray-400">Recharge Amount</p>
                         <p className="font-semibold text-lg text-green-400">₹{selectedRequest.amount_inr}</p>
                       </div>
                     </div>
