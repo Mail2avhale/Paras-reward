@@ -114,37 +114,37 @@ const AdminBillPayments = ({ user }) => {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="p-4 bg-yellow-50 border-yellow-200">
+          <Card className="p-4 bg-yellow-500/10 border-yellow-500/30">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">Pending</p>
-                <p className="text-2xl font-bold text-yellow-700">{stats.pending || 0}</p>
+                <p className="text-2xl font-bold text-yellow-400">{stats.pending || 0}</p>
               </div>
-              <Clock className="h-8 w-8 text-yellow-600" />
+              <Clock className="h-8 w-8 text-yellow-500" />
             </div>
           </Card>
-          <Card className="p-4 bg-green-50 border-green-200">
+          <Card className="p-4 bg-green-500/10 border-green-500/30">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">Completed</p>
-                <p className="text-2xl font-bold text-green-700">{stats.completed || 0}</p>
+                <p className="text-2xl font-bold text-green-400">{stats.completed || 0}</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <CheckCircle className="h-8 w-8 text-green-500" />
             </div>
           </Card>
-          <Card className="p-4 bg-red-50 border-red-200">
+          <Card className="p-4 bg-red-500/10 border-red-500/30">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">Rejected</p>
-                <p className="text-2xl font-bold text-red-700">{stats.rejected || 0}</p>
+                <p className="text-2xl font-bold text-red-400">{stats.rejected || 0}</p>
               </div>
-              <XCircle className="h-8 w-8 text-red-600" />
+              <XCircle className="h-8 w-8 text-red-500" />
             </div>
           </Card>
         </div>
 
         {/* Filters */}
-        <Card className="p-4 mb-6">
+        <Card className="p-4 mb-6 bg-gray-900 border-gray-700">
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
@@ -153,7 +153,7 @@ const AdminBillPayments = ({ user }) => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search by user, email, or ID..."
-                  className="pl-10"
+                  className="pl-10 bg-gray-800 border-gray-700 text-white"
                 />
               </div>
             </div>
@@ -191,32 +191,32 @@ const AdminBillPayments = ({ user }) => {
         </Card>
 
         {/* Requests Table */}
-        <Card className="p-6">
+        <Card className="p-6 bg-gray-900 border-gray-700">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 text-sm font-semibold">User</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold">Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold">Amount</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold">PRC</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold">Date</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold">Actions</th>
+                <tr className="border-b border-gray-700">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">User</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Type</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Amount</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">PRC</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Status</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Date</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedRequests.map((req) => (
-                  <tr key={req.request_id} className="border-b hover:bg-gray-800/50">
+                  <tr key={req.request_id} className="border-b border-gray-800 hover:bg-gray-800/50">
                     <td className="py-3 px-4">
                       <div>
-                        <p className="text-sm font-medium">{req.user_name}</p>
+                        <p className="text-sm font-medium text-white">{req.user_name}</p>
                         <p className="text-xs text-gray-400">{req.user_email}</p>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-sm">{getTypeLabel(req.request_type)}</td>
-                    <td className="py-3 px-4 text-sm font-bold">₹{req.amount_inr}</td>
-                    <td className="py-3 px-4 text-sm">{req.total_prc_deducted.toFixed(2)}</td>
+                    <td className="py-3 px-4 text-sm text-white">{getTypeLabel(req.request_type)}</td>
+                    <td className="py-3 px-4 text-sm font-bold text-amber-400">₹{req.amount_inr}</td>
+                    <td className="py-3 px-4 text-sm text-purple-400">{req.total_prc_deducted.toFixed(2)}</td>
                     <td className="py-3 px-4">
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         req.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -227,7 +227,7 @@ const AdminBillPayments = ({ user }) => {
                         {req.status}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-sm">
+                    <td className="py-3 px-4 text-sm text-gray-300">
                       {new Date(req.created_at).toLocaleDateString()}
                     </td>
                     <td className="py-3 px-4">
