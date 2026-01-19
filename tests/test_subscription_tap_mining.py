@@ -8,7 +8,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://translatesocial.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://social-rewarder.preview.emergentagent.com')
 
 # Test user credentials
 TEST_USER_UID = "900253b5-b917-4e6b-b26a-731b6fe112dd"  # testuser@test.com - Elite plan
