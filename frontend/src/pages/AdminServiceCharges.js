@@ -102,7 +102,7 @@ const AdminServiceCharges = ({ user }) => {
                     onClick={() => setBillPaymentConfig({ ...billPaymentConfig, charge_type: 'percentage' })}
                     className={`flex-1 p-4 border-2 rounded-lg transition-all ${
                       billPaymentConfig.charge_type === 'percentage'
-                        ? 'border-blue-500 bg-blue-500/100/10'
+                        ? 'border-blue-500 bg-blue-500/10'
                         : 'border-gray-700 hover:border-gray-300'
                     }`}
                   >
@@ -114,7 +114,7 @@ const AdminServiceCharges = ({ user }) => {
                     onClick={() => setBillPaymentConfig({ ...billPaymentConfig, charge_type: 'fixed' })}
                     className={`flex-1 p-4 border-2 rounded-lg transition-all ${
                       billPaymentConfig.charge_type === 'fixed'
-                        ? 'border-green-500 bg-green-500/100/10'
+                        ? 'border-green-500 bg-green-500/10'
                         : 'border-gray-700 hover:border-gray-300'
                     }`}
                   >
@@ -156,7 +156,7 @@ const AdminServiceCharges = ({ user }) => {
               </div>
 
               {/* Example Calculation */}
-              <div className="bg-blue-500/100/10 p-4 rounded-lg">
+              <div className="bg-blue-500/10 p-4 rounded-lg">
                 <p className="text-sm font-semibold text-gray-900 mb-2">Example Calculation</p>
                 <p className="text-sm text-gray-300">
                   For a ₹100 recharge (1000 PRC):
@@ -193,7 +193,7 @@ const AdminServiceCharges = ({ user }) => {
                     onClick={() => setGiftVoucherConfig({ ...giftVoucherConfig, charge_type: 'percentage' })}
                     className={`flex-1 p-4 border-2 rounded-lg transition-all ${
                       giftVoucherConfig.charge_type === 'percentage'
-                        ? 'border-purple-500 bg-purple-500/100/10'
+                        ? 'border-purple-500 bg-purple-500/10'
                         : 'border-gray-700 hover:border-gray-300'
                     }`}
                   >
@@ -205,7 +205,7 @@ const AdminServiceCharges = ({ user }) => {
                     onClick={() => setGiftVoucherConfig({ ...giftVoucherConfig, charge_type: 'fixed' })}
                     className={`flex-1 p-4 border-2 rounded-lg transition-all ${
                       giftVoucherConfig.charge_type === 'fixed'
-                        ? 'border-pink-500 bg-pink-500/100/10'
+                        ? 'border-pink-500 bg-pink-500/10'
                         : 'border-gray-700 hover:border-gray-300'
                     }`}
                   >
@@ -247,7 +247,7 @@ const AdminServiceCharges = ({ user }) => {
               </div>
 
               {/* Example Calculation */}
-              <div className="bg-purple-500/100/10 p-4 rounded-lg">
+              <div className="bg-purple-500/10 p-4 rounded-lg">
                 <p className="text-sm font-semibold text-gray-900 mb-2">Example Calculation</p>
                 <p className="text-sm text-gray-300">
                   For a ₹100 voucher (1000 PRC):

@@ -80,11 +80,11 @@ const AdminTrialBalance = ({ user }) => {
 
   const getCategoryColor = (category) => {
     switch (category) {
-      case 'assets': return 'text-blue-600 bg-blue-500/100/10';
-      case 'liabilities': return 'text-red-600 bg-red-500/100/10';
-      case 'equity': return 'text-purple-600 bg-purple-500/100/10';
-      case 'income': return 'text-green-600 bg-green-500/100/10';
-      case 'expenses': return 'text-orange-600 bg-orange-500/100/10';
+      case 'assets': return 'text-blue-600 bg-blue-500/10';
+      case 'liabilities': return 'text-red-600 bg-red-500/10';
+      case 'equity': return 'text-purple-600 bg-purple-500/10';
+      case 'income': return 'text-green-600 bg-green-500/10';
+      case 'expenses': return 'text-orange-600 bg-orange-500/10';
       default: return 'text-gray-600 bg-gray-800/50';
     }
   };
@@ -147,7 +147,7 @@ const AdminTrialBalance = ({ user }) => {
             className="space-y-6"
           >
             {/* Balance Status */}
-            <Card className={`p-4 ${trialBalance.totals?.is_balanced ? 'bg-green-500/100/10 border-green-500/30' : 'bg-red-500/100/10 border-red-500/30'}`}>
+            <Card className={`p-4 ${trialBalance.totals?.is_balanced ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
               <div className="flex items-center gap-3">
                 {trialBalance.totals?.is_balanced ? (
                   <CheckCircle2 className="h-8 w-8 text-green-600" />
@@ -183,7 +183,7 @@ const AdminTrialBalance = ({ user }) => {
 
             {/* Trial Balance Table */}
             <Card className="overflow-hidden">
-              <div className="p-4 bg-indigo-500/100/10 border-b">
+              <div className="p-4 bg-indigo-500/10 border-b">
                 <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                   <BarChart3 className="h-5 w-5 text-indigo-600" />
                   Trial Balance Statement
@@ -242,7 +242,7 @@ const AdminTrialBalance = ({ user }) => {
             </Card>
 
             {/* Help Box */}
-            <Card className="p-4 bg-indigo-500/100/10 border-indigo-500/30">
+            <Card className="p-4 bg-indigo-500/10 border-indigo-500/30">
               <div className="flex gap-3">
                 <Scale className="h-5 w-5 text-indigo-600 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-indigo-400">
@@ -335,8 +335,8 @@ const AdminTrialBalance = ({ user }) => {
                                 <td className="px-4 py-2 text-center">
                                   <span className={`text-xs font-bold px-2 py-1 rounded ${
                                     account.normal_balance === 'debit' 
-                                      ? 'bg-blue-500/100/20 text-blue-400' 
-                                      : 'bg-purple-500/100/20 text-purple-400'
+                                      ? 'bg-blue-500/20 text-blue-400' 
+                                      : 'bg-purple-500/20 text-purple-400'
                                   }`}>
                                     {account.normal_balance.toUpperCase()}
                                   </span>
@@ -356,7 +356,7 @@ const AdminTrialBalance = ({ user }) => {
             })}
 
             {/* Help Box */}
-            <Card className="p-4 bg-blue-500/100/10 border-blue-500/30">
+            <Card className="p-4 bg-blue-500/10 border-blue-500/30">
               <div className="flex gap-3">
                 <List className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-blue-400">

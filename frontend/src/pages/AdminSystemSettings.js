@@ -353,7 +353,7 @@ const AdminSystemSettings = ({ user }) => {
                 />
               </div>
             </div>
-            <div className="mt-6 p-4 bg-blue-500/100/10 rounded-lg">
+            <div className="mt-6 p-4 bg-blue-500/10 rounded-lg">
               <p className="text-sm text-blue-400">
                 <strong>Mining Formula:</strong> Rate = Base Rate × (1 + Level Bonus × Active Referrals) × VIP Multiplier
               </p>
@@ -507,25 +507,25 @@ const AdminSystemSettings = ({ user }) => {
             <div className="mt-6 p-4 bg-gray-800 rounded-lg">
               <h4 className="font-semibold mb-2">Bonus Summary</h4>
               <div className="grid grid-cols-5 gap-2 text-center text-sm">
-                <div className="bg-purple-500/100/20 p-2 rounded">
+                <div className="bg-purple-500/20 p-2 rounded">
                   <div className="font-bold text-purple-400">L1: {referralBonusSettings.level_1}%</div>
                 </div>
-                <div className="bg-blue-500/100/20 p-2 rounded">
+                <div className="bg-blue-500/20 p-2 rounded">
                   <div className="font-bold text-blue-400">L2: {referralBonusSettings.level_2}%</div>
                 </div>
-                <div className="bg-green-500/100/20 p-2 rounded">
+                <div className="bg-green-500/20 p-2 rounded">
                   <div className="font-bold text-green-400">L3: {referralBonusSettings.level_3}%</div>
                 </div>
-                <div className="bg-orange-500/100/20 p-2 rounded">
+                <div className="bg-orange-500/20 p-2 rounded">
                   <div className="font-bold text-orange-400">L4: {referralBonusSettings.level_4}%</div>
                 </div>
-                <div className="bg-pink-500/100/20 p-2 rounded">
+                <div className="bg-pink-500/20 p-2 rounded">
                   <div className="font-bold text-pink-400">L5: {referralBonusSettings.level_5}%</div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-6 p-4 bg-blue-500/100/10 rounded-lg">
+            <div className="mt-6 p-4 bg-blue-500/10 rounded-lg">
               <p className="text-sm text-blue-400">
                 <strong>How it works:</strong> If a user has 5 active referrals at Level 1 and Level 1 bonus is 10%, 
                 then (5 × 10% × Base Rate) bonus is added to their mining rate.
@@ -565,7 +565,7 @@ const AdminSystemSettings = ({ user }) => {
             
             {/* Status Card */}
             <div className={`p-4 rounded-lg border-2 mb-6 ${
-              registrationEnabled ? 'bg-green-500/100/10 border-green-500/30' : 'bg-red-500/100/10 border-red-500/30'
+              registrationEnabled ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'
             }`}>
               <div className="flex items-center gap-3">
                 {registrationEnabled ? (

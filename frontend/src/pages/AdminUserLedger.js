@@ -387,7 +387,7 @@ const AdminUserLedger = ({ user }) => {
       </Card>
 
       {/* Note */}
-      <div className="mt-4 p-4 bg-amber-500/100/10 border border-amber-200 rounded-lg">
+      <div className="mt-4 p-4 bg-amber-500/10 border border-amber-200 rounded-lg">
         <p className="text-sm text-amber-400">
           <strong>Note:</strong> This ledger is read-only and append-only. All transactions are permanently recorded and cannot be modified or deleted. Use the Export feature to download records for accounting purposes.
         </p>

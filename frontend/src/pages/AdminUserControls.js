@@ -278,18 +278,18 @@ const AdminUserControls = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-purple-500/100/10 border border-purple-500/30 rounded-xl p-4 mb-6"
+          className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-6"
         >
           <div className="flex flex-wrap items-center justify-between gap-4">
             <p className="font-medium text-purple-900">{selectedUsers.length} user(s) selected</p>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => handleBulkAction('pause')} className="px-4 py-2 bg-orange-500/100/100 text-white rounded-lg hover:bg-orange-600 flex items-center gap-2">
+              <button onClick={() => handleBulkAction('pause')} className="px-4 py-2 bg-orange-500/10 text-white rounded-lg hover:bg-orange-600 flex items-center gap-2">
                 <Pause className="w-4 h-4" /> Pause Mining
               </button>
-              <button onClick={() => handleBulkAction('resume')} className="px-4 py-2 bg-green-500/100/100 text-white rounded-lg hover:bg-green-600 flex items-center gap-2">
+              <button onClick={() => handleBulkAction('resume')} className="px-4 py-2 bg-green-500/10 text-white rounded-lg hover:bg-green-600 flex items-center gap-2">
                 <Play className="w-4 h-4" /> Resume Mining
               </button>
-              <button onClick={() => handleBulkAction('setCap500')} className="px-4 py-2 bg-blue-500/100/100 text-white rounded-lg hover:bg-blue-600">Set Cap 500</button>
+              <button onClick={() => handleBulkAction('setCap500')} className="px-4 py-2 bg-blue-500/10 text-white rounded-lg hover:bg-blue-600">Set Cap 500</button>
               <button onClick={() => handleBulkAction('removeCap')} className="px-4 py-2 bg-gray-800/500 text-white rounded-lg hover:bg-gray-600">Remove Cap</button>
               <button onClick={() => setSelectedUsers([])} className="px-4 py-2 border border-gray-600 rounded-lg hover:bg-gray-800">Clear</button>
             </div>
@@ -327,22 +327,22 @@ const AdminUserControls = () => {
                       <p className="text-sm text-gray-500">{user.email}</p>
                     </td>
                     <td className="p-4">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${user.mining_active !== false ? 'bg-green-500/100/20 text-green-400' : 'bg-orange-500/100/20 text-orange-400'}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${user.mining_active !== false ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>
                         {user.mining_active !== false ? <><Play className="w-3.5 h-3.5" />Active</> : <><Pause className="w-3.5 h-3.5" />Paused</>}
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${user.daily_prc_cap > 0 ? 'bg-blue-500/100/20 text-blue-400' : 'bg-gray-800 text-gray-400'}`}>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${user.daily_prc_cap > 0 ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-800 text-gray-400'}`}>
                         {user.daily_prc_cap > 0 ? `${user.daily_prc_cap} PRC` : 'Unlimited'}
                       </span>
                     </td>
                     <td className="p-4"><span className="font-medium text-white">{(user.prc_balance || 0).toLocaleString()} PRC</span></td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => updateUserSettings(user.uid, { mining_active: !user.mining_active })} className={`p-2 rounded-lg ${user.mining_active !== false ? 'bg-orange-500/100/20 text-orange-600 hover:bg-orange-200' : 'bg-green-500/100/20 text-green-600 hover:bg-green-200'}`}>
+                        <button onClick={() => updateUserSettings(user.uid, { mining_active: !user.mining_active })} className={`p-2 rounded-lg ${user.mining_active !== false ? 'bg-orange-500/20 text-orange-600 hover:bg-orange-200' : 'bg-green-500/20 text-green-600 hover:bg-green-200'}`}>
                           {user.mining_active !== false ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                         </button>
-                        <button onClick={() => openUserModal(user)} className="p-2 bg-purple-500/100/20 text-purple-600 rounded-lg hover:bg-purple-200">
+                        <button onClick={() => openUserModal(user)} className="p-2 bg-purple-500/20 text-purple-600 rounded-lg hover:bg-purple-200">
                           <Settings className="w-4 h-4" />
                         </button>
                       </div>
@@ -386,7 +386,7 @@ const AdminUserControls = () => {
                   {modalSettings.mining_active ? <Play className="w-5 h-5 text-green-500" /> : <Pause className="w-5 h-5 text-orange-500" />}
                   <div><p className="font-medium">Mining Status</p><p className="text-sm text-gray-500">{modalSettings.mining_active ? 'User can mine PRC' : 'Mining is paused'}</p></div>
                 </div>
-                <button onClick={() => setModalSettings(prev => ({ ...prev, mining_active: !prev.mining_active }))} className={`relative w-14 h-7 rounded-full transition-colors ${modalSettings.mining_active ? 'bg-green-500/100/100' : 'bg-gray-300'}`}>
+                <button onClick={() => setModalSettings(prev => ({ ...prev, mining_active: !prev.mining_active }))} className={`relative w-14 h-7 rounded-full transition-colors ${modalSettings.mining_active ? 'bg-green-500/10' : 'bg-gray-300'}`}>
                   <div className={`absolute top-1 w-5 h-5 bg-gray-900 rounded-full shadow transition-all ${modalSettings.mining_active ? 'left-8' : 'left-1'}`} />
                 </button>
               </div>
@@ -402,14 +402,14 @@ const AdminUserControls = () => {
 
               <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-xl">
                 <div className="flex items-center gap-3"><Zap className="w-5 h-5 text-yellow-500" /><div><p className="font-medium">Utility Only Mode</p><p className="text-sm text-gray-500">Bills only</p></div></div>
-                <button onClick={() => setModalSettings(prev => ({ ...prev, utility_only_mode: !prev.utility_only_mode }))} className={`relative w-14 h-7 rounded-full transition-colors ${modalSettings.utility_only_mode ? 'bg-yellow-500/100/100' : 'bg-gray-300'}`}>
+                <button onClick={() => setModalSettings(prev => ({ ...prev, utility_only_mode: !prev.utility_only_mode }))} className={`relative w-14 h-7 rounded-full transition-colors ${modalSettings.utility_only_mode ? 'bg-yellow-500/10' : 'bg-gray-300'}`}>
                   <div className={`absolute top-1 w-5 h-5 bg-gray-900 rounded-full shadow transition-all ${modalSettings.utility_only_mode ? 'left-8' : 'left-1'}`} />
                 </button>
               </div>
 
               <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-xl">
                 <div className="flex items-center gap-3"><Bell className="w-5 h-5 text-purple-500" /><div><p className="font-medium">Notifications</p><p className="text-sm text-gray-500">Push alerts</p></div></div>
-                <button onClick={() => setModalSettings(prev => ({ ...prev, notifications_enabled: !prev.notifications_enabled }))} className={`relative w-14 h-7 rounded-full transition-colors ${modalSettings.notifications_enabled ? 'bg-purple-500/100/100' : 'bg-gray-300'}`}>
+                <button onClick={() => setModalSettings(prev => ({ ...prev, notifications_enabled: !prev.notifications_enabled }))} className={`relative w-14 h-7 rounded-full transition-colors ${modalSettings.notifications_enabled ? 'bg-purple-500/10' : 'bg-gray-300'}`}>
                   <div className={`absolute top-1 w-5 h-5 bg-gray-900 rounded-full shadow transition-all ${modalSettings.notifications_enabled ? 'left-8' : 'left-1'}`} />
                 </button>
               </div>

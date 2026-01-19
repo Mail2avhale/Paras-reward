@@ -81,12 +81,12 @@ const AdminOrders = ({ user }) => {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': <span className="px-2 py-1 bg-yellow-500/100/20 text-yellow-400 text-xs rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> Pending</span>,
-      'confirmed': <span className="px-2 py-1 bg-blue-500/100/20 text-blue-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Confirmed</span>,
-      'processing': <span className="px-2 py-1 bg-purple-500/100/20 text-purple-400 text-xs rounded-full flex items-center gap-1"><Package className="h-3 w-3" /> Processing</span>,
-      'shipped': <span className="px-2 py-1 bg-indigo-500/100/20 text-indigo-400 text-xs rounded-full flex items-center gap-1"><Truck className="h-3 w-3" /> Shipped</span>,
-      'delivered': <span className="px-2 py-1 bg-green-500/100/20 text-green-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Delivered</span>,
-      'cancelled': <span className="px-2 py-1 bg-red-500/100/20 text-red-400 text-xs rounded-full flex items-center gap-1"><XCircle className="h-3 w-3" /> Cancelled</span>
+      'pending': <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> Pending</span>,
+      'confirmed': <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Confirmed</span>,
+      'processing': <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-xs rounded-full flex items-center gap-1"><Package className="h-3 w-3" /> Processing</span>,
+      'shipped': <span className="px-2 py-1 bg-indigo-500/20 text-indigo-400 text-xs rounded-full flex items-center gap-1"><Truck className="h-3 w-3" /> Shipped</span>,
+      'delivered': <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Delivered</span>,
+      'cancelled': <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center gap-1"><XCircle className="h-3 w-3" /> Cancelled</span>
     };
     return badges[status] || badges['pending'];
   };
@@ -108,19 +108,19 @@ const AdminOrders = ({ user }) => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card className="p-4 bg-blue-500/100/10 border-blue-500/30">
+        <Card className="p-4 bg-blue-500/10 border-blue-500/30">
           <p className="text-xs text-blue-600">Total Orders</p>
           <p className="text-2xl font-bold text-blue-400">{stats.total}</p>
         </Card>
-        <Card className="p-4 bg-yellow-500/100/10 border-yellow-500/30">
+        <Card className="p-4 bg-yellow-500/10 border-yellow-500/30">
           <p className="text-xs text-yellow-600">Pending</p>
           <p className="text-2xl font-bold text-yellow-400">{stats.pending}</p>
         </Card>
-        <Card className="p-4 bg-purple-500/100/10 border-purple-500/30">
+        <Card className="p-4 bg-purple-500/10 border-purple-500/30">
           <p className="text-xs text-purple-600">In Progress</p>
           <p className="text-2xl font-bold text-purple-400">{stats.processing}</p>
         </Card>
-        <Card className="p-4 bg-green-500/100/10 border-green-500/30">
+        <Card className="p-4 bg-green-500/10 border-green-500/30">
           <p className="text-xs text-green-600">Completed</p>
           <p className="text-2xl font-bold text-green-400">{stats.completed}</p>
         </Card>
@@ -175,7 +175,7 @@ const AdminOrders = ({ user }) => {
               <Card key={order.order_id} className="p-4">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                   <div className="flex items-start gap-4">
-                    <div className="p-3 bg-purple-500/100/20 rounded-lg">
+                    <div className="p-3 bg-purple-500/20 rounded-lg">
                       <Package className="h-6 w-6 text-purple-600" />
                     </div>
                     <div>

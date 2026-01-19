@@ -237,7 +237,7 @@ PARAS REWARD refund policy for various transactions.
             placeholder={`Enter ${tabs.find(t => t.id === activeTab)?.label} content...`}
           />
 
-          <div className="mt-4 p-4 bg-blue-500/100/10 rounded-lg">
+          <div className="mt-4 p-4 bg-blue-500/10 rounded-lg">
             <p className="text-sm text-blue-400">
               <strong>Tip:</strong> Use Markdown syntax for formatting. 
               Use # for headings, **bold**, *italic*, - for lists.

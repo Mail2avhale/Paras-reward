@@ -167,7 +167,7 @@ const AdminLiquidity = ({ user }) => {
 
       {/* Alerts */}
       {alerts.length > 0 && (
-        <Card className="p-4 border-orange-500/30 bg-orange-500/100/10">
+        <Card className="p-4 border-orange-500/30 bg-orange-500/10">
           <h3 className="font-bold text-orange-400 mb-3 flex items-center gap-2">
             <AlertTriangle className="h-5 w-5" />
             Active Alerts
@@ -175,9 +175,9 @@ const AdminLiquidity = ({ user }) => {
           <div className="space-y-2">
             {alerts.map((alert, idx) => (
               <div key={idx} className={`p-3 rounded-lg ${
-                alert.severity === 'high' ? 'bg-red-500/100/20 text-red-400' :
-                alert.severity === 'medium' ? 'bg-orange-500/100/20 text-orange-400' :
-                'bg-yellow-500/100/20 text-yellow-400'
+                alert.severity === 'high' ? 'bg-red-500/20 text-red-400' :
+                alert.severity === 'medium' ? 'bg-orange-500/20 text-orange-400' :
+                'bg-yellow-500/20 text-yellow-400'
               }`}>
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
@@ -191,9 +191,9 @@ const AdminLiquidity = ({ user }) => {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-5 bg-purple-500/100/10 border-purple-500/30">
+        <Card className="p-5 bg-purple-500/10 border-purple-500/30">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-purple-500/100/20 rounded-xl">
+            <div className="p-3 bg-purple-500/20 rounded-xl">
               <Coins className="h-6 w-6 text-purple-600" />
             </div>
             <div>
@@ -206,9 +206,9 @@ const AdminLiquidity = ({ user }) => {
           </div>
         </Card>
 
-        <Card className="p-5 bg-green-500/100/10 border-green-500/30">
+        <Card className="p-5 bg-green-500/10 border-green-500/30">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-green-500/100/20 rounded-xl">
+            <div className="p-3 bg-green-500/20 rounded-xl">
               <DollarSign className="h-6 w-6 text-green-600" />
             </div>
             <div>
@@ -220,9 +220,9 @@ const AdminLiquidity = ({ user }) => {
           </div>
         </Card>
 
-        <Card className="p-5 bg-red-500/100/10 border-red-500/30">
+        <Card className="p-5 bg-red-500/10 border-red-500/30">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-red-500/100/20 rounded-xl">
+            <div className="p-3 bg-red-500/20 rounded-xl">
               <TrendingDown className="h-6 w-6 text-red-600" />
             </div>
             <div>
@@ -234,9 +234,9 @@ const AdminLiquidity = ({ user }) => {
           </div>
         </Card>
 
-        <Card className="p-5 bg-blue-500/100/10 border-blue-500/30">
+        <Card className="p-5 bg-blue-500/10 border-blue-500/30">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-500/100/20 rounded-xl">
+            <div className="p-3 bg-blue-500/20 rounded-xl">
               <Wallet className="h-6 w-6 text-blue-600" />
             </div>
             <div>
@@ -269,7 +269,7 @@ const AdminLiquidity = ({ user }) => {
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div 
-                  className={`h-3 rounded-full ${ratios.reserve_ratio >= 80 ? 'bg-green-500/100/100' : ratios.reserve_ratio >= 50 ? 'bg-blue-500/100/100' : ratios.reserve_ratio >= 30 ? 'bg-yellow-500/100/100' : 'bg-red-500/100/100'}`}
+                  className={`h-3 rounded-full ${ratios.reserve_ratio >= 80 ? 'bg-green-500/10' : ratios.reserve_ratio >= 50 ? 'bg-blue-500/10' : ratios.reserve_ratio >= 30 ? 'bg-yellow-500/10' : 'bg-red-500/10'}`}
                   style={{ width: `${Math.min(100, ratios.reserve_ratio)}%` }}
                 />
               </div>
@@ -286,7 +286,7 @@ const AdminLiquidity = ({ user }) => {
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div 
-                  className={`h-3 rounded-full ${ratios.liquidity_ratio >= 3 ? 'bg-green-500/100/100' : ratios.liquidity_ratio >= 2 ? 'bg-blue-500/100/100' : ratios.liquidity_ratio >= 1 ? 'bg-yellow-500/100/100' : 'bg-red-500/100/100'}`}
+                  className={`h-3 rounded-full ${ratios.liquidity_ratio >= 3 ? 'bg-green-500/10' : ratios.liquidity_ratio >= 2 ? 'bg-blue-500/10' : ratios.liquidity_ratio >= 1 ? 'bg-yellow-500/10' : 'bg-red-500/10'}`}
                   style={{ width: `${Math.min(100, ratios.liquidity_ratio * 20)}%` }}
                 />
               </div>
@@ -303,7 +303,7 @@ const AdminLiquidity = ({ user }) => {
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div 
-                  className={`h-3 rounded-full ${ratios.prc_coverage >= 100 ? 'bg-green-500/100/100' : ratios.prc_coverage >= 50 ? 'bg-yellow-500/100/100' : 'bg-red-500/100/100'}`}
+                  className={`h-3 rounded-full ${ratios.prc_coverage >= 100 ? 'bg-green-500/10' : ratios.prc_coverage >= 50 ? 'bg-yellow-500/10' : 'bg-red-500/10'}`}
                   style={{ width: `${Math.min(100, ratios.prc_coverage)}%` }}
                 />
               </div>
@@ -322,7 +322,7 @@ const AdminLiquidity = ({ user }) => {
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-500/100/20 rounded-lg">
+                <div className="p-2 bg-blue-500/20 rounded-lg">
                   <DollarSign className="h-5 w-5 text-blue-600" />
                 </div>
                 <span className="font-medium">Bank Balance</span>
@@ -334,7 +334,7 @@ const AdminLiquidity = ({ user }) => {
 
             <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-500/100/20 rounded-lg">
+                <div className="p-2 bg-green-500/20 rounded-lg">
                   <Wallet className="h-5 w-5 text-green-600" />
                 </div>
                 <span className="font-medium">Cash in Hand</span>
@@ -346,7 +346,7 @@ const AdminLiquidity = ({ user }) => {
 
             <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-500/100/20 rounded-lg">
+                <div className="p-2 bg-purple-500/20 rounded-lg">
                   <Zap className="h-5 w-5 text-purple-600" />
                 </div>
                 <span className="font-medium">Payment Gateway</span>
@@ -467,12 +467,12 @@ const AdminLiquidity = ({ user }) => {
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {recommendations.map((rec, idx) => (
-              <div key={idx} className="p-4 bg-blue-500/100/10 rounded-lg border border-blue-500/30">
+              <div key={idx} className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/30">
                 <div className="flex items-start gap-3">
                   <div className={`px-2 py-1 rounded text-xs font-bold ${
-                    rec.impact === 'high' ? 'bg-red-500/100/20 text-red-400' :
-                    rec.impact === 'medium' ? 'bg-yellow-500/100/20 text-yellow-400' :
-                    'bg-green-500/100/20 text-green-400'
+                    rec.impact === 'high' ? 'bg-red-500/20 text-red-400' :
+                    rec.impact === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-green-500/20 text-green-400'
                   }`}>
                     {rec.impact.toUpperCase()}
                   </div>

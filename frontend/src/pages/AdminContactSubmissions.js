@@ -109,9 +109,9 @@ const AdminContactSubmissions = ({ user }) => {
 
   const getStatusBadge = (status) => {
     const styles = {
-      new: 'bg-blue-500/100/100/20 text-blue-400 border-blue-500/30',
-      read: 'bg-yellow-500/100/100/20 text-yellow-400 border-yellow-500/30',
-      replied: 'bg-green-500/100/100/20 text-green-400 border-green-500/30',
+      new: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      read: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+      replied: 'bg-green-500/20 text-green-400 border-green-500/30',
       closed: 'bg-gray-800/500/20 text-gray-400 border-gray-500/30'
     };
     return (

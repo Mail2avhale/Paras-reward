@@ -175,7 +175,7 @@ const AdminDataBackup = ({ user }) => {
               onClick={() => setSelectedExport(option.id)}
               className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-colors ${
                 selectedExport === option.id 
-                  ? 'bg-emerald-500/100/100/20 border-emerald-500/50' 
+                  ? 'bg-emerald-500/20 border-emerald-500/50' 
                   : 'bg-gray-900/50 border-gray-800 hover:border-gray-700'
               }`}
             >
@@ -217,7 +217,7 @@ const AdminDataBackup = ({ user }) => {
           Archive Old Data
         </h2>
 
-        <div className="bg-amber-500/100/100/10 border border-amber-500/30 rounded-xl p-4 mb-4">
+        <div className="bg-amber-500/10/10 border border-amber-500/30 rounded-xl p-4 mb-4">
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5" />
             <div>

@@ -109,9 +109,9 @@ const AdminSupport = ({ user }) => {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'open': <span className="px-2 py-1 bg-yellow-500/100/20 text-yellow-400 text-xs rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> Open</span>,
-      'in_progress': <span className="px-2 py-1 bg-blue-500/100/20 text-blue-400 text-xs rounded-full flex items-center gap-1"><MessageCircle className="h-3 w-3" /> In Progress</span>,
-      'resolved': <span className="px-2 py-1 bg-green-500/100/20 text-green-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Resolved</span>,
+      'open': <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> Open</span>,
+      'in_progress': <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full flex items-center gap-1"><MessageCircle className="h-3 w-3" /> In Progress</span>,
+      'resolved': <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Resolved</span>,
       'closed': <span className="px-2 py-1 bg-gray-800 text-gray-300 text-xs rounded-full flex items-center gap-1"><XCircle className="h-3 w-3" /> Closed</span>
     };
     return badges[status] || badges['open'];
@@ -119,8 +119,8 @@ const AdminSupport = ({ user }) => {
 
   const getPriorityBadge = (priority) => {
     const badges = {
-      'high': <span className="px-2 py-1 bg-red-500/100/20 text-red-400 text-xs rounded-full">High</span>,
-      'medium': <span className="px-2 py-1 bg-orange-500/100/20 text-orange-400 text-xs rounded-full">Medium</span>,
+      'high': <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full">High</span>,
+      'medium': <span className="px-2 py-1 bg-orange-500/20 text-orange-400 text-xs rounded-full">Medium</span>,
       'low': <span className="px-2 py-1 bg-gray-800 text-gray-300 text-xs rounded-full">Low</span>
     };
     return badges[priority] || badges['medium'];
@@ -143,19 +143,19 @@ const AdminSupport = ({ user }) => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card className="p-4 bg-blue-500/100/10 border-blue-500/30">
+        <Card className="p-4 bg-blue-500/10 border-blue-500/30">
           <p className="text-xs text-blue-600">Total Tickets</p>
           <p className="text-2xl font-bold text-blue-400">{stats.total}</p>
         </Card>
-        <Card className="p-4 bg-yellow-500/100/10 border-yellow-500/30">
+        <Card className="p-4 bg-yellow-500/10 border-yellow-500/30">
           <p className="text-xs text-yellow-600">Open</p>
           <p className="text-2xl font-bold text-yellow-400">{stats.open}</p>
         </Card>
-        <Card className="p-4 bg-purple-500/100/10 border-purple-500/30">
+        <Card className="p-4 bg-purple-500/10 border-purple-500/30">
           <p className="text-xs text-purple-600">In Progress</p>
           <p className="text-2xl font-bold text-purple-400">{stats.inProgress}</p>
         </Card>
-        <Card className="p-4 bg-green-500/100/10 border-green-500/30">
+        <Card className="p-4 bg-green-500/10 border-green-500/30">
           <p className="text-xs text-green-600">Resolved</p>
           <p className="text-2xl font-bold text-green-400">{stats.resolved}</p>
         </Card>
@@ -212,7 +212,7 @@ const AdminSupport = ({ user }) => {
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-start gap-4">
-                    <div className="p-3 bg-purple-500/100/20 rounded-lg">
+                    <div className="p-3 bg-purple-500/20 rounded-lg">
                       <Ticket className="h-6 w-6 text-purple-600" />
                   </div>
                   <div>
@@ -293,7 +293,7 @@ const AdminSupport = ({ user }) => {
                 <p className="text-xs text-gray-500 mb-2">Conversation</p>
                 <div className="space-y-3 max-h-64 overflow-y-auto">
                   {selectedTicket.messages?.map((msg, idx) => (
-                    <div key={idx} className={`p-3 rounded-lg ${msg.is_admin ? 'bg-purple-500/100/10 ml-8' : 'bg-gray-800/50 mr-8'}`}>
+                    <div key={idx} className={`p-3 rounded-lg ${msg.is_admin ? 'bg-purple-500/10 ml-8' : 'bg-gray-800/50 mr-8'}`}>
                       <div className="flex items-center gap-2 mb-1">
                         <User className="h-4 w-4" />
                         <span className="text-sm font-medium">{msg.is_admin ? 'Admin' : 'Customer'}</span>

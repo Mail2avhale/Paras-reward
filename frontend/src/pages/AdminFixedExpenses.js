@@ -207,7 +207,7 @@ const AdminFixedExpenses = ({ user }) => {
               <p className="text-sm text-gray-500">Total Expenses</p>
               <p className="text-2xl font-bold text-gray-900">₹{totalAmount.toLocaleString('en-IN')}</p>
             </div>
-            <div className="p-3 bg-purple-500/100/20 rounded-lg">
+            <div className="p-3 bg-purple-500/20 rounded-lg">
               <DollarSign className="h-6 w-6 text-purple-600" />
             </div>
           </div>
@@ -218,7 +218,7 @@ const AdminFixedExpenses = ({ user }) => {
               <p className="text-sm text-gray-500">Paid</p>
               <p className="text-2xl font-bold text-green-600">₹{paidAmount.toLocaleString('en-IN')}</p>
             </div>
-            <div className="p-3 bg-green-500/100/20 rounded-lg">
+            <div className="p-3 bg-green-500/20 rounded-lg">
               <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
           </div>
@@ -229,7 +229,7 @@ const AdminFixedExpenses = ({ user }) => {
               <p className="text-sm text-gray-500">Pending</p>
               <p className="text-2xl font-bold text-yellow-600">₹{pendingAmount.toLocaleString('en-IN')}</p>
             </div>
-            <div className="p-3 bg-yellow-500/100/20 rounded-lg">
+            <div className="p-3 bg-yellow-500/20 rounded-lg">
               <Clock className="h-6 w-6 text-yellow-600" />
             </div>
           </div>
@@ -240,7 +240,7 @@ const AdminFixedExpenses = ({ user }) => {
               <p className="text-sm text-gray-500">Total Entries</p>
               <p className="text-2xl font-bold text-gray-900">{total}</p>
             </div>
-            <div className="p-3 bg-blue-500/100/20 rounded-lg">
+            <div className="p-3 bg-blue-500/20 rounded-lg">
               <FileText className="h-6 w-6 text-blue-600" />
             </div>
           </div>
@@ -339,8 +339,8 @@ const AdminFixedExpenses = ({ user }) => {
                     <td className="py-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         expense.paid_status === 'paid' 
-                          ? 'bg-green-500/100/20 text-green-400' 
-                          : 'bg-yellow-500/100/20 text-yellow-400'
+                          ? 'bg-green-500/20 text-green-400' 
+                          : 'bg-yellow-500/20 text-yellow-400'
                       }`}>
                         {expense.paid_status}
                       </span>
@@ -348,7 +348,7 @@ const AdminFixedExpenses = ({ user }) => {
                     <td className="py-3">
                       <button
                         onClick={() => openEdit(expense)}
-                        className="p-2 text-blue-600 hover:bg-blue-500/100/10 rounded-lg"
+                        className="p-2 text-blue-600 hover:bg-blue-500/10 rounded-lg"
                       >
                         <Edit2 className="h-4 w-4" />
                       </button>

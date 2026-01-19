@@ -108,9 +108,9 @@ const AdminCapitalManagement = ({ user }) => {
 
   const getEntryTypeColor = (type) => {
     switch (type) {
-      case 'opening_capital': return 'bg-green-500/100/20 text-green-400';
-      case 'additional_capital': return 'bg-blue-500/100/20 text-blue-400';
-      case 'drawings': return 'bg-red-500/100/20 text-red-400';
+      case 'opening_capital': return 'bg-green-500/20 text-green-400';
+      case 'additional_capital': return 'bg-blue-500/20 text-blue-400';
+      case 'drawings': return 'bg-red-500/20 text-red-400';
       default: return 'bg-gray-700 text-gray-300';
     }
   };
@@ -236,7 +236,7 @@ const AdminCapitalManagement = ({ user }) => {
             <p className="text-lg font-bold text-red-600">{formatCurrency(capitalData?.drawings)}</p>
           </div>
         </div>
-        <div className="mt-4 p-3 bg-purple-500/100/20 rounded-lg text-center">
+        <div className="mt-4 p-3 bg-purple-500/20 rounded-lg text-center">
           <p className="text-sm text-purple-600">+ Retained Earnings: {formatCurrency(capitalData?.retained_earnings)}</p>
           <p className="text-lg font-bold text-purple-400 mt-1">= Total Equity: {formatCurrency(capitalData?.total_equity)}</p>
         </div>
@@ -244,7 +244,7 @@ const AdminCapitalManagement = ({ user }) => {
 
       {/* Entries Table */}
       <Card className="overflow-hidden">
-        <div className="p-4 bg-emerald-500/100/10 border-b flex items-center justify-between">
+        <div className="p-4 bg-emerald-500/10 border-b flex items-center justify-between">
           <h3 className="font-semibold text-gray-900 flex items-center gap-2">
             <Wallet className="h-5 w-5 text-emerald-600" />
             Capital Entries History
