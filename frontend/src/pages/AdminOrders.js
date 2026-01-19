@@ -81,12 +81,12 @@ const AdminOrders = ({ user }) => {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'pending': <span className="px-2 py-1 bg-yellow-100 text-yellow-400 text-xs rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> Pending</span>,
-      'confirmed': <span className="px-2 py-1 bg-blue-100 text-blue-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Confirmed</span>,
-      'processing': <span className="px-2 py-1 bg-purple-100 text-purple-400 text-xs rounded-full flex items-center gap-1"><Package className="h-3 w-3" /> Processing</span>,
+      'pending': <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> Pending</span>,
+      'confirmed': <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Confirmed</span>,
+      'processing': <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-xs rounded-full flex items-center gap-1"><Package className="h-3 w-3" /> Processing</span>,
       'shipped': <span className="px-2 py-1 bg-indigo-100 text-indigo-400 text-xs rounded-full flex items-center gap-1"><Truck className="h-3 w-3" /> Shipped</span>,
-      'delivered': <span className="px-2 py-1 bg-green-100 text-green-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Delivered</span>,
-      'cancelled': <span className="px-2 py-1 bg-red-100 text-red-400 text-xs rounded-full flex items-center gap-1"><XCircle className="h-3 w-3" /> Cancelled</span>
+      'delivered': <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Delivered</span>,
+      'cancelled': <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center gap-1"><XCircle className="h-3 w-3" /> Cancelled</span>
     };
     return badges[status] || badges['pending'];
   };

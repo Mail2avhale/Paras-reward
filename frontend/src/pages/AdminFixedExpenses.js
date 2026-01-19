@@ -339,8 +339,8 @@ const AdminFixedExpenses = ({ user }) => {
                     <td className="py-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         expense.paid_status === 'paid' 
-                          ? 'bg-green-100 text-green-400' 
-                          : 'bg-yellow-100 text-yellow-400'
+                          ? 'bg-green-500/20 text-green-400' 
+                          : 'bg-yellow-500/20 text-yellow-400'
                       }`}>
                         {expense.paid_status}
                       </span>

@@ -335,8 +335,8 @@ const AdminTrialBalance = ({ user }) => {
                                 <td className="px-4 py-2 text-center">
                                   <span className={`text-xs font-bold px-2 py-1 rounded ${
                                     account.normal_balance === 'debit' 
-                                      ? 'bg-blue-100 text-blue-400' 
-                                      : 'bg-purple-100 text-purple-400'
+                                      ? 'bg-blue-500/20 text-blue-400' 
+                                      : 'bg-purple-500/20 text-purple-400'
                                   }`}>
                                     {account.normal_balance.toUpperCase()}
                                   </span>

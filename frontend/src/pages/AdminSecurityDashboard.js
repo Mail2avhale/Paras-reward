@@ -275,13 +275,13 @@ const AdminSecurityDashboard = ({ user }) => {
 
   const getActionColor = (action) => {
     const colors = {
-      login: 'bg-green-100 text-green-400',
+      login: 'bg-green-500/20 text-green-400',
       logout: 'bg-gray-800 text-gray-100',
-      login_blocked_ip: 'bg-red-100 text-red-400',
-      activate_lockdown: 'bg-red-100 text-red-400',
-      deactivate_lockdown: 'bg-green-100 text-green-400',
-      force_logout_all: 'bg-orange-100 text-orange-400',
-      update_ip_whitelist: 'bg-blue-100 text-blue-400'
+      login_blocked_ip: 'bg-red-500/20 text-red-400',
+      activate_lockdown: 'bg-red-500/20 text-red-400',
+      deactivate_lockdown: 'bg-green-500/20 text-green-400',
+      force_logout_all: 'bg-orange-500/20 text-orange-400',
+      update_ip_whitelist: 'bg-blue-500/20 text-blue-400'
     };
     return colors[action] || 'bg-gray-800 text-gray-100';
   };
@@ -402,7 +402,7 @@ const AdminSecurityDashboard = ({ user }) => {
                             {config.label}
                           </span>
                           {!alert.is_read && (
-                            <span className="text-xs bg-purple-100 text-purple-400 px-2 py-0.5 rounded font-medium">
+                            <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded font-medium">
                               NEW
                             </span>
                           )}

@@ -249,11 +249,11 @@ const AdminPRCLedger = ({ user }) => {
                     </td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-1 rounded-full ${
-                        entry.type === 'mining' ? 'bg-green-100 text-green-400' :
-                        entry.type === 'tap_game' ? 'bg-blue-100 text-blue-400' :
-                        entry.type === 'referral' ? 'bg-purple-100 text-purple-400' :
-                        entry.type === 'prc_burn' ? 'bg-red-100 text-red-400' :
-                        entry.type === 'order' ? 'bg-orange-100 text-orange-400' :
+                        entry.type === 'mining' ? 'bg-green-500/20 text-green-400' :
+                        entry.type === 'tap_game' ? 'bg-blue-500/20 text-blue-400' :
+                        entry.type === 'referral' ? 'bg-purple-500/20 text-purple-400' :
+                        entry.type === 'prc_burn' ? 'bg-red-500/20 text-red-400' :
+                        entry.type === 'order' ? 'bg-orange-500/20 text-orange-400' :
                         'bg-gray-100 text-gray-300'
                       }`}>
                         {entry.type?.replace('_', ' ').toUpperCase()}
@@ -270,8 +270,8 @@ const AdminPRCLedger = ({ user }) => {
                     <td className="px-4 py-3 text-center">
                       <span className={`text-xs font-bold px-2 py-1 rounded ${
                         entry.dr_cr === 'CR' 
-                          ? 'bg-green-100 text-green-400' 
-                          : 'bg-red-100 text-red-400'
+                          ? 'bg-green-500/20 text-green-400' 
+                          : 'bg-red-500/20 text-red-400'
                       }`}>
                         {entry.dr_cr}
                       </span>

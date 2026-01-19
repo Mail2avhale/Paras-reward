@@ -262,7 +262,7 @@ const AdminAdsIncome = ({ user }) => {
                   <td className="py-3">{entry.date}</td>
                   <td className="py-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      entry.ad_network === 'admob' ? 'bg-green-100 text-green-400' : 'bg-purple-100 text-purple-400'
+                      entry.ad_network === 'admob' ? 'bg-green-500/20 text-green-400' : 'bg-purple-500/20 text-purple-400'
                     }`}>
                       {entry.ad_network?.toUpperCase()}
                     </span>

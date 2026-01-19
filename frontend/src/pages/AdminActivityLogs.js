@@ -26,16 +26,16 @@ const ACTION_ICONS = {
 };
 
 const ACTION_COLORS = {
-  login: 'bg-blue-100 text-blue-400',
-  order_placed: 'bg-green-100 text-green-400',
-  withdrawal_requested: 'bg-yellow-100 text-yellow-400',
+  login: 'bg-blue-500/20 text-blue-400',
+  order_placed: 'bg-green-500/20 text-green-400',
+  withdrawal_requested: 'bg-yellow-500/20 text-yellow-400',
   withdrawal_approved: 'bg-emerald-100 text-emerald-400',
-  withdrawal_rejected: 'bg-red-100 text-red-400',
-  kyc_submitted: 'bg-purple-100 text-purple-400',
+  withdrawal_rejected: 'bg-red-500/20 text-red-400',
+  kyc_submitted: 'bg-purple-500/20 text-purple-400',
   kyc_approved: 'bg-indigo-100 text-indigo-400',
-  kyc_rejected: 'bg-red-100 text-red-400',
+  kyc_rejected: 'bg-red-500/20 text-red-400',
   profile_updated: 'bg-gray-100 text-gray-300',
-  user_role_changed: 'bg-orange-100 text-orange-400',
+  user_role_changed: 'bg-orange-500/20 text-orange-400',
   mining_started: 'bg-teal-100 text-teal-400',
   mining_claimed: 'bg-cyan-100 text-cyan-400'
 };

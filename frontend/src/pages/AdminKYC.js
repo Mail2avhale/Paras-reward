@@ -83,11 +83,11 @@ const AdminKYC = ({ user }) => {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'verified':
-        return <span className="px-2 py-1 bg-green-100 text-green-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Verified</span>;
+        return <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Verified</span>;
       case 'rejected':
-        return <span className="px-2 py-1 bg-red-100 text-red-400 text-xs rounded-full flex items-center gap-1"><XCircle className="h-3 w-3" /> Rejected</span>;
+        return <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center gap-1"><XCircle className="h-3 w-3" /> Rejected</span>;
       default:
-        return <span className="px-2 py-1 bg-yellow-100 text-yellow-400 text-xs rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> Pending</span>;
+        return <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> Pending</span>;
     }
   };
 

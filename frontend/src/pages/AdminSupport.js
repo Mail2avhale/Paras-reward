@@ -109,9 +109,9 @@ const AdminSupport = ({ user }) => {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'open': <span className="px-2 py-1 bg-yellow-100 text-yellow-400 text-xs rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> Open</span>,
-      'in_progress': <span className="px-2 py-1 bg-blue-100 text-blue-400 text-xs rounded-full flex items-center gap-1"><MessageCircle className="h-3 w-3" /> In Progress</span>,
-      'resolved': <span className="px-2 py-1 bg-green-100 text-green-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Resolved</span>,
+      'open': <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> Open</span>,
+      'in_progress': <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full flex items-center gap-1"><MessageCircle className="h-3 w-3" /> In Progress</span>,
+      'resolved': <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Resolved</span>,
       'closed': <span className="px-2 py-1 bg-gray-800 text-gray-300 text-xs rounded-full flex items-center gap-1"><XCircle className="h-3 w-3" /> Closed</span>
     };
     return badges[status] || badges['open'];
@@ -119,8 +119,8 @@ const AdminSupport = ({ user }) => {
 
   const getPriorityBadge = (priority) => {
     const badges = {
-      'high': <span className="px-2 py-1 bg-red-100 text-red-400 text-xs rounded-full">High</span>,
-      'medium': <span className="px-2 py-1 bg-orange-100 text-orange-400 text-xs rounded-full">Medium</span>,
+      'high': <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full">High</span>,
+      'medium': <span className="px-2 py-1 bg-orange-500/20 text-orange-400 text-xs rounded-full">Medium</span>,
       'low': <span className="px-2 py-1 bg-gray-800 text-gray-300 text-xs rounded-full">Low</span>
     };
     return badges[priority] || badges['medium'];

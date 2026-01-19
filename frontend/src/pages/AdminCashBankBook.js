@@ -517,10 +517,10 @@ const AdminCashBankBook = ({ user }) => {
                           </td>
                           <td className="px-4 py-3">
                             <span className={`text-xs px-2 py-1 rounded-full ${
-                              entry.entry_type === 'capital' ? 'bg-purple-100 text-purple-400' :
-                              entry.entry_type === 'income' ? 'bg-green-100 text-green-400' :
-                              entry.entry_type === 'expense' ? 'bg-red-100 text-red-400' :
-                              'bg-blue-100 text-blue-400'
+                              entry.entry_type === 'capital' ? 'bg-purple-500/20 text-purple-400' :
+                              entry.entry_type === 'income' ? 'bg-green-500/20 text-green-400' :
+                              entry.entry_type === 'expense' ? 'bg-red-500/20 text-red-400' :
+                              'bg-blue-500/20 text-blue-400'
                             }`}>
                               {entry.category || entry.entry_type}
                             </span>

@@ -706,7 +706,7 @@ const AdminAccountingDashboard = ({ user }) => {
                           <td className="px-4 py-2">{new Date(entry.created_at).toLocaleDateString()}</td>
                           <td className="px-4 py-2 text-xs">{entry.user_id?.slice(0, 8)}...</td>
                           <td className="px-4 py-2">
-                            <span className="px-2 py-1 bg-green-100 text-green-400 rounded text-xs capitalize">
+                            <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs capitalize">
                               {entry.type?.replace('_', ' ')}
                             </span>
                           </td>
@@ -763,7 +763,7 @@ const AdminAccountingDashboard = ({ user }) => {
                           <td className="px-4 py-2">{new Date(entry.created_at).toLocaleDateString()}</td>
                           <td className="px-4 py-2 text-xs">{entry.user_id?.slice(0, 8)}...</td>
                           <td className="px-4 py-2">
-                            <span className="px-2 py-1 bg-red-100 text-red-400 rounded text-xs capitalize">
+                            <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs capitalize">
                               {entry.type?.replace('_', ' ')}
                             </span>
                           </td>
@@ -1042,7 +1042,7 @@ const AdminAccountingDashboard = ({ user }) => {
                             <div className="text-xs text-gray-500">{user.email}</div>
                           </td>
                           <td className="px-3 py-2">
-                            <span className={`px-2 py-1 rounded text-xs ${user.membership_type === 'vip' ? 'bg-purple-100 text-purple-400' : 'bg-gray-800'}`}>
+                            <span className={`px-2 py-1 rounded text-xs ${user.membership_type === 'vip' ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-800'}`}>
                               {user.membership_type}
                             </span>
                           </td>
@@ -1052,7 +1052,7 @@ const AdminAccountingDashboard = ({ user }) => {
                             {formatCurrency(Math.abs(user.net_cost))}
                           </td>
                           <td className="px-3 py-2 text-center">
-                            <span className={`px-2 py-1 rounded text-xs ${user.status === 'LOSS' ? 'bg-red-100 text-red-400' : 'bg-green-100 text-green-400'}`}>
+                            <span className={`px-2 py-1 rounded text-xs ${user.status === 'LOSS' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
                               {user.status}
                             </span>
                           </td>
