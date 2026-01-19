@@ -147,7 +147,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
           <Card className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-green-500/30">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-green-700 mb-1">Pending KYC</p>
+                <p className="text-sm text-green-400 mb-1">Pending KYC</p>
                 <p className="text-3xl font-bold text-green-900">{stats?.kyc?.pending || 0}</p>
                 <p className="text-xs text-green-600 mt-1">Requires approval</p>
               </div>
@@ -160,7 +160,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
           <Card className="p-6 bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-500/30">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-blue-700 mb-1">Pending Withdrawals</p>
+                <p className="text-sm text-blue-400 mb-1">Pending Withdrawals</p>
                 <p className="text-3xl font-bold text-blue-900">{stats?.withdrawals?.pending || 0}</p>
                 <p className="text-xs text-blue-600 mt-1">₹{(stats?.withdrawals?.pending_amount || 0).toLocaleString()}</p>
               </div>
@@ -173,7 +173,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
           <Card className="p-6 bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-amber-700 mb-1">VIP Payments</p>
+                <p className="text-sm text-amber-400 mb-1">VIP Payments</p>
                 <p className="text-3xl font-bold text-amber-900">{stats?.vip_payments?.pending || 0}</p>
                 <p className="text-xs text-amber-600 mt-1">Awaiting verification</p>
               </div>

@@ -109,9 +109,9 @@ const AdminSupport = ({ user }) => {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'open': <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> Open</span>,
-      'in_progress': <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full flex items-center gap-1"><MessageCircle className="h-3 w-3" /> In Progress</span>,
-      'resolved': <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Resolved</span>,
+      'open': <span className="px-2 py-1 bg-yellow-100 text-yellow-400 text-xs rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> Open</span>,
+      'in_progress': <span className="px-2 py-1 bg-blue-100 text-blue-400 text-xs rounded-full flex items-center gap-1"><MessageCircle className="h-3 w-3" /> In Progress</span>,
+      'resolved': <span className="px-2 py-1 bg-green-100 text-green-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Resolved</span>,
       'closed': <span className="px-2 py-1 bg-gray-800 text-gray-300 text-xs rounded-full flex items-center gap-1"><XCircle className="h-3 w-3" /> Closed</span>
     };
     return badges[status] || badges['open'];
@@ -119,8 +119,8 @@ const AdminSupport = ({ user }) => {
 
   const getPriorityBadge = (priority) => {
     const badges = {
-      'high': <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">High</span>,
-      'medium': <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">Medium</span>,
+      'high': <span className="px-2 py-1 bg-red-100 text-red-400 text-xs rounded-full">High</span>,
+      'medium': <span className="px-2 py-1 bg-orange-100 text-orange-400 text-xs rounded-full">Medium</span>,
       'low': <span className="px-2 py-1 bg-gray-800 text-gray-300 text-xs rounded-full">Low</span>
     };
     return badges[priority] || badges['medium'];
@@ -145,19 +145,19 @@ const AdminSupport = ({ user }) => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card className="p-4 bg-blue-500/10 border-blue-500/30">
           <p className="text-xs text-blue-600">Total Tickets</p>
-          <p className="text-2xl font-bold text-blue-700">{stats.total}</p>
+          <p className="text-2xl font-bold text-blue-400">{stats.total}</p>
         </Card>
         <Card className="p-4 bg-yellow-500/10 border-yellow-500/30">
           <p className="text-xs text-yellow-600">Open</p>
-          <p className="text-2xl font-bold text-yellow-700">{stats.open}</p>
+          <p className="text-2xl font-bold text-yellow-400">{stats.open}</p>
         </Card>
         <Card className="p-4 bg-purple-500/10 border-purple-500/30">
           <p className="text-xs text-purple-600">In Progress</p>
-          <p className="text-2xl font-bold text-purple-700">{stats.inProgress}</p>
+          <p className="text-2xl font-bold text-purple-400">{stats.inProgress}</p>
         </Card>
         <Card className="p-4 bg-green-500/10 border-green-500/30">
           <p className="text-xs text-green-600">Resolved</p>
-          <p className="text-2xl font-bold text-green-700">{stats.resolved}</p>
+          <p className="text-2xl font-bold text-green-400">{stats.resolved}</p>
         </Card>
       </div>
 

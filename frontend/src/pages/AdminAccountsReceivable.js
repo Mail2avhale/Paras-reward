@@ -207,9 +207,9 @@ const AdminAccountsReceivable = ({ user }) => {
                     <td className="px-4 py-3 text-sm text-gray-600">{formatDate(item.due_date)}</td>
                     <td className="px-4 py-3 text-center">
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                        item.status === 'paid' ? 'bg-green-100 text-green-700' :
-                        item.status === 'overdue' ? 'bg-red-100 text-red-700' :
-                        'bg-amber-100 text-amber-700'
+                        item.status === 'paid' ? 'bg-green-100 text-green-400' :
+                        item.status === 'overdue' ? 'bg-red-100 text-red-400' :
+                        'bg-amber-100 text-amber-400'
                       }`}>
                         {item.status}
                       </span>
@@ -255,7 +255,7 @@ const AdminAccountsReceivable = ({ user }) => {
               </div>
               <div className="p-6 space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Customer Name *</label>
+                  <label className="text-sm font-medium text-gray-300 mb-1 block">Customer Name *</label>
                   <input
                     type="text"
                     value={form.customer_name}
@@ -265,7 +265,7 @@ const AdminAccountsReceivable = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Amount (₹) *</label>
+                  <label className="text-sm font-medium text-gray-300 mb-1 block">Amount (₹) *</label>
                   <input
                     type="number"
                     value={form.amount}
@@ -275,7 +275,7 @@ const AdminAccountsReceivable = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Description</label>
+                  <label className="text-sm font-medium text-gray-300 mb-1 block">Description</label>
                   <input
                     type="text"
                     value={form.description}
@@ -285,7 +285,7 @@ const AdminAccountsReceivable = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Due Date</label>
+                  <label className="text-sm font-medium text-gray-300 mb-1 block">Due Date</label>
                   <input
                     type="date"
                     value={form.due_date}
@@ -294,7 +294,7 @@ const AdminAccountsReceivable = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Category</label>
+                  <label className="text-sm font-medium text-gray-300 mb-1 block">Category</label>
                   <select
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value })}

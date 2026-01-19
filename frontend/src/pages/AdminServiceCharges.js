@@ -96,7 +96,7 @@ const AdminServiceCharges = ({ user }) => {
             <div className="space-y-4">
               {/* Charge Type Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Charge Type</label>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Charge Type</label>
                 <div className="flex gap-4">
                   <button
                     onClick={() => setBillPaymentConfig({ ...billPaymentConfig, charge_type: 'percentage' })}
@@ -127,7 +127,7 @@ const AdminServiceCharges = ({ user }) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Percentage (%)
                   </label>
                   <Input
@@ -141,7 +141,7 @@ const AdminServiceCharges = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Fixed Amount (PRC)
                   </label>
                   <Input
@@ -158,10 +158,10 @@ const AdminServiceCharges = ({ user }) => {
               {/* Example Calculation */}
               <div className="bg-blue-500/10 p-4 rounded-lg">
                 <p className="text-sm font-semibold text-gray-900 mb-2">Example Calculation</p>
-                <p className="text-sm text-gray-700">
+                <p className="text-sm text-gray-300">
                   For a ₹100 recharge (1000 PRC):
                 </p>
-                <p className="text-lg font-bold text-blue-700 mt-1">
+                <p className="text-lg font-bold text-blue-400 mt-1">
                   Service Charge = {calculateExample(1000, billPaymentConfig).toFixed(2)} PRC
                 </p>
                 <p className="text-sm text-gray-600 mt-1">
@@ -187,7 +187,7 @@ const AdminServiceCharges = ({ user }) => {
             <div className="space-y-4">
               {/* Charge Type Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Charge Type</label>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Charge Type</label>
                 <div className="flex gap-4">
                   <button
                     onClick={() => setGiftVoucherConfig({ ...giftVoucherConfig, charge_type: 'percentage' })}
@@ -218,7 +218,7 @@ const AdminServiceCharges = ({ user }) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Percentage (%)
                   </label>
                   <Input
@@ -232,7 +232,7 @@ const AdminServiceCharges = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Fixed Amount (PRC)
                   </label>
                   <Input
@@ -249,10 +249,10 @@ const AdminServiceCharges = ({ user }) => {
               {/* Example Calculation */}
               <div className="bg-purple-500/10 p-4 rounded-lg">
                 <p className="text-sm font-semibold text-gray-900 mb-2">Example Calculation</p>
-                <p className="text-sm text-gray-700">
+                <p className="text-sm text-gray-300">
                   For a ₹100 voucher (1000 PRC):
                 </p>
-                <p className="text-lg font-bold text-purple-700 mt-1">
+                <p className="text-lg font-bold text-purple-400 mt-1">
                   Service Charge = {calculateExample(1000, giftVoucherConfig).toFixed(2)} PRC
                 </p>
                 <p className="text-sm text-gray-600 mt-1">

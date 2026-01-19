@@ -168,16 +168,16 @@ const AdminLiquidity = ({ user }) => {
       {/* Alerts */}
       {alerts.length > 0 && (
         <Card className="p-4 border-orange-500/30 bg-orange-500/10">
-          <h3 className="font-bold text-orange-800 mb-3 flex items-center gap-2">
+          <h3 className="font-bold text-orange-400 mb-3 flex items-center gap-2">
             <AlertTriangle className="h-5 w-5" />
             Active Alerts
           </h3>
           <div className="space-y-2">
             {alerts.map((alert, idx) => (
               <div key={idx} className={`p-3 rounded-lg ${
-                alert.severity === 'high' ? 'bg-red-100 text-red-800' :
-                alert.severity === 'medium' ? 'bg-orange-100 text-orange-800' :
-                'bg-yellow-100 text-yellow-800'
+                alert.severity === 'high' ? 'bg-red-100 text-red-400' :
+                alert.severity === 'medium' ? 'bg-orange-100 text-orange-400' :
+                'bg-yellow-100 text-yellow-400'
               }`}>
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
@@ -198,7 +198,7 @@ const AdminLiquidity = ({ user }) => {
             </div>
             <div>
               <p className="text-sm text-purple-600">Total PRC in System</p>
-              <p className="text-2xl font-bold text-purple-700">
+              <p className="text-2xl font-bold text-purple-400">
                 {summary.total_prc_in_system?.toLocaleString()}
               </p>
               <p className="text-xs text-purple-500">≈ {formatCurrency(summary.prc_inr_value)}</p>
@@ -213,7 +213,7 @@ const AdminLiquidity = ({ user }) => {
             </div>
             <div>
               <p className="text-sm text-green-600">Total Cash Reserves</p>
-              <p className="text-2xl font-bold text-green-700">
+              <p className="text-2xl font-bold text-green-400">
                 {formatCurrency(summary.total_cash_reserves)}
               </p>
             </div>
@@ -227,7 +227,7 @@ const AdminLiquidity = ({ user }) => {
             </div>
             <div>
               <p className="text-sm text-red-600">Total Liabilities</p>
-              <p className="text-2xl font-bold text-red-700">
+              <p className="text-2xl font-bold text-red-400">
                 {formatCurrency(summary.total_liabilities)}
               </p>
             </div>
@@ -241,7 +241,7 @@ const AdminLiquidity = ({ user }) => {
             </div>
             <div>
               <p className="text-sm text-blue-600">Available Liquidity</p>
-              <p className={`text-2xl font-bold ${summary.available_liquidity >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
+              <p className={`text-2xl font-bold ${summary.available_liquidity >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
                 {formatCurrency(summary.available_liquidity)}
               </p>
             </div>
@@ -470,9 +470,9 @@ const AdminLiquidity = ({ user }) => {
               <div key={idx} className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/30">
                 <div className="flex items-start gap-3">
                   <div className={`px-2 py-1 rounded text-xs font-bold ${
-                    rec.impact === 'high' ? 'bg-red-100 text-red-700' :
-                    rec.impact === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-green-100 text-green-700'
+                    rec.impact === 'high' ? 'bg-red-100 text-red-400' :
+                    rec.impact === 'medium' ? 'bg-yellow-100 text-yellow-400' :
+                    'bg-green-100 text-green-400'
                   }`}>
                     {rec.impact.toUpperCase()}
                   </div>

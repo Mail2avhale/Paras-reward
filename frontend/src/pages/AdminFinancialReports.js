@@ -136,7 +136,7 @@ const AdminFinancialReports = ({ user }) => {
             className={`flex items-center gap-2 px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
               activeReport === tab.id
                 ? 'border-purple-600 text-purple-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-gray-500 hover:text-gray-300'
             }`}
             data-testid={`tab-${tab.id}`}
           >
@@ -194,7 +194,7 @@ const AdminFinancialReports = ({ user }) => {
                   <div className="space-y-3">
                     {Object.entries(pnlData.income?.categories || {}).map(([category, amount]) => (
                       <div key={category} className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
-                        <span className="text-sm font-medium text-gray-700 capitalize">
+                        <span className="text-sm font-medium text-gray-300 capitalize">
                           {category.replace('_', ' ')}
                         </span>
                         <span className="font-semibold text-green-600">{formatCurrency(amount)}</span>
@@ -215,7 +215,7 @@ const AdminFinancialReports = ({ user }) => {
                   <div className="space-y-3">
                     {Object.entries(pnlData.expenses?.categories || {}).map(([category, amount]) => (
                       <div key={category} className="flex items-center justify-between p-3 bg-red-500/10 rounded-lg">
-                        <span className="text-sm font-medium text-gray-700 capitalize">
+                        <span className="text-sm font-medium text-gray-300 capitalize">
                           {category.replace('_', ' ')}
                         </span>
                         <span className="font-semibold text-red-600">{formatCurrency(amount)}</span>
@@ -268,7 +268,7 @@ const AdminFinancialReports = ({ user }) => {
                   <AlertCircle className="h-6 w-6 text-red-600" />
                 )}
                 <div>
-                  <p className={`font-medium ${balanceSheetData.balance_check?.is_balanced ? 'text-green-800' : 'text-red-800'}`}>
+                  <p className={`font-medium ${balanceSheetData.balance_check?.is_balanced ? 'text-green-400' : 'text-red-400'}`}>
                     {balanceSheetData.balance_check?.is_balanced ? 'Balance Sheet is Balanced ✓' : 'Balance Sheet Mismatch!'}
                   </p>
                   <p className="text-sm text-gray-600">
@@ -324,8 +324,8 @@ const AdminFinancialReports = ({ user }) => {
                         <span className="font-medium">{formatCurrency(balanceSheetData.liabilities?.current_liabilities?.prc_redemption_liability)}</span>
                       </div>
                       <div className="flex justify-between p-2 bg-amber-500/10 rounded text-sm">
-                        <span className="text-amber-700">PRC in Circulation</span>
-                        <span className="font-medium text-amber-700">{formatPRC(balanceSheetData.liabilities?.current_liabilities?.prc_in_circulation)} PRC</span>
+                        <span className="text-amber-400">PRC in Circulation</span>
+                        <span className="font-medium text-amber-400">{formatPRC(balanceSheetData.liabilities?.current_liabilities?.prc_in_circulation)} PRC</span>
                       </div>
                     </div>
                   </div>
@@ -408,7 +408,7 @@ const AdminFinancialReports = ({ user }) => {
                   {Object.entries(prcFlowData.inflow?.breakdown || {}).map(([type, amount]) => (
                     amount > 0 && (
                       <div key={type} className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
-                        <span className="text-sm font-medium text-gray-700 capitalize">
+                        <span className="text-sm font-medium text-gray-300 capitalize">
                           {type.replace('_', ' ')}
                         </span>
                         <span className="font-semibold text-green-600">+{formatPRC(amount)} PRC</span>
@@ -427,7 +427,7 @@ const AdminFinancialReports = ({ user }) => {
                   {Object.entries(prcFlowData.outflow?.breakdown || {}).map(([type, amount]) => (
                     amount > 0 && (
                       <div key={type} className="flex items-center justify-between p-3 bg-red-500/10 rounded-lg">
-                        <span className="text-sm font-medium text-gray-700 capitalize">
+                        <span className="text-sm font-medium text-gray-300 capitalize">
                           {type.replace('_', ' ')}
                         </span>
                         <span className="font-semibold text-red-600">-{formatPRC(amount)} PRC</span>

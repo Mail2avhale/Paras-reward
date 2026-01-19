@@ -62,7 +62,7 @@ const AdminSocialMediaSettings = ({ user }) => {
     { key: 'facebook', label: 'Facebook', icon: Facebook, color: 'text-blue-600', placeholder: 'https://facebook.com/yourpage' },
     { key: 'twitter', label: 'Twitter / X', icon: Twitter, color: 'text-sky-500', placeholder: 'https://twitter.com/yourhandle' },
     { key: 'instagram', label: 'Instagram', icon: Instagram, color: 'text-pink-600', placeholder: 'https://instagram.com/yourprofile' },
-    { key: 'linkedin', label: 'LinkedIn', icon: Linkedin, color: 'text-blue-700', placeholder: 'https://linkedin.com/company/yourcompany' },
+    { key: 'linkedin', label: 'LinkedIn', icon: Linkedin, color: 'text-blue-400', placeholder: 'https://linkedin.com/company/yourcompany' },
     { key: 'youtube', label: 'YouTube', icon: Youtube, color: 'text-red-600', placeholder: 'https://youtube.com/@yourchannel' },
     { key: 'telegram', label: 'Telegram', icon: Send, color: 'text-blue-500', placeholder: 'https://t.me/yourchannel' },
     { key: 'whatsapp', label: 'WhatsApp', icon: MessageCircle, color: 'text-green-600', placeholder: 'https://wa.me/919876543210' },
@@ -170,7 +170,7 @@ const AdminSocialMediaSettings = ({ user }) => {
         {/* Tips Card */}
         <Card className="p-6 mt-6 bg-blue-500/10 border-blue-500/30">
           <h3 className="font-semibold text-blue-900 mb-2">Tips for Social Media Links</h3>
-          <ul className="text-sm text-blue-800 space-y-1">
+          <ul className="text-sm text-blue-400 space-y-1">
             <li>• Use complete URLs including https://</li>
             <li>• For WhatsApp, use format: https://wa.me/919876543210 (with country code)</li>
             <li>• For Telegram channels, use: https://t.me/channelname</li>

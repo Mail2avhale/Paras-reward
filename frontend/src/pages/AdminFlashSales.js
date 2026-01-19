@@ -97,11 +97,11 @@ function AdminFlashSales() {
   const getStatusBadge = (sale) => {
     const now = new Date().toISOString();
     if (now < sale.start_time) {
-      return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold">Upcoming</span>;
+      return <span className="px-2 py-1 bg-blue-100 text-blue-400 rounded text-xs font-semibold">Upcoming</span>;
     } else if (now > sale.end_time) {
-      return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs font-semibold">Expired</span>;
+      return <span className="px-2 py-1 bg-gray-100 text-gray-200 rounded text-xs font-semibold">Expired</span>;
     } else {
-      return <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-semibold animate-pulse">Active</span>;
+      return <span className="px-2 py-1 bg-green-100 text-green-400 rounded text-xs font-semibold animate-pulse">Active</span>;
     }
   };
 
@@ -131,7 +131,7 @@ function AdminFlashSales() {
               className={`px-4 py-2 rounded-lg font-medium transition ${
                 filterStatus === status
                   ? 'bg-red-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-gray-100 text-gray-300 hover:bg-gray-200'
               }`}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -160,7 +160,7 @@ function AdminFlashSales() {
                     size="sm"
                     variant="outline"
                     onClick={() => handleDelete(sale.sale_id)}
-                    className="text-red-600 hover:text-red-700"
+                    className="text-red-600 hover:text-red-400"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -219,7 +219,7 @@ function AdminFlashSales() {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Product
               </label>
               <select
@@ -237,7 +237,7 @@ function AdminFlashSales() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Discount Percentage
               </label>
               <Input
@@ -251,7 +251,7 @@ function AdminFlashSales() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   Start Time
                 </label>
                 <Input
@@ -262,7 +262,7 @@ function AdminFlashSales() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   End Time
                 </label>
                 <Input
@@ -274,7 +274,7 @@ function AdminFlashSales() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Stock Limit (Optional)
               </label>
               <Input

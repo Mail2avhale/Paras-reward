@@ -219,10 +219,10 @@ const AdminBillPayments = ({ user }) => {
                     <td className="py-3 px-4 text-sm text-purple-400">{req.total_prc_deducted.toFixed(2)}</td>
                     <td className="py-3 px-4">
                       <span className={`px-2 py-1 rounded-full text-xs ${
-                        req.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        req.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                        req.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        'bg-red-100 text-red-800'
+                        req.status === 'pending' ? 'bg-yellow-100 text-yellow-400' :
+                        req.status === 'processing' ? 'bg-blue-100 text-blue-400' :
+                        req.status === 'completed' ? 'bg-green-100 text-green-400' :
+                        'bg-red-100 text-red-400'
                       }`}>
                         {req.status}
                       </span>

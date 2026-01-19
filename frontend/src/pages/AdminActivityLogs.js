@@ -26,18 +26,18 @@ const ACTION_ICONS = {
 };
 
 const ACTION_COLORS = {
-  login: 'bg-blue-100 text-blue-700',
-  order_placed: 'bg-green-100 text-green-700',
-  withdrawal_requested: 'bg-yellow-100 text-yellow-700',
-  withdrawal_approved: 'bg-emerald-100 text-emerald-700',
-  withdrawal_rejected: 'bg-red-100 text-red-700',
-  kyc_submitted: 'bg-purple-100 text-purple-700',
-  kyc_approved: 'bg-indigo-100 text-indigo-700',
-  kyc_rejected: 'bg-red-100 text-red-700',
-  profile_updated: 'bg-gray-100 text-gray-700',
-  user_role_changed: 'bg-orange-100 text-orange-700',
-  mining_started: 'bg-teal-100 text-teal-700',
-  mining_claimed: 'bg-cyan-100 text-cyan-700'
+  login: 'bg-blue-100 text-blue-400',
+  order_placed: 'bg-green-100 text-green-400',
+  withdrawal_requested: 'bg-yellow-100 text-yellow-400',
+  withdrawal_approved: 'bg-emerald-100 text-emerald-400',
+  withdrawal_rejected: 'bg-red-100 text-red-400',
+  kyc_submitted: 'bg-purple-100 text-purple-400',
+  kyc_approved: 'bg-indigo-100 text-indigo-400',
+  kyc_rejected: 'bg-red-100 text-red-400',
+  profile_updated: 'bg-gray-100 text-gray-300',
+  user_role_changed: 'bg-orange-100 text-orange-400',
+  mining_started: 'bg-teal-100 text-teal-400',
+  mining_claimed: 'bg-cyan-100 text-cyan-400'
 };
 
 const AdminActivityLogs = () => {
@@ -195,7 +195,7 @@ const AdminActivityLogs = () => {
           <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">Total Logs</p>
+                <p className="text-sm font-medium text-blue-400">Total Logs</p>
                 <p className="text-3xl font-bold text-blue-900 mt-1">{stats.total_logs}</p>
               </div>
               <Activity className="h-10 w-10 text-blue-600" />
@@ -205,7 +205,7 @@ const AdminActivityLogs = () => {
           <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Last 24 Hours</p>
+                <p className="text-sm font-medium text-green-400">Last 24 Hours</p>
                 <p className="text-3xl font-bold text-green-900 mt-1">{stats.recent_logs_24h}</p>
               </div>
               <RefreshCw className="h-10 w-10 text-green-600" />
@@ -215,7 +215,7 @@ const AdminActivityLogs = () => {
           <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-700">Action Types</p>
+                <p className="text-sm font-medium text-purple-400">Action Types</p>
                 <p className="text-3xl font-bold text-purple-900 mt-1">
                   {stats.action_type_stats?.length || 0}
                 </p>
@@ -227,7 +227,7 @@ const AdminActivityLogs = () => {
           <Card className="p-6 bg-gradient-to-br from-orange-50 to-orange-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-orange-700">Active Users</p>
+                <p className="text-sm font-medium text-orange-400">Active Users</p>
                 <p className="text-3xl font-bold text-orange-900 mt-1">
                   {stats.most_active_users?.length || 0}
                 </p>
@@ -300,17 +300,17 @@ const AdminActivityLogs = () => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-700">
-                    <th className="text-left py-4 px-4 font-semibold text-gray-700">Time</th>
-                    <th className="text-left py-4 px-4 font-semibold text-gray-700">User</th>
-                    <th className="text-left py-4 px-4 font-semibold text-gray-700">Action</th>
-                    <th className="text-left py-4 px-4 font-semibold text-gray-700">Description</th>
-                    <th className="text-left py-4 px-4 font-semibold text-gray-700">IP Address</th>
+                    <th className="text-left py-4 px-4 font-semibold text-gray-300">Time</th>
+                    <th className="text-left py-4 px-4 font-semibold text-gray-300">User</th>
+                    <th className="text-left py-4 px-4 font-semibold text-gray-300">Action</th>
+                    <th className="text-left py-4 px-4 font-semibold text-gray-300">Description</th>
+                    <th className="text-left py-4 px-4 font-semibold text-gray-300">IP Address</th>
                   </tr>
                 </thead>
                 <tbody>
                   {logs.map((log) => {
                     const Icon = ACTION_ICONS[log.action_type] || Activity;
-                    const colorClass = ACTION_COLORS[log.action_type] || 'bg-gray-100 text-gray-700';
+                    const colorClass = ACTION_COLORS[log.action_type] || 'bg-gray-100 text-gray-300';
                     
                     return (
                       <tr key={log.log_id} className="border-b border-gray-100 hover:bg-gray-800/50">
@@ -329,7 +329,7 @@ const AdminActivityLogs = () => {
                             {log.action_type.replace(/_/g, ' ').toUpperCase()}
                           </span>
                         </td>
-                        <td className="py-4 px-4 text-sm text-gray-700 max-w-md truncate">
+                        <td className="py-4 px-4 text-sm text-gray-300 max-w-md truncate">
                           {log.description}
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-600">

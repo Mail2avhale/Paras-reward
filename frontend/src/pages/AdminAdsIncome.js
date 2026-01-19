@@ -262,7 +262,7 @@ const AdminAdsIncome = ({ user }) => {
                   <td className="py-3">{entry.date}</td>
                   <td className="py-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      entry.ad_network === 'admob' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'
+                      entry.ad_network === 'admob' ? 'bg-green-100 text-green-400' : 'bg-purple-100 text-purple-400'
                     }`}>
                       {entry.ad_network?.toUpperCase()}
                     </span>
@@ -314,7 +314,7 @@ const AdminAdsIncome = ({ user }) => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Date</label>
+                  <label className="text-sm font-medium text-gray-300">Date</label>
                   <input
                     type="date"
                     value={form.date}
@@ -323,7 +323,7 @@ const AdminAdsIncome = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Ad Network</label>
+                  <label className="text-sm font-medium text-gray-300">Ad Network</label>
                   <select
                     value={form.ad_network}
                     onChange={(e) => setForm({...form, ad_network: e.target.value})}
@@ -336,7 +336,7 @@ const AdminAdsIncome = ({ user }) => {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Impressions</label>
+                  <label className="text-sm font-medium text-gray-300">Impressions</label>
                   <input
                     type="number"
                     value={form.impressions}
@@ -346,7 +346,7 @@ const AdminAdsIncome = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Clicks</label>
+                  <label className="text-sm font-medium text-gray-300">Clicks</label>
                   <input
                     type="number"
                     value={form.clicks}
@@ -356,7 +356,7 @@ const AdminAdsIncome = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">eCPM (₹)</label>
+                  <label className="text-sm font-medium text-gray-300">eCPM (₹)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -368,7 +368,7 @@ const AdminAdsIncome = ({ user }) => {
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700">Revenue Amount (₹) *</label>
+                <label className="text-sm font-medium text-gray-300">Revenue Amount (₹) *</label>
                 <input
                   type="number"
                   step="0.01"
@@ -379,7 +379,7 @@ const AdminAdsIncome = ({ user }) => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700">Notes</label>
+                <label className="text-sm font-medium text-gray-300">Notes</label>
                 <input
                   type="text"
                   value={form.notes}

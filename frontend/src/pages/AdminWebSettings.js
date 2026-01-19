@@ -216,7 +216,7 @@ const AdminWebSettings = ({ user }) => {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="text-red-500 hover:text-red-700 hover:bg-red-500/10"
+            className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
             onClick={() => handleRemoveLogo(logoType)}
           >
             <Trash2 className="h-4 w-4" />
@@ -571,7 +571,7 @@ const AdminWebSettings = ({ user }) => {
 
             {/* Info Box */}
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-6">
-              <p className="text-sm text-blue-800">
+              <p className="text-sm text-blue-400">
                 <strong>Tips:</strong> Upload high-quality images for best results. Images will be automatically resized. 
                 Supported formats: PNG, JPG, GIF, WEBP, ICO. Maximum file size: 5MB.
               </p>

@@ -106,10 +106,10 @@ const AdminAuditService = ({ user }) => {
 
   const getSeverityBadge = (severity) => {
     const badges = {
-      critical: 'bg-red-100 text-red-700 border-red-500/30',
-      high: 'bg-orange-100 text-orange-700 border-orange-500/30',
-      normal: 'bg-blue-100 text-blue-700 border-blue-500/30',
-      low: 'bg-gray-100 text-gray-700 border-gray-700'
+      critical: 'bg-red-100 text-red-400 border-red-500/30',
+      high: 'bg-orange-100 text-orange-400 border-orange-500/30',
+      normal: 'bg-blue-100 text-blue-400 border-blue-500/30',
+      low: 'bg-gray-100 text-gray-300 border-gray-700'
     };
     return badges[severity] || badges.normal;
   };
@@ -153,7 +153,7 @@ const AdminAuditService = ({ user }) => {
             <div className="flex items-center gap-3">
               <AlertCircle className="h-6 w-6 text-red-600" />
               <div>
-                <p className="font-semibold text-red-800">{alerts.length} Unread Alerts</p>
+                <p className="font-semibold text-red-400">{alerts.length} Unread Alerts</p>
                 <p className="text-sm text-red-600">{alerts[0]?.message}</p>
               </div>
             </div>
@@ -296,7 +296,7 @@ const AdminAuditService = ({ user }) => {
       {/* Suspicious Activities */}
       {suspicious.length > 0 && (
         <Card className="p-4 border-red-500/30">
-          <h3 className="font-bold text-red-800 mb-3 flex items-center gap-2">
+          <h3 className="font-bold text-red-400 mb-3 flex items-center gap-2">
             <AlertTriangle className="h-5 w-5" />
             Recent Suspicious Activities
           </h3>
@@ -407,7 +407,7 @@ const AdminAuditService = ({ user }) => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold">Audit Log Details</h2>
-                <button onClick={() => setSelectedLog(null)} className="text-gray-500 hover:text-gray-700">✕</button>
+                <button onClick={() => setSelectedLog(null)} className="text-gray-500 hover:text-gray-300">✕</button>
               </div>
               
               <div className="space-y-4">

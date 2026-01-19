@@ -348,7 +348,7 @@ const AdminCashBankBook = ({ user }) => {
             className={`flex items-center gap-2 px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
               activeTab === tab.id
                 ? 'border-purple-600 text-purple-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-gray-500 hover:text-gray-300'
             }`}
           >
             <tab.icon className="h-4 w-4" />
@@ -517,10 +517,10 @@ const AdminCashBankBook = ({ user }) => {
                           </td>
                           <td className="px-4 py-3">
                             <span className={`text-xs px-2 py-1 rounded-full ${
-                              entry.entry_type === 'capital' ? 'bg-purple-100 text-purple-700' :
-                              entry.entry_type === 'income' ? 'bg-green-100 text-green-700' :
-                              entry.entry_type === 'expense' ? 'bg-red-100 text-red-700' :
-                              'bg-blue-100 text-blue-700'
+                              entry.entry_type === 'capital' ? 'bg-purple-100 text-purple-400' :
+                              entry.entry_type === 'income' ? 'bg-green-100 text-green-400' :
+                              entry.entry_type === 'expense' ? 'bg-red-100 text-red-400' :
+                              'bg-blue-100 text-blue-400'
                             }`}>
                               {entry.category || entry.entry_type}
                             </span>
@@ -572,7 +572,7 @@ const AdminCashBankBook = ({ user }) => {
             <div className="p-6 space-y-4">
               {/* Account Selection */}
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Account</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">Account</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setEntryForm({...entryForm, account: 'cash'})}
@@ -597,7 +597,7 @@ const AdminCashBankBook = ({ user }) => {
 
               {/* Entry Type */}
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Entry Type</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">Entry Type</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setEntryForm({...entryForm, entry_type: 'income', category: ''})}
@@ -623,7 +623,7 @@ const AdminCashBankBook = ({ user }) => {
 
               {/* Category */}
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Category</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">Category</label>
                 <div className="grid grid-cols-2 gap-2">
                   {(entryForm.entry_type === 'expense' ? categories.expense : categories.income).map(cat => (
                     <button
@@ -642,7 +642,7 @@ const AdminCashBankBook = ({ user }) => {
 
               {/* Amount */}
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">Amount (₹)</label>
+                <label className="text-sm font-medium text-gray-300 mb-1 block">Amount (₹)</label>
                 <input
                   type="number"
                   value={entryForm.amount}
@@ -655,7 +655,7 @@ const AdminCashBankBook = ({ user }) => {
 
               {/* Description with Auto-Categorization */}
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">Description</label>
+                <label className="text-sm font-medium text-gray-300 mb-1 block">Description</label>
                 <input
                   type="text"
                   value={entryForm.description}
@@ -683,7 +683,7 @@ const AdminCashBankBook = ({ user }) => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Lightbulb className="h-4 w-4 text-amber-600" />
-                        <span className="text-sm font-medium text-amber-800">
+                        <span className="text-sm font-medium text-amber-400">
                           Suggested: <span className="capitalize">{autoSuggestion.suggested_category?.replace('_', ' ')}</span>
                           <span className="text-amber-600 ml-1">({autoSuggestion.suggested_type})</span>
                         </span>
@@ -696,14 +696,14 @@ const AdminCashBankBook = ({ user }) => {
                         Apply
                       </button>
                     </div>
-                    <p className="text-xs text-amber-700 mt-1">{autoSuggestion.match_reason}</p>
+                    <p className="text-xs text-amber-400 mt-1">{autoSuggestion.match_reason}</p>
                   </motion.div>
                 )}
               </div>
 
               {/* Reference No */}
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">Reference No (Optional)</label>
+                <label className="text-sm font-medium text-gray-300 mb-1 block">Reference No (Optional)</label>
                 <input
                   type="text"
                   value={entryForm.reference_no}
@@ -750,7 +750,7 @@ const AdminCashBankBook = ({ user }) => {
             <div className="p-6 space-y-4">
               <div className="flex items-center gap-4">
                 <div className="flex-1">
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">From</label>
+                  <label className="text-sm font-medium text-gray-300 mb-1 block">From</label>
                   <select
                     value={transferForm.from_account}
                     onChange={(e) => setTransferForm({...transferForm, from_account: e.target.value, to_account: e.target.value === 'cash' ? 'bank' : 'cash'})}
@@ -762,7 +762,7 @@ const AdminCashBankBook = ({ user }) => {
                 </div>
                 <ArrowLeftRight className="h-6 w-6 text-gray-400 mt-6" />
                 <div className="flex-1">
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">To</label>
+                  <label className="text-sm font-medium text-gray-300 mb-1 block">To</label>
                   <select
                     value={transferForm.to_account}
                     onChange={(e) => setTransferForm({...transferForm, to_account: e.target.value})}
@@ -775,7 +775,7 @@ const AdminCashBankBook = ({ user }) => {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">Amount (₹)</label>
+                <label className="text-sm font-medium text-gray-300 mb-1 block">Amount (₹)</label>
                 <input
                   type="number"
                   value={transferForm.amount}
@@ -786,7 +786,7 @@ const AdminCashBankBook = ({ user }) => {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">Description (Optional)</label>
+                <label className="text-sm font-medium text-gray-300 mb-1 block">Description (Optional)</label>
                 <input
                   type="text"
                   value={transferForm.description}
@@ -832,7 +832,7 @@ const AdminCashBankBook = ({ user }) => {
             
             <div className="p-6 space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Account</label>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">Account</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setOpeningBalanceForm({...openingBalanceForm, account_type: 'cash'})}
@@ -858,7 +858,7 @@ const AdminCashBankBook = ({ user }) => {
               {openingBalanceForm.account_type === 'bank' && (
                 <>
                   <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">Bank Name</label>
+                    <label className="text-sm font-medium text-gray-300 mb-1 block">Bank Name</label>
                     <input
                       type="text"
                       value={openingBalanceForm.bank_name}
@@ -868,7 +868,7 @@ const AdminCashBankBook = ({ user }) => {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">Account Number</label>
+                    <label className="text-sm font-medium text-gray-300 mb-1 block">Account Number</label>
                     <input
                       type="text"
                       value={openingBalanceForm.account_number}
@@ -881,7 +881,7 @@ const AdminCashBankBook = ({ user }) => {
               )}
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">Opening Balance (₹)</label>
+                <label className="text-sm font-medium text-gray-300 mb-1 block">Opening Balance (₹)</label>
                 <input
                   type="number"
                   value={openingBalanceForm.amount}

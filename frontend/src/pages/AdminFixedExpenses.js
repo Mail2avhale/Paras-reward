@@ -339,8 +339,8 @@ const AdminFixedExpenses = ({ user }) => {
                     <td className="py-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         expense.paid_status === 'paid' 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-yellow-100 text-yellow-700'
+                          ? 'bg-green-100 text-green-400' 
+                          : 'bg-yellow-100 text-yellow-400'
                       }`}>
                         {expense.paid_status}
                       </span>
@@ -390,7 +390,7 @@ const AdminFixedExpenses = ({ user }) => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Category</label>
+                  <label className="text-sm font-medium text-gray-300">Category</label>
                   <select
                     value={form.category}
                     onChange={(e) => setForm({...form, category: e.target.value})}
@@ -402,7 +402,7 @@ const AdminFixedExpenses = ({ user }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Month</label>
+                  <label className="text-sm font-medium text-gray-300">Month</label>
                   <input
                     type="month"
                     value={form.month}
@@ -413,7 +413,7 @@ const AdminFixedExpenses = ({ user }) => {
               </div>
               
               <div>
-                <label className="text-sm font-medium text-gray-700">Description *</label>
+                <label className="text-sm font-medium text-gray-300">Description *</label>
                 <input
                   type="text"
                   value={form.description}
@@ -425,7 +425,7 @@ const AdminFixedExpenses = ({ user }) => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Amount (₹) *</label>
+                  <label className="text-sm font-medium text-gray-300">Amount (₹) *</label>
                   <input
                     type="number"
                     value={form.amount}
@@ -435,7 +435,7 @@ const AdminFixedExpenses = ({ user }) => {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Vendor</label>
+                  <label className="text-sm font-medium text-gray-300">Vendor</label>
                   <input
                     type="text"
                     value={form.vendor}
@@ -448,7 +448,7 @@ const AdminFixedExpenses = ({ user }) => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Payment Status</label>
+                  <label className="text-sm font-medium text-gray-300">Payment Status</label>
                   <select
                     value={form.paid_status}
                     onChange={(e) => setForm({...form, paid_status: e.target.value})}
@@ -459,7 +459,7 @@ const AdminFixedExpenses = ({ user }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Payment Date</label>
+                  <label className="text-sm font-medium text-gray-300">Payment Date</label>
                   <input
                     type="date"
                     value={form.payment_date}
@@ -477,7 +477,7 @@ const AdminFixedExpenses = ({ user }) => {
                   onChange={(e) => setForm({...form, recurring: e.target.checked})}
                   className="rounded"
                 />
-                <label htmlFor="recurring" className="text-sm text-gray-700">
+                <label htmlFor="recurring" className="text-sm text-gray-300">
                   Recurring monthly expense
                 </label>
               </div>

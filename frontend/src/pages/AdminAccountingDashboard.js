@@ -272,12 +272,12 @@ const AdminAccountingDashboard = ({ user }) => {
               {/* Total Income */}
               <Card className="p-5 bg-gradient-to-br from-green-50 to-emerald-50 border-green-500/30" data-testid="total-income-card">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-green-700">Total Income</span>
+                  <span className="text-sm font-medium text-green-400">Total Income</span>
                   <div className="p-2 bg-green-100 rounded-lg">
                     <TrendingUp className="h-5 w-5 text-green-600" />
                   </div>
                 </div>
-                <div className="text-2xl font-bold text-green-700">
+                <div className="text-2xl font-bold text-green-400">
                   {formatCurrency(quickViewData.masterSummary?.income?.total || 0)}
                 </div>
                 <div className="text-xs text-green-600 mt-1">All revenue sources</div>
@@ -286,12 +286,12 @@ const AdminAccountingDashboard = ({ user }) => {
               {/* Total Expense */}
               <Card className="p-5 bg-gradient-to-br from-red-50 to-rose-50 border-red-500/30" data-testid="total-expense-card">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-red-700">Total Expense</span>
+                  <span className="text-sm font-medium text-red-400">Total Expense</span>
                   <div className="p-2 bg-red-100 rounded-lg">
                     <TrendingDown className="h-5 w-5 text-red-600" />
                   </div>
                 </div>
-                <div className="text-2xl font-bold text-red-700">
+                <div className="text-2xl font-bold text-red-400">
                   {formatCurrency(quickViewData.masterSummary?.expense?.total || 0)}
                 </div>
                 <div className="text-xs text-red-600 mt-1">All outflows</div>
@@ -305,7 +305,7 @@ const AdminAccountingDashboard = ({ user }) => {
               }`} data-testid="net-pl-card">
                 <div className="flex items-center justify-between mb-3">
                   <span className={`text-sm font-medium ${
-                    (quickViewData.masterSummary?.net_profit_loss || 0) >= 0 ? 'text-emerald-700' : 'text-orange-700'
+                    (quickViewData.masterSummary?.net_profit_loss || 0) >= 0 ? 'text-emerald-400' : 'text-orange-400'
                   }`}>Net P&L</span>
                   <div className={`p-2 rounded-lg ${
                     (quickViewData.masterSummary?.net_profit_loss || 0) >= 0 ? 'bg-emerald-100' : 'bg-orange-100'
@@ -316,7 +316,7 @@ const AdminAccountingDashboard = ({ user }) => {
                   </div>
                 </div>
                 <div className={`text-2xl font-bold ${
-                  (quickViewData.masterSummary?.net_profit_loss || 0) >= 0 ? 'text-emerald-700' : 'text-orange-700'
+                  (quickViewData.masterSummary?.net_profit_loss || 0) >= 0 ? 'text-emerald-400' : 'text-orange-400'
                 }`}>
                   {formatCurrency(quickViewData.masterSummary?.net_profit_loss || 0)}
                 </div>
@@ -330,12 +330,12 @@ const AdminAccountingDashboard = ({ user }) => {
               {/* Cash Balance */}
               <Card className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-500/30" data-testid="cash-balance-card">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-blue-700">Cash Balance</span>
+                  <span className="text-sm font-medium text-blue-400">Cash Balance</span>
                   <div className="p-2 bg-blue-100 rounded-lg">
                     <Banknote className="h-5 w-5 text-blue-600" />
                   </div>
                 </div>
-                <div className="text-2xl font-bold text-blue-700">
+                <div className="text-2xl font-bold text-blue-400">
                   {formatCurrency(quickViewData.cashBalance)}
                 </div>
                 <div className="text-xs text-blue-600 mt-1">Cash in hand</div>
@@ -344,12 +344,12 @@ const AdminAccountingDashboard = ({ user }) => {
               {/* Bank Balance */}
               <Card className="p-5 bg-gradient-to-br from-purple-50 to-violet-50 border-purple-500/30" data-testid="bank-balance-card">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-purple-700">Bank Balance</span>
+                  <span className="text-sm font-medium text-purple-400">Bank Balance</span>
                   <div className="p-2 bg-purple-100 rounded-lg">
                     <CreditCard className="h-5 w-5 text-purple-600" />
                   </div>
                 </div>
-                <div className="text-2xl font-bold text-purple-700">
+                <div className="text-2xl font-bold text-purple-400">
                   {formatCurrency(quickViewData.bankBalance)}
                 </div>
                 <div className="text-xs text-purple-600 mt-1">Bank accounts</div>
@@ -360,7 +360,7 @@ const AdminAccountingDashboard = ({ user }) => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Income Breakdown */}
               <Card className="p-6" data-testid="income-breakdown">
-                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-green-700">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-green-400">
                   <TrendingUp className="h-5 w-5" />
                   Income Breakdown
                 </h3>
@@ -390,7 +390,7 @@ const AdminAccountingDashboard = ({ user }) => {
 
               {/* Expense Breakdown */}
               <Card className="p-6" data-testid="expense-breakdown">
-                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-red-700">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-red-400">
                   <TrendingDown className="h-5 w-5" />
                   Expense Breakdown
                 </h3>
@@ -409,20 +409,20 @@ const AdminAccountingDashboard = ({ user }) => {
 
             {/* PRC Stats */}
             <Card className="p-6" data-testid="prc-stats">
-              <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-purple-700">
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-purple-400">
                 <Coins className="h-5 w-5" />
                 PRC Statistics
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-purple-500/10 p-4 rounded-lg text-center">
                   <div className="text-sm text-purple-600 mb-1">Total PRC in System</div>
-                  <div className="text-2xl font-bold text-purple-700">
+                  <div className="text-2xl font-bold text-purple-400">
                     {(quickViewData.masterSummary?.prc_stats?.total_in_system || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                   </div>
                 </div>
                 <div className="bg-blue-500/10 p-4 rounded-lg text-center">
                   <div className="text-sm text-blue-600 mb-1">INR Liability</div>
-                  <div className="text-2xl font-bold text-blue-700">
+                  <div className="text-2xl font-bold text-blue-400">
                     {formatCurrency(quickViewData.masterSummary?.prc_stats?.inr_liability || 0)}
                   </div>
                 </div>
@@ -471,7 +471,7 @@ const AdminAccountingDashboard = ({ user }) => {
                 }`}
               >
                 <AlertTriangle className={`h-5 w-5 ${alert.type === 'CRITICAL' ? 'text-red-600' : 'text-yellow-600'}`} />
-                <span className={alert.type === 'CRITICAL' ? 'text-red-800' : 'text-yellow-800'}>{alert.message}</span>
+                <span className={alert.type === 'CRITICAL' ? 'text-red-400' : 'text-yellow-400'}>{alert.message}</span>
               </div>
             ))}
           </div>
@@ -678,7 +678,7 @@ const AdminAccountingDashboard = ({ user }) => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div className="bg-green-500/10 p-4 rounded-lg">
                     <div className="text-sm text-green-600">Total Minted</div>
-                    <div className="text-2xl font-bold text-green-700">{formatPRC(mintLedger.summary.total_minted)}</div>
+                    <div className="text-2xl font-bold text-green-400">{formatPRC(mintLedger.summary.total_minted)}</div>
                   </div>
                   {Object.entries(mintLedger.summary.by_source || {}).slice(0, 3).map(([source, data]) => (
                     <div key={source} className="bg-gray-800/50 p-4 rounded-lg">
@@ -706,7 +706,7 @@ const AdminAccountingDashboard = ({ user }) => {
                           <td className="px-4 py-2">{new Date(entry.created_at).toLocaleDateString()}</td>
                           <td className="px-4 py-2 text-xs">{entry.user_id?.slice(0, 8)}...</td>
                           <td className="px-4 py-2">
-                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs capitalize">
+                            <span className="px-2 py-1 bg-green-100 text-green-400 rounded text-xs capitalize">
                               {entry.type?.replace('_', ' ')}
                             </span>
                           </td>
@@ -736,7 +736,7 @@ const AdminAccountingDashboard = ({ user }) => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div className="bg-red-500/10 p-4 rounded-lg">
                     <div className="text-sm text-red-600">Total Burned</div>
-                    <div className="text-2xl font-bold text-red-700">{formatPRC(burnLedger.summary.total_burned)}</div>
+                    <div className="text-2xl font-bold text-red-400">{formatPRC(burnLedger.summary.total_burned)}</div>
                   </div>
                   {Object.entries(burnLedger.summary.by_use_type || {}).slice(0, 3).map(([type, data]) => (
                     <div key={type} className="bg-gray-800/50 p-4 rounded-lg">
@@ -763,7 +763,7 @@ const AdminAccountingDashboard = ({ user }) => {
                           <td className="px-4 py-2">{new Date(entry.created_at).toLocaleDateString()}</td>
                           <td className="px-4 py-2 text-xs">{entry.user_id?.slice(0, 8)}...</td>
                           <td className="px-4 py-2">
-                            <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs capitalize">
+                            <span className="px-2 py-1 bg-red-100 text-red-400 rounded text-xs capitalize">
                               {entry.type?.replace('_', ' ')}
                             </span>
                           </td>
@@ -793,15 +793,15 @@ const AdminAccountingDashboard = ({ user }) => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div className="bg-orange-500/10 p-4 rounded-lg">
                     <div className="text-sm text-orange-600">Total INR Liability</div>
-                    <div className="text-2xl font-bold text-orange-700">{formatCurrency(liabilityLedger.summary.total_inr_liability)}</div>
+                    <div className="text-2xl font-bold text-orange-400">{formatCurrency(liabilityLedger.summary.total_inr_liability)}</div>
                   </div>
                   <div className="bg-green-500/10 p-4 rounded-lg">
                     <div className="text-sm text-green-600">INR Paid</div>
-                    <div className="text-2xl font-bold text-green-700">{formatCurrency(liabilityLedger.summary.inr_paid)}</div>
+                    <div className="text-2xl font-bold text-green-400">{formatCurrency(liabilityLedger.summary.inr_paid)}</div>
                   </div>
                   <div className="bg-red-500/10 p-4 rounded-lg">
                     <div className="text-sm text-red-600">INR Pending</div>
-                    <div className="text-2xl font-bold text-red-700">{formatCurrency(liabilityLedger.summary.inr_pending)}</div>
+                    <div className="text-2xl font-bold text-red-400">{formatCurrency(liabilityLedger.summary.inr_pending)}</div>
                   </div>
                   <div className="bg-gray-800/50 p-4 rounded-lg">
                     <div className="text-sm text-gray-400">Conversion Rate</div>
@@ -851,11 +851,11 @@ const AdminAccountingDashboard = ({ user }) => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div className="bg-blue-500/10 p-4 rounded-lg">
                     <div className="text-sm text-blue-600">Reserve Balance</div>
-                    <div className="text-2xl font-bold text-blue-700">{formatCurrency(reserveFund.balance)}</div>
+                    <div className="text-2xl font-bold text-blue-400">{formatCurrency(reserveFund.balance)}</div>
                   </div>
                   <div className="bg-orange-500/10 p-4 rounded-lg">
                     <div className="text-sm text-orange-600">Total Liability</div>
-                    <div className="text-2xl font-bold text-orange-700">{formatCurrency(reserveFund.total_liability_inr)}</div>
+                    <div className="text-2xl font-bold text-orange-400">{formatCurrency(reserveFund.total_liability_inr)}</div>
                   </div>
                   <div className="bg-gray-800/50 p-4 rounded-lg">
                     <div className="text-sm text-gray-400">Backing Ratio</div>
@@ -863,14 +863,14 @@ const AdminAccountingDashboard = ({ user }) => {
                   </div>
                   <div className={`p-4 rounded-lg ${reserveFund.status === 'SAFE' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
                     <div className={`text-sm ${reserveFund.status === 'SAFE' ? 'text-green-600' : 'text-red-600'}`}>Status</div>
-                    <div className={`text-2xl font-bold ${reserveFund.status === 'SAFE' ? 'text-green-700' : 'text-red-700'}`}>
+                    <div className={`text-2xl font-bold ${reserveFund.status === 'SAFE' ? 'text-green-400' : 'text-red-400'}`}>
                       {reserveFund.status}
                     </div>
                   </div>
                 </div>
                 
                 <div className="p-4 bg-blue-500/10 rounded-lg mb-4">
-                  <p className="text-sm text-blue-800">
+                  <p className="text-sm text-blue-400">
                     <strong>Auto Allocation:</strong> {reserveFund.percentage}% of daily profit is automatically allocated to the reserve fund.
                     Target backing ratio is ≥ 1.0x (Reserve Fund ≥ Total Liability).
                   </p>
@@ -1005,17 +1005,17 @@ const AdminAccountingDashboard = ({ user }) => {
                 <div className="grid grid-cols-3 gap-4 mb-6">
                   <div className="bg-purple-500/10 p-4 rounded-lg">
                     <div className="text-sm text-purple-600">Total PRC Distributed (INR Value)</div>
-                    <div className="text-2xl font-bold text-purple-700">{formatCurrency(userCostAnalysis.summary.total_prc_distributed_value_inr)}</div>
+                    <div className="text-2xl font-bold text-purple-400">{formatCurrency(userCostAnalysis.summary.total_prc_distributed_value_inr)}</div>
                   </div>
                   <div className="bg-green-500/10 p-4 rounded-lg">
                     <div className="text-sm text-green-600">Total PRC Redeemed (INR Value)</div>
-                    <div className="text-2xl font-bold text-green-700">{formatCurrency(userCostAnalysis.summary.total_prc_redeemed_value_inr)}</div>
+                    <div className="text-2xl font-bold text-green-400">{formatCurrency(userCostAnalysis.summary.total_prc_redeemed_value_inr)}</div>
                   </div>
                   <div className={`p-4 rounded-lg ${userCostAnalysis.summary.net_system_cost >= 0 ? 'bg-red-500/10' : 'bg-green-500/10'}`}>
                     <div className={`text-sm ${userCostAnalysis.summary.net_system_cost >= 0 ? 'text-red-600' : 'text-green-600'}`}>
                       Net System Cost
                     </div>
-                    <div className={`text-2xl font-bold ${userCostAnalysis.summary.net_system_cost >= 0 ? 'text-red-700' : 'text-green-700'}`}>
+                    <div className={`text-2xl font-bold ${userCostAnalysis.summary.net_system_cost >= 0 ? 'text-red-400' : 'text-green-400'}`}>
                       {formatCurrency(Math.abs(userCostAnalysis.summary.net_system_cost))}
                       <span className="text-sm ml-1">{userCostAnalysis.summary.net_system_cost >= 0 ? '(Loss)' : '(Profit)'}</span>
                     </div>
@@ -1042,7 +1042,7 @@ const AdminAccountingDashboard = ({ user }) => {
                             <div className="text-xs text-gray-500">{user.email}</div>
                           </td>
                           <td className="px-3 py-2">
-                            <span className={`px-2 py-1 rounded text-xs ${user.membership_type === 'vip' ? 'bg-purple-100 text-purple-700' : 'bg-gray-800'}`}>
+                            <span className={`px-2 py-1 rounded text-xs ${user.membership_type === 'vip' ? 'bg-purple-100 text-purple-400' : 'bg-gray-800'}`}>
                               {user.membership_type}
                             </span>
                           </td>
@@ -1052,7 +1052,7 @@ const AdminAccountingDashboard = ({ user }) => {
                             {formatCurrency(Math.abs(user.net_cost))}
                           </td>
                           <td className="px-3 py-2 text-center">
-                            <span className={`px-2 py-1 rounded text-xs ${user.status === 'LOSS' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                            <span className={`px-2 py-1 rounded text-xs ${user.status === 'LOSS' ? 'bg-red-100 text-red-400' : 'bg-green-100 text-green-400'}`}>
                               {user.status}
                             </span>
                           </td>

@@ -99,7 +99,7 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <button
             onClick={() => navigate('/admin')}
-            className="flex items-center gap-2 text-purple-600 hover:text-purple-700 mb-4 transition-colors"
+            className="flex items-center gap-2 text-purple-600 hover:text-purple-400 mb-4 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
             <span className="font-medium">Back to Admin Dashboard</span>
@@ -219,7 +219,7 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
                       <p className="text-xs text-gray-400">{user.email}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-yellow-700">
+                      <p className="text-lg font-bold text-yellow-400">
                         {user.at_risk_prc.toFixed(2)} PRC
                       </p>
                       <p className="text-xs text-yellow-600">⏰ Expiring soon</p>
@@ -263,7 +263,7 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-purple-700">
+                      <p className="text-lg font-bold text-purple-400">
                         {user.prc_balance.toFixed(2)} PRC
                       </p>
                       <p className="text-xs text-red-600">
@@ -343,7 +343,7 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
         {/* Info Box */}
         <Card className="p-6 mt-6 bg-blue-500/10 border-blue-500/30">
           <h3 className="font-bold text-blue-900 mb-2">ℹ️ Burn System Information</h3>
-          <ul className="text-sm text-blue-800 space-y-1">
+          <ul className="text-sm text-blue-400 space-y-1">
             <li>• <strong>Free Users:</strong> PRC burns after 48 hours (FIFO - First In First Out)</li>
             <li>• <strong>VIP Users:</strong> PRC has lifetime validity (never burns while VIP active)</li>
             <li>• <strong>Expired VIP:</strong> Marketplace blocked immediately, PRC burns after 5-day grace period</li>

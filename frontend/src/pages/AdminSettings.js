@@ -319,7 +319,7 @@ const AdminSettings = ({ user }) => {
             {/* LinkedIn */}
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-                <Linkedin className="h-5 w-5 text-blue-700" />
+                <Linkedin className="h-5 w-5 text-blue-400" />
                 LinkedIn
               </label>
               <input
@@ -540,7 +540,7 @@ const AdminSettings = ({ user }) => {
                   <button
                     onClick={() => qrInputRef.current?.click()}
                     disabled={uploadingQR}
-                    className="flex items-center gap-2 px-4 py-3 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg transition-colors"
+                    className="flex items-center gap-2 px-4 py-3 bg-purple-100 hover:bg-purple-200 text-purple-400 rounded-lg transition-colors"
                   >
                     {uploadingQR ? (
                       <>
@@ -684,7 +684,7 @@ const AdminSettings = ({ user }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* PRC to INR Conversion Rate */}
             <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-5">
-              <label className="flex items-center gap-2 text-sm font-semibold text-amber-800 mb-3">
+              <label className="flex items-center gap-2 text-sm font-semibold text-amber-400 mb-3">
                 <Coins className="h-5 w-5" />
                 PRC to INR Conversion Rate
               </label>
@@ -696,12 +696,12 @@ const AdminSettings = ({ user }) => {
                     min="0.001"
                     value={marketplaceSettings.prc_to_inr_rate}
                     onChange={(e) => handleMarketplaceSettingsChange('prc_to_inr_rate', parseFloat(e.target.value) || 0.1)}
-                    className="w-full px-4 py-3 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white text-gray-800 font-mono text-lg"
+                    className="w-full px-4 py-3 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white text-gray-200 font-mono text-lg"
                   />
                 </div>
               </div>
               <div className="mt-3 p-3 bg-white rounded-lg border border-amber-200">
-                <p className="text-sm text-amber-700">
+                <p className="text-sm text-amber-400">
                   <strong>Current Rate:</strong> 1 PRC = ₹{marketplaceSettings.prc_to_inr_rate?.toFixed(2)}
                 </p>
                 <p className="text-sm text-amber-600 mt-1">
@@ -724,7 +724,7 @@ const AdminSettings = ({ user }) => {
                 min="0"
                 value={marketplaceSettings.free_delivery_threshold}
                 onChange={(e) => handleMarketplaceSettingsChange('free_delivery_threshold', parseInt(e.target.value) || 0)}
-                className="w-full px-4 py-3 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-800 font-mono text-lg"
+                className="w-full px-4 py-3 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-200 font-mono text-lg"
               />
               <p className="text-sm text-green-600 mt-2">
                 Orders above {marketplaceSettings.free_delivery_threshold} PRC get free delivery

@@ -250,7 +250,7 @@ const AdminFinancialRatios = ({ user }) => {
           <AlertTriangle className="h-5 w-5" />
           Improvement Tips
         </h3>
-        <ul className="space-y-2 text-sm text-purple-800">
+        <ul className="space-y-2 text-sm text-purple-400">
           {ratios.profit_margin?.status === 'poor' && (
             <li className="flex items-start gap-2">
               <ArrowUpRight className="h-4 w-4 mt-0.5 flex-shrink-0" />

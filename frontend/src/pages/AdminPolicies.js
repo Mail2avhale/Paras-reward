@@ -208,7 +208,7 @@ PARAS REWARD refund policy for various transactions.
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
                   activeTab === tab.id
                     ? 'bg-purple-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
+                    : 'bg-white text-gray-300 hover:bg-gray-100'
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -238,7 +238,7 @@ PARAS REWARD refund policy for various transactions.
           />
 
           <div className="mt-4 p-4 bg-blue-500/10 rounded-lg">
-            <p className="text-sm text-blue-800">
+            <p className="text-sm text-blue-400">
               <strong>Tip:</strong> Use Markdown syntax for formatting. 
               Use # for headings, **bold**, *italic*, - for lists.
             </p>

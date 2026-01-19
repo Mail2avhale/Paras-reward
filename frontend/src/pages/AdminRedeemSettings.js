@@ -233,7 +233,7 @@ const AdminRedeemSettings = ({ user }) => {
             <div className="p-3 bg-amber-500/10 border border-amber-200 rounded-lg">
               <div className="flex items-start gap-2">
                 <Info className="h-5 w-5 text-amber-600 mt-0.5" />
-                <div className="text-sm text-amber-800">
+                <div className="text-sm text-amber-400">
                   <strong>Auto-Approval Rule:</strong> Requests below ₹{settings.manual_approval_threshold} are automatically approved if all other checks pass.
                 </div>
               </div>
@@ -307,7 +307,7 @@ const AdminRedeemSettings = ({ user }) => {
             <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
               <div className="flex items-start gap-2">
                 <Lock className="h-5 w-5 text-blue-600 mt-0.5" />
-                <div className="text-sm text-blue-800">
+                <div className="text-sm text-blue-400">
                   <strong>Security Note:</strong> These settings help prevent fraud and maintain platform stability. Changes take effect immediately.
                 </div>
               </div>

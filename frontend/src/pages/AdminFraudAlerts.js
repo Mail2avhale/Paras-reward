@@ -91,18 +91,18 @@ const AdminFraudAlerts = ({ user }) => {
 
   const getSeverityColor = (severity) => {
     switch (severity) {
-      case 'critical': return 'bg-red-100 text-red-700 border-red-500/30';
-      case 'high': return 'bg-orange-100 text-orange-700 border-orange-500/30';
-      case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-500/30';
+      case 'critical': return 'bg-red-100 text-red-400 border-red-500/30';
+      case 'high': return 'bg-orange-100 text-orange-400 border-orange-500/30';
+      case 'medium': return 'bg-yellow-100 text-yellow-400 border-yellow-500/30';
       default: return 'bg-gray-800 text-gray-300 border-gray-700';
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-700';
-      case 'investigating': return 'bg-blue-100 text-blue-700';
-      case 'resolved': return 'bg-green-100 text-green-700';
+      case 'pending': return 'bg-yellow-100 text-yellow-400';
+      case 'investigating': return 'bg-blue-100 text-blue-400';
+      case 'resolved': return 'bg-green-100 text-green-400';
       case 'false_positive': return 'bg-gray-800 text-gray-300';
       default: return 'bg-gray-800 text-gray-300';
     }

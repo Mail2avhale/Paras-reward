@@ -127,10 +127,10 @@ const AdminVideoAds = ({ user, onLogout }) => {
 
   const getPlacementBadge = (placement) => {
     const badges = {
-      homepage: 'bg-blue-100 text-blue-700',
-      marketplace: 'bg-green-100 text-green-700',
-      pre_game: 'bg-purple-100 text-purple-700',
-      dashboard: 'bg-orange-100 text-orange-700'
+      homepage: 'bg-blue-100 text-blue-400',
+      marketplace: 'bg-green-100 text-green-400',
+      pre_game: 'bg-purple-100 text-purple-400',
+      dashboard: 'bg-orange-100 text-orange-400'
     };
     return badges[placement] || 'bg-gray-800 text-gray-300';
   };

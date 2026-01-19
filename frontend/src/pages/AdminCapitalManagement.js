@@ -108,10 +108,10 @@ const AdminCapitalManagement = ({ user }) => {
 
   const getEntryTypeColor = (type) => {
     switch (type) {
-      case 'opening_capital': return 'bg-green-100 text-green-700';
-      case 'additional_capital': return 'bg-blue-100 text-blue-700';
-      case 'drawings': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'opening_capital': return 'bg-green-100 text-green-400';
+      case 'additional_capital': return 'bg-blue-100 text-blue-400';
+      case 'drawings': return 'bg-red-100 text-red-400';
+      default: return 'bg-gray-100 text-gray-300';
     }
   };
 
@@ -212,7 +212,7 @@ const AdminCapitalManagement = ({ user }) => {
 
       {/* Equity Calculation Card */}
       <Card className="p-5 mb-6 bg-gradient-to-r from-gray-50 to-gray-100 border-2 border-dashed border-gray-300">
-        <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+        <h3 className="font-semibold text-gray-200 mb-4 flex items-center gap-2">
           <FileText className="h-5 w-5 text-gray-600" />
           Equity Calculation
         </h3>
@@ -238,7 +238,7 @@ const AdminCapitalManagement = ({ user }) => {
         </div>
         <div className="mt-4 p-3 bg-purple-100 rounded-lg text-center">
           <p className="text-sm text-purple-600">+ Retained Earnings: {formatCurrency(capitalData?.retained_earnings)}</p>
-          <p className="text-lg font-bold text-purple-800 mt-1">= Total Equity: {formatCurrency(capitalData?.total_equity)}</p>
+          <p className="text-lg font-bold text-purple-400 mt-1">= Total Equity: {formatCurrency(capitalData?.total_equity)}</p>
         </div>
       </Card>
 
@@ -334,7 +334,7 @@ const AdminCapitalManagement = ({ user }) => {
               <div className="p-6 space-y-4">
                 {/* Entry Type */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">Entry Type</label>
+                  <label className="text-sm font-medium text-gray-300 mb-2 block">Entry Type</label>
                   <div className="grid grid-cols-3 gap-2">
                     {[
                       { id: 'opening_capital', label: 'Opening Capital', icon: PiggyBank, color: 'emerald' },
@@ -362,7 +362,7 @@ const AdminCapitalManagement = ({ user }) => {
 
                 {/* Amount */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Amount (₹)</label>
+                  <label className="text-sm font-medium text-gray-300 mb-1 block">Amount (₹)</label>
                   <div className="relative">
                     <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <input
@@ -378,7 +378,7 @@ const AdminCapitalManagement = ({ user }) => {
 
                 {/* Date */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Date</label>
+                  <label className="text-sm font-medium text-gray-300 mb-1 block">Date</label>
                   <div className="relative">
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <input
@@ -392,7 +392,7 @@ const AdminCapitalManagement = ({ user }) => {
 
                 {/* Description */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Description</label>
+                  <label className="text-sm font-medium text-gray-300 mb-1 block">Description</label>
                   <input
                     type="text"
                     value={entryForm.description}
@@ -408,7 +408,7 @@ const AdminCapitalManagement = ({ user }) => {
 
                 {/* Reference No */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Reference No (Optional)</label>
+                  <label className="text-sm font-medium text-gray-300 mb-1 block">Reference No (Optional)</label>
                   <input
                     type="text"
                     value={entryForm.reference_no}

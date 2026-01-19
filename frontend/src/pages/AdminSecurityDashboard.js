@@ -254,10 +254,10 @@ const AdminSecurityDashboard = ({ user }) => {
 
   const getSeverityConfig = (severity) => {
     const configs = {
-      critical: { bg: 'bg-red-100', border: 'border-red-500', text: 'text-red-800', icon: AlertOctagon, label: '🔴 CRITICAL' },
-      high: { bg: 'bg-orange-100', border: 'border-orange-500', text: 'text-orange-800', icon: AlertTriangle, label: '🟠 HIGH' },
-      medium: { bg: 'bg-yellow-100', border: 'border-yellow-500', text: 'text-yellow-800', icon: AlertTriangle, label: '🟡 MEDIUM' },
-      low: { bg: 'bg-blue-100', border: 'border-blue-500', text: 'text-blue-800', icon: Shield, label: '🔵 LOW' }
+      critical: { bg: 'bg-red-100', border: 'border-red-500', text: 'text-red-400', icon: AlertOctagon, label: '🔴 CRITICAL' },
+      high: { bg: 'bg-orange-100', border: 'border-orange-500', text: 'text-orange-400', icon: AlertTriangle, label: '🟠 HIGH' },
+      medium: { bg: 'bg-yellow-100', border: 'border-yellow-500', text: 'text-yellow-400', icon: AlertTriangle, label: '🟡 MEDIUM' },
+      low: { bg: 'bg-blue-100', border: 'border-blue-500', text: 'text-blue-400', icon: Shield, label: '🔵 LOW' }
     };
     return configs[severity] || configs.low;
   };
@@ -275,13 +275,13 @@ const AdminSecurityDashboard = ({ user }) => {
 
   const getActionColor = (action) => {
     const colors = {
-      login: 'bg-green-100 text-green-800',
+      login: 'bg-green-100 text-green-400',
       logout: 'bg-gray-800 text-gray-100',
-      login_blocked_ip: 'bg-red-100 text-red-800',
-      activate_lockdown: 'bg-red-100 text-red-800',
-      deactivate_lockdown: 'bg-green-100 text-green-800',
-      force_logout_all: 'bg-orange-100 text-orange-800',
-      update_ip_whitelist: 'bg-blue-100 text-blue-800'
+      login_blocked_ip: 'bg-red-100 text-red-400',
+      activate_lockdown: 'bg-red-100 text-red-400',
+      deactivate_lockdown: 'bg-green-100 text-green-400',
+      force_logout_all: 'bg-orange-100 text-orange-400',
+      update_ip_whitelist: 'bg-blue-100 text-blue-400'
     };
     return colors[action] || 'bg-gray-800 text-gray-100';
   };
@@ -402,7 +402,7 @@ const AdminSecurityDashboard = ({ user }) => {
                             {config.label}
                           </span>
                           {!alert.is_read && (
-                            <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-medium">
+                            <span className="text-xs bg-purple-100 text-purple-400 px-2 py-0.5 rounded font-medium">
                               NEW
                             </span>
                           )}

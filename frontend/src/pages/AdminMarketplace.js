@@ -558,9 +558,9 @@ const AdminMarketplace = ({ user }) => {
   };
 
   const getStockStatusColor = (status, quantity) => {
-    if (status === 'out_of_stock' || quantity === 0) return 'bg-red-100 text-red-700 border-red-500/30';
-    if (status === 'limited' || (quantity > 0 && quantity < 10)) return 'bg-orange-100 text-orange-700 border-orange-500/30';
-    return 'bg-green-100 text-green-700 border-green-500/30';
+    if (status === 'out_of_stock' || quantity === 0) return 'bg-red-100 text-red-400 border-red-500/30';
+    if (status === 'limited' || (quantity > 0 && quantity < 10)) return 'bg-orange-100 text-orange-400 border-orange-500/30';
+    return 'bg-green-100 text-green-400 border-green-500/30';
   };
 
   return (
