@@ -236,7 +236,7 @@ const AdminPRCRain = ({ user }) => {
         </div>
         
         {settings.emergency_stop && (
-          <div className="mt-4 p-3 bg-red-500/20 border border-red-500 rounded-lg flex items-center gap-2">
+          <div className="mt-4 p-3 bg-red-500/100/20 border border-red-500 rounded-lg flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-red-400" />
             <span className="text-red-300">Emergency Stop is active. Enable the feature to deactivate.</span>
           </div>
@@ -353,7 +353,7 @@ const AdminPRCRain = ({ user }) => {
               />
               <p className="text-xs text-gray-500 mt-1">User दररोज maximum किती PRC lose करू शकतो</p>
             </div>
-            <div className="p-3 bg-red-500/10 rounded-lg space-y-3">
+            <div className="p-3 bg-red-500/100/10 rounded-lg space-y-3">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-white font-medium">Enable Negative Drops</div>
@@ -414,7 +414,7 @@ const AdminPRCRain = ({ user }) => {
                 variant="ghost"
                 size="sm"
                 onClick={() => removeColor(index)}
-                className="text-red-400 hover:text-red-300 hover:bg-red-500/20 h-8 w-8 p-0"
+                className="text-red-400 hover:text-red-300 hover:bg-red-500/100/20 h-8 w-8 p-0"
               >
                 ×
               </Button>
@@ -448,7 +448,7 @@ const AdminPRCRain = ({ user }) => {
       </Card>
 
       {/* Info Box */}
-      <div className="mt-6 p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg text-purple-200 text-sm">
+      <div className="mt-6 p-4 bg-purple-500/100/10 border border-purple-500/30 rounded-lg text-purple-200 text-sm">
         <strong className="text-white">🎮 Gameplay:</strong> User ला फक्त colorful drops दिसतील. 
         प्रत्येक tap वर random PRC (+/-) मिळेल. कोणताही drop positive किंवा negative असू शकतो - 
         user ला माहिती नसेल! Pure dopamine experience! 🎯

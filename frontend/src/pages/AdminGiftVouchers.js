@@ -109,19 +109,19 @@ const AdminGiftVouchers = ({ user }) => {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card className="p-4 bg-yellow-500/10 border-yellow-500/30">
+          <Card className="p-4 bg-yellow-500/100/10 border-yellow-500/30">
             <p className="text-sm text-gray-400">Pending</p>
             <p className="text-2xl font-bold text-yellow-400">{stats.pending || 0}</p>
           </Card>
-          <Card className="p-4 bg-green-500/10 border-green-500/30">
+          <Card className="p-4 bg-green-500/100/10 border-green-500/30">
             <p className="text-sm text-gray-400">Completed</p>
             <p className="text-2xl font-bold text-green-400">{stats.completed || 0}</p>
           </Card>
-          <Card className="p-4 bg-blue-500/10 border-blue-500/30">
+          <Card className="p-4 bg-blue-500/100/10 border-blue-500/30">
             <p className="text-sm text-gray-400">Pending Value</p>
             <p className="text-2xl font-bold text-blue-400">₹{stats.total_value_pending || 0}</p>
           </Card>
-          <Card className="p-4 bg-purple-500/10 border-purple-500/30">
+          <Card className="p-4 bg-purple-500/100/10 border-purple-500/30">
             <p className="text-sm text-gray-400">Completed Value</p>
             <p className="text-2xl font-bold text-purple-400">₹{stats.total_value_completed || 0}</p>
           </Card>
@@ -167,9 +167,9 @@ const AdminGiftVouchers = ({ user }) => {
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="font-bold text-lg text-white">₹{req.denomination} Voucher</h3>
                       <span className={`px-2 py-1 rounded-full text-xs ${
-                        req.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                        req.status === 'completed' ? 'bg-green-500/20 text-green-400' :
-                        'bg-red-500/20 text-red-400'
+                        req.status === 'pending' ? 'bg-yellow-500/100/20 text-yellow-400' :
+                        req.status === 'completed' ? 'bg-green-500/100/20 text-green-400' :
+                        'bg-red-500/100/20 text-red-400'
                       }`}>
                         {req.status}
                       </span>
@@ -226,7 +226,7 @@ const AdminGiftVouchers = ({ user }) => {
               <h2 className="text-2xl font-bold mb-4 text-white">Process Voucher Request</h2>
               
               <div className="space-y-4">
-                <div className="bg-purple-500/10 border border-purple-500/30 p-4 rounded-lg">
+                <div className="bg-purple-500/100/10 border border-purple-500/30 p-4 rounded-lg">
                   <p className="text-sm text-gray-400">User: <span className="font-semibold text-white">{selectedRequest.user_name}</span></p>
                   <p className="text-sm text-gray-400">Denomination: <span className="font-semibold text-lg text-amber-400">₹{selectedRequest.denomination}</span></p>
                   <p className="text-sm text-gray-400">PRC Deducted: <span className="font-semibold text-purple-400">{selectedRequest.total_prc_deducted.toFixed(2)} PRC</span></p>

@@ -134,7 +134,7 @@ const AdminPaymentSettings = ({ user }) => {
         {/* UPI Payment Settings */}
         <Card className="p-6 shadow-xl bg-gray-900/50 border-gray-800">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/100/20 flex items-center justify-center">
               <Wallet className="w-5 h-5 text-purple-400" />
             </div>
             <div>
@@ -168,7 +168,7 @@ const AdminPaymentSettings = ({ user }) => {
                   />
                   <button
                     onClick={removeQRCode}
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600"
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500/100 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -205,7 +205,7 @@ const AdminPaymentSettings = ({ user }) => {
         {/* Bank Transfer Settings */}
         <Card className="p-6 shadow-xl mt-6 bg-gray-900/50 border-gray-800">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/100/20 flex items-center justify-center">
               <Building className="w-5 h-5 text-blue-400" />
             </div>
             <div>
@@ -264,7 +264,7 @@ const AdminPaymentSettings = ({ user }) => {
         {/* Payment Instructions */}
         <Card className="p-6 shadow-xl mt-6 bg-gray-900/50 border-gray-800">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/100/20 flex items-center justify-center">
               <FileText className="w-5 h-5 text-emerald-400" />
             </div>
             <div>

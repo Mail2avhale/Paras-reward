@@ -168,7 +168,7 @@ const AdminSocialMediaSettings = ({ user }) => {
         </Card>
 
         {/* Tips Card */}
-        <Card className="p-6 mt-6 bg-blue-50 border-blue-200">
+        <Card className="p-6 mt-6 bg-blue-500/10 border-blue-500/30">
           <h3 className="font-semibold text-blue-900 mb-2">Tips for Social Media Links</h3>
           <ul className="text-sm text-blue-800 space-y-1">
             <li>• Use complete URLs including https://</li>

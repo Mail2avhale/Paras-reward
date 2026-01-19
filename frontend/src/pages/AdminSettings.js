@@ -563,7 +563,7 @@ const AdminSettings = ({ user }) => {
                       />
                       <button
                         onClick={() => handlePaymentConfigChange('qr_code_url', '')}
-                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600"
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500/100 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600"
                       >
                         ×
                       </button>
@@ -714,7 +714,7 @@ const AdminSettings = ({ user }) => {
             </div>
 
             {/* Free Delivery Threshold */}
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-5">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-500/30 rounded-xl p-5">
               <label className="flex items-center gap-2 text-sm font-semibold text-green-300 mb-3">
                 <Truck className="h-5 w-5" />
                 Free Delivery Threshold (PRC)

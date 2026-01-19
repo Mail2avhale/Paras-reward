@@ -270,7 +270,7 @@ const AdminAccountingDashboard = ({ user }) => {
             {/* Main Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Total Income */}
-              <Card className="p-5 bg-gradient-to-br from-green-50 to-emerald-50 border-green-200" data-testid="total-income-card">
+              <Card className="p-5 bg-gradient-to-br from-green-50 to-emerald-50 border-green-500/30" data-testid="total-income-card">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-green-700">Total Income</span>
                   <div className="p-2 bg-green-100 rounded-lg">
@@ -284,7 +284,7 @@ const AdminAccountingDashboard = ({ user }) => {
               </Card>
 
               {/* Total Expense */}
-              <Card className="p-5 bg-gradient-to-br from-red-50 to-rose-50 border-red-200" data-testid="total-expense-card">
+              <Card className="p-5 bg-gradient-to-br from-red-50 to-rose-50 border-red-500/30" data-testid="total-expense-card">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-red-700">Total Expense</span>
                   <div className="p-2 bg-red-100 rounded-lg">
@@ -328,7 +328,7 @@ const AdminAccountingDashboard = ({ user }) => {
               </Card>
 
               {/* Cash Balance */}
-              <Card className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200" data-testid="cash-balance-card">
+              <Card className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-500/30" data-testid="cash-balance-card">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-blue-700">Cash Balance</span>
                   <div className="p-2 bg-blue-100 rounded-lg">
@@ -342,7 +342,7 @@ const AdminAccountingDashboard = ({ user }) => {
               </Card>
 
               {/* Bank Balance */}
-              <Card className="p-5 bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200" data-testid="bank-balance-card">
+              <Card className="p-5 bg-gradient-to-br from-purple-50 to-violet-50 border-purple-500/30" data-testid="bank-balance-card">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-purple-700">Bank Balance</span>
                   <div className="p-2 bg-purple-100 rounded-lg">
@@ -414,13 +414,13 @@ const AdminAccountingDashboard = ({ user }) => {
                 PRC Statistics
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-purple-50 p-4 rounded-lg text-center">
+                <div className="bg-purple-500/10 p-4 rounded-lg text-center">
                   <div className="text-sm text-purple-600 mb-1">Total PRC in System</div>
                   <div className="text-2xl font-bold text-purple-700">
                     {(quickViewData.masterSummary?.prc_stats?.total_in_system || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                   </div>
                 </div>
-                <div className="bg-blue-50 p-4 rounded-lg text-center">
+                <div className="bg-blue-500/10 p-4 rounded-lg text-center">
                   <div className="text-sm text-blue-600 mb-1">INR Liability</div>
                   <div className="text-2xl font-bold text-blue-700">
                     {formatCurrency(quickViewData.masterSummary?.prc_stats?.inr_liability || 0)}
@@ -515,8 +515,8 @@ const AdminAccountingDashboard = ({ user }) => {
                 <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                   <div 
                     className={`h-2 rounded-full ${
-                      dashboardData.risk.score >= 70 ? 'bg-green-500' : 
-                      dashboardData.risk.score >= 40 ? 'bg-yellow-500' : 'bg-red-500'
+                      dashboardData.risk.score >= 70 ? 'bg-green-500/100' : 
+                      dashboardData.risk.score >= 40 ? 'bg-yellow-500/100' : 'bg-red-500/100'
                     }`}
                     style={{ width: `${dashboardData.risk.score}%` }}
                   />
@@ -676,7 +676,7 @@ const AdminAccountingDashboard = ({ user }) => {
               <>
                 {/* Summary */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="bg-green-500/10 p-4 rounded-lg">
                     <div className="text-sm text-green-600">Total Minted</div>
                     <div className="text-2xl font-bold text-green-700">{formatPRC(mintLedger.summary.total_minted)}</div>
                   </div>
@@ -734,7 +734,7 @@ const AdminAccountingDashboard = ({ user }) => {
             {burnLedger ? (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-red-50 p-4 rounded-lg">
+                  <div className="bg-red-500/10 p-4 rounded-lg">
                     <div className="text-sm text-red-600">Total Burned</div>
                     <div className="text-2xl font-bold text-red-700">{formatPRC(burnLedger.summary.total_burned)}</div>
                   </div>
@@ -791,15 +791,15 @@ const AdminAccountingDashboard = ({ user }) => {
             {liabilityLedger ? (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-orange-50 p-4 rounded-lg">
+                  <div className="bg-orange-500/10 p-4 rounded-lg">
                     <div className="text-sm text-orange-600">Total INR Liability</div>
                     <div className="text-2xl font-bold text-orange-700">{formatCurrency(liabilityLedger.summary.total_inr_liability)}</div>
                   </div>
-                  <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="bg-green-500/10 p-4 rounded-lg">
                     <div className="text-sm text-green-600">INR Paid</div>
                     <div className="text-2xl font-bold text-green-700">{formatCurrency(liabilityLedger.summary.inr_paid)}</div>
                   </div>
-                  <div className="bg-red-50 p-4 rounded-lg">
+                  <div className="bg-red-500/10 p-4 rounded-lg">
                     <div className="text-sm text-red-600">INR Pending</div>
                     <div className="text-2xl font-bold text-red-700">{formatCurrency(liabilityLedger.summary.inr_pending)}</div>
                   </div>
@@ -849,11 +849,11 @@ const AdminAccountingDashboard = ({ user }) => {
             {reserveFund ? (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="bg-blue-500/10 p-4 rounded-lg">
                     <div className="text-sm text-blue-600">Reserve Balance</div>
                     <div className="text-2xl font-bold text-blue-700">{formatCurrency(reserveFund.balance)}</div>
                   </div>
-                  <div className="bg-orange-50 p-4 rounded-lg">
+                  <div className="bg-orange-500/10 p-4 rounded-lg">
                     <div className="text-sm text-orange-600">Total Liability</div>
                     <div className="text-2xl font-bold text-orange-700">{formatCurrency(reserveFund.total_liability_inr)}</div>
                   </div>
@@ -861,7 +861,7 @@ const AdminAccountingDashboard = ({ user }) => {
                     <div className="text-sm text-gray-400">Backing Ratio</div>
                     <div className="text-2xl font-bold">{reserveFund.backing_ratio}x</div>
                   </div>
-                  <div className={`p-4 rounded-lg ${reserveFund.status === 'SAFE' ? 'bg-green-50' : 'bg-red-50'}`}>
+                  <div className={`p-4 rounded-lg ${reserveFund.status === 'SAFE' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
                     <div className={`text-sm ${reserveFund.status === 'SAFE' ? 'text-green-600' : 'text-red-600'}`}>Status</div>
                     <div className={`text-2xl font-bold ${reserveFund.status === 'SAFE' ? 'text-green-700' : 'text-red-700'}`}>
                       {reserveFund.status}
@@ -869,7 +869,7 @@ const AdminAccountingDashboard = ({ user }) => {
                   </div>
                 </div>
                 
-                <div className="p-4 bg-blue-50 rounded-lg mb-4">
+                <div className="p-4 bg-blue-500/10 rounded-lg mb-4">
                   <p className="text-sm text-blue-800">
                     <strong>Auto Allocation:</strong> {reserveFund.percentage}% of daily profit is automatically allocated to the reserve fund.
                     Target backing ratio is ≥ 1.0x (Reserve Fund ≥ Total Liability).
@@ -918,25 +918,25 @@ const AdminAccountingDashboard = ({ user }) => {
               <>
                 {dailySummaries.trends && (
                   <div className="grid grid-cols-4 gap-4 mb-6">
-                    <div className={`p-3 rounded-lg ${dailySummaries.trends.prc_minted_change >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                    <div className={`p-3 rounded-lg ${dailySummaries.trends.prc_minted_change >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
                       <div className="text-xs text-gray-500">PRC Minted Change</div>
                       <div className={`font-bold ${dailySummaries.trends.prc_minted_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {dailySummaries.trends.prc_minted_change >= 0 ? '+' : ''}{dailySummaries.trends.prc_minted_change}
                       </div>
                     </div>
-                    <div className={`p-3 rounded-lg ${dailySummaries.trends.prc_burned_change >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                    <div className={`p-3 rounded-lg ${dailySummaries.trends.prc_burned_change >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
                       <div className="text-xs text-gray-500">PRC Burned Change</div>
                       <div className={`font-bold ${dailySummaries.trends.prc_burned_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {dailySummaries.trends.prc_burned_change >= 0 ? '+' : ''}{dailySummaries.trends.prc_burned_change}
                       </div>
                     </div>
-                    <div className={`p-3 rounded-lg ${dailySummaries.trends.revenue_change >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                    <div className={`p-3 rounded-lg ${dailySummaries.trends.revenue_change >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
                       <div className="text-xs text-gray-500">Revenue Change</div>
                       <div className={`font-bold ${dailySummaries.trends.revenue_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {dailySummaries.trends.revenue_change >= 0 ? '+' : ''}₹{dailySummaries.trends.revenue_change}
                       </div>
                     </div>
-                    <div className={`p-3 rounded-lg ${dailySummaries.trends.risk_score_change >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                    <div className={`p-3 rounded-lg ${dailySummaries.trends.risk_score_change >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
                       <div className="text-xs text-gray-500">Risk Score Change</div>
                       <div className={`font-bold ${dailySummaries.trends.risk_score_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {dailySummaries.trends.risk_score_change >= 0 ? '+' : ''}{dailySummaries.trends.risk_score_change}
@@ -1003,15 +1003,15 @@ const AdminAccountingDashboard = ({ user }) => {
             {userCostAnalysis ? (
               <>
                 <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className="bg-purple-500/10 p-4 rounded-lg">
                     <div className="text-sm text-purple-600">Total PRC Distributed (INR Value)</div>
                     <div className="text-2xl font-bold text-purple-700">{formatCurrency(userCostAnalysis.summary.total_prc_distributed_value_inr)}</div>
                   </div>
-                  <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="bg-green-500/10 p-4 rounded-lg">
                     <div className="text-sm text-green-600">Total PRC Redeemed (INR Value)</div>
                     <div className="text-2xl font-bold text-green-700">{formatCurrency(userCostAnalysis.summary.total_prc_redeemed_value_inr)}</div>
                   </div>
-                  <div className={`p-4 rounded-lg ${userCostAnalysis.summary.net_system_cost >= 0 ? 'bg-red-50' : 'bg-green-50'}`}>
+                  <div className={`p-4 rounded-lg ${userCostAnalysis.summary.net_system_cost >= 0 ? 'bg-red-500/10' : 'bg-green-500/10'}`}>
                     <div className={`text-sm ${userCostAnalysis.summary.net_system_cost >= 0 ? 'text-red-600' : 'text-green-600'}`}>
                       Net System Cost
                     </div>

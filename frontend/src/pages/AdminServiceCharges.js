@@ -71,7 +71,7 @@ const AdminServiceCharges = ({ user }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-800/50">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
@@ -102,8 +102,8 @@ const AdminServiceCharges = ({ user }) => {
                     onClick={() => setBillPaymentConfig({ ...billPaymentConfig, charge_type: 'percentage' })}
                     className={`flex-1 p-4 border-2 rounded-lg transition-all ${
                       billPaymentConfig.charge_type === 'percentage'
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-blue-500 bg-blue-500/10'
+                        : 'border-gray-700 hover:border-gray-300'
                     }`}
                   >
                     <Percent className="h-6 w-6 mx-auto mb-2 text-blue-600" />
@@ -114,8 +114,8 @@ const AdminServiceCharges = ({ user }) => {
                     onClick={() => setBillPaymentConfig({ ...billPaymentConfig, charge_type: 'fixed' })}
                     className={`flex-1 p-4 border-2 rounded-lg transition-all ${
                       billPaymentConfig.charge_type === 'fixed'
-                        ? 'border-green-500 bg-green-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-green-500 bg-green-500/10'
+                        : 'border-gray-700 hover:border-gray-300'
                     }`}
                   >
                     <DollarSign className="h-6 w-6 mx-auto mb-2 text-green-600" />
@@ -156,7 +156,7 @@ const AdminServiceCharges = ({ user }) => {
               </div>
 
               {/* Example Calculation */}
-              <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="bg-blue-500/10 p-4 rounded-lg">
                 <p className="text-sm font-semibold text-gray-900 mb-2">Example Calculation</p>
                 <p className="text-sm text-gray-700">
                   For a ₹100 recharge (1000 PRC):
@@ -193,8 +193,8 @@ const AdminServiceCharges = ({ user }) => {
                     onClick={() => setGiftVoucherConfig({ ...giftVoucherConfig, charge_type: 'percentage' })}
                     className={`flex-1 p-4 border-2 rounded-lg transition-all ${
                       giftVoucherConfig.charge_type === 'percentage'
-                        ? 'border-purple-500 bg-purple-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-purple-500 bg-purple-500/10'
+                        : 'border-gray-700 hover:border-gray-300'
                     }`}
                   >
                     <Percent className="h-6 w-6 mx-auto mb-2 text-purple-600" />
@@ -205,8 +205,8 @@ const AdminServiceCharges = ({ user }) => {
                     onClick={() => setGiftVoucherConfig({ ...giftVoucherConfig, charge_type: 'fixed' })}
                     className={`flex-1 p-4 border-2 rounded-lg transition-all ${
                       giftVoucherConfig.charge_type === 'fixed'
-                        ? 'border-pink-500 bg-pink-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-pink-500 bg-pink-500/10'
+                        : 'border-gray-700 hover:border-gray-300'
                     }`}
                   >
                     <DollarSign className="h-6 w-6 mx-auto mb-2 text-pink-600" />
@@ -247,7 +247,7 @@ const AdminServiceCharges = ({ user }) => {
               </div>
 
               {/* Example Calculation */}
-              <div className="bg-purple-50 p-4 rounded-lg">
+              <div className="bg-purple-500/10 p-4 rounded-lg">
                 <p className="text-sm font-semibold text-gray-900 mb-2">Example Calculation</p>
                 <p className="text-sm text-gray-700">
                   For a ₹100 voucher (1000 PRC):

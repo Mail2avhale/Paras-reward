@@ -299,7 +299,7 @@ const AdminActivityLogs = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-200">
+                  <tr className="border-b border-gray-700">
                     <th className="text-left py-4 px-4 font-semibold text-gray-700">Time</th>
                     <th className="text-left py-4 px-4 font-semibold text-gray-700">User</th>
                     <th className="text-left py-4 px-4 font-semibold text-gray-700">Action</th>
@@ -313,7 +313,7 @@ const AdminActivityLogs = () => {
                     const colorClass = ACTION_COLORS[log.action_type] || 'bg-gray-100 text-gray-700';
                     
                     return (
-                      <tr key={log.log_id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <tr key={log.log_id} className="border-b border-gray-100 hover:bg-gray-800/50">
                         <td className="py-4 px-4 text-sm text-gray-600">
                           {formatDate(log.created_at)}
                         </td>

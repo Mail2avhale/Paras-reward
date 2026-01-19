@@ -144,7 +144,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
 
         {/* Quick Stats Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+          <Card className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-green-500/30">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-green-700 mb-1">Pending KYC</p>
@@ -157,7 +157,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
             </div>
           </Card>
 
-          <Card className="p-6 bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
+          <Card className="p-6 bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-500/30">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-blue-700 mb-1">Pending Withdrawals</p>
@@ -192,7 +192,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
               <Button
                 onClick={() => navigate('/admin-old')}
                 variant="outline"
-                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-purple-50 hover:border-purple-300 transition-all"
+                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-purple-500/10 hover:border-purple-300 transition-all"
               >
                 <Users className="h-8 w-8 text-purple-600" />
                 <span className="text-sm font-medium">Manage Users</span>
@@ -201,7 +201,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
               <Button
                 onClick={() => navigate('/admin-old')}
                 variant="outline"
-                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-blue-50 hover:border-blue-300 transition-all"
+                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-blue-500/10 hover:border-blue-300 transition-all"
               >
                 <ShoppingCart className="h-8 w-8 text-blue-600" />
                 <span className="text-sm font-medium">Manage Orders</span>
@@ -210,7 +210,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
               <Button
                 onClick={() => navigate('/admin/analytics')}
                 variant="outline"
-                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-green-50 hover:border-green-300 transition-all"
+                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-green-500/10 hover:border-green-300 transition-all"
               >
                 <BarChart3 className="h-8 w-8 text-green-600" />
                 <span className="text-sm font-medium">Analytics</span>
@@ -219,7 +219,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
               <Button
                 onClick={() => navigate('/admin-old')}
                 variant="outline"
-                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-amber-50 hover:border-amber-300 transition-all"
+                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-amber-500/10 hover:border-amber-300 transition-all"
               >
                 <DollarSign className="h-8 w-8 text-amber-600" />
                 <span className="text-sm font-medium">Financials</span>
@@ -228,7 +228,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
               <Button
                 onClick={() => navigate('/admin-old')}
                 variant="outline"
-                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-indigo-50 hover:border-indigo-300 transition-all"
+                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-indigo-500/10 hover:border-indigo-300 transition-all"
               >
                 <Store className="h-8 w-8 text-indigo-600" />
                 <span className="text-sm font-medium">Stockists</span>
@@ -237,7 +237,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
               <Button
                 onClick={() => navigate('/admin-old')}
                 variant="outline"
-                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-red-50 hover:border-red-300 transition-all"
+                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-red-500/10 hover:border-red-300 transition-all"
               >
                 <Activity className="h-8 w-8 text-red-600" />
                 <span className="text-sm font-medium">Activity Logs</span>

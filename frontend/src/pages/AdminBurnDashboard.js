@@ -213,7 +213,7 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {atRisk.free_users_at_risk.slice(0, 10).map((user, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <div key={index} className="flex items-center justify-between p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/30">
                     <div>
                       <p className="font-semibold text-white">{user.name || 'Unknown'}</p>
                       <p className="text-xs text-gray-400">{user.email}</p>
@@ -254,7 +254,7 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {atRisk.expired_vips_at_risk.map((user, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200">
+                  <div key={index} className="flex items-center justify-between p-3 bg-purple-500/10 rounded-lg border border-purple-500/30">
                     <div>
                       <p className="font-semibold text-white">{user.name || 'Unknown'}</p>
                       <p className="text-xs text-gray-400">{user.email}</p>
@@ -341,7 +341,7 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
         </Card>
 
         {/* Info Box */}
-        <Card className="p-6 mt-6 bg-blue-50 border-blue-200">
+        <Card className="p-6 mt-6 bg-blue-500/10 border-blue-500/30">
           <h3 className="font-bold text-blue-900 mb-2">ℹ️ Burn System Information</h3>
           <ul className="text-sm text-blue-800 space-y-1">
             <li>• <strong>Free Users:</strong> PRC burns after 48 hours (FIFO - First In First Out)</li>

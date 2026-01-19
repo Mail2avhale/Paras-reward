@@ -237,7 +237,7 @@ const AdminDeliveryPartners = ({ user }) => {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/100/20 flex items-center justify-center">
               <Truck className="w-5 h-5 text-blue-500" />
             </div>
             <div>
@@ -249,7 +249,7 @@ const AdminDeliveryPartners = ({ user }) => {
         
         <Card className="p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/100/20 flex items-center justify-center">
               <CheckCircle className="w-5 h-5 text-emerald-500" />
             </div>
             <div>
@@ -261,7 +261,7 @@ const AdminDeliveryPartners = ({ user }) => {
         
         <Card className="p-4 bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/100/20 flex items-center justify-center">
               <Star className="w-5 h-5 text-purple-500" />
             </div>
             <div>
@@ -273,7 +273,7 @@ const AdminDeliveryPartners = ({ user }) => {
         
         <Card className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/100/20 flex items-center justify-center">
               <Package className="w-5 h-5 text-amber-500" />
             </div>
             <div>
@@ -285,7 +285,7 @@ const AdminDeliveryPartners = ({ user }) => {
         
         <Card className="p-4 bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border-cyan-500/20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/100/20 flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-cyan-500" />
             </div>
             <div>
@@ -298,7 +298,7 @@ const AdminDeliveryPartners = ({ user }) => {
 
       {/* Pending Orders Section */}
       {pendingOrders.length > 0 && (
-        <Card className="p-4 border-amber-500/30 bg-amber-500/5">
+        <Card className="p-4 border-amber-500/30 bg-amber-500/100/5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-amber-500" />
@@ -337,7 +337,7 @@ const AdminDeliveryPartners = ({ user }) => {
                       setSelectedOrder(order);
                       setShowAssignModal(true);
                     }}
-                    className="bg-amber-500 hover:bg-amber-600 text-gray-900"
+                    className="bg-amber-500/100 hover:bg-amber-600 text-gray-900"
                     data-testid={`assign-partner-${order.order_id}`}
                   >
                     Assign Partner
@@ -376,7 +376,7 @@ const AdminDeliveryPartners = ({ user }) => {
         
         <Button
           onClick={() => setShowAddModal(true)}
-          className="bg-emerald-500 hover:bg-emerald-600"
+          className="bg-emerald-500/100 hover:bg-emerald-600"
           data-testid="add-partner-btn"
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -406,7 +406,7 @@ const AdminDeliveryPartners = ({ user }) => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      partner.is_active ? 'bg-emerald-500/20' : 'bg-gray-700'
+                      partner.is_active ? 'bg-emerald-500/100/20' : 'bg-gray-700'
                     }`}>
                       <Truck className={`w-6 h-6 ${partner.is_active ? 'text-emerald-500' : 'text-gray-500'}`} />
                     </div>
@@ -415,12 +415,12 @@ const AdminDeliveryPartners = ({ user }) => {
                       <div className="flex items-center gap-2">
                         <h4 className="font-semibold text-white">{partner.name}</h4>
                         {partner.is_verified && (
-                          <span className="px-1.5 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded-full">
+                          <span className="px-1.5 py-0.5 bg-purple-500/100/20 text-purple-400 text-xs rounded-full">
                             Verified
                           </span>
                         )}
                         {!partner.is_active && (
-                          <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full">
+                          <span className="px-1.5 py-0.5 bg-red-500/100/20 text-red-400 text-xs rounded-full">
                             Inactive
                           </span>
                         )}
@@ -617,7 +617,7 @@ const AdminDeliveryPartners = ({ user }) => {
                       }}
                       className={`px-2 py-1 text-xs rounded-full transition-colors ${
                         formData.service_states.includes(state)
-                          ? 'bg-emerald-500 text-white'
+                          ? 'bg-emerald-500/100 text-white'
                           : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                       }`}
                     >
@@ -672,7 +672,7 @@ const AdminDeliveryPartners = ({ user }) => {
               </Button>
               <Button
                 onClick={showEditModal ? handleUpdatePartner : handleCreatePartner}
-                className="flex-1 bg-emerald-500 hover:bg-emerald-600"
+                className="flex-1 bg-emerald-500/100 hover:bg-emerald-600"
               >
                 {showEditModal ? 'Update Partner' : 'Add Partner'}
               </Button>
@@ -754,7 +754,7 @@ const AssignPartnerModal = ({ order, partners, onAssign, onClose }) => {
           <Button
             onClick={() => onAssign(order.order_id, selectedPartnerId, trackingNumber)}
             disabled={!selectedPartnerId}
-            className="flex-1 bg-emerald-500 hover:bg-emerald-600"
+            className="flex-1 bg-emerald-500/100 hover:bg-emerald-600"
           >
             <Check className="w-4 h-4 mr-2" />
             Assign Partner

@@ -167,7 +167,7 @@ const AdminFixedExpenses = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-800/50 p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -326,7 +326,7 @@ const AdminFixedExpenses = ({ user }) => {
               {expenses.map((expense) => {
                 const cat = EXPENSE_CATEGORIES.find(c => c.id === expense.expense_category);
                 return (
-                  <tr key={expense.expense_id} className="border-b hover:bg-gray-50">
+                  <tr key={expense.expense_id} className="border-b hover:bg-gray-800/50">
                     <td className="py-3">{expense.month}</td>
                     <td className="py-3">
                       <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100">
@@ -348,7 +348,7 @@ const AdminFixedExpenses = ({ user }) => {
                     <td className="py-3">
                       <button
                         onClick={() => openEdit(expense)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                        className="p-2 text-blue-600 hover:bg-blue-500/10 rounded-lg"
                       >
                         <Edit2 className="h-4 w-4" />
                       </button>

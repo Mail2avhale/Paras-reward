@@ -80,12 +80,12 @@ const AdminTrialBalance = ({ user }) => {
 
   const getCategoryColor = (category) => {
     switch (category) {
-      case 'assets': return 'text-blue-600 bg-blue-50';
-      case 'liabilities': return 'text-red-600 bg-red-50';
-      case 'equity': return 'text-purple-600 bg-purple-50';
-      case 'income': return 'text-green-600 bg-green-50';
-      case 'expenses': return 'text-orange-600 bg-orange-50';
-      default: return 'text-gray-600 bg-gray-50';
+      case 'assets': return 'text-blue-600 bg-blue-500/10';
+      case 'liabilities': return 'text-red-600 bg-red-500/10';
+      case 'equity': return 'text-purple-600 bg-purple-500/10';
+      case 'income': return 'text-green-600 bg-green-500/10';
+      case 'expenses': return 'text-orange-600 bg-orange-500/10';
+      default: return 'text-gray-600 bg-gray-800/50';
     }
   };
 
@@ -98,7 +98,7 @@ const AdminTrialBalance = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6" data-testid="admin-trial-balance">
+    <div className="min-h-screen bg-gray-800/50 p-4 md:p-6" data-testid="admin-trial-balance">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
@@ -147,7 +147,7 @@ const AdminTrialBalance = ({ user }) => {
             className="space-y-6"
           >
             {/* Balance Status */}
-            <Card className={`p-4 ${trialBalance.totals?.is_balanced ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+            <Card className={`p-4 ${trialBalance.totals?.is_balanced ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
               <div className="flex items-center gap-3">
                 {trialBalance.totals?.is_balanced ? (
                   <CheckCircle2 className="h-8 w-8 text-green-600" />
@@ -183,7 +183,7 @@ const AdminTrialBalance = ({ user }) => {
 
             {/* Trial Balance Table */}
             <Card className="overflow-hidden">
-              <div className="p-4 bg-indigo-50 border-b">
+              <div className="p-4 bg-indigo-500/10 border-b">
                 <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                   <BarChart3 className="h-5 w-5 text-indigo-600" />
                   Trial Balance Statement
@@ -209,7 +209,7 @@ const AdminTrialBalance = ({ user }) => {
                       </tr>
                     ) : (
                       trialBalance.accounts.map((account, idx) => (
-                        <tr key={idx} className="hover:bg-gray-50">
+                        <tr key={idx} className="hover:bg-gray-800/50">
                           <td className="px-4 py-3 text-sm font-mono text-gray-500">{account.code}</td>
                           <td className="px-4 py-3 text-sm font-medium text-gray-900">{account.name}</td>
                           <td className="px-4 py-3 text-right font-mono text-sm">
@@ -242,7 +242,7 @@ const AdminTrialBalance = ({ user }) => {
             </Card>
 
             {/* Help Box */}
-            <Card className="p-4 bg-indigo-50 border-indigo-200">
+            <Card className="p-4 bg-indigo-500/10 border-indigo-500/30">
               <div className="flex gap-3">
                 <Scale className="h-5 w-5 text-indigo-600 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-indigo-800">
@@ -264,7 +264,7 @@ const AdminTrialBalance = ({ user }) => {
             className="space-y-4"
           >
             {/* Summary */}
-            <Card className="p-4 bg-gray-50">
+            <Card className="p-4 bg-gray-800/50">
               <p className="text-sm text-gray-600">
                 Total Accounts: <span className="font-bold">{chartOfAccounts.total_accounts}</span>
               </p>
@@ -313,7 +313,7 @@ const AdminTrialBalance = ({ user }) => {
                         className="overflow-hidden"
                       >
                         <table className="w-full">
-                          <thead className="bg-gray-50">
+                          <thead className="bg-gray-800/50">
                             <tr>
                               <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Code</th>
                               <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Account Name</th>
@@ -324,7 +324,7 @@ const AdminTrialBalance = ({ user }) => {
                           </thead>
                           <tbody className="divide-y">
                             {data.accounts.map((account, idx) => (
-                              <tr key={idx} className="hover:bg-gray-50">
+                              <tr key={idx} className="hover:bg-gray-800/50">
                                 <td className="px-4 py-2 text-sm font-mono text-gray-500">{account.code}</td>
                                 <td className="px-4 py-2 text-sm font-medium text-gray-900">{account.name}</td>
                                 <td className="px-4 py-2">
@@ -356,7 +356,7 @@ const AdminTrialBalance = ({ user }) => {
             })}
 
             {/* Help Box */}
-            <Card className="p-4 bg-blue-50 border-blue-200">
+            <Card className="p-4 bg-blue-500/10 border-blue-500/30">
               <div className="flex gap-3">
                 <List className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-blue-800">

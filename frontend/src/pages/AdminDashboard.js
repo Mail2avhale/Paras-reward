@@ -129,7 +129,7 @@ const AdminDashboard = ({ user }) => {
             <RefreshCw className={`w-4 h-4 mr-2 ${loading || chartsLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <div className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 text-xs rounded-full flex items-center gap-2">
+          <div className="px-3 py-1.5 bg-emerald-500/100/20 text-emerald-400 text-xs rounded-full flex items-center gap-2">
             <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
             Live Data
           </div>
@@ -175,7 +175,7 @@ const AdminDashboard = ({ user }) => {
               <p className="text-2xl font-bold text-white">{stats?.users?.total?.toLocaleString() || 0}</p>
               <p className="text-xs text-blue-400 mt-1">+{stats?.users?.new_today || 0} today</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-blue-500/100/20 flex items-center justify-center">
               <Users className="w-6 h-6 text-blue-400" />
             </div>
           </div>
@@ -189,7 +189,7 @@ const AdminDashboard = ({ user }) => {
               <p className="text-2xl font-bold text-white">{totalPaidUsers.toLocaleString()}</p>
               <p className="text-xs text-purple-400 mt-1">{subscriptionStats.elite} Elite • {subscriptionStats.growth} Growth</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-purple-500/100/20 flex items-center justify-center">
               <Crown className="w-6 h-6 text-purple-400" />
             </div>
           </div>
@@ -203,7 +203,7 @@ const AdminDashboard = ({ user }) => {
               <p className="text-2xl font-bold text-white">{(stats?.total_prc || 0).toLocaleString()}</p>
               <p className="text-xs text-emerald-400 mt-1">₹{((stats?.total_prc || 0) / 10).toLocaleString()} value</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/100/20 flex items-center justify-center">
               <DollarSign className="w-6 h-6 text-emerald-400" />
             </div>
           </div>
@@ -217,7 +217,7 @@ const AdminDashboard = ({ user }) => {
               <p className="text-2xl font-bold text-white">{stats?.orders?.total?.toLocaleString() || 0}</p>
               <p className="text-xs text-amber-400 mt-1">{stats?.orders?.pending || 0} pending</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/100/20 flex items-center justify-center">
               <ShoppingCart className="w-6 h-6 text-amber-400" />
             </div>
           </div>
@@ -423,9 +423,9 @@ const AdminDashboard = ({ user }) => {
                 <div key={order.order_id} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      order.status === 'delivered' ? 'bg-emerald-500/20' :
-                      order.status === 'out_for_delivery' ? 'bg-blue-500/20' :
-                      order.status === 'cancelled' ? 'bg-red-500/20' : 'bg-amber-500/20'
+                      order.status === 'delivered' ? 'bg-emerald-500/100/20' :
+                      order.status === 'out_for_delivery' ? 'bg-blue-500/100/20' :
+                      order.status === 'cancelled' ? 'bg-red-500/100/20' : 'bg-amber-500/100/20'
                     }`}>
                       {order.status === 'delivered' ? <CheckCircle className="w-4 h-4 text-emerald-400" /> :
                        order.status === 'out_for_delivery' ? <Truck className="w-4 h-4 text-blue-400" /> :
@@ -517,18 +517,18 @@ const AdminDashboard = ({ user }) => {
 // Quick Action Card Component
 const QuickActionCard = ({ icon: Icon, label, badge, color, onClick }) => {
   const colorClasses = {
-    blue: 'bg-blue-500/10 border-blue-500/20 hover:bg-blue-500/20 text-blue-400',
-    purple: 'bg-purple-500/10 border-purple-500/20 hover:bg-purple-500/20 text-purple-400',
-    emerald: 'bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-400',
-    amber: 'bg-amber-500/10 border-amber-500/20 hover:bg-amber-500/20 text-amber-400',
-    cyan: 'bg-cyan-500/10 border-cyan-500/20 hover:bg-cyan-500/20 text-cyan-400',
-    pink: 'bg-pink-500/10 border-pink-500/20 hover:bg-pink-500/20 text-pink-400',
-    indigo: 'bg-indigo-500/10 border-indigo-500/20 hover:bg-indigo-500/20 text-indigo-400',
-    teal: 'bg-teal-500/10 border-teal-500/20 hover:bg-teal-500/20 text-teal-400',
-    red: 'bg-red-500/10 border-red-500/20 hover:bg-red-500/20 text-red-400',
-    orange: 'bg-orange-500/10 border-orange-500/20 hover:bg-orange-500/20 text-orange-400',
+    blue: 'bg-blue-500/100/10 border-blue-500/20 hover:bg-blue-500/100/20 text-blue-400',
+    purple: 'bg-purple-500/100/10 border-purple-500/20 hover:bg-purple-500/100/20 text-purple-400',
+    emerald: 'bg-emerald-500/100/10 border-emerald-500/20 hover:bg-emerald-500/100/20 text-emerald-400',
+    amber: 'bg-amber-500/100/10 border-amber-500/20 hover:bg-amber-500/100/20 text-amber-400',
+    cyan: 'bg-cyan-500/100/10 border-cyan-500/20 hover:bg-cyan-500/100/20 text-cyan-400',
+    pink: 'bg-pink-500/100/10 border-pink-500/20 hover:bg-pink-500/100/20 text-pink-400',
+    indigo: 'bg-indigo-500/100/10 border-indigo-500/20 hover:bg-indigo-500/100/20 text-indigo-400',
+    teal: 'bg-teal-500/100/10 border-teal-500/20 hover:bg-teal-500/100/20 text-teal-400',
+    red: 'bg-red-500/100/10 border-red-500/20 hover:bg-red-500/100/20 text-red-400',
+    orange: 'bg-orange-500/100/10 border-orange-500/20 hover:bg-orange-500/100/20 text-orange-400',
     lime: 'bg-lime-500/10 border-lime-500/20 hover:bg-lime-500/20 text-lime-400',
-    gray: 'bg-gray-500/10 border-gray-500/20 hover:bg-gray-500/20 text-gray-400',
+    gray: 'bg-gray-800/500/10 border-gray-500/20 hover:bg-gray-800/500/20 text-gray-400',
   };
 
   return (
@@ -538,7 +538,7 @@ const QuickActionCard = ({ icon: Icon, label, badge, color, onClick }) => {
       data-testid={`quick-action-${label.toLowerCase()}`}
     >
       {badge > 0 && (
-        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500/100 text-white text-[10px] rounded-full flex items-center justify-center">
           {badge > 9 ? '9+' : badge}
         </span>
       )}

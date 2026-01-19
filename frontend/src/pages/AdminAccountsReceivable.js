@@ -118,7 +118,7 @@ const AdminAccountsReceivable = ({ user }) => {
   const summary = data?.summary || {};
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6" data-testid="admin-ar">
+    <div className="min-h-screen bg-gray-800/50 p-4 md:p-6" data-testid="admin-ar">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
@@ -199,7 +199,7 @@ const AdminAccountsReceivable = ({ user }) => {
                 </tr>
               ) : (
                 data.receivables.map((item) => (
-                  <tr key={item.invoice_id} className="hover:bg-gray-50">
+                  <tr key={item.invoice_id} className="hover:bg-gray-800/50">
                     <td className="px-4 py-3 text-sm font-mono text-gray-900">{item.invoice_id}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{item.customer_name}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{item.description || '-'}</td>

@@ -117,7 +117,7 @@ const AdminAccountsPayable = ({ user }) => {
   const summary = data?.summary || {};
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6" data-testid="admin-ap">
+    <div className="min-h-screen bg-gray-800/50 p-4 md:p-6" data-testid="admin-ap">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
@@ -205,7 +205,7 @@ const AdminAccountsPayable = ({ user }) => {
                 </tr>
               ) : (
                 data.payables.map((item) => (
-                  <tr key={item.bill_id} className="hover:bg-gray-50">
+                  <tr key={item.bill_id} className="hover:bg-gray-800/50">
                     <td className="px-4 py-3 text-sm font-mono text-gray-900">{item.bill_id}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{item.vendor_name}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{item.description || '-'}</td>

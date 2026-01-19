@@ -91,9 +91,9 @@ const AdminFraudAlerts = ({ user }) => {
 
   const getSeverityColor = (severity) => {
     switch (severity) {
-      case 'critical': return 'bg-red-100 text-red-700 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-700 border-orange-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      case 'critical': return 'bg-red-100 text-red-700 border-red-500/30';
+      case 'high': return 'bg-orange-100 text-orange-700 border-orange-500/30';
+      case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-500/30';
       default: return 'bg-gray-800 text-gray-300 border-gray-700';
     }
   };

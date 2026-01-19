@@ -95,7 +95,7 @@ const AdminPRCLedger = ({ user }) => {
   const summary = ledgerData?.summary || {};
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6" data-testid="admin-prc-ledger">
+    <div className="min-h-screen bg-gray-800/50 p-4 md:p-6" data-testid="admin-prc-ledger">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
@@ -113,7 +113,7 @@ const AdminPRCLedger = ({ user }) => {
           <Button 
             onClick={handleSyncToBooks} 
             size="sm" 
-            className="bg-amber-500 hover:bg-amber-600"
+            className="bg-amber-500/100 hover:bg-amber-600"
             disabled={syncing}
             data-testid="sync-prc-btn"
           >
@@ -206,7 +206,7 @@ const AdminPRCLedger = ({ user }) => {
 
       {/* Ledger Table */}
       <Card className="overflow-hidden">
-        <div className="p-4 bg-amber-50 border-b flex items-center justify-between">
+        <div className="p-4 bg-amber-500/10 border-b flex items-center justify-between">
           <h3 className="font-semibold text-gray-900 flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-amber-600" />
             PRC Transaction Ledger
@@ -237,7 +237,7 @@ const AdminPRCLedger = ({ user }) => {
                 </tr>
               ) : (
                 ledgerData.entries.map((entry, idx) => (
-                  <tr key={entry.id || idx} className="hover:bg-gray-50">
+                  <tr key={entry.id || idx} className="hover:bg-gray-800/50">
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {formatDate(entry.date)}
                     </td>
@@ -312,7 +312,7 @@ const AdminPRCLedger = ({ user }) => {
       </Card>
 
       {/* Info Box */}
-      <Card className="mt-4 p-4 bg-amber-50 border-amber-200">
+      <Card className="mt-4 p-4 bg-amber-500/10 border-amber-200">
         <div className="flex gap-3">
           <Coins className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-amber-800">

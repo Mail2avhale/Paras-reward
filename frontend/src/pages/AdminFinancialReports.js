@@ -86,7 +86,7 @@ const AdminFinancialReports = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6" data-testid="admin-financial-reports">
+    <div className="min-h-screen bg-gray-800/50 p-4 md:p-6" data-testid="admin-financial-reports">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
@@ -193,7 +193,7 @@ const AdminFinancialReports = ({ user }) => {
                 ) : (
                   <div className="space-y-3">
                     {Object.entries(pnlData.income?.categories || {}).map(([category, amount]) => (
-                      <div key={category} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                      <div key={category} className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
                         <span className="text-sm font-medium text-gray-700 capitalize">
                           {category.replace('_', ' ')}
                         </span>
@@ -214,7 +214,7 @@ const AdminFinancialReports = ({ user }) => {
                 ) : (
                   <div className="space-y-3">
                     {Object.entries(pnlData.expenses?.categories || {}).map(([category, amount]) => (
-                      <div key={category} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                      <div key={category} className="flex items-center justify-between p-3 bg-red-500/10 rounded-lg">
                         <span className="text-sm font-medium text-gray-700 capitalize">
                           {category.replace('_', ' ')}
                         </span>
@@ -233,15 +233,15 @@ const AdminFinancialReports = ({ user }) => {
                 PRC Metrics for {pnlData.period}
               </h3>
               <div className="grid grid-cols-3 gap-4">
-                <div className="p-4 bg-green-50 rounded-lg text-center">
+                <div className="p-4 bg-green-500/10 rounded-lg text-center">
                   <p className="text-sm text-gray-600">Mined</p>
                   <p className="text-xl font-bold text-green-600">{formatPRC(pnlData.prc_metrics?.mined)} PRC</p>
                 </div>
-                <div className="p-4 bg-blue-50 rounded-lg text-center">
+                <div className="p-4 bg-blue-500/10 rounded-lg text-center">
                   <p className="text-sm text-gray-600">Consumed</p>
                   <p className="text-xl font-bold text-blue-600">{formatPRC(pnlData.prc_metrics?.consumed)} PRC</p>
                 </div>
-                <div className="p-4 bg-red-50 rounded-lg text-center">
+                <div className="p-4 bg-red-500/10 rounded-lg text-center">
                   <p className="text-sm text-gray-600">Burned</p>
                   <p className="text-xl font-bold text-red-600">{formatPRC(pnlData.prc_metrics?.burned)} PRC</p>
                 </div>
@@ -260,7 +260,7 @@ const AdminFinancialReports = ({ user }) => {
             className="space-y-6"
           >
             {/* Balance Check */}
-            <Card className={`p-4 ${balanceSheetData.balance_check?.is_balanced ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+            <Card className={`p-4 ${balanceSheetData.balance_check?.is_balanced ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
               <div className="flex items-center gap-3">
                 {balanceSheetData.balance_check?.is_balanced ? (
                   <CheckCircle2 className="h-6 w-6 text-green-600" />
@@ -290,11 +290,11 @@ const AdminFinancialReports = ({ user }) => {
                   <div>
                     <p className="text-sm text-gray-500 mb-2">Current Assets</p>
                     <div className="space-y-2">
-                      <div className="flex justify-between p-2 bg-gray-50 rounded">
+                      <div className="flex justify-between p-2 bg-gray-800/50 rounded">
                         <span className="text-sm">Cash in Hand</span>
                         <span className="font-medium">{formatCurrency(balanceSheetData.assets?.current_assets?.cash_in_hand)}</span>
                       </div>
-                      <div className="flex justify-between p-2 bg-gray-50 rounded">
+                      <div className="flex justify-between p-2 bg-gray-800/50 rounded">
                         <span className="text-sm">Bank Balance</span>
                         <span className="font-medium">{formatCurrency(balanceSheetData.assets?.current_assets?.bank_balance)}</span>
                       </div>
@@ -319,11 +319,11 @@ const AdminFinancialReports = ({ user }) => {
                   <div>
                     <p className="text-sm text-gray-500 mb-2">Current Liabilities</p>
                     <div className="space-y-2">
-                      <div className="flex justify-between p-2 bg-gray-50 rounded">
+                      <div className="flex justify-between p-2 bg-gray-800/50 rounded">
                         <span className="text-sm">PRC Redemption Liability</span>
                         <span className="font-medium">{formatCurrency(balanceSheetData.liabilities?.current_liabilities?.prc_redemption_liability)}</span>
                       </div>
-                      <div className="flex justify-between p-2 bg-amber-50 rounded text-sm">
+                      <div className="flex justify-between p-2 bg-amber-500/10 rounded text-sm">
                         <span className="text-amber-700">PRC in Circulation</span>
                         <span className="font-medium text-amber-700">{formatPRC(balanceSheetData.liabilities?.current_liabilities?.prc_in_circulation)} PRC</span>
                       </div>
@@ -346,11 +346,11 @@ const AdminFinancialReports = ({ user }) => {
                 </h3>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <div className="flex justify-between p-2 bg-gray-50 rounded">
+                    <div className="flex justify-between p-2 bg-gray-800/50 rounded">
                       <span className="text-sm">Capital</span>
                       <span className="font-medium">{formatCurrency(balanceSheetData.equity?.capital)}</span>
                     </div>
-                    <div className="flex justify-between p-2 bg-gray-50 rounded">
+                    <div className="flex justify-between p-2 bg-gray-800/50 rounded">
                       <span className="text-sm">Retained Earnings</span>
                       <span className={`font-medium ${balanceSheetData.equity?.retained_earnings >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {formatCurrency(balanceSheetData.equity?.retained_earnings)}
@@ -407,7 +407,7 @@ const AdminFinancialReports = ({ user }) => {
                 <div className="space-y-3">
                   {Object.entries(prcFlowData.inflow?.breakdown || {}).map(([type, amount]) => (
                     amount > 0 && (
-                      <div key={type} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                      <div key={type} className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
                         <span className="text-sm font-medium text-gray-700 capitalize">
                           {type.replace('_', ' ')}
                         </span>
@@ -426,7 +426,7 @@ const AdminFinancialReports = ({ user }) => {
                 <div className="space-y-3">
                   {Object.entries(prcFlowData.outflow?.breakdown || {}).map(([type, amount]) => (
                     amount > 0 && (
-                      <div key={type} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                      <div key={type} className="flex items-center justify-between p-3 bg-red-500/10 rounded-lg">
                         <span className="text-sm font-medium text-gray-700 capitalize">
                           {type.replace('_', ' ')}
                         </span>
@@ -446,7 +446,7 @@ const AdminFinancialReports = ({ user }) => {
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-800/50">
                     <tr>
                       <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Date</th>
                       <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Inflow</th>
@@ -456,7 +456,7 @@ const AdminFinancialReports = ({ user }) => {
                   </thead>
                   <tbody className="divide-y">
                     {prcFlowData.daily_breakdown?.slice(0, 10).map((day, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50">
+                      <tr key={idx} className="hover:bg-gray-800/50">
                         <td className="px-4 py-2 text-sm">{day.date}</td>
                         <td className="px-4 py-2 text-right text-sm text-green-600">+{formatPRC(day.inflow)}</td>
                         <td className="px-4 py-2 text-right text-sm text-red-600">-{formatPRC(day.outflow)}</td>

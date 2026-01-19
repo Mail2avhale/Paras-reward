@@ -122,7 +122,7 @@ const AdminAdsIncome = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-800/50 p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -258,7 +258,7 @@ const AdminAdsIncome = ({ user }) => {
             </thead>
             <tbody>
               {entries.map((entry) => (
-                <tr key={entry.entry_id} className="border-b hover:bg-gray-50">
+                <tr key={entry.entry_id} className="border-b hover:bg-gray-800/50">
                   <td className="py-3">{entry.date}</td>
                   <td className="py-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -274,7 +274,7 @@ const AdminAdsIncome = ({ user }) => {
                   <td className="py-3">
                     <button
                       onClick={() => handleDelete(entry.entry_id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                      className="p-2 text-red-600 hover:bg-red-500/10 rounded-lg"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

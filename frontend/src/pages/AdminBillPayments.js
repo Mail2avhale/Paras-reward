@@ -114,7 +114,7 @@ const AdminBillPayments = ({ user }) => {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="p-4 bg-yellow-500/10 border-yellow-500/30">
+          <Card className="p-4 bg-yellow-500/100/10 border-yellow-500/30">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">Pending</p>
@@ -123,7 +123,7 @@ const AdminBillPayments = ({ user }) => {
               <Clock className="h-8 w-8 text-yellow-500" />
             </div>
           </Card>
-          <Card className="p-4 bg-green-500/10 border-green-500/30">
+          <Card className="p-4 bg-green-500/100/10 border-green-500/30">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">Completed</p>
@@ -132,7 +132,7 @@ const AdminBillPayments = ({ user }) => {
               <CheckCircle className="h-8 w-8 text-green-500" />
             </div>
           </Card>
-          <Card className="p-4 bg-red-500/10 border-red-500/30">
+          <Card className="p-4 bg-red-500/100/10 border-red-500/30">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">Rejected</p>

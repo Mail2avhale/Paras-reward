@@ -78,7 +78,7 @@ const AdminFinancialRatios = ({ user }) => {
   const underlying = data?.underlying_data || {};
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6" data-testid="admin-financial-ratios">
+    <div className="min-h-screen bg-gray-800/50 p-4 md:p-6" data-testid="admin-financial-ratios">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
@@ -133,7 +133,7 @@ const AdminFinancialRatios = ({ user }) => {
             </div>
             <Gauge className={`h-10 w-10 ${ratios.current_ratio?.status === 'good' ? 'text-green-500' : ratios.current_ratio?.status === 'fair' ? 'text-amber-500' : 'text-red-500'}`} />
           </div>
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
+          <div className="mt-4 p-3 bg-gray-800/50 rounded-lg text-sm text-gray-600">
             <p>Measures ability to pay short-term debts. Higher than 2.0 is ideal.</p>
           </div>
         </Card>
@@ -156,7 +156,7 @@ const AdminFinancialRatios = ({ user }) => {
             </div>
             <BarChart3 className={`h-10 w-10 ${ratios.quick_ratio?.status === 'good' ? 'text-green-500' : 'text-red-500'}`} />
           </div>
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
+          <div className="mt-4 p-3 bg-gray-800/50 rounded-lg text-sm text-gray-600">
             <p>Liquidity without inventory. Should be at least 1.0.</p>
           </div>
         </Card>
@@ -183,7 +183,7 @@ const AdminFinancialRatios = ({ user }) => {
               <TrendingDown className="h-10 w-10 text-red-500" />
             )}
           </div>
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
+          <div className="mt-4 p-3 bg-gray-800/50 rounded-lg text-sm text-gray-600">
             <p>Percentage of revenue retained as profit. Higher is better.</p>
           </div>
         </Card>
@@ -206,7 +206,7 @@ const AdminFinancialRatios = ({ user }) => {
             </div>
             <PieChart className={`h-10 w-10 ${ratios.expense_ratio?.status === 'good' ? 'text-green-500' : ratios.expense_ratio?.status === 'fair' ? 'text-amber-500' : 'text-red-500'}`} />
           </div>
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
+          <div className="mt-4 p-3 bg-gray-800/50 rounded-lg text-sm text-gray-600">
             <p>Percentage of revenue spent on expenses. Lower is better.</p>
           </div>
         </Card>
@@ -219,23 +219,23 @@ const AdminFinancialRatios = ({ user }) => {
           Underlying Financial Data
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="p-4 bg-blue-50 rounded-lg text-center">
+          <div className="p-4 bg-blue-500/10 rounded-lg text-center">
             <p className="text-xs text-gray-600 mb-1">Total Cash</p>
             <p className="text-lg font-bold text-blue-600">{formatCurrency(underlying.total_cash)}</p>
           </div>
-          <div className="p-4 bg-red-50 rounded-lg text-center">
+          <div className="p-4 bg-red-500/10 rounded-lg text-center">
             <p className="text-xs text-gray-600 mb-1">Liabilities</p>
             <p className="text-lg font-bold text-red-600">{formatCurrency(underlying.total_current_liabilities)}</p>
           </div>
-          <div className="p-4 bg-green-50 rounded-lg text-center">
+          <div className="p-4 bg-green-500/10 rounded-lg text-center">
             <p className="text-xs text-gray-600 mb-1">Income</p>
             <p className="text-lg font-bold text-green-600">{formatCurrency(underlying.total_income)}</p>
           </div>
-          <div className="p-4 bg-orange-50 rounded-lg text-center">
+          <div className="p-4 bg-orange-500/10 rounded-lg text-center">
             <p className="text-xs text-gray-600 mb-1">Expenses</p>
             <p className="text-lg font-bold text-orange-600">{formatCurrency(underlying.total_expenses)}</p>
           </div>
-          <div className={`p-4 rounded-lg text-center ${underlying.net_profit >= 0 ? 'bg-emerald-50' : 'bg-rose-50'}`}>
+          <div className={`p-4 rounded-lg text-center ${underlying.net_profit >= 0 ? 'bg-emerald-500/10' : 'bg-rose-50'}`}>
             <p className="text-xs text-gray-600 mb-1">Net Profit/Loss</p>
             <p className={`text-lg font-bold ${underlying.net_profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
               {formatCurrency(underlying.net_profit)}
@@ -245,7 +245,7 @@ const AdminFinancialRatios = ({ user }) => {
       </Card>
 
       {/* Tips Card */}
-      <Card className="mt-6 p-5 bg-purple-50 border-purple-200">
+      <Card className="mt-6 p-5 bg-purple-500/10 border-purple-500/30">
         <h3 className="font-semibold text-purple-900 mb-3 flex items-center gap-2">
           <AlertTriangle className="h-5 w-5" />
           Improvement Tips

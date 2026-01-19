@@ -165,14 +165,14 @@ PARAS REWARD refund policy for various transactions.
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-800/50 flex items-center justify-center">
         <Loader className="h-8 w-8 animate-spin text-purple-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-800/50 pb-20">
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
@@ -237,7 +237,7 @@ PARAS REWARD refund policy for various transactions.
             placeholder={`Enter ${tabs.find(t => t.id === activeTab)?.label} content...`}
           />
 
-          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+          <div className="mt-4 p-4 bg-blue-500/10 rounded-lg">
             <p className="text-sm text-blue-800">
               <strong>Tip:</strong> Use Markdown syntax for formatting. 
               Use # for headings, **bold**, *italic*, - for lists.

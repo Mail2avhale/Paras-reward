@@ -124,7 +124,7 @@ const AdminCapitalManagement = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6" data-testid="admin-capital-management">
+    <div className="min-h-screen bg-gray-800/50 p-4 md:p-6" data-testid="admin-capital-management">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
@@ -244,7 +244,7 @@ const AdminCapitalManagement = ({ user }) => {
 
       {/* Entries Table */}
       <Card className="overflow-hidden">
-        <div className="p-4 bg-emerald-50 border-b flex items-center justify-between">
+        <div className="p-4 bg-emerald-500/10 border-b flex items-center justify-between">
           <h3 className="font-semibold text-gray-900 flex items-center gap-2">
             <Wallet className="h-5 w-5 text-emerald-600" />
             Capital Entries History
@@ -276,7 +276,7 @@ const AdminCapitalManagement = ({ user }) => {
                 </tr>
               ) : (
                 capitalData.entries.map((entry, idx) => (
-                  <tr key={entry.entry_id || idx} className="hover:bg-gray-50">
+                  <tr key={entry.entry_id || idx} className="hover:bg-gray-800/50">
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {formatDate(entry.date)}
                     </td>
@@ -347,7 +347,7 @@ const AdminCapitalManagement = ({ user }) => {
                         className={`p-3 rounded-lg border-2 flex flex-col items-center gap-1 transition-all ${
                           entryForm.entry_type === type.id
                             ? `border-${type.color}-500 bg-${type.color}-50`
-                            : 'border-gray-200 hover:border-gray-300'
+                            : 'border-gray-700 hover:border-gray-300'
                         }`}
                         data-testid={`entry-type-${type.id}`}
                       >

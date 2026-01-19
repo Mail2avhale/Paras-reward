@@ -108,19 +108,19 @@ const AdminOrders = ({ user }) => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card className="p-4 bg-blue-50 border-blue-200">
+        <Card className="p-4 bg-blue-500/10 border-blue-500/30">
           <p className="text-xs text-blue-600">Total Orders</p>
           <p className="text-2xl font-bold text-blue-700">{stats.total}</p>
         </Card>
-        <Card className="p-4 bg-yellow-50 border-yellow-200">
+        <Card className="p-4 bg-yellow-500/10 border-yellow-500/30">
           <p className="text-xs text-yellow-600">Pending</p>
           <p className="text-2xl font-bold text-yellow-700">{stats.pending}</p>
         </Card>
-        <Card className="p-4 bg-purple-50 border-purple-200">
+        <Card className="p-4 bg-purple-500/10 border-purple-500/30">
           <p className="text-xs text-purple-600">In Progress</p>
           <p className="text-2xl font-bold text-purple-700">{stats.processing}</p>
         </Card>
-        <Card className="p-4 bg-green-50 border-green-200">
+        <Card className="p-4 bg-green-500/10 border-green-500/30">
           <p className="text-xs text-green-600">Completed</p>
           <p className="text-2xl font-bold text-green-700">{stats.completed}</p>
         </Card>

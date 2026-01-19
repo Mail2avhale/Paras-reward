@@ -353,7 +353,7 @@ const AdminSystemSettings = ({ user }) => {
                 />
               </div>
             </div>
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <div className="mt-6 p-4 bg-blue-500/10 rounded-lg">
               <p className="text-sm text-blue-800">
                 <strong>Mining Formula:</strong> Rate = Base Rate × (1 + Level Bonus × Active Referrals) × VIP Multiplier
               </p>
@@ -525,7 +525,7 @@ const AdminSystemSettings = ({ user }) => {
               </div>
             </div>
 
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <div className="mt-6 p-4 bg-blue-500/10 rounded-lg">
               <p className="text-sm text-blue-800">
                 <strong>How it works:</strong> If a user has 5 active referrals at Level 1 and Level 1 bonus is 10%, 
                 then (5 × 10% × Base Rate) bonus is added to their mining rate.
@@ -565,7 +565,7 @@ const AdminSystemSettings = ({ user }) => {
             
             {/* Status Card */}
             <div className={`p-4 rounded-lg border-2 mb-6 ${
-              registrationEnabled ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+              registrationEnabled ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'
             }`}>
               <div className="flex items-center gap-3">
                 {registrationEnabled ? (

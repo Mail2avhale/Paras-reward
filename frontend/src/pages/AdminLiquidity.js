@@ -167,7 +167,7 @@ const AdminLiquidity = ({ user }) => {
 
       {/* Alerts */}
       {alerts.length > 0 && (
-        <Card className="p-4 border-orange-200 bg-orange-50">
+        <Card className="p-4 border-orange-500/30 bg-orange-500/10">
           <h3 className="font-bold text-orange-800 mb-3 flex items-center gap-2">
             <AlertTriangle className="h-5 w-5" />
             Active Alerts
@@ -191,7 +191,7 @@ const AdminLiquidity = ({ user }) => {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-5 bg-purple-50 border-purple-200">
+        <Card className="p-5 bg-purple-500/10 border-purple-500/30">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-purple-100 rounded-xl">
               <Coins className="h-6 w-6 text-purple-600" />
@@ -206,7 +206,7 @@ const AdminLiquidity = ({ user }) => {
           </div>
         </Card>
 
-        <Card className="p-5 bg-green-50 border-green-200">
+        <Card className="p-5 bg-green-500/10 border-green-500/30">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-green-100 rounded-xl">
               <DollarSign className="h-6 w-6 text-green-600" />
@@ -220,7 +220,7 @@ const AdminLiquidity = ({ user }) => {
           </div>
         </Card>
 
-        <Card className="p-5 bg-red-50 border-red-200">
+        <Card className="p-5 bg-red-500/10 border-red-500/30">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-red-100 rounded-xl">
               <TrendingDown className="h-6 w-6 text-red-600" />
@@ -234,7 +234,7 @@ const AdminLiquidity = ({ user }) => {
           </div>
         </Card>
 
-        <Card className="p-5 bg-blue-50 border-blue-200">
+        <Card className="p-5 bg-blue-500/10 border-blue-500/30">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-blue-100 rounded-xl">
               <Wallet className="h-6 w-6 text-blue-600" />
@@ -269,7 +269,7 @@ const AdminLiquidity = ({ user }) => {
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div 
-                  className={`h-3 rounded-full ${ratios.reserve_ratio >= 80 ? 'bg-green-500' : ratios.reserve_ratio >= 50 ? 'bg-blue-500' : ratios.reserve_ratio >= 30 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                  className={`h-3 rounded-full ${ratios.reserve_ratio >= 80 ? 'bg-green-500/100' : ratios.reserve_ratio >= 50 ? 'bg-blue-500/100' : ratios.reserve_ratio >= 30 ? 'bg-yellow-500/100' : 'bg-red-500/100'}`}
                   style={{ width: `${Math.min(100, ratios.reserve_ratio)}%` }}
                 />
               </div>
@@ -286,7 +286,7 @@ const AdminLiquidity = ({ user }) => {
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div 
-                  className={`h-3 rounded-full ${ratios.liquidity_ratio >= 3 ? 'bg-green-500' : ratios.liquidity_ratio >= 2 ? 'bg-blue-500' : ratios.liquidity_ratio >= 1 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                  className={`h-3 rounded-full ${ratios.liquidity_ratio >= 3 ? 'bg-green-500/100' : ratios.liquidity_ratio >= 2 ? 'bg-blue-500/100' : ratios.liquidity_ratio >= 1 ? 'bg-yellow-500/100' : 'bg-red-500/100'}`}
                   style={{ width: `${Math.min(100, ratios.liquidity_ratio * 20)}%` }}
                 />
               </div>
@@ -303,7 +303,7 @@ const AdminLiquidity = ({ user }) => {
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div 
-                  className={`h-3 rounded-full ${ratios.prc_coverage >= 100 ? 'bg-green-500' : ratios.prc_coverage >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                  className={`h-3 rounded-full ${ratios.prc_coverage >= 100 ? 'bg-green-500/100' : ratios.prc_coverage >= 50 ? 'bg-yellow-500/100' : 'bg-red-500/100'}`}
                   style={{ width: `${Math.min(100, ratios.prc_coverage)}%` }}
                 />
               </div>
@@ -467,7 +467,7 @@ const AdminLiquidity = ({ user }) => {
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {recommendations.map((rec, idx) => (
-              <div key={idx} className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div key={idx} className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/30">
                 <div className="flex items-start gap-3">
                   <div className={`px-2 py-1 rounded text-xs font-bold ${
                     rec.impact === 'high' ? 'bg-red-100 text-red-700' :

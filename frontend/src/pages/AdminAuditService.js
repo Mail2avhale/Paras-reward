@@ -106,10 +106,10 @@ const AdminAuditService = ({ user }) => {
 
   const getSeverityBadge = (severity) => {
     const badges = {
-      critical: 'bg-red-100 text-red-700 border-red-200',
-      high: 'bg-orange-100 text-orange-700 border-orange-200',
-      normal: 'bg-blue-100 text-blue-700 border-blue-200',
-      low: 'bg-gray-100 text-gray-700 border-gray-200'
+      critical: 'bg-red-100 text-red-700 border-red-500/30',
+      high: 'bg-orange-100 text-orange-700 border-orange-500/30',
+      normal: 'bg-blue-100 text-blue-700 border-blue-500/30',
+      low: 'bg-gray-100 text-gray-700 border-gray-700'
     };
     return badges[severity] || badges.normal;
   };
@@ -148,7 +148,7 @@ const AdminAuditService = ({ user }) => {
 
       {/* Alerts Banner */}
       {alerts.length > 0 && (
-        <Card className="p-4 bg-red-50 border-red-200">
+        <Card className="p-4 bg-red-500/10 border-red-500/30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <AlertCircle className="h-6 w-6 text-red-600" />
@@ -295,14 +295,14 @@ const AdminAuditService = ({ user }) => {
 
       {/* Suspicious Activities */}
       {suspicious.length > 0 && (
-        <Card className="p-4 border-red-200">
+        <Card className="p-4 border-red-500/30">
           <h3 className="font-bold text-red-800 mb-3 flex items-center gap-2">
             <AlertTriangle className="h-5 w-5" />
             Recent Suspicious Activities
           </h3>
           <div className="space-y-2">
             {suspicious.slice(0, 5).map((log, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+              <div key={idx} className="flex items-center justify-between p-3 bg-red-500/10 rounded-lg">
                 <div className="flex items-center gap-3">
                   {getActionIcon(log.action_type)}
                   <div>
@@ -328,7 +328,7 @@ const AdminAuditService = ({ user }) => {
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-800/50">
               <tr>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600">Timestamp</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600">Action</th>
@@ -353,7 +353,7 @@ const AdminAuditService = ({ user }) => {
                 </tr>
               ) : (
                 logs.map((log) => (
-                  <tr key={log.log_id} className="border-b hover:bg-gray-50">
+                  <tr key={log.log_id} className="border-b hover:bg-gray-800/50">
                     <td className="py-3 px-4 text-sm">
                       <p className="font-medium">{new Date(log.timestamp).toLocaleDateString()}</p>
                       <p className="text-xs text-gray-500">{new Date(log.timestamp).toLocaleTimeString()}</p>
@@ -450,13 +450,13 @@ const AdminAuditService = ({ user }) => {
                 
                 <div>
                   <p className="text-xs text-gray-500">Details</p>
-                  <p className="text-sm p-3 bg-gray-50 rounded-lg">{selectedLog.details || 'No details'}</p>
+                  <p className="text-sm p-3 bg-gray-800/50 rounded-lg">{selectedLog.details || 'No details'}</p>
                 </div>
                 
                 {selectedLog.old_value && (
                   <div>
                     <p className="text-xs text-gray-500">Old Value</p>
-                    <pre className="text-xs p-3 bg-red-50 rounded-lg overflow-auto">
+                    <pre className="text-xs p-3 bg-red-500/10 rounded-lg overflow-auto">
                       {JSON.stringify(selectedLog.old_value, null, 2)}
                     </pre>
                   </div>
@@ -465,7 +465,7 @@ const AdminAuditService = ({ user }) => {
                 {selectedLog.new_value && (
                   <div>
                     <p className="text-xs text-gray-500">New Value</p>
-                    <pre className="text-xs p-3 bg-green-50 rounded-lg overflow-auto">
+                    <pre className="text-xs p-3 bg-green-500/10 rounded-lg overflow-auto">
                       {JSON.stringify(selectedLog.new_value, null, 2)}
                     </pre>
                   </div>

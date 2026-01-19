@@ -245,7 +245,7 @@ const AdminCashBankBook = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+    <div className="min-h-screen bg-gray-800/50 p-4 md:p-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
@@ -378,7 +378,7 @@ const AdminCashBankBook = ({ user }) => {
               ) : (
                 <div className="space-y-3 max-h-80 overflow-y-auto">
                   {cashBook.entries.slice(0, 5).map((entry, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-full ${
                           entry.entry_type === 'expense' || entry.entry_type === 'transfer_out'
@@ -422,7 +422,7 @@ const AdminCashBankBook = ({ user }) => {
               ) : (
                 <div className="space-y-3 max-h-80 overflow-y-auto">
                   {bankBook.entries.slice(0, 5).map((entry, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-full ${
                           entry.entry_type === 'expense' || entry.entry_type === 'transfer_out'
@@ -466,7 +466,7 @@ const AdminCashBankBook = ({ user }) => {
           >
             <Card className="overflow-hidden">
               {/* Book Header */}
-              <div className={`p-4 ${activeTab === 'cash' ? 'bg-green-50' : 'bg-blue-50'}`}>
+              <div className={`p-4 ${activeTab === 'cash' ? 'bg-green-500/10' : 'bg-blue-500/10'}`}>
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-bold text-lg">
@@ -507,7 +507,7 @@ const AdminCashBankBook = ({ user }) => {
                       </tr>
                     ) : (
                       (activeTab === 'cash' ? cashBook.entries : bankBook.entries).map((entry, idx) => (
-                        <tr key={idx} className="hover:bg-gray-50">
+                        <tr key={idx} className="hover:bg-gray-800/50">
                           <td className="px-4 py-3 text-sm">{formatDate(entry.date)}</td>
                           <td className="px-4 py-3">
                             <p className="text-sm font-medium text-gray-900">{entry.description}</p>
@@ -577,7 +577,7 @@ const AdminCashBankBook = ({ user }) => {
                   <button
                     onClick={() => setEntryForm({...entryForm, account: 'cash'})}
                     className={`flex-1 p-3 rounded-lg border-2 flex items-center justify-center gap-2 ${
-                      entryForm.account === 'cash' ? 'border-green-500 bg-green-50' : 'border-gray-200'
+                      entryForm.account === 'cash' ? 'border-green-500 bg-green-500/10' : 'border-gray-700'
                     }`}
                   >
                     <Wallet className="h-5 w-5 text-green-600" />
@@ -586,7 +586,7 @@ const AdminCashBankBook = ({ user }) => {
                   <button
                     onClick={() => setEntryForm({...entryForm, account: 'bank'})}
                     className={`flex-1 p-3 rounded-lg border-2 flex items-center justify-center gap-2 ${
-                      entryForm.account === 'bank' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                      entryForm.account === 'bank' ? 'border-blue-500 bg-blue-500/10' : 'border-gray-700'
                     }`}
                   >
                     <Building2 className="h-5 w-5 text-blue-600" />
@@ -603,7 +603,7 @@ const AdminCashBankBook = ({ user }) => {
                     onClick={() => setEntryForm({...entryForm, entry_type: 'income', category: ''})}
                     className={`flex-1 p-3 rounded-lg border-2 ${
                       entryForm.entry_type === 'income' || entryForm.entry_type === 'capital'
-                        ? 'border-green-500 bg-green-50' : 'border-gray-200'
+                        ? 'border-green-500 bg-green-500/10' : 'border-gray-700'
                     }`}
                   >
                     <ArrowUpRight className="h-5 w-5 text-green-600 mx-auto" />
@@ -612,7 +612,7 @@ const AdminCashBankBook = ({ user }) => {
                   <button
                     onClick={() => setEntryForm({...entryForm, entry_type: 'expense', category: ''})}
                     className={`flex-1 p-3 rounded-lg border-2 ${
-                      entryForm.entry_type === 'expense' ? 'border-red-500 bg-red-50' : 'border-gray-200'
+                      entryForm.entry_type === 'expense' ? 'border-red-500 bg-red-500/10' : 'border-gray-700'
                     }`}
                   >
                     <ArrowDownRight className="h-5 w-5 text-red-600 mx-auto" />
@@ -630,7 +630,7 @@ const AdminCashBankBook = ({ user }) => {
                       key={cat.value}
                       onClick={() => setEntryForm({...entryForm, category: cat.value, entry_type: cat.value === 'capital' ? 'capital' : entryForm.entry_type})}
                       className={`p-2 rounded-lg border text-left flex items-center gap-2 text-sm ${
-                        entryForm.category === cat.value ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:bg-gray-50'
+                        entryForm.category === cat.value ? 'border-purple-500 bg-purple-500/10' : 'border-gray-700 hover:bg-gray-800/50'
                       }`}
                     >
                       <cat.icon className="h-4 w-4 text-gray-600" />
@@ -678,7 +678,7 @@ const AdminCashBankBook = ({ user }) => {
                   <motion.div
                     initial={{ opacity: 0, y: -5 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg"
+                    className="mt-2 p-3 bg-amber-500/10 border border-amber-200 rounded-lg"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -690,7 +690,7 @@ const AdminCashBankBook = ({ user }) => {
                       </div>
                       <button
                         onClick={applyAutoSuggestion}
-                        className="text-xs px-2 py-1 bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors"
+                        className="text-xs px-2 py-1 bg-amber-500/100 text-white rounded hover:bg-amber-600 transition-colors"
                         data-testid="apply-suggestion-btn"
                       >
                         Apply
@@ -837,7 +837,7 @@ const AdminCashBankBook = ({ user }) => {
                   <button
                     onClick={() => setOpeningBalanceForm({...openingBalanceForm, account_type: 'cash'})}
                     className={`flex-1 p-3 rounded-lg border-2 flex items-center justify-center gap-2 ${
-                      openingBalanceForm.account_type === 'cash' ? 'border-green-500 bg-green-50' : 'border-gray-200'
+                      openingBalanceForm.account_type === 'cash' ? 'border-green-500 bg-green-500/10' : 'border-gray-700'
                     }`}
                   >
                     <Wallet className="h-5 w-5 text-green-600" />
@@ -846,7 +846,7 @@ const AdminCashBankBook = ({ user }) => {
                   <button
                     onClick={() => setOpeningBalanceForm({...openingBalanceForm, account_type: 'bank'})}
                     className={`flex-1 p-3 rounded-lg border-2 flex items-center justify-center gap-2 ${
-                      openingBalanceForm.account_type === 'bank' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                      openingBalanceForm.account_type === 'bank' ? 'border-blue-500 bg-blue-500/10' : 'border-gray-700'
                     }`}
                   >
                     <Building2 className="h-5 w-5 text-blue-600" />

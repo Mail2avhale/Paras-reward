@@ -143,19 +143,19 @@ const AdminSupport = ({ user }) => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card className="p-4 bg-blue-50 border-blue-200">
+        <Card className="p-4 bg-blue-500/10 border-blue-500/30">
           <p className="text-xs text-blue-600">Total Tickets</p>
           <p className="text-2xl font-bold text-blue-700">{stats.total}</p>
         </Card>
-        <Card className="p-4 bg-yellow-50 border-yellow-200">
+        <Card className="p-4 bg-yellow-500/10 border-yellow-500/30">
           <p className="text-xs text-yellow-600">Open</p>
           <p className="text-2xl font-bold text-yellow-700">{stats.open}</p>
         </Card>
-        <Card className="p-4 bg-purple-50 border-purple-200">
+        <Card className="p-4 bg-purple-500/10 border-purple-500/30">
           <p className="text-xs text-purple-600">In Progress</p>
           <p className="text-2xl font-bold text-purple-700">{stats.inProgress}</p>
         </Card>
-        <Card className="p-4 bg-green-50 border-green-200">
+        <Card className="p-4 bg-green-500/10 border-green-500/30">
           <p className="text-xs text-green-600">Resolved</p>
           <p className="text-2xl font-bold text-green-700">{stats.resolved}</p>
         </Card>
@@ -293,7 +293,7 @@ const AdminSupport = ({ user }) => {
                 <p className="text-xs text-gray-500 mb-2">Conversation</p>
                 <div className="space-y-3 max-h-64 overflow-y-auto">
                   {selectedTicket.messages?.map((msg, idx) => (
-                    <div key={idx} className={`p-3 rounded-lg ${msg.is_admin ? 'bg-purple-50 ml-8' : 'bg-gray-800/50 mr-8'}`}>
+                    <div key={idx} className={`p-3 rounded-lg ${msg.is_admin ? 'bg-purple-500/10 ml-8' : 'bg-gray-800/50 mr-8'}`}>
                       <div className="flex items-center gap-2 mb-1">
                         <User className="h-4 w-4" />
                         <span className="text-sm font-medium">{msg.is_admin ? 'Admin' : 'Customer'}</span>

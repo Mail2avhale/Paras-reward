@@ -465,7 +465,7 @@ const AdminSecurityDashboard = ({ user }) => {
         <div className="space-y-6">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+            <Card className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-500/30">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-purple-600 font-medium">Active Sessions</p>
@@ -475,7 +475,7 @@ const AdminSecurityDashboard = ({ user }) => {
               </div>
             </Card>
 
-            <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+            <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border-green-500/30">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-green-600 font-medium">Today's Logins</p>
@@ -485,7 +485,7 @@ const AdminSecurityDashboard = ({ user }) => {
               </div>
             </Card>
 
-            <Card className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+            <Card className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 border-orange-500/30">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-orange-600 font-medium">Unread Alerts</p>
@@ -496,8 +496,8 @@ const AdminSecurityDashboard = ({ user }) => {
             </Card>
 
             <Card className={`p-4 ${dashboard.lockdown_status?.lockdown_active 
-              ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200' 
-              : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'}`}>
+              ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-500/30' 
+              : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-500/30'}`}>
               <div className="flex items-center justify-between">
                 <div>
                   <p className={`text-sm font-medium ${dashboard.lockdown_status?.lockdown_active ? 'text-red-600' : 'text-blue-600'}`}>
@@ -623,7 +623,7 @@ const AdminSecurityDashboard = ({ user }) => {
                 <div className="flex gap-4 pt-4">
                   <Button 
                     onClick={() => handleActivateLockdown('partial')}
-                    className="bg-orange-500 hover:bg-orange-600"
+                    className="bg-orange-500/100 hover:bg-orange-600"
                     disabled={!lockdownReason.trim() || selectedFeatures.length === 0}
                   >
                     <Lock className="w-4 h-4 mr-2" />
@@ -631,7 +631,7 @@ const AdminSecurityDashboard = ({ user }) => {
                   </Button>
                   <Button 
                     onClick={() => handleActivateLockdown('full')}
-                    className="bg-red-500 hover:bg-red-600"
+                    className="bg-red-500/100 hover:bg-red-600"
                     disabled={!lockdownReason.trim()}
                   >
                     <ShieldAlert className="w-4 h-4 mr-2" />
@@ -661,7 +661,7 @@ const AdminSecurityDashboard = ({ user }) => {
               <Button
                 variant={ipWhitelist.enabled ? 'default' : 'outline'}
                 onClick={() => setIpWhitelist(prev => ({ ...prev, enabled: !prev.enabled }))}
-                className={ipWhitelist.enabled ? 'bg-green-500 hover:bg-green-600' : ''}
+                className={ipWhitelist.enabled ? 'bg-green-500/100 hover:bg-green-600' : ''}
               >
                 {ipWhitelist.enabled ? '✅ Enabled' : 'Disabled'}
               </Button>
