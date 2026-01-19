@@ -173,7 +173,7 @@ const AdminAccountsPayable = ({ user }) => {
             key={f}
             onClick={() => setFilter(f)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize ${
-              filter === f ? 'bg-red-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'
+              filter === f ? 'bg-red-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-700'
             }`}
           >
             {f}
@@ -185,7 +185,7 @@ const AdminAccountsPayable = ({ user }) => {
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-100">
+            <thead className="bg-gray-700">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Bill ID</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Vendor</th>
@@ -215,7 +215,7 @@ const AdminAccountsPayable = ({ user }) => {
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                         item.status === 'paid' ? 'bg-green-500/20 text-green-400' :
                         item.status === 'overdue' ? 'bg-red-500/20 text-red-400' :
-                        'bg-amber-100 text-amber-400'
+                        'bg-amber-500/20 text-amber-400'
                       }`}>
                         {item.status}
                       </span>

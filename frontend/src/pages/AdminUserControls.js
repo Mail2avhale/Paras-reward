@@ -339,10 +339,10 @@ const AdminUserControls = () => {
                     <td className="p-4"><span className="font-medium text-white">{(user.prc_balance || 0).toLocaleString()} PRC</span></td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => updateUserSettings(user.uid, { mining_active: !user.mining_active })} className={`p-2 rounded-lg ${user.mining_active !== false ? 'bg-orange-100 text-orange-600 hover:bg-orange-200' : 'bg-green-100 text-green-600 hover:bg-green-200'}`}>
+                        <button onClick={() => updateUserSettings(user.uid, { mining_active: !user.mining_active })} className={`p-2 rounded-lg ${user.mining_active !== false ? 'bg-orange-500/20 text-orange-600 hover:bg-orange-200' : 'bg-green-500/20 text-green-600 hover:bg-green-200'}`}>
                           {user.mining_active !== false ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                         </button>
-                        <button onClick={() => openUserModal(user)} className="p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200">
+                        <button onClick={() => openUserModal(user)} className="p-2 bg-purple-500/20 text-purple-600 rounded-lg hover:bg-purple-200">
                           <Settings className="w-4 h-4" />
                         </button>
                       </div>

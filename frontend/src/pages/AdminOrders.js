@@ -84,7 +84,7 @@ const AdminOrders = ({ user }) => {
       'pending': <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> Pending</span>,
       'confirmed': <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Confirmed</span>,
       'processing': <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-xs rounded-full flex items-center gap-1"><Package className="h-3 w-3" /> Processing</span>,
-      'shipped': <span className="px-2 py-1 bg-indigo-100 text-indigo-400 text-xs rounded-full flex items-center gap-1"><Truck className="h-3 w-3" /> Shipped</span>,
+      'shipped': <span className="px-2 py-1 bg-indigo-500/20 text-indigo-400 text-xs rounded-full flex items-center gap-1"><Truck className="h-3 w-3" /> Shipped</span>,
       'delivered': <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Delivered</span>,
       'cancelled': <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center gap-1"><XCircle className="h-3 w-3" /> Cancelled</span>
     };
@@ -175,7 +175,7 @@ const AdminOrders = ({ user }) => {
               <Card key={order.order_id} className="p-4">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                   <div className="flex items-start gap-4">
-                    <div className="p-3 bg-purple-100 rounded-lg">
+                    <div className="p-3 bg-purple-500/20 rounded-lg">
                       <Package className="h-6 w-6 text-purple-600" />
                     </div>
                     <div>

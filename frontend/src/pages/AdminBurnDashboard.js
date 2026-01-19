@@ -307,8 +307,8 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
                   <div className="flex items-center gap-4">
                     <div className={`p-2 rounded-full ${
                       burn.transaction_type === 'prc_burn_free_user'
-                        ? 'bg-orange-100 text-orange-600'
-                        : 'bg-purple-100 text-purple-600'
+                        ? 'bg-orange-500/20 text-orange-600'
+                        : 'bg-purple-500/20 text-purple-600'
                     }`}>
                       <Flame className="w-5 h-5" />
                     </div>

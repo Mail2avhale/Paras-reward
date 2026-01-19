@@ -182,9 +182,9 @@ const AdminAccountingDashboard = ({ user }) => {
 
   const getRiskColor = (status) => {
     switch(status) {
-      case 'SAFE': return 'text-green-600 bg-green-100';
-      case 'WARNING': return 'text-yellow-600 bg-yellow-100';
-      case 'CRITICAL': return 'text-red-600 bg-red-100';
+      case 'SAFE': return 'text-green-600 bg-green-500/20';
+      case 'WARNING': return 'text-yellow-600 bg-yellow-500/20';
+      case 'CRITICAL': return 'text-red-600 bg-red-500/20';
       default: return 'text-gray-400 bg-gray-800';
     }
   };
@@ -273,7 +273,7 @@ const AdminAccountingDashboard = ({ user }) => {
               <Card className="p-5 bg-gradient-to-br from-green-50 to-emerald-50 border-green-500/30" data-testid="total-income-card">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-green-400">Total Income</span>
-                  <div className="p-2 bg-green-100 rounded-lg">
+                  <div className="p-2 bg-green-500/20 rounded-lg">
                     <TrendingUp className="h-5 w-5 text-green-600" />
                   </div>
                 </div>
@@ -287,7 +287,7 @@ const AdminAccountingDashboard = ({ user }) => {
               <Card className="p-5 bg-gradient-to-br from-red-50 to-rose-50 border-red-500/30" data-testid="total-expense-card">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-red-400">Total Expense</span>
-                  <div className="p-2 bg-red-100 rounded-lg">
+                  <div className="p-2 bg-red-500/20 rounded-lg">
                     <TrendingDown className="h-5 w-5 text-red-600" />
                   </div>
                 </div>
@@ -308,7 +308,7 @@ const AdminAccountingDashboard = ({ user }) => {
                     (quickViewData.masterSummary?.net_profit_loss || 0) >= 0 ? 'text-emerald-400' : 'text-orange-400'
                   }`}>Net P&L</span>
                   <div className={`p-2 rounded-lg ${
-                    (quickViewData.masterSummary?.net_profit_loss || 0) >= 0 ? 'bg-emerald-100' : 'bg-orange-100'
+                    (quickViewData.masterSummary?.net_profit_loss || 0) >= 0 ? 'bg-emerald-500/20' : 'bg-orange-500/20'
                   }`}>
                     <IndianRupee className={`h-5 w-5 ${
                       (quickViewData.masterSummary?.net_profit_loss || 0) >= 0 ? 'text-emerald-600' : 'text-orange-600'
@@ -331,7 +331,7 @@ const AdminAccountingDashboard = ({ user }) => {
               <Card className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-500/30" data-testid="cash-balance-card">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-blue-400">Cash Balance</span>
-                  <div className="p-2 bg-blue-100 rounded-lg">
+                  <div className="p-2 bg-blue-500/20 rounded-lg">
                     <Banknote className="h-5 w-5 text-blue-600" />
                   </div>
                 </div>
@@ -345,7 +345,7 @@ const AdminAccountingDashboard = ({ user }) => {
               <Card className="p-5 bg-gradient-to-br from-purple-50 to-violet-50 border-purple-500/30" data-testid="bank-balance-card">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-purple-400">Bank Balance</span>
-                  <div className="p-2 bg-purple-100 rounded-lg">
+                  <div className="p-2 bg-purple-500/20 rounded-lg">
                     <CreditCard className="h-5 w-5 text-purple-600" />
                   </div>
                 </div>
@@ -467,7 +467,7 @@ const AdminAccountingDashboard = ({ user }) => {
               <div 
                 key={idx} 
                 className={`p-4 rounded-lg flex items-center gap-3 ${
-                  alert.type === 'CRITICAL' ? 'bg-red-100 border-red-300 border' : 'bg-yellow-100 border-yellow-300 border'
+                  alert.type === 'CRITICAL' ? 'bg-red-500/20 border-red-300 border' : 'bg-yellow-500/20 border-yellow-300 border'
                 }`}
               >
                 <AlertTriangle className={`h-5 w-5 ${alert.type === 'CRITICAL' ? 'text-red-600' : 'text-yellow-600'}`} />
@@ -552,7 +552,7 @@ const AdminAccountingDashboard = ({ user }) => {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-gray-500">Backing Ratio</span>
                   <span className={`px-2 py-1 rounded text-xs font-bold ${
-                    dashboardData.liability.backing_status === 'SAFE' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                    dashboardData.liability.backing_status === 'SAFE' ? 'bg-green-500/20 text-green-600' : 'bg-red-500/20 text-red-600'
                   }`}>
                     {dashboardData.liability.backing_status}
                   </span>

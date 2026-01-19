@@ -207,7 +207,7 @@ const AdminFixedExpenses = ({ user }) => {
               <p className="text-sm text-gray-500">Total Expenses</p>
               <p className="text-2xl font-bold text-gray-900">₹{totalAmount.toLocaleString('en-IN')}</p>
             </div>
-            <div className="p-3 bg-purple-100 rounded-lg">
+            <div className="p-3 bg-purple-500/20 rounded-lg">
               <DollarSign className="h-6 w-6 text-purple-600" />
             </div>
           </div>
@@ -218,7 +218,7 @@ const AdminFixedExpenses = ({ user }) => {
               <p className="text-sm text-gray-500">Paid</p>
               <p className="text-2xl font-bold text-green-600">₹{paidAmount.toLocaleString('en-IN')}</p>
             </div>
-            <div className="p-3 bg-green-100 rounded-lg">
+            <div className="p-3 bg-green-500/20 rounded-lg">
               <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
           </div>
@@ -229,7 +229,7 @@ const AdminFixedExpenses = ({ user }) => {
               <p className="text-sm text-gray-500">Pending</p>
               <p className="text-2xl font-bold text-yellow-600">₹{pendingAmount.toLocaleString('en-IN')}</p>
             </div>
-            <div className="p-3 bg-yellow-100 rounded-lg">
+            <div className="p-3 bg-yellow-500/20 rounded-lg">
               <Clock className="h-6 w-6 text-yellow-600" />
             </div>
           </div>
@@ -240,7 +240,7 @@ const AdminFixedExpenses = ({ user }) => {
               <p className="text-sm text-gray-500">Total Entries</p>
               <p className="text-2xl font-bold text-gray-900">{total}</p>
             </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
+            <div className="p-3 bg-blue-500/20 rounded-lg">
               <FileText className="h-6 w-6 text-blue-600" />
             </div>
           </div>
@@ -283,7 +283,7 @@ const AdminFixedExpenses = ({ user }) => {
                 const Icon = cat.icon;
                 return (
                   <div key={cat.id} className="flex items-center gap-3">
-                    <div className="p-2 bg-gray-100 rounded-lg">
+                    <div className="p-2 bg-gray-700 rounded-lg">
                       <Icon className="h-4 w-4 text-gray-600" />
                     </div>
                     <div className="flex-1">
@@ -329,7 +329,7 @@ const AdminFixedExpenses = ({ user }) => {
                   <tr key={expense.expense_id} className="border-b hover:bg-gray-800/50">
                     <td className="py-3">{expense.month}</td>
                     <td className="py-3">
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100">
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-700">
                         {cat?.label || expense.expense_category}
                       </span>
                     </td>

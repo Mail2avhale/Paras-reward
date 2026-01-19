@@ -111,7 +111,7 @@ const AdminCapitalManagement = ({ user }) => {
       case 'opening_capital': return 'bg-green-500/20 text-green-400';
       case 'additional_capital': return 'bg-blue-500/20 text-blue-400';
       case 'drawings': return 'bg-red-500/20 text-red-400';
-      default: return 'bg-gray-100 text-gray-300';
+      default: return 'bg-gray-700 text-gray-300';
     }
   };
 
@@ -236,7 +236,7 @@ const AdminCapitalManagement = ({ user }) => {
             <p className="text-lg font-bold text-red-600">{formatCurrency(capitalData?.drawings)}</p>
           </div>
         </div>
-        <div className="mt-4 p-3 bg-purple-100 rounded-lg text-center">
+        <div className="mt-4 p-3 bg-purple-500/20 rounded-lg text-center">
           <p className="text-sm text-purple-600">+ Retained Earnings: {formatCurrency(capitalData?.retained_earnings)}</p>
           <p className="text-lg font-bold text-purple-400 mt-1">= Total Equity: {formatCurrency(capitalData?.total_equity)}</p>
         </div>
@@ -256,7 +256,7 @@ const AdminCapitalManagement = ({ user }) => {
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-100">
+            <thead className="bg-gray-700">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Date</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Type</th>

@@ -109,7 +109,7 @@ const AdminAuditService = ({ user }) => {
       critical: 'bg-red-500/20 text-red-400 border-red-500/30',
       high: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
       normal: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      low: 'bg-gray-100 text-gray-300 border-gray-700'
+      low: 'bg-gray-700 text-gray-300 border-gray-700'
     };
     return badges[severity] || badges.normal;
   };
@@ -169,7 +169,7 @@ const AdminAuditService = ({ user }) => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
+              <div className="p-2 bg-purple-500/20 rounded-lg">
                 <Activity className="h-5 w-5 text-purple-600" />
               </div>
               <div>
@@ -181,7 +181,7 @@ const AdminAuditService = ({ user }) => {
           
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
+              <div className="p-2 bg-red-500/20 rounded-lg">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
               </div>
               <div>
@@ -193,7 +193,7 @@ const AdminAuditService = ({ user }) => {
           
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
+              <div className="p-2 bg-green-500/20 rounded-lg">
                 <CheckCircle className="h-5 w-5 text-green-600" />
               </div>
               <div>
@@ -205,7 +205,7 @@ const AdminAuditService = ({ user }) => {
           
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-100 rounded-lg">
+              <div className="p-2 bg-amber-500/20 rounded-lg">
                 <Clock className="h-5 w-5 text-amber-600" />
               </div>
               <div>

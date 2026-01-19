@@ -195,7 +195,7 @@ const AdminPRCLedger = ({ user }) => {
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               filter === f.id
                 ? 'bg-purple-600 text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-100'
+                : 'bg-white text-gray-600 hover:bg-gray-700'
             }`}
             data-testid={`filter-${f.id}`}
           >
@@ -218,7 +218,7 @@ const AdminPRCLedger = ({ user }) => {
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-100">
+            <thead className="bg-gray-700">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Date</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Description</th>
@@ -254,7 +254,7 @@ const AdminPRCLedger = ({ user }) => {
                         entry.type === 'referral' ? 'bg-purple-500/20 text-purple-400' :
                         entry.type === 'prc_burn' ? 'bg-red-500/20 text-red-400' :
                         entry.type === 'order' ? 'bg-orange-500/20 text-orange-400' :
-                        'bg-gray-100 text-gray-300'
+                        'bg-gray-700 text-gray-300'
                       }`}>
                         {entry.type?.replace('_', ' ').toUpperCase()}
                       </span>

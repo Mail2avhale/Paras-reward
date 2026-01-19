@@ -167,7 +167,7 @@ const AdminFraudAlerts = ({ user }) => {
         </Card>
         <Card className={`p-4 cursor-pointer hover:shadow-md ${statusFilter === 'pending' ? 'ring-2 ring-yellow-500' : ''}`} onClick={() => setStatusFilter('pending')}>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-100 rounded-lg">
+            <div className="p-2 bg-yellow-500/20 rounded-lg">
               <Clock className="h-5 w-5 text-yellow-600" />
             </div>
             <div>
@@ -178,7 +178,7 @@ const AdminFraudAlerts = ({ user }) => {
         </Card>
         <Card className={`p-4 cursor-pointer hover:shadow-md ${statusFilter === 'investigating' ? 'ring-2 ring-blue-500' : ''}`} onClick={() => setStatusFilter('investigating')}>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
+            <div className="p-2 bg-blue-500/20 rounded-lg">
               <Eye className="h-5 w-5 text-blue-600" />
             </div>
             <div>
@@ -189,7 +189,7 @@ const AdminFraudAlerts = ({ user }) => {
         </Card>
         <Card className={`p-4 cursor-pointer hover:shadow-md ${statusFilter === 'resolved' ? 'ring-2 ring-green-500' : ''}`} onClick={() => setStatusFilter('resolved')}>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
+            <div className="p-2 bg-green-500/20 rounded-lg">
               <CheckCircle className="h-5 w-5 text-green-600" />
             </div>
             <div>

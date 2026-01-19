@@ -540,7 +540,7 @@ const AdminSettings = ({ user }) => {
                   <button
                     onClick={() => qrInputRef.current?.click()}
                     disabled={uploadingQR}
-                    className="flex items-center gap-2 px-4 py-3 bg-purple-100 hover:bg-purple-200 text-purple-400 rounded-lg transition-colors"
+                    className="flex items-center gap-2 px-4 py-3 bg-purple-500/20 hover:bg-purple-200 text-purple-400 rounded-lg transition-colors"
                   >
                     {uploadingQR ? (
                       <>

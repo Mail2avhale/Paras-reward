@@ -193,7 +193,7 @@ const AdminLiquidity = ({ user }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="p-5 bg-purple-500/10 border-purple-500/30">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-purple-100 rounded-xl">
+            <div className="p-3 bg-purple-500/20 rounded-xl">
               <Coins className="h-6 w-6 text-purple-600" />
             </div>
             <div>
@@ -208,7 +208,7 @@ const AdminLiquidity = ({ user }) => {
 
         <Card className="p-5 bg-green-500/10 border-green-500/30">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-green-100 rounded-xl">
+            <div className="p-3 bg-green-500/20 rounded-xl">
               <DollarSign className="h-6 w-6 text-green-600" />
             </div>
             <div>
@@ -222,7 +222,7 @@ const AdminLiquidity = ({ user }) => {
 
         <Card className="p-5 bg-red-500/10 border-red-500/30">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-red-100 rounded-xl">
+            <div className="p-3 bg-red-500/20 rounded-xl">
               <TrendingDown className="h-6 w-6 text-red-600" />
             </div>
             <div>
@@ -236,7 +236,7 @@ const AdminLiquidity = ({ user }) => {
 
         <Card className="p-5 bg-blue-500/10 border-blue-500/30">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-100 rounded-xl">
+            <div className="p-3 bg-blue-500/20 rounded-xl">
               <Wallet className="h-6 w-6 text-blue-600" />
             </div>
             <div>
@@ -322,7 +322,7 @@ const AdminLiquidity = ({ user }) => {
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
+                <div className="p-2 bg-blue-500/20 rounded-lg">
                   <DollarSign className="h-5 w-5 text-blue-600" />
                 </div>
                 <span className="font-medium">Bank Balance</span>
@@ -334,7 +334,7 @@ const AdminLiquidity = ({ user }) => {
 
             <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
+                <div className="p-2 bg-green-500/20 rounded-lg">
                   <Wallet className="h-5 w-5 text-green-600" />
                 </div>
                 <span className="font-medium">Cash in Hand</span>
@@ -346,7 +346,7 @@ const AdminLiquidity = ({ user }) => {
 
             <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
+                <div className="p-2 bg-purple-500/20 rounded-lg">
                   <Zap className="h-5 w-5 text-purple-600" />
                 </div>
                 <span className="font-medium">Payment Gateway</span>

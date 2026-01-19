@@ -507,19 +507,19 @@ const AdminSystemSettings = ({ user }) => {
             <div className="mt-6 p-4 bg-gray-800 rounded-lg">
               <h4 className="font-semibold mb-2">Bonus Summary</h4>
               <div className="grid grid-cols-5 gap-2 text-center text-sm">
-                <div className="bg-purple-100 p-2 rounded">
+                <div className="bg-purple-500/20 p-2 rounded">
                   <div className="font-bold text-purple-400">L1: {referralBonusSettings.level_1}%</div>
                 </div>
-                <div className="bg-blue-100 p-2 rounded">
+                <div className="bg-blue-500/20 p-2 rounded">
                   <div className="font-bold text-blue-400">L2: {referralBonusSettings.level_2}%</div>
                 </div>
-                <div className="bg-green-100 p-2 rounded">
+                <div className="bg-green-500/20 p-2 rounded">
                   <div className="font-bold text-green-400">L3: {referralBonusSettings.level_3}%</div>
                 </div>
-                <div className="bg-orange-100 p-2 rounded">
+                <div className="bg-orange-500/20 p-2 rounded">
                   <div className="font-bold text-orange-400">L4: {referralBonusSettings.level_4}%</div>
                 </div>
-                <div className="bg-pink-100 p-2 rounded">
+                <div className="bg-pink-500/20 p-2 rounded">
                   <div className="font-bold text-pink-400">L5: {referralBonusSettings.level_5}%</div>
                 </div>
               </div>

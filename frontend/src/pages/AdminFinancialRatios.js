@@ -49,10 +49,10 @@ const AdminFinancialRatios = ({ user }) => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'good': return 'text-green-600 bg-green-100';
-      case 'fair': return 'text-amber-600 bg-amber-100';
-      case 'poor': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'good': return 'text-green-600 bg-green-500/20';
+      case 'fair': return 'text-amber-600 bg-amber-500/20';
+      case 'poor': return 'text-red-600 bg-red-500/20';
+      default: return 'text-gray-600 bg-gray-700';
     }
   };
 

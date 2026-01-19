@@ -258,11 +258,11 @@ const AdminDashboardModern = ({ user, onLogout }) => {
               {recentActivity.map((activity, index) => {
                 const Icon = activity.icon;
                 const colorClasses = {
-                  green: { bg: 'bg-green-100', text: 'text-green-600' },
-                  amber: { bg: 'bg-amber-100', text: 'text-amber-600' },
-                  blue: { bg: 'bg-blue-100', text: 'text-blue-600' },
-                  purple: { bg: 'bg-purple-100', text: 'text-purple-600' },
-                  red: { bg: 'bg-red-100', text: 'text-red-600' },
+                  green: { bg: 'bg-green-500/20', text: 'text-green-600' },
+                  amber: { bg: 'bg-amber-500/20', text: 'text-amber-600' },
+                  blue: { bg: 'bg-blue-500/20', text: 'text-blue-600' },
+                  purple: { bg: 'bg-purple-500/20', text: 'text-purple-600' },
+                  red: { bg: 'bg-red-500/20', text: 'text-red-600' },
                 };
                 const colors = colorClasses[activity.color] || colorClasses.blue;
                 
@@ -287,7 +287,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
           <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/admin-old')}>
             <div className="flex items-center justify-between mb-4">
-              <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+              <div className="h-12 w-12 rounded-lg bg-purple-500/20 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
                 <Users className="h-6 w-6 text-purple-600" />
               </div>
               <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
@@ -302,7 +302,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
 
           <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/admin-old')}>
             <div className="flex items-center justify-between mb-4">
-              <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+              <div className="h-12 w-12 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
                 <ShoppingCart className="h-6 w-6 text-blue-600" />
               </div>
               <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
@@ -317,7 +317,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
 
           <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/admin-old')}>
             <div className="flex items-center justify-between mb-4">
-              <div className="h-12 w-12 rounded-lg bg-indigo-100 flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+              <div className="h-12 w-12 rounded-lg bg-indigo-500/20 flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
                 <Store className="h-6 w-6 text-indigo-600" />
               </div>
               <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
@@ -332,7 +332,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
 
           <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/admin-old')}>
             <div className="flex items-center justify-between mb-4">
-              <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition-colors">
+              <div className="h-12 w-12 rounded-lg bg-green-500/20 flex items-center justify-center group-hover:bg-green-200 transition-colors">
                 <DollarSign className="h-6 w-6 text-green-600" />
               </div>
               <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-green-600 group-hover:translate-x-1 transition-all" />
@@ -346,7 +346,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
 
           <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/admin-old')}>
             <div className="flex items-center justify-between mb-4">
-              <div className="h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+              <div className="h-12 w-12 rounded-lg bg-gray-700 flex items-center justify-center group-hover:bg-gray-200 transition-colors">
                 <Settings className="h-6 w-6 text-gray-600" />
               </div>
               <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all" />

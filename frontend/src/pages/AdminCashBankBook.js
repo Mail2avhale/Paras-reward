@@ -382,7 +382,7 @@ const AdminCashBankBook = ({ user }) => {
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-full ${
                           entry.entry_type === 'expense' || entry.entry_type === 'transfer_out'
-                            ? 'bg-red-100' : 'bg-green-100'
+                            ? 'bg-red-500/20' : 'bg-green-500/20'
                         }`}>
                           {entry.entry_type === 'expense' || entry.entry_type === 'transfer_out' ? (
                             <ArrowDownRight className="h-4 w-4 text-red-600" />
@@ -426,7 +426,7 @@ const AdminCashBankBook = ({ user }) => {
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-full ${
                           entry.entry_type === 'expense' || entry.entry_type === 'transfer_out'
-                            ? 'bg-red-100' : 'bg-blue-100'
+                            ? 'bg-red-500/20' : 'bg-blue-500/20'
                         }`}>
                           {entry.entry_type === 'expense' || entry.entry_type === 'transfer_out' ? (
                             <ArrowDownRight className="h-4 w-4 text-red-600" />
@@ -488,7 +488,7 @@ const AdminCashBankBook = ({ user }) => {
               {/* Entries Table */}
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-100">
+                  <thead className="bg-gray-700">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Date</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Description</th>
@@ -563,7 +563,7 @@ const AdminCashBankBook = ({ user }) => {
                   <Plus className="h-5 w-5 text-purple-600" />
                   Add New Entry
                 </h3>
-                <button onClick={() => setShowEntryModal(false)} className="p-2 hover:bg-gray-100 rounded-full">
+                <button onClick={() => setShowEntryModal(false)} className="p-2 hover:bg-gray-700 rounded-full">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -741,7 +741,7 @@ const AdminCashBankBook = ({ user }) => {
                   <ArrowLeftRight className="h-5 w-5 text-purple-600" />
                   Transfer Between Accounts
                 </h3>
-                <button onClick={() => setShowTransferModal(false)} className="p-2 hover:bg-gray-100 rounded-full">
+                <button onClick={() => setShowTransferModal(false)} className="p-2 hover:bg-gray-700 rounded-full">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -824,7 +824,7 @@ const AdminCashBankBook = ({ user }) => {
                   <Settings className="h-5 w-5 text-purple-600" />
                   Set Opening Balance
                 </h3>
-                <button onClick={() => setShowOpeningBalanceModal(false)} className="p-2 hover:bg-gray-100 rounded-full">
+                <button onClick={() => setShowOpeningBalanceModal(false)} className="p-2 hover:bg-gray-700 rounded-full">
                   <X className="h-5 w-5" />
                 </button>
               </div>

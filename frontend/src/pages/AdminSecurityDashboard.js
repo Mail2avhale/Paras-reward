@@ -254,10 +254,10 @@ const AdminSecurityDashboard = ({ user }) => {
 
   const getSeverityConfig = (severity) => {
     const configs = {
-      critical: { bg: 'bg-red-100', border: 'border-red-500', text: 'text-red-400', icon: AlertOctagon, label: '🔴 CRITICAL' },
-      high: { bg: 'bg-orange-100', border: 'border-orange-500', text: 'text-orange-400', icon: AlertTriangle, label: '🟠 HIGH' },
-      medium: { bg: 'bg-yellow-100', border: 'border-yellow-500', text: 'text-yellow-400', icon: AlertTriangle, label: '🟡 MEDIUM' },
-      low: { bg: 'bg-blue-100', border: 'border-blue-500', text: 'text-blue-400', icon: Shield, label: '🔵 LOW' }
+      critical: { bg: 'bg-red-500/20', border: 'border-red-500', text: 'text-red-400', icon: AlertOctagon, label: '🔴 CRITICAL' },
+      high: { bg: 'bg-orange-500/20', border: 'border-orange-500', text: 'text-orange-400', icon: AlertTriangle, label: '🟠 HIGH' },
+      medium: { bg: 'bg-yellow-500/20', border: 'border-yellow-500', text: 'text-yellow-400', icon: AlertTriangle, label: '🟡 MEDIUM' },
+      low: { bg: 'bg-blue-500/20', border: 'border-blue-500', text: 'text-blue-400', icon: Shield, label: '🔵 LOW' }
     };
     return configs[severity] || configs.low;
   };

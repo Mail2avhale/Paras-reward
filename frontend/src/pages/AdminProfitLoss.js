@@ -149,7 +149,7 @@ const AdminProfitLoss = ({ user }) => {
             </div>
           )}
         </div>
-        <div className={`p-3 rounded-xl ${isProfit !== undefined ? (isProfit ? 'bg-green-100' : 'bg-red-100') : 'bg-gray-800'}`}>
+        <div className={`p-3 rounded-xl ${isProfit !== undefined ? (isProfit ? 'bg-green-500/20' : 'bg-red-500/20') : 'bg-gray-800'}`}>
           <Icon className={`h-6 w-6 ${isProfit !== undefined ? (isProfit ? 'text-green-600' : 'text-red-600') : 'text-gray-400'}`} />
         </div>
       </div>

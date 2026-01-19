@@ -172,7 +172,7 @@ const AdminKYC = ({ user }) => {
               <Card key={doc.kyc_id} className="p-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-start gap-4">
-                    <div className="p-3 bg-purple-100 rounded-lg">
+                    <div className="p-3 bg-purple-500/20 rounded-lg">
                       <User className="h-6 w-6 text-purple-600" />
                   </div>
                   <div>

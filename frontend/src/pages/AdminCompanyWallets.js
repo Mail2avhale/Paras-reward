@@ -120,11 +120,11 @@ const AdminCompanyWallets = ({ user }) => {
 
   const getWalletColor = (type) => {
     switch (type) {
-      case 'ads_revenue': return 'bg-blue-100 text-blue-600';
-      case 'subscription': return 'bg-purple-100 text-purple-600';
-      case 'redeem_reserve': return 'bg-green-100 text-green-600';
-      case 'charity': return 'bg-pink-100 text-pink-600';
-      case 'profit': return 'bg-yellow-100 text-yellow-600';
+      case 'ads_revenue': return 'bg-blue-500/20 text-blue-600';
+      case 'subscription': return 'bg-purple-500/20 text-purple-600';
+      case 'redeem_reserve': return 'bg-green-500/20 text-green-600';
+      case 'charity': return 'bg-pink-500/20 text-pink-600';
+      case 'profit': return 'bg-yellow-500/20 text-yellow-600';
       default: return 'bg-gray-800 text-gray-400';
     }
   };
@@ -236,7 +236,7 @@ const AdminCompanyWallets = ({ user }) => {
               {transactions.map((txn, idx) => (
                 <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${txn.type === 'credit' ? 'bg-green-100' : 'bg-red-100'}`}>
+                    <div className={`p-2 rounded-full ${txn.type === 'credit' ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
                       {txn.type === 'credit' ? (
                         <TrendingUp className="h-4 w-4 text-green-600" />
                       ) : (

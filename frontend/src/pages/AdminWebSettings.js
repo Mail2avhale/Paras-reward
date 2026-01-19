@@ -195,7 +195,7 @@ const AdminWebSettings = ({ user }) => {
   const LogoUploadCard = ({ title, description, logoType, currentUrl, inputRef }) => (
     <div className="border-2 border-dashed border-gray-700 rounded-xl p-6 hover:border-purple-300 transition-colors">
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+        <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
           <Image className="h-5 w-5 text-purple-600" />
         </div>
         <div>
