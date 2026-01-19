@@ -152,7 +152,7 @@ const AdminAdsIncome = ({ user }) => {
               <p className="text-sm text-gray-500">Total Revenue</p>
               <p className="text-2xl font-bold text-gray-900">₹{totalRevenue.toLocaleString('en-IN')}</p>
             </div>
-            <div className="p-3 bg-green-500/20 rounded-lg">
+            <div className="p-3 bg-green-500/100/20 rounded-lg">
               <DollarSign className="h-6 w-6 text-green-600" />
             </div>
           </div>
@@ -163,7 +163,7 @@ const AdminAdsIncome = ({ user }) => {
               <p className="text-sm text-gray-500">Total Impressions</p>
               <p className="text-2xl font-bold text-gray-900">{totalImpressions.toLocaleString()}</p>
             </div>
-            <div className="p-3 bg-blue-500/20 rounded-lg">
+            <div className="p-3 bg-blue-500/100/20 rounded-lg">
               <Eye className="h-6 w-6 text-blue-600" />
             </div>
           </div>
@@ -174,7 +174,7 @@ const AdminAdsIncome = ({ user }) => {
               <p className="text-sm text-gray-500">Total Clicks</p>
               <p className="text-2xl font-bold text-gray-900">{totalClicks.toLocaleString()}</p>
             </div>
-            <div className="p-3 bg-purple-500/20 rounded-lg">
+            <div className="p-3 bg-purple-500/100/20 rounded-lg">
               <TrendingUp className="h-6 w-6 text-purple-600" />
             </div>
           </div>
@@ -185,7 +185,7 @@ const AdminAdsIncome = ({ user }) => {
               <p className="text-sm text-gray-500">Entries</p>
               <p className="text-2xl font-bold text-gray-900">{total}</p>
             </div>
-            <div className="p-3 bg-yellow-500/20 rounded-lg">
+            <div className="p-3 bg-yellow-500/100/20 rounded-lg">
               <Calendar className="h-6 w-6 text-yellow-600" />
             </div>
           </div>
@@ -198,7 +198,7 @@ const AdminAdsIncome = ({ user }) => {
           {summary.map((s) => (
             <Card key={s._id} className="p-4">
               <div className="flex items-center gap-3 mb-3">
-                <div className={`p-2 rounded-lg ${s._id === 'admob' ? 'bg-green-500/20' : 'bg-purple-500/20'}`}>
+                <div className={`p-2 rounded-lg ${s._id === 'admob' ? 'bg-green-500/100/20' : 'bg-purple-500/100/20'}`}>
                   <Smartphone className={`h-5 w-5 ${s._id === 'admob' ? 'text-green-600' : 'text-purple-600'}`} />
                 </div>
                 <h3 className="font-semibold capitalize">{s._id || 'Unknown'}</h3>
@@ -262,7 +262,7 @@ const AdminAdsIncome = ({ user }) => {
                   <td className="py-3">{entry.date}</td>
                   <td className="py-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      entry.ad_network === 'admob' ? 'bg-green-500/20 text-green-400' : 'bg-purple-500/20 text-purple-400'
+                      entry.ad_network === 'admob' ? 'bg-green-500/100/20 text-green-400' : 'bg-purple-500/100/20 text-purple-400'
                     }`}>
                       {entry.ad_network?.toUpperCase()}
                     </span>
@@ -274,7 +274,7 @@ const AdminAdsIncome = ({ user }) => {
                   <td className="py-3">
                     <button
                       onClick={() => handleDelete(entry.entry_id)}
-                      className="p-2 text-red-600 hover:bg-red-500/10 rounded-lg"
+                      className="p-2 text-red-600 hover:bg-red-500/100/10 rounded-lg"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

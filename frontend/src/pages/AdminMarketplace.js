@@ -558,9 +558,9 @@ const AdminMarketplace = ({ user }) => {
   };
 
   const getStockStatusColor = (status, quantity) => {
-    if (status === 'out_of_stock' || quantity === 0) return 'bg-red-500/20 text-red-400 border-red-500/30';
-    if (status === 'limited' || (quantity > 0 && quantity < 10)) return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
-    return 'bg-green-500/20 text-green-400 border-green-500/30';
+    if (status === 'out_of_stock' || quantity === 0) return 'bg-red-500/100/20 text-red-400 border-red-500/30';
+    if (status === 'limited' || (quantity > 0 && quantity < 10)) return 'bg-orange-500/100/20 text-orange-400 border-orange-500/30';
+    return 'bg-green-500/100/20 text-green-400 border-green-500/30';
   };
 
   return (
@@ -573,7 +573,7 @@ const AdminMarketplace = ({ user }) => {
         </div>
         <Button 
           onClick={() => { resetForm(); setShowAddModal(true); }} 
-          className="bg-amber-500/100 hover:bg-amber-600 text-black"
+          className="bg-amber-500/100/100 hover:bg-amber-600 text-black"
           data-testid="add-product-btn"
         >
           <Plus className="h-4 w-4 mr-2" /> Add Product
@@ -584,7 +584,7 @@ const AdminMarketplace = ({ user }) => {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         <Card className="p-4 bg-gray-900 border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-500/100/20 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-blue-500/100/100/20 rounded-xl flex items-center justify-center">
               <Package className="h-5 w-5 text-blue-400" />
             </div>
             <div>
@@ -595,7 +595,7 @@ const AdminMarketplace = ({ user }) => {
         </Card>
         <Card className="p-4 bg-gray-900 border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-500/100/20 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-green-500/100/100/20 rounded-xl flex items-center justify-center">
               <CheckCircle className="h-5 w-5 text-green-400" />
             </div>
             <div>
@@ -606,7 +606,7 @@ const AdminMarketplace = ({ user }) => {
         </Card>
         <Card className="p-4 bg-gray-900 border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-500/100/20 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-emerald-500/100/100/20 rounded-xl flex items-center justify-center">
               <Box className="h-5 w-5 text-emerald-400" />
             </div>
             <div>
@@ -617,7 +617,7 @@ const AdminMarketplace = ({ user }) => {
         </Card>
         <Card className="p-4 bg-gray-900 border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-500/100/20 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-red-500/100/100/20 rounded-xl flex items-center justify-center">
               <AlertCircle className="h-5 w-5 text-red-400" />
             </div>
             <div>
@@ -628,7 +628,7 @@ const AdminMarketplace = ({ user }) => {
         </Card>
         <Card className="p-4 bg-gray-900 border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-500/100/20 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-amber-500/100/100/20 rounded-xl flex items-center justify-center">
               <Home className="h-5 w-5 text-amber-400" />
             </div>
             <div>
@@ -639,7 +639,7 @@ const AdminMarketplace = ({ user }) => {
         </Card>
         <Card className="p-4 bg-gray-900 border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-500/100/20 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-purple-500/100/100/20 rounded-xl flex items-center justify-center">
               <Star className="h-5 w-5 text-purple-400" />
             </div>
             <div>
@@ -719,7 +719,7 @@ const AdminMarketplace = ({ user }) => {
                   )}
                   
                   {product.badge && (
-                    <div className="absolute top-2 left-2 bg-amber-500/100 px-2 py-1 rounded-full text-xs font-bold text-black">
+                    <div className="absolute top-2 left-2 bg-amber-500/100/100 px-2 py-1 rounded-full text-xs font-bold text-black">
                       {getBadgeDisplay(product.badge)}
                     </div>
                   )}
@@ -731,7 +731,7 @@ const AdminMarketplace = ({ user }) => {
                   </div>
                   
                   {product.show_on_home && (
-                    <div className="absolute bottom-2 left-2 bg-blue-500/100 p-1.5 rounded-full">
+                    <div className="absolute bottom-2 left-2 bg-blue-500/100/100 p-1.5 rounded-full">
                       <Home className="h-3 w-3 text-white" />
                     </div>
                   )}
@@ -822,7 +822,7 @@ const AdminMarketplace = ({ user }) => {
                 <Button 
                   onClick={handleAddProduct} 
                   disabled={processing || !formData.name || !formData.category || !formData.prc_price}
-                  className="flex-1 bg-amber-500/100 hover:bg-amber-600 text-black"
+                  className="flex-1 bg-amber-500/100/100 hover:bg-amber-600 text-black"
                   data-testid="save-product-btn"
                 >
                   {processing ? 'Adding...' : <><Save className="h-4 w-4 mr-2" /> Add Product</>}
@@ -861,7 +861,7 @@ const AdminMarketplace = ({ user }) => {
                 <Button 
                   onClick={handleUpdateProduct} 
                   disabled={processing || !formData.name || !formData.category || !formData.prc_price}
-                  className="flex-1 bg-amber-500/100 hover:bg-amber-600 text-black"
+                  className="flex-1 bg-amber-500/100/100 hover:bg-amber-600 text-black"
                   data-testid="update-product-btn"
                 >
                   {processing ? 'Updating...' : <><Save className="h-4 w-4 mr-2" /> Update Product</>}

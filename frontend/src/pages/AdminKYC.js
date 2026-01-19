@@ -83,11 +83,11 @@ const AdminKYC = ({ user }) => {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'verified':
-        return <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Verified</span>;
+        return <span className="px-2 py-1 bg-green-500/100/20 text-green-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Verified</span>;
       case 'rejected':
-        return <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center gap-1"><XCircle className="h-3 w-3" /> Rejected</span>;
+        return <span className="px-2 py-1 bg-red-500/100/20 text-red-400 text-xs rounded-full flex items-center gap-1"><XCircle className="h-3 w-3" /> Rejected</span>;
       default:
-        return <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> Pending</span>;
+        return <span className="px-2 py-1 bg-yellow-500/100/20 text-yellow-400 text-xs rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> Pending</span>;
     }
   };
 
@@ -108,19 +108,19 @@ const AdminKYC = ({ user }) => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card className="p-4 bg-blue-500/10 border-blue-500/30">
+        <Card className="p-4 bg-blue-500/100/10 border-blue-500/30">
           <p className="text-xs text-blue-600">Total Submissions</p>
           <p className="text-2xl font-bold text-blue-400">{stats.total}</p>
         </Card>
-        <Card className="p-4 bg-yellow-500/10 border-yellow-500/30">
+        <Card className="p-4 bg-yellow-500/100/10 border-yellow-500/30">
           <p className="text-xs text-yellow-600">Pending Review</p>
           <p className="text-2xl font-bold text-yellow-400">{stats.pending}</p>
         </Card>
-        <Card className="p-4 bg-green-500/10 border-green-500/30">
+        <Card className="p-4 bg-green-500/100/10 border-green-500/30">
           <p className="text-xs text-green-600">Verified</p>
           <p className="text-2xl font-bold text-green-400">{stats.verified}</p>
         </Card>
-        <Card className="p-4 bg-red-500/10 border-red-500/30">
+        <Card className="p-4 bg-red-500/100/10 border-red-500/30">
           <p className="text-xs text-red-600">Rejected</p>
           <p className="text-2xl font-bold text-red-400">{stats.rejected}</p>
         </Card>
@@ -172,7 +172,7 @@ const AdminKYC = ({ user }) => {
               <Card key={doc.kyc_id} className="p-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-start gap-4">
-                    <div className="p-3 bg-purple-500/20 rounded-lg">
+                    <div className="p-3 bg-purple-500/100/20 rounded-lg">
                       <User className="h-6 w-6 text-purple-600" />
                   </div>
                   <div>

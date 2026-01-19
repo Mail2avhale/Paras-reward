@@ -213,9 +213,9 @@ const AdminAccountsPayable = ({ user }) => {
                     <td className="px-4 py-3 text-sm text-gray-600">{formatDate(item.due_date)}</td>
                     <td className="px-4 py-3 text-center">
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                        item.status === 'paid' ? 'bg-green-500/20 text-green-400' :
-                        item.status === 'overdue' ? 'bg-red-500/20 text-red-400' :
-                        'bg-amber-500/20 text-amber-400'
+                        item.status === 'paid' ? 'bg-green-500/100/20 text-green-400' :
+                        item.status === 'overdue' ? 'bg-red-500/100/20 text-red-400' :
+                        'bg-amber-500/100/20 text-amber-400'
                       }`}>
                         {item.status}
                       </span>

@@ -114,7 +114,7 @@ const AdminBillPayments = ({ user }) => {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="p-4 bg-yellow-500/100/10 border-yellow-500/30">
+          <Card className="p-4 bg-yellow-500/100/100/10 border-yellow-500/30">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">Pending</p>
@@ -123,7 +123,7 @@ const AdminBillPayments = ({ user }) => {
               <Clock className="h-8 w-8 text-yellow-500" />
             </div>
           </Card>
-          <Card className="p-4 bg-green-500/100/10 border-green-500/30">
+          <Card className="p-4 bg-green-500/100/100/10 border-green-500/30">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">Completed</p>
@@ -132,7 +132,7 @@ const AdminBillPayments = ({ user }) => {
               <CheckCircle className="h-8 w-8 text-green-500" />
             </div>
           </Card>
-          <Card className="p-4 bg-red-500/100/10 border-red-500/30">
+          <Card className="p-4 bg-red-500/100/100/10 border-red-500/30">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">Rejected</p>
@@ -219,10 +219,10 @@ const AdminBillPayments = ({ user }) => {
                     <td className="py-3 px-4 text-sm text-purple-400">{req.total_prc_deducted.toFixed(2)}</td>
                     <td className="py-3 px-4">
                       <span className={`px-2 py-1 rounded-full text-xs ${
-                        req.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                        req.status === 'processing' ? 'bg-blue-500/20 text-blue-400' :
-                        req.status === 'completed' ? 'bg-green-500/20 text-green-400' :
-                        'bg-red-500/20 text-red-400'
+                        req.status === 'pending' ? 'bg-yellow-500/100/20 text-yellow-400' :
+                        req.status === 'processing' ? 'bg-blue-500/100/20 text-blue-400' :
+                        req.status === 'completed' ? 'bg-green-500/100/20 text-green-400' :
+                        'bg-red-500/100/20 text-red-400'
                       }`}>
                         {req.status}
                       </span>

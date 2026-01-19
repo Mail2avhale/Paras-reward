@@ -149,7 +149,7 @@ const AdminProfitLoss = ({ user }) => {
             </div>
           )}
         </div>
-        <div className={`p-3 rounded-xl ${isProfit !== undefined ? (isProfit ? 'bg-green-500/20' : 'bg-red-500/20') : 'bg-gray-800'}`}>
+        <div className={`p-3 rounded-xl ${isProfit !== undefined ? (isProfit ? 'bg-green-500/100/20' : 'bg-red-500/100/20') : 'bg-gray-800'}`}>
           <Icon className={`h-6 w-6 ${isProfit !== undefined ? (isProfit ? 'text-green-600' : 'text-red-600') : 'text-gray-400'}`} />
         </div>
       </div>
@@ -241,26 +241,26 @@ const AdminProfitLoss = ({ user }) => {
           value={data?.summary?.gross_revenue}
           change={data?.summary?.revenue_change}
           icon={TrendingUp}
-          color="bg-green-500/10 border-green-500/30"
+          color="bg-green-500/100/10 border-green-500/30"
         />
         <StatCard
           title="Total Expenses"
           value={data?.summary?.total_expenses}
           icon={TrendingDown}
-          color="bg-red-500/10 border-red-500/30"
+          color="bg-red-500/100/10 border-red-500/30"
         />
         <StatCard
           title="Net Profit/Loss"
           value={data?.summary?.net_profit}
           icon={data?.summary?.net_profit >= 0 ? TrendingUp : TrendingDown}
-          color={data?.summary?.net_profit >= 0 ? "bg-emerald-500/10 border-emerald-200" : "bg-rose-50 border-rose-200"}
+          color={data?.summary?.net_profit >= 0 ? "bg-emerald-500/100/10 border-emerald-200" : "bg-rose-500/10 border-rose-200"}
           isProfit={data?.summary?.net_profit >= 0}
         />
         <StatCard
           title="Profit Margin"
           value={null}
           icon={PieIcon}
-          color="bg-purple-500/10 border-purple-500/30"
+          color="bg-purple-500/100/10 border-purple-500/30"
         />
       </div>
 

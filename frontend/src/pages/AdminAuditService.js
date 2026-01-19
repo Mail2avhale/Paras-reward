@@ -106,9 +106,9 @@ const AdminAuditService = ({ user }) => {
 
   const getSeverityBadge = (severity) => {
     const badges = {
-      critical: 'bg-red-500/20 text-red-400 border-red-500/30',
-      high: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-      normal: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      critical: 'bg-red-500/100/20 text-red-400 border-red-500/30',
+      high: 'bg-orange-500/100/20 text-orange-400 border-orange-500/30',
+      normal: 'bg-blue-500/100/20 text-blue-400 border-blue-500/30',
       low: 'bg-gray-700 text-gray-300 border-gray-700'
     };
     return badges[severity] || badges.normal;
@@ -148,7 +148,7 @@ const AdminAuditService = ({ user }) => {
 
       {/* Alerts Banner */}
       {alerts.length > 0 && (
-        <Card className="p-4 bg-red-500/10 border-red-500/30">
+        <Card className="p-4 bg-red-500/100/10 border-red-500/30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <AlertCircle className="h-6 w-6 text-red-600" />
@@ -169,7 +169,7 @@ const AdminAuditService = ({ user }) => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-500/20 rounded-lg">
+              <div className="p-2 bg-purple-500/100/20 rounded-lg">
                 <Activity className="h-5 w-5 text-purple-600" />
               </div>
               <div>
@@ -181,7 +181,7 @@ const AdminAuditService = ({ user }) => {
           
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-500/20 rounded-lg">
+              <div className="p-2 bg-red-500/100/20 rounded-lg">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
               </div>
               <div>
@@ -193,7 +193,7 @@ const AdminAuditService = ({ user }) => {
           
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-500/20 rounded-lg">
+              <div className="p-2 bg-green-500/100/20 rounded-lg">
                 <CheckCircle className="h-5 w-5 text-green-600" />
               </div>
               <div>
@@ -205,7 +205,7 @@ const AdminAuditService = ({ user }) => {
           
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-500/20 rounded-lg">
+              <div className="p-2 bg-amber-500/100/20 rounded-lg">
                 <Clock className="h-5 w-5 text-amber-600" />
               </div>
               <div>
@@ -302,7 +302,7 @@ const AdminAuditService = ({ user }) => {
           </h3>
           <div className="space-y-2">
             {suspicious.slice(0, 5).map((log, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-red-500/10 rounded-lg">
+              <div key={idx} className="flex items-center justify-between p-3 bg-red-500/100/10 rounded-lg">
                 <div className="flex items-center gap-3">
                   {getActionIcon(log.action_type)}
                   <div>
@@ -456,7 +456,7 @@ const AdminAuditService = ({ user }) => {
                 {selectedLog.old_value && (
                   <div>
                     <p className="text-xs text-gray-500">Old Value</p>
-                    <pre className="text-xs p-3 bg-red-500/10 rounded-lg overflow-auto">
+                    <pre className="text-xs p-3 bg-red-500/100/10 rounded-lg overflow-auto">
                       {JSON.stringify(selectedLog.old_value, null, 2)}
                     </pre>
                   </div>
@@ -465,7 +465,7 @@ const AdminAuditService = ({ user }) => {
                 {selectedLog.new_value && (
                   <div>
                     <p className="text-xs text-gray-500">New Value</p>
-                    <pre className="text-xs p-3 bg-green-500/10 rounded-lg overflow-auto">
+                    <pre className="text-xs p-3 bg-green-500/100/10 rounded-lg overflow-auto">
                       {JSON.stringify(selectedLog.new_value, null, 2)}
                     </pre>
                   </div>

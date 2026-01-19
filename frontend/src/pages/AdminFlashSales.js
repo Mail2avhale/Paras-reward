@@ -97,11 +97,11 @@ function AdminFlashSales() {
   const getStatusBadge = (sale) => {
     const now = new Date().toISOString();
     if (now < sale.start_time) {
-      return <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-semibold">Upcoming</span>;
+      return <span className="px-2 py-1 bg-blue-500/100/20 text-blue-400 rounded text-xs font-semibold">Upcoming</span>;
     } else if (now > sale.end_time) {
       return <span className="px-2 py-1 bg-gray-700 text-gray-300 rounded text-xs font-semibold">Expired</span>;
     } else {
-      return <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-semibold animate-pulse">Active</span>;
+      return <span className="px-2 py-1 bg-green-500/100/20 text-green-400 rounded text-xs font-semibold animate-pulse">Active</span>;
     }
   };
 

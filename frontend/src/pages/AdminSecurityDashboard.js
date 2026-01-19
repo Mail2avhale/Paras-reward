@@ -254,10 +254,10 @@ const AdminSecurityDashboard = ({ user }) => {
 
   const getSeverityConfig = (severity) => {
     const configs = {
-      critical: { bg: 'bg-red-500/20', border: 'border-red-500', text: 'text-red-400', icon: AlertOctagon, label: '🔴 CRITICAL' },
-      high: { bg: 'bg-orange-500/20', border: 'border-orange-500', text: 'text-orange-400', icon: AlertTriangle, label: '🟠 HIGH' },
-      medium: { bg: 'bg-yellow-500/20', border: 'border-yellow-500', text: 'text-yellow-400', icon: AlertTriangle, label: '🟡 MEDIUM' },
-      low: { bg: 'bg-blue-500/20', border: 'border-blue-500', text: 'text-blue-400', icon: Shield, label: '🔵 LOW' }
+      critical: { bg: 'bg-red-500/100/20', border: 'border-red-500', text: 'text-red-400', icon: AlertOctagon, label: '🔴 CRITICAL' },
+      high: { bg: 'bg-orange-500/100/20', border: 'border-orange-500', text: 'text-orange-400', icon: AlertTriangle, label: '🟠 HIGH' },
+      medium: { bg: 'bg-yellow-500/100/20', border: 'border-yellow-500', text: 'text-yellow-400', icon: AlertTriangle, label: '🟡 MEDIUM' },
+      low: { bg: 'bg-blue-500/100/20', border: 'border-blue-500', text: 'text-blue-400', icon: Shield, label: '🔵 LOW' }
     };
     return configs[severity] || configs.low;
   };
@@ -275,13 +275,13 @@ const AdminSecurityDashboard = ({ user }) => {
 
   const getActionColor = (action) => {
     const colors = {
-      login: 'bg-green-500/20 text-green-400',
+      login: 'bg-green-500/100/20 text-green-400',
       logout: 'bg-gray-800 text-gray-100',
-      login_blocked_ip: 'bg-red-500/20 text-red-400',
-      activate_lockdown: 'bg-red-500/20 text-red-400',
-      deactivate_lockdown: 'bg-green-500/20 text-green-400',
-      force_logout_all: 'bg-orange-500/20 text-orange-400',
-      update_ip_whitelist: 'bg-blue-500/20 text-blue-400'
+      login_blocked_ip: 'bg-red-500/100/20 text-red-400',
+      activate_lockdown: 'bg-red-500/100/20 text-red-400',
+      deactivate_lockdown: 'bg-green-500/100/20 text-green-400',
+      force_logout_all: 'bg-orange-500/100/20 text-orange-400',
+      update_ip_whitelist: 'bg-blue-500/100/20 text-blue-400'
     };
     return colors[action] || 'bg-gray-800 text-gray-100';
   };
@@ -402,7 +402,7 @@ const AdminSecurityDashboard = ({ user }) => {
                             {config.label}
                           </span>
                           {!alert.is_read && (
-                            <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded font-medium">
+                            <span className="text-xs bg-purple-500/100/20 text-purple-400 px-2 py-0.5 rounded font-medium">
                               NEW
                             </span>
                           )}
@@ -623,7 +623,7 @@ const AdminSecurityDashboard = ({ user }) => {
                 <div className="flex gap-4 pt-4">
                   <Button 
                     onClick={() => handleActivateLockdown('partial')}
-                    className="bg-orange-500/100 hover:bg-orange-600"
+                    className="bg-orange-500/100/100 hover:bg-orange-600"
                     disabled={!lockdownReason.trim() || selectedFeatures.length === 0}
                   >
                     <Lock className="w-4 h-4 mr-2" />
@@ -631,7 +631,7 @@ const AdminSecurityDashboard = ({ user }) => {
                   </Button>
                   <Button 
                     onClick={() => handleActivateLockdown('full')}
-                    className="bg-red-500/100 hover:bg-red-600"
+                    className="bg-red-500/100/100 hover:bg-red-600"
                     disabled={!lockdownReason.trim()}
                   >
                     <ShieldAlert className="w-4 h-4 mr-2" />
@@ -661,7 +661,7 @@ const AdminSecurityDashboard = ({ user }) => {
               <Button
                 variant={ipWhitelist.enabled ? 'default' : 'outline'}
                 onClick={() => setIpWhitelist(prev => ({ ...prev, enabled: !prev.enabled }))}
-                className={ipWhitelist.enabled ? 'bg-green-500/100 hover:bg-green-600' : ''}
+                className={ipWhitelist.enabled ? 'bg-green-500/100/100 hover:bg-green-600' : ''}
               >
                 {ipWhitelist.enabled ? '✅ Enabled' : 'Disabled'}
               </Button>

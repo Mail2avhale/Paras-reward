@@ -26,18 +26,18 @@ const ACTION_ICONS = {
 };
 
 const ACTION_COLORS = {
-  login: 'bg-blue-500/20 text-blue-400',
-  order_placed: 'bg-green-500/20 text-green-400',
-  withdrawal_requested: 'bg-yellow-500/20 text-yellow-400',
-  withdrawal_approved: 'bg-emerald-500/20 text-emerald-400',
-  withdrawal_rejected: 'bg-red-500/20 text-red-400',
-  kyc_submitted: 'bg-purple-500/20 text-purple-400',
-  kyc_approved: 'bg-indigo-500/20 text-indigo-400',
-  kyc_rejected: 'bg-red-500/20 text-red-400',
+  login: 'bg-blue-500/100/20 text-blue-400',
+  order_placed: 'bg-green-500/100/20 text-green-400',
+  withdrawal_requested: 'bg-yellow-500/100/20 text-yellow-400',
+  withdrawal_approved: 'bg-emerald-500/100/20 text-emerald-400',
+  withdrawal_rejected: 'bg-red-500/100/20 text-red-400',
+  kyc_submitted: 'bg-purple-500/100/20 text-purple-400',
+  kyc_approved: 'bg-indigo-500/100/20 text-indigo-400',
+  kyc_rejected: 'bg-red-500/100/20 text-red-400',
   profile_updated: 'bg-gray-700 text-gray-300',
-  user_role_changed: 'bg-orange-500/20 text-orange-400',
-  mining_started: 'bg-teal-500/20 text-teal-400',
-  mining_claimed: 'bg-cyan-500/20 text-cyan-400'
+  user_role_changed: 'bg-orange-500/100/20 text-orange-400',
+  mining_started: 'bg-teal-500/100/20 text-teal-400',
+  mining_claimed: 'bg-cyan-500/100/20 text-cyan-400'
 };
 
 const AdminActivityLogs = () => {

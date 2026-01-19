@@ -113,7 +113,7 @@ const AdminPRCLedger = ({ user }) => {
           <Button 
             onClick={handleSyncToBooks} 
             size="sm" 
-            className="bg-amber-500/100 hover:bg-amber-600"
+            className="bg-amber-500/100/100 hover:bg-amber-600"
             disabled={syncing}
             data-testid="sync-prc-btn"
           >
@@ -206,7 +206,7 @@ const AdminPRCLedger = ({ user }) => {
 
       {/* Ledger Table */}
       <Card className="overflow-hidden">
-        <div className="p-4 bg-amber-500/10 border-b flex items-center justify-between">
+        <div className="p-4 bg-amber-500/100/10 border-b flex items-center justify-between">
           <h3 className="font-semibold text-gray-900 flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-amber-600" />
             PRC Transaction Ledger
@@ -249,11 +249,11 @@ const AdminPRCLedger = ({ user }) => {
                     </td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-1 rounded-full ${
-                        entry.type === 'mining' ? 'bg-green-500/20 text-green-400' :
-                        entry.type === 'tap_game' ? 'bg-blue-500/20 text-blue-400' :
-                        entry.type === 'referral' ? 'bg-purple-500/20 text-purple-400' :
-                        entry.type === 'prc_burn' ? 'bg-red-500/20 text-red-400' :
-                        entry.type === 'order' ? 'bg-orange-500/20 text-orange-400' :
+                        entry.type === 'mining' ? 'bg-green-500/100/20 text-green-400' :
+                        entry.type === 'tap_game' ? 'bg-blue-500/100/20 text-blue-400' :
+                        entry.type === 'referral' ? 'bg-purple-500/100/20 text-purple-400' :
+                        entry.type === 'prc_burn' ? 'bg-red-500/100/20 text-red-400' :
+                        entry.type === 'order' ? 'bg-orange-500/100/20 text-orange-400' :
                         'bg-gray-700 text-gray-300'
                       }`}>
                         {entry.type?.replace('_', ' ').toUpperCase()}
@@ -270,8 +270,8 @@ const AdminPRCLedger = ({ user }) => {
                     <td className="px-4 py-3 text-center">
                       <span className={`text-xs font-bold px-2 py-1 rounded ${
                         entry.dr_cr === 'CR' 
-                          ? 'bg-green-500/20 text-green-400' 
-                          : 'bg-red-500/20 text-red-400'
+                          ? 'bg-green-500/100/20 text-green-400' 
+                          : 'bg-red-500/100/20 text-red-400'
                       }`}>
                         {entry.dr_cr}
                       </span>
@@ -312,7 +312,7 @@ const AdminPRCLedger = ({ user }) => {
       </Card>
 
       {/* Info Box */}
-      <Card className="mt-4 p-4 bg-amber-500/10 border-amber-200">
+      <Card className="mt-4 p-4 bg-amber-500/100/10 border-amber-200">
         <div className="flex gap-3">
           <Coins className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-amber-400">

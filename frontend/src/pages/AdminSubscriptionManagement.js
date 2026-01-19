@@ -80,9 +80,9 @@ const AdminSubscriptionManagement = ({ user }) => {
 
   const planColors = {
     explorer: 'bg-gray-800/500',
-    startup: 'bg-blue-500/100',
-    growth: 'bg-emerald-500/100',
-    elite: 'bg-amber-500/100'
+    startup: 'bg-blue-500/100/100',
+    growth: 'bg-emerald-500/100/100',
+    elite: 'bg-amber-500/100/100'
   };
 
   useEffect(() => {
@@ -357,7 +357,7 @@ const AdminSubscriptionManagement = ({ user }) => {
             variant="outline" 
             onClick={handleRunBurnJob}
             disabled={processing}
-            className="border-red-500/50 text-red-400 hover:bg-red-500/100/10"
+            className="border-red-500/50 text-red-400 hover:bg-red-500/100/100/10"
           >
             <Zap className="w-4 h-4 mr-2" />
             Run Explorer Burn
@@ -384,7 +384,7 @@ const AdminSubscriptionManagement = ({ user }) => {
         </Card>
         <Card className="p-4 bg-gray-900 border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-500/100/20 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-blue-500/100/100/20 rounded-lg flex items-center justify-center">
               <Rocket className="w-5 h-5 text-blue-500" />
             </div>
             <div>
@@ -395,7 +395,7 @@ const AdminSubscriptionManagement = ({ user }) => {
         </Card>
         <Card className="p-4 bg-gray-900 border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-500/100/20 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-emerald-500/100/100/20 rounded-lg flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-emerald-500" />
             </div>
             <div>
@@ -406,7 +406,7 @@ const AdminSubscriptionManagement = ({ user }) => {
         </Card>
         <Card className="p-4 bg-gray-900 border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-500/100/20 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-amber-500/100/100/20 rounded-lg flex items-center justify-center">
               <Crown className="w-5 h-5 text-amber-500" />
             </div>
             <div>
@@ -417,7 +417,7 @@ const AdminSubscriptionManagement = ({ user }) => {
         </Card>
         <Card className="p-4 bg-gray-900 border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-500/100/20 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-orange-500/100/100/20 rounded-lg flex items-center justify-center">
               <Clock className="w-5 h-5 text-orange-500" />
             </div>
             <div>
@@ -428,7 +428,7 @@ const AdminSubscriptionManagement = ({ user }) => {
         </Card>
         <Card className="p-4 bg-gray-900 border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-500/100/20 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-green-500/100/100/20 rounded-lg flex items-center justify-center">
               <DollarSign className="w-5 h-5 text-green-500" />
             </div>
             <div>
@@ -447,7 +447,7 @@ const AdminSubscriptionManagement = ({ user }) => {
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-lg font-medium transition-all ${
               activeTab === tab
-                ? 'bg-amber-500/100 text-black'
+                ? 'bg-amber-500/100/100 text-black'
                 : 'text-gray-400 hover:text-white hover:bg-gray-800'
             }`}
           >
@@ -472,8 +472,8 @@ const AdminSubscriptionManagement = ({ user }) => {
                 <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      payment.status === 'approved' ? 'bg-green-500/100/20' :
-                      payment.status === 'rejected' ? 'bg-red-500/100/20' : 'bg-orange-500/100/20'
+                      payment.status === 'approved' ? 'bg-green-500/100/100/20' :
+                      payment.status === 'rejected' ? 'bg-red-500/100/100/20' : 'bg-orange-500/100/100/20'
                     }`}>
                       {payment.status === 'approved' ? <CheckCircle className="w-4 h-4 text-green-500" /> :
                        payment.status === 'rejected' ? <XCircle className="w-4 h-4 text-red-500" /> :
@@ -531,7 +531,7 @@ const AdminSubscriptionManagement = ({ user }) => {
               <button
                 onClick={handleCleanDatabase}
                 disabled={processing}
-                className="w-full p-4 bg-red-500/100/10 border border-red-500/30 rounded-lg flex items-center gap-3 hover:bg-red-500/100/20 transition-all"
+                className="w-full p-4 bg-red-500/100/100/10 border border-red-500/30 rounded-lg flex items-center gap-3 hover:bg-red-500/100/100/20 transition-all"
               >
                 <AlertCircle className="w-5 h-5 text-red-500" />
                 <div className="text-left">
@@ -555,7 +555,7 @@ const AdminSubscriptionManagement = ({ user }) => {
                   onClick={() => { setPaymentFilter(status); fetchPayments(); }}
                   className={`px-3 py-1 rounded-full text-sm ${
                     paymentFilter === status
-                      ? 'bg-amber-500/100 text-black'
+                      ? 'bg-amber-500/100/100 text-black'
                       : 'bg-gray-800 text-gray-400'
                   }`}
                 >
@@ -570,7 +570,7 @@ const AdminSubscriptionManagement = ({ user }) => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      planColors[payment.subscription_plan] || 'bg-amber-500/100'
+                      planColors[payment.subscription_plan] || 'bg-amber-500/100/100'
                     }/20`}>
                       {(() => {
                         const Icon = planIcons[payment.subscription_plan] || Crown;
@@ -641,7 +641,7 @@ const AdminSubscriptionManagement = ({ user }) => {
                   <X className="w-4 h-4 mr-2" />
                   Cancel
                 </Button>
-                <Button onClick={handleSavePricing} disabled={processing} className="bg-amber-500/100 hover:bg-amber-600">
+                <Button onClick={handleSavePricing} disabled={processing} className="bg-amber-500/100/100 hover:bg-amber-600">
                   <Save className="w-4 h-4 mr-2" />
                   Save
                 </Button>
@@ -653,9 +653,9 @@ const AdminSubscriptionManagement = ({ user }) => {
               const planPricing = editingPricing ? pricingForm[plan] || {} : pricing[plan] || {};
               return (
                 <div key={plan} className={`p-6 rounded-xl border ${
-                  plan === 'elite' ? 'bg-amber-500/100/10 border-amber-500/30' :
-                  plan === 'growth' ? 'bg-emerald-500/100/10 border-emerald-500/30' :
-                  'bg-blue-500/100/10 border-blue-500/30'
+                  plan === 'elite' ? 'bg-amber-500/100/100/10 border-amber-500/30' :
+                  plan === 'growth' ? 'bg-emerald-500/100/100/10 border-emerald-500/30' :
+                  'bg-blue-500/100/100/10 border-blue-500/30'
                 }`}>
                   <div className="flex items-center gap-3 mb-4">
                     {(() => {
@@ -746,9 +746,9 @@ const AdminSubscriptionManagement = ({ user }) => {
                       </td>
                       <td className="py-3">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          plan === 'elite' ? 'bg-amber-500/100/20 text-amber-400' :
-                          plan === 'growth' ? 'bg-emerald-500/100/20 text-emerald-400' :
-                          plan === 'startup' ? 'bg-blue-500/100/20 text-blue-400' :
+                          plan === 'elite' ? 'bg-amber-500/100/100/20 text-amber-400' :
+                          plan === 'growth' ? 'bg-emerald-500/100/100/20 text-emerald-400' :
+                          plan === 'startup' ? 'bg-blue-500/100/100/20 text-blue-400' :
                           'bg-gray-800/500/20 text-gray-400'
                         }`}>
                           {plan.charAt(0).toUpperCase() + plan.slice(1)}
@@ -769,7 +769,7 @@ const AdminSubscriptionManagement = ({ user }) => {
                       <td className="py-3">
                         <button
                           onClick={() => openEditSubscription(u)}
-                          className="px-3 py-1 bg-purple-500/100/20 text-purple-400 text-xs rounded-lg hover:bg-purple-500/100/30 transition-colors"
+                          className="px-3 py-1 bg-purple-500/100/100/20 text-purple-400 text-xs rounded-lg hover:bg-purple-500/100/100/30 transition-colors"
                         >
                           <Edit2 className="w-3 h-3 inline mr-1" />
                           Edit
@@ -802,9 +802,9 @@ const AdminSubscriptionManagement = ({ user }) => {
               <div className="flex items-center gap-2 mt-2">
                 <span className="text-gray-500 text-xs">Current Plan:</span>
                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                  editingUser.subscription_plan === 'elite' ? 'bg-amber-500/100/20 text-amber-400' :
-                  editingUser.subscription_plan === 'growth' ? 'bg-emerald-500/100/20 text-emerald-400' :
-                  editingUser.subscription_plan === 'startup' ? 'bg-blue-500/100/20 text-blue-400' :
+                  editingUser.subscription_plan === 'elite' ? 'bg-amber-500/100/100/20 text-amber-400' :
+                  editingUser.subscription_plan === 'growth' ? 'bg-emerald-500/100/100/20 text-emerald-400' :
+                  editingUser.subscription_plan === 'startup' ? 'bg-blue-500/100/100/20 text-blue-400' :
                   'bg-gray-700 text-gray-400'
                 }`}>
                   {(editingUser.subscription_plan || 'explorer').charAt(0).toUpperCase() + (editingUser.subscription_plan || 'explorer').slice(1)}
@@ -828,9 +828,9 @@ const AdminSubscriptionManagement = ({ user }) => {
                       onClick={() => setManualSubForm({...manualSubForm, plan})}
                       className={`p-3 rounded-lg border text-xs font-medium transition-colors ${
                         manualSubForm.plan === plan 
-                          ? plan === 'elite' ? 'bg-amber-500/100/20 border-amber-500 text-amber-400' :
-                            plan === 'growth' ? 'bg-emerald-500/100/20 border-emerald-500 text-emerald-400' :
-                            plan === 'startup' ? 'bg-blue-500/100/20 border-blue-500 text-blue-400' :
+                          ? plan === 'elite' ? 'bg-amber-500/100/100/20 border-amber-500 text-amber-400' :
+                            plan === 'growth' ? 'bg-emerald-500/100/100/20 border-emerald-500 text-emerald-400' :
+                            plan === 'startup' ? 'bg-blue-500/100/100/20 border-blue-500 text-blue-400' :
                             'bg-gray-700 border-gray-600 text-gray-300'
                           : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
                       }`}
@@ -863,7 +863,7 @@ const AdminSubscriptionManagement = ({ user }) => {
                       })}
                       className={`px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
                         manualSubForm.days === days && !manualSubForm.use_manual_expiry
-                          ? 'bg-purple-500/100/20 border-purple-500 text-purple-400'
+                          ? 'bg-purple-500/100/100/20 border-purple-500 text-purple-400'
                           : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
                       }`}
                     >
@@ -905,7 +905,7 @@ const AdminSubscriptionManagement = ({ user }) => {
                     onClick={() => setManualSubForm({...manualSubForm, use_manual_expiry: false})}
                     className={`flex-1 p-3 rounded-lg border text-sm transition-colors ${
                       !manualSubForm.use_manual_expiry
-                        ? 'bg-green-500/100/20 border-green-500 text-green-400'
+                        ? 'bg-green-500/100/100/20 border-green-500 text-green-400'
                         : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
                     }`}
                   >
@@ -920,7 +920,7 @@ const AdminSubscriptionManagement = ({ user }) => {
                     onClick={() => setManualSubForm({...manualSubForm, use_manual_expiry: true})}
                     className={`flex-1 p-3 rounded-lg border text-sm transition-colors ${
                       manualSubForm.use_manual_expiry
-                        ? 'bg-blue-500/100/20 border-blue-500 text-blue-400'
+                        ? 'bg-blue-500/100/100/20 border-blue-500 text-blue-400'
                         : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
                     }`}
                   >
@@ -953,7 +953,7 @@ const AdminSubscriptionManagement = ({ user }) => {
                 <button
                   onClick={() => setManualSubForm({...manualSubForm, is_free: !manualSubForm.is_free, amount_paid: 0})}
                   className={`relative w-12 h-6 rounded-full transition-colors ${
-                    manualSubForm.is_free ? 'bg-green-500/100' : 'bg-gray-700'
+                    manualSubForm.is_free ? 'bg-green-500/100/100' : 'bg-gray-700'
                   }`}
                 >
                   <span className={`absolute top-1 w-4 h-4 rounded-full bg-gray-900 transition-transform ${
@@ -1015,7 +1015,7 @@ const AdminSubscriptionManagement = ({ user }) => {
               </div>
               
               {/* Summary */}
-              <div className="bg-purple-500/100/10 border border-purple-500/30 rounded-lg p-4">
+              <div className="bg-purple-500/100/100/10 border border-purple-500/30 rounded-lg p-4">
                 <h4 className="text-purple-400 font-medium mb-2">Summary</h4>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>

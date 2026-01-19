@@ -49,9 +49,9 @@ const AdminFinancialRatios = ({ user }) => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'good': return 'text-green-600 bg-green-500/20';
-      case 'fair': return 'text-amber-600 bg-amber-500/20';
-      case 'poor': return 'text-red-600 bg-red-500/20';
+      case 'good': return 'text-green-600 bg-green-500/100/20';
+      case 'fair': return 'text-amber-600 bg-amber-500/100/20';
+      case 'poor': return 'text-red-600 bg-red-500/100/20';
       default: return 'text-gray-600 bg-gray-700';
     }
   };
@@ -219,23 +219,23 @@ const AdminFinancialRatios = ({ user }) => {
           Underlying Financial Data
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="p-4 bg-blue-500/10 rounded-lg text-center">
+          <div className="p-4 bg-blue-500/100/10 rounded-lg text-center">
             <p className="text-xs text-gray-600 mb-1">Total Cash</p>
             <p className="text-lg font-bold text-blue-600">{formatCurrency(underlying.total_cash)}</p>
           </div>
-          <div className="p-4 bg-red-500/10 rounded-lg text-center">
+          <div className="p-4 bg-red-500/100/10 rounded-lg text-center">
             <p className="text-xs text-gray-600 mb-1">Liabilities</p>
             <p className="text-lg font-bold text-red-600">{formatCurrency(underlying.total_current_liabilities)}</p>
           </div>
-          <div className="p-4 bg-green-500/10 rounded-lg text-center">
+          <div className="p-4 bg-green-500/100/10 rounded-lg text-center">
             <p className="text-xs text-gray-600 mb-1">Income</p>
             <p className="text-lg font-bold text-green-600">{formatCurrency(underlying.total_income)}</p>
           </div>
-          <div className="p-4 bg-orange-500/10 rounded-lg text-center">
+          <div className="p-4 bg-orange-500/100/10 rounded-lg text-center">
             <p className="text-xs text-gray-600 mb-1">Expenses</p>
             <p className="text-lg font-bold text-orange-600">{formatCurrency(underlying.total_expenses)}</p>
           </div>
-          <div className={`p-4 rounded-lg text-center ${underlying.net_profit >= 0 ? 'bg-emerald-500/10' : 'bg-rose-50'}`}>
+          <div className={`p-4 rounded-lg text-center ${underlying.net_profit >= 0 ? 'bg-emerald-500/100/10' : 'bg-rose-500/10'}`}>
             <p className="text-xs text-gray-600 mb-1">Net Profit/Loss</p>
             <p className={`text-lg font-bold ${underlying.net_profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
               {formatCurrency(underlying.net_profit)}
@@ -245,7 +245,7 @@ const AdminFinancialRatios = ({ user }) => {
       </Card>
 
       {/* Tips Card */}
-      <Card className="mt-6 p-5 bg-purple-500/10 border-purple-500/30">
+      <Card className="mt-6 p-5 bg-purple-500/100/10 border-purple-500/30">
         <h3 className="font-semibold text-purple-900 mb-3 flex items-center gap-2">
           <AlertTriangle className="h-5 w-5" />
           Improvement Tips

@@ -91,18 +91,18 @@ const AdminFraudAlerts = ({ user }) => {
 
   const getSeverityColor = (severity) => {
     switch (severity) {
-      case 'critical': return 'bg-red-500/20 text-red-400 border-red-500/30';
-      case 'high': return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
-      case 'medium': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+      case 'critical': return 'bg-red-500/100/20 text-red-400 border-red-500/30';
+      case 'high': return 'bg-orange-500/100/20 text-orange-400 border-orange-500/30';
+      case 'medium': return 'bg-yellow-500/100/20 text-yellow-400 border-yellow-500/30';
       default: return 'bg-gray-800 text-gray-300 border-gray-700';
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-500/20 text-yellow-400';
-      case 'investigating': return 'bg-blue-500/20 text-blue-400';
-      case 'resolved': return 'bg-green-500/20 text-green-400';
+      case 'pending': return 'bg-yellow-500/100/20 text-yellow-400';
+      case 'investigating': return 'bg-blue-500/100/20 text-blue-400';
+      case 'resolved': return 'bg-green-500/100/20 text-green-400';
       case 'false_positive': return 'bg-gray-800 text-gray-300';
       default: return 'bg-gray-800 text-gray-300';
     }
@@ -167,7 +167,7 @@ const AdminFraudAlerts = ({ user }) => {
         </Card>
         <Card className={`p-4 cursor-pointer hover:shadow-md ${statusFilter === 'pending' ? 'ring-2 ring-yellow-500' : ''}`} onClick={() => setStatusFilter('pending')}>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-500/20 rounded-lg">
+            <div className="p-2 bg-yellow-500/100/20 rounded-lg">
               <Clock className="h-5 w-5 text-yellow-600" />
             </div>
             <div>
@@ -178,7 +178,7 @@ const AdminFraudAlerts = ({ user }) => {
         </Card>
         <Card className={`p-4 cursor-pointer hover:shadow-md ${statusFilter === 'investigating' ? 'ring-2 ring-blue-500' : ''}`} onClick={() => setStatusFilter('investigating')}>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
+            <div className="p-2 bg-blue-500/100/20 rounded-lg">
               <Eye className="h-5 w-5 text-blue-600" />
             </div>
             <div>
@@ -189,7 +189,7 @@ const AdminFraudAlerts = ({ user }) => {
         </Card>
         <Card className={`p-4 cursor-pointer hover:shadow-md ${statusFilter === 'resolved' ? 'ring-2 ring-green-500' : ''}`} onClick={() => setStatusFilter('resolved')}>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-500/20 rounded-lg">
+            <div className="p-2 bg-green-500/100/20 rounded-lg">
               <CheckCircle className="h-5 w-5 text-green-600" />
             </div>
             <div>
