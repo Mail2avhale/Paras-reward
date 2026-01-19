@@ -956,7 +956,7 @@ const AdminSubscriptionManagement = ({ user }) => {
                     manualSubForm.is_free ? 'bg-green-500/100' : 'bg-gray-700'
                   }`}
                 >
-                  <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                  <span className={`absolute top-1 w-4 h-4 rounded-full bg-gray-900 transition-transform ${
                     manualSubForm.is_free ? 'left-7' : 'left-1'
                   }`} />
                 </button>

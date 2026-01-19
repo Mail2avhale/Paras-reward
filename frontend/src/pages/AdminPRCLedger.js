@@ -133,7 +133,7 @@ const AdminPRCLedger = ({ user }) => {
               <h2 className="text-2xl font-bold mt-1">{formatPRC(summary.total_mined_prc)} PRC</h2>
               <p className="text-green-200 text-sm mt-1">≈ {formatCurrency(summary.total_mined_inr)}</p>
             </div>
-            <div className="bg-white/20 p-2 rounded-lg">
+            <div className="bg-gray-900/20 p-2 rounded-lg">
               <TrendingUp className="h-6 w-6" />
             </div>
           </div>
@@ -147,7 +147,7 @@ const AdminPRCLedger = ({ user }) => {
               <h2 className="text-2xl font-bold mt-1">{formatPRC(summary.total_consumed_prc)} PRC</h2>
               <p className="text-blue-200 text-sm mt-1">≈ {formatCurrency(summary.total_consumed_inr)}</p>
             </div>
-            <div className="bg-white/20 p-2 rounded-lg">
+            <div className="bg-gray-900/20 p-2 rounded-lg">
               <TrendingDown className="h-6 w-6" />
             </div>
           </div>
@@ -161,7 +161,7 @@ const AdminPRCLedger = ({ user }) => {
               <h2 className="text-2xl font-bold mt-1">{formatPRC(summary.total_burned_prc)} PRC</h2>
               <p className="text-orange-200 text-sm mt-1">≈ {formatCurrency(summary.total_burned_inr)}</p>
             </div>
-            <div className="bg-white/20 p-2 rounded-lg">
+            <div className="bg-gray-900/20 p-2 rounded-lg">
               <Flame className="h-6 w-6" />
             </div>
           </div>
@@ -175,7 +175,7 @@ const AdminPRCLedger = ({ user }) => {
               <h2 className="text-2xl font-bold mt-1">{formatPRC(summary.net_circulation_prc)} PRC</h2>
               <p className="text-purple-200 text-sm mt-1">{summary.conversion_rate}</p>
             </div>
-            <div className="bg-white/20 p-2 rounded-lg">
+            <div className="bg-gray-900/20 p-2 rounded-lg">
               <Wallet className="h-6 w-6" />
             </div>
           </div>
@@ -195,7 +195,7 @@ const AdminPRCLedger = ({ user }) => {
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               filter === f.id
                 ? 'bg-purple-600 text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-700'
+                : 'bg-gray-900 text-gray-600 hover:bg-gray-700'
             }`}
             data-testid={`filter-${f.id}`}
           >

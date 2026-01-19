@@ -161,7 +161,7 @@ const AdminCapitalManagement = ({ user }) => {
               <h2 className="text-2xl font-bold mt-1">{formatCurrency(capitalData?.opening_capital)}</h2>
               <p className="text-emerald-200 text-xs mt-1">Initial investment</p>
             </div>
-            <div className="bg-white/20 p-2 rounded-lg">
+            <div className="bg-gray-900/20 p-2 rounded-lg">
               <PiggyBank className="h-6 w-6" />
             </div>
           </div>
@@ -175,7 +175,7 @@ const AdminCapitalManagement = ({ user }) => {
               <h2 className="text-2xl font-bold mt-1">{formatCurrency(capitalData?.additional_capital)}</h2>
               <p className="text-blue-200 text-xs mt-1">Further investments</p>
             </div>
-            <div className="bg-white/20 p-2 rounded-lg">
+            <div className="bg-gray-900/20 p-2 rounded-lg">
               <TrendingUp className="h-6 w-6" />
             </div>
           </div>
@@ -189,7 +189,7 @@ const AdminCapitalManagement = ({ user }) => {
               <h2 className="text-2xl font-bold mt-1">{formatCurrency(capitalData?.drawings)}</h2>
               <p className="text-red-200 text-xs mt-1">Withdrawn amount</p>
             </div>
-            <div className="bg-white/20 p-2 rounded-lg">
+            <div className="bg-gray-900/20 p-2 rounded-lg">
               <TrendingDown className="h-6 w-6" />
             </div>
           </div>
@@ -203,7 +203,7 @@ const AdminCapitalManagement = ({ user }) => {
               <h2 className="text-2xl font-bold mt-1">{formatCurrency(capitalData?.total_equity)}</h2>
               <p className="text-purple-200 text-xs mt-1">Net owner's equity</p>
             </div>
-            <div className="bg-white/20 p-2 rounded-lg">
+            <div className="bg-gray-900/20 p-2 rounded-lg">
               <CircleDollarSign className="h-6 w-6" />
             </div>
           </div>
@@ -217,21 +217,21 @@ const AdminCapitalManagement = ({ user }) => {
           Equity Calculation
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
-          <div className="p-3 bg-white rounded-lg shadow-sm">
+          <div className="p-3 bg-gray-900 rounded-lg shadow-sm">
             <p className="text-xs text-gray-500">Opening Capital</p>
             <p className="text-lg font-bold text-emerald-600">{formatCurrency(capitalData?.opening_capital)}</p>
           </div>
-          <div className="p-3 bg-white rounded-lg shadow-sm flex items-center justify-center">
+          <div className="p-3 bg-gray-900 rounded-lg shadow-sm flex items-center justify-center">
             <span className="text-2xl text-gray-400">+</span>
           </div>
-          <div className="p-3 bg-white rounded-lg shadow-sm">
+          <div className="p-3 bg-gray-900 rounded-lg shadow-sm">
             <p className="text-xs text-gray-500">Additional Capital</p>
             <p className="text-lg font-bold text-blue-600">{formatCurrency(capitalData?.additional_capital)}</p>
           </div>
-          <div className="p-3 bg-white rounded-lg shadow-sm flex items-center justify-center">
+          <div className="p-3 bg-gray-900 rounded-lg shadow-sm flex items-center justify-center">
             <span className="text-2xl text-gray-400">−</span>
           </div>
-          <div className="p-3 bg-white rounded-lg shadow-sm">
+          <div className="p-3 bg-gray-900 rounded-lg shadow-sm">
             <p className="text-xs text-gray-500">Drawings</p>
             <p className="text-lg font-bold text-red-600">{formatCurrency(capitalData?.drawings)}</p>
           </div>
@@ -318,7 +318,7 @@ const AdminCapitalManagement = ({ user }) => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-xl shadow-xl max-w-md w-full"
+              className="bg-gray-900 rounded-xl shadow-xl max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 border-b flex items-center justify-between">

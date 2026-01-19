@@ -696,11 +696,11 @@ const AdminSettings = ({ user }) => {
                     min="0.001"
                     value={marketplaceSettings.prc_to_inr_rate}
                     onChange={(e) => handleMarketplaceSettingsChange('prc_to_inr_rate', parseFloat(e.target.value) || 0.1)}
-                    className="w-full px-4 py-3 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white text-gray-200 font-mono text-lg"
+                    className="w-full px-4 py-3 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-gray-900 text-gray-200 font-mono text-lg"
                   />
                 </div>
               </div>
-              <div className="mt-3 p-3 bg-white rounded-lg border border-amber-200">
+              <div className="mt-3 p-3 bg-gray-900 rounded-lg border border-amber-200">
                 <p className="text-sm text-amber-400">
                   <strong>Current Rate:</strong> 1 PRC = ₹{marketplaceSettings.prc_to_inr_rate?.toFixed(2)}
                 </p>
@@ -724,7 +724,7 @@ const AdminSettings = ({ user }) => {
                 min="0"
                 value={marketplaceSettings.free_delivery_threshold}
                 onChange={(e) => handleMarketplaceSettingsChange('free_delivery_threshold', parseInt(e.target.value) || 0)}
-                className="w-full px-4 py-3 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-200 font-mono text-lg"
+                className="w-full px-4 py-3 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-gray-900 text-gray-200 font-mono text-lg"
               />
               <p className="text-sm text-green-600 mt-2">
                 Orders above {marketplaceSettings.free_delivery_threshold} PRC get free delivery

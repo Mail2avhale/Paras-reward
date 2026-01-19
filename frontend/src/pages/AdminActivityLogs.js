@@ -239,7 +239,7 @@ const AdminActivityLogs = () => {
       )}
 
       {/* Filters */}
-      <Card className="p-6 bg-white">
+      <Card className="p-6 bg-gray-900">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -285,7 +285,7 @@ const AdminActivityLogs = () => {
       </Card>
 
       {/* Logs Table */}
-      <Card className="p-6 bg-white">
+      <Card className="p-6 bg-gray-900">
         {loading ? (
           <TableSkeleton rows={10} columns={5} />
         ) : logs.length === 0 ? (

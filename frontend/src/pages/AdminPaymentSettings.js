@@ -164,7 +164,7 @@ const AdminPaymentSettings = ({ user }) => {
                   <img 
                     src={paymentConfig.qr_code_url} 
                     alt="Payment QR" 
-                    className="h-32 w-32 object-contain bg-white rounded-xl p-2"
+                    className="h-32 w-32 object-contain bg-gray-900 rounded-xl p-2"
                   />
                   <button
                     onClick={removeQRCode}

@@ -174,7 +174,7 @@ PARAS REWARD refund policy for various transactions.
   return (
     <div className="min-h-screen bg-gray-800/50 pb-20">
       {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-10">
+      <div className="bg-gray-900 border-b sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -208,7 +208,7 @@ PARAS REWARD refund policy for various transactions.
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
                   activeTab === tab.id
                     ? 'bg-purple-600 text-white'
-                    : 'bg-white text-gray-300 hover:bg-gray-700'
+                    : 'bg-gray-900 text-gray-300 hover:bg-gray-700'
                 }`}
               >
                 <Icon className="h-4 w-4" />

@@ -292,7 +292,7 @@ const AdminCashBankBook = ({ user }) => {
                 </span>
               </div>
             </div>
-            <div className="bg-white/20 p-3 rounded-xl">
+            <div className="bg-gray-900/20 p-3 rounded-xl">
               <Wallet className="h-8 w-8" />
             </div>
           </div>
@@ -314,7 +314,7 @@ const AdminCashBankBook = ({ user }) => {
                 </span>
               </div>
             </div>
-            <div className="bg-white/20 p-3 rounded-xl">
+            <div className="bg-gray-900/20 p-3 rounded-xl">
               <Building2 className="h-8 w-8" />
             </div>
           </div>
@@ -328,7 +328,7 @@ const AdminCashBankBook = ({ user }) => {
               <h2 className="text-3xl font-bold mt-2">{formatCurrency(summary?.total_balance)}</h2>
               <p className="text-purple-200 text-sm mt-3">Cash + Bank Combined</p>
             </div>
-            <div className="bg-white/20 p-3 rounded-xl">
+            <div className="bg-gray-900/20 p-3 rounded-xl">
               <IndianRupee className="h-8 w-8" />
             </div>
           </div>
@@ -555,7 +555,7 @@ const AdminCashBankBook = ({ user }) => {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+            className="bg-gray-900 rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
           >
             <div className="p-6 border-b">
               <div className="flex items-center justify-between">
@@ -733,7 +733,7 @@ const AdminCashBankBook = ({ user }) => {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl max-w-md w-full"
+            className="bg-gray-900 rounded-2xl max-w-md w-full"
           >
             <div className="p-6 border-b">
               <div className="flex items-center justify-between">
@@ -816,7 +816,7 @@ const AdminCashBankBook = ({ user }) => {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl max-w-md w-full"
+            className="bg-gray-900 rounded-2xl max-w-md w-full"
           >
             <div className="p-6 border-b">
               <div className="flex items-center justify-between">

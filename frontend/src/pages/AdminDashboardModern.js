@@ -86,7 +86,7 @@ const AdminDashboardModern = ({ user, onLogout }) => {
               </p>
             </div>
             <div className="hidden md:block">
-              <div className="bg-white/20 backdrop-blur-lg rounded-2xl p-6 border border-white/30">
+              <div className="bg-gray-900/20 backdrop-blur-lg rounded-2xl p-6 border border-white/30">
                 <div className="flex items-center space-x-3">
                   <div className="h-12 w-12 rounded-full bg-green-400 flex items-center justify-center">
                     <Activity className="h-6 w-6 text-white" />

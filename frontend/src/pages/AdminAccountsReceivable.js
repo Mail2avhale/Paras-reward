@@ -167,7 +167,7 @@ const AdminAccountsReceivable = ({ user }) => {
             key={f}
             onClick={() => setFilter(f)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize ${
-              filter === f ? 'bg-green-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-700'
+              filter === f ? 'bg-green-600 text-white' : 'bg-gray-900 text-gray-600 hover:bg-gray-700'
             }`}
           >
             {f}
@@ -244,7 +244,7 @@ const AdminAccountsReceivable = ({ user }) => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-xl shadow-xl max-w-md w-full"
+              className="bg-gray-900 rounded-xl shadow-xl max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 border-b flex items-center justify-between">
