@@ -40,6 +40,18 @@ const RegisterSimple = () => {
   const validateForm = () => {
     const newErrors = {};
 
+    // Full Name validation
+    if (!formData.full_name || formData.full_name.trim().length < 2) {
+      newErrors.full_name = 'Full name is required (min 2 characters)';
+    }
+
+    // Mobile validation
+    if (!formData.mobile) {
+      newErrors.mobile = 'Mobile number is required';
+    } else if (!/^[6-9]\d{9}$/.test(formData.mobile)) {
+      newErrors.mobile = 'Enter valid 10-digit mobile number';
+    }
+
     // Email validation
     if (!formData.email) {
       newErrors.email = 'Email is required';
