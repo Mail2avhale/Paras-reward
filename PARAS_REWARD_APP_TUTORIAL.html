@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>पारस रिवॉर्ड अॅप - संपूर्ण मार्गदर्शिका</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #ffffff;
+            line-height: 1.8;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            background: linear-gradient(90deg, #f39c12, #e74c3c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .header .tagline {
+            font-size: 1.1em;
+            color: #bbb;
+        }
+        
+        .welcome-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .welcome-box p {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        
+        .welcome-box .url {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 20px;
+            border-radius: 20px;
+            display: inline-block;
+            font-weight: bold;
+        }
+        
+        .toc {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .toc h2 {
+            color: #f39c12;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .toc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
+        .toc-item {
+            background: rgba(255,255,255,0.05);
+            padding: 12px 15px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+        
+        .toc-item:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateX(5px);
+        }
+        
+        .section {
+            margin-bottom: 50px;
+            padding: 30px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 15px;
+            border-left: 4px solid #f39c12;
+        }
+        
+        .section h2 {
+            color: #f39c12;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .section h3 {
+            color: #3498db;
+            font-size: 1.3em;
+            margin: 25px 0 15px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        th {
+            background: rgba(243, 156, 18, 0.2);
+            color: #f39c12;
+            font-weight: 600;
+        }
+        
+        tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .step-box {
+            background: rgba(52, 152, 219, 0.1);
+            border: 1px solid rgba(52, 152, 219, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        
+        .tip-box {
+            background: rgba(46, 204, 113, 0.1);
+            border-left: 4px solid #2ecc71;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .warning-box {
+            background: rgba(231, 76, 60, 0.1);
+            border-left: 4px solid #e74c3c;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .plan-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .plan-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        
+        .plan-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(243, 156, 18, 0.5);
+        }
+        
+        .plan-card.free { border-top: 4px solid #95a5a6; }
+        .plan-card.startup { border-top: 4px solid #f39c12; }
+        .plan-card.growth { border-top: 4px solid #3498db; }
+        .plan-card.elite { border-top: 4px solid #9b59b6; }
+        
+        .plan-card .icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .plan-card .name {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .plan-card .price {
+            color: #f39c12;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        
+        .plan-card .multiplier {
+            background: rgba(243, 156, 18, 0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        
+        .referral-tree {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+        
+        .level {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px 20px;
+            margin: 8px 0;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            margin-left: calc(var(--level) * 20px);
+        }
+        
+        .level-badge {
+            background: linear-gradient(135deg, #f39c12, #e74c3c);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        
+        .voucher-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .voucher-card {
+            background: linear-gradient(135deg, rgba(155, 89, 182, 0.2), rgba(142, 68, 173, 0.2));
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(155, 89, 182, 0.3);
+        }
+        
+        .voucher-card .amount {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #9b59b6;
+        }
+        
+        .voucher-card .prc {
+            color: #bbb;
+            font-size: 0.9em;
+        }
+        
+        .voucher-card.popular {
+            border-color: #f39c12;
+            background: linear-gradient(135deg, rgba(243, 156, 18, 0.2), rgba(230, 126, 34, 0.2));
+        }
+        
+        .voucher-card.popular::after {
+            content: "⭐ Popular";
+            display: block;
+            margin-top: 10px;
+            color: #f39c12;
+            font-size: 0.8em;
+        }
+        
+        .tips-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .tip-card {
+            background: rgba(46, 204, 113, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #2ecc71;
+        }
+        
+        .tip-card .tip-title {
+            font-weight: bold;
+            color: #2ecc71;
+            margin-bottom: 8px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 2px solid rgba(255,255,255,0.1);
+        }
+        
+        .footer h2 {
+            background: linear-gradient(90deg, #f39c12, #e74c3c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+        }
+        
+        .footer .thank-you {
+            font-size: 1.5em;
+            margin: 20px 0;
+        }
+        
+        .footer .copyright {
+            color: #666;
+            margin-top: 20px;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                color: black;
+            }
+            .container {
+                background: white;
+            }
+            .section {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🏆 PARAS REWARD TECHNOLOGIES PVT LTD</h1>
+            <p class="tagline">पारस रिवॉर्ड अॅप - संपूर्ण मार्गदर्शिका</p>
+        </div>
+        
+        <!-- Welcome Box -->
+        <div class="welcome-box">
+            <p><strong>नमस्कार मित्रांनो! पारस रिवॉर्ड अॅपमध्ये आपले स्वागत आहे!</strong></p>
+            <p>या अॅपमध्ये तुम्ही दररोज टॅप करून <strong>PRC (पारस रिवॉर्ड कॉइन)</strong> कमवू शकता आणि हे PRC वापरून मोबाईल रिचार्ज, बिल पेमेंट, गिफ्ट व्हाउचर आणि प्रॉडक्ट्स खरेदी करू शकता!</p>
+            <div class="url">🌐 www.parasreward.com</div>
+        </div>
+        
+        <!-- Table of Contents -->
+        <div class="toc">
+            <h2>📑 अनुक्रमणिका</h2>
+            <div class="toc-grid">
+                <div class="toc-item">📱 1. रजिस्ट्रेशन</div>
+                <div class="toc-item">🔐 2. लॉगिन</div>
+                <div class="toc-item">🏠 3. डॅशबोर्ड</div>
+                <div class="toc-item">👆 4. टॅप गेम</div>
+                <div class="toc-item">📊 5. सबस्क्रिप्शन प्लॅन्स</div>
+                <div class="toc-item">👥 6. रेफरल सिस्टम</div>
+                <div class="toc-item">🛒 7. Marketplace</div>
+                <div class="toc-item">📱 8. बिल पेमेंट्स</div>
+                <div class="toc-item">🎁 9. गिफ्ट व्हाउचर्स</div>
+                <div class="toc-item">📄 10. KYC व्हेरिफिकेशन</div>
+                <div class="toc-item">👤 11. प्रोफाइल सेटिंग्स</div>
+                <div class="toc-item">🎯 12. टिप्स आणि ट्रिक्स</div>
+            </div>
+        </div>
+        
+        <!-- Section 1: Registration -->
+        <div class="section">
+            <h2>📱 भाग 1: रजिस्ट्रेशन</h2>
+            <p>सर्वात आधी, अॅप डाउनलोड करा आणि रजिस्टर करा.</p>
+            
+            <table>
+                <tr><th>स्टेप</th><th>क्रिया</th></tr>
+                <tr><td><strong>स्टेप 1</strong></td><td>'Create Account' बटण दाबा</td></tr>
+                <tr><td><strong>स्टेप 2</strong></td><td>तुमचे नाव टाका</td></tr>
+                <tr><td><strong>स्टेप 3</strong></td><td>ईमेल आयडी टाका</td></tr>
+                <tr><td><strong>स्टेप 4</strong></td><td>मोबाईल नंबर टाका</td></tr>
+                <tr><td><strong>स्टेप 5</strong></td><td>पासवर्ड सेट करा</td></tr>
+                <tr><td><strong>स्टेप 6</strong></td><td>'Register' बटण दाबा</td></tr>
+            </table>
+            
+            <div class="tip-box">
+                ⭐ <strong>महत्वाचे:</strong> जर तुमच्याकडे रेफरल कोड असेल तर तो टाका - यामुळे तुम्हाला <strong>बोनस PRC</strong> मिळेल!
+            </div>
+        </div>
+        
+        <!-- Section 2: Login -->
+        <div class="section">
+            <h2>🔐 भाग 2: लॉगिन</h2>
+            <p>रजिस्ट्रेशन झाल्यावर, लॉगिन करा:</p>
+            <div class="step-box">
+                <p>1️⃣ तुमचा ईमेल किंवा मोबाईल नंबर टाका</p>
+                <p>2️⃣ पासवर्ड टाकून <strong>'Sign In'</strong> दाबा</p>
+                <p>3️⃣ लॉगिन झाल्यावर तुम्हाला वेलकम स्क्रीन दिसेल</p>
+            </div>
+        </div>
+        
+        <!-- Section 3: Dashboard -->
+        <div class="section">
+            <h2>🏠 भाग 3: डॅशबोर्ड</h2>
+            <p>हे आहे तुमचे डॅशबोर्ड - अॅपचे मुख्य पेज!</p>
+            
+            <h3>इथे तुम्हाला दिसेल:</h3>
+            <table>
+                <tr><th>आयटम</th><th>वर्णन</th></tr>
+                <tr><td>💰 <strong>PRC बॅलन्स</strong></td><td>तुमच्याकडे किती PRC आहेत</td></tr>
+                <tr><td>🎁 <strong>Daily Reward</strong></td><td>आजचा बोनस</td></tr>
+                <tr><td>⚡ <strong>Quick Actions</strong></td><td>Tap Game, Marketplace, Referrals</td></tr>
+                <tr><td>📋 <strong>Recent Activity</strong></td><td>तुमच्या अॅक्टिव्हिटीज</td></tr>
+            </table>
+            
+            <h3>🌟 Daily Rewards कसे जमा करायचे?</h3>
+            <div class="step-box">
+                <p><strong>स्टेप 1:</strong> 'Start Session' बटण दाबा - Mining session सुरू होईल</p>
+                <p><strong>स्टेप 2:</strong> Session चालू असताना बॅकग्राउंडमध्ये PRC जमा होत राहते (तुम्ही app बंद केली तरी चालते!)</p>
+                <p><strong>स्टेप 3:</strong> 'Collect Rewards' बटण दाबा - जमा झालेले PRC तुमच्या wallet मध्ये येतात</p>
+            </div>
+            
+            <div class="tip-box">
+                💡 <strong>टीप:</strong> Elite प्लॅन असल्यास <strong>3x जास्त PRC</strong> मिळतात!
+            </div>
+        </div>
+        
+        <!-- Section 4: Tap Game -->
+        <div class="section">
+            <h2>👆 भाग 4: टॅप गेम - PRC कमवा!</h2>
+            <p>आता सर्वात मजेशीर भाग - टॅप गेम!</p>
+            
+            <h3>PRC कसे कमवायचे:</h3>
+            <table>
+                <tr><th>स्टेप</th><th>क्रिया</th></tr>
+                <tr><td>1️⃣</td><td>टॅप गेम पेजवर जा</td></tr>
+                <tr><td>2️⃣</td><td>मधल्या मोठ्या बटणावर टॅप करा</td></tr>
+                <tr><td>3️⃣</td><td>प्रत्येक टॅपवर तुम्हाला PRC मिळतात!</td></tr>
+            </table>
+            
+            <div class="tip-box">
+                🔥 <strong>टीप:</strong> दररोज टॅप करा - सलग टॅप केल्यास तुमचा <strong>मल्टिप्लायर वाढतो</strong> आणि जास्त PRC मिळतात!
+            </div>
+        </div>
+        
+        <!-- Section 5: Subscription Plans -->
+        <div class="section">
+            <h2>📊 भाग 5: सबस्क्रिप्शन प्लॅन्स</h2>
+            <p>जास्त फायदे मिळवण्यासाठी पेड प्लॅन घ्या!</p>
+            
+            <div class="plan-cards">
+                <div class="plan-card free">
+                    <div class="icon">🆓</div>
+                    <div class="name">Explorer</div>
+                    <div class="price">फ्री</div>
+                    <div class="multiplier">1x</div>
+                    <p>बेसिक फीचर्स<br>PRC रिडीम नाही</p>
+                </div>
+                <div class="plan-card startup">
+                    <div class="icon">⭐</div>
+                    <div class="name">Startup</div>
+                    <div class="price">₹299/महिना</div>
+                    <div class="multiplier">1.5x</div>
+                    <p>Marketplace, Bill Payment वापरता येते</p>
+                </div>
+                <div class="plan-card growth">
+                    <div class="icon">🚀</div>
+                    <div class="name">Growth</div>
+                    <div class="price">₹549/महिना</div>
+                    <div class="multiplier">2x</div>
+                    <p>सर्व फीचर्स</p>
+                </div>
+                <div class="plan-card elite">
+                    <div class="icon">👑</div>
+                    <div class="name">Elite</div>
+                    <div class="price">₹799/महिना</div>
+                    <div class="multiplier">3x</div>
+                    <p>सर्वोत्तम बेनिफिट्स</p>
+                </div>
+            </div>
+            
+            <div class="step-box">
+                <strong>प्लॅन कसा घ्यायचा:</strong><br>
+                प्लॅन निवडा → UPI/बँक ट्रान्सफर करा → स्क्रीनशॉट अपलोड करा → Admin approve करेल → प्लॅन activate!
+            </div>
+        </div>
+        
+        <!-- Section 6: Referral System -->
+        <div class="section">
+            <h2>👥 भाग 6: रेफरल सिस्टम - मित्रांना बोलवा!</h2>
+            <p>मित्रांना बोलवा आणि जास्त PRC कमवा!</p>
+            
+            <h3>रेफरल कसे करायचे:</h3>
+            <table>
+                <tr><th>स्टेप</th><th>क्रिया</th></tr>
+                <tr><td>1️⃣</td><td>'Referrals' पेजवर जा</td></tr>
+                <tr><td>2️⃣</td><td>तुमचा युनिक रेफरल कोड कॉपी करा</td></tr>
+                <tr><td>3️⃣</td><td>WhatsApp, Telegram वर मित्रांना शेअर करा</td></tr>
+                <tr><td>4️⃣</td><td>मित्र जॉईन झाल्यावर तुम्हाला बोनस मिळतो!</td></tr>
+            </table>
+            
+            <h3>🎯 5-लेव्हल रेफरल बोनस:</h3>
+            <div class="referral-tree">
+                <div class="level" style="--level: 0;"><span class="level-badge">लेव्हल 1</span> 10% बोनस ← Direct referrals</div>
+                <div class="level" style="--level: 1;"><span class="level-badge">लेव्हल 2</span> 5% बोनस</div>
+                <div class="level" style="--level: 2;"><span class="level-badge">लेव्हल 3</span> 2.5% बोनस</div>
+                <div class="level" style="--level: 3;"><span class="level-badge">लेव्हल 4</span> 1.5% बोनस</div>
+                <div class="level" style="--level: 4;"><span class="level-badge">लेव्हल 5</span> 1% बोनस</div>
+            </div>
+            
+            <div class="tip-box">
+                💡 म्हणजे तुमच्या मित्राने बोलावलेल्या लोकांवरूनही तुम्हाला कमाई होते!
+            </div>
+        </div>
+        
+        <!-- Section 7: Marketplace -->
+        <div class="section">
+            <h2>🛒 भाग 7: Marketplace - शॉपिंग करा!</h2>
+            <p>तुमचे PRC वापरून शॉपिंग करा!</p>
+            
+            <h3>ऑर्डर कसा करायचा:</h3>
+            <table>
+                <tr><th>स्टेप</th><th>क्रिया</th></tr>
+                <tr><td>1️⃣</td><td>प्रॉडक्ट निवडा</td></tr>
+                <tr><td>2️⃣</td><td>'Buy Now' दाबा</td></tr>
+                <tr><td>3️⃣</td><td>डिलिव्हरी Address टाका</td></tr>
+                <tr><td>4️⃣</td><td>PRC पेमेंट करा</td></tr>
+                <tr><td>5️⃣</td><td>डिलिव्हरी पार्टनर तुमच्या पत्त्यावर प्रॉडक्ट पोहोचवेल!</td></tr>
+            </table>
+            
+            <div class="warning-box">
+                ⚠️ <strong>लक्षात ठेवा:</strong> Marketplace वापरण्यासाठी <strong>Startup किंवा त्यापुढील प्लॅन</strong> हवा!
+            </div>
+        </div>
+        
+        <!-- Section 8: Bill Payments -->
+        <div class="section">
+            <h2>📱 भाग 8: बिल पेमेंट्स</h2>
+            <p>PRC वापरून बिल्स भरा!</p>
+            
+            <h3>उपलब्ध सर्व्हिसेस:</h3>
+            <table>
+                <tr><th>आयकॉन</th><th>सर्व्हिस</th><th>वर्णन</th></tr>
+                <tr><td>📱</td><td><strong>मोबाईल रिचार्ज</strong></td><td>Jio, Airtel, Vi सर्व ऑपरेटर्स</td></tr>
+                <tr><td>💡</td><td><strong>वीज बिल</strong></td><td>MSEDCL आणि इतर</td></tr>
+                <tr><td>💳</td><td><strong>क्रेडिट कार्ड</strong></td><td>सर्व बँक्स</td></tr>
+                <tr><td>📺</td><td><strong>DTH रिचार्ज</strong></td><td>Tata Play, Airtel DTH</td></tr>
+            </table>
+            
+            <div class="warning-box">
+                ⚠️ <strong>लक्षात ठेवा:</strong> हे फीचर <strong>Startup+ प्लॅनमध्ये</strong> उपलब्ध आहे!
+            </div>
+        </div>
+        
+        <!-- Section 9: Gift Vouchers -->
+        <div class="section">
+            <h2>🎁 भाग 9: गिफ्ट व्हाउचर्स</h2>
+            <p>PRC रिडीम करून PhonePe व्हाउचर मिळवा!</p>
+            
+            <h3>व्हाउचर अमाउंट्स:</h3>
+            <div class="voucher-grid">
+                <div class="voucher-card">
+                    <div class="amount">₹10</div>
+                    <div class="prc">100 PRC</div>
+                </div>
+                <div class="voucher-card">
+                    <div class="amount">₹50</div>
+                    <div class="prc">500 PRC</div>
+                </div>
+                <div class="voucher-card popular">
+                    <div class="amount">₹100</div>
+                    <div class="prc">1000 PRC</div>
+                </div>
+                <div class="voucher-card popular">
+                    <div class="amount">₹500</div>
+                    <div class="prc">5000 PRC</div>
+                </div>
+                <div class="voucher-card">
+                    <div class="amount">₹1000</div>
+                    <div class="prc">10000 PRC</div>
+                </div>
+                <div class="voucher-card">
+                    <div class="amount">₹5000</div>
+                    <div class="prc">50000 PRC</div>
+                </div>
+            </div>
+            
+            <h3>फायदे:</h3>
+            <p>✅ कुठेही वापरता येतात &nbsp; ✅ Fast processing &nbsp; ✅ गिफ्ट म्हणूनही देता येतात</p>
+        </div>
+        
+        <!-- Section 10: KYC -->
+        <div class="section">
+            <h2>📄 भाग 10: KYC व्हेरिफिकेशन</h2>
+            <p>मोठ्या रिडेम्प्शनसाठी KYC करा!</p>
+            
+            <h3>KYC का करायचे:</h3>
+            <table>
+                <tr><td>🔒</td><td>अकाउंट सिक्युरिटी</td></tr>
+                <tr><td>💰</td><td>जास्त withdrawal limit</td></tr>
+                <tr><td>⚡</td><td>फास्ट प्रोसेसिंग</td></tr>
+            </table>
+            
+            <h3>कसे करायचे:</h3>
+            <table>
+                <tr><th>स्टेप</th><th>क्रिया</th></tr>
+                <tr><td>1️⃣</td><td>KYC पेजवर जा</td></tr>
+                <tr><td>2️⃣</td><td>Document निवडा - Aadhaar किंवा PAN</td></tr>
+                <tr><td>3️⃣</td><td>नाव टाका (Document वरचे)</td></tr>
+                <tr><td>4️⃣</td><td>Document नंबर टाका</td></tr>
+                <tr><td>5️⃣</td><td>Front Side फोटो अपलोड करा</td></tr>
+                <tr><td>6️⃣</td><td>Back Side फोटो अपलोड करा</td></tr>
+                <tr><td>7️⃣</td><td>'Submit' दाबा</td></tr>
+            </table>
+            
+            <div class="tip-box">
+                ⏱️ Admin <strong>24-48 तासात</strong> verify करेल!
+            </div>
+        </div>
+        
+        <!-- Section 11: Profile -->
+        <div class="section">
+            <h2>👤 भाग 11: प्रोफाइल सेटिंग्स</h2>
+            <p>प्रोफाइल पेजवर तुम्ही:</p>
+            <table>
+                <tr><td>✏️</td><td><strong>प्रोफाइल एडिट</strong></td><td>नाव, फोटो, Address बदला</td></tr>
+            </table>
+        </div>
+        
+        <!-- Section 12: Tips -->
+        <div class="section">
+            <h2>🎯 भाग 12: टिप्स आणि ट्रिक्स</h2>
+            <p>जास्तीत जास्त PRC कमवण्यासाठी या टिप्स फॉलो करा:</p>
+            
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <div class="tip-title">💡 टीप 1</div>
+                    <p>दररोज टॅप करा - Streak बोनस मिळतो!</p>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-title">💡 टीप 2</div>
+                    <p>मित्रांना रेफर करा - 5 लेव्हल पर्यंत कमाई!</p>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-title">💡 टीप 3</div>
+                    <p>पेड प्लॅन घ्या - मल्टिप्लायर आणि जास्त टॅप्स!</p>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-title">💡 टीप 4</div>
+                    <p>KYC करा - जास्त withdrawal limit!</p>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-title">💡 टीप 5</div>
+                    <p>Notifications ON ठेवा - स्पेशल ऑफर्स मिस होणार नाहीत!</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <h2>🏆 PARAS REWARD TECHNOLOGIES PVT LTD</h2>
+            <div class="thank-you">
+                <p>"तर मित्रांनो, हे होते पारस रिवॉर्ड अॅपचे पूर्ण ट्युटोरियल!</p>
+                <p><strong>आजच अॅप डाउनलोड करा, दररोज टॅप करा आणि रिवॉर्ड्स कमवा!</strong></p>
+                <p>धन्यवाद!! 🙏</p>
+            </div>
+            <p>🌐 <a href="https://parasreward.com" style="color: #3498db;">www.parasreward.com</a></p>
+            <p class="copyright">© 2026 All Rights Reserved</p>
+        </div>
+    </div>
+</body>
+</html>
