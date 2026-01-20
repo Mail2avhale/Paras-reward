@@ -933,9 +933,9 @@ async def get_user_subscription_info(user: dict) -> dict:
     }
 
 # ========== REDEMPTION LIMIT SYSTEM ==========
-async def get_redeem_settings():
-    """Get redemption limit settings from database"""
-    settings = await db.settings.find_one({}, {"_id": 0, "redeem_settings": 1})
+async def get_monthly_redeem_limit_settings():
+    """Get monthly redemption limit settings from database"""
+    settings = await db.settings.find_one({}, {"_id": 0, "monthly_redeem_settings": 1})
     
     default_settings = {
         "multiplier_1": 5,
@@ -945,8 +945,8 @@ async def get_redeem_settings():
         "enabled": True
     }
     
-    if settings and "redeem_settings" in settings:
-        return {**default_settings, **settings["redeem_settings"]}
+    if settings and "monthly_redeem_settings" in settings:
+        return {**default_settings, **settings["monthly_redeem_settings"]}
     return default_settings
 
 async def get_subscription_monthly_price(plan: str) -> float:
