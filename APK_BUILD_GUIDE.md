@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://tapgame-rewards-1.preview.emergentagent.com",
+    "url": "https://reward-flow-debug.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
