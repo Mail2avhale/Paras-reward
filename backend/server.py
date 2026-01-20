@@ -10056,21 +10056,19 @@ async def update_redeem_limit_settings_admin(request: Request):
     # Validate inputs
     multiplier_1 = float(data.get("multiplier_1", 5))
     multiplier_2 = float(data.get("multiplier_2", 10))
-    referral_bonus = float(data.get("referral_bonus", 20))
-    double_limit_referrals = int(data.get("double_limit_referrals", 5))
+    referral_bonus_percent = float(data.get("referral_bonus_percent", 20))  # 20% per referral
     enabled = data.get("enabled", True)
     
-    if multiplier_1 < 0 or multiplier_2 < 0 or referral_bonus < 0:
+    if multiplier_1 < 0 or multiplier_2 < 0 or referral_bonus_percent < 0:
         raise HTTPException(status_code=400, detail="Multipliers and bonus cannot be negative")
     
-    if double_limit_referrals < 1:
-        raise HTTPException(status_code=400, detail="Double limit referrals must be at least 1")
+    if referral_bonus_percent > 100:
+        raise HTTPException(status_code=400, detail="Referral bonus percent cannot exceed 100%")
     
     monthly_redeem_settings = {
         "multiplier_1": multiplier_1,
         "multiplier_2": multiplier_2,
-        "referral_bonus": referral_bonus,
-        "double_limit_referrals": double_limit_referrals,
+        "referral_bonus_percent": referral_bonus_percent,
         "enabled": enabled,
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
