@@ -14,13 +14,13 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 - ~~Master Stockist, Sub Stockist, Outlet~~ - Replaced with Direct Delivery Partner model
 
 ### Key Features
-1. **4-Tier Subscription System** (NEW - Jan 12, 2026)
-   | Plan | Multiplier | Tap Limit | Ref Weight | Can Redeem | Price |
-   |------|------------|-----------|------------|------------|-------|
-   | Explorer | 1.0x | 100 | 1.0x | ❌ | FREE |
-   | Startup | 1.5x | 200 | 1.2x | ✅ | ₹299/mo |
-   | Growth | 2.0x | 300 | 1.5x | ✅ | ₹549/mo |
-   | Elite | 3.0x | 400 | 2.0x | ✅ | ₹799/mo |
+1. **4-Tier Subscription System** (Updated - Jan 20, 2026)
+   | Plan | Multiplier | Tap Limit | Daily PRC (Tap Game) | Ref Weight | Can Redeem | Price |
+   |------|------------|-----------|----------------------|------------|------------|-------|
+   | Explorer | 1.0x | 100 | 10 PRC | 1.0x | ❌ | FREE |
+   | Startup | 1.5x | 100 | 50 PRC | 1.2x | ✅ | ₹299/mo |
+   | Growth | 2.0x | 100 | 100 PRC | 1.5x | ✅ | ₹549/mo |
+   | Elite | 3.0x | 100 | 200 PRC | 2.0x | ✅ | ₹799/mo |
 
 2. **PRC (Platform Reward Currency)**
    - Mining system with subscription multiplier
