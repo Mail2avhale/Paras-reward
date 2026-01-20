@@ -4,7 +4,8 @@ import axios from 'axios';
 import { 
   Users, Copy, Check, Share2, ArrowLeft, Gift, Crown, TrendingUp, 
   ChevronRight, UserCheck, Zap, History, MessageCircle, Link2,
-  Award, Sparkles, HelpCircle, ArrowRight, PartyPopper
+  Award, Sparkles, HelpCircle, ArrowRight, PartyPopper, ChevronDown, ChevronUp,
+  User, GitBranch, Circle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
