@@ -21825,6 +21825,98 @@ async def get_referral_levels(user_id: str):
     }
 
 
+@api_router.get("/referrals/{user_id}/reward-progress")
+async def get_referral_reward_progress(user_id: str):
+    """
+    Get the referral reward progress for a user.
+    
+    Shows progress towards the "10 paid referrals in 7 days = Free Explorer subscription" reward.
+    Only applicable for Startup plan users who haven't claimed the reward yet.
+    """
+    user = await db.users.find_one({"uid": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    now = datetime.now(timezone.utc)
+    seven_days_ago = (now - timedelta(days=7)).isoformat()
+    
+    # Get user's subscription info
+    sub_info = await get_user_subscription_info(user)
+    current_plan = sub_info["plan"]
+    
+    # Check if reward already claimed
+    reward_claimed = user.get("referral_subscription_reward_claimed", False)
+    reward_date = user.get("referral_subscription_reward_date")
+    
+    # Get direct referrals
+    referral_uids = await get_referral_uids(user_id)
+    total_referrals = len(referral_uids)
+    
+    # Count paid referrals in last 7 days
+    paid_referrals_7days = 0
+    paid_referral_details = []
+    
+    if referral_uids:
+        # Find approved payments in last 7 days for referrals
+        payments = await db.vip_payments.find({
+            "$or": [
+                {"user_id": {"$in": referral_uids}},
+                {"user_uid": {"$in": referral_uids}}
+            ],
+            "status": "approved",
+            "approved_at": {"$gte": seven_days_ago}
+        }).to_list(100)
+        
+        paid_referrals_7days = len(payments)
+        
+        # Get details for display (max 10)
+        for payment in payments[:10]:
+            paid_uid = payment.get("user_id") or payment.get("user_uid")
+            ref_user = await db.users.find_one({"uid": paid_uid}, {"_id": 0, "name": 1, "email": 1})
+            paid_referral_details.append({
+                "name": ref_user.get("name", "User") if ref_user else "User",
+                "plan": payment.get("subscription_plan", "startup"),
+                "approved_at": payment.get("approved_at")
+            })
+    
+    # Calculate progress percentage
+    progress_percent = min(100, (paid_referrals_7days / 10) * 100)
+    remaining_needed = max(0, 10 - paid_referrals_7days)
+    
+    # Determine eligibility status
+    is_eligible_plan = current_plan == "startup"
+    is_eligible = is_eligible_plan and not reward_claimed and paid_referrals_7days >= 10
+    
+    # Calculate days remaining in the 7-day window
+    window_end = now + timedelta(days=7)
+    
+    return {
+        "is_eligible": is_eligible,
+        "is_startup_plan": is_eligible_plan,
+        "reward_already_claimed": reward_claimed,
+        "reward_claim_date": reward_date,
+        "current_plan": current_plan,
+        "total_referrals": total_referrals,
+        "paid_referrals_7days": paid_referrals_7days,
+        "required_paid_referrals": 10,
+        "remaining_needed": remaining_needed,
+        "progress_percent": progress_percent,
+        "paid_referral_details": paid_referral_details,
+        "reward_description": "Get 10 paid referrals within 7 days to earn a FREE 1-month Explorer subscription!",
+        "window_info": {
+            "window_days": 7,
+            "rolling_window": True,
+            "message": f"Referrals are counted from the last 7 days (rolling window)"
+        },
+        "status_message": (
+            "🎉 You've already claimed this reward!" if reward_claimed else
+            "🎉 Congratulations! You're eligible for the free subscription!" if is_eligible else
+            f"⚠️ Only Startup plan users are eligible for this reward" if not is_eligible_plan else
+            f"🔥 {paid_referrals_7days}/10 paid referrals - {remaining_needed} more to go!"
+        )
+    }
+
+
 # ========== AI REFERRAL FRAUD DETECTION & BONUS SYSTEM ==========
 
 # Level-wise bonus configuration
