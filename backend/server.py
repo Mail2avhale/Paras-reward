@@ -22985,22 +22985,163 @@ async def get_user_recent_activity(uid: str, limit: int = 10):
 @api_router.get("/global/live-activity")
 async def get_global_live_activity(limit: int = 20):
     """
-    Get live global activity feed showing bill payments, vouchers, and shopping
-    Only shows approved/completed transactions for privacy
+    Get live global activity feed showing ALL user activities:
+    - Registrations (new signups)
+    - Subscriptions (VIP activations)
+    - Referrals (new referral signups)
+    - Tap game earnings
+    - PRC Rain drop earnings
+    - Bill payments
+    - Gift vouchers
+    - Marketplace shopping
+    - Milestone achievements
+    
+    Only shows approved/completed transactions for privacy.
+    User names are anonymized (first 3 chars + ***).
     """
     activities = []
     
-    # Get recent bill payment completions
+    # Helper function to anonymize user name
+    def anonymize_name(name, city=None):
+        user_name = (name or "User")[:3] + "***"
+        location = (city or "")[:3] + "..." if city else ""
+        return user_name, location
+    
+    # ========== 1. NEW REGISTRATIONS (last 24 hours) ==========
+    try:
+        twenty_four_hours_ago = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+        new_users = await db.users.find(
+            {"created_at": {"$gte": twenty_four_hours_ago}},
+            {"_id": 0, "name": 1, "city": 1, "state": 1, "created_at": 1, "referred_by": 1}
+        ).sort("created_at", -1).limit(limit).to_list(length=limit)
+        
+        for user in new_users:
+            user_name, location = anonymize_name(user.get("name"), user.get("city") or user.get("state"))
+            is_referral = bool(user.get("referred_by"))
+            
+            activities.append({
+                "type": "registration",
+                "icon": "👋" if not is_referral else "🤝",
+                "user": user_name,
+                "location": location,
+                "description": "Joined via referral!" if is_referral else "Joined the platform!",
+                "timestamp": user.get("created_at"),
+                "category": "registration"
+            })
+    except Exception as e:
+        logging.error(f"Error fetching new registrations: {e}")
+    
+    # ========== 2. SUBSCRIPTION ACTIVATIONS ==========
+    try:
+        subscriptions = await db.vip_payments.find(
+            {"status": "approved"},
+            {"_id": 0, "user_id": 1, "subscription_plan": 1, "amount": 1, "approved_at": 1}
+        ).sort("approved_at", -1).limit(limit).to_list(length=limit)
+        
+        for sub in subscriptions:
+            user = await db.users.find_one({"uid": sub.get("user_id")}, {"_id": 0, "name": 1, "city": 1, "state": 1})
+            if user:
+                user_name, location = anonymize_name(user.get("name"), user.get("city") or user.get("state"))
+                plan = sub.get("subscription_plan", "VIP")
+                plan_display = plan.capitalize() if plan else "VIP"
+                
+                activities.append({
+                    "type": "subscription",
+                    "icon": "⭐" if plan == "startup" else "🚀" if plan == "growth" else "👑" if plan == "elite" else "💎",
+                    "user": user_name,
+                    "location": location,
+                    "description": f"Upgraded to {plan_display} plan!",
+                    "timestamp": sub.get("approved_at"),
+                    "category": "subscription"
+                })
+    except Exception as e:
+        logging.error(f"Error fetching subscriptions: {e}")
+    
+    # ========== 3. TAP GAME EARNINGS (last 12 hours) ==========
+    try:
+        twelve_hours_ago = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()
+        tap_transactions = await db.transactions.find(
+            {"type": "tap_game", "timestamp": {"$gte": twelve_hours_ago}},
+            {"_id": 0, "user_id": 1, "amount": 1, "timestamp": 1, "description": 1}
+        ).sort("timestamp", -1).limit(limit).to_list(length=limit)
+        
+        for tap in tap_transactions:
+            user = await db.users.find_one({"uid": tap.get("user_id")}, {"_id": 0, "name": 1, "city": 1, "state": 1})
+            if user:
+                user_name, location = anonymize_name(user.get("name"), user.get("city") or user.get("state"))
+                amount = tap.get("amount", 0)
+                
+                activities.append({
+                    "type": "tap_game",
+                    "icon": "👆",
+                    "user": user_name,
+                    "location": location,
+                    "description": f"Earned {amount:.1f} PRC from Tap Game!",
+                    "timestamp": tap.get("timestamp"),
+                    "category": "earnings"
+                })
+    except Exception as e:
+        logging.error(f"Error fetching tap game transactions: {e}")
+    
+    # ========== 4. PRC RAIN DROP EARNINGS ==========
+    try:
+        rain_transactions = await db.transactions.find(
+            {"type": "prc_rain_gain"},
+            {"_id": 0, "user_id": 1, "amount": 1, "timestamp": 1}
+        ).sort("timestamp", -1).limit(limit).to_list(length=limit)
+        
+        for rain in rain_transactions:
+            user = await db.users.find_one({"uid": rain.get("user_id")}, {"_id": 0, "name": 1, "city": 1, "state": 1})
+            if user:
+                user_name, location = anonymize_name(user.get("name"), user.get("city") or user.get("state"))
+                amount = rain.get("amount", 0)
+                
+                activities.append({
+                    "type": "prc_rain",
+                    "icon": "🌧️",
+                    "user": user_name,
+                    "location": location,
+                    "description": f"Caught {amount:.1f} PRC in Rain Drop!",
+                    "timestamp": rain.get("timestamp"),
+                    "category": "earnings"
+                })
+    except Exception as e:
+        logging.error(f"Error fetching rain drop transactions: {e}")
+    
+    # ========== 5. REFERRAL BONUSES ==========
+    try:
+        referral_transactions = await db.transactions.find(
+            {"type": "referral"},
+            {"_id": 0, "user_id": 1, "amount": 1, "timestamp": 1, "description": 1}
+        ).sort("timestamp", -1).limit(limit).to_list(length=limit)
+        
+        for ref in referral_transactions:
+            user = await db.users.find_one({"uid": ref.get("user_id")}, {"_id": 0, "name": 1, "city": 1, "state": 1})
+            if user:
+                user_name, location = anonymize_name(user.get("name"), user.get("city") or user.get("state"))
+                amount = ref.get("amount", 0)
+                
+                activities.append({
+                    "type": "referral_bonus",
+                    "icon": "🎯",
+                    "user": user_name,
+                    "location": location,
+                    "description": f"Earned {amount:.1f} PRC referral bonus!",
+                    "timestamp": ref.get("timestamp"),
+                    "category": "referral"
+                })
+    except Exception as e:
+        logging.error(f"Error fetching referral transactions: {e}")
+    
+    # ========== 6. BILL PAYMENTS ==========
     bill_payments = await db.bill_payment_requests.find(
         {"status": {"$in": ["completed", "approved"]}},
         {"_id": 0, "user_id": 1, "request_type": 1, "amount_inr": 1, "created_at": 1, "processed_at": 1}
     ).sort("processed_at", -1).limit(limit).to_list(length=limit)
     
     for bill in bill_payments:
-        # Get user name (anonymized)
-        user = await db.users.find_one({"uid": bill.get("user_id")}, {"_id": 0, "name": 1, "state": 1})
-        user_name = user.get("name", "User")[:3] + "***" if user else "User***"
-        location = user.get("state", "")[:3] + "..." if user and user.get("state") else ""
+        user = await db.users.find_one({"uid": bill.get("user_id")}, {"_id": 0, "name": 1, "city": 1, "state": 1})
+        user_name, location = anonymize_name(user.get("name") if user else None, user.get("city") or user.get("state") if user else None)
         
         request_type = bill.get("request_type", "bill")
         type_labels = {
@@ -23010,10 +23151,17 @@ async def get_global_live_activity(limit: int = 20):
             "credit_card_payment": "Credit Card Payment",
             "loan_emi": "Loan EMI"
         }
+        type_icons = {
+            "mobile_recharge": "📱",
+            "dish_recharge": "📡",
+            "electricity_bill": "💡",
+            "credit_card_payment": "💳",
+            "loan_emi": "🏦"
+        }
         
         activities.append({
             "type": "bill_payment",
-            "icon": "💳",
+            "icon": type_icons.get(request_type, "💳"),
             "user": user_name,
             "location": location,
             "description": f"{type_labels.get(request_type, 'Bill Payment')} - ₹{bill.get('amount_inr', 0):.0f}",
@@ -23021,37 +23169,37 @@ async def get_global_live_activity(limit: int = 20):
             "category": "bill"
         })
     
-    # Get recent gift voucher completions
+    # ========== 7. GIFT VOUCHER REDEMPTIONS ==========
     vouchers = await db.gift_voucher_requests.find(
         {"status": {"$in": ["completed", "approved"]}},
-        {"_id": 0, "user_id": 1, "denomination": 1, "created_at": 1, "processed_at": 1}
+        {"_id": 0, "user_id": 1, "denomination": 1, "voucher_type": 1, "created_at": 1, "processed_at": 1}
     ).sort("processed_at", -1).limit(limit).to_list(length=limit)
     
     for voucher in vouchers:
-        user = await db.users.find_one({"uid": voucher.get("user_id")}, {"_id": 0, "name": 1, "state": 1})
-        user_name = user.get("name", "User")[:3] + "***" if user else "User***"
-        location = user.get("state", "")[:3] + "..." if user and user.get("state") else ""
+        user = await db.users.find_one({"uid": voucher.get("user_id")}, {"_id": 0, "name": 1, "city": 1, "state": 1})
+        user_name, location = anonymize_name(user.get("name") if user else None, user.get("city") or user.get("state") if user else None)
+        
+        voucher_type = voucher.get("voucher_type", "Gift")
         
         activities.append({
             "type": "gift_voucher",
             "icon": "🎁",
             "user": user_name,
             "location": location,
-            "description": f"Redeemed ₹{voucher.get('denomination', 0)} Gift Voucher",
+            "description": f"Redeemed ₹{voucher.get('denomination', 0)} {voucher_type} Voucher",
             "timestamp": voucher.get("processed_at") or voucher.get("created_at"),
             "category": "voucher"
         })
     
-    # Get recent product orders
+    # ========== 8. MARKETPLACE ORDERS ==========
     orders = await db.orders.find(
         {"status": {"$in": ["delivered", "shipped", "confirmed"]}},
         {"_id": 0, "user_id": 1, "total_prc": 1, "created_at": 1, "items": 1}
     ).sort("created_at", -1).limit(limit).to_list(length=limit)
     
     for order in orders:
-        user = await db.users.find_one({"uid": order.get("user_id")}, {"_id": 0, "name": 1, "state": 1})
-        user_name = user.get("name", "User")[:3] + "***" if user else "User***"
-        location = user.get("state", "")[:3] + "..." if user and user.get("state") else ""
+        user = await db.users.find_one({"uid": order.get("user_id")}, {"_id": 0, "name": 1, "city": 1, "state": 1})
+        user_name, location = anonymize_name(user.get("name") if user else None, user.get("city") or user.get("state") if user else None)
         
         item_count = len(order.get("items", []))
         item_text = f"{item_count} item{'s' if item_count > 1 else ''}"
@@ -23066,7 +23214,7 @@ async def get_global_live_activity(limit: int = 20):
             "category": "shopping"
         })
     
-    # Get recent milestone achievements (last 24 hours)
+    # ========== 9. MILESTONE ACHIEVEMENTS ==========
     try:
         twenty_four_hours_ago = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
         recent_milestones = await db.milestone_achievements.find(
@@ -23090,6 +23238,26 @@ async def get_global_live_activity(limit: int = 20):
             })
     except Exception as e:
         logging.error(f"Error fetching milestones: {e}")
+    
+    # ========== 10. REFERRAL REWARD CLAIMS ==========
+    try:
+        reward_logs = await db.activity_logs.find(
+            {"action_type": "referral_reward", "is_global": True},
+            {"_id": 0}
+        ).sort("created_at", -1).limit(5).to_list(5)
+        
+        for reward in reward_logs:
+            activities.append({
+                "type": "referral_reward",
+                "icon": "🎁",
+                "user": (reward.get("user_name") or "User")[:3] + "***",
+                "location": "",
+                "description": "Earned free Explorer subscription via referrals!",
+                "timestamp": reward.get("created_at"),
+                "category": "reward"
+            })
+    except Exception as e:
+        logging.error(f"Error fetching referral rewards: {e}")
     
     # Sort by timestamp
     def get_ts(item):
