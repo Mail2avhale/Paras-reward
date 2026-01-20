@@ -22,6 +22,7 @@ const NetworkFeed = ({ user }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('all');  // NEW: Category filter
   
   // Pagination state
   const [globalPage, setGlobalPage] = useState(1);
@@ -32,6 +33,24 @@ const NetworkFeed = ({ user }) => {
   const [globalTotal, setGlobalTotal] = useState(0);
   const [networkTotal, setNetworkTotal] = useState(0);
   const ITEMS_PER_PAGE = 10; // Reduced for easier pagination visibility
+
+  // Activity category definitions
+  const activityCategories = [
+    { id: 'all', label: 'All', icon: '📋', types: [] },
+    { id: 'registration', label: 'New Users', icon: '👋', types: ['registration'] },
+    { id: 'subscription', label: 'Subscriptions', icon: '⭐', types: ['subscription'] },
+    { id: 'referral', label: 'Referrals', icon: '🤝', types: ['referral_bonus', 'referral_reward'] },
+    { id: 'earnings', label: 'Earnings', icon: '💰', types: ['tap_game', 'prc_rain', 'mining'] },
+    { id: 'redeem', label: 'Redeems', icon: '🛍️', types: ['bill_payment', 'gift_voucher', 'shopping'] },
+  ];
+
+  // Filter activities by category
+  const getFilteredActivities = (activities) => {
+    if (categoryFilter === 'all') return activities;
+    const category = activityCategories.find(c => c.id === categoryFilter);
+    if (!category || category.types.length === 0) return activities;
+    return activities.filter(a => category.types.includes(a.type) || a.category === categoryFilter);
+  };
 
   useEffect(() => {
     fetchData();
