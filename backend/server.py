@@ -21793,9 +21793,12 @@ async def get_referral_levels(user_id: str):
             # Check if user has ACTIVE MINING SESSION
             # Active = mining_session_end > current_time (session not expired)
             session_end = u.get("mining_session_end")
+            mining_start = u.get("mining_start_time")
             
             is_active = False
+            debug_info = ""
             
+            # Method 1: Check mining_session_end directly
             if session_end:
                 try:
                     if isinstance(session_end, str):
@@ -21809,9 +21812,32 @@ async def get_referral_levels(user_id: str):
                     
                     # User is active if mining session has not expired
                     is_active = session_end_dt > now
+                    debug_info = f"session_end check: {session_end_dt.isoformat()} > {now.isoformat()} = {is_active}"
                 except Exception as e:
-                    print(f"Error checking session for {u.get('uid')}: {e}")
+                    debug_info = f"session_end parse error: {e}"
                     is_active = False
+            
+            # Method 2: Fallback - if no session_end but has mining_start_time, calculate it
+            elif mining_start and not is_active:
+                try:
+                    if isinstance(mining_start, str):
+                        start_dt = datetime.fromisoformat(mining_start.replace('Z', '+00:00'))
+                    else:
+                        start_dt = mining_start
+                    
+                    if start_dt.tzinfo is None:
+                        start_dt = start_dt.replace(tzinfo=timezone.utc)
+                    
+                    # Session is 24 hours from start
+                    calculated_end = start_dt + timedelta(hours=24)
+                    is_active = calculated_end > now
+                    debug_info = f"calculated from start: {calculated_end.isoformat()} > {now.isoformat()} = {is_active}"
+                except Exception as e:
+                    debug_info = f"mining_start parse error: {e}"
+            
+            # Log for debugging (will show in backend logs)
+            if u.get("name") and "somnath" in u.get("name", "").lower():
+                print(f"DEBUG {u.get('name')}: is_active={is_active}, {debug_info}, raw_session_end={session_end}, raw_start={mining_start}")
             
             if is_active:
                 active_count += 1
