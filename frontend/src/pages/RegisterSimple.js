@@ -138,8 +138,8 @@ const RegisterSimple = () => {
           <div className="flex items-start gap-3">
             <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
             <div className="text-sm text-blue-900">
-              <p className="font-semibold mb-1">Quick Registration</p>
-              <p>Just email & password to get started. Complete your profile later!</p>
+              <p className="font-semibold mb-1">Easy Registration</p>
+              <p>Fill in your details to get started and earn rewards!</p>
             </div>
           </div>
         </div>
