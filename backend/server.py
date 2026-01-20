@@ -5277,6 +5277,12 @@ async def checkout(request: Request):
     total_prc = sum(item["prc_price"] * item["quantity"] for item in cart["items"])
     total_cash = sum(item.get("cash_price", 0) * item["quantity"] for item in cart["items"])
     
+    # ===== REDEMPTION LIMIT CHECK =====
+    redeem_check = await check_redemption_allowed(user, total_prc)
+    if not redeem_check["allowed"]:
+        raise HTTPException(status_code=403, detail=redeem_check["reason"])
+    # ===================================
+    
     # Get delivery charge configuration (10% of PRC value in cash as default)
     # PRC to cash conversion: 10 PRC = ₹1, so total_prc/10 = cash equivalent
     config = await db.system_config.find_one({"config_type": "delivery"})
