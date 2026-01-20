@@ -21787,23 +21787,25 @@ async def get_referral_levels(user_id: str):
         # Get detailed user info and activity status
         user_details = []
         active_count = 0
+        now = datetime.now(timezone.utc)
         
         for u in users:
-            # NEW: Check if user has active session (logged in within last 24 hours)
-            twenty_four_hours_ago = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+            # NEW: Check if user has ACTIVE MINING SESSION
+            # Active = mining_active=True AND mining_session_end > current_time
+            mining_active = u.get("mining_active", False)
+            session_end = u.get("mining_session_end")
             
-            last_login = u.get("last_login")
             is_active = False
             
-            if last_login:
+            if mining_active and session_end:
                 try:
-                    if isinstance(last_login, str):
-                        last_login_dt = datetime.fromisoformat(last_login.replace('Z', '+00:00'))
+                    if isinstance(session_end, str):
+                        session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
                     else:
-                        last_login_dt = last_login
+                        session_end_dt = session_end
                     
-                    # User is active if logged in within last 24 hours
-                    is_active = last_login_dt.isoformat() >= twenty_four_hours_ago
+                    # User is active ONLY if mining session is running (not expired)
+                    is_active = session_end_dt > now
                 except:
                     is_active = False
             
@@ -21818,7 +21820,8 @@ async def get_referral_levels(user_id: str):
                 "membership_type": u.get("membership_type", "free"),
                 "subscription_plan": u.get("subscription_plan", "explorer"),
                 "joined_at": u.get("created_at"),
-                "last_login": u.get("last_login")  # Added for transparency
+                "mining_active": mining_active,
+                "session_end": session_end
             })
         
         levels.append({
