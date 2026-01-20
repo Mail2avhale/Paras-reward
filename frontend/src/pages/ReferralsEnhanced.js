@@ -651,7 +651,7 @@ Download now & start earning!`;
         </div>
       </div>
 
-      {/* Bonus Levels - Visual Pyramid */}
+      {/* Bonus Levels - Visual Pyramid with Expandable User List */}
       <div className="px-5 mb-6">
         <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
@@ -659,16 +659,18 @@ Download now & start earning!`;
               <Sparkles className="w-5 h-5 text-amber-400" />
               Earning Levels
             </h3>
-            <span className="text-xs text-gray-500">Earn % of friends&apos; rewards</span>
+            <span className="text-xs text-gray-500">Tap to see users</span>
           </div>
           
-          {/* Pyramid visualization */}
+          {/* Pyramid visualization with expandable sections */}
           <div className="space-y-2">
             {[1, 2, 3, 4, 5].map((level) => {
               const config = levelConfig[level];
-              const levelData = referralLevels.find(l => l.level === level) || { count: 0, active_count: 0 };
+              const levelData = referralLevels.find(l => l.level === level) || { count: 0, active_count: 0, users: [] };
               const totalUsers = levelData.count || levelData.users?.length || 0;
               const activeUsers = levelData.active_count || levelData.users?.filter(u => u.is_active).length || 0;
+              const users = levelData.users || [];
+              const isExpanded = expandedLevels[level];
               
               // Calculate width based on level (pyramid effect)
               const widthPercent = 100 - (level - 1) * 12;
@@ -679,16 +681,17 @@ Download now & start earning!`;
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: level * 0.1 }}
-                  className="flex items-center gap-3"
-                  style={{ paddingLeft: `${(level - 1) * 6}%` }}
+                  className="flex flex-col"
+                  style={{ paddingLeft: `${(level - 1) * 4}%` }}
                 >
                   <div 
-                    className={`flex-1 flex items-center justify-between p-3 rounded-xl border transition-all ${
+                    className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
                       activeUsers > 0 
-                        ? `bg-${config.color}-500/20 border-${config.color}-500/30` 
-                        : 'bg-gray-800/50 border-gray-700/50'
+                        ? `bg-${config.color}-500/20 border-${config.color}-500/30 hover:bg-${config.color}-500/30` 
+                        : 'bg-gray-800/50 border-gray-700/50 hover:bg-gray-800'
                     }`}
                     style={{ maxWidth: `${widthPercent}%` }}
+                    onClick={() => totalUsers > 0 && toggleLevel(level)}
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-xl">{config.icon}</span>
@@ -696,19 +699,81 @@ Download now & start earning!`;
                         <p className={`font-semibold text-sm ${activeUsers > 0 ? 'text-white' : 'text-gray-400'}`}>
                           {config.label}
                         </p>
-                        <p className="text-xs text-gray-500">
-                          {totalUsers} invited • {activeUsers} active
-                        </p>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-gray-500">{totalUsers} invited</span>
+                          <span className="text-green-400">• {activeUsers} active</span>
+                          <span className="text-red-400">• {totalUsers - activeUsers} inactive</span>
+                        </div>
                       </div>
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-sm font-bold ${
-                      activeUsers > 0 
-                        ? `bg-${config.color}-500/30 text-${config.color}-300` 
-                        : 'bg-gray-700/50 text-gray-500'
-                    }`}>
-                      +{config.percent}%
+                    <div className="flex items-center gap-2">
+                      <div className={`px-3 py-1 rounded-full text-sm font-bold ${
+                        activeUsers > 0 
+                          ? `bg-${config.color}-500/30 text-${config.color}-300` 
+                          : 'bg-gray-700/50 text-gray-500'
+                      }`}>
+                        +{config.percent}%
+                      </div>
+                      {totalUsers > 0 && (
+                        isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />
+                      )}
                     </div>
                   </div>
+                  
+                  {/* Expanded User List */}
+                  <AnimatePresence>
+                    {isExpanded && users.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-2 ml-4 space-y-1"
+                        style={{ maxWidth: `${widthPercent - 5}%` }}
+                      >
+                        {users.map((u, idx) => (
+                          <div 
+                            key={u.uid || idx}
+                            className={`flex items-center justify-between p-2 rounded-lg ${
+                              u.is_active ? 'bg-green-500/10 border border-green-500/20' : 'bg-gray-800/50 border border-gray-700/50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              {/* Status indicator */}
+                              <div className={`w-2 h-2 rounded-full ${u.is_active ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`}></div>
+                              
+                              {/* Avatar */}
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                                u.is_active ? 'bg-green-500/20 text-green-400' : 'bg-gray-700 text-gray-400'
+                              }`}>
+                                {u.name?.charAt(0)?.toUpperCase() || 'U'}
+                              </div>
+                              
+                              {/* Name */}
+                              <span className={`text-sm truncate max-w-[120px] ${u.is_active ? 'text-white' : 'text-gray-400'}`}>
+                                {u.name || 'User'}
+                              </span>
+                            </div>
+                            
+                            {/* Status badge */}
+                            <div className="flex items-center gap-2">
+                              {u.membership_type && u.membership_type !== 'free' && (
+                                <span className="text-xs px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded capitalize">
+                                  {u.membership_type}
+                                </span>
+                              )}
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                u.is_active 
+                                  ? 'bg-green-500/20 text-green-400' 
+                                  : 'bg-red-500/20 text-red-400'
+                              }`}>
+                                {u.is_active ? '🟢 Active' : '🔴 Inactive'}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
               );
             })}
@@ -720,6 +785,29 @@ Download now & start earning!`;
             <span className="text-amber-400 font-bold">Up to +20% bonus</span>
           </div>
         </div>
+      </div>
+
+      {/* Network Tree View Button */}
+      <div className="px-5 mb-6">
+        <button
+          onClick={() => {
+            setShowNetworkTree(true);
+            fetchNetworkTree();
+          }}
+          className="w-full bg-gradient-to-r from-cyan-500/20 to-blue-600/10 border border-cyan-500/30 rounded-2xl p-4 flex items-center justify-between hover:from-cyan-500/30 hover:to-blue-600/20 transition-all"
+          data-testid="view-network-tree"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+              <GitBranch className="w-6 h-6 text-cyan-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-white font-bold">Network Tree View</p>
+              <p className="text-cyan-400 text-sm">See your complete referral network</p>
+            </div>
+          </div>
+          <ChevronRight className="w-6 h-6 text-cyan-400" />
+        </button>
       </div>
 
       {/* View Earnings History */}
