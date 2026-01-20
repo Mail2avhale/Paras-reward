@@ -17,6 +17,8 @@ const RegisterSimple = () => {
   const refCode = searchParams.get('ref') || '';
   
   const [formData, setFormData] = useState({
+    full_name: '',
+    mobile: '',
     email: '',
     password: '',
     confirmPassword: '',
