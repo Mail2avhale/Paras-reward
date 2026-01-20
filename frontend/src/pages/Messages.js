@@ -64,6 +64,63 @@ const Messages = ({ user }) => {
     }
   };
 
+  // Search users to start new conversation
+  const searchUsers = async (query) => {
+    if (!query || query.length < 2) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+    
+    try {
+      setIsSearching(true);
+      const response = await axios.get(`${API}/api/social/search-users?q=${encodeURIComponent(query)}&limit=10`);
+      // Filter out current user
+      const filteredUsers = (response.data.users || []).filter(u => u.uid !== user.uid);
+      setSearchResults(filteredUsers);
+      setShowSearchResults(true);
+    } catch (error) {
+      console.error('Error searching users:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Handle search input with debounce
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    
+    // Clear existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    // Debounce search
+    searchTimeoutRef.current = setTimeout(() => {
+      searchUsers(value);
+    }, 300);
+  };
+
+  // Start chat with searched user
+  const startChatWithUser = (searchedUser) => {
+    setShowSearchResults(false);
+    setSearchQuery('');
+    setSearchResults([]);
+    
+    // Check if conversation already exists
+    const existingConv = conversations.find(c => c.other_user?.uid === searchedUser.uid);
+    if (existingConv) {
+      openConversation(existingConv.conversation_id, existingConv.other_user);
+    } else {
+      // Start new conversation
+      setActiveConversation({ isNew: true, recipient: searchedUser });
+      setRecipientProfile(searchedUser);
+      setMessages([]);
+    }
+  };
+
   const fetchRecipientAndOpenChat = async (uid) => {
     try {
       const response = await axios.get(`${API}/api/users/${uid}/public-profile`);
