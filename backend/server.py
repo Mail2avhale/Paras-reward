@@ -4076,14 +4076,14 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
     sub_info = await get_user_subscription_info(user)
     plan = sub_info["plan"]
     
-    # NEW: PRC per tap based on subscription plan
-    # Free/Startup: 100 taps = 10 PRC (0.1 per tap)
-    # Explorer: 100 taps = 50 PRC (0.5 per tap)
+    # PRC per tap based on subscription plan (100 taps daily for all)
+    # Explorer (Free): 100 taps = 10 PRC (0.1 per tap)
+    # Startup: 100 taps = 50 PRC (0.5 per tap)
     # Growth: 100 taps = 100 PRC (1.0 per tap)
     # Elite: 100 taps = 200 PRC (2.0 per tap)
     prc_per_tap_config = {
-        "explorer": 0.1,   # Free users - 10 PRC daily
-        "free": 0.1,       # Free users - 10 PRC daily
+        "explorer": 0.1,   # Explorer (Free) - 10 PRC daily
+        "free": 0.1,       # Free fallback - 10 PRC daily
         "startup": 0.5,    # Startup - 50 PRC daily
         "growth": 1.0,     # Growth - 100 PRC daily
         "elite": 2.0       # Elite - 200 PRC daily
