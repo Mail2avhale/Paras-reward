@@ -21844,8 +21844,8 @@ async def get_referral_reward_progress(user_id: str):
     """
     Get the referral reward progress for a user.
     
-    Shows progress towards the "10 paid referrals in 7 days = Free Explorer subscription" reward.
-    Only applicable for Startup plan users who haven't claimed the reward yet.
+    Shows progress towards the "10 paid referrals in 7 days = Free Startup subscription (₹299)" reward.
+    Only applicable for Explorer (FREE) plan users who haven't claimed the reward yet.
     """
     user = await db.users.find_one({"uid": user_id}, {"_id": 0})
     if not user:
@@ -21897,8 +21897,8 @@ async def get_referral_reward_progress(user_id: str):
     progress_percent = min(100, (paid_referrals_7days / 10) * 100)
     remaining_needed = max(0, 10 - paid_referrals_7days)
     
-    # Determine eligibility status
-    is_eligible_plan = current_plan == "startup"
+    # Determine eligibility status - Explorer (FREE) plan users only
+    is_eligible_plan = current_plan == "explorer"
     is_eligible = is_eligible_plan and not reward_claimed and paid_referrals_7days >= 10
     
     # Calculate days remaining in the 7-day window
@@ -21906,7 +21906,8 @@ async def get_referral_reward_progress(user_id: str):
     
     return {
         "is_eligible": is_eligible,
-        "is_startup_plan": is_eligible_plan,
+        "is_explorer_plan": is_eligible_plan,
+        "is_startup_plan": is_eligible_plan,  # Keep for backward compatibility
         "reward_already_claimed": reward_claimed,
         "reward_claim_date": reward_date,
         "current_plan": current_plan,
@@ -21916,7 +21917,9 @@ async def get_referral_reward_progress(user_id: str):
         "remaining_needed": remaining_needed,
         "progress_percent": progress_percent,
         "paid_referral_details": paid_referral_details,
-        "reward_description": "Get 10 paid referrals within 7 days to earn a FREE 1-month Explorer subscription!",
+        "reward_description": "Get 10 paid referrals within 7 days to earn a FREE 1-month Startup subscription worth ₹299!",
+        "reward_plan": "startup",
+        "reward_value": 299,
         "window_info": {
             "window_days": 7,
             "rolling_window": True,
@@ -21924,8 +21927,8 @@ async def get_referral_reward_progress(user_id: str):
         },
         "status_message": (
             "🎉 You've already claimed this reward!" if reward_claimed else
-            "🎉 Congratulations! You're eligible for the free subscription!" if is_eligible else
-            f"⚠️ Only Startup plan users are eligible for this reward" if not is_eligible_plan else
+            "🎉 Congratulations! You're eligible for the free Startup subscription!" if is_eligible else
+            f"⚠️ Only Explorer (Free) plan users are eligible for this reward" if not is_eligible_plan else
             f"🔥 {paid_referrals_7days}/10 paid referrals - {remaining_needed} more to go!"
         )
     }
