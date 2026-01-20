@@ -15,7 +15,24 @@ import confetti from 'canvas-confetti';
 const TreeNode = ({ node, depth = 0 }) => {
   const [isExpanded, setIsExpanded] = useState(depth < 2);
   const hasChildren = node?.children && node.children.length > 0;
-  const isActive = node?.membership_type === 'vip' || node?.membership_type === 'elite' || node?.membership_type === 'growth' || node?.membership_type === 'startup';
+  const subscriptionPlan = node?.subscription_plan || 'explorer';
+  const isActive = node?.is_active || subscriptionPlan !== 'explorer' || node?.membership_type === 'vip';
+  
+  // Get plan display info
+  const getPlanBadge = () => {
+    switch(subscriptionPlan) {
+      case 'elite':
+        return { label: '👑 Elite', bgColor: 'bg-purple-500/20', textColor: 'text-purple-400' };
+      case 'growth':
+        return { label: '🚀 Growth', bgColor: 'bg-blue-500/20', textColor: 'text-blue-400' };
+      case 'startup':
+        return { label: '⭐ Startup', bgColor: 'bg-amber-500/20', textColor: 'text-amber-400' };
+      default:
+        return null;
+    }
+  };
+  
+  const planBadge = getPlanBadge();
   
   if (!node) return null;
   
@@ -54,10 +71,14 @@ const TreeNode = ({ node, depth = 0 }) => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-white text-sm font-medium truncate">{node.name || 'User'}</span>
-            {isActive && (
+            {/* Show subscription plan badge */}
+            {planBadge ? (
+              <span className={`px-1.5 py-0.5 ${planBadge.bgColor} ${planBadge.textColor} text-xs rounded-full`}>
+                {planBadge.label}
+              </span>
+            ) : isActive ? (
               <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full">Active</span>
-            )}
-            {!isActive && (
+            ) : (
               <span className="px-1.5 py-0.5 bg-gray-700 text-gray-500 text-xs rounded-full">Free</span>
             )}
           </div>
