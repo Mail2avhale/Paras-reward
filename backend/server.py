@@ -4067,15 +4067,31 @@ async def get_user_redeemed_stats(uid: str):
 # ========== TAP GAME ROUTES ==========
 @api_router.post("/game/tap/{uid}")
 async def play_tap_game(uid: str, tap_data: TapGamePlay):
-    """Play tap game - 0.01 PRC/tap for all users, tap limits based on subscription plan"""
+    """Play tap game - PRC per tap varies by subscription plan, 100 taps daily limit for all"""
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Get user's subscription info for tap limit
+    # Get user's subscription info
     sub_info = await get_user_subscription_info(user)
-    prc_per_tap = 0.01  # Same for all plans
-    max_taps = sub_info["tap_limit"]  # Explorer:100, Startup:200, Growth:300, Elite:400
+    plan = sub_info["plan"]
+    
+    # NEW: PRC per tap based on subscription plan
+    # Free/Startup: 100 taps = 10 PRC (0.1 per tap)
+    # Explorer: 100 taps = 50 PRC (0.5 per tap)
+    # Growth: 100 taps = 100 PRC (1.0 per tap)
+    # Elite: 100 taps = 200 PRC (2.0 per tap)
+    prc_per_tap_config = {
+        "explorer": 0.1,   # Free users - 10 PRC daily
+        "free": 0.1,       # Free users - 10 PRC daily
+        "startup": 0.5,    # Startup - 50 PRC daily
+        "growth": 1.0,     # Growth - 100 PRC daily
+        "elite": 2.0       # Elite - 200 PRC daily
+    }
+    prc_per_tap = prc_per_tap_config.get(plan, 0.1)
+    
+    # All plans get 100 taps daily
+    max_taps = 100
     
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     current_taps = user.get("taps_today", 0) if user.get("last_tap_date") == today else 0
@@ -4127,7 +4143,7 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
         user_id=uid,
         action_type="tap_game",
         description=f"Played tap game: {taps_to_add} taps, earned {prc_earned} PRC",
-        metadata={"taps": taps_to_add, "prc_earned": prc_earned, "prc_per_tap": prc_per_tap, "plan": sub_info["plan"]}
+        metadata={"taps": taps_to_add, "prc_earned": prc_earned, "prc_per_tap": prc_per_tap, "plan": plan}
     )
     
     return {
@@ -4136,7 +4152,8 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
         "prc_earned": prc_earned,
         "prc_per_tap": prc_per_tap,
         "max_taps": max_taps,
-        "subscription_plan": sub_info["plan"]
+        "subscription_plan": plan,
+        "daily_prc_potential": max_taps * prc_per_tap
     }
 
 # ========== REFERRAL ROUTES ==========
