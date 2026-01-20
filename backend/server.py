@@ -2046,7 +2046,7 @@ async def check_user_birthday(uid: str):
 # ========== AUTH ROUTES ==========
 @api_router.post("/auth/register/simple")
 async def simple_register(request: Request):
-    """Simplified registration - only email, password, and role required"""
+    """Simplified registration - full name, mobile, email, password required"""
     # Check if registration is enabled
     settings = await db.settings.find_one({}, {"_id": 0, "registration_enabled": 1, "registration_message": 1})
     if settings and not settings.get("registration_enabled", True):
@@ -2055,6 +2055,8 @@ async def simple_register(request: Request):
     
     data = await request.json()
     
+    full_name = data.get("full_name", "").strip()
+    mobile = data.get("mobile", "").strip()
     email = data.get("email")
     password = data.get("password")
     role = data.get("role", "user")  # user, master_stockist, sub_stockist, outlet
@@ -2062,6 +2064,22 @@ async def simple_register(request: Request):
     
     if not email or not password:
         raise HTTPException(status_code=400, detail="Email and password are required")
+    
+    # Validate full name if provided
+    if full_name and len(full_name) < 2:
+        raise HTTPException(status_code=400, detail="Full name must be at least 2 characters")
+    
+    # Validate mobile if provided
+    if mobile:
+        # Remove any spaces or dashes
+        mobile = mobile.replace(" ", "").replace("-", "")
+        if not mobile.isdigit() or len(mobile) != 10:
+            raise HTTPException(status_code=400, detail="Mobile number must be 10 digits")
+        
+        # Check if mobile already exists
+        existing_mobile = await db.users.find_one({"mobile": mobile})
+        if existing_mobile:
+            raise HTTPException(status_code=400, detail="Mobile number already registered")
     
     # Validate email format
     if "@" not in email:
@@ -2079,14 +2097,15 @@ async def simple_register(request: Request):
         if not referrer:
             raise HTTPException(status_code=400, detail="Invalid referral code")
     
-    # Create minimal user
+    # Create user with full name and mobile
     user_data = {
         "uid": str(uuid.uuid4()),
         "email": email,
+        "mobile": mobile if mobile else None,
         "password_hash": hash_password(password),
         "role": role,
-        "name": email.split("@")[0],  # Use email prefix as temporary name
-        "profile_complete": False,
+        "name": full_name if full_name else email.split("@")[0],  # Use full name or email prefix
+        "profile_complete": bool(full_name and mobile),  # Mark complete if both provided
         "profile_picture": None,
         "prc_balance": 0,
         "total_mined": 0,
