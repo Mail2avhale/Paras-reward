@@ -809,28 +809,22 @@ Download now & start earning!`;
               )}
 
               {/* Not Eligible Info */}
-              {!rewardProgress.is_startup_plan && !rewardProgress.reward_already_claimed && (
+              {!(rewardProgress.is_explorer_plan || rewardProgress.current_plan === 'explorer') && !rewardProgress.reward_already_claimed && (
                 <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gray-700 flex items-center justify-center text-xl">
                       🔒
                     </div>
                     <div className="flex-1">
-                      <p className="text-gray-300 text-sm">Upgrade to Startup plan to unlock this reward</p>
+                      <p className="text-gray-300 text-sm">This reward is for Explorer (Free) plan users</p>
                       <p className="text-gray-500 text-xs">Current plan: {rewardProgress.current_plan?.charAt(0).toUpperCase() + rewardProgress.current_plan?.slice(1)}</p>
                     </div>
-                    <button 
-                      onClick={() => navigate('/subscription')}
-                      className="px-3 py-1.5 bg-amber-500 text-black text-xs font-bold rounded-lg hover:bg-amber-400 transition-colors"
-                    >
-                      Upgrade
-                    </button>
                   </div>
                 </div>
               )}
 
               {/* Recent Paid Referrals */}
-              {rewardProgress.is_startup_plan && rewardProgress.paid_referral_details?.length > 0 && !rewardProgress.reward_already_claimed && (
+              {(rewardProgress.is_explorer_plan || rewardProgress.current_plan === 'explorer') && rewardProgress.paid_referral_details?.length > 0 && !rewardProgress.reward_already_claimed && (
                 <div className="mt-4">
                   <p className="text-xs text-gray-500 mb-2">Recent paid referrals (last 7 days):</p>
                   <div className="flex flex-wrap gap-2">
