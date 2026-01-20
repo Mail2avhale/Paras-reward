@@ -932,7 +932,219 @@ async def get_user_subscription_info(user: dict) -> dict:
         "expiry_date": subscription_expiry_str
     }
 
-# ========== HELPER FUNCTIONS ==========
+# ========== REDEMPTION LIMIT SYSTEM ==========
+async def get_redeem_settings():
+    """Get redemption limit settings from database"""
+    settings = await db.settings.find_one({}, {"_id": 0, "redeem_settings": 1})
+    
+    default_settings = {
+        "multiplier_1": 5,
+        "multiplier_2": 10,
+        "referral_bonus": 20,
+        "double_limit_referrals": 5,  # 5+ referrals = double limit
+        "enabled": True
+    }
+    
+    if settings and "redeem_settings" in settings:
+        return {**default_settings, **settings["redeem_settings"]}
+    return default_settings
+
+async def get_subscription_monthly_price(plan: str) -> float:
+    """Get monthly price for a subscription plan"""
+    pricing = await get_subscription_pricing()
+    
+    if plan == "explorer" or plan == "free":
+        return 0
+    
+    plan_pricing = pricing.get(plan, {})
+    return plan_pricing.get("monthly", 0)
+
+async def calculate_user_monthly_redeem_limit(user: dict) -> dict:
+    """
+    Calculate user's monthly redemption limit
+    Formula: (Plan Price × M1 × M2) + (Referrals × Referral Bonus)
+    If 5+ referrals: Double the total limit
+    """
+    redeem_settings = await get_redeem_settings()
+    
+    if not redeem_settings.get("enabled", True):
+        return {"limit": float('inf'), "enabled": False}
+    
+    # Get user's subscription info
+    sub_info = await get_user_subscription_info(user)
+    plan = sub_info.get("plan", "explorer")
+    
+    # Get plan monthly price
+    plan_price = await get_subscription_monthly_price(plan)
+    
+    # Get direct referral count
+    direct_referrals = await db.users.count_documents({"referred_by": user.get("uid")})
+    
+    # Calculate base limit
+    m1 = redeem_settings.get("multiplier_1", 5)
+    m2 = redeem_settings.get("multiplier_2", 10)
+    referral_bonus = redeem_settings.get("referral_bonus", 20)
+    double_limit_threshold = redeem_settings.get("double_limit_referrals", 5)
+    
+    base_limit = plan_price * m1 * m2
+    referral_extra = direct_referrals * referral_bonus
+    
+    total_limit = base_limit + referral_extra
+    
+    # Double limit if 5+ referrals
+    if direct_referrals >= double_limit_threshold:
+        total_limit = total_limit * 2
+    
+    return {
+        "limit": total_limit,
+        "base_limit": base_limit,
+        "referral_bonus_total": referral_extra,
+        "direct_referrals": direct_referrals,
+        "is_doubled": direct_referrals >= double_limit_threshold,
+        "plan": plan,
+        "plan_price": plan_price,
+        "enabled": True
+    }
+
+async def get_user_monthly_redemption_usage(user_id: str, subscription_start: str = None) -> float:
+    """
+    Get user's total PRC redeemed in current billing cycle
+    Billing cycle starts from subscription start date
+    """
+    now = datetime.now(timezone.utc)
+    
+    # Determine billing cycle start
+    if subscription_start:
+        try:
+            start = datetime.fromisoformat(subscription_start.replace('Z', '+00:00'))
+            if start.tzinfo is None:
+                start = start.replace(tzinfo=timezone.utc)
+            
+            # Calculate current billing cycle start
+            # Find how many months since subscription start
+            months_diff = (now.year - start.year) * 12 + (now.month - start.month)
+            if now.day < start.day:
+                months_diff -= 1
+            
+            # Current cycle start
+            cycle_start = start + timedelta(days=30 * months_diff)
+            if cycle_start > now:
+                cycle_start = start + timedelta(days=30 * (months_diff - 1))
+        except:
+            # Fallback to calendar month
+            cycle_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    else:
+        # Free users - use calendar month
+        cycle_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    cycle_start_str = cycle_start.isoformat()
+    
+    # Sum all redemptions since cycle start
+    total_redeemed = 0
+    
+    # Bill Payments
+    bill_payments = await db.payment_requests.aggregate([
+        {
+            "$match": {
+                "user_id": user_id,
+                "status": {"$in": ["completed", "approved", "pending"]},
+                "created_at": {"$gte": cycle_start_str}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": "$total_prc_deducted"}}}
+    ]).to_list(1)
+    if bill_payments:
+        total_redeemed += bill_payments[0].get("total", 0)
+    
+    # Gift Vouchers
+    voucher_redemptions = await db.gift_voucher_requests.aggregate([
+        {
+            "$match": {
+                "user_id": user_id,
+                "status": {"$in": ["completed", "approved", "pending"]},
+                "created_at": {"$gte": cycle_start_str}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": "$total_prc_deducted"}}}
+    ]).to_list(1)
+    if voucher_redemptions:
+        total_redeemed += voucher_redemptions[0].get("total", 0)
+    
+    # Marketplace Orders
+    marketplace_orders = await db.orders.aggregate([
+        {
+            "$match": {
+                "user_id": user_id,
+                "status": {"$nin": ["cancelled", "refunded"]},
+                "created_at": {"$gte": cycle_start_str}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": "$total_prc"}}}
+    ]).to_list(1)
+    if marketplace_orders:
+        total_redeemed += marketplace_orders[0].get("total", 0)
+    
+    # Loan EMI Payments
+    loan_payments = await db.loan_payments.aggregate([
+        {
+            "$match": {
+                "user_id": user_id,
+                "status": {"$in": ["completed", "approved", "pending"]},
+                "created_at": {"$gte": cycle_start_str}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": "$prc_amount"}}}
+    ]).to_list(1)
+    if loan_payments:
+        total_redeemed += loan_payments[0].get("total", 0)
+    
+    return total_redeemed
+
+async def check_redemption_allowed(user: dict, prc_amount: float) -> dict:
+    """
+    Check if user can redeem the specified PRC amount
+    Returns: {"allowed": bool, "reason": str, "remaining": float}
+    """
+    redeem_settings = await get_redeem_settings()
+    
+    if not redeem_settings.get("enabled", True):
+        return {"allowed": True, "reason": "System disabled", "remaining": float('inf')}
+    
+    # Calculate limit
+    limit_info = await calculate_user_monthly_redeem_limit(user)
+    monthly_limit = limit_info.get("limit", 0)
+    
+    # Free users cannot redeem
+    if monthly_limit == 0:
+        return {
+            "allowed": False,
+            "reason": "Service temporarily unavailable",
+            "remaining": 0,
+            "limit": 0
+        }
+    
+    # Get current usage
+    subscription_start = user.get("subscription_start_date") or user.get("subscription_created_at")
+    current_usage = await get_user_monthly_redemption_usage(user.get("uid"), subscription_start)
+    
+    remaining = monthly_limit - current_usage
+    
+    if current_usage + prc_amount > monthly_limit:
+        return {
+            "allowed": False,
+            "reason": "Service temporarily unavailable",
+            "remaining": max(0, remaining),
+            "limit": monthly_limit,
+            "current_usage": current_usage
+        }
+    
+    return {
+        "allowed": True,
+        "reason": "OK",
+        "remaining": remaining - prc_amount,
+        "limit": monthly_limit,
+        "current_usage": current_usage
+    }
 async def get_base_rate():
     """Calculate mining base rate based on total users"""
     # Fetch total users
