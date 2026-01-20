@@ -146,9 +146,56 @@ const RegisterSimple = () => {
 
         {/* Registration Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Full Name */}
+          <div>
+            <Label htmlFor="full_name">Full Name *</Label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                id="full_name"
+                type="text"
+                placeholder="Enter your full name"
+                value={formData.full_name}
+                onChange={(e) => handleChange('full_name', e.target.value)}
+                className={`pl-10 ${errors.full_name ? 'border-red-500' : ''}`}
+                data-testid="register-full-name"
+              />
+            </div>
+            {errors.full_name && (
+              <div className="flex items-center gap-1 mt-1 text-red-600 text-sm">
+                <AlertCircle className="h-4 w-4" />
+                <span>{errors.full_name}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile Number */}
+          <div>
+            <Label htmlFor="mobile">Mobile Number *</Label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                id="mobile"
+                type="tel"
+                placeholder="10-digit mobile number"
+                value={formData.mobile}
+                onChange={(e) => handleChange('mobile', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                className={`pl-10 ${errors.mobile ? 'border-red-500' : ''}`}
+                data-testid="register-mobile"
+                maxLength={10}
+              />
+            </div>
+            {errors.mobile && (
+              <div className="flex items-center gap-1 mt-1 text-red-600 text-sm">
+                <AlertCircle className="h-4 w-4" />
+                <span>{errors.mobile}</span>
+              </div>
+            )}
+          </div>
+
           {/* Email */}
           <div>
-            <Label htmlFor="email">Email Address</Label>
+            <Label htmlFor="email">Email Address *</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
