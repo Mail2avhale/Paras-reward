@@ -340,10 +340,13 @@ Download now & start earning!`;
   const fetchNetworkTree = async () => {
     try {
       const response = await axios.get(`${API}/api/referrals/${user.uid}/tree`);
-      setNetworkTree(response.data.tree);
+      // The API returns a tree object with 'tree' key containing the root node
+      const treeData = response.data.tree;
+      // We want to show the children of the root (the user's direct referrals and their network)
+      setNetworkTree(treeData?.children || []);
     } catch (error) {
       console.error('Error fetching network tree:', error);
-      setNetworkTree(null);
+      setNetworkTree([]);
     }
   };
 
