@@ -939,9 +939,27 @@ Download now & start earning!`;
                             
                             {/* Status badge */}
                             <div className="flex items-center gap-2">
-                              {u.membership_type && u.membership_type !== 'free' && (
-                                <span className="text-xs px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded capitalize">
-                                  {u.membership_type}
+                              {/* Show subscription plan badge */}
+                              {u.subscription_plan && u.subscription_plan !== 'explorer' && (
+                                <span className={`text-xs px-1.5 py-0.5 rounded capitalize ${
+                                  u.subscription_plan === 'elite' 
+                                    ? 'bg-purple-500/20 text-purple-400' 
+                                    : u.subscription_plan === 'growth'
+                                      ? 'bg-blue-500/20 text-blue-400'
+                                      : u.subscription_plan === 'startup'
+                                        ? 'bg-amber-500/20 text-amber-400'
+                                        : 'bg-gray-500/20 text-gray-400'
+                                }`}>
+                                  {u.subscription_plan === 'elite' ? '👑 Elite' : 
+                                   u.subscription_plan === 'growth' ? '🚀 Growth' : 
+                                   u.subscription_plan === 'startup' ? '⭐ Startup' : 
+                                   u.subscription_plan}
+                                </span>
+                              )}
+                              {/* Show Explorer badge for free users with membership_type check */}
+                              {(!u.subscription_plan || u.subscription_plan === 'explorer') && u.membership_type === 'vip' && (
+                                <span className="text-xs px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded">
+                                  ✓ VIP
                                 </span>
                               )}
                               <span className={`text-xs px-2 py-0.5 rounded-full ${
