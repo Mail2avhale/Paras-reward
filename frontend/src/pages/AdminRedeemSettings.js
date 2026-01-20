@@ -78,7 +78,7 @@ const AdminRedeemSettings = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await axios.put(`${API}/api/admin/settings/redeem`, settings);
+      await axios.put(`${API}/api/admin/settings/redeem-limits`, settings);
       toast.success('Redemption settings saved successfully!');
     } catch (error) {
       console.error('Error saving settings:', error);
