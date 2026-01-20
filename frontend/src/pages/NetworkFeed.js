@@ -447,8 +447,30 @@ const NetworkFeed = ({ user }) => {
         </div>
       </div>
 
+      {/* Category Filter Chips */}
+      {activeTab === 'global' && (
+        <div className="px-5 mb-4">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+            {activityCategories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setCategoryFilter(category.id)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 whitespace-nowrap transition-all ${
+                  categoryFilter === category.id
+                    ? 'bg-purple-500 text-white'
+                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                }`}
+              >
+                <span>{category.icon}</span>
+                <span>{category.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Suggested Users */}
-      {user?.uid && suggestedUsers.length > 0 && activeTab === 'global' && (
+      {user?.uid && suggestedUsers.length > 0 && activeTab === 'global' && categoryFilter === 'all' && (
         <div className="px-5 mb-6">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-white font-bold">{t('suggestedForYou')}</h3>
@@ -465,6 +487,11 @@ const NetworkFeed = ({ user }) => {
         <h3 className="text-white font-bold mb-3 flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-amber-400" />
           {activeTab === 'global' ? t('globalActivity') : t('yourNetwork')}
+          {categoryFilter !== 'all' && (
+            <span className="text-sm text-purple-400 font-normal">
+              • {activityCategories.find(c => c.id === categoryFilter)?.label}
+            </span>
+          )}
         </h3>
 
         {loading ? (
