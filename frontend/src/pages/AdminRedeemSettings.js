@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { 
   ArrowLeft, Save, Shield, Calculator, Users, 
-  TrendingUp, AlertTriangle, RefreshCw 
+  TrendingUp, AlertTriangle, RefreshCw, Percent
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -21,16 +21,15 @@ const AdminRedeemSettings = () => {
   const [settings, setSettings] = useState({
     multiplier_1: 5,
     multiplier_2: 10,
-    referral_bonus: 20,
-    double_limit_referrals: 5,
+    referral_bonus_percent: 20,  // 20% per referral
     enabled: true
   });
   
   // Example calculations for preview
   const [examples, setExamples] = useState({
-    startup: { base: 0, withReferrals: 0, doubled: 0 },
-    growth: { base: 0, withReferrals: 0, doubled: 0 },
-    elite: { base: 0, withReferrals: 0, doubled: 0 }
+    startup: [],
+    growth: [],
+    elite: []
   });
 
   useEffect(() => {
@@ -54,7 +53,7 @@ const AdminRedeemSettings = () => {
   };
 
   const calculateExamples = () => {
-    const { multiplier_1, multiplier_2, referral_bonus, double_limit_referrals } = settings;
+    const { multiplier_1, multiplier_2, referral_bonus_percent } = settings;
     
     const planPrices = {
       startup: 299,
@@ -62,14 +61,16 @@ const AdminRedeemSettings = () => {
       elite: 799
     };
     
+    const referralCounts = [0, 1, 2, 3, 5, 10];
     const newExamples = {};
     
     Object.entries(planPrices).forEach(([plan, price]) => {
       const base = price * multiplier_1 * multiplier_2;
-      const withReferrals = base + (3 * referral_bonus); // 3 referrals example
-      const doubled = (base + (double_limit_referrals * referral_bonus)) * 2; // With 5+ referrals
-      
-      newExamples[plan] = { base, withReferrals, doubled };
+      newExamples[plan] = referralCounts.map(refs => {
+        const multiplier = 1 + (refs * referral_bonus_percent / 100);
+        const limit = base * multiplier;
+        return { refs, multiplier, limit };
+      });
     });
     
     setExamples(newExamples);
@@ -102,7 +103,7 @@ const AdminRedeemSettings = () => {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white p-6">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -115,8 +116,8 @@ const AdminRedeemSettings = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Redemption Limit Settings</h1>
-              <p className="text-gray-400 text-sm">Configure monthly PRC redemption limits</p>
+              <h1 className="text-2xl font-bold">Monthly Redemption Limits</h1>
+              <p className="text-gray-400 text-sm">Control how much PRC users can redeem per month</p>
             </div>
           </div>
           <Button
@@ -136,9 +137,8 @@ const AdminRedeemSettings = () => {
             <div>
               <p className="font-semibold text-amber-400">Important Notice</p>
               <p className="text-sm text-gray-300">
-                These settings control how much PRC users can redeem per month. 
-                Changes will affect all users immediately. Users will see "Service temporarily unavailable" 
-                when they exceed their limit.
+                Users will see <strong>"Service temporarily unavailable"</strong> when they exceed their limit.
+                They will NOT know about the limit system.
               </p>
             </div>
           </div>
@@ -153,8 +153,8 @@ const AdminRedeemSettings = () => {
                 <p className="font-semibold text-white">System Status</p>
                 <p className="text-sm text-gray-400">
                   {settings.enabled 
-                    ? 'Redemption limits are active' 
-                    : 'Limits disabled - unlimited redemption allowed'}
+                    ? 'Redemption limits are ACTIVE' 
+                    : 'Limits DISABLED - unlimited redemption allowed'}
                 </p>
               </div>
             </div>
@@ -169,82 +169,96 @@ const AdminRedeemSettings = () => {
         <Card className="p-6 mb-6 bg-gray-900 border-gray-700">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Calculator className="h-5 w-5 text-purple-500" />
-            Limit Formula Settings
+            Limit Formula
           </h2>
           
           <div className="bg-gray-800/50 p-4 rounded-lg mb-6">
-            <p className="text-sm text-gray-300 font-mono">
-              Monthly Limit = (Plan Price × <span className="text-purple-400">M1</span> × <span className="text-blue-400">M2</span>) + (Referrals × <span className="text-green-400">Bonus</span>)
-            </p>
-            <p className="text-xs text-gray-500 mt-2">
-              If referrals ≥ {settings.double_limit_referrals}, total limit is doubled
+            <p className="text-sm text-gray-300 font-mono text-center">
+              Monthly Limit = <span className="text-amber-400">(Plan Price × M1 × M2)</span> × <span className="text-green-400">(1 + Referrals × {settings.referral_bonus_percent}%)</span>
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Multiplier 1 (M1) <span className="text-purple-400">×{settings.multiplier_1}</span>
+                Multiplier 1 (M1)
               </label>
               <Input
                 type="number"
                 value={settings.multiplier_1}
                 onChange={(e) => handleChange('multiplier_1', parseFloat(e.target.value) || 0)}
-                className="bg-gray-800 border-gray-700 text-white"
+                className="bg-gray-800 border-gray-700 text-white text-lg"
                 min="0"
-                step="0.5"
+                step="1"
               />
+              <p className="text-xs text-gray-500 mt-1">Base multiplier</p>
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Multiplier 2 (M2) <span className="text-blue-400">×{settings.multiplier_2}</span>
+                Multiplier 2 (M2)
               </label>
               <Input
                 type="number"
                 value={settings.multiplier_2}
                 onChange={(e) => handleChange('multiplier_2', parseFloat(e.target.value) || 0)}
-                className="bg-gray-800 border-gray-700 text-white"
+                className="bg-gray-800 border-gray-700 text-white text-lg"
                 min="0"
                 step="1"
               />
+              <p className="text-xs text-gray-500 mt-1">Secondary multiplier</p>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Referral Bonus (per referral) <span className="text-green-400">+{settings.referral_bonus} PRC</span>
+              <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-1">
+                <Percent className="h-4 w-4 text-green-400" />
+                Referral Bonus (per referral)
               </label>
-              <Input
-                type="number"
-                value={settings.referral_bonus}
-                onChange={(e) => handleChange('referral_bonus', parseFloat(e.target.value) || 0)}
-                className="bg-gray-800 border-gray-700 text-white"
-                min="0"
-                step="5"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Double Limit at Referrals <span className="text-amber-400">≥{settings.double_limit_referrals}</span>
-              </label>
-              <Input
-                type="number"
-                value={settings.double_limit_referrals}
-                onChange={(e) => handleChange('double_limit_referrals', parseInt(e.target.value) || 1)}
-                className="bg-gray-800 border-gray-700 text-white"
-                min="1"
-                step="1"
-              />
+              <div className="relative">
+                <Input
+                  type="number"
+                  value={settings.referral_bonus_percent}
+                  onChange={(e) => handleChange('referral_bonus_percent', parseFloat(e.target.value) || 0)}
+                  className="bg-gray-800 border-gray-700 text-white text-lg pr-8"
+                  min="0"
+                  max="100"
+                  step="5"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 font-bold">%</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Extra limit per referral</p>
             </div>
           </div>
         </Card>
 
-        {/* Preview Calculations */}
+        {/* Referral Bonus Explanation */}
+        <Card className="p-6 mb-6 bg-green-500/10 border-green-500/30">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Users className="h-5 w-5 text-green-500" />
+            Referral Bonus System
+          </h2>
+          
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+            {[0, 1, 2, 3, 5, 10].map(refs => {
+              const multiplier = 1 + (refs * settings.referral_bonus_percent / 100);
+              const bonusPercent = refs * settings.referral_bonus_percent;
+              return (
+                <div key={refs} className="text-center p-3 bg-gray-800/50 rounded-lg">
+                  <p className="text-2xl font-bold text-white">{refs}</p>
+                  <p className="text-xs text-gray-400">referrals</p>
+                  <p className="text-lg font-semibold text-green-400 mt-2">{multiplier.toFixed(1)}×</p>
+                  <p className="text-xs text-gray-500">+{bonusPercent}% limit</p>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        {/* Example Calculations Table */}
         <Card className="p-6 bg-gray-900 border-gray-700">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-green-500" />
-            Example Calculations
+            <TrendingUp className="h-5 w-5 text-blue-500" />
+            Example Monthly Limits (PRC)
           </h2>
           
           <div className="overflow-x-auto">
@@ -253,48 +267,46 @@ const AdminRedeemSettings = () => {
                 <tr className="border-b border-gray-700">
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Plan</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Price</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-400">Base Limit</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-400">With 3 Refs</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-400">With {settings.double_limit_referrals}+ Refs (2×)</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-400">0 Refs (Base)</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-400">1 Ref (+{settings.referral_bonus_percent}%)</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-400">3 Refs (+{settings.referral_bonus_percent * 3}%)</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-400">5 Refs (+{settings.referral_bonus_percent * 5}%)</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-400">10 Refs (+{settings.referral_bonus_percent * 10}%)</th>
                 </tr>
               </thead>
               <tbody>
                 <tr className="border-b border-gray-800">
                   <td className="py-3 px-4 text-white">Explorer (Free)</td>
                   <td className="py-3 px-4 text-gray-400">₹0</td>
-                  <td className="py-3 px-4 text-right text-red-400">0 PRC</td>
-                  <td className="py-3 px-4 text-right text-red-400">0 PRC</td>
-                  <td className="py-3 px-4 text-right text-red-400">0 PRC</td>
+                  <td colSpan={5} className="py-3 px-4 text-center text-red-400 font-semibold">
+                    Cannot Redeem (0 PRC limit)
+                  </td>
                 </tr>
-                <tr className="border-b border-gray-800">
-                  <td className="py-3 px-4 text-white">Startup</td>
-                  <td className="py-3 px-4 text-gray-400">₹299</td>
-                  <td className="py-3 px-4 text-right text-purple-400">{examples.startup.base.toLocaleString()} PRC</td>
-                  <td className="py-3 px-4 text-right text-blue-400">{examples.startup.withReferrals.toLocaleString()} PRC</td>
-                  <td className="py-3 px-4 text-right text-green-400">{examples.startup.doubled.toLocaleString()} PRC</td>
-                </tr>
-                <tr className="border-b border-gray-800">
-                  <td className="py-3 px-4 text-white">Growth</td>
-                  <td className="py-3 px-4 text-gray-400">₹549</td>
-                  <td className="py-3 px-4 text-right text-purple-400">{examples.growth.base.toLocaleString()} PRC</td>
-                  <td className="py-3 px-4 text-right text-blue-400">{examples.growth.withReferrals.toLocaleString()} PRC</td>
-                  <td className="py-3 px-4 text-right text-green-400">{examples.growth.doubled.toLocaleString()} PRC</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 text-white">Elite</td>
-                  <td className="py-3 px-4 text-gray-400">₹799</td>
-                  <td className="py-3 px-4 text-right text-purple-400">{examples.elite.base.toLocaleString()} PRC</td>
-                  <td className="py-3 px-4 text-right text-blue-400">{examples.elite.withReferrals.toLocaleString()} PRC</td>
-                  <td className="py-3 px-4 text-right text-green-400">{examples.elite.doubled.toLocaleString()} PRC</td>
-                </tr>
+                {['startup', 'growth', 'elite'].map((plan) => (
+                  <tr key={plan} className="border-b border-gray-800">
+                    <td className="py-3 px-4 text-white capitalize">{plan}</td>
+                    <td className="py-3 px-4 text-gray-400">
+                      ₹{plan === 'startup' ? 299 : plan === 'growth' ? 549 : 799}
+                    </td>
+                    {examples[plan]?.filter(e => [0, 1, 3, 5, 10].includes(e.refs)).map((ex, idx) => (
+                      <td key={idx} className={`py-3 px-4 text-right font-mono ${
+                        ex.refs === 0 ? 'text-purple-400' : 
+                        ex.refs >= 5 ? 'text-green-400 font-bold' : 'text-blue-400'
+                      }`}>
+                        {Math.round(ex.limit).toLocaleString()}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
           
           <div className="mt-4 p-3 bg-gray-800/50 rounded-lg">
             <p className="text-xs text-gray-400">
-              <strong>Note:</strong> These limits apply to all redemption services combined (Bill Payments, Gift Vouchers, Marketplace, Loan EMI, Credit Cards). 
-              The billing cycle resets every 30 days from the user's subscription start date.
+              <strong>Services Covered:</strong> Bill Payments, Gift Vouchers, Marketplace, Loan EMI, Credit Card Bills - ALL count towards the monthly limit.
+              <br/>
+              <strong>Billing Cycle:</strong> Resets every 30 days from user's subscription start date.
             </p>
           </div>
         </Card>
