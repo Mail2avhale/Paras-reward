@@ -21994,6 +21994,122 @@ async def get_referral_reward_progress(user_id: str):
     }
 
 
+
+@api_router.get("/debug/user-mining-status/{email_or_uid}")
+async def debug_user_mining_status(email_or_uid: str):
+    """
+    DEBUG ENDPOINT: Check a user's mining status and related fields.
+    Use this to diagnose why a user might show as inactive in referral lists.
+    Can be called with email or uid.
+    """
+    # Try to find user by UID first, then by email
+    user = await db.users.find_one({"uid": email_or_uid}, {"_id": 0, "password_hash": 0})
+    if not user:
+        user = await db.users.find_one({"email": email_or_uid}, {"_id": 0, "password_hash": 0})
+    
+    if not user:
+        return {"error": "User not found", "search_term": email_or_uid}
+    
+    now = datetime.now(timezone.utc)
+    
+    # Extract mining-related fields
+    mining_active = user.get("mining_active")
+    mining_start = user.get("mining_start_time")
+    session_end = user.get("mining_session_end")
+    last_login = user.get("last_login")
+    
+    # Calculate expected active status
+    calculated_active = False
+    active_reason = "none"
+    
+    if mining_active is True or mining_active == True or mining_active == "true":
+        if session_end:
+            try:
+                if isinstance(session_end, str):
+                    session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+                else:
+                    session_end_dt = session_end
+                
+                if session_end_dt.tzinfo is None:
+                    session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
+                
+                if session_end_dt > now:
+                    calculated_active = True
+                    active_reason = "mining_active_and_session_valid"
+                else:
+                    active_reason = f"mining_active_but_session_expired (ended {session_end_dt})"
+            except Exception as e:
+                calculated_active = True
+                active_reason = f"mining_active_flag_only (parse error: {e})"
+        else:
+            calculated_active = True
+            active_reason = "mining_active_no_session_end"
+    elif session_end:
+        try:
+            if isinstance(session_end, str):
+                session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+            else:
+                session_end_dt = session_end
+            
+            if session_end_dt.tzinfo is None:
+                session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
+            
+            if session_end_dt > now:
+                calculated_active = True
+                active_reason = "session_end_valid"
+            else:
+                active_reason = f"session_expired_at_{session_end_dt}"
+        except Exception as e:
+            active_reason = f"session_end_parse_error: {e}"
+    elif mining_start:
+        try:
+            if isinstance(mining_start, str):
+                start_dt = datetime.fromisoformat(mining_start.replace('Z', '+00:00'))
+            else:
+                start_dt = mining_start
+            
+            if start_dt.tzinfo is None:
+                start_dt = start_dt.replace(tzinfo=timezone.utc)
+            
+            calculated_end = start_dt + timedelta(hours=24)
+            if calculated_end > now:
+                calculated_active = True
+                active_reason = f"calculated_from_start (ends {calculated_end})"
+            else:
+                active_reason = f"calculated_session_expired (ended {calculated_end})"
+        except Exception as e:
+            active_reason = f"mining_start_parse_error: {e}"
+    
+    return {
+        "user_found": True,
+        "email": user.get("email"),
+        "uid": user.get("uid"),
+        "name": user.get("name"),
+        "current_timestamp": now.isoformat(),
+        
+        # Mining fields from database
+        "db_fields": {
+            "mining_active": mining_active,
+            "mining_active_type": type(mining_active).__name__,
+            "mining_start_time": mining_start,
+            "mining_session_end": session_end,
+            "last_login": last_login
+        },
+        
+        # Calculated status
+        "calculated_status": {
+            "is_active": calculated_active,
+            "active_reason": active_reason
+        },
+        
+        # Additional info
+        "subscription_plan": user.get("subscription_plan", "explorer"),
+        "membership_type": user.get("membership_type", "free"),
+        "referred_by": user.get("referred_by")
+    }
+
+
+
 # ========== AI REFERRAL FRAUD DETECTION & BONUS SYSTEM ==========
 
 # Level-wise bonus configuration
