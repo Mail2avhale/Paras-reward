@@ -10042,6 +10042,75 @@ async def update_marketplace_settings(request: Request):
     )
     return {"message": "Marketplace settings updated"}
 
+# ========== REDEMPTION LIMIT SETTINGS (ADMIN) ==========
+
+@api_router.get("/admin/settings/redeem")
+async def get_redeem_settings_admin():
+    """Get redemption limit settings (Admin only)"""
+    settings = await get_redeem_settings()
+    return settings
+
+@api_router.put("/admin/settings/redeem")
+async def update_redeem_settings_admin(request: Request):
+    """Update redemption limit settings (Admin only)"""
+    data = await request.json()
+    
+    # Validate inputs
+    multiplier_1 = float(data.get("multiplier_1", 5))
+    multiplier_2 = float(data.get("multiplier_2", 10))
+    referral_bonus = float(data.get("referral_bonus", 20))
+    double_limit_referrals = int(data.get("double_limit_referrals", 5))
+    enabled = data.get("enabled", True)
+    
+    if multiplier_1 < 0 or multiplier_2 < 0 or referral_bonus < 0:
+        raise HTTPException(status_code=400, detail="Multipliers and bonus cannot be negative")
+    
+    if double_limit_referrals < 1:
+        raise HTTPException(status_code=400, detail="Double limit referrals must be at least 1")
+    
+    redeem_settings = {
+        "multiplier_1": multiplier_1,
+        "multiplier_2": multiplier_2,
+        "referral_bonus": referral_bonus,
+        "double_limit_referrals": double_limit_referrals,
+        "enabled": enabled,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.settings.update_one(
+        {},
+        {"$set": {"redeem_settings": redeem_settings}},
+        upsert=True
+    )
+    
+    return {"message": "Redemption settings updated", "settings": redeem_settings}
+
+@api_router.get("/admin/user/{uid}/redeem-limit")
+async def get_user_redeem_limit_admin(uid: str):
+    """Get a user's redemption limit details (Admin only - for debugging/support)"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    limit_info = await calculate_user_monthly_redeem_limit(user)
+    subscription_start = user.get("subscription_start_date") or user.get("subscription_created_at")
+    current_usage = await get_user_monthly_redemption_usage(uid, subscription_start)
+    
+    return {
+        "user_id": uid,
+        "user_name": user.get("name"),
+        "plan": limit_info.get("plan"),
+        "plan_price": limit_info.get("plan_price"),
+        "monthly_limit": limit_info.get("limit"),
+        "base_limit": limit_info.get("base_limit"),
+        "referral_bonus_total": limit_info.get("referral_bonus_total"),
+        "direct_referrals": limit_info.get("direct_referrals"),
+        "is_doubled": limit_info.get("is_doubled"),
+        "current_usage": current_usage,
+        "remaining": max(0, limit_info.get("limit", 0) - current_usage),
+        "usage_percentage": round((current_usage / limit_info.get("limit", 1)) * 100, 2) if limit_info.get("limit", 0) > 0 else 0
+    }
+
 # ========== MARKETPLACE (USER) ==========
 
 @api_router.get("/marketplace/products")
