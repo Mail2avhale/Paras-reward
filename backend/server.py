@@ -965,7 +965,7 @@ async def calculate_user_monthly_redeem_limit(user: dict) -> dict:
     Formula: (Plan Price × M1 × M2) + (Referrals × Referral Bonus)
     If 5+ referrals: Double the total limit
     """
-    redeem_settings = await get_redeem_settings()
+    redeem_settings = await get_monthly_redeem_limit_settings()
     
     if not redeem_settings.get("enabled", True):
         return {"limit": float('inf'), "enabled": False}
@@ -1105,7 +1105,7 @@ async def check_redemption_allowed(user: dict, prc_amount: float) -> dict:
     Check if user can redeem the specified PRC amount
     Returns: {"allowed": bool, "reason": str, "remaining": float}
     """
-    redeem_settings = await get_redeem_settings()
+    redeem_settings = await get_monthly_redeem_limit_settings()
     
     if not redeem_settings.get("enabled", True):
         return {"allowed": True, "reason": "System disabled", "remaining": float('inf')}
