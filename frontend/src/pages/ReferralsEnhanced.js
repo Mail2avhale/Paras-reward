@@ -601,7 +601,7 @@ Download now & start earning!`;
                   <motion.div 
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    transition={{ type: "spring", delay: 0.2 }}
+                    transition={{ duration: 0.3, delay: 0.2 }}
                     className={`w-20 h-20 rounded-2xl flex items-center justify-center text-4xl ${
                       current ? `bg-${current.color}-500/20 border-2 border-${current.color}-500/50` : 'bg-gray-800'
                     }`}
