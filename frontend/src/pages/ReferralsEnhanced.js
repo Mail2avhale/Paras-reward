@@ -693,13 +693,13 @@ Download now & start earning!`;
             className={`relative overflow-hidden rounded-2xl p-5 border ${
               rewardProgress.reward_already_claimed 
                 ? 'bg-gradient-to-br from-green-900/30 to-emerald-900/20 border-green-500/30' 
-                : rewardProgress.is_startup_plan
+                : rewardProgress.is_explorer_plan || rewardProgress.current_plan === 'explorer'
                   ? 'bg-gradient-to-br from-purple-900/30 to-indigo-900/20 border-purple-500/30'
                   : 'bg-gray-900/50 border-gray-700/50'
             }`}
           >
             {/* Background decoration */}
-            {rewardProgress.is_startup_plan && !rewardProgress.reward_already_claimed && (
+            {(rewardProgress.is_explorer_plan || rewardProgress.current_plan === 'explorer') && !rewardProgress.reward_already_claimed && (
               <>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl"></div>
                 <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl"></div>
@@ -711,16 +711,16 @@ Download now & start earning!`;
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-white font-bold flex items-center gap-2">
                   <Gift className={`w-5 h-5 ${rewardProgress.reward_already_claimed ? 'text-green-400' : 'text-purple-400'}`} />
-                  {rewardProgress.reward_already_claimed ? 'Reward Claimed!' : 'Free Subscription Reward'}
+                  {rewardProgress.reward_already_claimed ? 'Reward Claimed!' : 'Free Startup Subscription'}
                 </h3>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                   rewardProgress.reward_already_claimed 
                     ? 'bg-green-500/20 text-green-400'
-                    : rewardProgress.is_startup_plan 
+                    : rewardProgress.is_explorer_plan || rewardProgress.current_plan === 'explorer'
                       ? 'bg-purple-500/20 text-purple-400'
                       : 'bg-gray-700 text-gray-400'
                 }`}>
-                  {rewardProgress.reward_already_claimed ? '✓ Completed' : rewardProgress.is_startup_plan ? 'Eligible' : 'Startup Only'}
+                  {rewardProgress.reward_already_claimed ? '✓ Completed' : (rewardProgress.is_explorer_plan || rewardProgress.current_plan === 'explorer') ? 'Eligible' : 'Explorer Only'}
                 </span>
               </div>
 
