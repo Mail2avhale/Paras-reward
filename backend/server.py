@@ -2137,9 +2137,9 @@ async def simple_register(request: Request):
         )
     
     return {
-        "message": "Registration successful! Please complete your profile.",
+        "message": "Registration successful!" if user_data["profile_complete"] else "Registration successful! Please complete your profile.",
         "uid": user_data["uid"],
-        "profile_complete": False,
+        "profile_complete": user_data["profile_complete"],
         "referred_by": referrer["name"] if referrer else None
     }
 
