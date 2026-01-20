@@ -21789,15 +21789,24 @@ async def get_referral_levels(user_id: str):
         active_count = 0
         
         for u in users:
-            # Check if user has been active (last 30 days)
-            thirty_days_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+            # NEW: Check if user has active session (logged in within last 24 hours)
+            twenty_four_hours_ago = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
             
-            recent_activity = await db.transactions.count_documents({
-                "user_id": u.get("uid"),
-                "created_at": {"$gte": thirty_days_ago}
-            })
+            last_login = u.get("last_login")
+            is_active = False
             
-            is_active = recent_activity > 0 or u.get("mining_active", False)
+            if last_login:
+                try:
+                    if isinstance(last_login, str):
+                        last_login_dt = datetime.fromisoformat(last_login.replace('Z', '+00:00'))
+                    else:
+                        last_login_dt = last_login
+                    
+                    # User is active if logged in within last 24 hours
+                    is_active = last_login_dt.isoformat() >= twenty_four_hours_ago
+                except:
+                    is_active = False
+            
             if is_active:
                 active_count += 1
             
@@ -21808,7 +21817,8 @@ async def get_referral_levels(user_id: str):
                 "is_active": is_active,
                 "membership_type": u.get("membership_type", "free"),
                 "subscription_plan": u.get("subscription_plan", "explorer"),
-                "joined_at": u.get("created_at")
+                "joined_at": u.get("created_at"),
+                "last_login": u.get("last_login")  # Added for transparency
             })
         
         levels.append({
