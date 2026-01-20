@@ -67,7 +67,46 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 
 ## What's Been Implemented
 
-### January 19, 2026 (Current Session - Admin Panel Dark Theme)
+### January 20, 2026 (Current Session - Tap Game & Referral Rewards)
+
+#### Tap Game Daily PRC Limits ✅ (COMPLETED)
+
+**Implementation**: Modified `/api/game/tap/{uid}` endpoint in `backend/server.py`
+
+**PRC Earning per 100 Daily Taps by Subscription Plan:**
+| Plan | PRC per Tap | Daily PRC (100 taps) |
+|------|-------------|----------------------|
+| Explorer (Free) | 0.1 | 10 PRC |
+| Startup | 0.5 | 50 PRC |
+| Growth | 1.0 | 100 PRC |
+| Elite | 2.0 | 200 PRC |
+
+**Features:**
+- All plans have 100 daily tap limit
+- PRC earned varies by subscription plan
+- Daily reset at midnight UTC
+- Response includes: taps_added, remaining_taps, prc_earned, prc_per_tap, daily_prc_potential
+
+#### Referral Subscription Reward System ✅ (COMPLETED)
+
+**Implementation**: New `check_and_grant_referral_reward()` function in `backend/server.py`
+
+**Reward Rules:**
+- **Eligibility**: User must be on "Startup" plan
+- **Requirement**: Get 10 paid referrals within a rolling 7-day window
+- **Reward**: Free 1-month "Explorer" subscription
+- **One-time**: Lifetime reward (cannot be claimed twice)
+- **Trigger**: Automatically checked when any subscription payment is approved
+
+**Features:**
+- In-app notification created for reward recipient
+- Activity logged in activity_logs collection (with `is_global: true` flag)
+- Subscription extended from current expiry (not replaced)
+- `referral_subscription_reward_claimed` flag prevents duplicate rewards
+
+**Test Results**: 24 tests passed, 1 skipped (96% success rate)
+
+### January 19, 2026 (Previous Session - Admin Panel Dark Theme)
 
 #### Admin Panel Dark Theme Standardization ✅ (COMPLETED)
 
