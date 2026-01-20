@@ -663,6 +663,177 @@ Download now & start earning!`;
         </div>
       </div>
 
+      {/* 🎁 Reward Progress Tracker - Free Subscription Reward */}
+      {rewardProgress && (
+        <div className="px-5 mb-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`relative overflow-hidden rounded-2xl p-5 border ${
+              rewardProgress.reward_already_claimed 
+                ? 'bg-gradient-to-br from-green-900/30 to-emerald-900/20 border-green-500/30' 
+                : rewardProgress.is_startup_plan
+                  ? 'bg-gradient-to-br from-purple-900/30 to-indigo-900/20 border-purple-500/30'
+                  : 'bg-gray-900/50 border-gray-700/50'
+            }`}
+          >
+            {/* Background decoration */}
+            {rewardProgress.is_startup_plan && !rewardProgress.reward_already_claimed && (
+              <>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl"></div>
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl"></div>
+              </>
+            )}
+            
+            <div className="relative z-10">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-white font-bold flex items-center gap-2">
+                  <Gift className={`w-5 h-5 ${rewardProgress.reward_already_claimed ? 'text-green-400' : 'text-purple-400'}`} />
+                  {rewardProgress.reward_already_claimed ? 'Reward Claimed!' : 'Free Subscription Reward'}
+                </h3>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  rewardProgress.reward_already_claimed 
+                    ? 'bg-green-500/20 text-green-400'
+                    : rewardProgress.is_startup_plan 
+                      ? 'bg-purple-500/20 text-purple-400'
+                      : 'bg-gray-700 text-gray-400'
+                }`}>
+                  {rewardProgress.reward_already_claimed ? '✓ Completed' : rewardProgress.is_startup_plan ? 'Eligible' : 'Startup Only'}
+                </span>
+              </div>
+
+              {/* Status Message */}
+              <p className={`text-sm mb-4 ${
+                rewardProgress.reward_already_claimed ? 'text-green-300' : 'text-gray-300'
+              }`}>
+                {rewardProgress.status_message}
+              </p>
+
+              {/* Progress Section - Only show if eligible and not claimed */}
+              {rewardProgress.is_startup_plan && !rewardProgress.reward_already_claimed && (
+                <>
+                  {/* Progress Bar */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between text-xs mb-2">
+                      <span className="text-gray-400">Progress</span>
+                      <span className="text-purple-400 font-bold">
+                        {rewardProgress.paid_referrals_7days}/{rewardProgress.required_paid_referrals} paid referrals
+                      </span>
+                    </div>
+                    <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${rewardProgress.progress_percent}%` }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        className={`h-full rounded-full ${
+                          rewardProgress.progress_percent >= 100 
+                            ? 'bg-gradient-to-r from-green-500 to-emerald-400'
+                            : 'bg-gradient-to-r from-purple-500 to-indigo-400'
+                        }`}
+                      />
+                    </div>
+                    
+                    {/* Progress dots */}
+                    <div className="flex justify-between mt-2">
+                      {[0, 2, 4, 6, 8, 10].map((num) => (
+                        <div key={num} className="flex flex-col items-center">
+                          <div className={`w-2 h-2 rounded-full ${
+                            rewardProgress.paid_referrals_7days >= num 
+                              ? 'bg-purple-400' 
+                              : 'bg-gray-700'
+                          }`} />
+                          <span className="text-[10px] text-gray-500 mt-1">{num}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Reward Info */}
+                  <div className="bg-black/20 rounded-xl p-3 mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-2xl">
+                        🎁
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-white font-semibold text-sm">Reward: Free 1-Month Explorer Plan</p>
+                        <p className="text-gray-400 text-xs">Get 10 paid referrals in 7 days to unlock</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Window Info */}
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <History className="w-3 h-3" />
+                    <span>{rewardProgress.window_info?.message}</span>
+                  </div>
+                </>
+              )}
+
+              {/* Claimed Reward Info */}
+              {rewardProgress.reward_already_claimed && (
+                <div className="bg-green-500/10 rounded-xl p-4 border border-green-500/20">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-2xl">
+                      ✓
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-green-300 font-semibold">Congratulations! Reward Claimed</p>
+                      <p className="text-green-400/70 text-xs">
+                        Claimed on {rewardProgress.reward_claim_date ? new Date(rewardProgress.reward_claim_date).toLocaleDateString() : 'Recently'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Not Eligible Info */}
+              {!rewardProgress.is_startup_plan && !rewardProgress.reward_already_claimed && (
+                <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gray-700 flex items-center justify-center text-xl">
+                      🔒
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-gray-300 text-sm">Upgrade to Startup plan to unlock this reward</p>
+                      <p className="text-gray-500 text-xs">Current plan: {rewardProgress.current_plan?.charAt(0).toUpperCase() + rewardProgress.current_plan?.slice(1)}</p>
+                    </div>
+                    <button 
+                      onClick={() => navigate('/subscription')}
+                      className="px-3 py-1.5 bg-amber-500 text-black text-xs font-bold rounded-lg hover:bg-amber-400 transition-colors"
+                    >
+                      Upgrade
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Recent Paid Referrals */}
+              {rewardProgress.is_startup_plan && rewardProgress.paid_referral_details?.length > 0 && !rewardProgress.reward_already_claimed && (
+                <div className="mt-4">
+                  <p className="text-xs text-gray-500 mb-2">Recent paid referrals (last 7 days):</p>
+                  <div className="flex flex-wrap gap-2">
+                    {rewardProgress.paid_referral_details.slice(0, 5).map((ref, idx) => (
+                      <div key={idx} className="flex items-center gap-1 bg-purple-500/10 px-2 py-1 rounded-full">
+                        <div className="w-4 h-4 rounded-full bg-purple-500/30 flex items-center justify-center text-[8px] text-purple-300">
+                          {ref.name?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                        <span className="text-xs text-purple-300">{ref.name?.split(' ')[0] || 'User'}</span>
+                      </div>
+                    ))}
+                    {rewardProgress.paid_referral_details.length > 5 && (
+                      <div className="flex items-center gap-1 bg-gray-700/50 px-2 py-1 rounded-full">
+                        <span className="text-xs text-gray-400">+{rewardProgress.paid_referral_details.length - 5} more</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Bonus Levels - Visual Pyramid with Expandable User List */}
       <div className="px-5 mb-6">
         <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5">
