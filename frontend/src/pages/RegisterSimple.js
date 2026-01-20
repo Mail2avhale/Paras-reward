@@ -87,6 +87,8 @@ const RegisterSimple = () => {
 
     try {
       const response = await axios.post(`${API}/auth/register/simple`, {
+        full_name: formData.full_name.trim(),
+        mobile: formData.mobile,
         email: formData.email,
         password: formData.password,
         role: formData.role,
