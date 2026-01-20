@@ -328,6 +328,104 @@ Download now & start earning!`;
     return sum + (activeUsers * levelConfig[level.level]?.percent || 0);
   }, 0);
 
+  // Toggle level expansion
+  const toggleLevel = (level) => {
+    setExpandedLevels(prev => ({
+      ...prev,
+      [level]: !prev[level]
+    }));
+  };
+
+  // Fetch network tree for visualization
+  const fetchNetworkTree = async () => {
+    try {
+      const response = await axios.get(`${API}/api/referrals/${user.uid}/tree`);
+      setNetworkTree(response.data.tree);
+    } catch (error) {
+      console.error('Error fetching network tree:', error);
+      setNetworkTree(null);
+    }
+  };
+
+  // Network Tree Node Component
+  const TreeNode = ({ node, depth = 0 }) => {
+    const [isExpanded, setIsExpanded] = useState(depth < 2);
+    const hasChildren = node?.children && node.children.length > 0;
+    const isActive = node?.membership_type === 'vip' || node?.membership_type === 'elite' || node?.membership_type === 'growth' || node?.membership_type === 'startup';
+    
+    if (!node) return null;
+    
+    return (
+      <div className="ml-4">
+        <div 
+          className={`flex items-center gap-2 py-2 cursor-pointer hover:bg-gray-800/50 rounded-lg px-2 transition-colors ${depth === 0 ? 'ml-0' : ''}`}
+          onClick={() => hasChildren && setIsExpanded(!isExpanded)}
+        >
+          {/* Connector line */}
+          {depth > 0 && (
+            <div className="flex items-center">
+              <div className="w-4 h-px bg-gray-600"></div>
+            </div>
+          )}
+          
+          {/* Expand/Collapse icon */}
+          {hasChildren ? (
+            isExpanded ? (
+              <ChevronDown className="w-4 h-4 text-gray-500" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-gray-500" />
+            )
+          ) : (
+            <Circle className="w-2 h-2 text-gray-600 ml-1 mr-1" />
+          )}
+          
+          {/* User avatar with status */}
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+            isActive ? 'bg-green-500/20 text-green-400 ring-2 ring-green-500/50' : 'bg-gray-700 text-gray-400'
+          }`}>
+            {node.name?.charAt(0)?.toUpperCase() || 'U'}
+          </div>
+          
+          {/* User info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-white text-sm font-medium truncate">{node.name || 'User'}</span>
+              {isActive && (
+                <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full">Active</span>
+              )}
+              {!isActive && (
+                <span className="px-1.5 py-0.5 bg-gray-700 text-gray-500 text-xs rounded-full">Free</span>
+              )}
+            </div>
+            {hasChildren && (
+              <span className="text-xs text-gray-500">{node.children.length} referral{node.children.length !== 1 ? 's' : ''}</span>
+            )}
+          </div>
+          
+          {/* Level badge */}
+          <span className={`text-xs px-2 py-0.5 rounded-full ${
+            depth === 0 ? 'bg-amber-500/20 text-amber-400' :
+            depth === 1 ? 'bg-blue-500/20 text-blue-400' :
+            depth === 2 ? 'bg-emerald-500/20 text-emerald-400' :
+            depth === 3 ? 'bg-purple-500/20 text-purple-400' :
+            'bg-pink-500/20 text-pink-400'
+          }`}>
+            L{depth}
+          </span>
+        </div>
+        
+        {/* Children */}
+        {hasChildren && isExpanded && (
+          <div className="border-l border-gray-700 ml-4">
+            {node.children.map((child, idx) => (
+              <TreeNode key={child.id || idx} node={child} depth={depth + 1} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
