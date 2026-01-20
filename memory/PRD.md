@@ -123,6 +123,33 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 
 **Test Results**: 24 tests passed (96% success rate)
 
+#### Global Activity Feed Enhancement ✅ (COMPLETED)
+
+**Implementation**: 
+- Backend: Enhanced `get_global_live_activity()` in `backend/server.py`
+- Frontend: Updated `frontend/src/pages/NetworkFeed.js` with category filters
+
+**Activity Types Now Tracked:**
+| Type | Icon | Description |
+|------|------|-------------|
+| Registration | 👋/🤝 | New user signups (with referral indicator) |
+| Subscription | ⭐/🚀/👑 | VIP plan activations |
+| Tap Game | 👆 | Tap game PRC earnings |
+| PRC Rain | 🌧️ | Rain drop PRC earnings |
+| Referral Bonus | 🎯 | Referral commission earnings |
+| Bill Payment | 💳/📱/📡/💡 | Bill payments by type |
+| Gift Voucher | 🎁 | Voucher redemptions |
+| Shopping | 🛍️ | Marketplace orders |
+| Milestone | 🏆 | Badge unlocks |
+| Referral Reward | 🎁 | Free subscription rewards |
+
+**Frontend Features:**
+- Category filter chips: All, New Users, Subscriptions, Referrals, Earnings, Redeems
+- Filtered view with activity count
+- Color-coded activity cards by type
+- User name anonymization (first 3 chars + ***)
+- Location display when available
+
 ### January 19, 2026 (Previous Session - Admin Panel Dark Theme)
 
 #### Admin Panel Dark Theme Standardization ✅ (COMPLETED)
