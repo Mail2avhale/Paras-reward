@@ -511,33 +511,48 @@ const NetworkFeed = ({ user }) => {
         ) : (
           <div className="space-y-3">
             {activeTab === 'global' ? (
-              globalFeed.length === 0 ? (
-                <div className="text-center py-12">
-                  <Globe className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                  <p className="text-gray-500">{t('noActivityYet')}</p>
-                </div>
-              ) : (
-                <>
-                  {/* Activity count */}
-                  <div className="text-center text-gray-500 text-sm mb-4">
-                    {t('showingActivities').replace('{count}', globalFeed.length)}
+              (() => {
+                const filteredFeed = getFilteredActivities(globalFeed);
+                return filteredFeed.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Globe className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                    <p className="text-gray-500">
+                      {categoryFilter !== 'all' 
+                        ? `No ${activityCategories.find(c => c.id === categoryFilter)?.label.toLowerCase()} activity yet`
+                        : t('noActivityYet')
+                      }
+                    </p>
+                    {categoryFilter !== 'all' && (
+                      <button
+                        onClick={() => setCategoryFilter('all')}
+                        className="mt-2 text-purple-400 text-sm hover:underline"
+                      >
+                        View all activities
+                      </button>
+                    )}
                   </div>
-                  
-                  {globalFeed.map((activity, index) => renderActivityItem(activity, index))}
-                  
-                  {/* Load More / End of list */}
-                  {hasMoreGlobal ? (
-                    <button
-                      onClick={loadMoreGlobal}
-                      disabled={loadingMore}
-                      className="w-full py-3 mt-4 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition-colors flex items-center justify-center gap-2"
-                    >
-                      {loadingMore ? (
-                        <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <>
-                          <RefreshCw className="w-4 h-4" />
-                          {t('loadMore')}
+                ) : (
+                  <>
+                    {/* Activity count */}
+                    <div className="text-center text-gray-500 text-sm mb-4">
+                      Showing {filteredFeed.length} {categoryFilter !== 'all' ? activityCategories.find(c => c.id === categoryFilter)?.label.toLowerCase() : ''} activities
+                    </div>
+                    
+                    {filteredFeed.map((activity, index) => renderActivityItem(activity, index))}
+                    
+                    {/* Load More / End of list */}
+                    {hasMoreGlobal && categoryFilter === 'all' ? (
+                      <button
+                        onClick={loadMoreGlobal}
+                        disabled={loadingMore}
+                        className="w-full py-3 mt-4 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition-colors flex items-center justify-center gap-2"
+                      >
+                        {loadingMore ? (
+                          <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <RefreshCw className="w-4 h-4" />
+                            {t('loadMore')}
                         </>
                       )}
                     </button>
