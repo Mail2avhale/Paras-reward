@@ -155,9 +155,32 @@ const NetworkFeed = ({ user }) => {
 
   const renderActivityItem = (activity, index) => {
     const getActivityIcon = () => {
+      // Use icon from API if available
+      if (activity.icon) {
+        return <span className="text-xl">{activity.icon}</span>;
+      }
+      
       switch (activity.type) {
+        case 'registration':
+          return <span className="text-xl">👋</span>;
+        case 'subscription':
+          return <span className="text-xl">⭐</span>;
+        case 'tap_game':
+          return <span className="text-xl">👆</span>;
+        case 'prc_rain':
+          return <span className="text-xl">🌧️</span>;
+        case 'referral_bonus':
+          return <span className="text-xl">🎯</span>;
+        case 'bill_payment':
+          return <span className="text-xl">💳</span>;
+        case 'gift_voucher':
+          return <span className="text-xl">🎁</span>;
+        case 'shopping':
+          return <span className="text-xl">🛍️</span>;
         case 'milestone':
-          return <span className="text-xl">{activity.badge}</span>;
+          return <span className="text-xl">{activity.badge || '🏆'}</span>;
+        case 'referral_reward':
+          return <span className="text-xl">🎁</span>;
         case 'follow':
           return <UserPlus className="w-5 h-5 text-purple-400" />;
         case 'team_growth':
@@ -169,8 +192,26 @@ const NetworkFeed = ({ user }) => {
 
     const getActivityBg = () => {
       switch (activity.type) {
+        case 'registration':
+          return 'bg-green-500/20';
+        case 'subscription':
+          return 'bg-amber-500/20';
+        case 'tap_game':
+          return 'bg-blue-500/20';
+        case 'prc_rain':
+          return 'bg-cyan-500/20';
+        case 'referral_bonus':
+          return 'bg-purple-500/20';
+        case 'bill_payment':
+          return 'bg-indigo-500/20';
+        case 'gift_voucher':
+          return 'bg-pink-500/20';
+        case 'shopping':
+          return 'bg-orange-500/20';
         case 'milestone':
           return 'bg-amber-500/20';
+        case 'referral_reward':
+          return 'bg-emerald-500/20';
         case 'follow':
           return 'bg-purple-500/20';
         case 'team_growth':
@@ -179,6 +220,34 @@ const NetworkFeed = ({ user }) => {
           return 'bg-gray-800';
       }
     };
+
+    const getActivityColor = () => {
+      switch (activity.type) {
+        case 'registration':
+          return 'text-green-400';
+        case 'subscription':
+          return 'text-amber-400';
+        case 'tap_game':
+          return 'text-blue-400';
+        case 'prc_rain':
+          return 'text-cyan-400';
+        case 'referral_bonus':
+          return 'text-purple-400';
+        case 'bill_payment':
+          return 'text-indigo-400';
+        case 'gift_voucher':
+          return 'text-pink-400';
+        case 'shopping':
+          return 'text-orange-400';
+        default:
+          return 'text-gray-400';
+      }
+    };
+
+    // Get display text - prioritize description from API
+    const displayText = activity.description || activity.text || 'Activity';
+    const displayUser = activity.user || activity.user_name || 'User';
+    const displayTime = activity.timestamp || activity.created_at;
 
     return (
       <motion.div
@@ -193,15 +262,15 @@ const NetworkFeed = ({ user }) => {
             {getActivityIcon()}
           </div>
           <div className="flex-1">
-            <button 
-              onClick={() => activity.user_uid && navigate(`/profile/${activity.user_uid}`)}
-              className="text-white font-semibold hover:text-purple-400 transition-colors"
-            >
-              {activity.user_name || 'User'}
-            </button>
-            <p className="text-gray-400 text-sm">{activity.text}</p>
+            <div className="flex items-center gap-2">
+              <span className="text-white font-semibold">{displayUser}</span>
+              {activity.location && (
+                <span className="text-gray-500 text-xs">• {activity.location}</span>
+              )}
+            </div>
+            <p className={`text-sm ${getActivityColor()}`}>{displayText}</p>
             <p className="text-gray-600 text-xs mt-1">
-              {activity.created_at ? new Date(activity.created_at).toLocaleString() : 'Just now'}
+              {displayTime ? new Date(displayTime).toLocaleString() : 'Just now'}
             </p>
           </div>
         </div>
