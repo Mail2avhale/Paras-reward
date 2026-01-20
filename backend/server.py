@@ -10044,15 +10044,15 @@ async def update_marketplace_settings(request: Request):
 
 # ========== REDEMPTION LIMIT SETTINGS (ADMIN) ==========
 
-@api_router.get("/admin/settings/redeem")
-async def get_redeem_settings_admin():
-    """Get redemption limit settings (Admin only)"""
-    settings = await get_redeem_settings()
+@api_router.get("/admin/settings/redeem-limits")
+async def get_redeem_limit_settings_admin():
+    """Get monthly redemption limit settings (Admin only)"""
+    settings = await get_monthly_redeem_limit_settings()
     return settings
 
-@api_router.put("/admin/settings/redeem")
-async def update_redeem_settings_admin(request: Request):
-    """Update redemption limit settings (Admin only)"""
+@api_router.put("/admin/settings/redeem-limits")
+async def update_redeem_limit_settings_admin(request: Request):
+    """Update monthly redemption limit settings (Admin only)"""
     data = await request.json()
     
     # Validate inputs
@@ -10068,7 +10068,7 @@ async def update_redeem_settings_admin(request: Request):
     if double_limit_referrals < 1:
         raise HTTPException(status_code=400, detail="Double limit referrals must be at least 1")
     
-    redeem_settings = {
+    monthly_redeem_settings = {
         "multiplier_1": multiplier_1,
         "multiplier_2": multiplier_2,
         "referral_bonus": referral_bonus,
@@ -10079,11 +10079,11 @@ async def update_redeem_settings_admin(request: Request):
     
     await db.settings.update_one(
         {},
-        {"$set": {"redeem_settings": redeem_settings}},
+        {"$set": {"monthly_redeem_settings": monthly_redeem_settings}},
         upsert=True
     )
     
-    return {"message": "Redemption settings updated", "settings": redeem_settings}
+    return {"message": "Monthly redemption limit settings updated", "settings": monthly_redeem_settings}
 
 @api_router.get("/admin/user/{uid}/redeem-limit")
 async def get_user_redeem_limit_admin(uid: str):
