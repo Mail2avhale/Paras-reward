@@ -21807,6 +21807,7 @@ async def get_referral_levels(user_id: str):
                 "email": u.get("email"),
                 "is_active": is_active,
                 "membership_type": u.get("membership_type", "free"),
+                "subscription_plan": u.get("subscription_plan", "explorer"),
                 "joined_at": u.get("created_at")
             })
         
