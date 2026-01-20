@@ -5434,6 +5434,12 @@ async def create_order_legacy(uid: str, order_data: OrderCreate):
     
     prc_price = product["prc_price"]
     
+    # ===== REDEMPTION LIMIT CHECK =====
+    redeem_check = await check_redemption_allowed(user, prc_price)
+    if not redeem_check["allowed"]:
+        raise HTTPException(status_code=403, detail=redeem_check["reason"])
+    # ===================================
+    
     # Check balance
     if user.get("prc_balance", 0) < prc_price:
         raise HTTPException(status_code=400, detail="Insufficient PRC balance")
