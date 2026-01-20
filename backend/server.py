@@ -5101,10 +5101,10 @@ async def check_and_grant_referral_reward(new_paid_user_id: str, now: datetime):
     Check if the referrer of a newly paid user qualifies for the free subscription reward.
     
     Rules:
-    - Referrer must be on "Startup" plan
+    - Referrer must be on "Explorer" (FREE) plan
     - Referrer must have 10+ paid referrals in the last 7 days (rolling window)
     - This is a ONE-TIME (lifetime) reward per user
-    - Reward: Free 1-month "Explorer" subscription
+    - Reward: Free 1-month "Startup" subscription (₹299 value)
     """
     # Get the new paid user
     new_user = await db.users.find_one({"uid": new_paid_user_id})
@@ -5123,10 +5123,10 @@ async def check_and_grant_referral_reward(new_paid_user_id: str, now: datetime):
         print(f"Referrer {referrer_uid} already claimed referral reward")
         return
     
-    # Check if referrer is on Startup plan
+    # Check if referrer is on Explorer (FREE) plan
     referrer_plan = referrer.get("subscription_plan", "explorer")
-    if referrer_plan != "startup":
-        print(f"Referrer {referrer_uid} is on {referrer_plan} plan, not eligible (needs Startup)")
+    if referrer_plan != "explorer":
+        print(f"Referrer {referrer_uid} is on {referrer_plan} plan, not eligible (needs Explorer/Free)")
         return
     
     # Count paid referrals in last 7 days (rolling window)
