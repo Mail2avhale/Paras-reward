@@ -1126,6 +1126,116 @@ Download now & start earning!`;
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Network Tree Modal */}
+      <AnimatePresence>
+        {showNetworkTree && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex flex-col"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-800">
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setShowNetworkTree(false)}
+                  className="p-2 hover:bg-gray-800 rounded-lg"
+                >
+                  <ArrowLeft className="w-5 h-5 text-white" />
+                </button>
+                <div>
+                  <h2 className="text-lg font-bold text-white">Network Tree</h2>
+                  <p className="text-xs text-gray-400">Your complete referral network</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowNetworkTree(false)}
+                className="text-gray-500 hover:text-white p-2"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {/* Legend */}
+            <div className="flex items-center gap-4 px-4 py-2 bg-gray-900/50 border-b border-gray-800">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <span className="text-xs text-gray-400">Active (Paid)</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded-full bg-gray-500"></div>
+                <span className="text-xs text-gray-400">Inactive (Free)</span>
+              </div>
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">L0</span>
+                <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded">L1</span>
+                <span className="text-xs px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded">L2</span>
+              </div>
+            </div>
+            
+            {/* Tree Content */}
+            <div className="flex-1 overflow-auto p-4">
+              {networkTree ? (
+                <div className="bg-gray-900/50 rounded-xl p-4 border border-gray-800">
+                  {/* Root User (You) */}
+                  <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-amber-500/20 to-amber-600/10 rounded-xl border border-amber-500/30 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-amber-500/30 flex items-center justify-center text-amber-400 font-bold">
+                      {user?.name?.charAt(0)?.toUpperCase() || 'Y'}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-white font-bold">{user?.name || 'You'}</p>
+                      <p className="text-amber-400 text-xs">Your Network</p>
+                    </div>
+                    <Crown className="w-5 h-5 text-amber-400" />
+                  </div>
+                  
+                  {/* Tree */}
+                  {networkTree.length > 0 ? (
+                    <div className="space-y-1">
+                      {networkTree.map((node, idx) => (
+                        <TreeNode key={node.id || idx} node={node} depth={1} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-10">
+                      <Users className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                      <p className="text-gray-400">No referrals yet</p>
+                      <p className="text-gray-500 text-sm">Start inviting friends to build your network!</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="w-10 h-10 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                    <p className="text-gray-400">Loading network...</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Stats Footer */}
+            <div className="p-4 border-t border-gray-800 bg-gray-900/50">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="text-2xl font-bold text-white">{referralStats.total}</p>
+                  <p className="text-xs text-gray-500">Total Network</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-green-400">{referralStats.active}</p>
+                  <p className="text-xs text-gray-500">Active Users</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-amber-400">+{totalActiveBonus}%</p>
+                  <p className="text-xs text-gray-500">Total Bonus</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
