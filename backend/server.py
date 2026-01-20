@@ -961,8 +961,8 @@ async def get_subscription_monthly_price(plan: str) -> float:
 async def calculate_user_monthly_redeem_limit(user: dict) -> dict:
     """
     Calculate user's monthly redemption limit
-    Formula: (Plan Price × M1 × M2) + (Referrals × Referral Bonus)
-    If 5+ referrals: Double the total limit
+    Formula: Base Limit × (1 + (Referrals × Referral Bonus %))
+    Example: 14,950 × (1 + (5 × 0.20)) = 14,950 × 2.0 = 29,900 PRC
     """
     redeem_settings = await get_monthly_redeem_limit_settings()
     
@@ -982,24 +982,23 @@ async def calculate_user_monthly_redeem_limit(user: dict) -> dict:
     # Calculate base limit
     m1 = redeem_settings.get("multiplier_1", 5)
     m2 = redeem_settings.get("multiplier_2", 10)
-    referral_bonus = redeem_settings.get("referral_bonus", 20)
-    double_limit_threshold = redeem_settings.get("double_limit_referrals", 5)
+    referral_bonus_percent = redeem_settings.get("referral_bonus_percent", 20)  # 20% per referral
     
     base_limit = plan_price * m1 * m2
-    referral_extra = direct_referrals * referral_bonus
     
-    total_limit = base_limit + referral_extra
+    # Calculate referral multiplier: 1 + (referrals × bonus_percent / 100)
+    # Example: 5 referrals × 20% = 100% extra = 2.0× multiplier
+    referral_multiplier = 1 + (direct_referrals * referral_bonus_percent / 100)
     
-    # Double limit if 5+ referrals
-    if direct_referrals >= double_limit_threshold:
-        total_limit = total_limit * 2
+    # Final limit
+    total_limit = base_limit * referral_multiplier
     
     return {
         "limit": total_limit,
         "base_limit": base_limit,
-        "referral_bonus_total": referral_extra,
+        "referral_multiplier": referral_multiplier,
+        "referral_bonus_percent": referral_bonus_percent,
         "direct_referrals": direct_referrals,
-        "is_doubled": direct_referrals >= double_limit_threshold,
         "plan": plan,
         "plan_price": plan_price,
         "enabled": True
