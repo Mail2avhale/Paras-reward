@@ -1173,15 +1173,15 @@ Download now & start earning!`;
               initial={{ opacity: 0, scale: 0.5, y: 50 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.8, y: 20 }}
-              transition={{ type: "spring", duration: 0.6 }}
+              transition={{ duration: 0.4 }}
               className="bg-gradient-to-br from-amber-500 via-amber-600 to-orange-600 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
               {/* Animated celebration icon */}
               <motion.div
                 initial={{ scale: 0 }}
-                animate={{ scale: [0, 1.2, 1] }}
-                transition={{ delay: 0.2, duration: 0.5 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.3 }}
                 className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6"
               >
                 <motion.div
