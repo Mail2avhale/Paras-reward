@@ -5075,6 +5075,14 @@ async def approve_vip_payment(payment_id: str, request: Request):
             "timestamp": now.isoformat()
         })
         
+        # ========== REFERRAL REWARD SYSTEM ==========
+        # Check if this user's referrer qualifies for the "10 paid referrals in 7 days" reward
+        try:
+            await check_and_grant_referral_reward(user_id, now)
+        except Exception as e:
+            print(f"Error checking referral reward: {e}")
+        # ==============================================
+        
         # Calculate total days for message
         if start_date != now:
             remaining = (start_date - now).days
@@ -5087,6 +5095,142 @@ async def approve_vip_payment(payment_id: str, request: Request):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+async def check_and_grant_referral_reward(new_paid_user_id: str, now: datetime):
+    """
+    Check if the referrer of a newly paid user qualifies for the free subscription reward.
+    
+    Rules:
+    - Referrer must be on "Startup" plan
+    - Referrer must have 10+ paid referrals in the last 7 days (rolling window)
+    - This is a ONE-TIME (lifetime) reward per user
+    - Reward: Free 1-month "Explorer" subscription
+    """
+    # Get the new paid user
+    new_user = await db.users.find_one({"uid": new_paid_user_id})
+    if not new_user or not new_user.get("referred_by"):
+        return  # No referrer
+    
+    referrer_uid = new_user.get("referred_by")
+    
+    # Get referrer details
+    referrer = await db.users.find_one({"uid": referrer_uid})
+    if not referrer:
+        return
+    
+    # Check if referrer has already received this reward (lifetime check)
+    if referrer.get("referral_subscription_reward_claimed"):
+        print(f"Referrer {referrer_uid} already claimed referral reward")
+        return
+    
+    # Check if referrer is on Startup plan
+    referrer_plan = referrer.get("subscription_plan", "explorer")
+    if referrer_plan != "startup":
+        print(f"Referrer {referrer_uid} is on {referrer_plan} plan, not eligible (needs Startup)")
+        return
+    
+    # Count paid referrals in last 7 days (rolling window)
+    seven_days_ago = (now - timedelta(days=7)).isoformat()
+    
+    # Find all users referred by this person who got their subscription approved in last 7 days
+    # We check vip_payments for approved subscriptions
+    paid_referrals_count = await db.vip_payments.count_documents({
+        "user_id": {"$in": await get_referral_uids(referrer_uid)},
+        "status": "approved",
+        "approved_at": {"$gte": seven_days_ago}
+    })
+    
+    print(f"Referrer {referrer_uid} has {paid_referrals_count} paid referrals in last 7 days")
+    
+    if paid_referrals_count < 10:
+        return  # Not enough paid referrals yet
+    
+    # Grant the reward! Free 1-month Explorer subscription
+    print(f"🎉 Granting free Explorer subscription to {referrer_uid} for achieving 10 paid referrals!")
+    
+    # Calculate subscription dates
+    current_expiry = referrer.get("subscription_expiry")
+    start_date = now
+    
+    if current_expiry:
+        try:
+            if isinstance(current_expiry, str):
+                current_expiry_dt = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
+            else:
+                current_expiry_dt = current_expiry
+            
+            # If current subscription is still valid, extend from that date
+            if current_expiry_dt > now:
+                start_date = current_expiry_dt
+        except Exception as e:
+            print(f"Error parsing referrer expiry date: {e}")
+    
+    # Add 30 days
+    new_expiry = (start_date + timedelta(days=30)).isoformat()
+    
+    # Update referrer's subscription to Explorer (or extend if already higher)
+    # Only upgrade to explorer if they were on startup (which they must be to qualify)
+    await db.users.update_one(
+        {"uid": referrer_uid},
+        {
+            "$set": {
+                "subscription_plan": "explorer",
+                "subscription_expiry": new_expiry,
+                "vip_expiry": new_expiry,
+                "membership_type": "vip",
+                "referral_subscription_reward_claimed": True,
+                "referral_subscription_reward_date": now.isoformat()
+            }
+        }
+    )
+    
+    # Log the reward in activity
+    await log_activity(
+        user_id=referrer_uid,
+        action_type="referral_reward",
+        description=f"Earned free 1-month Explorer subscription for referring 10 paid members in 7 days!",
+        metadata={
+            "reward_type": "free_subscription",
+            "plan": "explorer",
+            "duration_days": 30,
+            "paid_referrals_count": paid_referrals_count,
+            "new_expiry": new_expiry
+        }
+    )
+    
+    # Create notification for the referrer
+    await create_notification(
+        user_id=referrer_uid,
+        title="🎉 Congratulations! Free Subscription Earned!",
+        message=f"You've referred 10 paid members in the last 7 days and earned a FREE 1-month Explorer subscription! Your new expiry: {new_expiry[:10]}",
+        notification_type="reward",
+        icon="🎁"
+    )
+    
+    # Add to global activity feed
+    await db.activity_logs.insert_one({
+        "log_id": str(uuid.uuid4()),
+        "action": "referral_reward_earned",
+        "user_id": referrer_uid,
+        "user_name": referrer.get("name", "Unknown"),
+        "description": f"{referrer.get('name', 'A user')} earned a free Explorer subscription by referring 10 paid members!",
+        "metadata": {
+            "reward_type": "free_subscription",
+            "paid_referrals": paid_referrals_count
+        },
+        "timestamp": now.isoformat(),
+        "is_global": True  # Flag for global activity feed
+    })
+    
+    print(f"✅ Referral reward granted to {referrer_uid}")
+
+async def get_referral_uids(referrer_uid: str) -> list:
+    """Get list of UIDs of users referred by a specific user"""
+    referrals = await db.users.find(
+        {"referred_by": referrer_uid},
+        {"uid": 1, "_id": 0}
+    ).to_list(None)
+    return [r["uid"] for r in referrals]
 
 @api_router.post("/admin/vip-payment/{payment_id}/reject")
 async def reject_vip_payment(payment_id: str, request: Request):
