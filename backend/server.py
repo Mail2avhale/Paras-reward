@@ -21780,30 +21780,57 @@ async def get_referral_levels(user_id: str):
     referrals_by_level = await get_multi_level_referrals(user_id, max_levels=5)
     
     levels = []
+    now = datetime.now(timezone.utc)
+    
     for level_num in range(1, 6):
         level_key = f"level_{level_num}"
-        users = referrals_by_level.get(level_key, [])  # Fixed: use level_key string
+        users = referrals_by_level.get(level_key, [])
         
         # Get detailed user info and activity status
         user_details = []
         active_count = 0
-        now = datetime.now(timezone.utc)
         
         for u in users:
             # Check if user has ACTIVE MINING SESSION
-            # Match Admin Panel logic: mining_active !== false
+            # ENHANCED: Check multiple indicators of active status
             mining_active = u.get("mining_active")
             session_end = u.get("mining_session_end")
             mining_start = u.get("mining_start_time")
+            last_login = u.get("last_login")
             
             is_active = False
+            active_reason = "none"
             
             # Method 1: Check mining_active field directly (same as Admin Panel)
-            # Admin uses: mining_active !== false
-            if mining_active is True or mining_active == True:
-                is_active = True
+            # FIXED: Also accept string "true" for MongoDB compatibility
+            if mining_active is True or mining_active == True or mining_active == "true":
+                # Even if mining_active is true, verify the session hasn't expired
+                if session_end:
+                    try:
+                        if isinstance(session_end, str):
+                            session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+                        else:
+                            session_end_dt = session_end
+                        
+                        if session_end_dt.tzinfo is None:
+                            session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
+                        
+                        if session_end_dt > now:
+                            is_active = True
+                            active_reason = "mining_active_and_session_valid"
+                        else:
+                            # Session expired but mining_active wasn't reset
+                            active_reason = "mining_active_but_session_expired"
+                    except Exception as e:
+                        # If we can't parse session_end, trust mining_active flag
+                        is_active = True
+                        active_reason = "mining_active_flag_only"
+                else:
+                    # No session_end but mining_active is True
+                    is_active = True
+                    active_reason = "mining_active_no_session_end"
             
-            # Method 2: If mining_active is not set, check session_end
+            # Method 2: If mining_active is not set/false, check session_end directly
             elif session_end:
                 try:
                     if isinstance(session_end, str):
@@ -21814,11 +21841,13 @@ async def get_referral_levels(user_id: str):
                     if session_end_dt.tzinfo is None:
                         session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
                     
-                    is_active = session_end_dt > now
+                    if session_end_dt > now:
+                        is_active = True
+                        active_reason = "session_end_valid"
                 except:
                     pass
             
-            # Method 3: Fallback - calculate from mining_start_time
+            # Method 3: Fallback - calculate from mining_start_time (24h window)
             elif mining_start:
                 try:
                     if isinstance(mining_start, str):
@@ -21830,7 +21859,9 @@ async def get_referral_levels(user_id: str):
                         start_dt = start_dt.replace(tzinfo=timezone.utc)
                     
                     calculated_end = start_dt + timedelta(hours=24)
-                    is_active = calculated_end > now
+                    if calculated_end > now:
+                        is_active = True
+                        active_reason = "calculated_from_start"
                 except:
                     pass
             
@@ -21845,7 +21876,11 @@ async def get_referral_levels(user_id: str):
                 "membership_type": u.get("membership_type", "free"),
                 "subscription_plan": u.get("subscription_plan", "explorer"),
                 "joined_at": u.get("created_at"),
-                "session_end": session_end
+                "session_end": session_end,
+                # DEBUG fields - will help diagnose production issues
+                "mining_active_raw": mining_active,
+                "mining_start": mining_start,
+                "active_reason": active_reason
             })
         
         levels.append({
@@ -21859,7 +21894,8 @@ async def get_referral_levels(user_id: str):
     return {
         "levels": levels,
         "total": sum(l["count"] for l in levels),
-        "total_active": sum(l["active_count"] for l in levels)
+        "total_active": sum(l["active_count"] for l in levels),
+        "debug_timestamp": now.isoformat()
     }
 
 
