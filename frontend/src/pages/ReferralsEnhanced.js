@@ -267,6 +267,14 @@ const ReferralsEnhanced = ({ user }) => {
       const userResponse = await axios.get(`${API}/api/user/${user.uid}`);
       setUserData(userResponse.data);
       
+      // Fetch reward progress for the subscription reward tracker
+      try {
+        const rewardResponse = await axios.get(`${API}/api/referrals/${user.uid}/reward-progress`);
+        setRewardProgress(rewardResponse.data);
+      } catch (e) {
+        console.log('Reward progress API not available:', e);
+      }
+      
       try {
         const levelsResponse = await axios.get(`${API}/api/referrals/${user.uid}/levels`);
         const levels = levelsResponse.data.levels || [];
