@@ -21790,23 +21790,27 @@ async def get_referral_levels(user_id: str):
         now = datetime.now(timezone.utc)
         
         for u in users:
-            # NEW: Check if user has ACTIVE MINING SESSION
-            # Active = mining_active=True AND mining_session_end > current_time
-            mining_active = u.get("mining_active", False)
+            # Check if user has ACTIVE MINING SESSION
+            # Active = mining_session_end > current_time (session not expired)
             session_end = u.get("mining_session_end")
             
             is_active = False
             
-            if mining_active and session_end:
+            if session_end:
                 try:
                     if isinstance(session_end, str):
                         session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
                     else:
                         session_end_dt = session_end
                     
-                    # User is active ONLY if mining session is running (not expired)
+                    # Handle timezone-naive datetime
+                    if session_end_dt.tzinfo is None:
+                        session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
+                    
+                    # User is active if mining session has not expired
                     is_active = session_end_dt > now
-                except:
+                except Exception as e:
+                    print(f"Error checking session for {u.get('uid')}: {e}")
                     is_active = False
             
             if is_active:
@@ -21820,7 +21824,6 @@ async def get_referral_levels(user_id: str):
                 "membership_type": u.get("membership_type", "free"),
                 "subscription_plan": u.get("subscription_plan", "explorer"),
                 "joined_at": u.get("created_at"),
-                "mining_active": mining_active,
                 "session_end": session_end
             })
         
