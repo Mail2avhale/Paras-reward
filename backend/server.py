@@ -5133,9 +5133,13 @@ async def check_and_grant_referral_reward(new_paid_user_id: str, now: datetime):
     seven_days_ago = (now - timedelta(days=7)).isoformat()
     
     # Find all users referred by this person who got their subscription approved in last 7 days
-    # We check vip_payments for approved subscriptions
+    # We check vip_payments for approved subscriptions (handles both user_id and user_uid fields)
+    referral_uids = await get_referral_uids(referrer_uid)
     paid_referrals_count = await db.vip_payments.count_documents({
-        "user_id": {"$in": await get_referral_uids(referrer_uid)},
+        "$or": [
+            {"user_id": {"$in": referral_uids}},
+            {"user_uid": {"$in": referral_uids}}
+        ],
         "status": "approved",
         "approved_at": {"$gte": seven_days_ago}
     })
