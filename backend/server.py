@@ -5149,8 +5149,8 @@ async def check_and_grant_referral_reward(new_paid_user_id: str, now: datetime):
     if paid_referrals_count < 10:
         return  # Not enough paid referrals yet
     
-    # Grant the reward! Free 1-month Explorer subscription
-    print(f"🎉 Granting free Explorer subscription to {referrer_uid} for achieving 10 paid referrals!")
+    # Grant the reward! Free 1-month STARTUP subscription (₹299 value)
+    print(f"🎉 Granting free STARTUP subscription to {referrer_uid} for achieving 10 paid referrals!")
     
     # Calculate subscription dates
     current_expiry = referrer.get("subscription_expiry")
@@ -5172,13 +5172,12 @@ async def check_and_grant_referral_reward(new_paid_user_id: str, now: datetime):
     # Add 30 days
     new_expiry = (start_date + timedelta(days=30)).isoformat()
     
-    # Update referrer's subscription to Explorer (or extend if already higher)
-    # Only upgrade to explorer if they were on startup (which they must be to qualify)
+    # Update referrer's subscription to STARTUP (₹299 value - FREE reward)
     await db.users.update_one(
         {"uid": referrer_uid},
         {
             "$set": {
-                "subscription_plan": "explorer",
+                "subscription_plan": "startup",
                 "subscription_expiry": new_expiry,
                 "vip_expiry": new_expiry,
                 "membership_type": "vip",
@@ -5192,10 +5191,11 @@ async def check_and_grant_referral_reward(new_paid_user_id: str, now: datetime):
     await log_activity(
         user_id=referrer_uid,
         action_type="referral_reward",
-        description=f"Earned free 1-month Explorer subscription for referring 10 paid members in 7 days!",
+        description=f"Earned free 1-month Startup subscription (₹299 value) for referring 10 paid members in 7 days!",
         metadata={
             "reward_type": "free_subscription",
-            "plan": "explorer",
+            "plan": "startup",
+            "plan_value": 299,
             "duration_days": 30,
             "paid_referrals_count": paid_referrals_count,
             "new_expiry": new_expiry
@@ -5205,8 +5205,8 @@ async def check_and_grant_referral_reward(new_paid_user_id: str, now: datetime):
     # Create notification for the referrer
     await create_notification(
         user_id=referrer_uid,
-        title="🎉 Congratulations! Free Subscription Earned!",
-        message=f"You've referred 10 paid members in the last 7 days and earned a FREE 1-month Explorer subscription! Your new expiry: {new_expiry[:10]}",
+        title="🎉 Congratulations! Free Startup Subscription Earned!",
+        message=f"You've referred 10 paid members in the last 7 days and earned a FREE 1-month Startup subscription worth ₹299! Your new expiry: {new_expiry[:10]}",
         notification_type="reward",
         icon="🎁"
     )
