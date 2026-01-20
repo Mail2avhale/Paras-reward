@@ -21791,34 +21791,35 @@ async def get_referral_levels(user_id: str):
         
         for u in users:
             # Check if user has ACTIVE MINING SESSION
-            # Active = mining_session_end > current_time (session not expired)
+            # Match Admin Panel logic: mining_active !== false
+            mining_active = u.get("mining_active")
             session_end = u.get("mining_session_end")
             mining_start = u.get("mining_start_time")
             
             is_active = False
-            debug_info = ""
             
-            # Method 1: Check mining_session_end directly
-            if session_end:
+            # Method 1: Check mining_active field directly (same as Admin Panel)
+            # Admin uses: mining_active !== false
+            if mining_active is True or mining_active == True:
+                is_active = True
+            
+            # Method 2: If mining_active is not set, check session_end
+            elif session_end:
                 try:
                     if isinstance(session_end, str):
                         session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
                     else:
                         session_end_dt = session_end
                     
-                    # Handle timezone-naive datetime
                     if session_end_dt.tzinfo is None:
                         session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
                     
-                    # User is active if mining session has not expired
                     is_active = session_end_dt > now
-                    debug_info = f"session_end check: {session_end_dt.isoformat()} > {now.isoformat()} = {is_active}"
-                except Exception as e:
-                    debug_info = f"session_end parse error: {e}"
-                    is_active = False
+                except:
+                    pass
             
-            # Method 2: Fallback - if no session_end but has mining_start_time, calculate it
-            elif mining_start and not is_active:
+            # Method 3: Fallback - calculate from mining_start_time
+            elif mining_start:
                 try:
                     if isinstance(mining_start, str):
                         start_dt = datetime.fromisoformat(mining_start.replace('Z', '+00:00'))
@@ -21828,16 +21829,10 @@ async def get_referral_levels(user_id: str):
                     if start_dt.tzinfo is None:
                         start_dt = start_dt.replace(tzinfo=timezone.utc)
                     
-                    # Session is 24 hours from start
                     calculated_end = start_dt + timedelta(hours=24)
                     is_active = calculated_end > now
-                    debug_info = f"calculated from start: {calculated_end.isoformat()} > {now.isoformat()} = {is_active}"
-                except Exception as e:
-                    debug_info = f"mining_start parse error: {e}"
-            
-            # Log for debugging (will show in backend logs)
-            if u.get("name") and "somnath" in u.get("name", "").lower():
-                print(f"DEBUG {u.get('name')}: is_active={is_active}, {debug_info}, raw_session_end={session_end}, raw_start={mining_start}")
+                except:
+                    pass
             
             if is_active:
                 active_count += 1
