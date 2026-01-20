@@ -119,6 +119,9 @@ const ReferralsEnhanced = ({ user }) => {
   // State for milestone celebration
   const [celebratingMilestone, setCelebratingMilestone] = useState(null);
   const [liveActivity, setLiveActivity] = useState([]);
+  const [expandedLevels, setExpandedLevels] = useState({});  // Track which levels are expanded
+  const [showNetworkTree, setShowNetworkTree] = useState(false);
+  const [networkTree, setNetworkTree] = useState(null);
 
   useEffect(() => {
     if (user?.uid) {
