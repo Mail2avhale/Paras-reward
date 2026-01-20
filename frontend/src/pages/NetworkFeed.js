@@ -556,13 +556,14 @@ const NetworkFeed = ({ user }) => {
                         </>
                       )}
                     </button>
-                  ) : globalFeed.length > 0 && (
+                  ) : filteredFeed.length > 0 && (
                     <p className="text-center text-gray-600 text-sm mt-4 py-3">
-                      — {t('allActivitiesLoaded')} ({globalFeed.length}) —
+                      — All activities loaded ({filteredFeed.length}) —
                     </p>
                   )}
                 </>
-              )
+              );
+              })()
             ) : (
               networkFeed.length === 0 ? (
                 <div className="text-center py-12">
