@@ -732,7 +732,7 @@ Download now & start earning!`;
               </p>
 
               {/* Progress Section - Only show if eligible and not claimed */}
-              {rewardProgress.is_startup_plan && !rewardProgress.reward_already_claimed && (
+              {(rewardProgress.is_explorer_plan || rewardProgress.current_plan === 'explorer') && !rewardProgress.reward_already_claimed && (
                 <>
                   {/* Progress Bar */}
                   <div className="mb-4">
