@@ -338,20 +338,21 @@ class TestReferralRewardSystem:
         if response.status_code == 200:
             referrer_data = response.json()
             referrer_uid = referrer_data.get("uid")
-            referral_code = referrer_data.get("referral_code")
             
-            print(f"✅ Created referrer: {referrer_email}, code: {referral_code}")
+            print(f"✅ Created referrer: {referrer_email}, uid: {referrer_uid}")
+            
+            # Get referral code via API (registration doesn't return it directly)
+            code_response = requests.get(f"{BASE_URL}/api/referral/code/{referrer_uid}")
+            assert code_response.status_code == 200, f"Failed to get referral code: {code_response.text}"
+            
+            code_data = code_response.json()
+            referral_code = code_data.get("referral_code")
             
             # Verify referral code exists
             assert referral_code is not None, "Referral code should be generated"
+            assert len(referral_code) > 0, "Referral code should not be empty"
             
-            # Get referral code via API
-            code_response = requests.get(f"{BASE_URL}/api/referral/code/{referrer_uid}")
-            if code_response.status_code == 200:
-                code_data = code_response.json()
-                assert "referral_code" in code_data
-                print(f"✅ Referral code API working: {code_data}")
-            
+            print(f"✅ Referral code API working: {code_data}")
             print(f"✅ Referral reward eligibility test passed")
         else:
             pytest.fail(f"Failed to create referrer: {response.text}")
