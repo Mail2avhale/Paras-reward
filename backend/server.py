@@ -18682,6 +18682,12 @@ async def create_gift_voucher_request(request: Request):
     # Total PRC to deduct
     total_prc = prc_required + service_charge
     
+    # ===== REDEMPTION LIMIT CHECK =====
+    redeem_check = await check_redemption_allowed(user, total_prc)
+    if not redeem_check["allowed"]:
+        raise HTTPException(status_code=403, detail=redeem_check["reason"])
+    # ===================================
+    
     # Check if user has enough PRC
     user_prc_balance = user.get("prc_balance", 0)
     if user_prc_balance < total_prc:
