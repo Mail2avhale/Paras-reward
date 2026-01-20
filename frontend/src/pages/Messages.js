@@ -235,16 +235,68 @@ const Messages = ({ user }) => {
             </div>
           </div>
 
-          {/* Search */}
+          {/* Search - Now searches for users AND filters conversations */}
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
             <input
               type="text"
-              placeholder={t('searchConversations')}
+              placeholder="Search users or conversations..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={handleSearchChange}
+              onFocus={() => searchQuery.length >= 2 && setShowSearchResults(true)}
               className="w-full pl-12 pr-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
             />
+            
+            {/* Search Results Dropdown */}
+            {showSearchResults && searchQuery.length >= 2 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border border-gray-700 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto">
+                {isSearching ? (
+                  <div className="p-4 text-center text-gray-400">
+                    <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                    Searching...
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <div>
+                    <p className="px-4 py-2 text-xs text-gray-500 border-b border-gray-800">Users found</p>
+                    {searchResults.map(searchedUser => (
+                      <button
+                        key={searchedUser.uid}
+                        onClick={() => startChatWithUser(searchedUser)}
+                        className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-800 transition-colors text-left"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold">
+                          {searchedUser.name?.[0]?.toUpperCase() || 'U'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-medium truncate">{searchedUser.name || 'User'}</span>
+                            {searchedUser.membership_type === 'vip' && (
+                              <Crown className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                            )}
+                          </div>
+                          <p className="text-gray-500 text-sm truncate">
+                            {searchedUser.city || searchedUser.state || 'PARAS Member'}
+                          </p>
+                        </div>
+                        <MessageCircle className="w-5 h-5 text-purple-400 flex-shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 text-center text-gray-400">
+                    No users found for "{searchQuery}"
+                  </div>
+                )}
+                
+                {/* Close button */}
+                <button
+                  onClick={() => setShowSearchResults(false)}
+                  className="w-full px-4 py-2 text-xs text-gray-500 hover:text-white border-t border-gray-800 transition-colors"
+                >
+                  Close search
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
