@@ -21587,17 +21587,80 @@ async def get_referral_stats(user_id: str):
     """Get comprehensive referral statistics"""
     
     # Get direct referrals
-    direct_referrals = await db.users.find({"referred_by": user_id}).to_list(length=None)
+    direct_referrals = await db.users.find({"referred_by": user_id}, {"_id": 0}).to_list(length=None)
     
-    # Count active referrals (users with orders)
+    now = datetime.now(timezone.utc)
+    
+    # Count active referrals based on MINING SESSION (same logic as /referrals/{user_id}/levels)
     active_count = 0
     total_orders_from_referrals = 0
     
     for referral in direct_referrals:
-        orders = await db.orders.count_documents({"user_id": referral["uid"]})
-        if orders > 0:
+        # Check if user has ACTIVE MINING SESSION (consistent with levels API)
+        mining_active = referral.get("mining_active")
+        session_end = referral.get("mining_session_end")
+        mining_start = referral.get("mining_start_time")
+        
+        is_active = False
+        
+        # Method 1: Check mining_active field directly
+        if mining_active is True or mining_active == True or mining_active == "true":
+            if session_end:
+                try:
+                    if isinstance(session_end, str):
+                        session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+                    else:
+                        session_end_dt = session_end
+                    
+                    if session_end_dt.tzinfo is None:
+                        session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
+                    
+                    if session_end_dt > now:
+                        is_active = True
+                except:
+                    is_active = True  # Trust the flag if parse fails
+            else:
+                is_active = True  # mining_active is True, no session_end
+        
+        # Method 2: Check session_end directly
+        elif session_end:
+            try:
+                if isinstance(session_end, str):
+                    session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+                else:
+                    session_end_dt = session_end
+                
+                if session_end_dt.tzinfo is None:
+                    session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
+                
+                if session_end_dt > now:
+                    is_active = True
+            except:
+                pass
+        
+        # Method 3: Calculate from mining_start_time
+        elif mining_start:
+            try:
+                if isinstance(mining_start, str):
+                    start_dt = datetime.fromisoformat(mining_start.replace('Z', '+00:00'))
+                else:
+                    start_dt = mining_start
+                
+                if start_dt.tzinfo is None:
+                    start_dt = start_dt.replace(tzinfo=timezone.utc)
+                
+                calculated_end = start_dt + timedelta(hours=24)
+                if calculated_end > now:
+                    is_active = True
+            except:
+                pass
+        
+        if is_active:
             active_count += 1
-            total_orders_from_referrals += orders
+        
+        # Also count orders for additional context
+        orders = await db.orders.count_documents({"user_id": referral["uid"]})
+        total_orders_from_referrals += orders
     
     # Get referral earnings from transactions
     referral_earnings = await db.transactions.aggregate([
@@ -21607,7 +21670,7 @@ async def get_referral_stats(user_id: str):
     
     total_earned = referral_earnings[0]["total"] if referral_earnings else 0
     
-    # Calculate conversion rate
+    # Calculate conversion rate (active rate based on mining sessions)
     conversion_rate = (active_count / len(direct_referrals) * 100) if direct_referrals else 0
     
     # Get recent referrals (last 10)
@@ -21625,7 +21688,10 @@ async def get_referral_stats(user_id: str):
                 "name": r.get("name", "Unknown"),
                 "email": r.get("email", ""),
                 "joined_at": r.get("created_at", ""),
-                "membership_type": r.get("membership_type", "free")
+                "membership_type": r.get("membership_type", "free"),
+                "subscription_plan": r.get("subscription_plan", "explorer"),
+                "mining_active": r.get("mining_active"),
+                "session_end": r.get("mining_session_end")
             }
             for r in recent_referrals
         ]
