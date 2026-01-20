@@ -369,18 +369,56 @@ const ReferralsEnhanced = ({ user }) => {
   const referralCode = userData?.referral_code || user?.referral_code || 'N/A';
   const referralLink = `https://parasreward.com/register?ref=${referralCode}`;
 
-  const copyCode = () => {
-    navigator.clipboard.writeText(referralCode);
-    setCopied(true);
-    toast.success('Code copied!');
-    setTimeout(() => setCopied(false), 2000);
+  // Safe clipboard copy with fallback
+  const safeCopyToClipboard = async (text, successMessage) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        toast.success(successMessage);
+        return true;
+      }
+    } catch (error) {
+      console.log('Clipboard API failed, using fallback');
+    }
+    
+    // Fallback: Create temporary textarea
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      textarea.style.top = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const success = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      if (success) {
+        toast.success(successMessage);
+        return true;
+      }
+    } catch (err) {
+      console.log('Fallback copy failed');
+    }
+    
+    toast.error('Copy नाही झाले. कृपया manually copy करा.');
+    return false;
   };
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(referralLink);
-    setCopiedLink(true);
-    toast.success('Link copied!');
-    setTimeout(() => setCopiedLink(false), 2000);
+  const copyCode = async () => {
+    const success = await safeCopyToClipboard(referralCode, 'Code copied!');
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const copyLink = async () => {
+    const success = await safeCopyToClipboard(referralLink, 'Link copied!');
+    if (success) {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
   };
 
   const shareOnWhatsApp = () => {
@@ -427,7 +465,8 @@ Download now & start earning!`;
       }
     } catch (error) {
       if (error.name !== 'AbortError') {
-        copyLink();
+        // Use WhatsApp as fallback instead of copyLink
+        shareOnWhatsApp();
       }
     }
   };
