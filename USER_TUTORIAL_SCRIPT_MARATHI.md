@@ -402,22 +402,23 @@
 
 ## 📂 स्क्रीनशॉट फाइल्स
 
-सर्व स्क्रीनशॉट `/tmp/` फोल्डरमध्ये सेव्ह आहेत:
+सर्व स्क्रीनशॉट Production app वरून घ्या:
 
-| क्रमांक | फाइल नाव | वर्णन |
-|--------|----------|-------|
-| 1 | `tutorial_01_login.png` | लॉगिन पेज |
-| 2 | `tutorial_02_register.png` | रजिस्ट्रेशन पेज |
-| 3 | `tutorial_03_dashboard.png` | Admin डॅशबोर्ड |
-| 4 | `tutorial_04_user_dashboard.png` | युजर डॅशबोर्ड |
-| 5 | `tutorial_05_tapgame.png` | टॅप गेम |
-| 6 | `tutorial_06_marketplace.png` | Marketplace |
-| 7 | `tutorial_07_referrals.png` | रेफरल पेज |
-| 8 | `tutorial_08_subscription.png` | सबस्क्रिप्शन प्लॅन्स |
-| 9 | `tutorial_09_profile.png` | प्रोफाइल पेज |
-| 10 | `tutorial_10_billpayments.png` | बिल पेमेंट्स |
-| 11 | `tutorial_11_giftvouchers.png` | गिफ्ट व्हाउचर्स |
-| 12 | `tutorial_12_kyc.png` | KYC व्हेरिफिकेशन |
+| क्रमांक | फाइल नाव | वर्णन | App मधला पेज |
+|--------|----------|-------|--------------|
+| 1 | `tutorial_01_login.png` | लॉगिन पेज | `/login` |
+| 2 | `tutorial_02_register.png` | रजिस्ट्रेशन पेज | `/register` |
+| 3 | `tutorial_03_dashboard.png` | Admin डॅशबोर्ड | `/admin` |
+| 4 | `tutorial_04_user_dashboard.png` | युजर डॅशबोर्ड | `/dashboard` |
+| 5 | `tutorial_05_tapgame.png` | टॅप गेम | `/tap-game` |
+| 6 | `tutorial_06_marketplace.png` | Marketplace | `/marketplace` |
+| 7 | `tutorial_07_referrals.png` | रेफरल पेज | `/referrals` |
+| 8 | `tutorial_08_subscription.png` | सबस्क्रिप्शन प्लॅन्स | `/subscription` |
+| 9 | `tutorial_09_profile.png` | प्रोफाइल पेज | `/profile` |
+| 10 | `tutorial_10_billpayments.png` | बिल पेमेंट्स | `/bill-payments` |
+| 11 | `tutorial_11_giftvouchers.png` | गिफ्ट व्हाउचर्स | `/gift-vouchers` |
+| 12 | `tutorial_12_kyc.png` | KYC व्हेरिफिकेशन | `/kyc` |
+| **13** | **`tutorial_13_daily_rewards.png`** | **Daily Rewards / Mining** | **`/daily-rewards`** |
 
 ---
 
