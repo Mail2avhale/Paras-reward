@@ -5,11 +5,12 @@ import {
   Users, Copy, Check, Share2, ArrowLeft, Gift, Crown, TrendingUp, 
   ChevronRight, UserCheck, Zap, History, MessageCircle, Link2,
   Award, Sparkles, HelpCircle, ArrowRight, PartyPopper, ChevronDown, ChevronUp,
-  User, GitBranch, Circle
+  User, GitBranch, Circle, Brain
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
+import { AIReferralCoach } from '@/components/AINetworkReferral';
 
 // Network Tree Node Component - defined outside to avoid re-creation
 const TreeNode = ({ node, depth = 0 }) => {
