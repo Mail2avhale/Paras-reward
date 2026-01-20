@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://social-rewarder.preview.emergentagent.com/setup
+   https://tapgame-rewards-1.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
