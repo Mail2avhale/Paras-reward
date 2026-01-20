@@ -777,7 +777,7 @@ Download now & start earning!`;
                         🎁
                       </div>
                       <div className="flex-1">
-                        <p className="text-white font-semibold text-sm">Reward: Free 1-Month Explorer Plan</p>
+                        <p className="text-white font-semibold text-sm">Reward: Free 1-Month Startup Plan (₹299)</p>
                         <p className="text-gray-400 text-xs">Get 10 paid referrals in 7 days to unlock</p>
                       </div>
                     </div>
