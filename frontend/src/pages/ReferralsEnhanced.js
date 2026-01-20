@@ -1268,15 +1268,15 @@ Download now & start earning!`;
               initial={{ opacity: 0, scale: 0.5, y: 50 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.8, y: 20 }}
-              transition={{ type: "spring", duration: 0.6 }}
+              transition={{ duration: 0.4 }}
               className={`bg-gradient-to-br from-${celebratingMilestone.color}-500 via-${celebratingMilestone.color}-600 to-${celebratingMilestone.color}-700 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl`}
               onClick={e => e.stopPropagation()}
             >
               {/* Animated badge */}
               <motion.div
                 initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: [0, 1.3, 1], rotate: 0 }}
-                transition={{ delay: 0.2, duration: 0.8, type: "spring" }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.2, duration: 0.4 }}
                 className="w-28 h-28 bg-white/20 rounded-3xl flex items-center justify-center mx-auto mb-6 backdrop-blur-sm border-4 border-white/30"
               >
                 <motion.span
