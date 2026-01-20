@@ -940,8 +940,7 @@ async def get_monthly_redeem_limit_settings():
     default_settings = {
         "multiplier_1": 5,
         "multiplier_2": 10,
-        "referral_bonus": 20,
-        "double_limit_referrals": 5,  # 5+ referrals = double limit
+        "referral_bonus_percent": 20,  # 20% extra per referral
         "enabled": True
     }
     
