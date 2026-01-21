@@ -1329,13 +1329,39 @@ async def count_active_referrals_by_level_with_weights(user_id: str):
     
     for level, users in referrals_by_level.items():
         for user in users:
-            # Check if user has active mining session
-            mining_active = user.get("mining_active", False)
+            # Check if user has active mining session - CONSISTENT LOGIC
+            mining_active = user.get("mining_active")
             session_end = user.get("mining_session_end")
+            mining_start = user.get("mining_start_time")
             
             is_session_active = False
             
-            if mining_active and session_end:
+            # Method 1: Check mining_active field directly
+            if mining_active is True or mining_active == True or mining_active == "true":
+                if session_end:
+                    try:
+                        if isinstance(session_end, str):
+                            session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+                        elif isinstance(session_end, datetime):
+                            session_end_dt = session_end
+                        else:
+                            session_end_dt = None
+                        
+                        if session_end_dt:
+                            if session_end_dt.tzinfo is None:
+                                session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
+                            
+                            if session_end_dt > now:
+                                is_session_active = True
+                    except:
+                        # If parse fails, trust mining_active flag
+                        is_session_active = True
+                else:
+                    # mining_active is True but no session_end - trust the flag
+                    is_session_active = True
+            
+            # Method 2: If mining_active not set, check session_end directly
+            elif session_end:
                 try:
                     if isinstance(session_end, str):
                         session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
@@ -1344,8 +1370,32 @@ async def count_active_referrals_by_level_with_weights(user_id: str):
                     else:
                         session_end_dt = None
                     
-                    if session_end_dt and session_end_dt > now:
-                        is_session_active = True
+                    if session_end_dt:
+                        if session_end_dt.tzinfo is None:
+                            session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
+                        
+                        if session_end_dt > now:
+                            is_session_active = True
+                except:
+                    pass
+            
+            # Method 3: Fallback - calculate from mining_start_time (24h window)
+            elif mining_start:
+                try:
+                    if isinstance(mining_start, str):
+                        start_dt = datetime.fromisoformat(mining_start.replace('Z', '+00:00'))
+                    elif isinstance(mining_start, datetime):
+                        start_dt = mining_start
+                    else:
+                        start_dt = None
+                    
+                    if start_dt:
+                        if start_dt.tzinfo is None:
+                            start_dt = start_dt.replace(tzinfo=timezone.utc)
+                        
+                        calculated_end = start_dt + timedelta(hours=24)
+                        if calculated_end > now:
+                            is_session_active = True
                 except:
                     pass
             
