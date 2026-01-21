@@ -218,6 +218,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/marketplace" element={user ? <Marketplace user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/flash-sales" element={user ? <FlashSalesPage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/orders" element={user ? <Orders user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/activity" element={user ? <MyActivity user={user} /> : <Navigate to="/login" />} />
             <Route path="/vip" element={<Navigate to="/subscription" replace />} /> {/* Legacy VIP route redirects to new subscription system */}
             <Route path="/subscription" element={user ? <SubscriptionPlans user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/kyc" element={user ? <KYCVerification user={user} /> : <Navigate to="/login" />} />
