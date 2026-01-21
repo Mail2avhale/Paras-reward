@@ -4990,14 +4990,6 @@ async def submit_vip_payment(uid: str, payment: VIPPaymentCreate):
     
     return vip_payment
 
-@api_router.get("/membership/payments", response_model=List[VIPPayment])
-async def get_vip_payments():
-    """Get all VIP payments (Admin)"""
-    payments = await db.vip_payments.find({}, {"_id": 0}).to_list(1000)
-    for payment in payments:
-        if isinstance(payment.get('created_at'), str):
-            payment['created_at'] = datetime.fromisoformat(payment['created_at'])
-    return payments
 
 # ==================== ADMIN VIP PAYMENT VERIFICATION ====================
 
