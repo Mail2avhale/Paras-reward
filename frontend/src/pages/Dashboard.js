@@ -5,7 +5,11 @@ import Navbar from '@/components/Navbar';
 import PRCRain from '@/components/PRCRain';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Coins, Zap, Users, Gift, Trophy, Wallet, Crown, ShieldCheck, Package } from 'lucide-react';
+import { 
+  Coins, Zap, Users, Gift, Trophy, Wallet, Crown, ShieldCheck, Package,
+  Smartphone, Tv, CreditCard, Building, ShoppingBag, Activity, Receipt,
+  Sparkles, ArrowRight
+} from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
