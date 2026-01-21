@@ -126,11 +126,6 @@ const DashboardModern = ({ user, onLogout }) => {
         }));
         setRecentTransactions(formattedActivities);
       }
-      
-      // Process global activity
-      if (globalResult.status === 'fulfilled') {
-        setGlobalActivity(globalResult.value.data.activities || []);
-      }
 
       // Check profile completion
       const currentUser = userResult.status === 'fulfilled' ? userResult.value.data : user;
