@@ -5558,9 +5558,6 @@ async def checkout(request: Request):
     if user.get("prc_balance", 0) < total_prc:
         raise HTTPException(status_code=400, detail="Insufficient PRC balance")
     
-    # Atomic PRC deduction
-    new_prc_balance = user["prc_balance"] - total_prc
-    
     # Create order - Direct Delivery by Partner Model (no outlet assignment)
     order = Order(
         user_id=user_id,
@@ -5580,15 +5577,14 @@ async def checkout(request: Request):
     order_dict["delivery_partner"] = "pending_assignment"  # To be assigned by admin
     order_dict["delivery_method"] = "direct_delivery"
     
-    # Update user PRC balance only (no cashback)
-    update_fields = {
-        "prc_balance": new_prc_balance
-    }
-    
-    await db.users.update_one(
-        {"uid": user_id},
-        {"$set": update_fields}
+    # Atomic PRC deduction with balance check to prevent negative balance
+    result = await db.users.update_one(
+        {"uid": user_id, "prc_balance": {"$gte": total_prc}},  # Only update if sufficient balance
+        {"$inc": {"prc_balance": -total_prc}}
     )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="Insufficient PRC balance (concurrent transaction detected)")
     
     # Create wallet transaction records
     transactions = []
