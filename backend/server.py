@@ -1419,7 +1419,7 @@ async def log_transaction(
             "wallet_type": wallet_type,
             "type": transaction_type,
             "amount": amount,
-            "balance_before": round(current_balance + amount, 2) if transaction_type in ["order", "withdrawal", "admin_debit", "delivery_charge", "scratch_card_purchase", "treasure_hunt_play", "prc_burn", "bill_payment_request", "gift_voucher_request", "prc_rain_loss"] else round(current_balance - amount, 2),
+            "balance_before": round(current_balance + amount, 2) if transaction_type in ["order", "withdrawal", "admin_debit", "delivery_charge", "prc_burn", "bill_payment_request", "gift_voucher_request", "prc_rain_loss"] else round(current_balance - amount, 2),
             "balance_after": round(current_balance, 2),
             "status": "completed",
             "description": description,
@@ -1433,8 +1433,8 @@ async def log_transaction(
         return transaction["transaction_id"]
     
     # Determine if credit or debit
-    credit_types = ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share", "scratch_card_reward", "treasure_hunt_reward", "delivery_commission", "prc_rain_gain"]
-    debit_types = ["order", "withdrawal", "admin_debit", "delivery_charge", "scratch_card_purchase", "treasure_hunt_play", "prc_burn", "bill_payment_request", "gift_voucher_request", "prc_rain_loss"]
+    credit_types = ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share", "delivery_commission", "prc_rain_gain"]
+    debit_types = ["order", "withdrawal", "admin_debit", "delivery_charge", "prc_burn", "bill_payment_request", "gift_voucher_request", "prc_rain_loss"]
     
     if transaction_type in credit_types:
         increment_amount = amount
@@ -4084,12 +4084,12 @@ async def get_user_today_stats(uid: str):
         
         # Define earning transaction types
         earning_types = ["mining", "tap_game", "referral", "cashback", "admin_credit", 
-                         "profit_share", "scratch_card_reward", "treasure_hunt_reward", 
+                         "profit_share", 
                          "delivery_commission", "prc_rain_gain"]
         
         # Define spending transaction types
         spending_types = ["order", "withdrawal", "admin_debit", "delivery_charge", 
-                          "scratch_card_purchase", "treasure_hunt_play", "prc_burn", 
+                          "prc_burn", 
                           "bill_payment_request", "gift_voucher_request", "prc_rain_loss"]
         
         # Get today's earning transactions
@@ -6919,8 +6919,8 @@ async def get_wallet_transactions(uid: str, wallet_type: str = None, page: int =
     ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
     # Calculate totals for current page
-    total_credit = sum(t["amount"] for t in transactions if t["type"] in ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share", "scratch_card_reward", "treasure_hunt_reward"])
-    total_debit = sum(t["amount"] for t in transactions if t["type"] in ["order", "withdrawal", "admin_debit", "delivery_charge", "scratch_card_purchase", "treasure_hunt_play"])
+    total_credit = sum(t["amount"] for t in transactions if t["type"] in ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share"])
+    total_debit = sum(t["amount"] for t in transactions if t["type"] in ["order", "withdrawal", "admin_debit", "delivery_charge"])
     
     return {
         "transactions": transactions,
@@ -16517,13 +16517,13 @@ async def get_detailed_prc_analytics(period: str = "month"):
         }, {"_id": 0}).to_list(length=None)
         
         # Calculate PRC Created (mining, referral bonuses, cashback, admin credits)
-        credit_types = ["mining", "referral_bonus", "cashback", "admin_credit", "vip_bonus", "signup_bonus", "scratch_card_win", "treasure_hunt_win", "prc_rain_gain"]
+        credit_types = ["mining", "referral_bonus", "cashback", "admin_credit", "vip_bonus", "signup_bonus", "prc_rain_gain"]
         
         prc_created_current = sum(t.get("amount", 0) for t in current_transactions if t.get("type") in credit_types)
         prc_created_prev = sum(t.get("amount", 0) for t in prev_transactions if t.get("type") in credit_types)
         
         # Calculate PRC Used (orders, games, services)
-        debit_types = ["order", "withdrawal", "scratch_card_purchase", "treasure_hunt_play", "bill_payment_request", "gift_voucher_request", "delivery_charge", "prc_rain_loss", "prc_burn"]
+        debit_types = ["order", "withdrawal", "bill_payment_request", "gift_voucher_request", "delivery_charge", "prc_rain_loss", "prc_burn"]
         
         prc_used_current = sum(abs(t.get("amount", 0)) for t in current_transactions if t.get("type") in debit_types)
         prc_used_prev = sum(abs(t.get("amount", 0)) for t in prev_transactions if t.get("type") in debit_types)
@@ -25243,7 +25243,7 @@ async def get_prc_mint_ledger(
 ):
     """Get PRC mint (inflow) ledger with filters"""
     try:
-        query = {"type": {"$in": ["mining", "tap_game", "referral", "cashback", "admin_credit", "profit_share", "scratch_card_reward", "treasure_hunt_reward", "delivery_commission", "prc_rain_gain"]}}
+        query = {"type": {"$in": ["mining", "tap_game", "referral", "cashback", "admin_credit", "profit_share", "delivery_commission", "prc_rain_gain"]}}
         
         if source_type:
             query["type"] = source_type
@@ -25297,7 +25297,7 @@ async def get_prc_burn_ledger(
 ):
     """Get PRC burn (outflow) ledger with filters"""
     try:
-        query = {"type": {"$in": ["order", "withdrawal", "admin_debit", "delivery_charge", "scratch_card_purchase", "treasure_hunt_play", "prc_burn", "bill_payment_request", "gift_voucher_request", "prc_rain_loss"]}}
+        query = {"type": {"$in": ["order", "withdrawal", "admin_debit", "delivery_charge", "prc_burn", "bill_payment_request", "gift_voucher_request", "prc_rain_loss"]}}
         
         if use_type:
             query["type"] = use_type
@@ -25626,7 +25626,7 @@ async def generate_daily_summary(target_date: str = None):
         })
         
         # PRC Minted
-        mint_types = ["mining", "tap_game", "referral", "cashback", "admin_credit", "profit_share", "scratch_card_reward", "treasure_hunt_reward", "delivery_commission", "prc_rain_gain"]
+        mint_types = ["mining", "tap_game", "referral", "cashback", "admin_credit", "profit_share", "delivery_commission", "prc_rain_gain"]
         mint_result = await db.transactions.aggregate([
             {"$match": {"type": {"$in": mint_types}, "created_at": {"$gte": start_of_day, "$lte": end_of_day}}},
             {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
@@ -25634,7 +25634,7 @@ async def generate_daily_summary(target_date: str = None):
         prc_minted = mint_result[0].get("total", 0) if mint_result else 0
         
         # PRC Burned
-        burn_types = ["order", "withdrawal", "admin_debit", "delivery_charge", "scratch_card_purchase", "treasure_hunt_play", "prc_burn", "bill_payment_request", "gift_voucher_request", "prc_rain_loss"]
+        burn_types = ["order", "withdrawal", "admin_debit", "delivery_charge", "prc_burn", "bill_payment_request", "gift_voucher_request", "prc_rain_loss"]
         burn_result = await db.transactions.aggregate([
             {"$match": {"type": {"$in": burn_types}, "created_at": {"$gte": start_of_day, "$lte": end_of_day}}},
             {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
@@ -26028,8 +26028,8 @@ async def get_master_accounting_dashboard():
         vip_users = await db.users.count_documents({"membership_type": "vip"})
         
         # PRC Supply
-        mint_types = ["mining", "tap_game", "referral", "cashback", "admin_credit", "profit_share", "scratch_card_reward", "treasure_hunt_reward", "delivery_commission", "prc_rain_gain"]
-        burn_types = ["order", "withdrawal", "admin_debit", "delivery_charge", "scratch_card_purchase", "treasure_hunt_play", "prc_burn", "bill_payment_request", "gift_voucher_request", "prc_rain_loss"]
+        mint_types = ["mining", "tap_game", "referral", "cashback", "admin_credit", "profit_share", "delivery_commission", "prc_rain_gain"]
+        burn_types = ["order", "withdrawal", "admin_debit", "delivery_charge", "prc_burn", "bill_payment_request", "gift_voucher_request", "prc_rain_loss"]
         
         total_minted_result = await db.transactions.aggregate([
             {"$match": {"type": {"$in": mint_types}}},
