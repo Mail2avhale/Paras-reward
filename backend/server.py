@@ -14738,6 +14738,8 @@ async def adjust_user_balance(uid: str, request: BalanceAdjustRequest):
             raise HTTPException(status_code=400, detail="Insufficient balance")
     elif request.operation == "set":
         new_balance = request.amount
+        if new_balance < 0:
+            raise HTTPException(status_code=400, detail="Cannot set negative balance")
     else:
         raise HTTPException(status_code=400, detail="Invalid operation")
     
