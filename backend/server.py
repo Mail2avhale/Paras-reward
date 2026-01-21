@@ -13347,13 +13347,6 @@ async def get_commission_report():
         "top_earners": top_earners
     }
 
-@api_router.get("/admin/reports/withdrawals")
-async def get_withdrawal_report(status: Optional[str] = None):
-    """Get withdrawal statistics report (Admin)"""
-    query = {}
-    if status:
-        query["status"] = status
-    
 
 # ========== ANALYTICS ENDPOINTS ==========
 
