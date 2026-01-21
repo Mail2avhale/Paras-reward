@@ -202,6 +202,103 @@ const Dashboard = ({ user, onLogout }) => {
               <span className="font-semibold">My Orders</span>
             </Button>
           </Link>
+
+          <Link to="/activity" className="block">
+            <Button className="w-full h-32 bg-white/80 backdrop-blur-sm hover:bg-white border-2 border-cyan-200 hover:border-cyan-400 text-gray-900 rounded-2xl shadow-lg hover:shadow-xl transition-all flex flex-col items-center justify-center gap-3">
+              <Activity className="h-8 w-8 text-cyan-600" />
+              <span className="font-semibold">Activity</span>
+            </Button>
+          </Link>
+        </div>
+
+        {/* ========== SERVICES SECTION ========== */}
+        <div className="mt-10">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-600" />
+              Services
+            </h2>
+          </div>
+
+          {/* Bill Payments Section */}
+          <Card className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-lg mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                <Receipt className="w-5 h-5 text-blue-600" />
+                Bill Payments
+              </h3>
+              <Link to="/bill-payments" className="text-blue-600 text-sm font-medium flex items-center gap-1 hover:underline">
+                View All <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-5 gap-3">
+              <Link to="/bill-payments?type=mobile_recharge" className="flex flex-col items-center gap-2 p-3 bg-white/80 rounded-xl hover:bg-white hover:shadow-md transition-all">
+                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Smartphone className="w-6 h-6 text-blue-600" />
+                </div>
+                <span className="text-xs font-medium text-gray-700 text-center">Mobile</span>
+              </Link>
+              <Link to="/bill-payments?type=dish_recharge" className="flex flex-col items-center gap-2 p-3 bg-white/80 rounded-xl hover:bg-white hover:shadow-md transition-all">
+                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                  <Tv className="w-6 h-6 text-purple-600" />
+                </div>
+                <span className="text-xs font-medium text-gray-700 text-center">DTH</span>
+              </Link>
+              <Link to="/bill-payments?type=electricity_bill" className="flex flex-col items-center gap-2 p-3 bg-white/80 rounded-xl hover:bg-white hover:shadow-md transition-all">
+                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                  <Zap className="w-6 h-6 text-amber-600" />
+                </div>
+                <span className="text-xs font-medium text-gray-700 text-center">Electric</span>
+              </Link>
+              <Link to="/bill-payments?type=credit_card_payment" className="flex flex-col items-center gap-2 p-3 bg-white/80 rounded-xl hover:bg-white hover:shadow-md transition-all">
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <CreditCard className="w-6 h-6 text-green-600" />
+                </div>
+                <span className="text-xs font-medium text-gray-700 text-center">Card</span>
+              </Link>
+              <Link to="/bill-payments?type=loan_emi" className="flex flex-col items-center gap-2 p-3 bg-white/80 rounded-xl hover:bg-white hover:shadow-md transition-all">
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <Building className="w-6 h-6 text-red-600" />
+                </div>
+                <span className="text-xs font-medium text-gray-700 text-center">Loan</span>
+              </Link>
+            </div>
+          </Card>
+
+          {/* Gift Vouchers & Shop Row */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Gift Vouchers Card */}
+            <Link to="/gift-vouchers">
+              <Card className="p-5 bg-gradient-to-br from-pink-50 to-rose-50 border-pink-200 shadow-lg h-full hover:shadow-xl transition-all">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center mb-3 shadow-lg">
+                    <Gift className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 mb-1">Gift Vouchers</h3>
+                  <p className="text-xs text-gray-500">Amazon, Flipkart, Swiggy & more</p>
+                  <div className="mt-3 px-3 py-1.5 bg-pink-500 text-white text-xs font-semibold rounded-full">
+                    Redeem Now
+                  </div>
+                </div>
+              </Card>
+            </Link>
+
+            {/* Shop Card */}
+            <Link to="/marketplace">
+              <Card className="p-5 bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200 shadow-lg h-full hover:shadow-xl transition-all">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center mb-3 shadow-lg">
+                    <ShoppingBag className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 mb-1">Shop</h3>
+                  <p className="text-xs text-gray-500">Exclusive products & deals</p>
+                  <div className="mt-3 px-3 py-1.5 bg-purple-500 text-white text-xs font-semibold rounded-full">
+                    Explore
+                  </div>
+                </div>
+              </Card>
+            </Link>
+          </div>
         </div>
 
         {/* Payment QR Code Section */}
