@@ -1309,14 +1309,10 @@ async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
 async def count_active_referrals_by_level(user_id: str):
     """
     Count active referrals at each level (up to 5 levels)
-    Active = has an active mining session (mining_active = True and session not expired)
-    Returns: {
-        'level_1': count,
-        'level_2': count,
-        'level_3': count,
-        'level_4': count,
-        'level_5': count
-    }
+    Active = ANY of:
+      1. Active mining session
+      2. Bonus collected in last 24h
+      3. Tap Game or Rain Drop played in last 24h
     """
     referrals_by_level = await get_multi_level_referrals(user_id, max_levels=5)
     active_counts = {
@@ -1327,98 +1323,19 @@ async def count_active_referrals_by_level(user_id: str):
         'level_5': 0
     }
     
-    # Current time for session check
-    now = datetime.now(timezone.utc)
-    
     print(f"🔍 Checking active referrals for user {user_id}")
     
     for level, users in referrals_by_level.items():
         print(f"  Level {level}: {len(users)} total referrals")
         for user in users:
-            # Check if user has active mining session - CONSISTENT with /levels endpoint
-            mining_active = user.get("mining_active")
-            session_end = user.get("mining_session_end")
-            mining_start = user.get("mining_start_time")
+            user_uid = user.get("uid")
+            is_active, active_reason = await check_user_active_status(user_uid, user)
             
-            is_session_active = False
-            active_reason = "none"
-            
-            # Method 1: Check mining_active field directly
-            # Accept True boolean or "true" string for MongoDB compatibility
-            if mining_active is True or mining_active == True or mining_active == "true":
-                if session_end:
-                    try:
-                        if isinstance(session_end, str):
-                            session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
-                        elif isinstance(session_end, datetime):
-                            session_end_dt = session_end
-                        else:
-                            session_end_dt = None
-                        
-                        if session_end_dt:
-                            if session_end_dt.tzinfo is None:
-                                session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
-                            
-                            if session_end_dt > now:
-                                is_session_active = True
-                                active_reason = "mining_active_and_session_valid"
-                            else:
-                                active_reason = "mining_active_but_session_expired"
-                    except Exception as e:
-                        # If we can't parse session_end, trust mining_active flag
-                        is_session_active = True
-                        active_reason = "mining_active_flag_only_parse_error"
-                else:
-                    # mining_active is True but no session_end - trust the flag
-                    is_session_active = True
-                    active_reason = "mining_active_no_session_end"
-            
-            # Method 2: If mining_active not set, check session_end directly
-            elif session_end:
-                try:
-                    if isinstance(session_end, str):
-                        session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
-                    elif isinstance(session_end, datetime):
-                        session_end_dt = session_end
-                    else:
-                        session_end_dt = None
-                    
-                    if session_end_dt:
-                        if session_end_dt.tzinfo is None:
-                            session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
-                        
-                        if session_end_dt > now:
-                            is_session_active = True
-                            active_reason = "session_end_valid"
-                except:
-                    pass
-            
-            # Method 3: Fallback - calculate from mining_start_time (24h window)
-            elif mining_start:
-                try:
-                    if isinstance(mining_start, str):
-                        start_dt = datetime.fromisoformat(mining_start.replace('Z', '+00:00'))
-                    elif isinstance(mining_start, datetime):
-                        start_dt = mining_start
-                    else:
-                        start_dt = None
-                    
-                    if start_dt:
-                        if start_dt.tzinfo is None:
-                            start_dt = start_dt.replace(tzinfo=timezone.utc)
-                        
-                        calculated_end = start_dt + timedelta(hours=24)
-                        if calculated_end > now:
-                            is_session_active = True
-                            active_reason = "calculated_from_start"
-                except:
-                    pass
-            
-            if is_session_active:
+            if is_active:
                 active_counts[level] += 1
-                print(f"    ✅ Active referral: {user.get('email')} (reason: {active_reason})")
+                print(f"    ✅ Active: {user.get('email')} (reason: {active_reason})")
             else:
-                print(f"    ⏰ Inactive referral: {user.get('email')} (mining_active: {mining_active}, session_end: {session_end})")
+                print(f"    ⏰ Inactive: {user.get('email')}")
     
     print(f"✅ Active referrals count: {active_counts}")
     return active_counts
@@ -1426,11 +1343,10 @@ async def count_active_referrals_by_level(user_id: str):
 async def count_active_referrals_by_level_with_weights(user_id: str):
     """
     Count active referrals at each level with subscription weights
-    Returns: {
-        'level_1': {'count': X, 'weighted_count': Y},
-        'level_2': {'count': X, 'weighted_count': Y},
-        ...
-    }
+    Active = ANY of:
+      1. Active mining session
+      2. Bonus collected in last 24h
+      3. Tap Game or Rain Drop played in last 24h
     """
     referrals_by_level = await get_multi_level_referrals(user_id, max_levels=5)
     level_data = {
@@ -1441,33 +1357,20 @@ async def count_active_referrals_by_level_with_weights(user_id: str):
         'level_5': {'count': 0, 'weighted_count': 0}
     }
     
-    now = datetime.now(timezone.utc)
-    
     for level, users in referrals_by_level.items():
         for user in users:
-            # Check if user has active mining session - CONSISTENT LOGIC
-            mining_active = user.get("mining_active")
-            session_end = user.get("mining_session_end")
-            mining_start = user.get("mining_start_time")
+            user_uid = user.get("uid")
+            is_active, _ = await check_user_active_status(user_uid, user)
             
-            is_session_active = False
-            
-            # Method 1: Check mining_active field directly
-            if mining_active is True or mining_active == True or mining_active == "true":
-                if session_end:
-                    try:
-                        if isinstance(session_end, str):
-                            session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
-                        elif isinstance(session_end, datetime):
-                            session_end_dt = session_end
-                        else:
-                            session_end_dt = None
-                        
-                        if session_end_dt:
-                            if session_end_dt.tzinfo is None:
-                                session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
-                            
-                            if session_end_dt > now:
+            if is_active:
+                # Get referral's subscription weight
+                sub_info = await get_user_subscription_info(user)
+                referral_weight = sub_info.get("referral_weight", 1.0)
+                
+                level_data[level]['count'] += 1
+                level_data[level]['weighted_count'] += referral_weight
+    
+    return level_data
                                 is_session_active = True
                     except:
                         # If parse fails, trust mining_active flag
