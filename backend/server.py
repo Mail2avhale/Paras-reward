@@ -1397,26 +1397,73 @@ async def log_transaction(
     related_id: Optional[str] = None,
     related_type: Optional[str] = None
 ) -> str:
-    """Log a transaction and update user balance"""
-    
-    # Get current user
-    user = await db.users.find_one({"uid": user_id})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    """Log a transaction and update user balance using atomic operations"""
     
     # Determine balance field
     balance_field = f"{wallet_type}_balance"
-    balance_before = user.get(balance_field, 0.0)
     
-    # Calculate new balance
-    if transaction_type in ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share", "scratch_card_reward", "treasure_hunt_reward", "delivery_commission", "prc_rain_gain"]:
-        # Credit transactions
-        balance_after = balance_before + amount
-    elif transaction_type in ["order", "withdrawal", "admin_debit", "delivery_charge", "scratch_card_purchase", "treasure_hunt_play", "prc_burn", "bill_payment_request", "gift_voucher_request", "prc_rain_loss"]:
-        # Debit transactions
-        balance_after = balance_before - amount
+    # Determine if credit or debit
+    credit_types = ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share", "scratch_card_reward", "treasure_hunt_reward", "delivery_commission", "prc_rain_gain"]
+    debit_types = ["order", "withdrawal", "admin_debit", "delivery_charge", "scratch_card_purchase", "treasure_hunt_play", "prc_burn", "bill_payment_request", "gift_voucher_request", "prc_rain_loss"]
+    
+    if transaction_type in credit_types:
+        increment_amount = amount
+    elif transaction_type in debit_types:
+        increment_amount = -amount
     else:
-        balance_after = balance_before
+        increment_amount = 0
+    
+    # For debit transactions, ensure we don't go negative (except for specific allowed types)
+    allowed_negative_types = []  # Types that can go negative - none by default
+    
+    if transaction_type in debit_types and transaction_type not in allowed_negative_types:
+        # Use atomic update with balance check to prevent negative balance
+        result = await db.users.find_one_and_update(
+            {"uid": user_id, balance_field: {"$gte": amount}},
+            {"$inc": {balance_field: increment_amount}},
+            return_document=True
+        )
+        
+        if not result:
+            # Check if user exists but has insufficient balance
+            user = await db.users.find_one({"uid": user_id})
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            current_balance = user.get(balance_field, 0.0)
+            if current_balance < amount:
+                # For PRC rain loss, just set to 0 instead of failing
+                if transaction_type == "prc_rain_loss":
+                    if current_balance > 0:
+                        # Deduct only what's available
+                        amount = current_balance
+                        increment_amount = -amount
+                        result = await db.users.find_one_and_update(
+                            {"uid": user_id},
+                            {"$set": {balance_field: 0}},
+                            return_document=True
+                        )
+                    else:
+                        # No balance to deduct, skip
+                        return f"TXN-{datetime.now(timezone.utc).strftime('%Y%m%d')}-SKIPPED"
+                else:
+                    raise HTTPException(status_code=400, detail=f"Insufficient {wallet_type} balance")
+        
+        balance_after = result.get(balance_field, 0.0) if result else 0.0
+        balance_before = balance_after - increment_amount
+    else:
+        # Credit transactions - just use atomic increment
+        result = await db.users.find_one_and_update(
+            {"uid": user_id},
+            {"$inc": {balance_field: increment_amount}},
+            return_document=True
+        )
+        
+        if not result:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        balance_after = result.get(balance_field, 0.0)
+        balance_before = balance_after - increment_amount
     
     # Create transaction record
     transaction = {
@@ -1425,8 +1472,8 @@ async def log_transaction(
         "wallet_type": wallet_type,
         "type": transaction_type,
         "amount": amount,
-        "balance_before": balance_before,
-        "balance_after": balance_after,
+        "balance_before": round(balance_before, 2),
+        "balance_after": round(balance_after, 2),
         "status": "completed",
         "description": description,
         "metadata": metadata,
@@ -1437,12 +1484,6 @@ async def log_transaction(
     
     # Insert transaction
     await db.transactions.insert_one(transaction)
-    
-    # Update user balance
-    await db.users.update_one(
-        {"uid": user_id},
-        {"$set": {balance_field: balance_after}}
-    )
     
     return transaction["transaction_id"]
 
