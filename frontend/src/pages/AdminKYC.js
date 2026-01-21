@@ -176,9 +176,15 @@ const AdminKYC = ({ user }) => {
                       <User className="h-6 w-6 text-purple-600" />
                   </div>
                   <div>
-                    <p className="font-semibold text-white">{doc.user_id}</p>
-                    <p className="text-sm text-gray-500">
-                      {doc.document_type === 'aadhaar' ? `Aadhaar: ${doc.aadhaar_number}` : `PAN: ${doc.pan_number}`}
+                    <p className="font-semibold text-white">{doc.user_name || 'Unknown User'}</p>
+                    <p className="text-sm text-gray-400">{doc.user_email || doc.user_id}</p>
+                    {doc.user_phone && (
+                      <p className="text-sm text-gray-500">📱 {doc.user_phone}</p>
+                    )}
+                    <p className="text-sm text-gray-500 mt-1">
+                      {doc.document_type === 'aadhaar' ? `Aadhaar: ${doc.aadhaar_number || 'N/A'}` : 
+                       doc.document_type === 'pan' ? `PAN: ${doc.pan_number || 'N/A'}` : 
+                       'Document: Not specified'}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
                       Submitted: {new Date(doc.submitted_at).toLocaleDateString()}
