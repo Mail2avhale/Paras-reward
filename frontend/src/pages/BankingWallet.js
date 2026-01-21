@@ -81,7 +81,6 @@ const BankingWallet = ({ user, walletBalance = 0 }) => {
       admin_debit: <AlertCircle className="w-5 h-5 text-red-600" />,
       delivery_charge: <TrendingDown className="w-5 h-5 text-gray-600" />,
       PRC_share: <TrendingUp className="w-5 h-5 text-green-600" />,
-      scratch_card_reward: <Gift className="w-5 h-5 text-pink-600" />,
       treasure_hunt_reward: <Gift className="w-5 h-5 text-purple-600" />
     };
     return iconMap[type] || <Wallet className="w-5 h-5 text-gray-600" />;
@@ -99,7 +98,6 @@ const BankingWallet = ({ user, walletBalance = 0 }) => {
       admin_credit: 'Admin Credit',
       admin_debit: 'Admin Debit',
       delivery_charge: 'Delivery Charge',
-      scratch_card_reward: 'Scratch Card Cashback',
       treasure_hunt_reward: 'Treasure Hunt Cashback',
       PRC_share: 'PRC Share'
     };
@@ -107,7 +105,7 @@ const BankingWallet = ({ user, walletBalance = 0 }) => {
   };
 
   const isCredit = (type) => {
-    return ['mining', 'tap_game', 'referral', 'cashback', 'Redemption_rejected', 'admin_credit', 'PRC_share', 'scratch_card_reward', 'treasure_hunt_reward'].includes(type);
+    return ['mining', 'tap_game', 'referral', 'cashback', 'Redemption_rejected', 'admin_credit', 'PRC_share', 'treasure_hunt_reward'].includes(type);
   };
 
   const formatDate = (dateString) => {
