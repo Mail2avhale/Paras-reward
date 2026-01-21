@@ -43,10 +43,9 @@ const DashboardModern = ({ user, onLogout }) => {
   const [userData, setUserData] = useState(null);
   const [showBalance, setShowBalance] = useState(true);
   const [recentTransactions, setRecentTransactions] = useState([]);
-  const [globalActivity, setGlobalActivity] = useState([]);
+  // globalActivity and activityTab moved to separate Activity page
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
-  const [activityTab, setActivityTab] = useState('yours');
   const [miningHistory, setMiningHistory] = useState([]);
   const [birthdayGreeting, setBirthdayGreeting] = useState(null);
 
