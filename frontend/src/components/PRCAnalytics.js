@@ -47,8 +47,8 @@ const PRCAnalytics = () => {
   // Prepare pie chart data
   const consumptionData = [
     { name: 'Marketplace', value: analytics.consumption_breakdown.marketplace, color: '#8b5cf6' },
-    { name: 'Treasure Hunt', value: analytics.consumption_breakdown.treasure_hunt, color: '#ec4899' },
-    { name: 'Scratch Cards', value: analytics.consumption_breakdown.scratch_cards, color: '#f59e0b' },
+    { name: 'Bill Payments', value: analytics.consumption_breakdown.bill_payments || 0, color: '#ec4899' },
+    { name: 'Gift Vouchers', value: analytics.consumption_breakdown.gift_vouchers || 0, color: '#f59e0b' },
     { name: 'VIP Memberships', value: analytics.consumption_breakdown.vip_memberships, color: '#10b981' }
   ];
 
