@@ -18771,12 +18771,14 @@ async def create_bill_payment_request(request: Request):
         "processed_by": None
     }
     
-    # Deduct PRC immediately when request is created
-    new_balance = user_prc_balance - total_prc
-    await db.users.update_one(
-        {"uid": user_id},
-        {"$set": {"prc_balance": new_balance}}
+    # Atomic PRC deduction with balance check to prevent negative balance
+    result = await db.users.update_one(
+        {"uid": user_id, "prc_balance": {"$gte": total_prc}},  # Only update if sufficient balance
+        {"$inc": {"prc_balance": -total_prc}}
     )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="Insufficient PRC balance (concurrent transaction detected)")
     
     # Log transaction
     await log_transaction(
