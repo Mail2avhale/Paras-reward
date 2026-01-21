@@ -336,7 +336,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 flex">
+    <div className="min-h-screen bg-gray-950 flex" data-admin="true">
       {/* Sidebar - Desktop */}
       <aside
         className={`hidden lg:flex flex-col bg-gray-900 text-white transition-all duration-300 border-r border-gray-800 ${
