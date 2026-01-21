@@ -174,8 +174,8 @@ const AdminKYC = ({ user }) => {
                   <div className="flex items-start gap-4">
                     <div className="p-3 bg-purple-500/20 rounded-lg">
                       <User className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <div>
+                    </div>
+                    <div>
                     <p className="font-semibold text-white">{doc.user_name || 'Unknown User'}</p>
                     <p className="text-sm text-gray-400">{doc.user_email || doc.user_id}</p>
                     {doc.user_phone && (
