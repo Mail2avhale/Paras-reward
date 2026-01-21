@@ -196,7 +196,12 @@ const AdminKYC = ({ user }) => {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => setSelectedDoc(doc)}
+                    data-testid="kyc-view-button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setSelectedDoc(doc);
+                    }}
                   >
                     <Eye className="h-4 w-4 mr-1" /> View
                   </Button>
