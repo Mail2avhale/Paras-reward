@@ -224,18 +224,46 @@ const AdminKYC = ({ user }) => {
               </div>
 
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">User ID</p>
-                    <p className="font-medium">{selectedDoc.user_id}</p>
+                {/* User Information Section */}
+                <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                  <h3 className="text-sm font-semibold text-purple-400 mb-3 flex items-center gap-2">
+                    <User className="w-4 h-4" /> User Information
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500">Name</p>
+                      <p className="font-medium text-white">{selectedDoc.user_name || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Email</p>
+                      <p className="font-medium text-white truncate">{selectedDoc.user_email || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Mobile</p>
+                      <p className="font-medium text-white">{selectedDoc.user_phone || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Location</p>
+                      <p className="font-medium text-white">
+                        {selectedDoc.user_city ? `${selectedDoc.user_city}, ${selectedDoc.user_state || ''}` : 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">User ID</p>
+                      <p className="font-mono text-xs text-gray-400 truncate">{selectedDoc.user_id}</p>
+                    </div>
                   </div>
+                </div>
+
+                {/* Document Status */}
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <p className="text-sm text-gray-500">Status</p>
                     {getStatusBadge(selectedDoc.status)}
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Document Type</p>
-                    <p className="font-medium capitalize">{selectedDoc.document_type}</p>
+                    <p className="font-medium capitalize">{selectedDoc.document_type || 'Not Specified'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Submitted</p>
@@ -243,46 +271,91 @@ const AdminKYC = ({ user }) => {
                   </div>
                 </div>
 
+                {/* Aadhaar Documents */}
                 {selectedDoc.document_type === 'aadhaar' && (
                   <>
                     <div>
                       <p className="text-sm text-gray-500 mb-2">Aadhaar Number</p>
-                      <p className="font-mono bg-gray-800 p-2 rounded">{selectedDoc.aadhaar_number}</p>
+                      <p className="font-mono bg-gray-800 p-2 rounded">{selectedDoc.aadhaar_number || 'Not provided'}</p>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       {selectedDoc.aadhaar_front && (
                         <div>
                           <p className="text-sm text-gray-500 mb-2">Aadhaar Front</p>
-                          <img src={selectedDoc.aadhaar_front} alt="Aadhaar Front" className="w-full rounded-lg border" />
+                          <img src={selectedDoc.aadhaar_front} alt="Aadhaar Front" className="w-full rounded-lg border border-gray-700" />
                         </div>
                       )}
                       {selectedDoc.aadhaar_back && (
                         <div>
                           <p className="text-sm text-gray-500 mb-2">Aadhaar Back</p>
-                          <img src={selectedDoc.aadhaar_back} alt="Aadhaar Back" className="w-full rounded-lg border" />
+                          <img src={selectedDoc.aadhaar_back} alt="Aadhaar Back" className="w-full rounded-lg border border-gray-700" />
                         </div>
                       )}
                     </div>
-                  </>
-                )}
-
-                {selectedDoc.document_type === 'pan' && (
-                  <>
-                    <div>
-                      <p className="text-sm text-gray-500 mb-2">PAN Number</p>
-                      <p className="font-mono bg-gray-800 p-2 rounded">{selectedDoc.pan_number}</p>
-                    </div>
-                    {selectedDoc.pan_front && (
-                      <div>
-                        <p className="text-sm text-gray-500 mb-2">PAN Card</p>
-                        <img src={selectedDoc.pan_front} alt="PAN Card" className="w-full max-w-sm rounded-lg border" />
-                      </div>
+                    {!selectedDoc.aadhaar_front && !selectedDoc.aadhaar_back && (
+                      <p className="text-amber-400 text-sm flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4" /> No document images uploaded
+                      </p>
                     )}
                   </>
                 )}
 
+                {/* PAN Documents */}
+                {selectedDoc.document_type === 'pan' && (
+                  <>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-2">PAN Number</p>
+                      <p className="font-mono bg-gray-800 p-2 rounded">{selectedDoc.pan_number || 'Not provided'}</p>
+                    </div>
+                    {selectedDoc.pan_front && (
+                      <div>
+                        <p className="text-sm text-gray-500 mb-2">PAN Card</p>
+                        <img src={selectedDoc.pan_front} alt="PAN Card" className="w-full max-w-sm rounded-lg border border-gray-700" />
+                      </div>
+                    )}
+                    {!selectedDoc.pan_front && (
+                      <p className="text-amber-400 text-sm flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4" /> No document image uploaded
+                      </p>
+                    )}
+                  </>
+                )}
+
+                {/* Generic Document - If document_type is not aadhaar or pan */}
+                {!selectedDoc.document_type && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                    <p className="text-amber-400 text-sm flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4" /> Document type not specified. Check for any uploaded images below.
+                    </p>
+                    {/* Check for any image fields */}
+                    {(selectedDoc.document_image || selectedDoc.front_image || selectedDoc.back_image) && (
+                      <div className="mt-4 grid grid-cols-2 gap-4">
+                        {selectedDoc.document_image && (
+                          <div>
+                            <p className="text-sm text-gray-500 mb-2">Document</p>
+                            <img src={selectedDoc.document_image} alt="Document" className="w-full rounded-lg border border-gray-700" />
+                          </div>
+                        )}
+                        {selectedDoc.front_image && (
+                          <div>
+                            <p className="text-sm text-gray-500 mb-2">Front</p>
+                            <img src={selectedDoc.front_image} alt="Front" className="w-full rounded-lg border border-gray-700" />
+                          </div>
+                        )}
+                        {selectedDoc.back_image && (
+                          <div>
+                            <p className="text-sm text-gray-500 mb-2">Back</p>
+                            <img src={selectedDoc.back_image} alt="Back" className="w-full rounded-lg border border-gray-700" />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Action Buttons */}
                 {selectedDoc.status === 'pending' && (
-                  <div className="flex gap-3 pt-4 border-t">
+                  <div className="flex gap-3 pt-4 border-t border-gray-700">
                     <Button
                       onClick={() => handleVerify(selectedDoc.kyc_id, 'approve')}
                       disabled={processing}
