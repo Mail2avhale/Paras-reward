@@ -16445,14 +16445,24 @@ async def purchase_scratch_card(purchase: ScratchCardPurchase, uid: str = None):
         if result.modified_count == 0:
             raise HTTPException(status_code=400, detail="Insufficient PRC balance (concurrent transaction detected)")
         
+        # Log PRC deduction transaction (skip_balance_update=True because already deducted above)
+        await log_transaction(
+            user_id=uid,
+            wallet_type="prc",
+            transaction_type="scratch_card_purchase",
+            amount=purchase.card_type,
+            description=f"Scratch Card purchase ({purchase.card_type} PRC)",
+            metadata={"card_type": purchase.card_type},
+            skip_balance_update=True
+        )
+        
         # Generate reward
         reward = generate_scratch_reward(is_vip, purchase.card_type)
         
         # Get current cashback wallet balance (for response only)
         cashback_wallet_balance = user.get("cashback_wallet_balance", 0)
         
-        # Log transaction in transactions collection - this function automatically updates the wallet balance
-        # DO NOT manually update wallet here as log_transaction() handles it
+        # Log cashback reward transaction - this DOES update the cashback wallet balance
         transaction_id = await log_transaction(
             user_id=uid,
             wallet_type="cashback_wallet",
