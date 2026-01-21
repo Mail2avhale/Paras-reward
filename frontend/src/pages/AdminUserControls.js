@@ -24,6 +24,7 @@ const AdminUserControls = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [fixingBalances, setFixingBalances] = useState(false);
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeMining: 0,
@@ -38,6 +39,36 @@ const AdminUserControls = () => {
     utility_only_mode: false,
     notifications_enabled: true
   });
+
+  // Fix negative balances function
+  const fixNegativeBalances = async () => {
+    if (!window.confirm('Are you sure you want to fix all negative PRC balances? This will set all negative balances to 0.')) {
+      return;
+    }
+    
+    setFixingBalances(true);
+    try {
+      const response = await axios.post(`${API}/api/admin/fix-negative-balances`);
+      const data = response.data;
+      
+      if (data.fixed_count > 0) {
+        toast.success(`Fixed ${data.fixed_count} users with negative balances`);
+        // Show details
+        data.fixed_users?.forEach(user => {
+          toast.info(`${user.name}: ${user.old_balance.toFixed(2)} → 0 PRC`);
+        });
+        // Refresh the user list
+        fetchUsers();
+      } else {
+        toast.info('No users with negative balances found');
+      }
+    } catch (error) {
+      console.error('Error fixing balances:', error);
+      toast.error('Failed to fix negative balances');
+    } finally {
+      setFixingBalances(false);
+    }
+  };
 
   const capOptions = [
     { value: 0, label: 'Unlimited' },
