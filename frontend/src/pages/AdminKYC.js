@@ -127,7 +127,7 @@ const AdminKYC = ({ user }) => {
       </div>
 
       {/* Filters */}
-      <Card className="p-4 mb-6">
+      <Card className="p-4 mb-6 bg-gray-900 border-gray-700">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -135,13 +135,13 @@ const AdminKYC = ({ user }) => {
               placeholder="Search by user ID, Aadhaar or PAN..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 bg-gray-800 border-gray-700 text-white placeholder-gray-500"
             />
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border rounded-lg"
+            className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
           >
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
