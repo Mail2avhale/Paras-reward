@@ -16629,8 +16629,6 @@ async def get_detailed_prc_analytics(period: str = "month"):
         usage_breakdown = []
         category_map = {
             "order": "Marketplace Orders",
-            "scratch_card_purchase": "Scratch Cards",
-            "treasure_hunt_play": "Treasure Hunt",
             "bill_payment_request": "Bill Payments",
             "gift_voucher_request": "Gift Vouchers",
             "withdrawal": "Withdrawals",
@@ -16655,8 +16653,6 @@ async def get_detailed_prc_analytics(period: str = "month"):
             "admin_credit": "Admin Credit",
             "vip_bonus": "VIP Bonus",
             "signup_bonus": "Signup Bonus",
-            "scratch_card_win": "Scratch Card Wins",
-            "treasure_hunt_win": "Treasure Hunt Wins",
             "prc_rain_gain": "PRC Rain Gain"
         }
         
