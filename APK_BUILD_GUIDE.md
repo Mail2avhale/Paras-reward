@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://reward-flow-debug.preview.emergentagent.com",
+    "url": "https://paras-fixify.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
