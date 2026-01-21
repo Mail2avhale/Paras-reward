@@ -774,143 +774,131 @@ const DashboardModern = ({ user, onLogout }) => {
         </div>
       )}
 
-      {/* Combined Activity Card - Your Activity + Live Activity */}
+      {/* ========== SERVICES SECTION ========== */}
       <div className="px-5 mb-6">
-        <div className="bg-gray-900/50 rounded-2xl border border-gray-800 overflow-hidden">
-          {/* Tab Header */}
-          <div className="flex items-center border-b border-gray-800">
-            <button
-              onClick={() => setActivityTab('yours')}
-              className={`flex-1 py-3 px-4 text-sm font-medium transition-all ${
-                activityTab === 'yours' 
-                  ? 'text-amber-500 border-b-2 border-amber-500 bg-amber-500/5' 
-                  : 'text-gray-400 hover:text-gray-300'
-              }`}
-            >
-              {t('yourActivity')}
-            </button>
-            <button
-              onClick={() => setActivityTab('live')}
-              className={`flex-1 py-3 px-4 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                activityTab === 'live' 
-                  ? 'text-emerald-500 border-b-2 border-emerald-500 bg-emerald-500/5' 
-                  : 'text-gray-400 hover:text-gray-300'
-              }`}
-            >
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              {t('liveActivity')}
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className="min-h-[200px]">
-            {activityTab === 'yours' ? (
-              /* Your Activity Content */
-              recentTransactions.length === 0 ? (
-                <div className="text-center py-8">
-                  <Clock className="w-10 h-10 mx-auto mb-2 text-gray-600" />
-                  <p className="text-gray-500 text-sm">{t('noActivityYet')}</p>
-                  <button 
-                    onClick={() => navigate('/daily-rewards')}
-                    className="mt-2 text-amber-500 text-sm font-medium"
-                  >
-                    {t('startEarning')} →
-                  </button>
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-800">
-                  {recentTransactions.slice(0, 5).map((tx, index) => (
-                    <div key={index} className="flex items-center justify-between p-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
-                          tx.amount > 0 ? 'bg-emerald-500/20' : tx.amount < 0 ? 'bg-red-500/20' : 'bg-blue-500/20'
-                        }`}>
-                          {tx.icon ? (
-                            <span>{tx.icon}</span>
-                          ) : tx.amount > 0 ? (
-                            <TrendingUp className="w-5 h-5 text-emerald-500" />
-                          ) : tx.amount < 0 ? (
-                            <ShoppingBag className="w-5 h-5 text-red-400" />
-                          ) : (
-                            <Clock className="w-5 h-5 text-blue-400" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-white text-sm font-medium">
-                            {(tx.description || tx.type || 'Activity').replace(/mining/gi, 'rewards')}
-                          </p>
-                          <p className="text-gray-500 text-xs">
-                            {tx.timestamp ? new Date(tx.timestamp).toLocaleDateString() : 'Today'}
-                          </p>
-                        </div>
-                      </div>
-                      {tx.amount !== undefined && tx.amount !== 0 && (
-                        <p className={`font-bold ${tx.amount > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {tx.amount > 0 ? '+' : ''}{tx.amount?.toFixed(2)} PRC
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )
-            ) : (
-              /* Live Activity Content */
-              globalActivity.length === 0 ? (
-                <div className="text-center py-8">
-                  <Clock className="w-10 h-10 mx-auto mb-2 text-gray-600" />
-                  <p className="text-gray-500 text-sm">No recent activity</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-800 max-h-[250px] overflow-y-auto">
-                  {globalActivity.slice(0, 8).map((activity, index) => (
-                    <motion.div 
-                      key={index} 
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className={`flex items-center justify-between p-3 ${
-                        activity.is_milestone ? 'bg-gradient-to-r from-amber-500/10 to-transparent' : ''
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-base ${
-                          activity.is_milestone ? 'bg-amber-500/30 ring-2 ring-amber-500/50' :
-                          activity.category === 'bill' ? 'bg-blue-500/20' :
-                          activity.category === 'voucher' ? 'bg-purple-500/20' : 'bg-amber-500/20'
-                        }`}>
-                          <span>{activity.icon}</span>
-                        </div>
-                        <div>
-                          <p className={`text-sm ${activity.is_milestone ? 'text-amber-400 font-semibold' : 'text-white'}`}>
-                            {activity.description}
-                          </p>
-                          <p className="text-gray-500 text-xs">
-                            {activity.user} {activity.location && `• ${activity.location}`}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-gray-600 text-xs">
-                        {activity.timestamp ? new Date(activity.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Now'}
-                      </span>
-                    </motion.div>
-                  ))}
-                </div>
-              )
-            )}
-          </div>
-
-          {/* View All Footer */}
-          {activityTab === 'yours' && recentTransactions.length > 0 && (
-            <div className="border-t border-gray-800 p-3">
-              <button 
-                onClick={() => navigate('/transactions')}
-                className="w-full text-amber-500 text-sm font-medium flex items-center justify-center gap-1"
-              >
-                View All Transactions <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-white text-lg font-bold flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-purple-400" />
+            Services
+          </h2>
         </div>
+
+        {/* Bill Payments Card */}
+        <div className="bg-gradient-to-br from-blue-900/40 to-indigo-900/30 rounded-2xl border border-blue-500/30 p-4 mb-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-white flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-blue-400" />
+              Bill Payments
+            </h3>
+            <button 
+              onClick={() => navigate('/bill-payments')}
+              className="text-blue-400 text-xs font-medium flex items-center gap-1"
+            >
+              View All <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="grid grid-cols-5 gap-2">
+            <button 
+              onClick={() => navigate('/bill-payments?type=mobile_recharge')}
+              className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
+            >
+              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                <span className="text-xl">📱</span>
+              </div>
+              <span className="text-[10px] text-gray-300 text-center">Mobile</span>
+            </button>
+            <button 
+              onClick={() => navigate('/bill-payments?type=dish_recharge')}
+              className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
+            >
+              <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                <span className="text-xl">📺</span>
+              </div>
+              <span className="text-[10px] text-gray-300 text-center">DTH</span>
+            </button>
+            <button 
+              onClick={() => navigate('/bill-payments?type=electricity_bill')}
+              className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
+            >
+              <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <span className="text-xl">⚡</span>
+              </div>
+              <span className="text-[10px] text-gray-300 text-center">Electric</span>
+            </button>
+            <button 
+              onClick={() => navigate('/bill-payments?type=credit_card_payment')}
+              className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
+            >
+              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                <span className="text-xl">💳</span>
+              </div>
+              <span className="text-[10px] text-gray-300 text-center">Card</span>
+            </button>
+            <button 
+              onClick={() => navigate('/bill-payments?type=loan_emi')}
+              className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
+            >
+              <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                <span className="text-xl">🏛️</span>
+              </div>
+              <span className="text-[10px] text-gray-300 text-center">Loan</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Gift Vouchers & Shop Row */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Gift Vouchers Card */}
+          <button 
+            onClick={() => navigate('/gift-vouchers')}
+            className="bg-gradient-to-br from-pink-900/40 to-rose-900/30 rounded-2xl border border-pink-500/30 p-4 text-left hover:border-pink-500/50 transition-all"
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center mb-3 shadow-lg">
+                <Gift className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="font-bold text-white text-sm mb-1">Gift Vouchers</h3>
+              <p className="text-[10px] text-gray-400">Amazon, Flipkart & more</p>
+              <div className="mt-2 px-3 py-1 bg-pink-500 text-white text-[10px] font-semibold rounded-full">
+                Redeem
+              </div>
+            </div>
+          </button>
+
+          {/* Shop Card */}
+          <button 
+            onClick={() => navigate('/marketplace')}
+            className="bg-gradient-to-br from-purple-900/40 to-indigo-900/30 rounded-2xl border border-purple-500/30 p-4 text-left hover:border-purple-500/50 transition-all"
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center mb-3 shadow-lg">
+                <ShoppingBag className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="font-bold text-white text-sm mb-1">Shop</h3>
+              <p className="text-[10px] text-gray-400">Products & deals</p>
+              <div className="mt-2 px-3 py-1 bg-purple-500 text-white text-[10px] font-semibold rounded-full">
+                Explore
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {/* Activity Button */}
+        <button 
+          onClick={() => navigate('/activity')}
+          className="w-full mt-4 bg-gradient-to-r from-cyan-900/40 to-teal-900/30 rounded-2xl border border-cyan-500/30 p-4 hover:border-cyan-500/50 transition-all flex items-center justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-lg">
+              <TrendingUp className="w-6 h-6 text-white" />
+            </div>
+            <div className="text-left">
+              <h3 className="font-bold text-white text-sm">Activity</h3>
+              <p className="text-[10px] text-gray-400">Your activity & live feed</p>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-cyan-400" />
+        </button>
       </div>
 
       {/* Share App FAB removed */}
