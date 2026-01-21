@@ -19145,7 +19145,7 @@ async def create_gift_voucher_request(request: Request):
     if result.modified_count == 0:
         raise HTTPException(status_code=400, detail="Insufficient PRC balance (concurrent transaction detected)")
     
-    # Log transaction
+    # Log transaction (skip_balance_update=True because we already deducted above)
     await log_transaction(
         user_id=user_id,
         wallet_type="prc",
@@ -19157,7 +19157,8 @@ async def create_gift_voucher_request(request: Request):
             "denomination": denomination,
             "prc_required": prc_required,
             "service_charge": service_charge
-        }
+        },
+        skip_balance_update=True  # Balance already updated atomically above
     )
     
     # Save request
