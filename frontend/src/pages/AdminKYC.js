@@ -350,47 +350,6 @@ const AdminKYC = ({ user }) => {
                     </p>
                   </div>
                 )}
-                      </div>
-                    )}
-                    {!selectedDoc.pan_front && (
-                      <p className="text-amber-400 text-sm flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4" /> No document image uploaded
-                      </p>
-                    )}
-                  </>
-                )}
-
-                {/* Generic Document - If document_type is not aadhaar or pan */}
-                {!selectedDoc.document_type && (
-                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
-                    <p className="text-amber-400 text-sm flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4" /> Document type not specified. Check for any uploaded images below.
-                    </p>
-                    {/* Check for any image fields */}
-                    {(selectedDoc.document_image || selectedDoc.front_image || selectedDoc.back_image) && (
-                      <div className="mt-4 grid grid-cols-2 gap-4">
-                        {selectedDoc.document_image && (
-                          <div>
-                            <p className="text-sm text-gray-500 mb-2">Document</p>
-                            <img src={selectedDoc.document_image} alt="Document" className="w-full rounded-lg border border-gray-700" />
-                          </div>
-                        )}
-                        {selectedDoc.front_image && (
-                          <div>
-                            <p className="text-sm text-gray-500 mb-2">Front</p>
-                            <img src={selectedDoc.front_image} alt="Front" className="w-full rounded-lg border border-gray-700" />
-                          </div>
-                        )}
-                        {selectedDoc.back_image && (
-                          <div>
-                            <p className="text-sm text-gray-500 mb-2">Back</p>
-                            <img src={selectedDoc.back_image} alt="Back" className="w-full rounded-lg border border-gray-700" />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {/* Action Buttons */}
                 {selectedDoc.status === 'pending' && (
