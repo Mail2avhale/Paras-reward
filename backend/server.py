@@ -1395,12 +1395,42 @@ async def log_transaction(
     description: str,
     metadata: Dict = {},
     related_id: Optional[str] = None,
-    related_type: Optional[str] = None
+    related_type: Optional[str] = None,
+    skip_balance_update: bool = False  # NEW: Skip balance update if already handled externally
 ) -> str:
-    """Log a transaction and update user balance using atomic operations"""
+    """Log a transaction and optionally update user balance using atomic operations"""
     
     # Determine balance field
     balance_field = f"{wallet_type}_balance"
+    
+    # If skip_balance_update is True, just log the transaction without updating balance
+    if skip_balance_update:
+        # Get current balance for logging purposes
+        user = await db.users.find_one({"uid": user_id}, {"_id": 0, balance_field: 1})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        current_balance = user.get(balance_field, 0.0)
+        
+        # Create transaction record (balance already updated externally)
+        transaction = {
+            "transaction_id": f"TXN-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}",
+            "user_id": user_id,
+            "wallet_type": wallet_type,
+            "type": transaction_type,
+            "amount": amount,
+            "balance_before": round(current_balance + amount, 2) if transaction_type in ["order", "withdrawal", "admin_debit", "delivery_charge", "scratch_card_purchase", "treasure_hunt_play", "prc_burn", "bill_payment_request", "gift_voucher_request", "prc_rain_loss"] else round(current_balance - amount, 2),
+            "balance_after": round(current_balance, 2),
+            "status": "completed",
+            "description": description,
+            "metadata": metadata,
+            "related_id": related_id,
+            "related_type": related_type,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.transactions.insert_one(transaction)
+        return transaction["transaction_id"]
     
     # Determine if credit or debit
     credit_types = ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share", "scratch_card_reward", "treasure_hunt_reward", "delivery_commission", "prc_rain_gain"]
