@@ -4947,10 +4947,22 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
         
         # Enrich with user data
         for payment in payments:
-            user = await db.users.find_one({"uid": payment.get("user_id")}, {"_id": 0, "name": 1, "email": 1})
+            user = await db.users.find_one(
+                {"uid": payment.get("user_id")}, 
+                {"_id": 0, "name": 1, "email": 1, "phone": 1, "mobile": 1, "city": 1, "state": 1, "subscription_plan": 1, "subscription_expiry": 1}
+            )
             if user:
                 payment["user_name"] = user.get("name", "Unknown")
                 payment["user_email"] = user.get("email", "")
+                payment["user_phone"] = user.get("phone") or user.get("mobile", "")
+                payment["user_city"] = user.get("city", "")
+                payment["user_state"] = user.get("state", "")
+                payment["current_plan"] = user.get("subscription_plan", "explorer")
+                payment["current_expiry"] = user.get("subscription_expiry", "")
+            else:
+                payment["user_name"] = "Unknown User"
+                payment["user_email"] = ""
+                payment["user_phone"] = ""
         
         return {
             "payments": payments,
