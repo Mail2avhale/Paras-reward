@@ -21946,7 +21946,13 @@ async def get_referral_earnings_history(user_id: str, period: str = "all"):
 
 @api_router.get("/referrals/{user_id}/levels")
 async def get_referral_levels(user_id: str):
-    """Get referral count by level (5 levels deep) with user details"""
+    """
+    Get referral count by level (5 levels deep) with user details
+    Active = ANY of:
+      1. Active mining session
+      2. Bonus collected in last 24h
+      3. Tap Game or Rain Drop played in last 24h
+    """
     
     level_counts = await count_active_referrals_by_level(user_id)
     referrals_by_level = await get_multi_level_referrals(user_id, max_levels=5)
@@ -21963,95 +21969,26 @@ async def get_referral_levels(user_id: str):
         active_count = 0
         
         for u in users:
-            # Check if user has ACTIVE MINING SESSION
-            # ENHANCED: Check multiple indicators of active status
-            mining_active = u.get("mining_active")
-            session_end = u.get("mining_session_end")
-            mining_start = u.get("mining_start_time")
-            last_login = u.get("last_login")
+            user_uid = u.get("uid")
             
-            is_active = False
-            active_reason = "none"
-            
-            # Method 1: Check mining_active field directly (same as Admin Panel)
-            # FIXED: Also accept string "true" for MongoDB compatibility
-            if mining_active is True or mining_active == True or mining_active == "true":
-                # Even if mining_active is true, verify the session hasn't expired
-                if session_end:
-                    try:
-                        if isinstance(session_end, str):
-                            session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
-                        else:
-                            session_end_dt = session_end
-                        
-                        if session_end_dt.tzinfo is None:
-                            session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
-                        
-                        if session_end_dt > now:
-                            is_active = True
-                            active_reason = "mining_active_and_session_valid"
-                        else:
-                            # Session expired but mining_active wasn't reset
-                            active_reason = "mining_active_but_session_expired"
-                    except Exception as e:
-                        # If we can't parse session_end, trust mining_active flag
-                        is_active = True
-                        active_reason = "mining_active_flag_only"
-                else:
-                    # No session_end but mining_active is True
-                    is_active = True
-                    active_reason = "mining_active_no_session_end"
-            
-            # Method 2: If mining_active is not set/false, check session_end directly
-            elif session_end:
-                try:
-                    if isinstance(session_end, str):
-                        session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
-                    else:
-                        session_end_dt = session_end
-                    
-                    if session_end_dt.tzinfo is None:
-                        session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
-                    
-                    if session_end_dt > now:
-                        is_active = True
-                        active_reason = "session_end_valid"
-                except:
-                    pass
-            
-            # Method 3: Fallback - calculate from mining_start_time (24h window)
-            elif mining_start:
-                try:
-                    if isinstance(mining_start, str):
-                        start_dt = datetime.fromisoformat(mining_start.replace('Z', '+00:00'))
-                    else:
-                        start_dt = mining_start
-                    
-                    if start_dt.tzinfo is None:
-                        start_dt = start_dt.replace(tzinfo=timezone.utc)
-                    
-                    calculated_end = start_dt + timedelta(hours=24)
-                    if calculated_end > now:
-                        is_active = True
-                        active_reason = "calculated_from_start"
-                except:
-                    pass
+            # Use the unified active status checker
+            is_active, active_reason = await check_user_active_status(user_uid, u)
             
             if is_active:
                 active_count += 1
             
             user_details.append({
-                "uid": u.get("uid"),
+                "uid": user_uid,
                 "name": u.get("name") or u.get("email", "").split("@")[0] or "User",
                 "email": u.get("email"),
                 "is_active": is_active,
                 "membership_type": u.get("membership_type", "free"),
                 "subscription_plan": u.get("subscription_plan", "explorer"),
                 "joined_at": u.get("created_at"),
-                "session_end": session_end,
-                # DEBUG fields - will help diagnose production issues
-                "mining_active_raw": mining_active,
-                "mining_start": mining_start,
+                "session_end": u.get("mining_session_end"),
+                # DEBUG fields
+                "mining_active_raw": u.get("mining_active"),
+                "mining_start": u.get("mining_start_time"),
                 "active_reason": active_reason
             })
         
