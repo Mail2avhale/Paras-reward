@@ -16318,12 +16318,14 @@ async def purchase_scratch_card(purchase: ScratchCardPurchase, uid: str = None):
                 detail=f"Insufficient PRC balance. You need {purchase.card_type} PRC but have {current_balance} PRC"
             )
         
-        # Deduct PRC
-        new_balance = current_balance - purchase.card_type
-        await db.users.update_one(
-            {"uid": uid},
-            {"$set": {"prc_balance": new_balance}}
+        # Atomic PRC deduction with balance check to prevent negative balance
+        result = await db.users.update_one(
+            {"uid": uid, "prc_balance": {"$gte": purchase.card_type}},  # Only update if sufficient balance
+            {"$inc": {"prc_balance": -purchase.card_type}}
         )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=400, detail="Insufficient PRC balance (concurrent transaction detected)")
         
         # Generate reward
         reward = generate_scratch_reward(is_vip, purchase.card_type)
