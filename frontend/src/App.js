@@ -46,9 +46,7 @@ const RegisterSimple = lazy(() => import("@/pages/RegisterSimple"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
 const ForgotPasswordNew = lazy(() => import("@/pages/ForgotPasswordNew"));
 const SupportTickets = lazy(() => import("@/pages/SupportTickets"));
-const Dashboard = lazy(() => import("@/pages/Dashboard"));
-const DashboardNew = lazy(() => import("@/pages/DashboardNew"));
-const DashboardPremium = lazy(() => import("@/pages/DashboardPremium"));
+// Dashboard.js, DashboardNew.js, DashboardPremium.js removed - not in use
 const DailyRewards = lazy(() => import("@/pages/Mining")); // Renamed for AdMob compliance
 const TapGame = lazy(() => import("@/pages/TapGame"));
 const DashboardModern = lazy(() => import("@/pages/DashboardModern"));
