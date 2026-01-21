@@ -84,10 +84,9 @@ const DashboardModern = ({ user, onLogout }) => {
       setLoading(true);
       
       // Parallel API calls for faster loading
-      const [userResult, activityResult, globalResult] = await Promise.allSettled([
+      const [userResult, activityResult] = await Promise.allSettled([
         axios.get(`${API}/api/user/${user.uid}`),
-        axios.get(`${API}/api/user/${user.uid}/recent-activity?limit=10`),
-        axios.get(`${API}/api/global/live-activity?limit=10`)
+        axios.get(`${API}/api/user/${user.uid}/recent-activity?limit=10`)
       ]);
       
       // Process user data
@@ -114,7 +113,7 @@ const DashboardModern = ({ user, onLogout }) => {
         });
       }
       
-      // Process activity data
+      // Process activity data (for recent transactions only, full activity moved to /activity page)
       if (activityResult.status === 'fulfilled') {
         const activities = activityResult.value.data.activities || [];
         const formattedActivities = activities.map(activity => ({
