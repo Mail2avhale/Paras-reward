@@ -176,21 +176,21 @@ const AdminKYC = ({ user }) => {
                       <User className="h-6 w-6 text-purple-600" />
                     </div>
                     <div>
-                    <p className="font-semibold text-white">{doc.user_name || 'Unknown User'}</p>
-                    <p className="text-sm text-gray-400">{doc.user_email || doc.user_id}</p>
-                    {doc.user_phone && (
-                      <p className="text-sm text-gray-500">📱 {doc.user_phone}</p>
-                    )}
-                    <p className="text-sm text-gray-500 mt-1">
-                      {(doc.aadhaar_front || doc.aadhaar_number) ? `Aadhaar: ${doc.aadhaar_number || 'Uploaded'}` : 
-                       (doc.pan_front || doc.pan_number) ? `PAN: ${doc.pan_number || 'Uploaded'}` : 
-                       'Document: Not specified'}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Submitted: {new Date(doc.submitted_at).toLocaleDateString()}
-                    </p>
+                      <p className="font-semibold text-white">{doc.user_name || 'Unknown User'}</p>
+                      <p className="text-sm text-gray-400">{doc.user_email || doc.user_id}</p>
+                      {doc.user_phone && (
+                        <p className="text-sm text-gray-500">📱 {doc.user_phone}</p>
+                      )}
+                      <p className="text-sm text-gray-500 mt-1">
+                        {(doc.aadhaar_front || doc.aadhaar_number) ? `Aadhaar: ${doc.aadhaar_number || 'Uploaded'}` : 
+                         (doc.pan_front || doc.pan_number) ? `PAN: ${doc.pan_number || 'Uploaded'}` : 
+                         'Document: Not specified'}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Submitted: {new Date(doc.submitted_at).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
-                </div>
                 <div className="flex items-center gap-3">
                   {getStatusBadge(doc.status)}
                   <Button
