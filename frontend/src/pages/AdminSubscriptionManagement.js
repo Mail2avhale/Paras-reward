@@ -1070,7 +1070,7 @@ const AdminSubscriptionManagement = ({ user }) => {
       {/* Payment Review Modal */}
       {selectedPayment && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-lg p-6 bg-gray-900 border-gray-700">
+          <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 bg-gray-900 border-gray-700">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-white">Review Payment</h3>
               <button onClick={() => setSelectedPayment(null)} className="text-gray-400 hover:text-white">
@@ -1078,27 +1078,72 @@ const AdminSubscriptionManagement = ({ user }) => {
               </button>
             </div>
             <div className="space-y-4">
+              {/* User Information Section */}
+              <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                <h4 className="text-sm font-semibold text-purple-400 mb-3 flex items-center gap-2">
+                  <Users className="w-4 h-4" /> User Information
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-gray-500">Name</p>
+                    <p className="text-white font-medium">{selectedPayment.user_name || 'Unknown'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Email</p>
+                    <p className="text-white text-sm truncate">{selectedPayment.user_email || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Mobile</p>
+                    <p className="text-white">{selectedPayment.user_phone || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Location</p>
+                    <p className="text-white">
+                      {selectedPayment.user_city ? `${selectedPayment.user_city}, ${selectedPayment.user_state || ''}` : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Current Plan</p>
+                    <p className="text-amber-400 capitalize">{selectedPayment.current_plan || 'Explorer'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">User ID</p>
+                    <p className="text-gray-400 text-xs truncate">{selectedPayment.user_id}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Details */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-500 text-sm">Plan</p>
-                  <p className="text-white">{selectedPayment.subscription_plan || 'VIP'}</p>
+                  <p className="text-gray-500 text-sm">Requested Plan</p>
+                  <p className="text-white font-bold capitalize">{selectedPayment.subscription_plan || 'VIP'}</p>
                 </div>
                 <div>
                   <p className="text-gray-500 text-sm">Duration</p>
                   <p className="text-white">{selectedPayment.plan_type}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500 text-sm">Amount</p>
-                  <p className="text-amber-500 font-bold">₹{selectedPayment.amount}</p>
+                  <p className="text-gray-500 text-sm">Amount Paid</p>
+                  <p className="text-amber-500 font-bold text-lg">₹{selectedPayment.amount}</p>
                 </div>
                 <div>
                   <p className="text-gray-500 text-sm">UTR Number</p>
-                  <p className="text-white">{selectedPayment.utr_number}</p>
+                  <p className="text-white font-mono">{selectedPayment.utr_number}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm">Payment Method</p>
+                  <p className="text-white capitalize">{selectedPayment.payment_method || 'UPI'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm">Submitted</p>
+                  <p className="text-white">{new Date(selectedPayment.submitted_at || selectedPayment.created_at).toLocaleString()}</p>
                 </div>
               </div>
+              
               {selectedPayment.screenshot_url && (
                 <div>
-                  <p className="text-gray-500 text-sm mb-2">Screenshot</p>
+                  <p className="text-gray-500 text-sm mb-2">Payment Screenshot</p>
                   <img 
                     src={selectedPayment.screenshot_url} 
                     alt="Payment Screenshot" 
@@ -1107,7 +1152,7 @@ const AdminSubscriptionManagement = ({ user }) => {
                 </div>
               )}
               <div>
-                <p className="text-gray-500 text-sm mb-2">Notes (Optional)</p>
+                <p className="text-gray-500 text-sm mb-2">Admin Notes (Optional)</p>
                 <Input
                   value={actionNotes}
                   onChange={(e) => setActionNotes(e.target.value)}
