@@ -86,7 +86,12 @@ const AdminSubscriptionManagement = ({ user }) => {
   };
 
   useEffect(() => {
-    if (!user || user.role !== 'admin') {
+    // Wait for user to be loaded before checking role
+    if (user === null || user === undefined) {
+      return; // Still loading user
+    }
+    
+    if (user.role !== 'admin') {
       navigate('/dashboard');
       return;
     }
