@@ -14798,6 +14798,55 @@ async def adjust_user_balance(uid: str, request: BalanceAdjustRequest):
         "new_balance": new_balance
     }
 
+@api_router.post("/admin/fix-negative-balances")
+async def fix_negative_balances():
+    """Admin fixes all negative PRC balances by setting them to 0"""
+    # Find all users with negative PRC balance
+    negative_users = await db.users.find(
+        {"prc_balance": {"$lt": 0}},
+        {"uid": 1, "email": 1, "name": 1, "prc_balance": 1, "_id": 0}
+    ).to_list(1000)
+    
+    if not negative_users:
+        return {"message": "No users with negative balance found", "fixed_count": 0}
+    
+    fixed_users = []
+    for user in negative_users:
+        old_balance = user.get("prc_balance", 0)
+        await db.users.update_one(
+            {"uid": user["uid"]},
+            {"$set": {"prc_balance": 0}}
+        )
+        
+        # Log the fix
+        await db.audit_logs.insert_one({
+            "log_id": str(uuid.uuid4()),
+            "action": "fix_negative_balance",
+            "entity_type": "user",
+            "entity_id": user["uid"],
+            "performed_by": "admin",
+            "changes": {
+                "old_balance": old_balance,
+                "new_balance": 0,
+                "reason": "Auto-fix negative PRC balance"
+            },
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        fixed_users.append({
+            "uid": user["uid"],
+            "email": user.get("email"),
+            "name": user.get("name"),
+            "old_balance": old_balance,
+            "new_balance": 0
+        })
+    
+    return {
+        "message": f"Fixed {len(fixed_users)} users with negative balances",
+        "fixed_count": len(fixed_users),
+        "fixed_users": fixed_users
+    }
+
 @api_router.delete("/admin/users/{uid}/delete")
 async def delete_user_admin(uid: str):
     """Admin deactivates/deletes a user"""
