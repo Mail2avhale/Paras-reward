@@ -272,6 +272,37 @@ const AdminUserControls = () => {
         </div>
       </div>
 
+      {/* Fix Negative Balances Button */}
+      <div className="bg-red-900/30 border border-red-500/50 rounded-xl p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-6 h-6 text-red-400" />
+            <div>
+              <h3 className="font-semibold text-red-400">Fix Negative PRC Balances</h3>
+              <p className="text-sm text-gray-400">Reset all users with negative PRC balance to 0</p>
+            </div>
+          </div>
+          <button
+            onClick={fixNegativeBalances}
+            disabled={fixingBalances}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium flex items-center gap-2 disabled:opacity-50"
+            data-testid="fix-negative-balances-btn"
+          >
+            {fixingBalances ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                Fixing...
+              </>
+            ) : (
+              <>
+                <Coins className="w-4 h-4" />
+                Fix Negative Balances
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
       {/* Search and Filters */}
       <div className="bg-gray-900 rounded-xl p-4 shadow-sm border mb-6">
         <div className="flex flex-col md:flex-row gap-4">
