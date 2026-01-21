@@ -579,8 +579,10 @@ const AdminSubscriptionManagement = ({ user }) => {
                     </div>
                     <div>
                       <p className="text-white font-medium">{payment.subscription_plan?.toUpperCase() || 'VIP'} - {payment.plan_type}</p>
-                      <p className="text-gray-500 text-sm">User: {payment.user_id?.slice(0, 12)}...</p>
-                      <p className="text-gray-500 text-sm">UTR: {payment.utr_number}</p>
+                      <p className="text-purple-400 font-medium">{payment.user_name || 'Unknown User'}</p>
+                      <p className="text-gray-400 text-sm">{payment.user_email || payment.user_id?.slice(0, 20)}</p>
+                      {payment.user_phone && <p className="text-gray-500 text-xs">📱 {payment.user_phone}</p>}
+                      <p className="text-gray-500 text-xs">UTR: {payment.utr_number}</p>
                     </div>
                   </div>
                   <div className="text-right">
