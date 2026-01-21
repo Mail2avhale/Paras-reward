@@ -5309,16 +5309,39 @@ async def submit_kyc(uid: str, kyc_data: KYCSubmit):
     
     return kyc_doc
 
-@api_router.get("/kyc/list", response_model=List[KYCDocument])
+@api_router.get("/kyc/list")
 async def get_kyc_documents():
-    """Get all KYC documents (Admin)"""
+    """Get all KYC documents with user details (Admin)"""
     docs = await db.kyc_documents.find({}, {"_id": 0}).to_list(1000)
+    
+    # Enrich with user details
+    enriched_docs = []
     for doc in docs:
         if isinstance(doc.get('submitted_at'), str):
             doc['submitted_at'] = datetime.fromisoformat(doc['submitted_at'])
         if doc.get('verified_at') and isinstance(doc['verified_at'], str):
             doc['verified_at'] = datetime.fromisoformat(doc['verified_at'])
-    return docs
+        
+        # Fetch user details
+        user = await db.users.find_one(
+            {"uid": doc.get("user_id")}, 
+            {"_id": 0, "name": 1, "email": 1, "phone": 1, "mobile": 1, "city": 1, "state": 1}
+        )
+        
+        if user:
+            doc["user_name"] = user.get("name", "Unknown")
+            doc["user_email"] = user.get("email", "")
+            doc["user_phone"] = user.get("phone") or user.get("mobile", "")
+            doc["user_city"] = user.get("city", "")
+            doc["user_state"] = user.get("state", "")
+        else:
+            doc["user_name"] = "Unknown User"
+            doc["user_email"] = ""
+            doc["user_phone"] = ""
+        
+        enriched_docs.append(doc)
+    
+    return enriched_docs
 
 @api_router.post("/kyc/{kyc_id}/verify")
 async def verify_kyc(kyc_id: str, action: VIPPaymentAction):
