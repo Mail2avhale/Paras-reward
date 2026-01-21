@@ -182,8 +182,8 @@ const AdminKYC = ({ user }) => {
                       <p className="text-sm text-gray-500">📱 {doc.user_phone}</p>
                     )}
                     <p className="text-sm text-gray-500 mt-1">
-                      {doc.document_type === 'aadhaar' ? `Aadhaar: ${doc.aadhaar_number || 'N/A'}` : 
-                       doc.document_type === 'pan' ? `PAN: ${doc.pan_number || 'N/A'}` : 
+                      {(doc.aadhaar_front || doc.aadhaar_number) ? `Aadhaar: ${doc.aadhaar_number || 'Uploaded'}` : 
+                       (doc.pan_front || doc.pan_number) ? `PAN: ${doc.pan_number || 'Uploaded'}` : 
                        'Document: Not specified'}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
