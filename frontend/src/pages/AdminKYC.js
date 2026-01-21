@@ -158,22 +158,22 @@ const AdminKYC = ({ user }) => {
       {loading ? (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="text-gray-500 mt-4">Loading KYC documents...</p>
+          <p className="text-gray-400 mt-4">Loading KYC documents...</p>
         </div>
       ) : filteredDocs.length === 0 ? (
-        <Card className="p-12 text-center">
-          <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">No KYC documents found</p>
+        <Card className="p-12 text-center bg-gray-900 border-gray-700">
+          <FileText className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+          <p className="text-gray-400">No KYC documents found</p>
         </Card>
       ) : (
         <>
           <div className="grid gap-4">
             {paginatedDocs.map((doc) => (
-              <Card key={doc.kyc_id} className="p-4">
+              <Card key={doc.kyc_id} className="p-4 bg-gray-900 border-gray-700">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-start gap-4">
                     <div className="p-3 bg-purple-500/20 rounded-lg">
-                      <User className="h-6 w-6 text-purple-600" />
+                      <User className="h-6 w-6 text-purple-400" />
                     </div>
                     <div>
                       <p className="font-semibold text-white">{doc.user_name || 'Unknown User'}</p>
@@ -186,7 +186,7 @@ const AdminKYC = ({ user }) => {
                          (doc.pan_front || doc.pan_number) ? `PAN: ${doc.pan_number || 'Uploaded'}` : 
                          'Document: Not specified'}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-gray-500 mt-1">
                         Submitted: {new Date(doc.submitted_at).toLocaleDateString()}
                       </p>
                     </div>
@@ -197,6 +197,7 @@ const AdminKYC = ({ user }) => {
                     size="sm"
                     variant="outline"
                     data-testid="kyc-view-button"
+                    className="border-gray-600 text-white hover:bg-gray-800"
                     onClick={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
