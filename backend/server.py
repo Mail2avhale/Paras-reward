@@ -5657,24 +5657,22 @@ async def checkout(request: Request):
     if result.modified_count == 0:
         raise HTTPException(status_code=400, detail="Insufficient PRC balance (concurrent transaction detected)")
     
-    # Create wallet transaction records
-    transactions = []
+    # Get updated user balance for response
+    updated_user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1})
+    new_prc_balance = updated_user.get("prc_balance", 0) if updated_user else 0
     
-    # PRC deduction transaction
-    transactions.append({
-        "transaction_id": str(uuid.uuid4()),
-        "user_id": user_id,
-        "type": "debit",
-        "wallet_type": "prc",
-        "amount": total_prc,
-        "description": f"Order #{order.order_id[:8]} - Product purchase",
-        "balance_after": new_prc_balance,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    })
-    
-    # Insert transactions to the correct collection
-    if transactions:
-        await db.transactions.insert_many(transactions)
+    # Create wallet transaction record (skip_balance_update because already deducted above)
+    await log_transaction(
+        user_id=user_id,
+        wallet_type="prc",
+        transaction_type="order",
+        amount=total_prc,
+        description=f"Order #{order.order_id[:8]} - Product purchase",
+        metadata={"order_id": order.order_id, "items_count": len(cart["items"])},
+        related_id=order.order_id,
+        related_type="order",
+        skip_balance_update=True
+    )
     
     # Update product stock
     for item in cart["items"]:
