@@ -1154,6 +1154,122 @@ async def get_base_rate():
     
     return current_base_rate
 
+
+async def check_user_active_status(user_uid: str, user_data: dict = None) -> tuple:
+    """
+    Check if a user is ACTIVE based on multiple criteria:
+    1. Has active mining session (mining_active = True AND session not expired)
+    2. Collected bonus in last 24 hours (mining transaction)
+    3. Played Tap Game or Rain Drop in last 24 hours
+    
+    Returns: (is_active: bool, active_reason: str)
+    """
+    now = datetime.now(timezone.utc)
+    twenty_four_hours_ago = now - timedelta(hours=24)
+    
+    # Get user data if not provided
+    if user_data is None:
+        user_data = await db.users.find_one({"uid": user_uid}, {"_id": 0})
+        if not user_data:
+            return False, "user_not_found"
+    
+    # ========== CONDITION 1: Active Mining Session ==========
+    mining_active = user_data.get("mining_active")
+    session_end = user_data.get("mining_session_end")
+    mining_start = user_data.get("mining_start_time")
+    
+    # Check mining_active flag
+    if mining_active is True or mining_active == True or mining_active == "true":
+        if session_end:
+            try:
+                if isinstance(session_end, str):
+                    session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+                elif isinstance(session_end, datetime):
+                    session_end_dt = session_end
+                else:
+                    session_end_dt = None
+                
+                if session_end_dt:
+                    if session_end_dt.tzinfo is None:
+                        session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
+                    
+                    if session_end_dt > now:
+                        return True, "mining_session_active"
+            except:
+                # If parse fails, trust the flag
+                return True, "mining_active_flag"
+        else:
+            # mining_active is True but no session_end - trust the flag
+            return True, "mining_active_no_session"
+    
+    # Check session_end directly (backup)
+    elif session_end:
+        try:
+            if isinstance(session_end, str):
+                session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+            elif isinstance(session_end, datetime):
+                session_end_dt = session_end
+            else:
+                session_end_dt = None
+            
+            if session_end_dt:
+                if session_end_dt.tzinfo is None:
+                    session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
+                
+                if session_end_dt > now:
+                    return True, "session_end_valid"
+        except:
+            pass
+    
+    # Calculate from mining_start (fallback)
+    elif mining_start:
+        try:
+            if isinstance(mining_start, str):
+                start_dt = datetime.fromisoformat(mining_start.replace('Z', '+00:00'))
+            elif isinstance(mining_start, datetime):
+                start_dt = mining_start
+            else:
+                start_dt = None
+            
+            if start_dt:
+                if start_dt.tzinfo is None:
+                    start_dt = start_dt.replace(tzinfo=timezone.utc)
+                
+                calculated_end = start_dt + timedelta(hours=24)
+                if calculated_end > now:
+                    return True, "calculated_from_start"
+        except:
+            pass
+    
+    # ========== CONDITION 2: Bonus Collection in last 24 hours ==========
+    try:
+        bonus_collection = await db.transactions.find_one({
+            "user_id": user_uid,
+            "type": "mining",
+            "created_at": {"$gte": twenty_four_hours_ago.isoformat()}
+        })
+        if bonus_collection:
+            return True, "bonus_collected_24h"
+    except:
+        pass
+    
+    # ========== CONDITION 3: Tap Game or Rain Drop in last 24 hours ==========
+    try:
+        game_activity = await db.transactions.find_one({
+            "user_id": user_uid,
+            "type": {"$in": ["tap_game", "prc_rain_gain", "prc_rain_loss"]},
+            "created_at": {"$gte": twenty_four_hours_ago.isoformat()}
+        })
+        if game_activity:
+            return True, "game_played_24h"
+    except:
+        pass
+    
+    # No active conditions met
+    return False, "inactive"
+
+
+
 async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
     """
     Get multi-level referrals (up to 5 levels deep)
