@@ -21690,82 +21690,30 @@ async def get_referral_tree(user_id: str):
 
 @api_router.get("/referrals/{user_id}/stats")
 async def get_referral_stats(user_id: str):
-    """Get comprehensive referral statistics"""
+    """
+    Get comprehensive referral statistics
+    Active = ANY of:
+      1. Active mining session
+      2. Bonus collected in last 24h
+      3. Tap Game or Rain Drop played in last 24h
+    """
     
     # Get direct referrals
     direct_referrals = await db.users.find({"referred_by": user_id}, {"_id": 0}).to_list(length=None)
     
-    now = datetime.now(timezone.utc)
-    
-    # Count active referrals based on MINING SESSION (same logic as /referrals/{user_id}/levels)
+    # Count active referrals using unified logic
     active_count = 0
     total_orders_from_referrals = 0
     
     for referral in direct_referrals:
-        # Check if user has ACTIVE MINING SESSION (consistent with levels API)
-        mining_active = referral.get("mining_active")
-        session_end = referral.get("mining_session_end")
-        mining_start = referral.get("mining_start_time")
-        
-        is_active = False
-        
-        # Method 1: Check mining_active field directly
-        if mining_active is True or mining_active == True or mining_active == "true":
-            if session_end:
-                try:
-                    if isinstance(session_end, str):
-                        session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
-                    else:
-                        session_end_dt = session_end
-                    
-                    if session_end_dt.tzinfo is None:
-                        session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
-                    
-                    if session_end_dt > now:
-                        is_active = True
-                except:
-                    is_active = True  # Trust the flag if parse fails
-            else:
-                is_active = True  # mining_active is True, no session_end
-        
-        # Method 2: Check session_end directly
-        elif session_end:
-            try:
-                if isinstance(session_end, str):
-                    session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
-                else:
-                    session_end_dt = session_end
-                
-                if session_end_dt.tzinfo is None:
-                    session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
-                
-                if session_end_dt > now:
-                    is_active = True
-            except:
-                pass
-        
-        # Method 3: Calculate from mining_start_time
-        elif mining_start:
-            try:
-                if isinstance(mining_start, str):
-                    start_dt = datetime.fromisoformat(mining_start.replace('Z', '+00:00'))
-                else:
-                    start_dt = mining_start
-                
-                if start_dt.tzinfo is None:
-                    start_dt = start_dt.replace(tzinfo=timezone.utc)
-                
-                calculated_end = start_dt + timedelta(hours=24)
-                if calculated_end > now:
-                    is_active = True
-            except:
-                pass
+        user_uid = referral.get("uid")
+        is_active, _ = await check_user_active_status(user_uid, referral)
         
         if is_active:
             active_count += 1
         
         # Also count orders for additional context
-        orders = await db.orders.count_documents({"user_id": referral["uid"]})
+        orders = await db.orders.count_documents({"user_id": user_uid})
         total_orders_from_referrals += orders
     
     # Get referral earnings from transactions
@@ -21776,7 +21724,7 @@ async def get_referral_stats(user_id: str):
     
     total_earned = referral_earnings[0]["total"] if referral_earnings else 0
     
-    # Calculate conversion rate (active rate based on mining sessions)
+    # Calculate conversion rate (active rate)
     conversion_rate = (active_count / len(direct_referrals) * 100) if direct_referrals else 0
     
     # Get recent referrals (last 10)
