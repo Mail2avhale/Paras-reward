@@ -23069,16 +23069,6 @@ async def mark_all_notifications_read(user_id: str):
         "count": result.modified_count
     }
 
-@api_router.delete("/notifications/{notification_id}")
-async def delete_notification(notification_id: str):
-    """Delete a notification"""
-    result = await db.notifications.delete_one({"notification_id": notification_id})
-    
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Notification not found")
-    
-    return {"message": "Notification deleted"}
-
 
 # ========== USER RECENT ACTIVITY ENDPOINT ==========
 @api_router.get("/user/{uid}/recent-activity")
