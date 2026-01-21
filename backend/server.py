@@ -1371,62 +1371,6 @@ async def count_active_referrals_by_level_with_weights(user_id: str):
                 level_data[level]['weighted_count'] += referral_weight
     
     return level_data
-                                is_session_active = True
-                    except:
-                        # If parse fails, trust mining_active flag
-                        is_session_active = True
-                else:
-                    # mining_active is True but no session_end - trust the flag
-                    is_session_active = True
-            
-            # Method 2: If mining_active not set, check session_end directly
-            elif session_end:
-                try:
-                    if isinstance(session_end, str):
-                        session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
-                    elif isinstance(session_end, datetime):
-                        session_end_dt = session_end
-                    else:
-                        session_end_dt = None
-                    
-                    if session_end_dt:
-                        if session_end_dt.tzinfo is None:
-                            session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
-                        
-                        if session_end_dt > now:
-                            is_session_active = True
-                except:
-                    pass
-            
-            # Method 3: Fallback - calculate from mining_start_time (24h window)
-            elif mining_start:
-                try:
-                    if isinstance(mining_start, str):
-                        start_dt = datetime.fromisoformat(mining_start.replace('Z', '+00:00'))
-                    elif isinstance(mining_start, datetime):
-                        start_dt = mining_start
-                    else:
-                        start_dt = None
-                    
-                    if start_dt:
-                        if start_dt.tzinfo is None:
-                            start_dt = start_dt.replace(tzinfo=timezone.utc)
-                        
-                        calculated_end = start_dt + timedelta(hours=24)
-                        if calculated_end > now:
-                            is_session_active = True
-                except:
-                    pass
-            
-            if is_session_active:
-                # Get referral's subscription weight
-                sub_info = await get_user_subscription_info(user)
-                referral_weight = sub_info.get("referral_weight", 1.0)
-                
-                level_data[level]['count'] += 1
-                level_data[level]['weighted_count'] += referral_weight
-    
-    return level_data
 
 async def calculate_profile_completion(user: Dict) -> float:
     """Calculate profile completion percentage"""
