@@ -5717,6 +5717,21 @@ async def create_order_legacy(uid: str, order_data: OrderCreate):
     delivery_fee = prc_price * 0.10
     total_cash_fee = transaction_fee + delivery_fee
     
+    # Atomic PRC deduction with balance check to prevent negative balance
+    cashback_inr = cashback / 10  # 10 PRC = ₹1
+    result = await db.users.update_one(
+        {"uid": uid, "prc_balance": {"$gte": prc_price}},  # Only update if sufficient balance
+        {
+            "$inc": {
+                "prc_balance": -prc_price,
+                "cash_wallet_balance": cashback_inr
+            }
+        }
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="Insufficient PRC balance (concurrent transaction detected)")
+    
     # Create order (using legacy single product model)
     order = OrderSingleProduct(
         user_id=uid,
@@ -5727,18 +5742,6 @@ async def create_order_legacy(uid: str, order_data: OrderCreate):
         transaction_fee=transaction_fee,
         delivery_fee=delivery_fee,
         total_cash_fee=total_cash_fee
-    )
-    
-    # Deduct PRC and add cashback to wallet
-    cashback_inr = cashback / 10  # 10 PRC = ₹1
-    await db.users.update_one(
-        {"uid": uid},
-        {
-            "$inc": {
-                "prc_balance": -prc_price,
-                "cash_wallet_balance": cashback_inr
-            }
-        }
     )
     
     # Save order
