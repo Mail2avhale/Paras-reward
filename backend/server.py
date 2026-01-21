@@ -16358,13 +16358,13 @@ async def get_prc_analytics():
         orders = await db.orders.find().to_list(length=None)
         prc_spent_marketplace = sum(order.get("prc_amount", 0) for order in orders)
         
-        # 2. Treasure Hunt
-        treasure_hunts = await db.treasure_hunt_progress.find().to_list(length=None)
-        prc_spent_treasure_hunt = sum(th.get("total_prc_spent", 0) for th in treasure_hunts)
+        # 2. Bill Payments
+        bill_payments = await db.bill_payment_requests.find({"status": "completed"}).to_list(length=None)
+        prc_spent_bill_payments = sum(bp.get("total_prc_deducted", 0) for bp in bill_payments)
         
-        # 3. Scratch Cards
-        scratch_cards = await db.scratch_cards.find().to_list(length=None)
-        prc_spent_scratch_cards = sum(sc.get("prc_spent", 0) for sc in scratch_cards)
+        # 3. Gift Vouchers
+        gift_vouchers = await db.gift_voucher_requests.find({"status": "completed"}).to_list(length=None)
+        prc_spent_gift_vouchers = sum(gv.get("total_prc_deducted", 0) for gv in gift_vouchers)
         
         # 4. VIP memberships
         vip_users = [u for u in users if u.get("membership_type") == "vip"]
@@ -16373,8 +16373,8 @@ async def get_prc_analytics():
         # Calculate total consumed
         total_prc_consumed = (
             prc_spent_marketplace + 
-            prc_spent_treasure_hunt + 
-            prc_spent_scratch_cards + 
+            prc_spent_bill_payments + 
+            prc_spent_gift_vouchers + 
             prc_spent_vip
         )
         
