@@ -66,6 +66,7 @@ const ReferralDashboard = lazy(() => import("@/pages/ReferralDashboard"));
 const ReferralDashboardAI = lazy(() => import("@/pages/ReferralDashboardAI"));
 // Removed: GamificationDashboard/Achievements for AdMob compliance
 const FlashSalesPage = lazy(() => import("@/pages/FlashSalesPage"));
+const MyActivity = lazy(() => import("@/pages/MyActivity"));
 
 // Social Feature Pages
 const PublicProfile = lazy(() => import("@/pages/PublicProfile"));
