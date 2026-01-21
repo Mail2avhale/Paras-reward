@@ -17,7 +17,8 @@ import {
   ChevronRight,
   Star,
   FileText,
-  Shield
+  Shield,
+  TrendingUp
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
