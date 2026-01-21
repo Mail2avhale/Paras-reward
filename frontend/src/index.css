@@ -1,5 +1,8 @@
 @tailwind base;
 
+/* Admin Dark Theme Styles */
+@import './styles/admin-theme.css';
+
 /* Safe area support for mobile browsers */
 /* Note: env(safe-area-inset-top) returns 0 on most Android browsers */
 /* We add a minimum 12px padding for Android browser address bar */
