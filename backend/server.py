@@ -16413,23 +16413,23 @@ async def get_prc_analytics():
                     else:
                         daily_consumption[date] = prc
         
-        # From treasure hunts
-        for th in treasure_hunts:
-            if th.get("started_at"):
-                date = th.get("started_at")[:10]
+        # From bill payments
+        for bp in bill_payments:
+            if bp.get("created_at"):
+                date = bp.get("created_at")[:10]
                 if date >= thirty_days_ago.isoformat()[:10]:
-                    prc = th.get("total_prc_spent", 0)
+                    prc = bp.get("total_prc_deducted", 0)
                     if date in daily_consumption:
                         daily_consumption[date] += prc
                     else:
                         daily_consumption[date] = prc
         
-        # From scratch cards
-        for sc in scratch_cards:
-            if sc.get("timestamp"):
-                date = sc.get("timestamp")[:10]
+        # From gift vouchers
+        for gv in gift_vouchers:
+            if gv.get("created_at"):
+                date = gv.get("created_at")[:10]
                 if date >= thirty_days_ago.isoformat()[:10]:
-                    prc = sc.get("prc_spent", 0)
+                    prc = gv.get("total_prc_deducted", 0)
                     if date in daily_consumption:
                         daily_consumption[date] += prc
                     else:
@@ -16452,8 +16452,8 @@ async def get_prc_analytics():
         # Breakdown of consumption
         consumption_breakdown = {
             "marketplace": prc_spent_marketplace,
-            "treasure_hunt": prc_spent_treasure_hunt,
-            "scratch_cards": prc_spent_scratch_cards,
+            "bill_payments": prc_spent_bill_payments,
+            "gift_vouchers": prc_spent_gift_vouchers,
             "vip_memberships": prc_spent_vip
         }
         
