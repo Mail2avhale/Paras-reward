@@ -14827,50 +14827,10 @@ async def delete_user_admin(uid: str):
     return {"message": "User deleted successfully"}
 
 
-# ========== ADMIN ORDER MANAGEMENT ROUTES ==========
-
-@api_router.get("/admin/orders/all")
-async def get_all_orders_admin(
-    page: int = 1,
-    limit: int = 50,
-    status: Optional[str] = None,
-    search: Optional[str] = None
-):
-    """Admin endpoint to get all orders with filters"""
-    query = {}
-    
-    if status:
-        query["status"] = status
-    
-    if search:
-        query["$or"] = [
-            {"order_id": {"$regex": search, "$options": "i"}},
-            {"user_id": {"$regex": search, "$options": "i"}},
-            {"secret_code": {"$regex": search, "$options": "i"}}
-        ]
-    
-    skip = (page - 1) * limit
-    orders = await db.orders.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=None)
-    total = await db.orders.count_documents(query)
-    
-    # Enrich with user data
-    for order in orders:
-        order.pop("_id", None)
-        user = await db.users.find_one({"uid": order.get("user_id")})
-        if user:
-            order["user_name"] = user.get("name", "Unknown")
-            order["user_email"] = user.get("email", "")
-    
-    return {
-        "orders": orders,
-        "total": total,
-        "page": page,
-        "limit": limit,
-        "pages": (total + limit - 1) // limit
-    }
+# ========== ADMIN ORDER MANAGEMENT ROUTES (Additional) ==========
 
 @api_router.get("/admin/orders/{order_id}/details")
-async def get_order_details_admin(order_id: str):
+async def get_order_details_admin_v2(order_id: str):
     """Admin gets detailed order information"""
     order = await db.orders.find_one({"order_id": order_id})
     if not order:
