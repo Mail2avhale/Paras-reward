@@ -219,104 +219,137 @@ const AdminKYC = ({ user }) => {
 
       {/* Document Detail Modal */}
       {selectedDoc && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold">KYC Document Details</h2>
-                <button onClick={() => setSelectedDoc(null)} className="text-gray-500 hover:text-gray-300">
+                <h2 className="text-xl font-bold text-white">KYC Document Details</h2>
+                <button onClick={() => setSelectedDoc(null)} className="text-gray-400 hover:text-white text-xl">
                   ✕
                 </button>
               </div>
 
               <div className="space-y-4">
-                {/* User Information Section */}
-                <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-                  <h3 className="text-sm font-semibold text-purple-400 mb-3 flex items-center gap-2">
+                {/* User Information Section - FIXED COLORS */}
+                <div className="bg-purple-900/30 rounded-lg p-4 border border-purple-500/30">
+                  <h3 className="text-sm font-semibold text-purple-300 mb-3 flex items-center gap-2">
                     <User className="w-4 h-4" /> User Information
                   </h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs text-gray-500">Name</p>
-                      <p className="font-medium text-white">{selectedDoc.user_name || 'N/A'}</p>
+                      <p className="text-xs text-purple-300/70">Name</p>
+                      <p className="font-medium text-white text-lg">{selectedDoc.user_name || 'N/A'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Email</p>
+                      <p className="text-xs text-purple-300/70">Email</p>
                       <p className="font-medium text-white truncate">{selectedDoc.user_email || 'N/A'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Mobile</p>
+                      <p className="text-xs text-purple-300/70">Mobile</p>
                       <p className="font-medium text-white">{selectedDoc.user_phone || 'N/A'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Location</p>
+                      <p className="text-xs text-purple-300/70">Location</p>
                       <p className="font-medium text-white">
                         {selectedDoc.user_city ? `${selectedDoc.user_city}, ${selectedDoc.user_state || ''}` : 'N/A'}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-xs text-gray-500">User ID</p>
-                      <p className="font-mono text-xs text-gray-400 truncate">{selectedDoc.user_id}</p>
+                    <div className="col-span-2">
+                      <p className="text-xs text-purple-300/70">User ID</p>
+                      <p className="font-mono text-xs text-gray-400">{selectedDoc.user_id}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Document Status */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-4 bg-gray-800/50 rounded-lg p-4">
                   <div>
-                    <p className="text-sm text-gray-500">Status</p>
+                    <p className="text-sm text-gray-400">Status</p>
                     {getStatusBadge(selectedDoc.status)}
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Document Type</p>
-                    <p className="font-medium capitalize">{selectedDoc.document_type || 'Not Specified'}</p>
+                    <p className="text-sm text-gray-400">Document Type</p>
+                    <p className="font-medium text-white capitalize">
+                      {selectedDoc.document_type || 
+                       (selectedDoc.aadhaar_front || selectedDoc.aadhaar_number ? 'Aadhaar' : 
+                        selectedDoc.pan_front || selectedDoc.pan_number ? 'PAN' : 'Not Specified')}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Submitted</p>
-                    <p className="font-medium">{new Date(selectedDoc.submitted_at).toLocaleString()}</p>
+                    <p className="text-sm text-gray-400">Submitted</p>
+                    <p className="font-medium text-white">{new Date(selectedDoc.submitted_at).toLocaleString()}</p>
                   </div>
                 </div>
 
-                {/* Aadhaar Documents */}
-                {selectedDoc.document_type === 'aadhaar' && (
-                  <>
-                    <div>
-                      <p className="text-sm text-gray-500 mb-2">Aadhaar Number</p>
-                      <p className="font-mono bg-gray-800 p-2 rounded">{selectedDoc.aadhaar_number || 'Not provided'}</p>
-                    </div>
+                {/* Aadhaar Documents - SHOW IF HAS AADHAAR DATA */}
+                {(selectedDoc.aadhaar_front || selectedDoc.aadhaar_back || selectedDoc.aadhaar_number) && (
+                  <div className="bg-blue-900/20 rounded-lg p-4 border border-blue-500/30">
+                    <h4 className="text-sm font-semibold text-blue-300 mb-3">📄 Aadhaar Card</h4>
+                    {selectedDoc.aadhaar_number && (
+                      <div className="mb-4">
+                        <p className="text-sm text-gray-400 mb-1">Aadhaar Number</p>
+                        <p className="font-mono bg-gray-800 p-2 rounded text-white">{selectedDoc.aadhaar_number}</p>
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-4">
                       {selectedDoc.aadhaar_front && (
                         <div>
-                          <p className="text-sm text-gray-500 mb-2">Aadhaar Front</p>
-                          <img src={selectedDoc.aadhaar_front} alt="Aadhaar Front" className="w-full rounded-lg border border-gray-700" />
+                          <p className="text-sm text-gray-400 mb-2">Front Side</p>
+                          <img 
+                            src={selectedDoc.aadhaar_front} 
+                            alt="Aadhaar Front" 
+                            className="w-full rounded-lg border border-gray-600 cursor-pointer hover:border-blue-400 transition-colors"
+                            onClick={() => window.open(selectedDoc.aadhaar_front, '_blank')}
+                          />
                         </div>
                       )}
                       {selectedDoc.aadhaar_back && (
                         <div>
-                          <p className="text-sm text-gray-500 mb-2">Aadhaar Back</p>
-                          <img src={selectedDoc.aadhaar_back} alt="Aadhaar Back" className="w-full rounded-lg border border-gray-700" />
+                          <p className="text-sm text-gray-400 mb-2">Back Side</p>
+                          <img 
+                            src={selectedDoc.aadhaar_back} 
+                            alt="Aadhaar Back" 
+                            className="w-full rounded-lg border border-gray-600 cursor-pointer hover:border-blue-400 transition-colors"
+                            onClick={() => window.open(selectedDoc.aadhaar_back, '_blank')}
+                          />
                         </div>
                       )}
                     </div>
-                    {!selectedDoc.aadhaar_front && !selectedDoc.aadhaar_back && (
-                      <p className="text-amber-400 text-sm flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4" /> No document images uploaded
-                      </p>
-                    )}
-                  </>
+                  </div>
                 )}
 
-                {/* PAN Documents */}
-                {selectedDoc.document_type === 'pan' && (
-                  <>
-                    <div>
-                      <p className="text-sm text-gray-500 mb-2">PAN Number</p>
-                      <p className="font-mono bg-gray-800 p-2 rounded">{selectedDoc.pan_number || 'Not provided'}</p>
-                    </div>
+                {/* PAN Documents - SHOW IF HAS PAN DATA */}
+                {(selectedDoc.pan_front || selectedDoc.pan_number) && (
+                  <div className="bg-amber-900/20 rounded-lg p-4 border border-amber-500/30">
+                    <h4 className="text-sm font-semibold text-amber-300 mb-3">📄 PAN Card</h4>
+                    {selectedDoc.pan_number && (
+                      <div className="mb-4">
+                        <p className="text-sm text-gray-400 mb-1">PAN Number</p>
+                        <p className="font-mono bg-gray-800 p-2 rounded text-white">{selectedDoc.pan_number}</p>
+                      </div>
+                    )}
                     {selectedDoc.pan_front && (
                       <div>
-                        <p className="text-sm text-gray-500 mb-2">PAN Card</p>
-                        <img src={selectedDoc.pan_front} alt="PAN Card" className="w-full max-w-sm rounded-lg border border-gray-700" />
+                        <p className="text-sm text-gray-400 mb-2">PAN Card Image</p>
+                        <img 
+                          src={selectedDoc.pan_front} 
+                          alt="PAN Card" 
+                          className="w-full max-w-md rounded-lg border border-gray-600 cursor-pointer hover:border-amber-400 transition-colors"
+                          onClick={() => window.open(selectedDoc.pan_front, '_blank')}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* No Documents Warning */}
+                {!selectedDoc.aadhaar_front && !selectedDoc.aadhaar_back && !selectedDoc.pan_front && !selectedDoc.aadhaar_number && !selectedDoc.pan_number && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                    <p className="text-amber-400 text-sm flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4" /> No documents uploaded by user
+                    </p>
+                  </div>
+                )}
                       </div>
                     )}
                     {!selectedDoc.pan_front && (
