@@ -30,6 +30,14 @@ const AdminBillPayments = ({ user }) => {
     fetchRequests();
   }, [user, navigate, filter]);
 
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchRequests();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
@@ -37,8 +45,11 @@ const AdminBillPayments = ({ user }) => {
 
   const fetchRequests = async () => {
     try {
-      const params = filter !== 'all' ? `?status=${filter}` : '';
-      const response = await axios.get(`${API}/api/admin/bill-payment/requests${params}`);
+      const params = new URLSearchParams();
+      if (filter !== 'all') params.append('status', filter);
+      if (searchTerm) params.append('search', searchTerm);
+      
+      const response = await axios.get(`${API}/api/admin/bill-payment/requests?${params.toString()}`);
       setRequests(response.data.requests || []);
       setStats(response.data.stats || {});
     } catch (error) {
