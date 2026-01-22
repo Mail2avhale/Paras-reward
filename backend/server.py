@@ -4710,6 +4710,15 @@ async def submit_subscription_payment(uid: str, request: Request):
     if duration not in SUBSCRIPTION_DURATIONS:
         raise HTTPException(status_code=400, detail="Invalid duration")
     
+    # Check if UTR number is unique
+    if utr_number:
+        utr_number = utr_number.strip().upper()
+        if not await check_unique_utr(utr_number):
+            raise HTTPException(
+                status_code=400, 
+                detail=f"UTR number '{utr_number}' आधीच वापरला गेला आहे. कृपया योग्य UTR number टाका."
+            )
+    
     now = datetime.now(timezone.utc)
     payment_id = str(uuid.uuid4())
     
