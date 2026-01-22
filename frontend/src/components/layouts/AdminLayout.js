@@ -18,6 +18,7 @@ const API = process.env.REACT_APP_BACKEND_URL;
 const MENU_TO_PERMISSION = {
   'dashboard': 'dashboard',
   'users': 'users',
+  'user-360': 'users',
   'user-controls': 'user_controls',
   'analytics': 'analytics',
   'kyc': 'kyc',
