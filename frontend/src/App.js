@@ -273,6 +273,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/financial-ratios" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminFinancialRatios user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/prc-economy" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><PRCEmergencyControls user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/user-controls" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminUserControls user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/user-360" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminUser360 user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/vip-plans" element={<Navigate to="/admin/subscriptions" replace />} /> {/* Legacy route redirect */}
             <Route path="/admin/burn-management" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminBurnDashboard user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/data-backup" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminDataBackup user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
