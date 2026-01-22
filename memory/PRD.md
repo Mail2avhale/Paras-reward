@@ -1063,9 +1063,11 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 - `/api/ai/chatbot` - AI chatbot
 - `/api/mining/status/{uid}` - Mining status with referral breakdown
 - `/api/referrals/{user_id}/levels` - Referral network
-- `/api/referral-earnings/{user_id}` - Detailed referral earnings history (NEW)
+- `/api/referral-earnings/{user_id}` - Detailed referral earnings history
 - `/api/global/live-activity` - Global activity feed
 - `/api/public/live-stats` - Platform statistics
+- `/api/admin/user-360?query=<search>` - User 360° View search (NEW)
+- `/api/admin/user-360/action` - User 360° View quick actions (NEW)
 
 ## Admin Credentials
 - Email: admin@paras.com
