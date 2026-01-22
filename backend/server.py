@@ -5272,7 +5272,7 @@ async def approve_vip_payment(payment_id: str, request: Request):
             }
         )
         
-        # Update payment status
+        # Update payment status with correction info
         await db.vip_payments.update_one(
             {"payment_id": payment_id},
             {
@@ -5282,7 +5282,13 @@ async def approve_vip_payment(payment_id: str, request: Request):
                     "approved_by": admin_id,
                     "admin_notes": notes,
                     "subscription_extended": start_date != now,
-                    "new_expiry": new_expiry
+                    "new_expiry": new_expiry,
+                    # Fraud prevention tracking
+                    "plan_corrected": plan_corrected,
+                    "original_plan_claimed": original_plan,
+                    "original_duration_claimed": original_duration,
+                    "actual_plan_approved": subscription_plan,
+                    "actual_duration_approved": plan_type
                 }
             }
         )
@@ -5297,7 +5303,7 @@ async def approve_vip_payment(payment_id: str, request: Request):
             upsert=True
         )
         
-        # Log activity
+        # Log activity with fraud prevention details
         await db.activity_logs.insert_one({
             "log_id": str(uuid.uuid4()),
             "action": "vip_payment_approved",
@@ -5307,6 +5313,8 @@ async def approve_vip_payment(payment_id: str, request: Request):
             "amount": payment.get("amount"),
             "plan_type": plan_type,
             "subscription_plan": subscription_plan,
+            "plan_corrected": plan_corrected,
+            "original_claimed": {"plan": original_plan, "duration": original_duration},
             "extended": start_date != now,
             "new_expiry": new_expiry,
             "timestamp": now.isoformat()
