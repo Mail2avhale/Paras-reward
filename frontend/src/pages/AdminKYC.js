@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,41 +7,146 @@ import { toast } from 'sonner';
 import Pagination from '@/components/Pagination';
 import {
   FileText, Search, CheckCircle, XCircle, Clock, User,
-  Eye, Download, AlertCircle, Filter, RefreshCw
+  Eye, Download, AlertCircle, Filter, RefreshCw, Loader2,
+  ChevronDown, ChevronUp, Image
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 const ITEMS_PER_PAGE = 10;
+const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
 
 const AdminKYC = ({ user }) => {
   const [kycDocuments, setKycDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('pending'); // Default to pending
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [stats, setStats] = useState({ pending: 0, verified: 0, rejected: 0 });
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+
+  // Fetch KYC documents
+  const fetchKYCDocuments = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API}/kyc/list`);
+      const docs = response.data || [];
+      setKycDocuments(docs);
+      
+      // Calculate stats
+      setStats({
+        pending: docs.filter(d => d.status === 'pending').length,
+        verified: docs.filter(d => d.status === 'verified').length,
+        rejected: docs.filter(d => d.status === 'rejected').length
+      });
+      setLastRefresh(new Date());
+    } catch (error) {
+      console.error('Error fetching KYC documents:', error);
+      toast.error('Failed to fetch KYC documents');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchKYCDocuments();
-  }, []);
+  }, [fetchKYCDocuments]);
+
+  // Auto-refresh for pending items
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const interval = setInterval(() => {
+      fetchKYCDocuments();
+    }, AUTO_REFRESH_INTERVAL);
+    return () => clearInterval(interval);
+  }, [autoRefresh, fetchKYCDocuments]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter]);
 
-  const fetchKYCDocuments = async () => {
+  // Sort and filter documents - Pending first
+  const sortedAndFilteredDocs = React.useMemo(() => {
+    let filtered = kycDocuments;
+
+    // Filter by status
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(doc => doc.status === statusFilter);
+    }
+
+    // Filter by search
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(doc =>
+        doc.user_id?.toLowerCase().includes(search) ||
+        doc.aadhaar_number?.toLowerCase().includes(search) ||
+        doc.pan_number?.toLowerCase().includes(search) ||
+        doc.user_name?.toLowerCase().includes(search) ||
+        doc.user_email?.toLowerCase().includes(search)
+      );
+    }
+
+    // Sort: Pending first, then by date (newest first)
+    return filtered.sort((a, b) => {
+      // Priority order: pending > verified > rejected
+      const statusOrder = { pending: 0, verified: 1, rejected: 2 };
+      const statusDiff = (statusOrder[a.status] || 3) - (statusOrder[b.status] || 3);
+      if (statusDiff !== 0) return statusDiff;
+      
+      // Then by date (newest first)
+      return new Date(b.submitted_at || 0) - new Date(a.submitted_at || 0);
+    });
+  }, [kycDocuments, statusFilter, searchTerm]);
+
+  // Pagination
+  const totalPages = Math.ceil(sortedAndFilteredDocs.length / ITEMS_PER_PAGE);
+  const paginatedDocs = sortedAndFilteredDocs.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Quick action handlers
+  const handleQuickApprove = async (doc, e) => {
+    e.stopPropagation();
+    if (!window.confirm(`Approve KYC for ${doc.user_name || doc.user_id}?`)) return;
+    
     try {
-      setLoading(true);
-      const response = await axios.get(`${API}/kyc/list`);
-      setKycDocuments(response.data || []);
+      setProcessing(true);
+      await axios.post(`${API}/kyc/${doc.kyc_id}/verify`, {
+        action: 'approve',
+        admin_id: user?.uid
+      });
+      toast.success('KYC Approved!');
+      fetchKYCDocuments();
     } catch (error) {
-      console.error('Error fetching KYC documents:', error);
-      toast.error('Failed to fetch KYC documents');
+      toast.error(error.response?.data?.detail || 'Failed to approve');
     } finally {
-      setLoading(false);
+      setProcessing(false);
+    }
+  };
+
+  const handleQuickReject = async (doc, e) => {
+    e.stopPropagation();
+    const reason = window.prompt('Rejection reason (optional):');
+    if (reason === null) return; // User cancelled
+    
+    try {
+      setProcessing(true);
+      await axios.post(`${API}/kyc/${doc.kyc_id}/verify`, {
+        action: 'reject',
+        admin_id: user?.uid,
+        notes: reason
+      });
+      toast.success('KYC Rejected');
+      fetchKYCDocuments();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to reject');
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -50,334 +155,339 @@ const AdminKYC = ({ user }) => {
       setProcessing(true);
       await axios.post(`${API}/kyc/${kycId}/verify`, {
         action,
-        admin_id: user?.uid,
-        note: action === 'approve' ? 'KYC verified by admin' : 'KYC rejected by admin'
+        admin_id: user?.uid
       });
       toast.success(`KYC ${action === 'approve' ? 'approved' : 'rejected'} successfully`);
       setSelectedDoc(null);
       fetchKYCDocuments();
     } catch (error) {
-      console.error('Error processing KYC:', error);
-      toast.error('Failed to process KYC');
+      toast.error(error.response?.data?.detail || 'Failed to update KYC status');
     } finally {
       setProcessing(false);
     }
   };
 
-  const filteredDocs = kycDocuments.filter(doc => {
-    const matchesSearch = 
-      doc.user_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.aadhaar_number?.includes(searchTerm) ||
-      doc.pan_number?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || doc.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  // Pagination
-  const totalPages = Math.ceil(filteredDocs.length / ITEMS_PER_PAGE);
-  const paginatedDocs = filteredDocs.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
-
   const getStatusBadge = (status) => {
-    switch (status) {
-      case 'verified':
-        return <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Verified</span>;
-      case 'rejected':
-        return <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center gap-1"><XCircle className="h-3 w-3" /> Rejected</span>;
-      default:
-        return <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> Pending</span>;
-    }
+    const badges = {
+      pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
+      verified: 'bg-green-500/20 text-green-400 border-green-500/50',
+      rejected: 'bg-red-500/20 text-red-400 border-red-500/50'
+    };
+    return badges[status] || 'bg-gray-500/20 text-gray-400';
   };
 
-  const stats = {
-    total: kycDocuments.length,
-    pending: kycDocuments.filter(d => d.status === 'pending').length,
-    verified: kycDocuments.filter(d => d.status === 'verified').length,
-    rejected: kycDocuments.filter(d => d.status === 'rejected').length
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   return (
-    <div className="p-4 lg:p-6">
+    <div className="p-4 md:p-6 bg-gray-950 min-h-screen">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">KYC Verification</h1>
-        <p className="text-gray-500">Review and verify user KYC documents</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <FileText className="w-7 h-7 text-blue-400" />
+            KYC Verification
+          </h1>
+          <p className="text-gray-400 text-sm mt-1">
+            Last updated: {lastRefresh.toLocaleTimeString()}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={fetchKYCDocuments}
+            variant="outline"
+            size="sm"
+            disabled={loading}
+            className="border-gray-700"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(e) => setAutoRefresh(e.target.checked)}
+              className="rounded border-gray-600"
+            />
+            Auto-refresh
+          </label>
+        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card className="p-4 bg-blue-500/10 border-blue-500/30">
-          <p className="text-xs text-blue-600">Total Submissions</p>
-          <p className="text-2xl font-bold text-blue-400">{stats.total}</p>
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <Card 
+          className={`p-4 cursor-pointer transition-all ${statusFilter === 'pending' ? 'ring-2 ring-yellow-500' : ''} bg-yellow-500/10 border-yellow-500/30`}
+          onClick={() => setStatusFilter('pending')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-yellow-400 text-sm font-medium">Pending</p>
+              <p className="text-3xl font-bold text-yellow-300">{stats.pending}</p>
+            </div>
+            <Clock className="w-10 h-10 text-yellow-500/50" />
+          </div>
         </Card>
-        <Card className="p-4 bg-yellow-500/10 border-yellow-500/30">
-          <p className="text-xs text-yellow-600">Pending Review</p>
-          <p className="text-2xl font-bold text-yellow-400">{stats.pending}</p>
+        <Card 
+          className={`p-4 cursor-pointer transition-all ${statusFilter === 'verified' ? 'ring-2 ring-green-500' : ''} bg-green-500/10 border-green-500/30`}
+          onClick={() => setStatusFilter('verified')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-400 text-sm font-medium">Verified</p>
+              <p className="text-3xl font-bold text-green-300">{stats.verified}</p>
+            </div>
+            <CheckCircle className="w-10 h-10 text-green-500/50" />
+          </div>
         </Card>
-        <Card className="p-4 bg-green-500/10 border-green-500/30">
-          <p className="text-xs text-green-600">Verified</p>
-          <p className="text-2xl font-bold text-green-400">{stats.verified}</p>
-        </Card>
-        <Card className="p-4 bg-red-500/10 border-red-500/30">
-          <p className="text-xs text-red-600">Rejected</p>
-          <p className="text-2xl font-bold text-red-400">{stats.rejected}</p>
+        <Card 
+          className={`p-4 cursor-pointer transition-all ${statusFilter === 'rejected' ? 'ring-2 ring-red-500' : ''} bg-red-500/10 border-red-500/30`}
+          onClick={() => setStatusFilter('rejected')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-red-400 text-sm font-medium">Rejected</p>
+              <p className="text-3xl font-bold text-red-300">{stats.rejected}</p>
+            </div>
+            <XCircle className="w-10 h-10 text-red-500/50" />
+          </div>
         </Card>
       </div>
 
       {/* Filters */}
-      <Card className="p-4 mb-6 bg-gray-900 border-gray-700">
+      <Card className="p-4 mb-6 bg-gray-900 border-gray-800">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <Input
-              placeholder="Search by user ID, Aadhaar or PAN..."
+              placeholder="Search by name, email, Aadhaar, PAN..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-gray-800 border-gray-700 text-white placeholder-gray-500"
+              className="pl-10 bg-gray-800 border-gray-700 text-white"
             />
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
-          >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="verified">Verified</option>
-            <option value="rejected">Rejected</option>
-          </select>
-          <Button onClick={fetchKYCDocuments} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" /> Refresh
-          </Button>
+          <div className="flex gap-2">
+            {['all', 'pending', 'verified', 'rejected'].map((status) => (
+              <Button
+                key={status}
+                variant={statusFilter === status ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter(status)}
+                className={statusFilter === status ? 'bg-blue-600' : 'border-gray-700 text-gray-300'}
+              >
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <div className="mt-2 text-sm text-gray-500">
+          Showing {paginatedDocs.length} of {sortedAndFilteredDocs.length} documents
         </div>
       </Card>
 
       {/* Documents List */}
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="text-gray-400 mt-4">Loading KYC documents...</p>
+      {loading && paginatedDocs.length === 0 ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
         </div>
-      ) : filteredDocs.length === 0 ? (
-        <Card className="p-12 text-center bg-gray-900 border-gray-700">
-          <FileText className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+      ) : paginatedDocs.length === 0 ? (
+        <Card className="p-12 text-center bg-gray-900 border-gray-800">
+          <FileText className="w-16 h-16 mx-auto text-gray-600 mb-4" />
           <p className="text-gray-400">No KYC documents found</p>
         </Card>
       ) : (
-        <>
-          <div className="grid gap-4">
-            {paginatedDocs.map((doc) => (
-              <Card key={doc.kyc_id} className="p-4 bg-gray-900 border-gray-700">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 bg-purple-500/20 rounded-lg">
-                      <User className="h-6 w-6 text-purple-400" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-white">{doc.user_name || 'Unknown User'}</p>
-                      <p className="text-sm text-gray-400">{doc.user_email || doc.user_id}</p>
-                      {doc.user_phone && (
-                        <p className="text-sm text-gray-500">📱 {doc.user_phone}</p>
-                      )}
-                      <p className="text-sm text-gray-500 mt-1">
-                        {(doc.aadhaar_front || doc.aadhaar_number) ? `Aadhaar: ${doc.aadhaar_number || 'Uploaded'}` : 
-                         (doc.pan_front || doc.pan_number) ? `PAN: ${doc.pan_number || 'Uploaded'}` : 
-                         'Document: Not specified'}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Submitted: {new Date(doc.submitted_at).toLocaleDateString()}
-                      </p>
+        <div className="space-y-3">
+          {paginatedDocs.map((doc) => (
+            <Card
+              key={doc.kyc_id}
+              className={`p-4 bg-gray-900 border-gray-800 hover:border-gray-700 transition-all cursor-pointer ${
+                doc.status === 'pending' ? 'border-l-4 border-l-yellow-500' : ''
+              }`}
+              onClick={() => setSelectedDoc(doc)}
+            >
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center">
+                    <User className="w-6 h-6 text-gray-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">{doc.user_name || 'Unknown User'}</p>
+                    <p className="text-sm text-gray-400">{doc.user_email || doc.user_id}</p>
+                    <div className="flex gap-4 mt-1 text-xs text-gray-500">
+                      {doc.aadhaar_number && <span>Aadhaar: •••• {doc.aadhaar_number.slice(-4)}</span>}
+                      {doc.pan_number && <span>PAN: {doc.pan_number}</span>}
                     </div>
                   </div>
+                </div>
+
                 <div className="flex items-center gap-3">
-                  {getStatusBadge(doc.status)}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    data-testid="kyc-view-button"
-                    className="border-gray-600 text-white hover:bg-gray-800"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      setSelectedDoc(doc);
-                    }}
-                  >
-                    <Eye className="h-4 w-4 mr-1" /> View
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(doc.status)}`}>
+                    {doc.status?.toUpperCase()}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {formatDate(doc.submitted_at)}
+                  </span>
+                  
+                  {/* Quick Actions for Pending */}
+                  {doc.status === 'pending' && (
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 h-8"
+                        onClick={(e) => handleQuickApprove(doc, e)}
+                        disabled={processing}
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="h-8"
+                        onClick={(e) => handleQuickReject(doc, e)}
+                        disabled={processing}
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                  
+                  <Button size="sm" variant="ghost" className="text-gray-400">
+                    <Eye className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
             </Card>
           ))}
-          </div>
-          
-          {/* Pagination */}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-6">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            totalItems={filteredDocs.length}
-            itemsPerPage={ITEMS_PER_PAGE}
             onPageChange={setCurrentPage}
           />
-        </>
+        </div>
       )}
 
       {/* Document Detail Modal */}
       {selectedDoc && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setSelectedDoc(null)}>
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700" onClick={(e) => e.stopPropagation()}>
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">KYC Document Details</h2>
-                <button onClick={() => setSelectedDoc(null)} className="text-gray-400 hover:text-white text-xl">
-                  ✕
-                </button>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedDoc(null)}>
+                  <XCircle className="w-5 h-5" />
+                </Button>
               </div>
 
-              <div className="space-y-4">
-                {/* User Information Section - FIXED COLORS */}
-                <div className="bg-purple-900/30 rounded-lg p-4 border border-purple-500/30">
-                  <h3 className="text-sm font-semibold text-purple-300 mb-3 flex items-center gap-2">
-                    <User className="w-4 h-4" /> User Information
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-purple-300/70">Name</p>
-                      <p className="font-medium text-white text-lg">{selectedDoc.user_name || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-purple-300/70">Email</p>
-                      <p className="font-medium text-white truncate">{selectedDoc.user_email || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-purple-300/70">Mobile</p>
-                      <p className="font-medium text-white">{selectedDoc.user_phone || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-purple-300/70">Location</p>
-                      <p className="font-medium text-white">
-                        {selectedDoc.user_city ? `${selectedDoc.user_city}, ${selectedDoc.user_state || ''}` : 'N/A'}
-                      </p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-xs text-purple-300/70">User ID</p>
-                      <p className="font-mono text-xs text-gray-400">{selectedDoc.user_id}</p>
-                    </div>
-                  </div>
+              {/* User Info */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <p className="text-gray-500 text-sm">Name</p>
+                  <p className="text-white font-medium">{selectedDoc.user_name || 'N/A'}</p>
                 </div>
-
-                {/* Document Status */}
-                <div className="grid grid-cols-3 gap-4 bg-gray-800/50 rounded-lg p-4">
-                  <div>
-                    <p className="text-sm text-gray-400">Status</p>
-                    {getStatusBadge(selectedDoc.status)}
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-400">Document Type</p>
-                    <p className="font-medium text-white capitalize">
-                      {selectedDoc.document_type || 
-                       (selectedDoc.aadhaar_front || selectedDoc.aadhaar_number ? 'Aadhaar' : 
-                        selectedDoc.pan_front || selectedDoc.pan_number ? 'PAN' : 'Not Specified')}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-400">Submitted</p>
-                    <p className="font-medium text-white">{new Date(selectedDoc.submitted_at).toLocaleString()}</p>
-                  </div>
+                <div>
+                  <p className="text-gray-500 text-sm">Email</p>
+                  <p className="text-white font-medium">{selectedDoc.user_email || 'N/A'}</p>
                 </div>
+                <div>
+                  <p className="text-gray-500 text-sm">Mobile</p>
+                  <p className="text-white font-medium">{selectedDoc.user_mobile || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm">Status</p>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(selectedDoc.status)}`}>
+                    {selectedDoc.status?.toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm">Aadhaar Number</p>
+                  <p className="text-white font-medium">{selectedDoc.aadhaar_number || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm">PAN Number</p>
+                  <p className="text-white font-medium">{selectedDoc.pan_number || 'N/A'}</p>
+                </div>
+              </div>
 
-                {/* Aadhaar Documents - SHOW IF HAS AADHAAR DATA */}
-                {(selectedDoc.aadhaar_front || selectedDoc.aadhaar_back || selectedDoc.aadhaar_number) && (
-                  <div className="bg-blue-900/20 rounded-lg p-4 border border-blue-500/30">
-                    <h4 className="text-sm font-semibold text-blue-300 mb-3">📄 Aadhaar Card</h4>
-                    {selectedDoc.aadhaar_number && (
-                      <div className="mb-4">
-                        <p className="text-sm text-gray-400 mb-1">Aadhaar Number</p>
-                        <p className="font-mono bg-gray-800 p-2 rounded text-white">{selectedDoc.aadhaar_number}</p>
-                      </div>
-                    )}
-                    <div className="grid grid-cols-2 gap-4">
-                      {selectedDoc.aadhaar_front && (
-                        <div>
-                          <p className="text-sm text-gray-400 mb-2">Front Side</p>
-                          <img 
-                            src={selectedDoc.aadhaar_front} 
-                            alt="Aadhaar Front" 
-                            className="w-full rounded-lg border border-gray-600 cursor-pointer hover:border-blue-400 transition-colors"
-                            onClick={() => window.open(selectedDoc.aadhaar_front, '_blank')}
-                          />
-                        </div>
-                      )}
-                      {selectedDoc.aadhaar_back && (
-                        <div>
-                          <p className="text-sm text-gray-400 mb-2">Back Side</p>
-                          <img 
-                            src={selectedDoc.aadhaar_back} 
-                            alt="Aadhaar Back" 
-                            className="w-full rounded-lg border border-gray-600 cursor-pointer hover:border-blue-400 transition-colors"
-                            onClick={() => window.open(selectedDoc.aadhaar_back, '_blank')}
-                          />
-                        </div>
-                      )}
+              {/* Documents */}
+              <div className="space-y-4 mb-6">
+                <h3 className="text-lg font-medium text-white">Documents</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {selectedDoc.aadhaar_front && (
+                    <div>
+                      <p className="text-gray-500 text-sm mb-2">Aadhaar Front</p>
+                      <img 
+                        src={selectedDoc.aadhaar_front} 
+                        alt="Aadhaar Front" 
+                        className="w-full rounded-lg border border-gray-700"
+                      />
                     </div>
-                  </div>
-                )}
-
-                {/* PAN Documents - SHOW IF HAS PAN DATA */}
-                {(selectedDoc.pan_front || selectedDoc.pan_number) && (
-                  <div className="bg-amber-900/20 rounded-lg p-4 border border-amber-500/30">
-                    <h4 className="text-sm font-semibold text-amber-300 mb-3">📄 PAN Card</h4>
-                    {selectedDoc.pan_number && (
-                      <div className="mb-4">
-                        <p className="text-sm text-gray-400 mb-1">PAN Number</p>
-                        <p className="font-mono bg-gray-800 p-2 rounded text-white">{selectedDoc.pan_number}</p>
-                      </div>
-                    )}
-                    {selectedDoc.pan_front && (
-                      <div>
-                        <p className="text-sm text-gray-400 mb-2">PAN Card Image</p>
-                        <img 
-                          src={selectedDoc.pan_front} 
-                          alt="PAN Card" 
-                          className="w-full max-w-md rounded-lg border border-gray-600 cursor-pointer hover:border-amber-400 transition-colors"
-                          onClick={() => window.open(selectedDoc.pan_front, '_blank')}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* No Documents Warning */}
-                {!selectedDoc.aadhaar_front && !selectedDoc.aadhaar_back && !selectedDoc.pan_front && !selectedDoc.aadhaar_number && !selectedDoc.pan_number && (
-                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
-                    <p className="text-amber-400 text-sm flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4" /> No documents uploaded by user
-                    </p>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                {selectedDoc.status === 'pending' && (
-                  <div className="flex gap-3 pt-4 border-t border-gray-700">
-                    <Button
-                      onClick={() => handleVerify(selectedDoc.kyc_id, 'approve')}
-                      disabled={processing}
-                      className="flex-1 bg-green-600 hover:bg-green-700"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" /> Approve
-                    </Button>
-                    <Button
-                      onClick={() => handleVerify(selectedDoc.kyc_id, 'reject')}
-                      disabled={processing}
-                      variant="destructive"
-                      className="flex-1"
-                    >
-                      <XCircle className="h-4 w-4 mr-2" /> Reject
-                    </Button>
+                  )}
+                  {selectedDoc.aadhaar_back && (
+                    <div>
+                      <p className="text-gray-500 text-sm mb-2">Aadhaar Back</p>
+                      <img 
+                        src={selectedDoc.aadhaar_back} 
+                        alt="Aadhaar Back" 
+                        className="w-full rounded-lg border border-gray-700"
+                      />
+                    </div>
+                  )}
+                  {selectedDoc.pan_front && (
+                    <div>
+                      <p className="text-gray-500 text-sm mb-2">PAN Card</p>
+                      <img 
+                        src={selectedDoc.pan_front} 
+                        alt="PAN Card" 
+                        className="w-full rounded-lg border border-gray-700"
+                      />
+                    </div>
+                  )}
+                </div>
+                {!selectedDoc.aadhaar_front && !selectedDoc.aadhaar_back && !selectedDoc.pan_front && (
+                  <div className="text-center py-8 bg-gray-800 rounded-lg">
+                    <Image className="w-12 h-12 mx-auto text-gray-600 mb-2" />
+                    <p className="text-gray-500">No document images available</p>
                   </div>
                 )}
               </div>
+
+              {/* Actions */}
+              {selectedDoc.status === 'pending' && (
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => handleVerify(selectedDoc.kyc_id, 'approve')}
+                    disabled={processing}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                    Approve KYC
+                  </Button>
+                  <Button
+                    onClick={() => handleVerify(selectedDoc.kyc_id, 'reject')}
+                    disabled={processing}
+                    variant="destructive"
+                    className="flex-1"
+                  >
+                    {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                    Reject KYC
+                  </Button>
+                </div>
+              )}
             </div>
           </Card>
         </div>
