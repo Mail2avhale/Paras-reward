@@ -5189,11 +5189,13 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
 
 @api_router.post("/admin/vip-payment/{payment_id}/approve")
 async def approve_vip_payment(payment_id: str, request: Request):
-    """Approve VIP payment and activate membership"""
+    """Approve VIP payment and activate membership with fraud prevention"""
     try:
         data = await request.json()
         admin_id = data.get("admin_id")
         notes = data.get("notes", "")
+        correct_plan = data.get("correct_plan")  # NEW: Admin can specify correct plan
+        correct_duration = data.get("correct_duration")  # NEW: Admin can specify correct duration
         
         # Get payment
         payment = await db.vip_payments.find_one({"payment_id": payment_id})
@@ -5204,7 +5206,16 @@ async def approve_vip_payment(payment_id: str, request: Request):
             raise HTTPException(status_code=400, detail="Payment already processed")
         
         user_id = payment.get("user_id")
-        plan_type = payment.get("plan_type")
+        
+        # Use corrected plan/duration if admin specified (fraud prevention)
+        original_plan = payment.get("subscription_plan", "startup")
+        original_duration = payment.get("plan_type", "monthly")
+        
+        subscription_plan = correct_plan if correct_plan else original_plan
+        plan_type = correct_duration if correct_duration else original_duration
+        
+        # Track if plan was corrected
+        plan_corrected = (correct_plan and correct_plan != original_plan) or (correct_duration and correct_duration != original_duration)
         
         # Calculate duration days
         now = datetime.now(timezone.utc)
