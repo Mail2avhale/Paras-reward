@@ -9462,11 +9462,41 @@ async def get_all_users(
     # Get users with sorting
     users = await db.users.find(query).sort(sort_field, sort_direction).skip(skip).limit(limit).to_list(length=limit)
     
-    # Remove sensitive data
+    # Remove sensitive data and add computed fields
     for user in users:
         user.pop("password_hash", None)
         user.pop("reset_token", None)
         user["_id"] = str(user["_id"])
+        
+        # Calculate total PRC redeemed for this user
+        uid = user.get("uid")
+        if uid:
+            total_redeemed = 0
+            
+            # From orders
+            orders = await db.orders.find(
+                {"user_id": uid, "status": {"$ne": "cancelled"}}, 
+                {"total_prc": 1, "prc_amount": 1}
+            ).to_list(500)
+            total_redeemed += sum(o.get("total_prc", 0) or o.get("prc_amount", 0) for o in orders)
+            
+            # From bill payments
+            bill_payments = await db.bill_payment_requests.find(
+                {"user_id": uid, "status": {"$in": ["approved", "completed"]}}, 
+                {"total_prc_deducted": 1}
+            ).to_list(500)
+            total_redeemed += sum(bp.get("total_prc_deducted", 0) for bp in bill_payments)
+            
+            # From gift vouchers
+            gift_vouchers = await db.gift_voucher_requests.find(
+                {"user_id": uid, "status": {"$in": ["approved", "completed"]}}, 
+                {"total_prc_deducted": 1}
+            ).to_list(500)
+            total_redeemed += sum(gv.get("total_prc_deducted", 0) for gv in gift_vouchers)
+            
+            user["total_redeemed"] = round(total_redeemed, 2)
+        else:
+            user["total_redeemed"] = 0
     
     return {
         "total": total,
