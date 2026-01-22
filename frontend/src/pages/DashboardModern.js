@@ -53,6 +53,7 @@ const DashboardModern = ({ user, onLogout }) => {
   const [stats, setStats] = useState({
     prcBalance: 0,
     totalMined: 0,
+    totalRedeemed: 0,  // NEW: Track total PRC redeemed
     referralCount: 0,
     membershipType: 'free',
     subscriptionPlan: 'explorer'
