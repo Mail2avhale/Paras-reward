@@ -25,7 +25,15 @@ const AdminOrders = ({ user }) => {
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [statusFilter]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchOrders();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -35,7 +43,12 @@ const AdminOrders = ({ user }) => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/admin/orders/all`);
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter);
+      params.append('limit', '500');
+      
+      const response = await axios.get(`${API}/admin/orders/all?${params.toString()}`);
       // API returns { orders: [], total: number, ... }
       setOrders(response.data?.orders || []);
     } catch (error) {
