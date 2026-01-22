@@ -191,15 +191,49 @@ const AdminSubscriptionManagement = ({ user }) => {
     }
   };
 
+  // Get expected plan from amount
+  const getExpectedPlanFromAmount = (amount) => {
+    if (!pricingReference?.amount_to_plan_map) return null;
+    return pricingReference.amount_to_plan_map[String(amount)];
+  };
+
+  // Check if payment amount matches claimed plan
+  const isPotentialFraud = (payment) => {
+    const expected = getExpectedPlanFromAmount(payment.amount);
+    if (!expected) return false;
+    return expected.plan !== payment.subscription_plan || expected.duration !== payment.plan_type;
+  };
+
   const handleApprovePayment = async (payment) => {
     try {
       setProcessing(true);
-      await axios.post(`${API}/api/admin/vip-payment/${payment.payment_id}/approve`, {
-        notes: actionNotes
-      });
-      toast.success('Payment approved! User subscription activated.');
+      
+      // Build request with fraud prevention data
+      const requestData = {
+        notes: actionNotes,
+        admin_id: user?.uid
+      };
+      
+      // If plan correction is enabled, add corrected values
+      if (showPlanCorrection && (correctPlan || correctDuration)) {
+        requestData.correct_plan = correctPlan || payment.subscription_plan;
+        requestData.correct_duration = correctDuration || payment.plan_type;
+      }
+      
+      await axios.post(`${API}/api/admin/vip-payment/${payment.payment_id}/approve`, requestData);
+      
+      if (showPlanCorrection && (correctPlan || correctDuration)) {
+        toast.success(`Payment approved with corrected plan: ${correctPlan || payment.subscription_plan} (${correctDuration || payment.plan_type})`);
+      } else {
+        toast.success('Payment approved! User subscription activated.');
+      }
+      
+      // Reset state
       setSelectedPayment(null);
       setActionNotes('');
+      setCorrectPlan('');
+      setCorrectDuration('');
+      setShowPlanCorrection(false);
       fetchPayments();
       fetchStats();
     } catch (error) {
@@ -218,6 +252,9 @@ const AdminSubscriptionManagement = ({ user }) => {
       toast.success('Payment rejected');
       setSelectedPayment(null);
       setActionNotes('');
+      setCorrectPlan('');
+      setCorrectDuration('');
+      setShowPlanCorrection(false);
       fetchPayments();
       fetchStats();
     } catch (error) {
