@@ -9998,8 +9998,8 @@ async def get_user_360_view(query: str):
             "created_at": act.get("created_at") or act.get("timestamp")
         })
     
-    # Sort by date
-    activity.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    # Sort by date (handle None values)
+    activity.sort(key=lambda x: x.get("created_at") or "1970-01-01", reverse=True)
     
     # ========== KYC INFORMATION ==========
     kyc_docs = await db.kyc_documents.find_one({"user_id": uid}, {"_id": 0})
