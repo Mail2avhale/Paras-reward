@@ -5115,6 +5115,17 @@ async def downgrade_subscription(uid: str, request: Request):
 @api_router.post("/membership/payment/{uid}", response_model=VIPPayment)
 async def submit_vip_payment(uid: str, payment: VIPPaymentCreate):
     """Submit VIP payment for verification"""
+    
+    # Check if UTR number is unique
+    if payment.utr_number:
+        utr_clean = payment.utr_number.strip().upper()
+        if not await check_unique_utr(utr_clean):
+            raise HTTPException(
+                status_code=400, 
+                detail=f"UTR number '{utr_clean}' आधीच वापरला गेला आहे. कृपया योग्य UTR number टाका."
+            )
+        payment.utr_number = utr_clean
+    
     vip_payment = VIPPayment(
         user_id=uid,
         amount=payment.amount,
