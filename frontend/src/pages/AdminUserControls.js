@@ -80,7 +80,7 @@ const AdminUserControls = () => {
   ];
 
   useEffect(() => {
-    fetchUsers();
+    // Initial fetch moved to debounced search effect
   }, []);
 
   useEffect(() => {
