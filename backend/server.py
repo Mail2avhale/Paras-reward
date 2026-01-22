@@ -9819,6 +9819,340 @@ async def get_user_details(uid: str):
     
     return user
 
+# ========== USER 360° VIEW - COMPREHENSIVE ADMIN ANALYTICS ==========
+
+@api_router.get("/admin/user-360")
+async def get_user_360_view(query: str):
+    """
+    Get comprehensive 360° view of a user for admin analytics.
+    Search by: email, mobile, Aadhaar (last 4 digits), PAN, UID, or referral code.
+    Returns: user profile, financial summary, referral network, all transactions, and activity timeline.
+    """
+    if not query or len(query.strip()) < 2:
+        raise HTTPException(status_code=400, detail="Search query too short")
+    
+    query = query.strip()
+    
+    # Build search query for multiple identifiers
+    search_conditions = [
+        {"email": {"$regex": f"^{query}$", "$options": "i"}},
+        {"mobile": query},
+        {"uid": query},
+        {"referral_code": {"$regex": f"^{query}$", "$options": "i"}},
+        {"pan_number": {"$regex": f"^{query}$", "$options": "i"}}
+    ]
+    
+    # For Aadhaar, search by last 4 digits
+    if query.isdigit() and len(query) == 4:
+        search_conditions.append({"aadhaar_number": {"$regex": f"{query}$"}})
+    elif len(query) == 12 and query.isdigit():
+        search_conditions.append({"aadhaar_number": query})
+    
+    # Find user
+    user = await db.users.find_one({"$or": search_conditions})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    uid = user["uid"]
+    
+    # Remove sensitive data from user
+    user.pop("password_hash", None)
+    user.pop("reset_token", None)
+    user.pop("_id", None)
+    
+    # ========== FINANCIAL STATS ==========
+    # Calculate total mined
+    total_mined_result = await db.transactions.aggregate([
+        {"$match": {"user_id": uid, "type": {"$in": ["mining", "tap_game", "referral", "admin_credit", "prc_rain_gain"]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]).to_list(1)
+    total_mined = total_mined_result[0]["total"] if total_mined_result else 0
+    
+    # Calculate total redeemed (spent)
+    total_redeemed_result = await db.transactions.aggregate([
+        {"$match": {"user_id": uid, "type": {"$in": ["order", "bill_payment_request", "gift_voucher_request", "prc_burn", "prc_rain_loss"]}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+    ]).to_list(1)
+    total_redeemed = total_redeemed_result[0]["total"] if total_redeemed_result else 0
+    
+    stats = {
+        "total_mined": round(total_mined, 2),
+        "total_redeemed": round(total_redeemed, 2),
+        "net_balance": round(user.get("prc_balance", 0), 2)
+    }
+    
+    # ========== REFERRAL NETWORK ==========
+    # Get who referred this user
+    referred_by_name = None
+    if user.get("referred_by"):
+        referrer = await db.users.find_one({"uid": user["referred_by"]}, {"_id": 0, "name": 1, "email": 1})
+        if referrer:
+            referred_by_name = referrer.get("name") or referrer.get("email", "").split("@")[0]
+    
+    # Get direct referrals
+    referrals = await db.users.find(
+        {"referred_by": uid},
+        {"_id": 0, "uid": 1, "name": 1, "email": 1, "created_at": 1, "mining_active": 1}
+    ).sort("created_at", -1).limit(50).to_list(50)
+    
+    # Count active referrals (users who have mining_active or have mined recently)
+    active_referrals = 0
+    for ref in referrals:
+        if ref.get("mining_active"):
+            active_referrals += 1
+        else:
+            # Check if they have any recent activity (last 7 days)
+            recent_activity = await db.transactions.find_one({
+                "user_id": ref["uid"],
+                "created_at": {"$gte": (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()}
+            })
+            if recent_activity:
+                active_referrals += 1
+    
+    # Calculate referral earnings
+    referral_earnings_result = await db.transactions.aggregate([
+        {"$match": {"user_id": uid, "type": "referral"}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]).to_list(1)
+    referral_earnings = referral_earnings_result[0]["total"] if referral_earnings_result else 0
+    
+    referral_data = {
+        "referred_by_name": referred_by_name,
+        "total_referrals": len(referrals),
+        "active_referrals": active_referrals,
+        "total_earnings": round(referral_earnings, 2),
+        "referrals": referrals[:10]  # First 10 referrals
+    }
+    
+    # ========== TRANSACTIONS HISTORY ==========
+    # Orders (Marketplace)
+    orders = await db.orders.find(
+        {"user_id": uid},
+        {"_id": 0, "order_id": 1, "total_prc": 1, "prc_amount": 1, "status": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    
+    # Bill Payments
+    bill_payments = await db.bill_payment_requests.find(
+        {"user_id": uid},
+        {"_id": 0, "request_id": 1, "request_type": 1, "amount_inr": 1, "total_prc_deducted": 1, "status": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    
+    # Gift Vouchers
+    gift_vouchers = await db.gift_voucher_requests.find(
+        {"user_id": uid},
+        {"_id": 0, "request_id": 1, "denomination": 1, "total_prc_deducted": 1, "status": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    
+    # Subscriptions
+    subscriptions = await db.subscriptions.find(
+        {"user_id": uid},
+        {"_id": 0, "payment_id": 1, "subscription_plan": 1, "plan_type": 1, "amount": 1, "status": 1, "submitted_at": 1}
+    ).sort("submitted_at", -1).limit(20).to_list(20)
+    
+    # Also check vip_subscriptions collection
+    vip_subscriptions = await db.vip_subscriptions.find(
+        {"user_id": uid},
+        {"_id": 0, "payment_id": 1, "subscription_plan": 1, "plan_type": 1, "amount": 1, "status": 1, "submitted_at": 1}
+    ).sort("submitted_at", -1).limit(20).to_list(20)
+    
+    # Merge subscription lists
+    all_subscriptions = subscriptions + vip_subscriptions
+    all_subscriptions.sort(key=lambda x: x.get("submitted_at", ""), reverse=True)
+    
+    transactions = {
+        "orders": orders,
+        "bill_payments": bill_payments,
+        "gift_vouchers": gift_vouchers,
+        "subscriptions": all_subscriptions[:20]
+    }
+    
+    # ========== ACTIVITY TIMELINE ==========
+    # Get recent transactions as activity
+    recent_transactions = await db.transactions.find(
+        {"user_id": uid},
+        {"_id": 0, "type": 1, "amount": 1, "description": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(30).to_list(30)
+    
+    # Get recent activity logs
+    recent_activities = await db.activity_logs.find(
+        {"user_id": uid},
+        {"_id": 0, "action_type": 1, "description": 1, "created_at": 1, "timestamp": 1}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    
+    # Merge and format activity
+    activity = []
+    for txn in recent_transactions:
+        activity.append({
+            "type": "transaction",
+            "action_type": txn.get("type"),
+            "description": f"{txn.get('type', 'Transaction').replace('_', ' ').title()}: {txn.get('amount', 0)} PRC",
+            "created_at": txn.get("created_at")
+        })
+    
+    for act in recent_activities:
+        activity.append({
+            "type": "activity",
+            "action_type": act.get("action_type"),
+            "description": act.get("description", act.get("action_type", "Activity")),
+            "created_at": act.get("created_at") or act.get("timestamp")
+        })
+    
+    # Sort by date
+    activity.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    
+    # ========== KYC INFORMATION ==========
+    kyc_docs = await db.kyc_documents.find_one({"user_id": uid}, {"_id": 0})
+    
+    return {
+        "user": user,
+        "stats": stats,
+        "referral": referral_data,
+        "transactions": transactions,
+        "activity": activity[:30],
+        "kyc": kyc_docs
+    }
+
+
+@api_router.post("/admin/user-360/action")
+async def user_360_quick_action(request: Request):
+    """
+    Perform quick admin actions on a user from the 360° view.
+    Actions: pause_mining, resume_mining, adjust_balance, set_cap, reset_password, send_notification, block_user, save_notes
+    """
+    data = await request.json()
+    user_id = data.get("user_id")
+    action = data.get("action")
+    admin_id = data.get("admin_id")
+    
+    if not user_id or not action:
+        raise HTTPException(status_code=400, detail="user_id and action are required")
+    
+    # Get user
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    now = datetime.now(timezone.utc)
+    result_message = ""
+    
+    if action == "pause_mining":
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {"mining_active": False, "updated_at": now.isoformat()}}
+        )
+        result_message = "Mining paused for user"
+        
+    elif action == "resume_mining":
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {"mining_active": True, "updated_at": now.isoformat()}}
+        )
+        result_message = "Mining resumed for user"
+        
+    elif action == "adjust_balance":
+        amount = data.get("amount", 0)
+        if amount == 0:
+            raise HTTPException(status_code=400, detail="Amount cannot be zero")
+        
+        current_balance = user.get("prc_balance", 0)
+        new_balance = current_balance + amount
+        
+        if new_balance < 0:
+            new_balance = 0
+        
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {"prc_balance": new_balance, "updated_at": now.isoformat()}}
+        )
+        
+        # Log the adjustment
+        await db.transactions.insert_one({
+            "transaction_id": f"TXN-{now.strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}",
+            "user_id": user_id,
+            "wallet_type": "prc",
+            "type": "admin_credit" if amount > 0 else "admin_debit",
+            "amount": amount,
+            "balance_before": current_balance,
+            "balance_after": new_balance,
+            "description": f"Admin adjustment: {'+' if amount > 0 else ''}{amount} PRC",
+            "status": "completed",
+            "created_at": now.isoformat(),
+            "metadata": {"adjusted_by": admin_id}
+        })
+        
+        result_message = f"Balance adjusted by {amount} PRC. New balance: {new_balance} PRC"
+        
+    elif action == "set_cap":
+        cap = data.get("cap", 0)
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {"daily_prc_cap": cap, "updated_at": now.isoformat()}}
+        )
+        result_message = f"Daily PRC cap set to {cap}" if cap > 0 else "Daily PRC cap removed (unlimited)"
+        
+    elif action == "reset_password":
+        # Generate a temporary password reset token
+        reset_token = str(uuid.uuid4())
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {"reset_token": reset_token, "updated_at": now.isoformat()}}
+        )
+        result_message = "Password reset initiated. User will need to use forgot password flow."
+        
+    elif action == "send_notification":
+        message = data.get("message", "")
+        if not message:
+            raise HTTPException(status_code=400, detail="Notification message is required")
+        
+        await db.notifications.insert_one({
+            "notification_id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "type": "admin",
+            "title": "Admin Message",
+            "message": message,
+            "is_read": False,
+            "created_at": now.isoformat()
+        })
+        result_message = "Notification sent to user"
+        
+    elif action == "block_user":
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {
+                "is_active": False,
+                "is_blocked": True,
+                "blocked_at": now.isoformat(),
+                "blocked_by": admin_id,
+                "updated_at": now.isoformat()
+            }}
+        )
+        result_message = "User has been blocked"
+        
+    elif action == "save_notes":
+        notes = data.get("notes", "")
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {"admin_notes": notes, "updated_at": now.isoformat()}}
+        )
+        result_message = "Admin notes saved"
+        
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown action: {action}")
+    
+    # Log admin action
+    await db.admin_audit_logs.insert_one({
+        "log_id": str(uuid.uuid4()),
+        "admin_id": admin_id,
+        "action": f"user_360_{action}",
+        "target_user_id": user_id,
+        "details": data,
+        "timestamp": now.isoformat()
+    })
+    
+    return {"success": True, "message": result_message}
+
+
 # ========== VIP MEMBERSHIP & PAYMENT CONFIGURATION ==========
 
 @api_router.get("/vip/payment-config")
