@@ -204,6 +204,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             
             {/* Protected Routes */}
             <Route path="/dashboard" element={user ? <DashboardModern user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/fintech" element={user ? <HomeFintech user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/support" element={user ? <SupportTickets user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/daily-rewards" element={user ? <DailyRewards user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/mining" element={<Navigate to="/daily-rewards" />} /> {/* Redirect old route */}
