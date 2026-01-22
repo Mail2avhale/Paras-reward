@@ -31182,6 +31182,50 @@ async def initialize_database_indexes():
     except Exception as e:
         print(f"⚠️  Mobile index setup: {e}")
     
+    # Aadhaar number index - sparse to allow null values, unique to prevent duplicates
+    try:
+        existing_indexes = await db.users.index_information()
+        if "aadhaar_number_1" not in existing_indexes:
+            await db.users.create_index("aadhaar_number", unique=True, sparse=True)
+            print("✅ Created sparse unique Aadhaar number index")
+        else:
+            print("✅ Aadhaar number index already exists")
+    except Exception as e:
+        print(f"⚠️  Aadhaar number index setup: {e}")
+    
+    # PAN number index - sparse to allow null values, unique to prevent duplicates
+    try:
+        existing_indexes = await db.users.index_information()
+        if "pan_number_1" not in existing_indexes:
+            await db.users.create_index("pan_number", unique=True, sparse=True)
+            print("✅ Created sparse unique PAN number index")
+        else:
+            print("✅ PAN number index already exists")
+    except Exception as e:
+        print(f"⚠️  PAN number index setup: {e}")
+    
+    # UTR number index on subscriptions - unique to prevent duplicate payments
+    try:
+        existing_indexes = await db.subscriptions.index_information()
+        if "utr_number_1" not in existing_indexes:
+            await db.subscriptions.create_index("utr_number", unique=True, sparse=True)
+            print("✅ Created sparse unique UTR number index on subscriptions")
+        else:
+            print("✅ UTR number index already exists on subscriptions")
+    except Exception as e:
+        print(f"⚠️  UTR number index setup (subscriptions): {e}")
+    
+    # UTR number index on vip_subscriptions - unique to prevent duplicate payments
+    try:
+        existing_indexes = await db.vip_subscriptions.index_information()
+        if "utr_number_1" not in existing_indexes:
+            await db.vip_subscriptions.create_index("utr_number", unique=True, sparse=True)
+            print("✅ Created sparse unique UTR number index on vip_subscriptions")
+        else:
+            print("✅ UTR number index already exists on vip_subscriptions")
+    except Exception as e:
+        print(f"⚠️  UTR number index setup (vip_subscriptions): {e}")
+    
     # Video ads indexes
     try:
         await db.video_ads.create_index("video_ad_id", unique=True)
