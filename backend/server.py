@@ -18960,7 +18960,8 @@ async def get_user_bill_payment_requests(user_id: str):
 @api_router.get("/admin/bill-payment/requests")
 async def get_all_bill_payment_requests(
     status: Optional[str] = None,
-    request_type: Optional[str] = None
+    request_type: Optional[str] = None,
+    search: Optional[str] = None
 ):
     """Get all bill payment requests (Admin only)"""
     query = {}
@@ -18969,6 +18970,16 @@ async def get_all_bill_payment_requests(
         query["status"] = status
     if request_type:
         query["request_type"] = request_type
+    
+    # Search by user_id, mobile, or request_id
+    if search:
+        query["$or"] = [
+            {"user_id": {"$regex": search, "$options": "i"}},
+            {"user_mobile": {"$regex": search, "$options": "i"}},
+            {"user_email": {"$regex": search, "$options": "i"}},
+            {"user_name": {"$regex": search, "$options": "i"}},
+            {"request_id": {"$regex": search, "$options": "i"}}
+        ]
     
     requests = await db.bill_payment_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
     
