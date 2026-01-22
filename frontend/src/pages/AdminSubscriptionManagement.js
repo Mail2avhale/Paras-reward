@@ -182,14 +182,23 @@ const AdminSubscriptionManagement = ({ user }) => {
     }
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (searchTerm = '') => {
     try {
-      const response = await axios.get(`${API}/api/admin/users?limit=100`);
+      const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
+      const response = await axios.get(`${API}/api/admin/users?limit=500${searchParam}`);
       setUsers(response.data.users || response.data || []);
     } catch (error) {
       console.error('Error fetching users:', error);
     }
   };
+
+  // Debounced server-side user search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchUsers(userSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [userSearch]);
 
   // Get expected plan from amount
   const getExpectedPlanFromAmount = (amount) => {
