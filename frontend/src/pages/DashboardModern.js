@@ -98,6 +98,7 @@ const DashboardModern = ({ user, onLogout }) => {
         setStats({
           prcBalance: fetchedUserData.prc_balance || 0,
           totalMined: fetchedUserData.total_mined || 0,
+          totalRedeemed: fetchedUserData.total_redeemed || 0,
           referralCount: fetchedUserData.referral_count || 0,
           membershipType: fetchedUserData.membership_type || 'free',
           subscriptionPlan: fetchedUserData.subscription_plan || 'explorer'
@@ -108,6 +109,7 @@ const DashboardModern = ({ user, onLogout }) => {
         setStats({
           prcBalance: user.prc_balance || 0,
           totalMined: user.total_mined || 0,
+          totalRedeemed: user.total_redeemed || 0,
           referralCount: user.referral_count || 0,
           membershipType: user.membership_type || 'free',
           subscriptionPlan: user.subscription_plan || 'explorer'
