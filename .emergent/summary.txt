@@ -1,115 +1,134 @@
 <analysis>**original_problem_statement:**
-The user's primary goal is to enhance their social rewards platform by fixing critical bugs and implementing new features. The session began with addressing a critical bug from a previous handoff where active users were showing as Inactive in the referral list. Throughout the session, the user reported several more issues and requested new features, including:
+The user's primary goal is to enhance their social rewards platform by fixing critical bugs and implementing new features. The session started with cleaning up old code and then moved to a critical bug where users' PRC balances were becoming negative after redemptions. This was a multi-layered problem involving race conditions and double deductions.
 
-1.  **Critical Bug: Active Referral Status (P0)**: The user confirmed via screenshots that the bug where users with active mining sessions appear as Inactive persists on their production app. This remained the highest priority issue and was addressed multiple times with increasingly robust logic.
-2.  **New Active Referral Logic**: The user proposed a new, more comprehensive definition for an active referral: a user is active if they have an active mining session, OR have collected a bonus in the last 24 hours, OR have played the Tap/Rain game in the last 24 hours.
-3.  **UI/UX & Routing Confusion**: The user was confused about the Invite Friends Hub routing and requested the AI Referral Coach be added to the main referrals page. They also pointed out the agent was editing an old dashboard file () instead of the correct one ().
-4.  **Admin Page Bugs**: The user reported multiple bugs across admin pages:
-    *   **Admin KYC**: User details and document images were not visible in the review modal. A follow-up report indicated bad color contrast and that documents were still not showing.
-    *   **Admin Subscriptions**: The Review button was incorrectly navigating to the dashboard instead of opening a modal, and user details were missing.
-    *   **Global Admin Dark Theme**: The user reported that the dark theme was broken across all admin pages (text color, background, buttons).
-5.  **New Bugs**: The user reported three new issues: a clipboard API error when sharing, the live activity feed showing self activity, and the user search in the messages page not working as expected.
-6.  **Dashboard Redesign**: The user requested a redesign of their main dashboard (), asking to move the activity feeds to a separate page and add new Services cards for Bill Payments, Gift Vouchers, and Shopping.
-7.  **Code Cleanup**: The user requested that old and unused code be identified and removed from the codebase.
+Throughout the session, the user also requested:
+1.  **Code Cleanup**: Removal of old, unused dashboard files and the entire Scratch Card feature.
+2.  **Data Integrity**: Implementation of strict, system-wide duplicate entry prevention for unique fields like Aadhaar, PAN, and UTR numbers.
+3.  **Fraud Prevention**: An admin feature to detect when a user pays for a cheap subscription but requests a more expensive one, allowing the admin to approve the correct plan based on the amount paid.
+4.  **UI/UX & Bug Fixes**:
+    *   Fixing non-functional search bars across multiple admin pages.
+    *   A complete overhaul of the admin workflow for KYC, Bill Payments, and Gift Vouchers to include pagination, status sorting, quick actions, and stats dashboards.
+    *   Fixing a broken route for the Fintech page.
+5.  **New Features**:
+    *   Displaying the total PRC a user has redeemed on their main dashboard's credit card view.
+    *   Adding a Redeemed PRC column to the admin user list.
+    *   A major new feature: a comprehensive **User 360° View** page in the admin panel to see all of a user's data and activity in one place.
+6.  **Clarification**: The user asked about the platform's scalability to handle future growth.
 
 **User's preferred language**: The user communicates in a mix of English and Marathi. The next agent **MUST** start all responses with  and then continue the technical explanation in English.
 
 **what currently exists?**
-The application is a full-stack social rewards platform (React/FastAPI/MongoDB). Significant progress was made in this session:
--   **Comprehensive Active Referral Fix**: A new, centralized helper function  was created in . This function implements the user's new 3-tier logic (active session OR recent bonus collection OR recent game activity) and is now used consistently across all relevant APIs, including referral stats, referral levels, and mining rate calculations.
--   **Dashboard Redesign**: The  page has been updated. The old activity feeds were removed and placed into a new, dedicated page at  (accessible via the  route). The dashboard now features a new Services section with styled cards for Bill Payments, Gift Vouchers, and Shopping.
--   **Admin Pages Fixed**:
-    *   **Admin KYC**: The backend API now provides full user details. The frontend modal has been completely reworked to correctly display user info and document images (Aadhaar/PAN), with improved UI/UX and dark theme colors. The fix was verified by the testing agent.
-    *   **Admin Subscriptions**: A navigation bug was fixed, and the review modal now correctly displays comprehensive user and payment details.
--   **User-Facing Bugs Fixed**:
-    *   **Message Search**: The  page now has a debounced user search that allows starting new conversations with any user on the platform.
-    *   **Clipboard API**: A fallback was added to the copy-to-clipboard function to prevent errors.
--   **Code & Theme Standardization**:
-    *   A code cleanup was performed, removing over 260KB of old backup files and several duplicate/unused API routes from .
-    *   A systematic solution for the Admin dark theme was created via a new  file and modifications to , with  updated as a template for the fix.
+The application is a full-stack social rewards platform (React/FastAPI/MongoDB). The session successfully resolved several critical issues and added multiple features:
+
+*   **Negative Balance Bug FIXED**: A multi-stage fix was implemented to resolve PRC balances becoming negative.
+    1.  **Race Condition Fix**: All PRC deduction operations were converted to use atomic  with conditional balance checks () to prevent race conditions during concurrent transactions (e.g., marketplace orders, PRC rain game).
+    2.  **Double Deduction Fix**: A  parameter was added to the core  function to prevent the balance from being deducted twice when an endpoint performed its own atomic update and also logged the transaction.
+    3.  **Admin Tool**: A new endpoint () and a corresponding button in the admin UI were created to reset all existing negative balances to zero.
+*   **Code Cleanup**: The Scratch Card feature was completely removed from the frontend and backend. Old, unused dashboard files (, , ) were deleted.
+*   **Unique Field Validation**: Robust duplicate entry prevention was added at both the database level (using unique partial indexes for Aadhaar/PAN) and the API level for user profiles, KYC, and subscription payments. An admin endpoint was added to report existing duplicates.
+*   **Admin Workflow Overhaul**:
+    *   **Search Fixed**: Non-functional, client-side search bars on several admin pages (, , , ) were replaced with debounced, server-side search functionality.
+    *   **New Admin UI Pattern**: Key pages (, , ) were refactored with a new, unified design featuring stats cards, auto-refresh, quick actions, server-side pagination, and improved status sorting.
+    *   **Fraud Prevention**: The subscription management modal now automatically detects and flags payment amount mismatches, allowing admins to approve the correct plan. The modal was also enhanced with more user details (join date, order history, KYC status) to aid decision-making.
+*   **Feature Additions**:
+    *   The user's dashboard credit card now displays their Total Redeemed PRC.
+    *   The admin user list now includes a Redeemed PRC column.
+*   **Routing Fix**: The route for the  page was correctly added to .
 
 **Last working item**:
--   **Last item agent was working**: Redesigning the user dashboard () by removing activity feeds and adding new service cards (Bill Payments, Gift Vouchers, Shop). A new page () was created for the activity feeds and a link was added to the sidebar menu.
--   **Status**: USER VERIFICATION PENDING
--   **Agent Testing Done**: Y (The agent successfully implemented the changes and verified the new dashboard layout with screenshots after working around a persistent modal issue.)
--   **Which testing method agent to use?**: manual testing by user. The user needs to deploy the application and confirm the new dashboard looks correct and that the Activity link in the sidebar works.
+-   **Last item agent was working**: Implementing the **User 360° View** feature. The agent had just started this major task by creating the new frontend page component.
+-   **Status**: IN PROGRESS
+-   **Agent Testing Done**: N
+-   **Which testing method agent to use?**: both. This is a large feature requiring a new backend API and a complex frontend page. Once the initial implementation is complete, the  should be used to verify both the API and the UI components.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   Issue 1: Active referral status shows Inactive for active mining users (P0)
--   Issue 2: Apply Dark Theme fix across all Admin pages (P1)
--   Issue 3: Verify Subscription Extend Logic (P1)
--   Issue 4: KYC Document Upload Functionality on Mobile (P1)
--   Issue 5: Pagination Verification on History Pages (P2)
--   Issue 6: Refactor  checks (P2)
+-   **Issue 1: User-facing search bar functionality (P1)**
+-   **Issue 2: Active referral status shows Inactive for active mining users (P0 - from previous handoff)**
+-   **Issue 3: Apply Dark Theme fix across all Admin pages (P1 - from previous handoff)**
+-   **Issue 4: Verify Subscription Extend Logic (P1 - from previous handoff)**
+-   **Issue 5: KYC Document Upload Functionality on Mobile (P1 - from previous handoff)**
 
 **Issues Detail:**
--   **Issue 1: Active referral status shows Inactive for active mining users**
-    -   **Attempted fixes**: This was the main focus of the session. The final and most robust fix involved creating a new helper function  in . This function implements the user's requested 3-tier logic (active mining session OR bonus collected in last 24h OR game played in last 24h). This logic was then applied consistently to all functions and endpoints that calculate active status (, ,  etc.).
+-   **Issue 1: User-facing search bar functionality**
+    -   **Description**: The user reported User view मध्ये pn search bar activate nahi (Search bar not active in user view). The agent asked for clarification on which page but did not receive a specific answer before moving to other tasks. Admin search bars were fixed, but this user-facing issue remains uninvestigated.
     -   **Next debug checklist**:
-        1.  **Crucially, confirm with the user that they have deployed the latest code changes to their production server.** The bug will persist until they do.
-        2.  If the issue is still present after deployment, guide the user to run the updated diagnostic command on their production server for an affected user (e.g., ): .
-        3.  Ask the user to share the console output. The new response includes an  object that shows the status of each of the three conditions, which will pinpoint the exact reason for the user's status.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical bug impacting the core referral and mining bonus system. Fixing it will ensure users receive the correct mining speed and trust the platform's data.
+        1.  Ask the user to specify which user-facing page has a broken search bar (e.g., Marketplace, Messages, Network Feed).
+        2.  Request a screenshot if possible.
+        3.  Investigate the specified page's component to check if it's using a faulty client-side search on paginated data, similar to the admin pages that were fixed.
+        4.  Implement server-side search if necessary.
+    -   **Why fix this issue and what will be achieved with the fix?**: A non-functional search bar severely degrades user experience and makes it difficult for users to find content or other users.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: Y (Similar issue was fixed on admin pages).
+    -   **Should Test frontend/backend/both after fix?**: both
+    -   **Blocked on other issue**: None
+
+-   **Issue 2: Active referral status shows Inactive for active mining users**
+    -   **Description**: This is a critical P0 carry-over from the previous session. A comprehensive backend fix was implemented, but it requires the user to deploy the code and verify. This has not been confirmed yet.
+    -   **Next debug checklist**:
+        1.  Confirm with the user if they have deployed the latest code changes to their production server.
+        2.  If the issue persists post-deployment, guide them to use the debug endpoint  and share the output.
     -   **Status**: USER VERIFICATION PENDING
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: backend
     -   **Blocked on other issue**: None
 
--   **Issue 2: Apply Dark Theme fix across all Admin pages**
-    -   **Description**: The user reported that the dark theme is broken across all ~47 admin pages. A centralized fix has been created ( and ), and  was updated as a proof-of-concept. The fix now needs to be applied to the remaining admin pages.
-    -   **Next debug checklist**:
-        1.  Ask the user to prioritize which admin pages they want fixed first.
-        2.  For each page, apply the standardized dark theme classes to , , , and  components as documented in the previous session.
-    -   **Status**: NOT STARTED (The framework is ready, but the rollout is pending).
-    -   **Should Test frontend/backend/both after fix?**: frontend
-
--   **Issue 3, 4, 5, 6**: These are lower-priority issues carried over from a previous handoff, still awaiting user verification or prioritization.
+-   **Issues 3, 4, 5**: These are lower-priority issues carried over from the previous handoff, still awaiting user prioritization or verification.
 
 **In progress Task List**:
--   None.
+-   **Task 1: Implement the User 360° View page (P0)**
+    -   **Where to resume**: The frontend file  has been created. The next step is to create a new, comprehensive backend API endpoint (e.g., ) that can search for a user by various unique identifiers and aggregate all their data from different collections (users, transactions, orders, subscriptions, referrals, etc.). Then, build out the frontend UI to display this data as per the proposed design.
+    -   **What will be achieved with this?**: This will provide administrators with a powerful, centralized tool to view all information about a user, significantly improving customer support, fraud analysis, and user management.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: both
+    -   **Blocked on something**: None
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   P1: Roll out the Admin Dark Theme fix to remaining admin pages.
+    -   P1: Roll out the Admin Dark Theme fix to all remaining admin pages.
     -   P1: AdMob + Unity Ads Integration.
     -   P1: Implement Shareable Achievement Cards for the social feature.
     -   P2: Automate recurring jobs (e.g., renewal notifications) using a scheduler.
+    -   P2: Implement remaining agent ideas for the User 360° View (Mining Graph, Referral Tree, Device Info, Admin Notes, PDF Export, etc.).
 -   **Future Tasks:**
-    -   Refactor the monolithic  into smaller, organized route files (e.g., , ).
+    -   Refactor the monolithic  into smaller, organized route files.
     -   AI Smart Financial Advisor.
     -   Automated Monthly Reports.
     -   AI Product Recommendations.
     -   Bulk subscription update tool for admins.
 
 **Completed work in this session**
--   **Critical Bug Fix (Active Referrals)**: Implemented a new, robust 3-tiered logic for active status and applied it consistently across all relevant backend APIs ().
--   **Dashboard Redesign**: Revamped  by moving activity feeds to a new  page and adding new service cards.
--   **Admin KYC Page Fix**: Overhauled the API and frontend modal to correctly display user information and documents, with improved UI/UX and dark theme colors (, ).
--   **Admin Subscription Page Fix**: Corrected a navigation bug and enriched the review modal with full user details (, ).
--   **Message Page User Search**: Implemented a new user search feature to allow starting conversations with any user ().
--   **Clipboard API Fix**: Added a fallback mechanism to the copy-to-clipboard function ().
--   **Code Cleanup**: Removed ~260KB of  files and several duplicate/unused API endpoints from .
--   **Admin Dark Theme System**: Established a centralized CSS file and layout modification for a consistent admin dark theme (, ).
+-   **Critical Bug Fix (Negative PRC Balance)**: Fixed race conditions and double-deduction bugs across all PRC redemption points by implementing atomic operations and improving the core  function.
+-   **Admin Tools**: Created a Fix Negative Balances button and a duplicate data reporting endpoint.
+-   **Code Cleanup**: Removed the entire Scratch Card feature and unused dashboard files.
+-   **Data Integrity**: Implemented robust unique field validation (Aadhaar, PAN, UTR) at both the database and API levels.
+-   **Admin Workflow Enhancement**:
+    -   Overhauled search functionality on key admin pages to be server-side.
+    -   Refactored , , and  with a new UI pattern including stats cards, quick actions, and server-side pagination/sorting.
+    -   Implemented a fraud detection and plan correction feature for subscription management.
+-   **Feature Addition**: Added Total Redeemed PRC stat to the user dashboard and admin user list.
+-   **Bug Fix**: Corrected the broken routing for the  page.
 
 **Earlier issues found/mentioned but not fixed**
--   **Live Activity Self Activity**: The user mentioned seeing their own activity. The agent investigated and concluded the API anonymizes data, so this should not be possible. The agent requested a screenshot if it persists, which was not provided. The issue is likely resolved or was a misunderstanding.
+-   See Pending/In progress Issue list. The main one is the uninvestigated user-facing search bar bug.
 
 **Known issue recurrence from previous fork**
--   **KYC document upload**: The reliability of this feature on mobile devices remains a recurring concern and is still awaiting final user verification on a real mobile device.
+-   **Active referral status**: The P0 bug from the previous handoff is still pending user verification after the fix was implemented.
+-   **KYC document upload on mobile**: This is a recurring concern still awaiting user verification.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Centralized Business Logic**: Created a single, reusable helper function () to encapsulate complex business logic (the 3-tier active status check) and ensure consistency across multiple backend APIs.
--   **Systematic Theming**: Instead of ad-hoc CSS fixes, a centralized theme file () and layout modification () were used to create a scalable solution for fixing the dark theme across all admin pages.
--   **Defensive API Design**: The backend logic for displaying KYC documents was updated to gracefully handle cases where the  field is missing, inferring the type from other available data fields.
--   **Code Refactoring & Cleanup**: Proactively identified and removed dead code, including unused backup files and duplicate API endpoints, improving the health of the monolithic  file.
+-   **Atomic Database Operations**: Extensive use of  with query conditions () and atomic operators () to prevent race conditions in financial transactions. This was the core fix for the negative balance bug.
+-   **Partial Unique Indexes**: Used  in MongoDB to create unique indexes on optional fields (like Aadhaar/PAN), which correctly ignores  values.
+-   **Debouncing**: Implemented on frontend search inputs to prevent excessive API calls while typing, improving performance.
+-   **Reusable Admin UI Pattern**: A new, comprehensive component structure was created and applied to several admin pages to provide a consistent and powerful user experience (Stats Cards, Server-side tables, Quick Actions).
 
 **key DB schema**
--   No new collections were added.
--   Logic now relies on the  collection (checking for records with type mining, tap_game, etc. within the last 24 hours) in addition to the  collection (, , ) to determine user activity.
+-   **users collection**: New partial unique indexes added for  and .
+-   **subscriptions/vip_subscriptions collections**: New unique index added for .
+-   Logic for  aggregates data from , , and .
 
 **All files of reference**
 -   
@@ -123,25 +142,28 @@ The application is a full-stack social rewards platform (React/FastAPI/MongoDB).
 -   
 
 **Critical Info for New Agent**
--   **Top Priority (P0 - Inactive Referral Bug)**: The user's most critical problem is the inactive referral bug on their production app. A comprehensive fix has been implemented in . Your first action **must** be to confirm with the user if they have deployed this latest code. If the problem persists after deployment, guide them to use the updated debug endpoint () and share the output, which will show a detailed breakdown of the new 3-tier activity check.
--   **User Communication**: You **must** start every response with  before continuing the technical explanation in English. The user is highly engaged and often provides feedback with screenshots.
--   **Correct File Editing**: Be very careful to identify the correct files to edit. The user is using a custom, feature-rich dashboard (), not the basic . Always refer to the user's screenshots to understand which part of the app they are referring to.
--   **Admin Dark Theme**: A system for a consistent dark theme is now in place. The user has requested this be fixed across all admin pages. You should ask the user to prioritize which pages to tackle next and then apply the established pattern from  and the  example.
+-   **Top Priority (P0)**: Your immediate task is to build the **User 360° View**. Start by creating the backend API to aggregate all user data, then build the frontend in .
+-   **User Communication**: You **must** start every response with  before continuing the technical explanation in English.
+-   **Negative Balance Bug Context**: The core fix for all PRC balance issues was making the central  function atomic and introducing a  parameter to prevent double deductions. Remember this pattern if any new transaction types are added.
+-   **Pending User Issues**: Be prepared to address the pending user-facing search bar issue and to follow up on the inactive referral bug verification.
+
+**documents and test reports created in this job**
+-   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **Request**: User reported an issue with the Admin KYC modal (documents not showing, bad contrast). (COMPLETED)
-2.  **Request**: User reported a global issue with the dark theme in all Admin pages. (IN PROGRESS - System created, rollout pending)
-3.  **Request**: User requested a redesign of the user dashboard (move activity, add service cards). (COMPLETED)
-4.  **Information**: User provided screenshots showing the agent was editing the wrong dashboard file. (ADDRESSED)
-5.  **Information**: User added credits.
-6.  **Request**: The user asks to show the new My Activity page, which was moved from the dashboard. (COMPLETED - screenshot provided)
-7.  **Information**: The user confirms the redesign of the user dashboard looks correct. (COMPLETED - screenshot provided)
-8.  **Information**: The user clicks on the X button to close the welcome modal. (ADDRESSED)
-9.  **Information**: The user clears local storage to try and dismiss the welcome modal. (ADDRESSED)
-10. **Information**: The user confirms the redesigned dashboard with the new Services section looks correct. (COMPLETED - screenshot provided)
+1.  **Request:** Add Total Redeemed PRC to the user's dashboard credit card. (COMPLETED)
+2.  **Request:** Add a Redeemed PRC column to the admin user list. (COMPLETED)
+3.  **Request:** A new User 360° View feature to see all of a user's details on one page. (IN PROGRESS)
+4.  **Confirmation:** User confirmed they want the User 360° View feature. (ADDRESSED)
+5.  **Request:** Fix broken search bars in the user view. (PENDING - Needs Clarification)
+6.  **Request:** Fix routing for the Fintech page. (COMPLETED)
+7.  **Request:** Add more user details to the admin fraud detection modal. (COMPLETED)
+8.  **Request:** Improve admin workflow with pagination, sorting (pending on top), and other ideas. (COMPLETED for key pages)
+9.  **Request:** Fix search bars on all admin pages. (COMPLETED for key pages)
+10. **Question:** Asked about platform scalability. (COMPLETED via support agent)
 
 **Project Health Check:**
--   **Broken**: The active referral status feature on the user's *current* (pre-deployment) production app is broken. The dark theme is inconsistent and broken on most of the ~47 admin pages.
+-   **Broken**: Some admin pages that were not part of the recent overhaul may still have non-functional, client-side search. A user-facing search function is also reported as broken but the specific page is unknown.
 -   **Mocked**: None.
 
 **3rd Party Integrations**
@@ -155,14 +177,14 @@ The application is a full-stack social rewards platform (React/FastAPI/MongoDB).
 -   Gemini Pro (Uses Emergent LLM Key)
 
 **Testing status**
--   **Testing agent used after significant changes**: YES, the  was used to verify the fix for the Admin KYC page modal.
+-   **Testing agent used after significant changes**: NO
 -   **Troubleshoot agent used after agent stuck in loop**: NO
--   **Test files created**: 
--   **Known regressions**: None in this session. The main bug was an existing one that became more understood.
+-   **Test files created**: None
+-   **Known regressions**: None.
 
 **Credentials to test flow:**
 -   **Admin**:  / 
 -   **Test User (for dashboard view)**:  / 
 
 **What agent forgot to execute**
--   The agent correctly prioritized the user's immediate and critical requests over lower-priority technical debt from the previous handoff (e.g., pagination verification,  refactor). No critical tasks were forgotten.</analysis>
+-   The agent did not follow up on the user's report of a broken search bar in the user view. It asked for clarification, but when the user provided new requests instead of an answer, the agent moved on without resolving the ambiguity. This issue is now pending.</analysis>

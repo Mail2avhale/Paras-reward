@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://paras-fixify.preview.emergentagent.com/setup
+   https://bugfix-rewards-hub.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
