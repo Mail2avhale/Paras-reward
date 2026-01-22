@@ -5341,6 +5341,38 @@ async def approve_vip_payment(payment_id: str, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@api_router.get("/admin/subscription-pricing-reference")
+async def get_subscription_pricing_reference():
+    """Get pricing reference for admin to verify payments and detect fraud"""
+    # Get pricing from settings or use defaults
+    settings = await db.settings.find_one({}, {"_id": 0, "subscription_pricing": 1})
+    
+    default_pricing = {
+        "startup": {"monthly": 299, "quarterly": 897, "half_yearly": 1495, "yearly": 2990},
+        "growth": {"monthly": 549, "quarterly": 1647, "half_yearly": 2745, "yearly": 5490},
+        "elite": {"monthly": 799, "quarterly": 2397, "half_yearly": 3995, "yearly": 7990}
+    }
+    
+    pricing = settings.get("subscription_pricing", default_pricing) if settings else default_pricing
+    
+    # Create easy-to-read reference with amount-to-plan mapping
+    amount_to_plan = {}
+    for plan, durations in pricing.items():
+        for duration, amount in durations.items():
+            amount_to_plan[str(amount)] = {"plan": plan, "duration": duration}
+    
+    return {
+        "pricing": pricing,
+        "amount_to_plan_map": amount_to_plan,
+        "fraud_detection_tips": [
+            "Amount ₹299 = Startup Monthly",
+            "Amount ₹549 = Growth Monthly", 
+            "Amount ₹799 = Elite Monthly",
+            "Screenshot मधील amount आणि claimed plan match करा",
+            "UTR number verify करा"
+        ]
+    }
+
 async def check_and_grant_referral_reward(new_paid_user_id: str, now: datetime):
     """
     Check if the referrer of a newly paid user qualifies for the free subscription reward.
