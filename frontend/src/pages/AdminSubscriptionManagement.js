@@ -1209,6 +1209,94 @@ const AdminSubscriptionManagement = ({ user }) => {
                   />
                 </div>
               )}
+
+              {/* Fraud Detection Alert */}
+              {isPotentialFraud(selectedPayment) && (
+                <div className="bg-red-900/30 border border-red-500 rounded-lg p-4">
+                  <div className="flex items-center gap-2 text-red-400 font-bold mb-2">
+                    <AlertCircle className="w-5 h-5" />
+                    ⚠️ Amount Mismatch Detected!
+                  </div>
+                  <div className="text-sm text-gray-300 space-y-1">
+                    <p>
+                      <span className="text-gray-500">Amount Paid:</span>{' '}
+                      <span className="text-amber-400 font-bold">₹{selectedPayment.amount}</span>
+                    </p>
+                    <p>
+                      <span className="text-gray-500">Expected Plan for ₹{selectedPayment.amount}:</span>{' '}
+                      <span className="text-green-400 font-bold capitalize">
+                        {getExpectedPlanFromAmount(selectedPayment.amount)?.plan || 'Unknown'} ({getExpectedPlanFromAmount(selectedPayment.amount)?.duration || 'Unknown'})
+                      </span>
+                    </p>
+                    <p>
+                      <span className="text-gray-500">User Claimed:</span>{' '}
+                      <span className="text-red-400 font-bold capitalize">
+                        {selectedPayment.subscription_plan} ({selectedPayment.plan_type})
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Plan Correction Section */}
+              <div className="bg-blue-900/20 border border-blue-500/50 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="flex items-center gap-2 text-blue-400 font-medium cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showPlanCorrection}
+                      onChange={(e) => setShowPlanCorrection(e.target.checked)}
+                      className="rounded border-gray-600"
+                    />
+                    Approve with Correct Plan (Fraud Prevention)
+                  </label>
+                </div>
+                
+                {showPlanCorrection && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-gray-500 block mb-1">Correct Plan</label>
+                        <select
+                          value={correctPlan}
+                          onChange={(e) => setCorrectPlan(e.target.value)}
+                          className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm"
+                        >
+                          <option value="">-- Select Plan --</option>
+                          <option value="startup">Startup (₹299/mo)</option>
+                          <option value="growth">Growth (₹549/mo)</option>
+                          <option value="elite">Elite (₹799/mo)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 block mb-1">Correct Duration</label>
+                        <select
+                          value={correctDuration}
+                          onChange={(e) => setCorrectDuration(e.target.value)}
+                          className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm"
+                        >
+                          <option value="">-- Select Duration --</option>
+                          <option value="monthly">Monthly (30 days)</option>
+                          <option value="quarterly">Quarterly (90 days)</option>
+                          <option value="half_yearly">Half Yearly (180 days)</option>
+                          <option value="yearly">Yearly (365 days)</option>
+                        </select>
+                      </div>
+                    </div>
+                    
+                    {/* Pricing Reference */}
+                    <div className="bg-gray-800/50 rounded p-2 text-xs">
+                      <p className="text-gray-400 mb-1">💡 Pricing Reference:</p>
+                      <div className="grid grid-cols-3 gap-2 text-gray-300">
+                        <span>₹299 = Startup</span>
+                        <span>₹549 = Growth</span>
+                        <span>₹799 = Elite</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <p className="text-gray-500 text-sm mb-2">Admin Notes (Optional)</p>
                 <Input
@@ -1222,10 +1310,10 @@ const AdminSubscriptionManagement = ({ user }) => {
                 <Button
                   onClick={() => handleApprovePayment(selectedPayment)}
                   disabled={processing}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  className={`flex-1 ${showPlanCorrection && correctPlan ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}`}
                 >
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Approve
+                  {showPlanCorrection && correctPlan ? `Approve as ${correctPlan}` : 'Approve'}
                 </Button>
                 <Button
                   onClick={() => handleRejectPayment(selectedPayment)}
