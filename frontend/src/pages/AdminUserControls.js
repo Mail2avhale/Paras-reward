@@ -117,22 +117,29 @@ const AdminUserControls = () => {
     }
   }, [selectedUser]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (searchTerm = '') => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/api/admin/users?include_settings=true`);
+      // Pass search to backend for server-side search
+      const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
+      const response = await axios.get(`${API}/api/admin/users?limit=1000${searchParam}`);
       setUsers(response.data.users || response.data || []);
     } catch (error) {
       console.error('Error fetching users:', error);
-      setUsers([
-        { uid: '1', name: 'Test User 1', email: 'test1@example.com', mining_active: true, daily_prc_cap: 0, prc_balance: 5000, total_mined: 1200 },
-        { uid: '2', name: 'Test User 2', email: 'test2@example.com', mining_active: false, daily_prc_cap: 500, prc_balance: 3200, total_mined: 800 },
-        { uid: '3', name: 'Test User 3', email: 'test3@example.com', mining_active: true, daily_prc_cap: 1000, prc_balance: 7500, total_mined: 2500 },
-      ]);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
   };
+  
+  // Debounced search - fetch from server when search changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchUsers(searchQuery);
+    }, 300); // 300ms debounce
+    
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const updateUserSettings = async (userId, settings) => {
     try {
