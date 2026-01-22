@@ -50,6 +50,12 @@ const AdminSubscriptionManagement = ({ user }) => {
   const [actionNotes, setActionNotes] = useState('');
   const [processing, setProcessing] = useState(false);
   
+  // Fraud prevention - Plan correction
+  const [correctPlan, setCorrectPlan] = useState('');
+  const [correctDuration, setCorrectDuration] = useState('');
+  const [pricingReference, setPricingReference] = useState(null);
+  const [showPlanCorrection, setShowPlanCorrection] = useState(false);
+  
   // Manual subscription update
   const [editingUser, setEditingUser] = useState(null);
   const [manualSubForm, setManualSubForm] = useState({
