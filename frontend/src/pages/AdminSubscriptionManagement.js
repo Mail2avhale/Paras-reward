@@ -1161,7 +1161,7 @@ const AdminSubscriptionManagement = ({ user }) => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Mobile</p>
-                    <p className="text-white">{selectedPayment.user_phone || 'N/A'}</p>
+                    <p className="text-white">{selectedPayment.user_phone || selectedPayment.user_mobile || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Location</p>
@@ -1172,6 +1172,40 @@ const AdminSubscriptionManagement = ({ user }) => {
                   <div>
                     <p className="text-xs text-gray-500">Current Plan</p>
                     <p className="text-amber-400 capitalize">{selectedPayment.current_plan || 'Explorer'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Join Date</p>
+                    <p className="text-gray-400 text-sm">
+                      {selectedPayment.user_created_at 
+                        ? new Date(selectedPayment.user_created_at).toLocaleDateString('en-IN') 
+                        : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Total Orders</p>
+                    <p className="text-white">{selectedPayment.user_total_orders || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">PRC Balance</p>
+                    <p className="text-green-400">{selectedPayment.user_prc_balance?.toFixed(2) || '0'} PRC</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">KYC Status</p>
+                    <span className={`px-2 py-0.5 rounded text-xs ${
+                      selectedPayment.user_kyc_status === 'verified' 
+                        ? 'bg-green-500/20 text-green-400' 
+                        : 'bg-yellow-500/20 text-yellow-400'
+                    }`}>
+                      {selectedPayment.user_kyc_status || 'Pending'}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Previous Payments</p>
+                    <p className="text-white">{selectedPayment.user_previous_payments || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Referral Code</p>
+                    <p className="text-purple-400 font-mono">{selectedPayment.user_referral_code || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">User ID</p>
