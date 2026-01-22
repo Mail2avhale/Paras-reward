@@ -19213,11 +19213,20 @@ async def get_user_gift_voucher_requests(user_id: str):
     return {"requests": requests, "count": len(requests)}
 
 @api_router.get("/admin/gift-voucher/requests")
-async def get_all_gift_voucher_requests(status: Optional[str] = None):
+async def get_all_gift_voucher_requests(status: Optional[str] = None, search: Optional[str] = None):
     """Get all gift voucher requests (Admin only)"""
     query = {}
     if status:
         query["status"] = status
+    
+    # Search by user info or request ID
+    if search:
+        query["$or"] = [
+            {"user_id": {"$regex": search, "$options": "i"}},
+            {"user_email": {"$regex": search, "$options": "i"}},
+            {"user_name": {"$regex": search, "$options": "i"}},
+            {"request_id": {"$regex": search, "$options": "i"}}
+        ]
     
     requests = await db.gift_voucher_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
     
