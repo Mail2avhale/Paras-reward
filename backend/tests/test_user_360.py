@@ -25,18 +25,18 @@ class TestUser360Search:
         self.session = requests.Session()
         self.session.headers.update({"Content-Type": "application/json"})
         
-        # Login as admin
-        login_response = self.session.post(f"{BASE_URL}/api/auth/login", json={
-            "email": ADMIN_EMAIL,
-            "password": ADMIN_PASSWORD
-        })
+        # Login as admin - uses query parameters
+        login_response = self.session.post(
+            f"{BASE_URL}/api/auth/login",
+            params={"identifier": ADMIN_EMAIL, "password": ADMIN_PASSWORD}
+        )
         
         if login_response.status_code == 200:
             data = login_response.json()
             token = data.get("access_token") or data.get("token")
             if token:
                 self.session.headers.update({"Authorization": f"Bearer {token}"})
-            self.admin_uid = data.get("user", {}).get("uid")
+            self.admin_uid = data.get("uid")
         else:
             pytest.skip(f"Admin login failed: {login_response.status_code}")
     
@@ -195,18 +195,18 @@ class TestUser360Actions:
         self.session = requests.Session()
         self.session.headers.update({"Content-Type": "application/json"})
         
-        # Login as admin
-        login_response = self.session.post(f"{BASE_URL}/api/auth/login", json={
-            "email": ADMIN_EMAIL,
-            "password": ADMIN_PASSWORD
-        })
+        # Login as admin - uses query parameters
+        login_response = self.session.post(
+            f"{BASE_URL}/api/auth/login",
+            params={"identifier": ADMIN_EMAIL, "password": ADMIN_PASSWORD}
+        )
         
         if login_response.status_code == 200:
             data = login_response.json()
             token = data.get("access_token") or data.get("token")
             if token:
                 self.session.headers.update({"Authorization": f"Bearer {token}"})
-            self.admin_uid = data.get("user", {}).get("uid")
+            self.admin_uid = data.get("uid")
         else:
             pytest.skip(f"Admin login failed: {login_response.status_code}")
         
