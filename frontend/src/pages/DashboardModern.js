@@ -571,12 +571,20 @@ const DashboardModern = ({ user, onLogout }) => {
               </div>
             </div>
 
-            {/* Bottom Row - Card Holder & Multiplier */}
+            {/* Bottom Row - Card Holder, Redeemed & Multiplier */}
             <div className="flex items-end justify-between">
               <div>
                 <p className="text-gray-600 text-[8px] tracking-widest mb-0.5">CARD HOLDER</p>
-                <p className="text-white text-sm font-semibold tracking-wide uppercase truncate max-w-[160px]">
+                <p className="text-white text-sm font-semibold tracking-wide uppercase truncate max-w-[120px]">
                   {userData?.name || user?.email?.split('@')[0] || 'USER'}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-gray-600 text-[8px] tracking-widest mb-0.5">REDEEMED</p>
+                <p className="text-emerald-400 text-sm font-bold">
+                  {stats.totalRedeemed >= 1000 
+                    ? `${(stats.totalRedeemed / 1000).toFixed(1)}K` 
+                    : stats.totalRedeemed.toFixed(0)}
                 </p>
               </div>
               <div className="text-right">
