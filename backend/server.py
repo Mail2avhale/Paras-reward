@@ -2116,12 +2116,51 @@ async def check_unique_fields(field_name: str, value: str, exclude_uid: Optional
     if not value:
         return True
     
+    # Clean the value (remove spaces for Aadhaar/PAN)
+    if field_name in ["aadhaar_number", "pan_number"]:
+        value = value.replace(" ", "").strip().upper() if field_name == "pan_number" else value.replace(" ", "").strip()
+    
     query = {field_name: value}
     if exclude_uid:
         query["uid"] = {"$ne": exclude_uid}
     
     existing = await db.users.find_one(query)
     return existing is None
+
+async def check_unique_utr(utr_number: str, exclude_subscription_id: Optional[str] = None):
+    """Check if UTR number is unique across subscriptions"""
+    if not utr_number:
+        return True
+    
+    utr_number = utr_number.strip().upper()
+    
+    # Check in subscriptions collection
+    query = {"utr_number": utr_number}
+    if exclude_subscription_id:
+        query["subscription_id"] = {"$ne": exclude_subscription_id}
+    
+    existing_sub = await db.subscriptions.find_one(query)
+    if existing_sub:
+        return False
+    
+    # Check in vip_subscriptions collection
+    query_vip = {"utr_number": utr_number}
+    if exclude_subscription_id:
+        query_vip["subscription_id"] = {"$ne": exclude_subscription_id}
+    
+    existing_vip = await db.vip_subscriptions.find_one(query_vip)
+    return existing_vip is None
+
+async def get_duplicate_field_owner(field_name: str, value: str):
+    """Get the user who already has this field value (for error messages)"""
+    if not value:
+        return None
+    
+    if field_name in ["aadhaar_number", "pan_number"]:
+        value = value.replace(" ", "").strip().upper() if field_name == "pan_number" else value.replace(" ", "").strip()
+    
+    user = await db.users.find_one({field_name: value}, {"_id": 0, "name": 1, "email": 1, "mobile": 1})
+    return user
 
 async def get_active_referrals(uid: str):
     """Count active referrals (with active mining sessions in last 24 hours)"""
