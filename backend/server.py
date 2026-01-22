@@ -5514,6 +5514,37 @@ async def reject_vip_payment(payment_id: str, request: Request):
 @api_router.post("/kyc/submit/{uid}", response_model=KYCDocument)
 async def submit_kyc(uid: str, kyc_data: KYCSubmit):
     """Submit KYC documents"""
+    
+    # Check if Aadhaar number is unique
+    if kyc_data.aadhaar_number:
+        aadhaar_clean = kyc_data.aadhaar_number.replace(" ", "").strip()
+        if not await check_unique_fields("aadhaar_number", aadhaar_clean, exclude_uid=uid):
+            owner = await get_duplicate_field_owner("aadhaar_number", aadhaar_clean)
+            owner_hint = ""
+            if owner:
+                masked_email = owner.get("email", "")[:3] + "***" if owner.get("email") else ""
+                owner_hint = f" (already registered with {masked_email})"
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Aadhaar number आधीच नोंदणीकृत आहे{owner_hint}. कृपया योग्य Aadhaar number वापरा."
+            )
+        kyc_data.aadhaar_number = aadhaar_clean
+    
+    # Check if PAN number is unique
+    if kyc_data.pan_number:
+        pan_clean = kyc_data.pan_number.replace(" ", "").strip().upper()
+        if not await check_unique_fields("pan_number", pan_clean, exclude_uid=uid):
+            owner = await get_duplicate_field_owner("pan_number", pan_clean)
+            owner_hint = ""
+            if owner:
+                masked_email = owner.get("email", "")[:3] + "***" if owner.get("email") else ""
+                owner_hint = f" (already registered with {masked_email})"
+            raise HTTPException(
+                status_code=400, 
+                detail=f"PAN number आधीच नोंदणीकृत आहे{owner_hint}. कृपया योग्य PAN number वापरा."
+            )
+        kyc_data.pan_number = pan_clean
+    
     kyc_doc = KYCDocument(
         user_id=uid,
         aadhaar_front=kyc_data.aadhaar_front_base64,
@@ -5527,10 +5558,16 @@ async def submit_kyc(uid: str, kyc_data: KYCSubmit):
     doc['submitted_at'] = doc['submitted_at'].isoformat()
     await db.kyc_documents.insert_one(doc)
     
-    # Update user KYC status
+    # Update user KYC status and save verified numbers
+    update_fields = {"kyc_status": "pending"}
+    if kyc_data.aadhaar_number:
+        update_fields["aadhaar_number"] = kyc_data.aadhaar_number
+    if kyc_data.pan_number:
+        update_fields["pan_number"] = kyc_data.pan_number
+    
     await db.users.update_one(
         {"uid": uid},
-        {"$set": {"kyc_status": "pending"}}
+        {"$set": update_fields}
     )
     
     return kyc_doc
