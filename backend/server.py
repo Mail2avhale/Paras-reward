@@ -3344,14 +3344,35 @@ async def complete_profile(uid: str, request: Request):
     
     data = await request.json()
     
-    # Check for duplicate fields
-    for field in ["mobile", "aadhaar_number", "pan_number"]:
+    # Check for duplicate unique fields with detailed error messages
+    unique_fields = {
+        "mobile": "Mobile number",
+        "aadhaar_number": "Aadhaar number", 
+        "pan_number": "PAN number"
+    }
+    
+    for field, field_label in unique_fields.items():
         if data.get(field):
-            existing = await db.users.find_one({field: data[field], "uid": {"$ne": uid}})
-            if existing:
+            # Clean the value
+            value = data[field].strip()
+            if field == "pan_number":
+                value = value.upper()
+            if field == "aadhaar_number":
+                value = value.replace(" ", "")
+            
+            data[field] = value  # Update with cleaned value
+            
+            if not await check_unique_fields(field, value, exclude_uid=uid):
+                # Get info about who owns this value
+                owner = await get_duplicate_field_owner(field, value)
+                owner_hint = ""
+                if owner:
+                    masked_email = owner.get("email", "")[:3] + "***" if owner.get("email") else ""
+                    owner_hint = f" (already registered with {masked_email})"
+                
                 raise HTTPException(
                     status_code=400,
-                    detail=f"{field.replace('_', ' ').title()} already in use"
+                    detail=f"{field_label} already registered{owner_hint}. कृपया दुसरा {field_label} वापरा."
                 )
     
     # Build update data
