@@ -110,9 +110,19 @@ const AdminSubscriptionManagement = ({ user }) => {
       fetchStats(),
       fetchPayments(),
       fetchPricing(),
-      fetchUsers()
+      fetchUsers(),
+      fetchPricingReference()
     ]);
     setLoading(false);
+  };
+
+  const fetchPricingReference = async () => {
+    try {
+      const response = await axios.get(`${API}/api/admin/subscription-pricing-reference`);
+      setPricingReference(response.data);
+    } catch (error) {
+      console.error('Error fetching pricing reference:', error);
+    }
   };
 
   const fetchStats = async () => {
