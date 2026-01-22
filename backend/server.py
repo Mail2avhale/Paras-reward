@@ -5146,7 +5146,7 @@ async def submit_vip_payment(uid: str, payment: VIPPaymentCreate):
 
 @api_router.get("/admin/vip-payments")
 async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int = 20):
-    """Get VIP payments for admin verification"""
+    """Get VIP payments for admin verification with detailed user info for fraud detection"""
     try:
         query = {}
         if status:
@@ -5159,24 +5159,47 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
             query, {"_id": 0}
         ).sort("submitted_at", -1).skip(skip).limit(limit).to_list(limit)
         
-        # Enrich with user data
+        # Enrich with comprehensive user data for fraud detection
         for payment in payments:
             user = await db.users.find_one(
                 {"uid": payment.get("user_id")}, 
-                {"_id": 0, "name": 1, "email": 1, "phone": 1, "mobile": 1, "city": 1, "state": 1, "subscription_plan": 1, "subscription_expiry": 1}
+                {"_id": 0, "name": 1, "email": 1, "phone": 1, "mobile": 1, "city": 1, "state": 1, 
+                 "subscription_plan": 1, "subscription_expiry": 1, "prc_balance": 1, "total_mined": 1,
+                 "kyc_status": 1, "referral_code": 1, "created_at": 1, "membership_type": 1}
             )
+            
             if user:
                 payment["user_name"] = user.get("name", "Unknown")
                 payment["user_email"] = user.get("email", "")
                 payment["user_phone"] = user.get("phone") or user.get("mobile", "")
+                payment["user_mobile"] = user.get("mobile", "")
                 payment["user_city"] = user.get("city", "")
                 payment["user_state"] = user.get("state", "")
-                payment["current_plan"] = user.get("subscription_plan", "explorer")
+                payment["current_plan"] = user.get("subscription_plan") or user.get("membership_type", "explorer")
                 payment["current_expiry"] = user.get("subscription_expiry", "")
+                # Additional fraud detection fields
+                payment["user_prc_balance"] = user.get("prc_balance", 0)
+                payment["user_total_mined"] = user.get("total_mined", 0)
+                payment["user_kyc_status"] = user.get("kyc_status", "pending")
+                payment["user_referral_code"] = user.get("referral_code", "")
+                payment["user_created_at"] = user.get("created_at", "")
             else:
                 payment["user_name"] = "Unknown User"
                 payment["user_email"] = ""
                 payment["user_phone"] = ""
+                payment["user_prc_balance"] = 0
+                payment["user_kyc_status"] = "unknown"
+            
+            # Count previous payments by this user
+            user_previous_payments = await db.vip_payments.count_documents({
+                "user_id": payment.get("user_id"),
+                "status": {"$in": ["approved", "completed"]}
+            })
+            payment["user_previous_payments"] = user_previous_payments
+            
+            # Count total orders
+            user_total_orders = await db.orders.count_documents({"user_id": payment.get("user_id")})
+            payment["user_total_orders"] = user_total_orders
         
         return {
             "payments": payments,
