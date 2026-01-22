@@ -31360,23 +31360,31 @@ async def initialize_database_indexes():
     except Exception as e:
         print(f"⚠️  Mobile index setup: {e}")
     
-    # Aadhaar number index - sparse to allow null values, unique to prevent duplicates
+    # Aadhaar number index - partial index to allow null/empty values, unique for actual values
     try:
         existing_indexes = await db.users.index_information()
         if "aadhaar_number_1" not in existing_indexes:
-            await db.users.create_index("aadhaar_number", unique=True, sparse=True)
-            print("✅ Created sparse unique Aadhaar number index")
+            await db.users.create_index(
+                "aadhaar_number", 
+                unique=True, 
+                partialFilterExpression={"aadhaar_number": {"$type": "string", "$ne": ""}}
+            )
+            print("✅ Created partial unique Aadhaar number index")
         else:
             print("✅ Aadhaar number index already exists")
     except Exception as e:
         print(f"⚠️  Aadhaar number index setup: {e}")
     
-    # PAN number index - sparse to allow null values, unique to prevent duplicates
+    # PAN number index - partial index to allow null/empty values, unique for actual values
     try:
         existing_indexes = await db.users.index_information()
         if "pan_number_1" not in existing_indexes:
-            await db.users.create_index("pan_number", unique=True, sparse=True)
-            print("✅ Created sparse unique PAN number index")
+            await db.users.create_index(
+                "pan_number", 
+                unique=True, 
+                partialFilterExpression={"pan_number": {"$type": "string", "$ne": ""}}
+            )
+            print("✅ Created partial unique PAN number index")
         else:
             print("✅ PAN number index already exists")
     except Exception as e:
