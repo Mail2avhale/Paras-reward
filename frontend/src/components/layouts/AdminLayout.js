@@ -97,6 +97,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/admin' },
     { id: 'users', label: 'Users', icon: Users, path: '/admin/users' },
+    { id: 'user-360', label: 'User 360° View', icon: Eye, path: '/admin/user-360' },
     { id: 'kyc', label: 'KYC Verification', icon: FileText, path: '/admin/kyc' },
     { id: 'orders', label: 'Orders', icon: ShoppingCart, path: '/admin/orders' },
     { id: 'delivery-partners', label: 'Delivery Partners', icon: Truck, path: '/admin/delivery-partners' },
