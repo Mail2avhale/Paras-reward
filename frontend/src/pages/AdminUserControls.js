@@ -379,14 +379,15 @@ const AdminUserControls = () => {
                 <th className="p-4 text-left text-sm font-medium text-gray-400">Mining Status</th>
                 <th className="p-4 text-left text-sm font-medium text-gray-400">Daily Cap</th>
                 <th className="p-4 text-left text-sm font-medium text-gray-400">PRC Balance</th>
+                <th className="p-4 text-left text-sm font-medium text-gray-400">Redeemed</th>
                 <th className="p-4 text-left text-sm font-medium text-gray-400">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {loading ? (
-                <tr><td colSpan={6} className="p-8 text-center text-gray-500"><RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />Loading...</td></tr>
+                <tr><td colSpan={7} className="p-8 text-center text-gray-500"><RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />Loading...</td></tr>
               ) : filteredUsers.length === 0 ? (
-                <tr><td colSpan={6} className="p-8 text-center text-gray-500">No users found</td></tr>
+                <tr><td colSpan={7} className="p-8 text-center text-gray-500">No users found</td></tr>
               ) : (
                 filteredUsers.map(user => (
                   <tr key={user.uid} className="hover:bg-gray-800/50">
@@ -406,6 +407,11 @@ const AdminUserControls = () => {
                       </span>
                     </td>
                     <td className="p-4"><span className="font-medium text-white">{(user.prc_balance || 0).toLocaleString()} PRC</span></td>
+                    <td className="p-4">
+                      <span className={`font-medium ${(user.total_redeemed || 0) > 0 ? 'text-emerald-400' : 'text-gray-500'}`}>
+                        {(user.total_redeemed || 0).toLocaleString()} PRC
+                      </span>
+                    </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
                         <button onClick={() => updateUserSettings(user.uid, { mining_active: !user.mining_active })} className={`p-2 rounded-lg ${user.mining_active !== false ? 'bg-orange-500/20 text-orange-600 hover:bg-orange-200' : 'bg-green-500/20 text-green-600 hover:bg-green-200'}`}>
