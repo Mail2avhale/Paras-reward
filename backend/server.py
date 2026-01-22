@@ -14904,6 +14904,67 @@ async def update_user_admin(uid: str, request: UserUpdateRequest):
     
     return {"message": "User updated successfully", "updates": update_data}
 
+@api_router.get("/admin/duplicate-check")
+async def check_duplicate_data():
+    """Admin: Check for duplicate Aadhaar, PAN, Mobile, UTR numbers"""
+    duplicates = {
+        "aadhaar_numbers": [],
+        "pan_numbers": [],
+        "mobile_numbers": [],
+        "utr_numbers": [],
+        "summary": {}
+    }
+    
+    # Check duplicate Aadhaar numbers
+    pipeline = [
+        {"$match": {"aadhaar_number": {"$ne": None, "$ne": ""}}},
+        {"$group": {"_id": "$aadhaar_number", "count": {"$sum": 1}, "users": {"$push": {"uid": "$uid", "name": "$name", "email": "$email"}}}},
+        {"$match": {"count": {"$gt": 1}}}
+    ]
+    aadhaar_dups = await db.users.aggregate(pipeline).to_list(100)
+    duplicates["aadhaar_numbers"] = [{"aadhaar": d["_id"], "count": d["count"], "users": d["users"]} for d in aadhaar_dups]
+    
+    # Check duplicate PAN numbers
+    pipeline = [
+        {"$match": {"pan_number": {"$ne": None, "$ne": ""}}},
+        {"$group": {"_id": "$pan_number", "count": {"$sum": 1}, "users": {"$push": {"uid": "$uid", "name": "$name", "email": "$email"}}}},
+        {"$match": {"count": {"$gt": 1}}}
+    ]
+    pan_dups = await db.users.aggregate(pipeline).to_list(100)
+    duplicates["pan_numbers"] = [{"pan": d["_id"], "count": d["count"], "users": d["users"]} for d in pan_dups]
+    
+    # Check duplicate Mobile numbers
+    pipeline = [
+        {"$match": {"mobile": {"$ne": None, "$ne": ""}}},
+        {"$group": {"_id": "$mobile", "count": {"$sum": 1}, "users": {"$push": {"uid": "$uid", "name": "$name", "email": "$email"}}}},
+        {"$match": {"count": {"$gt": 1}}}
+    ]
+    mobile_dups = await db.users.aggregate(pipeline).to_list(100)
+    duplicates["mobile_numbers"] = [{"mobile": d["_id"], "count": d["count"], "users": d["users"]} for d in mobile_dups]
+    
+    # Check duplicate UTR numbers in subscriptions
+    pipeline = [
+        {"$match": {"utr_number": {"$ne": None, "$ne": ""}}},
+        {"$group": {"_id": "$utr_number", "count": {"$sum": 1}, "payments": {"$push": {"payment_id": "$payment_id", "user_id": "$user_id", "amount": "$amount"}}}},
+        {"$match": {"count": {"$gt": 1}}}
+    ]
+    utr_dups_subs = await db.subscriptions.aggregate(pipeline).to_list(100)
+    utr_dups_vip = await db.vip_subscriptions.aggregate(pipeline).to_list(100)
+    utr_dups_payments = await db.vip_payments.aggregate(pipeline).to_list(100)
+    
+    all_utr_dups = utr_dups_subs + utr_dups_vip + utr_dups_payments
+    duplicates["utr_numbers"] = [{"utr": d["_id"], "count": d["count"], "payments": d["payments"]} for d in all_utr_dups]
+    
+    # Summary
+    duplicates["summary"] = {
+        "total_duplicate_aadhaar": len(duplicates["aadhaar_numbers"]),
+        "total_duplicate_pan": len(duplicates["pan_numbers"]),
+        "total_duplicate_mobile": len(duplicates["mobile_numbers"]),
+        "total_duplicate_utr": len(duplicates["utr_numbers"])
+    }
+    
+    return duplicates
+
 @api_router.post("/admin/users/{uid}/adjust-balance")
 async def adjust_user_balance(uid: str, request: BalanceAdjustRequest):
     """Admin adjusts user balance (PRC, cashback, profit)"""
