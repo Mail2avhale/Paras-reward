@@ -31367,7 +31367,7 @@ async def initialize_database_indexes():
             await db.users.create_index(
                 "aadhaar_number", 
                 unique=True, 
-                partialFilterExpression={"aadhaar_number": {"$type": "string", "$ne": ""}}
+                partialFilterExpression={"aadhaar_number": {"$exists": True, "$type": "string"}}
             )
             print("✅ Created partial unique Aadhaar number index")
         else:
@@ -31382,7 +31382,7 @@ async def initialize_database_indexes():
             await db.users.create_index(
                 "pan_number", 
                 unique=True, 
-                partialFilterExpression={"pan_number": {"$type": "string", "$ne": ""}}
+                partialFilterExpression={"pan_number": {"$exists": True, "$type": "string"}}
             )
             print("✅ Created partial unique PAN number index")
         else:
