@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -6,21 +6,48 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import Pagination from '@/components/Pagination';
-import { ArrowLeft, Clock, CheckCircle, XCircle, Search, Filter } from 'lucide-react';
+import { 
+  ArrowLeft, Clock, CheckCircle, XCircle, Search, Filter, 
+  RefreshCw, Loader2, Phone, Zap, Tv, Droplet, CreditCard,
+  Eye, User
+} from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 const ITEMS_PER_PAGE = 10;
+const AUTO_REFRESH_INTERVAL = 30000;
 
 const AdminBillPayments = ({ user }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState([]);
-  const [stats, setStats] = useState({});
-  const [filter, setFilter] = useState('all');
+  const [stats, setStats] = useState({ pending: 0, approved: 0, completed: 0, rejected: 0 });
+  const [filter, setFilter] = useState('pending'); // Default to pending
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [adminNotes, setAdminNotes] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [processing, setProcessing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+
+  const fetchRequests = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (filter !== 'all') params.append('status', filter);
+      if (searchTerm) params.append('search', searchTerm);
+      
+      const response = await axios.get(`${API}/api/admin/bill-payment/requests?${params.toString()}`);
+      setRequests(response.data.requests || []);
+      setStats(response.data.stats || {});
+      setLastRefresh(new Date());
+    } catch (error) {
+      console.error('Error fetching requests:', error);
+      toast.error('Failed to load requests');
+    } finally {
+      setLoading(false);
+    }
+  }, [filter, searchTerm]);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -28,7 +55,14 @@ const AdminBillPayments = ({ user }) => {
       return;
     }
     fetchRequests();
-  }, [user, navigate, filter]);
+  }, [user, navigate, fetchRequests]);
+
+  // Auto-refresh
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const interval = setInterval(fetchRequests, AUTO_REFRESH_INTERVAL);
+    return () => clearInterval(interval);
+  }, [autoRefresh, fetchRequests]);
 
   // Debounced search
   useEffect(() => {
@@ -43,23 +77,25 @@ const AdminBillPayments = ({ user }) => {
     setCurrentPage(1);
   }, [filter, searchTerm]);
 
-  const fetchRequests = async () => {
-    try {
-      const params = new URLSearchParams();
-      if (filter !== 'all') params.append('status', filter);
-      if (searchTerm) params.append('search', searchTerm);
-      
-      const response = await axios.get(`${API}/api/admin/bill-payment/requests?${params.toString()}`);
-      setRequests(response.data.requests || []);
-      setStats(response.data.stats || {});
-    } catch (error) {
-      console.error('Error fetching requests:', error);
-      toast.error('Failed to load requests');
-    }
-  };
+  // Sort requests - Pending first
+  const sortedRequests = React.useMemo(() => {
+    return [...requests].sort((a, b) => {
+      const statusOrder = { pending: 0, approved: 1, completed: 2, rejected: 3 };
+      const statusDiff = (statusOrder[a.status] || 4) - (statusOrder[b.status] || 4);
+      if (statusDiff !== 0) return statusDiff;
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
+  }, [requests]);
+
+  // Pagination
+  const totalPages = Math.ceil(sortedRequests.length / ITEMS_PER_PAGE);
+  const paginatedRequests = sortedRequests.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const handleProcess = async (requestId, action) => {
-    setLoading(true);
+    setProcessing(true);
     try {
       await axios.post(`${API}/api/admin/bill-payment/process`, {
         request_id: requestId,
@@ -70,498 +106,387 @@ const AdminBillPayments = ({ user }) => {
 
       const actionText = action === 'reject' ? 'rejected' : action === 'approve' ? 'approved' : 'completed';
       toast.success(`Request ${actionText} successfully!`);
-      
       setSelectedRequest(null);
       setAdminNotes('');
       fetchRequests();
     } catch (error) {
-      console.error('Error processing request:', error);
       toast.error(error.response?.data?.detail || 'Failed to process request');
     } finally {
-      setLoading(false);
+      setProcessing(false);
     }
   };
 
-  const filteredRequests = requests.filter(req =>
-    req.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    req.user_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    req.request_id.includes(searchTerm)
-  );
+  // Quick actions
+  const handleQuickApprove = async (req, e) => {
+    e.stopPropagation();
+    if (!window.confirm(`Approve bill payment of ₹${req.amount_inr} for ${req.user_name || req.user_id}?`)) return;
+    
+    try {
+      setProcessing(true);
+      await axios.post(`${API}/api/admin/bill-payment/process`, {
+        request_id: req.request_id,
+        action: 'approve',
+        admin_uid: user.uid
+      });
+      toast.success('Request approved!');
+      fetchRequests();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to approve');
+    } finally {
+      setProcessing(false);
+    }
+  };
 
-  // Pagination
-  const totalPages = Math.ceil(filteredRequests.length / ITEMS_PER_PAGE);
-  const paginatedRequests = filteredRequests.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  const handleQuickReject = async (req, e) => {
+    e.stopPropagation();
+    const reason = window.prompt('Rejection reason:');
+    if (reason === null) return;
+    
+    try {
+      setProcessing(true);
+      await axios.post(`${API}/api/admin/bill-payment/process`, {
+        request_id: req.request_id,
+        action: 'reject',
+        admin_notes: reason,
+        admin_uid: user.uid
+      });
+      toast.success('Request rejected');
+      fetchRequests();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to reject');
+    } finally {
+      setProcessing(false);
+    }
+  };
 
-  const getTypeLabel = (type) => {
-    const labels = {
-      mobile_recharge: 'Mobile Recharge',
-      dish_recharge: 'DTH/Dish',
-      electricity_bill: 'Electricity',
-      credit_card_payment: 'Credit Card',
-      loan_emi: 'Loan/EMI'
+  const getTypeIcon = (type) => {
+    const icons = {
+      mobile_recharge: <Phone className="w-5 h-5 text-blue-400" />,
+      electricity: <Zap className="w-5 h-5 text-yellow-400" />,
+      dth: <Tv className="w-5 h-5 text-purple-400" />,
+      water: <Droplet className="w-5 h-5 text-cyan-400" />,
+      default: <CreditCard className="w-5 h-5 text-gray-400" />
     };
-    return labels[type] || type;
+    return icons[type] || icons.default;
+  };
+
+  const getStatusBadge = (status) => {
+    const badges = {
+      pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
+      approved: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
+      completed: 'bg-green-500/20 text-green-400 border-green-500/50',
+      rejected: 'bg-red-500/20 text-red-400 border-red-500/50'
+    };
+    return badges[status] || 'bg-gray-500/20 text-gray-400';
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   return (
-    <div className="min-h-screen bg-gray-800/50">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => navigate('/admin')}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Admin
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-white">Bill Payment Requests</h1>
-              <p className="text-sm text-gray-400">Manage user bill payment and recharge requests</p>
-            </div>
+    <div className="p-4 md:p-6 bg-gray-950 min-h-screen">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/admin')} className="text-gray-400">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <CreditCard className="w-7 h-7 text-green-400" />
+              Bill Payment Requests
+            </h1>
+            <p className="text-gray-400 text-sm">
+              Last updated: {lastRefresh.toLocaleTimeString()}
+            </p>
           </div>
         </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="p-4 bg-yellow-500/10/10 border-yellow-500/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400">Pending</p>
-                <p className="text-2xl font-bold text-yellow-400">{stats.pending || 0}</p>
-              </div>
-              <Clock className="h-8 w-8 text-yellow-500" />
-            </div>
-          </Card>
-          <Card className="p-4 bg-green-500/10/10 border-green-500/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400">Completed</p>
-                <p className="text-2xl font-bold text-green-400">{stats.completed || 0}</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
-            </div>
-          </Card>
-          <Card className="p-4 bg-red-500/10/10 border-red-500/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400">Rejected</p>
-                <p className="text-2xl font-bold text-red-400">{stats.rejected || 0}</p>
-              </div>
-              <XCircle className="h-8 w-8 text-red-500" />
-            </div>
-          </Card>
+        <div className="flex items-center gap-2">
+          <Button onClick={fetchRequests} variant="outline" size="sm" disabled={loading} className="border-gray-700">
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(e) => setAutoRefresh(e.target.checked)}
+              className="rounded border-gray-600"
+            />
+            Auto-refresh
+          </label>
         </div>
+      </div>
 
-        {/* Filters */}
-        <Card className="p-4 mb-6 bg-gray-900 border-gray-700">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex-1 min-w-[200px]">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by user, email, or ID..."
-                  className="pl-10 bg-gray-800 border-gray-700 text-white"
-                />
-              </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        <Card 
+          className={`p-4 cursor-pointer transition-all ${filter === 'pending' ? 'ring-2 ring-yellow-500' : ''} bg-yellow-500/10 border-yellow-500/30`}
+          onClick={() => setFilter('pending')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-yellow-400 text-sm font-medium">Pending</p>
+              <p className="text-3xl font-bold text-yellow-300">{stats.pending || 0}</p>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant={filter === 'all' ? 'default' : 'outline'}
-                onClick={() => setFilter('all')}
-                size="sm"
-              >
-                All
-              </Button>
-              <Button
-                variant={filter === 'pending' ? 'default' : 'outline'}
-                onClick={() => setFilter('pending')}
-                size="sm"
-              >
-                Pending
-              </Button>
-              <Button
-                variant={filter === 'completed' ? 'default' : 'outline'}
-                onClick={() => setFilter('completed')}
-                size="sm"
-              >
-                Completed
-              </Button>
-              <Button
-                variant={filter === 'rejected' ? 'default' : 'outline'}
-                onClick={() => setFilter('rejected')}
-                size="sm"
-              >
-                Rejected
-              </Button>
-            </div>
+            <Clock className="w-8 h-8 text-yellow-500/50" />
           </div>
         </Card>
+        <Card 
+          className={`p-4 cursor-pointer transition-all ${filter === 'approved' ? 'ring-2 ring-blue-500' : ''} bg-blue-500/10 border-blue-500/30`}
+          onClick={() => setFilter('approved')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-400 text-sm font-medium">Approved</p>
+              <p className="text-3xl font-bold text-blue-300">{stats.approved || 0}</p>
+            </div>
+            <CheckCircle className="w-8 h-8 text-blue-500/50" />
+          </div>
+        </Card>
+        <Card 
+          className={`p-4 cursor-pointer transition-all ${filter === 'completed' ? 'ring-2 ring-green-500' : ''} bg-green-500/10 border-green-500/30`}
+          onClick={() => setFilter('completed')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-400 text-sm font-medium">Completed</p>
+              <p className="text-3xl font-bold text-green-300">{stats.completed || 0}</p>
+            </div>
+            <CheckCircle className="w-8 h-8 text-green-500/50" />
+          </div>
+        </Card>
+        <Card 
+          className={`p-4 cursor-pointer transition-all ${filter === 'rejected' ? 'ring-2 ring-red-500' : ''} bg-red-500/10 border-red-500/30`}
+          onClick={() => setFilter('rejected')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-red-400 text-sm font-medium">Rejected</p>
+              <p className="text-3xl font-bold text-red-300">{stats.rejected || 0}</p>
+            </div>
+            <XCircle className="w-8 h-8 text-red-500/50" />
+          </div>
+        </Card>
+      </div>
 
-        {/* Requests Table */}
-        <Card className="p-6 bg-gray-900 border-gray-700">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">User</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Amount</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">PRC</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Date</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedRequests.map((req) => (
-                  <tr key={req.request_id} className="border-b border-gray-800 hover:bg-gray-800/50">
-                    <td className="py-3 px-4">
-                      <div>
-                        <p className="text-sm font-medium text-white">{req.user_name}</p>
-                        <p className="text-xs text-gray-400">{req.user_email}</p>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-sm text-white">{getTypeLabel(req.request_type)}</td>
-                    <td className="py-3 px-4 text-sm font-bold text-amber-400">₹{req.amount_inr}</td>
-                    <td className="py-3 px-4 text-sm text-purple-400">{req.total_prc_deducted.toFixed(2)}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        req.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                        req.status === 'processing' ? 'bg-blue-500/20 text-blue-400' :
-                        req.status === 'completed' ? 'bg-green-500/20 text-green-400' :
-                        'bg-red-500/20 text-red-400'
-                      }`}>
-                        {req.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-300">
-                      {new Date(req.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="py-3 px-4">
+      {/* Filters */}
+      <Card className="p-4 mb-6 bg-gray-900 border-gray-800">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <Input
+              placeholder="Search by name, email, mobile, request ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-gray-800 border-gray-700 text-white"
+            />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {['all', 'pending', 'approved', 'completed', 'rejected'].map((status) => (
+              <Button
+                key={status}
+                variant={filter === status ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter(status)}
+                className={filter === status ? 'bg-blue-600' : 'border-gray-700 text-gray-300'}
+              >
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <div className="mt-2 text-sm text-gray-500">
+          Showing {paginatedRequests.length} of {sortedRequests.length} requests
+        </div>
+      </Card>
+
+      {/* Requests List */}
+      {loading && paginatedRequests.length === 0 ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        </div>
+      ) : paginatedRequests.length === 0 ? (
+        <Card className="p-12 text-center bg-gray-900 border-gray-800">
+          <CreditCard className="w-16 h-16 mx-auto text-gray-600 mb-4" />
+          <p className="text-gray-400">No requests found</p>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {paginatedRequests.map((req) => (
+            <Card
+              key={req.request_id}
+              className={`p-4 bg-gray-900 border-gray-800 hover:border-gray-700 transition-all cursor-pointer ${
+                req.status === 'pending' ? 'border-l-4 border-l-yellow-500' : ''
+              }`}
+              onClick={() => setSelectedRequest(req)}
+            >
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center">
+                    {getTypeIcon(req.request_type)}
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">{req.user_name || 'Unknown User'}</p>
+                    <p className="text-sm text-gray-400">{req.user_mobile || req.user_email || req.user_id}</p>
+                    <div className="flex gap-4 mt-1 text-xs text-gray-500">
+                      <span className="capitalize">{req.request_type?.replace('_', ' ')}</span>
+                      <span>₹{req.amount_inr}</span>
+                      <span>{req.total_prc_deducted} PRC</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(req.status)}`}>
+                    {req.status?.toUpperCase()}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {formatDate(req.created_at)}
+                  </span>
+                  
+                  {/* Quick Actions */}
+                  {req.status === 'pending' && (
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={() => setSelectedRequest(req)}
+                        className="bg-green-600 hover:bg-green-700 h-8"
+                        onClick={(e) => handleQuickApprove(req, e)}
+                        disabled={processing}
                       >
-                        View
+                        <CheckCircle className="w-4 h-4" />
                       </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          
-          {/* Pagination */}
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={filteredRequests.length}
-            itemsPerPage={ITEMS_PER_PAGE}
-            onPageChange={setCurrentPage}
-          />
-        </Card>
-
-        {/* Detail Modal */}
-        {selectedRequest && (
-          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 bg-gray-900 border-gray-700">
-              <h2 className="text-2xl font-bold mb-4 text-white">Request Details</h2>
-              
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-400">User</p>
-                    <p className="font-semibold text-white">{selectedRequest.user_name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-400">Type</p>
-                    <p className="font-semibold text-white">{getTypeLabel(selectedRequest.request_type)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-400">Amount</p>
-                    <p className="font-semibold text-lg text-amber-400">₹{selectedRequest.amount_inr}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-400">PRC Deducted</p>
-                    <p className="font-semibold text-purple-400">{selectedRequest.total_prc_deducted.toFixed(2)} PRC</p>
-                  </div>
-                </div>
-
-                <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-                  <p className="text-sm font-semibold mb-3 text-white">Request Details</p>
-                  
-                  {/* Loan/EMI specific formatted display */}
-                  {selectedRequest.request_type === 'loan_emi' ? (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-gray-900 p-3 rounded border">
-                          <p className="text-xs text-gray-500">Loan Account Number</p>
-                          <p className="font-semibold">{selectedRequest.details?.loan_account || '-'}</p>
-                        </div>
-                        <div className="bg-gray-900 p-3 rounded border">
-                          <p className="text-xs text-gray-500">Bank/NBFC Name</p>
-                          <p className="font-semibold">{selectedRequest.details?.bank_name || '-'}</p>
-                        </div>
-                        <div className="bg-gray-900 p-3 rounded border">
-                          <p className="text-xs text-gray-500">IFSC Code</p>
-                          <p className="font-semibold font-mono">{selectedRequest.details?.ifsc_code || '-'}</p>
-                        </div>
-                        <div className="bg-gray-900 p-3 rounded border">
-                          <p className="text-xs text-gray-500">Customer ID</p>
-                          <p className="font-semibold">{selectedRequest.details?.customer_id || '-'}</p>
-                        </div>
-                        <div className="bg-gray-900 p-3 rounded border">
-                          <p className="text-xs text-gray-500">Borrower Name</p>
-                          <p className="font-semibold">{selectedRequest.details?.borrower_name || '-'}</p>
-                        </div>
-                        <div className="bg-gray-900 p-3 rounded border">
-                          <p className="text-xs text-gray-500">Registered Mobile</p>
-                          <p className="font-semibold">{selectedRequest.details?.registered_mobile || '-'}</p>
-                        </div>
-                        <div className="bg-gray-900 p-3 rounded border">
-                          <p className="text-xs text-gray-500">Loan Type</p>
-                          <p className="font-semibold capitalize">{selectedRequest.details?.loan_type?.replace('_', ' ') || '-'}</p>
-                        </div>
-                        <div className="bg-gray-900 p-3 rounded border">
-                          <p className="text-xs text-gray-500">Remaining Tenure</p>
-                          <p className="font-semibold">{selectedRequest.details?.loan_tenure || '-'}</p>
-                        </div>
-                        <div className="bg-gray-900 p-3 rounded border">
-                          <p className="text-xs text-gray-500">EMI Due Date</p>
-                          <p className="font-semibold">{selectedRequest.details?.emi_due_date || '-'}</p>
-                        </div>
-                        <div className="bg-gray-900 p-3 rounded border">
-                          <p className="text-xs text-gray-500">Monthly EMI Amount</p>
-                          <p className="font-semibold">₹{selectedRequest.details?.emi_amount || '-'}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : selectedRequest.request_type === 'electricity' ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Consumer Number</p>
-                        <p className="font-semibold font-mono">{selectedRequest.details?.consumer_number || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Provider</p>
-                        <p className="font-semibold">{selectedRequest.details?.provider || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Consumer Name</p>
-                        <p className="font-semibold">{selectedRequest.details?.consumer_name || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Bill Amount</p>
-                        <p className="font-semibold">₹{selectedRequest.details?.bill_amount || selectedRequest.amount_inr}</p>
-                      </div>
-                      {selectedRequest.details?.billing_unit && (
-                        <div className="bg-gray-900 p-3 rounded border">
-                          <p className="text-xs text-gray-500">Billing Unit</p>
-                          <p className="font-semibold">{selectedRequest.details?.billing_unit}</p>
-                        </div>
-                      )}
-                      {selectedRequest.details?.due_date && (
-                        <div className="bg-gray-900 p-3 rounded border">
-                          <p className="text-xs text-gray-500">Due Date</p>
-                          <p className="font-semibold">{selectedRequest.details?.due_date}</p>
-                        </div>
-                      )}
-                    </div>
-                  ) : selectedRequest.request_type === 'mobile_recharge' ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-gray-800/70 p-3 rounded border border-gray-600">
-                        <p className="text-xs text-gray-400">Mobile Number</p>
-                        <p className="font-semibold font-mono text-lg text-white">{selectedRequest.details?.mobile_number || '-'}</p>
-                      </div>
-                      <div className="bg-gray-800/70 p-3 rounded border border-gray-600">
-                        <p className="text-xs text-gray-400">Operator</p>
-                        <p className="font-semibold text-white">{selectedRequest.details?.operator || '-'}</p>
-                      </div>
-                      <div className="bg-gray-800/70 p-3 rounded border border-gray-600">
-                        <p className="text-xs text-gray-400">Circle/State</p>
-                        <p className="font-semibold text-white">{selectedRequest.details?.circle || '-'}</p>
-                      </div>
-                      <div className="bg-gray-800/70 p-3 rounded border border-gray-600">
-                        <p className="text-xs text-gray-400">Recharge Type</p>
-                        <p className="font-semibold capitalize text-white">{selectedRequest.details?.recharge_type || 'Prepaid'}</p>
-                      </div>
-                      <div className="bg-gray-800/70 p-3 rounded border border-gray-600 col-span-2">
-                        <p className="text-xs text-gray-400">Recharge Amount</p>
-                        <p className="font-semibold text-lg text-green-400">₹{selectedRequest.amount_inr}</p>
-                      </div>
-                    </div>
-                  ) : selectedRequest.request_type === 'dth' ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Subscriber ID</p>
-                        <p className="font-semibold font-mono">{selectedRequest.details?.subscriber_id || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">DTH Provider</p>
-                        <p className="font-semibold">{selectedRequest.details?.provider || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Customer Name</p>
-                        <p className="font-semibold">{selectedRequest.details?.customer_name || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Recharge Amount</p>
-                        <p className="font-semibold text-lg text-green-400">₹{selectedRequest.amount_inr}</p>
-                      </div>
-                    </div>
-                  ) : selectedRequest.request_type === 'gas' ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Consumer Number</p>
-                        <p className="font-semibold font-mono">{selectedRequest.details?.consumer_number || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Gas Provider</p>
-                        <p className="font-semibold">{selectedRequest.details?.provider || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Consumer Name</p>
-                        <p className="font-semibold">{selectedRequest.details?.consumer_name || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Bill Amount</p>
-                        <p className="font-semibold text-lg">₹{selectedRequest.amount_inr}</p>
-                      </div>
-                    </div>
-                  ) : selectedRequest.request_type === 'water' ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Consumer Number</p>
-                        <p className="font-semibold font-mono">{selectedRequest.details?.consumer_number || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Water Board</p>
-                        <p className="font-semibold">{selectedRequest.details?.provider || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Consumer Name</p>
-                        <p className="font-semibold">{selectedRequest.details?.consumer_name || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Bill Amount</p>
-                        <p className="font-semibold text-lg">₹{selectedRequest.amount_inr}</p>
-                      </div>
-                    </div>
-                  ) : selectedRequest.request_type === 'broadband' ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Account Number</p>
-                        <p className="font-semibold font-mono">{selectedRequest.details?.account_number || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">ISP Provider</p>
-                        <p className="font-semibold">{selectedRequest.details?.provider || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Customer Name</p>
-                        <p className="font-semibold">{selectedRequest.details?.customer_name || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Bill Amount</p>
-                        <p className="font-semibold text-lg">₹{selectedRequest.amount_inr}</p>
-                      </div>
-                    </div>
-                  ) : selectedRequest.request_type === 'insurance' ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Policy Number</p>
-                        <p className="font-semibold font-mono">{selectedRequest.details?.policy_number || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Insurance Company</p>
-                        <p className="font-semibold">{selectedRequest.details?.provider || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Policy Holder</p>
-                        <p className="font-semibold">{selectedRequest.details?.policy_holder || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Premium Amount</p>
-                        <p className="font-semibold text-lg">₹{selectedRequest.amount_inr}</p>
-                      </div>
-                    </div>
-                  ) : selectedRequest.request_type === 'fastag' ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">Vehicle Number</p>
-                        <p className="font-semibold font-mono text-lg">{selectedRequest.details?.vehicle_number || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border">
-                        <p className="text-xs text-gray-500">FASTag Provider</p>
-                        <p className="font-semibold">{selectedRequest.details?.provider || '-'}</p>
-                      </div>
-                      <div className="bg-gray-900 p-3 rounded border col-span-2">
-                        <p className="text-xs text-gray-500">Recharge Amount</p>
-                        <p className="font-semibold text-lg text-green-400">₹{selectedRequest.amount_inr}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Fallback for unknown types - show formatted key-value pairs */
-                    <div className="grid grid-cols-2 gap-3">
-                      {selectedRequest.details && Object.entries(selectedRequest.details).map(([key, value]) => (
-                        <div key={key} className="bg-gray-900 p-3 rounded border">
-                          <p className="text-xs text-gray-500 capitalize">{key.replace(/_/g, ' ')}</p>
-                          <p className="font-semibold">{value || '-'}</p>
-                        </div>
-                      ))}
-                      {(!selectedRequest.details || Object.keys(selectedRequest.details).length === 0) && (
-                        <p className="text-gray-500 col-span-2">No additional details available</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {selectedRequest.status === 'pending' && (
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Admin Notes</label>
-                    <textarea
-                      value={adminNotes}
-                      onChange={(e) => setAdminNotes(e.target.value)}
-                      className="w-full border border-gray-700 rounded bg-gray-800 text-white p-2 text-sm"
-                      rows={3}
-                      placeholder="Add notes (optional)..."
-                    />
-                  </div>
-                )}
-
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={() => setSelectedRequest(null)}>
-                    Close
-                  </Button>
-                  {selectedRequest.status === 'pending' && (
-                    <>
                       <Button
+                        size="sm"
                         variant="destructive"
-                        onClick={() => handleProcess(selectedRequest.request_id, 'reject')}
-                        disabled={loading}
+                        className="h-8"
+                        onClick={(e) => handleQuickReject(req, e)}
+                        disabled={processing}
                       >
-                        Reject
+                        <XCircle className="w-4 h-4" />
                       </Button>
-                      <Button
-                        onClick={() => handleProcess(selectedRequest.request_id, 'complete')}
-                        disabled={loading}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        Mark Complete
-                      </Button>
-                    </>
+                    </div>
                   )}
+                  
+                  <Button size="sm" variant="ghost" className="text-gray-400">
+                    <Eye className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
             </Card>
-          </div>
-        )}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {selectedRequest && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setSelectedRequest(null)}>
+          <Card className="w-full max-w-lg bg-gray-900 border-gray-700" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-white">Request Details</h2>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedRequest(null)}>
+                  <XCircle className="w-5 h-5" />
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-gray-500 text-sm">User</p>
+                    <p className="text-white font-medium">{selectedRequest.user_name || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-sm">Mobile</p>
+                    <p className="text-white font-medium">{selectedRequest.user_mobile || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-sm">Type</p>
+                    <p className="text-white font-medium capitalize">{selectedRequest.request_type?.replace('_', ' ')}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-sm">Amount</p>
+                    <p className="text-white font-medium">₹{selectedRequest.amount_inr}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-sm">PRC Deducted</p>
+                    <p className="text-white font-medium">{selectedRequest.total_prc_deducted} PRC</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-sm">Status</p>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(selectedRequest.status)}`}>
+                      {selectedRequest.status?.toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+
+                {selectedRequest.status === 'pending' && (
+                  <>
+                    <div>
+                      <p className="text-gray-500 text-sm mb-2">Admin Notes</p>
+                      <Input
+                        value={adminNotes}
+                        onChange={(e) => setAdminNotes(e.target.value)}
+                        placeholder="Add notes (optional)..."
+                        className="bg-gray-800 border-gray-700 text-white"
+                      />
+                    </div>
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={() => handleProcess(selectedRequest.request_id, 'approve')}
+                        disabled={processing}
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                      >
+                        {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                        Approve
+                      </Button>
+                      <Button
+                        onClick={() => handleProcess(selectedRequest.request_id, 'reject')}
+                        disabled={processing}
+                        variant="destructive"
+                        className="flex-1"
+                      >
+                        {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                        Reject
+                      </Button>
+                    </div>
+                  </>
+                )}
+                
+                {selectedRequest.status === 'approved' && (
+                  <Button
+                    onClick={() => handleProcess(selectedRequest.request_id, 'complete')}
+                    disabled={processing}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                  >
+                    {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                    Mark as Completed
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
