@@ -307,7 +307,7 @@ const ReferralsEnhanced = ({ user }) => {
           const users = level.users || [];
           totalCount += users.length;
           activeCount += users.filter(u => u.is_active).length;
-          vipCount += users.filter(u => u.membership_type === 'vip' || ['startup', 'growth', 'elite'].includes(u.subscription_plan?.toLowerCase())).length;
+          vipCount += users.filter(u => ['startup', 'growth', 'elite'].includes(u.subscription_plan?.toLowerCase())).length;
         });
         
         // Check for milestone achievements (5, 10, 25, 50, 100)
