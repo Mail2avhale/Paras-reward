@@ -9070,6 +9070,7 @@ async def get_admin_stats():
         "financial": {
             "total_revenue_inr": total_revenue_inr,
             "total_revenue_prc": total_revenue_prc,
+            "total_prc_redeemed": round(total_prc_redeemed, 2),
             "total_prc_value_in_inr": total_prc_value_in_inr,
             "total_security_deposits": total_security_deposits,
             "total_renewal_fees": total_renewal_fees,
