@@ -177,7 +177,7 @@ const Leaderboard = ({ user }) => {
                       )}
                     </div>
                     <p className="text-gray-500 text-sm">
-                      {(entry.membership_type === 'vip' || ['startup', 'growth', 'elite'].includes(entry.subscription_plan?.toLowerCase())) ? '👑 VIP Member' : 'Free Member'}
+                      {['startup', 'growth', 'elite'].includes(entry.subscription_plan?.toLowerCase()) ? '👑 VIP Member' : 'Free Member'}
                     </p>
                   </div>
 
