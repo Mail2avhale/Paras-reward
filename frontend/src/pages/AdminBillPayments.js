@@ -400,7 +400,7 @@ const AdminBillPayments = ({ user }) => {
       {/* Detail Modal */}
       {selectedRequest && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setSelectedRequest(null)}>
-          <Card className="w-full max-w-lg bg-gray-900 border-gray-700" onClick={(e) => e.stopPropagation()}>
+          <Card className="w-full max-w-lg bg-gray-900 border-gray-700 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">Request Details</h2>
@@ -410,33 +410,131 @@ const AdminBillPayments = ({ user }) => {
               </div>
 
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-gray-500 text-sm">User</p>
-                    <p className="text-white font-medium">{selectedRequest.user_name || 'N/A'}</p>
+                {/* User Information Section */}
+                <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                  <h3 className="text-sm font-semibold text-blue-400 mb-3 flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    User Information
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-gray-500 text-xs">Name</p>
+                      <p className="text-white font-medium">{selectedRequest.user_name || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">Mobile</p>
+                      <p className="text-white font-medium">{selectedRequest.user_mobile || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">Email</p>
+                      <p className="text-white font-medium text-sm">{selectedRequest.user_email || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">Subscription</p>
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        selectedRequest.user_subscription === 'elite' ? 'bg-purple-500/20 text-purple-400' :
+                        selectedRequest.user_subscription === 'growth' ? 'bg-blue-500/20 text-blue-400' :
+                        selectedRequest.user_subscription === 'startup' ? 'bg-green-500/20 text-green-400' :
+                        'bg-gray-500/20 text-gray-400'
+                      }`}>
+                        {selectedRequest.user_subscription?.toUpperCase() || 'EXPLORER'}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">PRC Balance</p>
+                      <p className="text-amber-400 font-medium">{selectedRequest.user_prc_balance?.toFixed(2) || '0.00'} PRC</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">KYC Status</p>
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        selectedRequest.user_kyc_status === 'verified' ? 'bg-green-500/20 text-green-400' :
+                        selectedRequest.user_kyc_status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                        'bg-red-500/20 text-red-400'
+                      }`}>
+                        {selectedRequest.user_kyc_status?.toUpperCase() || 'PENDING'}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-gray-500 text-sm">Mobile</p>
-                    <p className="text-white font-medium">{selectedRequest.user_mobile || 'N/A'}</p>
+                </div>
+
+                {/* Request Details Section */}
+                <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                  <h3 className="text-sm font-semibold text-green-400 mb-3 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4" />
+                    Payment Details
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-gray-500 text-xs">Type</p>
+                      <p className="text-white font-medium capitalize">{selectedRequest.request_type?.replace('_', ' ')}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">Amount</p>
+                      <p className="text-white font-medium">₹{selectedRequest.amount_inr}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">PRC Deducted</p>
+                      <p className="text-amber-400 font-medium">{selectedRequest.total_prc_deducted} PRC</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">Status</p>
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium border ${getStatusBadge(selectedRequest.status)}`}>
+                        {selectedRequest.status?.toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">Request Date</p>
+                      <p className="text-white text-sm">{formatDate(selectedRequest.created_at)}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">Request ID</p>
+                      <p className="text-gray-400 text-xs font-mono">{selectedRequest.request_id?.slice(0, 12)}...</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-gray-500 text-sm">Type</p>
-                    <p className="text-white font-medium capitalize">{selectedRequest.request_type?.replace('_', ' ')}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500 text-sm">Amount</p>
-                    <p className="text-white font-medium">₹{selectedRequest.amount_inr}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500 text-sm">PRC Deducted</p>
-                    <p className="text-white font-medium">{selectedRequest.total_prc_deducted} PRC</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500 text-sm">Status</p>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(selectedRequest.status)}`}>
-                      {selectedRequest.status?.toUpperCase()}
-                    </span>
-                  </div>
+                  
+                  {/* Additional Details based on request type */}
+                  {selectedRequest.phone_number && (
+                    <div className="mt-3 pt-3 border-t border-gray-700">
+                      <p className="text-gray-500 text-xs">Recharge Number</p>
+                      <p className="text-white font-medium">{selectedRequest.phone_number}</p>
+                    </div>
+                  )}
+                  {selectedRequest.operator && (
+                    <div className="mt-2">
+                      <p className="text-gray-500 text-xs">Operator</p>
+                      <p className="text-white">{selectedRequest.operator}</p>
+                    </div>
+                  )}
+                  {selectedRequest.account_number && (
+                    <div className="mt-2">
+                      <p className="text-gray-500 text-xs">Account Number</p>
+                      <p className="text-white font-mono">{selectedRequest.account_number}</p>
+                    </div>
+                  )}
+                  {selectedRequest.consumer_number && (
+                    <div className="mt-2">
+                      <p className="text-gray-500 text-xs">Consumer Number</p>
+                      <p className="text-white font-mono">{selectedRequest.consumer_number}</p>
+                    </div>
+                  )}
+                  {selectedRequest.biller_name && (
+                    <div className="mt-2">
+                      <p className="text-gray-500 text-xs">Biller Name</p>
+                      <p className="text-white">{selectedRequest.biller_name}</p>
+                    </div>
+                  )}
+                  {selectedRequest.loan_account && (
+                    <div className="mt-2">
+                      <p className="text-gray-500 text-xs">Loan Account</p>
+                      <p className="text-white font-mono">{selectedRequest.loan_account}</p>
+                    </div>
+                  )}
+                  {selectedRequest.bank_name && (
+                    <div className="mt-2">
+                      <p className="text-gray-500 text-xs">Bank Name</p>
+                      <p className="text-white">{selectedRequest.bank_name}</p>
+                    </div>
+                  )}
                 </div>
 
                 {selectedRequest.status === 'pending' && (
