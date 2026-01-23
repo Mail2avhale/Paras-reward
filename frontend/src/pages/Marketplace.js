@@ -421,8 +421,8 @@ const Marketplace = ({ user }) => {
     return sum + (product?.prc_price || 0) * item.quantity;
   }, 0);
 
-  const hasPaidPlan = ['startup', 'growth', 'elite'].includes(userData?.subscription_plan);
-  const isVip = hasPaidPlan || userData?.membership_type === 'vip';
+  const hasPaidPlan = ['startup', 'growth', 'elite'].includes(userData?.subscription_plan?.toLowerCase());
+  const isVip = hasPaidPlan;
 
   if (loading) {
     return (
