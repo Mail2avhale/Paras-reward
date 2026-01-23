@@ -324,12 +324,12 @@ Download now & start earning!`;
                       <div className="text-right">
                         <span
                           className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
-                            (referral.membership_type === 'vip' || ['startup', 'growth', 'elite'].includes(referral.subscription_plan?.toLowerCase()))
+                            ['startup', 'growth', 'elite'].includes(referral.subscription_plan?.toLowerCase())
                               ? 'bg-purple-100 text-purple-800'
                               : 'bg-gray-200 text-gray-700'
                           }`}
                         >
-                          {(referral.subscription_plan || referral.membership_type || 'free').toUpperCase()}
+                          {(referral.subscription_plan || 'explorer').toUpperCase()}
                         </span>
                         <p className="text-xs text-gray-500 mt-1">
                           {new Date(referral.joined_at).toLocaleDateString()}
