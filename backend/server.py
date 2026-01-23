@@ -5387,6 +5387,151 @@ async def approve_vip_payment(payment_id: str, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ========== VIP STATUS HELPER & MIGRATION ==========
+
+def is_paid_subscriber(user: dict) -> bool:
+    """
+    Unified helper to check if user has paid subscription.
+    Supports both legacy (membership_type: vip) and new (subscription_plan) systems.
+    Use this instead of checking membership_type directly.
+    """
+    if not user:
+        return False
+    
+    # Check new subscription plan system first (preferred)
+    subscription_plan = user.get("subscription_plan", "").lower()
+    if subscription_plan in ["startup", "growth", "elite"]:
+        return True
+    
+    # Fallback to legacy VIP system
+    if user.get("membership_type") == "vip":
+        return True
+    
+    return False
+
+
+@api_router.post("/admin/migrate-vip-users")
+async def migrate_vip_users_to_subscription(request: Request):
+    """
+    Migrate legacy VIP users to new subscription system.
+    - membership_type: vip -> subscription_plan: startup (if no plan set)
+    - Preserves existing subscription_plan if already set
+    """
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id")
+        dry_run = data.get("dry_run", True)  # Default to dry run for safety
+        
+        # Find all users with membership_type: vip but no subscription_plan or explorer
+        legacy_vip_users = await db.users.find({
+            "membership_type": "vip",
+            "$or": [
+                {"subscription_plan": {"$exists": False}},
+                {"subscription_plan": None},
+                {"subscription_plan": ""},
+                {"subscription_plan": "explorer"}
+            ]
+        }).to_list(1000)
+        
+        if dry_run:
+            return {
+                "success": True,
+                "dry_run": True,
+                "message": f"Found {len(legacy_vip_users)} legacy VIP users to migrate",
+                "users": [{"email": u.get("email"), "uid": u.get("uid"), "current_plan": u.get("subscription_plan")} for u in legacy_vip_users[:20]],
+                "note": "Set dry_run=false to execute migration"
+            }
+        
+        # Execute migration
+        now = datetime.now(timezone.utc)
+        migrated_count = 0
+        
+        for user in legacy_vip_users:
+            # Migrate to startup plan (most common VIP equivalent)
+            # Preserve existing expiry if set
+            expiry = user.get("vip_expiry") or user.get("membership_expiry") or user.get("subscription_expiry")
+            if not expiry:
+                # Set 30 days from now if no expiry
+                expiry = (now + timedelta(days=30)).isoformat()
+            
+            await db.users.update_one(
+                {"uid": user["uid"]},
+                {
+                    "$set": {
+                        "subscription_plan": "startup",
+                        "subscription_expiry": expiry,
+                        "migrated_from_vip": True,
+                        "migration_date": now.isoformat()
+                    }
+                }
+            )
+            migrated_count += 1
+        
+        # Log migration
+        await db.admin_audit_logs.insert_one({
+            "log_id": str(uuid.uuid4()),
+            "admin_id": admin_id,
+            "action": "vip_to_subscription_migration",
+            "migrated_count": migrated_count,
+            "timestamp": now.isoformat()
+        })
+        
+        return {
+            "success": True,
+            "dry_run": False,
+            "message": f"Successfully migrated {migrated_count} legacy VIP users to Startup plan",
+            "migrated_count": migrated_count
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/vip-migration-status")
+async def get_vip_migration_status():
+    """Get current migration status - how many users are on old vs new system"""
+    
+    # Count legacy VIP users (membership_type: vip without proper subscription_plan)
+    legacy_vip_count = await db.users.count_documents({
+        "membership_type": "vip",
+        "$or": [
+            {"subscription_plan": {"$exists": False}},
+            {"subscription_plan": None},
+            {"subscription_plan": ""},
+            {"subscription_plan": "explorer"}
+        ]
+    })
+    
+    # Count users already on new system
+    new_system_count = await db.users.count_documents({
+        "subscription_plan": {"$in": ["startup", "growth", "elite"]}
+    })
+    
+    # Count migrated users
+    migrated_count = await db.users.count_documents({
+        "migrated_from_vip": True
+    })
+    
+    # Count free/explorer users
+    free_count = await db.users.count_documents({
+        "$or": [
+            {"subscription_plan": "explorer"},
+            {"subscription_plan": {"$exists": False}},
+            {"membership_type": {"$ne": "vip"}, "subscription_plan": {"$in": [None, "", "explorer"]}}
+        ]
+    })
+    
+    return {
+        "legacy_vip_pending_migration": legacy_vip_count,
+        "new_subscription_system": new_system_count,
+        "already_migrated": migrated_count,
+        "free_explorer_users": free_count,
+        "migration_complete": legacy_vip_count == 0,
+        "recommendation": "Run migration with dry_run=false when ready" if legacy_vip_count > 0 else "All VIP users migrated!"
+    }
+
+
 @api_router.get("/admin/subscription-pricing-reference")
 async def get_subscription_pricing_reference():
     """Get pricing reference for admin to verify payments and detect fraud"""
