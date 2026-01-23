@@ -168,7 +168,7 @@ const PublicProfile = ({ user }) => {
           {/* Avatar */}
           <div className="relative inline-block mb-4">
             <div className={`w-28 h-28 rounded-full flex items-center justify-center text-4xl font-bold ${
-              (profile.membership_type === 'vip' || ['startup', 'growth', 'elite'].includes(profile.subscription_plan?.toLowerCase()))
+              ['startup', 'growth', 'elite'].includes(profile.subscription_plan?.toLowerCase())
                 ? 'bg-gradient-to-br from-amber-400 to-amber-600' 
                 : 'bg-gradient-to-br from-purple-500 to-purple-700'
             }`}>
@@ -183,7 +183,7 @@ const PublicProfile = ({ user }) => {
                 <CheckCircle className="w-4 h-4 text-white" />
               </div>
             )}
-            {(profile.membership_type === 'vip' || ['startup', 'growth', 'elite'].includes(profile.subscription_plan?.toLowerCase())) && (
+            {['startup', 'growth', 'elite'].includes(profile.subscription_plan?.toLowerCase()) && (
               <div className="absolute -top-1 -right-1 w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center border-4 border-gray-950">
                 <Crown className="w-4 h-4 text-white" />
               </div>
