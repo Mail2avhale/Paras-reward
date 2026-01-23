@@ -17,7 +17,7 @@ const TreeNode = ({ node, depth = 0 }) => {
   const [isExpanded, setIsExpanded] = useState(depth < 2);
   const hasChildren = node?.children && node.children.length > 0;
   const subscriptionPlan = node?.subscription_plan || 'explorer';
-  const isActive = node?.is_active || subscriptionPlan !== 'explorer' || node?.membership_type === 'vip' || ['startup', 'growth', 'elite'].includes(subscriptionPlan?.toLowerCase());
+  const isActive = node?.is_active || ['startup', 'growth', 'elite'].includes(subscriptionPlan?.toLowerCase());
   
   // Get plan display info
   const getPlanBadge = () => {
