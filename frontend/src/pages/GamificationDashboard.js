@@ -265,7 +265,7 @@ function GamificationDashboard({ user, onLogout }) {
                       </span>
                       <div>
                         <p className="font-medium text-gray-900">{entry.name}</p>
-                        <p className="text-xs text-gray-500">{entry.membership_type.toUpperCase()}</p>
+                        <p className="text-xs text-gray-500">{(entry.subscription_plan || 'explorer').toUpperCase()}</p>
                       </div>
                     </div>
                     <span className="font-bold text-blue-600">{entry.total_referrals} refs</span>
