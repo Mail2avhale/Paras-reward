@@ -26,9 +26,8 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
       return;
     }
     
-    // Check VIP membership - support both legacy (membership_type: vip) and new (subscription_plan) models
+    // Check subscription plan for gift voucher access
     const isVipOrPaidSubscription = 
-      user.membership_type === 'vip' || 
       ['startup', 'growth', 'elite'].includes(user.subscription_plan?.toLowerCase());
     
     if (!isVipOrPaidSubscription) {
