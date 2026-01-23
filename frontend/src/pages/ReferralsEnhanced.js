@@ -1042,12 +1042,6 @@ Download now & start earning!`;
                                    u.subscription_plan}
                                 </span>
                               )}
-                              {/* Show Explorer badge for free users with membership_type check */}
-                              {(!u.subscription_plan || u.subscription_plan === 'explorer') && u.membership_type === 'vip' && (
-                                <span className="text-xs px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded">
-                                  ✓ VIP
-                                </span>
-                              )}
                               <span className={`text-xs px-2 py-0.5 rounded-full ${
                                 u.is_active 
                                   ? 'bg-green-500/20 text-green-400' 
