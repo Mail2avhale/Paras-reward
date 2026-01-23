@@ -615,23 +615,6 @@ const AdminBillPayments = ({ user }) => {
                       )}
                     </div>
                   )}
-                    <div className="mt-2">
-                      <p className="text-gray-500 text-xs">Biller Name</p>
-                      <p className="text-white">{selectedRequest.biller_name}</p>
-                    </div>
-                  )}
-                  {selectedRequest.loan_account && (
-                    <div className="mt-2">
-                      <p className="text-gray-500 text-xs">Loan Account</p>
-                      <p className="text-white font-mono">{selectedRequest.loan_account}</p>
-                    </div>
-                  )}
-                  {selectedRequest.bank_name && (
-                    <div className="mt-2">
-                      <p className="text-gray-500 text-xs">Bank Name</p>
-                      <p className="text-white">{selectedRequest.bank_name}</p>
-                    </div>
-                  )}
                 </div>
 
                 {selectedRequest.status === 'pending' && (
