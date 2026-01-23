@@ -19566,7 +19566,7 @@ async def get_all_bill_payment_requests(
     request_type: Optional[str] = None,
     search: Optional[str] = None
 ):
-    """Get all bill payment requests (Admin only)"""
+    """Get all bill payment requests (Admin only) with enriched user data"""
     query = {}
     
     if status:
@@ -19585,6 +19585,26 @@ async def get_all_bill_payment_requests(
         ]
     
     requests = await db.bill_payment_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    
+    # Enrich requests with current user data
+    for req in requests:
+        user_id = req.get("user_id")
+        if user_id:
+            user = await db.users.find_one({"uid": user_id}, {
+                "_id": 0, "name": 1, "email": 1, "mobile": 1, 
+                "subscription_plan": 1, "membership_type": 1,
+                "prc_balance": 1, "kyc_status": 1
+            })
+            if user:
+                # Add/update user details in request
+                req["user_name"] = user.get("name") or req.get("user_name")
+                req["user_email"] = user.get("email") or req.get("user_email")
+                req["user_mobile"] = user.get("mobile") or req.get("user_mobile")
+                req["user_subscription"] = user.get("subscription_plan") or (
+                    "vip" if user.get("membership_type") == "vip" else "explorer"
+                )
+                req["user_prc_balance"] = user.get("prc_balance", 0)
+                req["user_kyc_status"] = user.get("kyc_status", "pending")
     
     # Get statistics
     total_pending = await db.bill_payment_requests.count_documents({"status": "pending"})
