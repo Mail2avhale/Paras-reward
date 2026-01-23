@@ -375,8 +375,8 @@ const AdvancedOrderManagement = () => {
                         <p className="font-semibold">{orderDetails.user_details?.mobile || 'N/A'}</p>
                       </div>
                       <div>
-                        <span className="text-gray-600">Membership:</span>
-                        <p className="font-semibold capitalize">{orderDetails.user_details?.membership_type || 'Free'}</p>
+                        <span className="text-gray-600">Subscription:</span>
+                        <p className="font-semibold capitalize">{orderDetails.user_details?.subscription_plan || 'Explorer'}</p>
                       </div>
                     </div>
                   </Card>
