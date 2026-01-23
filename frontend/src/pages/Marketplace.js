@@ -240,10 +240,10 @@ const Marketplace = ({ user }) => {
   const categories = ['All', ...new Set(products.map(p => p.category).filter(Boolean))];
 
   useEffect(() => {
-    // Check subscription plan instead of VIP
+    // Check subscription plan
     if (user) {
-      const hasPaidPlan = ['startup', 'growth', 'elite'].includes(user.subscription_plan);
-      if (!hasPaidPlan && user.membership_type !== 'vip') {
+      const hasPaidPlan = ['startup', 'growth', 'elite'].includes(user.subscription_plan?.toLowerCase());
+      if (!hasPaidPlan) {
         toast.error('Paid subscription required to access Marketplace');
         setTimeout(() => navigate('/subscription'), 2000);
         return;
