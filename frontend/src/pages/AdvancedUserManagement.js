@@ -399,9 +399,9 @@ const AdvancedUserManagement = () => {
                     <span className={`px-2 py-1 rounded text-xs font-semibold ${getRoleBadge(user.role)}`}>
                       {user.role?.replace('_', ' ').toUpperCase()}
                     </span>
-                    <span className={`px-2 py-1 rounded text-xs font-semibold ${getMembershipBadge(user.membership_type)}`}>
-                      {user.subscription_plan?.toUpperCase() || user.membership_type?.toUpperCase() || 'EXPLORER'}
-                      {(user.membership_type === 'vip' || user.subscription_plan) && user.membership_expiry && (
+                    <span className={`px-2 py-1 rounded text-xs font-semibold ${getMembershipBadge(user.subscription_plan)}`}>
+                      {user.subscription_plan?.toUpperCase() || 'EXPLORER'}
+                      {user.subscription_plan && user.membership_expiry && (
                         <span className="ml-1 font-normal">
                           (→ {new Date(user.membership_expiry).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })})
                         </span>
