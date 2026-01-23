@@ -8961,6 +8961,43 @@ async def get_admin_stats():
     marketplace_charges_result = await db.orders.aggregate(marketplace_charges_pipeline).to_list(1)
     total_marketplace_charges = marketplace_charges_result[0]["total"] if marketplace_charges_result else 0
     
+    # Calculate TOTAL PRC REDEEMED (spent by users) across all redemption types
+    total_prc_redeemed = 0
+    
+    # 1. Orders (marketplace) - completed/delivered orders
+    orders_prc_pipeline = [
+        {"$match": {"status": {"$in": ["completed", "delivered"]}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", {"$ifNull": ["$prc_amount", 0]}]}}}}
+    ]
+    orders_prc_result = await db.orders.aggregate(orders_prc_pipeline).to_list(1)
+    total_prc_redeemed += orders_prc_result[0]["total"] if orders_prc_result else 0
+    
+    # 2. Bill payments - completed bill payments
+    bill_prc_pipeline = [
+        {"$match": {"status": {"$in": ["completed", "approved", "success"]}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
+    ]
+    bill_prc_result = await db.bill_payment_requests.aggregate(bill_prc_pipeline).to_list(1)
+    total_prc_redeemed += bill_prc_result[0]["total"] if bill_prc_result else 0
+    
+    # 3. Gift vouchers - completed voucher redemptions
+    voucher_prc_pipeline = [
+        {"$match": {"status": {"$in": ["completed", "approved", "delivered"]}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
+    ]
+    voucher_prc_result = await db.gift_voucher_requests.aggregate(voucher_prc_pipeline).to_list(1)
+    total_prc_redeemed += voucher_prc_result[0]["total"] if voucher_prc_result else 0
+    
+    # 4. Also check transactions collection for any additional redemptions
+    txn_redeem_pipeline = [
+        {"$match": {"type": {"$in": ["order", "bill_payment_request", "gift_voucher_request", "prc_burn"]}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+    ]
+    txn_redeem_result = await db.transactions.aggregate(txn_redeem_pipeline).to_list(1)
+    # Only use transactions total if the individual collections have 0
+    if total_prc_redeemed == 0 and txn_redeem_result:
+        total_prc_redeemed = txn_redeem_result[0]["total"]
+    
     # Get recent VIP payments (last 5)
     recent_vip_payments = await db.vip_payments.find(
         {"status": "approved"},
