@@ -245,13 +245,12 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
       const userResponse = await axios.get(`${API}/users/${user.uid}`);
       const freshUserData = userResponse.data;
       
-      // Support both legacy (membership_type: vip) and new (subscription_plan) models
+      // Check subscription plan for shopping access
       const isVipOrPaidSubscription = 
-        freshUserData?.membership_type === 'vip' || 
         ['startup', 'growth', 'elite'].includes(freshUserData?.subscription_plan?.toLowerCase());
       
       if (!isVipOrPaidSubscription) {
-        toast.error('VIP membership required to shop!');
+        toast.error('Paid subscription required to shop!');
         navigate('/dashboard');
         return;
       }
