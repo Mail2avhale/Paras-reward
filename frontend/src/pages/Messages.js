@@ -270,7 +270,7 @@ const Messages = ({ user }) => {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="text-white font-medium truncate">{searchedUser.name || 'User'}</span>
-                            {(searchedUser.membership_type === 'vip' || ['startup', 'growth', 'elite'].includes(searchedUser.subscription_plan?.toLowerCase())) && (
+                            {['startup', 'growth', 'elite'].includes(searchedUser.subscription_plan?.toLowerCase()) && (
                               <Crown className="w-4 h-4 text-amber-400 flex-shrink-0" />
                             )}
                           </div>
