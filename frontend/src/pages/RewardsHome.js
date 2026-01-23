@@ -257,7 +257,7 @@ const RewardsHome = () => {
         totalUsers: response.data.users?.total || 0,
         totalPRC: response.data.total_prc || 0,
         vipMembers: response.data.users?.vip || 0,
-        totalRedeemed: response.data.financial?.total_revenue_prc || 0
+        totalRedeemed: response.data.financial?.total_prc_redeemed || 0
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
