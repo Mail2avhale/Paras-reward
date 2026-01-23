@@ -327,7 +327,7 @@ const NetworkFeed = ({ user }) => {
         >
           <span className="text-white font-semibold truncate">{userItem.name}</span>
           {userItem.badge && <span>{userItem.badge}</span>}
-          {userItem.membership_type === 'vip' && <Crown className="w-4 h-4 text-amber-400" />}
+          {(userItem.membership_type === 'vip' || ['startup', 'growth', 'elite'].includes(userItem.subscription_plan?.toLowerCase())) && <Crown className="w-4 h-4 text-amber-400" />}
         </button>
         <p className="text-gray-500 text-sm truncate">
           {userItem.city && <span>{userItem.city}</span>}
