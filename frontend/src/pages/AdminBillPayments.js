@@ -491,33 +491,130 @@ const AdminBillPayments = ({ user }) => {
                       <p className="text-gray-400 text-xs font-mono">{selectedRequest.request_id?.slice(0, 12)}...</p>
                     </div>
                   </div>
+                </div>
+                
+                {/* Service Specific Details Section */}
+                <div className="bg-yellow-900/20 rounded-lg p-4 border border-yellow-700/50">
+                  <h3 className="text-sm font-semibold text-yellow-400 mb-3 flex items-center gap-2">
+                    <Phone className="w-4 h-4" />
+                    Service Details - {selectedRequest.request_type?.replace('_', ' ').toUpperCase()}
+                  </h3>
                   
-                  {/* Additional Details based on request type */}
-                  {selectedRequest.phone_number && (
-                    <div className="mt-3 pt-3 border-t border-gray-700">
-                      <p className="text-gray-500 text-xs">Recharge Number</p>
-                      <p className="text-white font-medium">{selectedRequest.phone_number}</p>
+                  {/* Mobile Recharge */}
+                  {selectedRequest.request_type === 'mobile_recharge' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-gray-400 text-xs">Mobile Number</p>
+                        <p className="text-white font-medium text-lg">{selectedRequest.phone_number || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-xs">Operator</p>
+                        <p className="text-white font-medium">{selectedRequest.operator || 'N/A'}</p>
+                      </div>
                     </div>
                   )}
-                  {selectedRequest.operator && (
-                    <div className="mt-2">
-                      <p className="text-gray-500 text-xs">Operator</p>
-                      <p className="text-white">{selectedRequest.operator}</p>
+                  
+                  {/* DTH Recharge */}
+                  {selectedRequest.request_type === 'dth_recharge' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-gray-400 text-xs">Subscriber ID</p>
+                        <p className="text-white font-medium text-lg font-mono">{selectedRequest.subscriber_id || selectedRequest.phone_number || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-xs">DTH Operator</p>
+                        <p className="text-white font-medium">{selectedRequest.dth_operator || selectedRequest.operator || 'N/A'}</p>
+                      </div>
                     </div>
                   )}
-                  {selectedRequest.account_number && (
-                    <div className="mt-2">
-                      <p className="text-gray-500 text-xs">Account Number</p>
-                      <p className="text-white font-mono">{selectedRequest.account_number}</p>
+                  
+                  {/* Electricity Bill */}
+                  {selectedRequest.request_type === 'electricity_bill' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-gray-400 text-xs">Consumer Number</p>
+                        <p className="text-white font-medium text-lg font-mono">{selectedRequest.consumer_number || selectedRequest.account_number || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-xs">Provider/Biller</p>
+                        <p className="text-white font-medium">{selectedRequest.biller_name || 'N/A'}</p>
+                      </div>
                     </div>
                   )}
-                  {selectedRequest.consumer_number && (
-                    <div className="mt-2">
-                      <p className="text-gray-500 text-xs">Consumer Number</p>
-                      <p className="text-white font-mono">{selectedRequest.consumer_number}</p>
+                  
+                  {/* Credit Card Payment */}
+                  {selectedRequest.request_type === 'credit_card' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-gray-400 text-xs">Card Number (Last 4)</p>
+                        <p className="text-white font-medium text-lg">**** **** **** {selectedRequest.card_last4 || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-xs">Bank Name</p>
+                        <p className="text-white font-medium">{selectedRequest.bank_name || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-xs">Cardholder Name</p>
+                        <p className="text-white font-medium">{selectedRequest.cardholder_name || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-xs">Card Type</p>
+                        <p className="text-white font-medium">{selectedRequest.card_type || 'N/A'}</p>
+                      </div>
                     </div>
                   )}
-                  {selectedRequest.biller_name && (
+                  
+                  {/* Loan/EMI Payment */}
+                  {selectedRequest.request_type === 'loan_emi' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-gray-400 text-xs">Loan Account Number</p>
+                        <p className="text-white font-medium text-lg font-mono">{selectedRequest.loan_account || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-xs">Bank Name</p>
+                        <p className="text-white font-medium">{selectedRequest.bank_name || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-xs">Borrower Name</p>
+                        <p className="text-white font-medium">{selectedRequest.borrower_name || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-xs">Loan Type</p>
+                        <p className="text-white font-medium">{selectedRequest.loan_type || 'N/A'}</p>
+                      </div>
+                      {selectedRequest.ifsc_code && (
+                        <div>
+                          <p className="text-gray-400 text-xs">IFSC Code</p>
+                          <p className="text-white font-mono">{selectedRequest.ifsc_code}</p>
+                        </div>
+                      )}
+                      {selectedRequest.emi_amount && (
+                        <div>
+                          <p className="text-gray-400 text-xs">EMI Amount</p>
+                          <p className="text-white font-medium">₹{selectedRequest.emi_amount}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Fallback for any other type */}
+                  {!['mobile_recharge', 'dth_recharge', 'electricity_bill', 'credit_card', 'loan_emi'].includes(selectedRequest.request_type) && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {selectedRequest.phone_number && (
+                        <div>
+                          <p className="text-gray-400 text-xs">Phone/Account</p>
+                          <p className="text-white font-medium">{selectedRequest.phone_number}</p>
+                        </div>
+                      )}
+                      {selectedRequest.operator && (
+                        <div>
+                          <p className="text-gray-400 text-xs">Operator/Provider</p>
+                          <p className="text-white font-medium">{selectedRequest.operator}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                     <div className="mt-2">
                       <p className="text-gray-500 text-xs">Biller Name</p>
                       <p className="text-white">{selectedRequest.biller_name}</p>
