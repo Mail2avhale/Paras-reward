@@ -282,8 +282,8 @@ const Marketplace = ({ user }) => {
   };
 
   const addToCart = async (product) => {
-    const hasPaidPlan = ['startup', 'growth', 'elite'].includes(userData?.subscription_plan);
-    if (!userData || (!hasPaidPlan && userData.membership_type !== 'vip')) {
+    const hasPaidPlan = ['startup', 'growth', 'elite'].includes(userData?.subscription_plan?.toLowerCase());
+    if (!userData || !hasPaidPlan) {
       toast.error('Paid subscription required to shop');
       navigate('/subscription');
       return;
