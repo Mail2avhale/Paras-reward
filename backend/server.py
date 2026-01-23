@@ -19628,14 +19628,16 @@ async def get_all_bill_payment_requests(
             req["card_type"] = details.get("card_type")
             req["bank_name"] = details.get("bank_name")
             
-            # Loan/EMI details
-            req["loan_account"] = details.get("loan_account")
+            # Loan/EMI details - handle both old (loan_account_number) and new (loan_account) field names
+            req["loan_account"] = details.get("loan_account") or details.get("loan_account_number")
             req["borrower_name"] = details.get("borrower_name")
             req["loan_type"] = details.get("loan_type")
             req["ifsc_code"] = details.get("ifsc_code")
             req["registered_mobile"] = details.get("registered_mobile")
             req["emi_amount"] = details.get("emi_amount")
             req["emi_due_date"] = details.get("emi_due_date")
+            req["customer_id"] = details.get("customer_id")
+            req["loan_tenure"] = details.get("loan_tenure")
     
     # Get statistics
     total_pending = await db.bill_payment_requests.count_documents({"status": "pending"})
