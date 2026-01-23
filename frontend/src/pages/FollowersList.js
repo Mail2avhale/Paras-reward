@@ -178,7 +178,7 @@ const FollowersList = ({ user, type = 'followers' }) => {
                     className="flex items-center gap-2"
                   >
                     <span className="text-white font-semibold truncate">{item.name}</span>
-                    {item.membership_type === 'vip' && <Crown className="w-4 h-4 text-amber-400" />}
+                    {(item.membership_type === 'vip' || ['startup', 'growth', 'elite'].includes(item.subscription_plan?.toLowerCase())) && <Crown className="w-4 h-4 text-amber-400" />}
                   </button>
                   <p className="text-gray-500 text-sm">
                     {item.team_size || 0} team • {item.followers_count || 0} followers
