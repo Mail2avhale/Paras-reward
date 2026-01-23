@@ -26,7 +26,12 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
       return;
     }
     
-    if (user.membership_type !== 'vip') {
+    // Check VIP membership - support both legacy (membership_type: vip) and new (subscription_plan) models
+    const isVipOrPaidSubscription = 
+      user.membership_type === 'vip' || 
+      ['startup', 'growth', 'elite'].includes(user.subscription_plan?.toLowerCase());
+    
+    if (!isVipOrPaidSubscription) {
       toast.error('VIP membership required to redeem gift vouchers');
       setTimeout(() => navigate('/dashboard'), 2000);
       return;
