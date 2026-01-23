@@ -105,6 +105,49 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 
 ---
 
+### January 23, 2026 (VIP Membership to Subscription Migration)
+
+#### VIP to Subscription Migration System ✅ (COMPLETED)
+
+**Problem**: Old `membership_type: vip` system conflicting with new `subscription_plan` system causing users with active subscriptions to be blocked from redemption features.
+
+**Solution - Gradual Migration (Option A)**:
+
+**1. Fixed VIP Checks Across Frontend:**
+- `BillPayments.js` - Now checks both `membership_type === 'vip'` AND `subscription_plan` in ['startup', 'growth', 'elite']
+- `GiftVoucherRedemption.js` - Same fix
+- `MarketplaceEnhanced.js` - Same fix (both initial and addToCart)
+- `WalletNew.js` - Fixed `isFreeUser` calculation
+
+**2. Backend Migration Tools:**
+- `GET /api/admin/vip-migration-status` - Check migration progress
+- `POST /api/admin/migrate-vip-users` - Migrate legacy VIP users (with dry_run option)
+- `is_paid_subscriber(user)` - New helper function for unified VIP status check
+
+**3. Migration Status Response:**
+```json
+{
+  "legacy_vip_pending_migration": 0,
+  "new_subscription_system": 37,
+  "already_migrated": 0,
+  "free_explorer_users": 50,
+  "migration_complete": true
+}
+```
+
+**4. How Subscription Approval Now Works:**
+- Sets `membership_type: vip` (legacy compatibility)
+- Sets `subscription_plan: startup/growth/elite` (new system)
+- Both fields updated on approval for forward/backward compatibility
+
+---
+
+### January 23, 2026 (Homepage Stats Fix)
+
+#### PRC Redeemed Stats Fix ✅ (COMPLETED)
+
+---
+
 ### January 20, 2026 (Tap Game & Referral Rewards)
 
 #### Tap Game Daily PRC Limits ✅ (COMPLETED)
