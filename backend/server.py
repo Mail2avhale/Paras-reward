@@ -19586,7 +19586,7 @@ async def get_all_bill_payment_requests(
     
     requests = await db.bill_payment_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
     
-    # Enrich requests with current user data
+    # Enrich requests with current user data and flatten service details
     for req in requests:
         user_id = req.get("user_id")
         if user_id:
@@ -19605,6 +19605,37 @@ async def get_all_bill_payment_requests(
                 )
                 req["user_prc_balance"] = user.get("prc_balance", 0)
                 req["user_kyc_status"] = user.get("kyc_status", "pending")
+        
+        # Flatten service details from nested 'details' object
+        details = req.get("details", {})
+        if isinstance(details, dict):
+            # Mobile Recharge details
+            req["phone_number"] = details.get("phone_number") or details.get("mobile_number")
+            req["operator"] = details.get("operator")
+            
+            # DTH details
+            req["subscriber_id"] = details.get("subscriber_id") or details.get("customer_id")
+            req["dth_operator"] = details.get("dth_operator") or details.get("operator")
+            
+            # Electricity Bill details
+            req["consumer_number"] = details.get("consumer_number")
+            req["account_number"] = details.get("account_number")
+            req["biller_name"] = details.get("biller_name") or details.get("provider")
+            
+            # Credit Card details
+            req["card_last4"] = details.get("card_last4")
+            req["cardholder_name"] = details.get("cardholder_name")
+            req["card_type"] = details.get("card_type")
+            req["bank_name"] = details.get("bank_name")
+            
+            # Loan/EMI details
+            req["loan_account"] = details.get("loan_account")
+            req["borrower_name"] = details.get("borrower_name")
+            req["loan_type"] = details.get("loan_type")
+            req["ifsc_code"] = details.get("ifsc_code")
+            req["registered_mobile"] = details.get("registered_mobile")
+            req["emi_amount"] = details.get("emi_amount")
+            req["emi_due_date"] = details.get("emi_due_date")
     
     # Get statistics
     total_pending = await db.bill_payment_requests.count_documents({"status": "pending"})
