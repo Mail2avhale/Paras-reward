@@ -34,7 +34,10 @@ const WalletNew = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(false);
   
   // Determine minimum Redemption based on membership
-  const isFreeUser = user?.membership_type !== 'vip';
+  // Support both legacy (membership_type: vip) and new (subscription_plan) models
+  const isPaidUser = user?.membership_type === 'vip' || 
+    ['startup', 'growth', 'elite'].includes(user?.subscription_plan?.toLowerCase());
+  const isFreeUser = !isPaidUser;
   const minCashbackRedemption = isFreeUser ? 1000 : 10;
   const minprcRedemption = 50;
   
