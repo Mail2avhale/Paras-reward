@@ -50,9 +50,8 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
       return;
     }
     
-    // Support both legacy (membership_type: vip) and new (subscription_plan) models
+    // Check subscription plan for marketplace access
     const isVipOrPaidSubscription = 
-      user.membership_type === 'vip' || 
       ['startup', 'growth', 'elite'].includes(user.subscription_plan?.toLowerCase());
     
     if (!isVipOrPaidSubscription) {
