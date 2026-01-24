@@ -476,11 +476,30 @@ const SubscriptionPlans = ({ user }) => {
               <input
                 type="text"
                 value={formData.utr_number}
-                onChange={(e) => setFormData({...formData, utr_number: e.target.value})}
-                placeholder="Enter UTR number"
-                className="w-full p-4 bg-gray-900 border border-gray-700 rounded-xl text-white focus:border-amber-500 outline-none"
+                onChange={(e) => setFormData({...formData, utr_number: formatUTR(e.target.value)})}
+                placeholder="Enter 12+ digit UTR number"
+                maxLength={35}
+                className="w-full p-4 bg-gray-900 border border-gray-700 rounded-xl text-white focus:border-amber-500 outline-none font-mono tracking-wider"
                 data-testid="utr-input"
               />
+              {formData.utr_number && formData.utr_number.length > 0 && (
+                <div className="mt-1">
+                  {validateUTR(formData.utr_number).isValid ? (
+                    <p className="text-green-400 text-xs flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      {validateUTR(formData.utr_number).hint}
+                    </p>
+                  ) : (
+                    <p className="text-red-400 text-xs flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {validateUTR(formData.utr_number).error}
+                    </p>
+                  )}
+                </div>
+              )}
+              <p className="text-gray-600 text-xs mt-1">
+                IMPS: 12 digits | NEFT: 16 chars | RTGS: 22 chars | UPI: 12+ chars
+              </p>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
