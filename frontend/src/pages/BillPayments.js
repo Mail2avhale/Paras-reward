@@ -11,6 +11,10 @@ import {
   Send, Clock, CheckCircle, XCircle, AlertCircle, Receipt
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { 
+  formatMobile, formatIFSC, formatBankAccount,
+  validateMobile, validateIFSC, validateBankAccount
+} from '@/utils/indianValidation';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
