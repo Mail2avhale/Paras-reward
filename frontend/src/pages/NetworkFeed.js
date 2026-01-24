@@ -54,7 +54,28 @@ const NetworkFeed = ({ user }) => {
 
   useEffect(() => {
     fetchData();
-  }, [user]);
+    
+    // Auto-refresh global feed every 15 seconds for LIVE updates
+    const refreshInterval = setInterval(() => {
+      if (activeTab === 'global') {
+        refreshGlobalFeed();
+      }
+    }, 15000);
+    
+    return () => clearInterval(refreshInterval);
+  }, [user, activeTab]);
+  
+  // Silent refresh without showing loading state
+  const refreshGlobalFeed = async () => {
+    try {
+      const globalRes = await axios.get(`${API}/api/global/live-activity?limit=50`);
+      const globalActivities = globalRes.data.activities || [];
+      setGlobalFeed(globalActivities);
+      setGlobalTotal(globalRes.data.total || globalActivities.length);
+    } catch (error) {
+      console.error('Error refreshing global feed:', error);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
