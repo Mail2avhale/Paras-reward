@@ -22660,6 +22660,309 @@ async def get_suggested_users(uid: str, limit: int = 10):
     return {"suggested_users": suggestions}
 
 
+# ========== DIRECT REFERRAL MESSAGING ==========
+
+@api_router.get("/referrals/{user_id}/direct-list")
+async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20):
+    """
+    Get list of direct referrals with messaging capability
+    Returns referrals that the user can message
+    """
+    skip = (page - 1) * limit
+    
+    # Get direct referrals (users who used this user's referral code)
+    direct_referrals = await db.users.find(
+        {"referred_by": user_id},
+        {
+            "_id": 0, 
+            "uid": 1, 
+            "name": 1, 
+            "email": 1,
+            "avatar": 1, 
+            "profile_picture": 1,
+            "city": 1, 
+            "state": 1,
+            "subscription_plan": 1,
+            "membership_type": 1,
+            "mining_active": 1,
+            "mining_session_end": 1,
+            "last_login": 1,
+            "created_at": 1,
+            "allow_messages": 1
+        }
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    total = await db.users.count_documents({"referred_by": user_id})
+    
+    # Also get the user who referred this user (can also message them)
+    current_user = await db.users.find_one(
+        {"uid": user_id},
+        {"_id": 0, "referred_by": 1}
+    )
+    
+    referrer = None
+    if current_user and current_user.get("referred_by"):
+        referrer_data = await db.users.find_one(
+            {"uid": current_user["referred_by"]},
+            {
+                "_id": 0,
+                "uid": 1,
+                "name": 1,
+                "avatar": 1,
+                "profile_picture": 1,
+                "city": 1,
+                "state": 1,
+                "subscription_plan": 1,
+                "allow_messages": 1
+            }
+        )
+        if referrer_data:
+            referrer = {
+                "uid": referrer_data["uid"],
+                "name": referrer_data.get("name", "Unknown"),
+                "avatar": referrer_data.get("avatar") or referrer_data.get("profile_picture"),
+                "city": referrer_data.get("city", ""),
+                "state": referrer_data.get("state", ""),
+                "subscription_plan": referrer_data.get("subscription_plan", "explorer"),
+                "can_message": referrer_data.get("allow_messages", True)
+            }
+    
+    # Format referrals
+    result = []
+    for ref in direct_referrals:
+        # Check active status
+        is_active = False
+        if ref.get("mining_active") and ref.get("mining_session_end"):
+            try:
+                session_end = datetime.fromisoformat(ref["mining_session_end"].replace('Z', '+00:00'))
+                is_active = session_end > datetime.now(timezone.utc)
+            except:
+                pass
+        
+        result.append({
+            "uid": ref["uid"],
+            "name": ref.get("name", "Unknown"),
+            "avatar": ref.get("avatar") or ref.get("profile_picture"),
+            "city": ref.get("city", ""),
+            "state": ref.get("state", ""),
+            "subscription_plan": ref.get("subscription_plan") or ("explorer" if ref.get("membership_type") == "free" else "startup"),
+            "is_active": is_active,
+            "joined_at": ref.get("created_at", ""),
+            "last_seen": ref.get("last_login", ""),
+            "can_message": ref.get("allow_messages", True)
+        })
+    
+    return {
+        "referrals": result,
+        "referrer": referrer,
+        "total": total,
+        "page": page,
+        "total_pages": (total + limit - 1) // limit
+    }
+
+
+# ========== NEARBY USERS (IP-BASED) ==========
+
+@api_router.get("/social/nearby-users/{uid}")
+async def get_nearby_users(uid: str, limit: int = 20):
+    """
+    Get users who are nearby based on IP geolocation
+    Only shows users who have opted-in to location visibility
+    """
+    # Get current user's location data
+    current_user = await db.users.find_one(
+        {"uid": uid},
+        {"_id": 0, "city": 1, "state": 1, "country": 1, "ip_location": 1, "show_location": 1}
+    )
+    
+    if not current_user:
+        return {"nearby_users": [], "message": "User not found"}
+    
+    user_city = current_user.get("city") or current_user.get("ip_location", {}).get("city", "")
+    user_state = current_user.get("state") or current_user.get("ip_location", {}).get("region", "")
+    user_country = current_user.get("country") or current_user.get("ip_location", {}).get("country", "India")
+    
+    if not user_city and not user_state:
+        return {"nearby_users": [], "message": "Location not available. Please update your profile."}
+    
+    # Get users the current user is already following
+    following = await db.follows.find(
+        {"follower_uid": uid},
+        {"_id": 0, "following_uid": 1}
+    ).to_list(1000)
+    following_uids = {f["following_uid"] for f in following}
+    following_uids.add(uid)  # Exclude self
+    
+    nearby_users = []
+    seen_uids = set(following_uids)
+    
+    # Helper function to format user
+    async def format_nearby_user(user, distance_label=""):
+        followers_count = await db.follows.count_documents({"following_uid": user["uid"]})
+        is_following = user["uid"] in following_uids
+        
+        return {
+            "uid": user["uid"],
+            "name": user.get("name", "User"),
+            "avatar": user.get("avatar") or user.get("profile_picture"),
+            "city": user.get("city", ""),
+            "state": user.get("state", ""),
+            "subscription_plan": user.get("subscription_plan", "explorer"),
+            "is_verified": user.get("kyc_verified", False),
+            "followers_count": followers_count,
+            "is_following": is_following,
+            "distance_label": distance_label,
+            "can_message": user.get("allow_messages", True)
+        }
+    
+    # 1. SAME CITY users (closest)
+    if user_city:
+        city_users = await db.users.find(
+            {
+                "uid": {"$nin": list(seen_uids)},
+                "$or": [
+                    {"city": {"$regex": f"^{user_city}$", "$options": "i"}},
+                    {"ip_location.city": {"$regex": f"^{user_city}$", "$options": "i"}}
+                ],
+                "show_location": True,
+                "is_public": {"$ne": False}
+            },
+            {
+                "_id": 0, "uid": 1, "name": 1, "avatar": 1, "profile_picture": 1,
+                "city": 1, "state": 1, "subscription_plan": 1, "kyc_verified": 1, "allow_messages": 1
+            }
+        ).limit(limit).to_list(limit)
+        
+        for user in city_users:
+            if len(nearby_users) >= limit:
+                break
+            formatted = await format_nearby_user(user, f"In {user_city}")
+            nearby_users.append(formatted)
+            seen_uids.add(user["uid"])
+    
+    # 2. SAME STATE users (nearby)
+    if user_state and len(nearby_users) < limit:
+        state_users = await db.users.find(
+            {
+                "uid": {"$nin": list(seen_uids)},
+                "$or": [
+                    {"state": {"$regex": f"^{user_state}$", "$options": "i"}},
+                    {"ip_location.region": {"$regex": f"^{user_state}$", "$options": "i"}}
+                ],
+                "show_location": True,
+                "is_public": {"$ne": False}
+            },
+            {
+                "_id": 0, "uid": 1, "name": 1, "avatar": 1, "profile_picture": 1,
+                "city": 1, "state": 1, "subscription_plan": 1, "kyc_verified": 1, "allow_messages": 1
+            }
+        ).limit(limit - len(nearby_users)).to_list(limit - len(nearby_users))
+        
+        for user in state_users:
+            if len(nearby_users) >= limit:
+                break
+            formatted = await format_nearby_user(user, f"In {user_state}")
+            nearby_users.append(formatted)
+            seen_uids.add(user["uid"])
+    
+    return {
+        "nearby_users": nearby_users,
+        "user_location": {
+            "city": user_city,
+            "state": user_state,
+            "country": user_country
+        },
+        "total": len(nearby_users)
+    }
+
+
+@api_router.put("/user/{uid}/location-visibility")
+async def update_location_visibility(uid: str, data: dict):
+    """
+    Update user's location visibility setting (opt-in/opt-out for nearby users feature)
+    """
+    show_location = data.get("show_location", False)
+    
+    result = await db.users.update_one(
+        {"uid": uid},
+        {"$set": {"show_location": show_location, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {
+        "success": True,
+        "show_location": show_location,
+        "message": "Location visibility updated" if show_location else "You are now hidden from nearby users"
+    }
+
+
+@api_router.post("/user/{uid}/update-ip-location")
+async def update_user_ip_location(uid: str, request: Request):
+    """
+    Update user's IP-based location (called on login/app open)
+    Uses IP geolocation to determine approximate location
+    """
+    # Get client IP
+    client_ip = request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+    if not client_ip:
+        client_ip = request.headers.get("X-Real-IP", "")
+    if not client_ip and request.client:
+        client_ip = request.client.host
+    
+    # Skip for localhost
+    if client_ip in ["127.0.0.1", "localhost", "::1", ""]:
+        return {"success": True, "message": "Localhost - location not updated"}
+    
+    try:
+        # Use free IP geolocation API
+        import httpx
+        async with httpx.AsyncClient() as client:
+            # Using ip-api.com (free, no API key needed)
+            response = await client.get(f"http://ip-api.com/json/{client_ip}?fields=status,city,regionName,country,lat,lon")
+            
+            if response.status_code == 200:
+                geo_data = response.json()
+                
+                if geo_data.get("status") == "success":
+                    ip_location = {
+                        "city": geo_data.get("city", ""),
+                        "region": geo_data.get("regionName", ""),
+                        "country": geo_data.get("country", "India"),
+                        "lat": geo_data.get("lat"),
+                        "lon": geo_data.get("lon"),
+                        "ip": client_ip,
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }
+                    
+                    # Update user's IP location
+                    await db.users.update_one(
+                        {"uid": uid},
+                        {
+                            "$set": {
+                                "ip_location": ip_location,
+                                "last_ip": client_ip
+                            }
+                        }
+                    )
+                    
+                    return {
+                        "success": True,
+                        "location": {
+                            "city": ip_location["city"],
+                            "state": ip_location["region"],
+                            "country": ip_location["country"]
+                        }
+                    }
+        
+        return {"success": False, "message": "Could not determine location"}
+        
+    except Exception as e:
+        print(f"IP geolocation error: {e}")
+        return {"success": False, "message": "Location service unavailable"}
+
+
 # ========== REFERRAL PROGRAM ==========
 
 @api_router.get("/referrals/{user_id}/tree")
