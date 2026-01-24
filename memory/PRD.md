@@ -138,6 +138,40 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 
 ---
 
+#### In-App Referral Notifications ✅ (COMPLETED - Jan 24, 2026)
+
+**Problem**: Users weren't notified about important referral events like new joiners, active referrals, and referral messages.
+
+**Solution:**
+
+**Notification Types Implemented:**
+
+| Type | Icon | Trigger | Message Example |
+|------|------|---------|-----------------|
+| `new_referral` | 👋 | Someone joins using your referral link | "Rahul just joined using your referral link! Help them get started." |
+| `referral_active` | 🚀 | Your referral starts mining for first time | "Rahul just started mining! You'll earn bonus PRC from their activity." |
+| `referral_message` | 🤝 | A referral sends you a message | "Rahul: Hello, can you help me..." |
+
+**Backend Changes:**
+- **Registration endpoint** (`/api/auth/register`): Now creates `new_referral` notification for referrer when new user registers with referral code
+- **Mining start endpoint** (`/api/mining/start/{uid}`): Now creates `referral_active` notification for referrer when referral starts first mining session
+- **Message send endpoint** (`/api/messages/send`): Enhanced to detect if sender is a referral and creates `referral_message` notification with special styling
+
+**Frontend Changes (Notifications.js):**
+- Added new notification type icons: `new_referral` (emerald), `referral_active` (orange), `referral_message` (green)
+- Added `getNotificationBgColor()` helper for type-specific background colors
+- Referral notifications have distinctive styling:
+  - Emerald/green left border
+  - "Referral" badge
+  - Green/emerald dot for unread
+- Clicking notification navigates to action_url (e.g., `/messages/{uid}` or `/network`)
+
+**Files Modified:**
+- `backend/server.py` - Added notifications in registration, mining start, and message send flows
+- `frontend/src/pages/Notifications.js` - Enhanced styling for referral notification types
+
+---
+
 #### Direct Referral Messaging ✅ (COMPLETED - Jan 24, 2026)
 
 **Problem**: Users could not communicate with their referrals to help them get started.
