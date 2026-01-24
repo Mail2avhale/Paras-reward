@@ -50,6 +50,10 @@ const AdminSubscriptionManagement = ({ user }) => {
   const [actionNotes, setActionNotes] = useState('');
   const [processing, setProcessing] = useState(false);
   
+  // Time filter and search for payments
+  const [timeFilter, setTimeFilter] = useState('all');
+  const [paymentSearch, setPaymentSearch] = useState('');
+  
   // Fraud prevention - Plan correction
   const [correctPlan, setCorrectPlan] = useState('');
   const [correctDuration, setCorrectDuration] = useState('');
