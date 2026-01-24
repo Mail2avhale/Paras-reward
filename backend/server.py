@@ -2546,7 +2546,7 @@ async def simple_register(request: Request):
 
 @api_router.post("/auth/register")
 async def register_user(request: Request):
-    """Enhanced user registration with duplicate checks"""
+    """Enhanced user registration with fraud detection"""
     # Check if registration is enabled
     settings = await db.settings.find_one({}, {"_id": 0, "registration_enabled": 1, "registration_message": 1})
     if settings and not settings.get("registration_enabled", True):
@@ -2554,6 +2554,35 @@ async def register_user(request: Request):
         raise HTTPException(status_code=403, detail=message)
     
     data = await request.json()
+    
+    # Get client IP and device fingerprint for fraud detection
+    client_ip = get_client_ip(request)
+    device_fingerprint = data.get('device_fingerprint')
+    
+    # ========== FRAUD DETECTION ==========
+    fraud_check = await fraud_detector.assess_registration_risk(
+        ip_address=client_ip,
+        device_fingerprint=device_fingerprint,
+        aadhaar=data.get('aadhaar_number'),
+        pan=data.get('pan_number'),
+        mobile=data.get('mobile'),
+        referral_code=data.get('referred_by') or data.get('referral_code')
+    )
+    
+    # Log the registration attempt
+    await fraud_detector.log_registration_attempt(
+        ip=client_ip,
+        device=device_fingerprint,
+        success=fraud_check["allowed"],
+        reason=fraud_check.get("block_reason")
+    )
+    
+    # Block if fraud detected
+    if not fraud_check["allowed"]:
+        raise HTTPException(
+            status_code=403,
+            detail=fraud_check["block_reason"]
+        )
     
     # Construct full name from first, middle, last name if provided
     if data.get('first_name') or data.get('last_name'):
@@ -2566,8 +2595,8 @@ async def register_user(request: Request):
             name_parts.append(data['last_name'])
         data['name'] = ' '.join(name_parts)
     
-    # Check duplicates
-    for field in ["email", "mobile", "aadhaar_number", "pan_number"]:
+    # Legacy duplicate check (fraud detector also checks, but keep for backwards compat)
+    for field in ["email"]:
         if data.get(field):
             if not await check_unique_fields(field, data[field]):
                 raise HTTPException(
@@ -2580,6 +2609,12 @@ async def register_user(request: Request):
         data['password_hash'] = hash_password(data['password'])
         del data['password']
     
+    # Store fraud detection data
+    data['registration_ip'] = client_ip
+    data['device_fingerprint'] = device_fingerprint
+    data['fraud_risk_score'] = fraud_check.get('risk_score', 0)
+    data['fraud_risk_level'] = fraud_check.get('risk_level', 'low')
+    
     # Create user
     user = User(**data)
     user_dict = user.model_dump()
@@ -2590,7 +2625,12 @@ async def register_user(request: Request):
             user_dict[field] = user_dict[field].isoformat()
     
     await db.users.insert_one(user_dict)
-    return {"message": "Registration successful", "uid": user.uid}
+    
+    return {
+        "message": "Registration successful", 
+        "uid": user.uid,
+        "risk_level": fraud_check.get('risk_level', 'low')
+    }
 
 @api_router.post("/auth/login")
 async def login(
