@@ -138,6 +138,75 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 
 ---
 
+#### Direct Referral Messaging ✅ (COMPLETED - Jan 24, 2026)
+
+**Problem**: Users could not communicate with their referrals to help them get started.
+
+**Solution:**
+
+**Backend API - `GET /api/referrals/{user_id}/direct-list`:**
+- Returns list of direct referrals with messaging capability
+- Includes referrer (person who referred the user)
+- Fields: uid, name, avatar, city, state, subscription_plan, is_active, can_message
+
+**Frontend - Updated `/frontend/src/pages/ReferralDashboardAI.js`:**
+- Added new "My Referrals" tab with MessageCircle icon
+- Shows referrer card (if user was referred) with Message button
+- Lists all direct referrals with:
+  - Active/Inactive status badge
+  - Location (city, state)
+  - Subscription plan indicator
+  - Message button (navigates to `/messages/{uid}`)
+- Empty state with "Start Sharing" CTA
+
+**Features:**
+- Bi-directional messaging: Referrer ↔ Referral can message each other
+- Text-only messages (using existing Messages system)
+- Respects `allow_messages` user setting
+
+---
+
+#### Nearby Users (IP-based) ✅ (COMPLETED - Jan 24, 2026)
+
+**Problem**: Users couldn't discover other users in their geographic area.
+
+**Solution:**
+
+**Backend APIs:**
+
+1. `POST /api/user/{uid}/update-ip-location`
+   - Updates user's location based on IP geolocation
+   - Uses free ip-api.com service (no API key needed)
+   - Stores: city, region, country, lat, lon
+
+2. `GET /api/social/nearby-users/{uid}`
+   - Returns users in same city/state who opted-in
+   - Includes: name, avatar, city, state, followers_count, distance_label
+   - Sorted by proximity: Same City > Same State
+
+3. `PUT /api/user/{uid}/location-visibility`
+   - Toggle opt-in/opt-out for nearby users feature
+   - Field: `show_location: true/false`
+
+**Frontend - Updated `/frontend/src/pages/ReferralDashboardAI.js`:**
+- Added new "Nearby" tab with MapPin icon
+- Shows user's detected location (from IP geolocation)
+- "Visible/Hidden" toggle for privacy (opt-in by default)
+- User cards with:
+  - Name, avatar, location
+  - Followers count
+  - Follow button
+  - Message button
+- Privacy notice explaining opt-in visibility
+- Empty state with guidance
+
+**Privacy Features:**
+- Opt-in system: Only users with `show_location: true` are visible
+- Toggle button to hide from nearby users
+- Uses IP-based city/state (not exact GPS)
+
+---
+
 ### January 24, 2026 (Input Validation Enhancement)
 
 #### Indian Document Field Validation ✅ (COMPLETED)
