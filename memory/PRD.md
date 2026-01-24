@@ -67,6 +67,41 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 
 ## What's Been Implemented
 
+### January 24, 2026 (Input Validation Enhancement)
+
+#### Indian Document Field Validation ✅ (COMPLETED)
+
+**Problem**: Input fields for financial/identity documents had no standard validation, leading to potential fraud.
+
+**Solution - Created `/frontend/src/utils/indianValidation.js`:**
+Central validation utility with the following validators:
+
+| Field | Format | Validation |
+|-------|--------|------------|
+| Mobile | 10 digits | Starts with 6-9 |
+| Email | standard | email@domain.com |
+| PAN | AAAAA1234A | 5 letters + 4 digits + 1 letter |
+| Aadhaar | 12 digits | Cannot start with 0 or 1 |
+| IFSC | AAAA0NNNNNN | 4 letters + 0 + 6 alphanumeric |
+| Bank Account | 9-18 digits | Numeric only |
+| UPI | name@handle | username@bankhandle |
+| Pincode | 6 digits | First digit 1-9 |
+| GST | 15 characters | State code + PAN + checksum |
+
+**Files Updated:**
+- `Register.js` - Mobile, Aadhaar, PAN, UPI, Pincode validation
+- `BillPayments.js` - Mobile, IFSC validation
+- `KYCVerification.js` - Aadhaar, PAN validation
+- `Setup.js` - Mobile validation
+
+**Features:**
+- Real-time validation with error messages
+- Auto-formatting (e.g., Aadhaar: XXXX XXXX XXXX)
+- Input masking (only valid characters allowed)
+- IFSC shows bank code when valid (e.g., "✓ Bank: SBIN")
+
+---
+
 ### January 24, 2026 (Subscription UI/UX Improvements)
 
 #### Subscription UI Enhancement ✅ (COMPLETED)
