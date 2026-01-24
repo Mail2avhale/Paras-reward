@@ -356,21 +356,29 @@ const Register = () => {
                       data-testid="reg-aadhaar"
                       placeholder="12-digit Aadhaar"
                       value={userForm.aadhaar_number}
-                      onChange={(e) => setUserForm({...userForm, aadhaar_number: e.target.value})}
+                      onChange={(e) => setUserForm({...userForm, aadhaar_number: formatAadhaar(e.target.value)})}
+                      maxLength={14}
                       required
                       className="py-5"
                     />
+                    {userForm.aadhaar_number && userForm.aadhaar_number.replace(/\s/g, '').length > 0 && !validateAadhaar(userForm.aadhaar_number).isValid && (
+                      <p className="text-red-500 text-xs mt-1">Enter valid 12-digit Aadhaar number</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">PAN Number *</label>
                     <Input
                       data-testid="reg-pan"
-                      placeholder="10-character PAN"
+                      placeholder="10-character PAN (e.g., ABCDE1234F)"
                       value={userForm.pan_number}
-                      onChange={(e) => setUserForm({...userForm, pan_number: e.target.value.toUpperCase()})}
+                      onChange={(e) => setUserForm({...userForm, pan_number: formatPAN(e.target.value)})}
+                      maxLength={10}
                       required
                       className="py-5"
                     />
+                    {userForm.pan_number && userForm.pan_number.length > 0 && !validatePAN(userForm.pan_number).isValid && (
+                      <p className="text-red-500 text-xs mt-1">Enter valid PAN (e.g., ABCDE1234F)</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">UPI ID</label>
@@ -378,9 +386,12 @@ const Register = () => {
                       data-testid="reg-upi"
                       placeholder="yourname@upi"
                       value={userForm.upi_id}
-                      onChange={(e) => setUserForm({...userForm, upi_id: e.target.value})}
+                      onChange={(e) => setUserForm({...userForm, upi_id: e.target.value.toLowerCase()})}
                       className="py-5"
                     />
+                    {userForm.upi_id && userForm.upi_id.length > 0 && !validateUPI(userForm.upi_id).isValid && (
+                      <p className="text-red-500 text-xs mt-1">Enter valid UPI ID (e.g., name@upi)</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
