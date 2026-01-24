@@ -270,7 +270,11 @@ const AdminAccountingDashboard = ({ user }) => {
             {/* Main Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Total Income */}
-              <Card className="p-5 bg-gradient-to-br from-green-50 to-emerald-50 border-green-500/30" data-testid="total-income-card">
+              <Card 
+                className="p-5 bg-gradient-to-br from-green-50 to-emerald-50 border-green-500/30 cursor-pointer hover:shadow-lg transition-shadow" 
+                data-testid="total-income-card"
+                onClick={() => navigate('/admin/income-sources')}
+              >
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-green-400">Total Income</span>
                   <div className="p-2 bg-green-500/20 rounded-lg">
@@ -284,7 +288,11 @@ const AdminAccountingDashboard = ({ user }) => {
               </Card>
 
               {/* Total Expense */}
-              <Card className="p-5 bg-gradient-to-br from-red-50 to-rose-50 border-red-500/30" data-testid="total-expense-card">
+              <Card 
+                className="p-5 bg-gradient-to-br from-red-50 to-rose-50 border-red-500/30 cursor-pointer hover:shadow-lg transition-shadow" 
+                data-testid="total-expense-card"
+                onClick={() => navigate('/admin/expenses')}
+              >
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-red-400">Total Expense</span>
                   <div className="p-2 bg-red-500/20 rounded-lg">
