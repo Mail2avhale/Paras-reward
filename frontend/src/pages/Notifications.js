@@ -279,15 +279,16 @@ const Notifications = ({ user }) => {
                 transition={{ delay: index * 0.03 }}
                 onClick={() => handleNotificationClick(notification)}
                 className={`flex items-start gap-3 p-4 rounded-xl cursor-pointer transition-colors ${
-                  !notification.read 
-                    ? 'bg-purple-500/10 border border-purple-500/20' 
-                    : 'bg-gray-900/50 border border-gray-800 hover:bg-gray-800/50'
+                  getNotificationBgColor(notification.type, notification.read)
                 }`}
               >
                 {/* Icon */}
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
                   notification.type === 'new_follower' ? 'bg-purple-500/20' :
                   notification.type === 'new_message' ? 'bg-blue-500/20' :
+                  notification.type === 'referral_message' ? 'bg-green-500/20' :
+                  notification.type === 'new_referral' ? 'bg-emerald-500/20' :
+                  notification.type === 'referral_active' ? 'bg-orange-500/20' :
                   'bg-amber-500/20'
                 }`}>
                   {notification.icon ? (
@@ -301,15 +302,29 @@ const Notifications = ({ user }) => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className={`font-medium ${!notification.read ? 'text-white' : 'text-gray-300'}`}>
-                        {notification.title}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className={`font-medium ${!notification.read ? 'text-white' : 'text-gray-300'}`}>
+                          {notification.title}
+                        </p>
+                        {/* Badge for referral notifications */}
+                        {(notification.type === 'new_referral' || notification.type === 'referral_active' || notification.type === 'referral_message') && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-medium">
+                            Referral
+                          </span>
+                        )}
+                      </div>
                       <p className="text-gray-500 text-sm mt-0.5">
                         {notification.message}
                       </p>
                     </div>
                     {!notification.read && (
-                      <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0 mt-2"></div>
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-2 ${
+                        notification.type === 'new_referral' || notification.type === 'referral_active' 
+                          ? 'bg-emerald-500' 
+                          : notification.type === 'referral_message'
+                          ? 'bg-green-500'
+                          : 'bg-purple-500'
+                      }`}></div>
                     )}
                   </div>
                   <p className="text-gray-600 text-xs mt-2">
