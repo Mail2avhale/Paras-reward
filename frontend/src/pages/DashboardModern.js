@@ -682,11 +682,11 @@ const DashboardModern = ({ user, onLogout }) => {
         </div>
       </div>
 
-      {/* Horizontal Scrollable Cards - VIP Upgrade + Offers */}
-      {stats.membershipType !== 'vip' && (
+      {/* Horizontal Scrollable Cards - Upgrade Banner + Offers (only for Explorer/Free users) */}
+      {!['startup', 'growth', 'elite'].includes(stats.subscriptionPlan?.toLowerCase()) && (
         <div className="mb-4 overflow-hidden">
           <div className="px-5 flex gap-3 overflow-x-auto scrollbar-hide pb-2" style={{ scrollSnapType: 'x mandatory' }}>
-            {/* VIP Upgrade Card */}
+            {/* Upgrade Card */}
             <motion.div 
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -707,8 +707,8 @@ const DashboardModern = ({ user, onLogout }) => {
                       <Crown className="w-5 h-5 text-yellow-400" />
                     </div>
                     <div>
-                      <p className="text-yellow-400 font-bold text-sm">{t('upgradeToVip')}</p>
-                      <p className="text-amber-200/60 text-xs">2x {t('rewards')} • {t('never')} {t('prcExpires')}</p>
+                      <p className="text-yellow-400 font-bold text-sm">Upgrade करा!</p>
+                      <p className="text-amber-200/60 text-xs">Startup/Elite plan • Redeem सेवा unlock करा</p>
                     </div>
                   </div>
                   <div className="bg-yellow-400 text-black px-3 py-1.5 rounded-lg font-bold text-sm">
