@@ -19529,6 +19529,23 @@ async def create_bill_payment_request(request: Request):
     if amount_inr <= 0:
         raise HTTPException(status_code=400, detail="Amount must be positive")
     
+    # ========== FRAUD DETECTION ==========
+    # Check transaction velocity
+    velocity_ok, velocity_msg = await fraud_detector.check_transaction_velocity(user_id, "bill_payment")
+    if not velocity_ok:
+        raise HTTPException(status_code=429, detail=velocity_msg)
+    
+    # Check daily redemption limit
+    daily_ok, daily_msg = await fraud_detector.check_daily_redemption_value(user_id, amount_inr)
+    if not daily_ok:
+        raise HTTPException(status_code=429, detail=daily_msg)
+    
+    # Check new account high value
+    new_ok, new_msg = await fraud_detector.check_new_account_high_value(user_id, amount_inr)
+    if not new_ok:
+        raise HTTPException(status_code=403, detail=new_msg)
+    # =====================================
+    
     # Get user
     user = await db.users.find_one({"uid": user_id})
     if not user:
