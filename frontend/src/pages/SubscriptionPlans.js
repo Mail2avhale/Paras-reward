@@ -115,6 +115,13 @@ const SubscriptionPlans = ({ user }) => {
       return;
     }
 
+    // Validate UTR format
+    const utrValidation = validateUTR(formData.utr_number);
+    if (!utrValidation.isValid) {
+      toast.error(utrValidation.error || 'Please enter a valid UTR number');
+      return;
+    }
+
     try {
       setSubmitting(true);
       
@@ -122,7 +129,8 @@ const SubscriptionPlans = ({ user }) => {
         plan: selectedPlan.id,
         duration: selectedDuration,
         amount: getPrice(),
-        utr_number: formData.utr_number,
+        utr_number: utrValidation.cleaned, // Use cleaned UTR
+        utr_type: utrValidation.utrType,   // Send detected type
         screenshot_base64: formData.screenshot_url,
         date: formData.date,
         time: formData.time
