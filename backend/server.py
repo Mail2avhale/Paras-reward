@@ -306,6 +306,9 @@ else:
 client = AsyncIOMotorClient(mongo_url, **connection_options)
 db = client[os.environ['DB_NAME']]
 
+# Initialize Fraud Detector
+fraud_detector = FraudDetector(db)
+
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
