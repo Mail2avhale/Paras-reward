@@ -230,8 +230,20 @@ const AdminSubscriptionManagement = ({ user }) => {
 
   const fetchPayments = async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/vip-payments?status=${paymentFilter}`);
-      setPayments(Array.isArray(response.data) ? response.data : response.data.payments || []);
+      // Fetch all payments (filtering done client-side for better UX)
+      const [pendingRes, approvedRes, rejectedRes] = await Promise.all([
+        axios.get(`${API}/api/admin/vip-payments?status=pending`),
+        axios.get(`${API}/api/admin/vip-payments?status=approved`),
+        axios.get(`${API}/api/admin/vip-payments?status=rejected`)
+      ]);
+      
+      const allPayments = [
+        ...(Array.isArray(pendingRes.data) ? pendingRes.data : pendingRes.data.payments || []),
+        ...(Array.isArray(approvedRes.data) ? approvedRes.data : approvedRes.data.payments || []),
+        ...(Array.isArray(rejectedRes.data) ? rejectedRes.data : rejectedRes.data.payments || [])
+      ];
+      
+      setPayments(allPayments);
     } catch (error) {
       console.error('Error fetching payments:', error);
     }
