@@ -4315,22 +4315,10 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
     sub_info = await get_user_subscription_info(user)
     plan = sub_info["plan"]
     
-    # PRC per tap based on subscription plan (100 taps daily for all)
-    # Explorer (Free): 100 taps = 10 PRC (0.1 per tap)
-    # Startup: 100 taps = 50 PRC (0.5 per tap)
-    # Growth: 100 taps = 100 PRC (1.0 per tap)
-    # Elite: 100 taps = 200 PRC (2.0 per tap)
-    prc_per_tap_config = {
-        "explorer": 0.1,   # Explorer (Free) - 10 PRC daily
-        "free": 0.1,       # Free fallback - 10 PRC daily
-        "startup": 0.5,    # Startup - 50 PRC daily
-        "growth": 1.0,     # Growth - 100 PRC daily
-        "elite": 2.0       # Elite - 200 PRC daily
-    }
-    prc_per_tap = prc_per_tap_config.get(plan, 0.1)
-    
-    # All plans get 100 taps daily
-    max_taps = 100
+    # Get PRC per tap and tap limit from SUBSCRIPTION_PLANS
+    plan_config = SUBSCRIPTION_PLANS.get(plan, SUBSCRIPTION_PLANS["explorer"])
+    prc_per_tap = plan_config.get("prc_per_tap", 0.1)
+    max_taps = plan_config.get("tap_limit", 100)
     
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     current_taps = user.get("taps_today", 0) if user.get("last_tap_date") == today else 0
