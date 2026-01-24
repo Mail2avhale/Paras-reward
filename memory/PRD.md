@@ -104,6 +104,38 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 - 50+: High risk 🔴
 - 100+: Blocked ❌
 
+#### Admin Fraud Dashboard UI ✅ (COMPLETED - Jan 24, 2026)
+
+**Problem**: Admins had no visual interface to monitor fraud detection system.
+
+**Solution - Created `/frontend/src/pages/AdminFraudDashboard.js`:**
+
+**Dashboard Features:**
+| Section | Description |
+|---------|-------------|
+| Summary Stats Cards | Blocked Today, Blocked This Week, High Risk Users, Suspicious IPs |
+| Overview Tab | Block Reasons chart, Suspicious IPs list (3+ attempts) |
+| Blocked Tab | Registration attempts list with success/blocked status |
+| Logs Tab | Fraud event logs with risk level badges |
+| Lookup Tab | User fraud profile search by UID |
+| Active Protections | 8-card grid showing all enabled fraud rules |
+
+**User Fraud Profile Lookup:**
+- User information (name, email, risk score, risk level)
+- Registration IP and Device Fingerprint
+- Related accounts (same device/same IP)
+- Circular referral chain detection
+- User fraud history timeline
+
+**Route & Menu:**
+- Route: `/admin/fraud-dashboard`
+- Menu: Added under "Controls & Security" group in AdminLayout
+- Permission: `fraud` (same as fraud-alerts)
+
+**Files Updated:**
+- `frontend/src/App.js` - Added route for AdminFraudDashboard
+- `frontend/src/components/layouts/AdminLayout.js` - Added menu link with ShieldAlert icon
+
 ---
 
 ### January 24, 2026 (Input Validation Enhancement)
