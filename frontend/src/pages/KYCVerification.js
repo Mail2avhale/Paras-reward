@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import AdvancedDocumentUpload from '@/components/AdvancedDocumentUpload';
+import { formatAadhaar, formatPAN, validateAadhaar, validatePAN } from '@/utils/indianValidation';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
