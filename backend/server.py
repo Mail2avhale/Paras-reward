@@ -835,6 +835,8 @@ SUBSCRIPTION_PLANS = {
         "multiplier": 1.0,
         "referral_weight": 1.0,
         "tap_limit": 100,
+        "prc_per_tap": 0.1,
+        "daily_max_prc": 10,
         "can_redeem": False,
         "is_free": True,
         "default_price": 0
@@ -843,7 +845,9 @@ SUBSCRIPTION_PLANS = {
         "name": "Startup",
         "multiplier": 1.5,
         "referral_weight": 1.2,
-        "tap_limit": 200,
+        "tap_limit": 100,
+        "prc_per_tap": 0.5,
+        "daily_max_prc": 50,
         "can_redeem": True,
         "is_free": False,
         "default_price": 299
@@ -852,7 +856,9 @@ SUBSCRIPTION_PLANS = {
         "name": "Growth",
         "multiplier": 2.0,
         "referral_weight": 1.5,
-        "tap_limit": 300,
+        "tap_limit": 100,
+        "prc_per_tap": 1.0,
+        "daily_max_prc": 100,
         "can_redeem": True,
         "is_free": False,
         "default_price": 549
@@ -861,7 +867,9 @@ SUBSCRIPTION_PLANS = {
         "name": "Elite",
         "multiplier": 3.0,
         "referral_weight": 2.0,
-        "tap_limit": 400,
+        "tap_limit": 100,
+        "prc_per_tap": 2.0,
+        "daily_max_prc": 200,
         "can_redeem": True,
         "is_free": False,
         "default_price": 799
