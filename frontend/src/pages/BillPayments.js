@@ -57,8 +57,8 @@ const BillPayments = ({ user, onLogout }) => {
       ['startup', 'growth', 'elite'].includes(user.subscription_plan?.toLowerCase());
     
     if (!isVipOrPaidSubscription) {
-      toast.error('VIP membership required to use bill payment services');
-      setTimeout(() => navigate('/dashboard'), 2000);
+      toast.error('Free subscription वर redeem service उपलब्ध नाही. Startup किंवा Elite plan घ्या आणि redeem चा आनंद घ्या! 🎉');
+      setTimeout(() => navigate('/subscription'), 2000);
       return;
     }
     
