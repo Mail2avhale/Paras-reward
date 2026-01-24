@@ -660,67 +660,6 @@ function ReferralDashboardAI({ user, onLogout }) {
               />
             </motion.div>
           )}
-
-          {activeTab === 'tree' && (
-            <motion.div
-              key="tree"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-            >
-              <Card className="p-6 border-0 shadow-xl">
-                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Users className="w-6 h-6 text-purple-600" />
-                  Friends Tree View
-                </h3>
-                {treeData ? (
-                  <div className="h-[500px] bg-gray-50 rounded-xl overflow-hidden">
-                    <Tree
-                      data={treeData}
-                      orientation="vertical"
-                      pathFunc="step"
-                      translate={{ x: 300, y: 50 }}
-                      separation={{ siblings: 1.5, nonSiblings: 2 }}
-                      nodeSize={{ x: 150, y: 100 }}
-                      renderCustomNodeElement={({ nodeDatum }) => (
-                        <g>
-                          <circle r={25} fill={nodeDatum.children ? '#8b5cf6' : '#10b981'} />
-                          <text
-                            fill="white"
-                            fontSize={10}
-                            textAnchor="middle"
-                            dy={4}
-                          >
-                            {nodeDatum.name?.slice(0, 2).toUpperCase() || '?'}
-                          </text>
-                          <text
-                            fill="#374151"
-                            fontSize={10}
-                            textAnchor="middle"
-                            dy={45}
-                          >
-                            {nodeDatum.name?.split(' ')[0] || 'User'}
-                          </text>
-                        </g>
-                      )}
-                    />
-                  </div>
-                ) : (
-                  <div className="h-64 bg-gray-50 rounded-xl flex flex-col items-center justify-center">
-                    <Users className="w-16 h-16 text-gray-300 mb-4" />
-                    <p className="text-gray-500 text-lg">No referrals yet</p>
-                    <p className="text-gray-400 text-sm">Share your link to invite friends!</p>
-                    <Button 
-                      className="mt-4 bg-purple-600"
-                      onClick={() => setActiveTab('share')}
-                    >
-                      Start Sharing
-                    </Button>
-                  </div>
-                )}
-              </Card>
-            </motion.div>
-          )}
         </AnimatePresence>
       </div>
     </div>
