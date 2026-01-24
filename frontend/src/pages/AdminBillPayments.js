@@ -355,6 +355,7 @@ const AdminBillPayments = ({ user }) => {
               <div>
                 <p className="text-yellow-400 text-xs font-medium">Pending</p>
                 <p className="text-2xl font-bold text-yellow-300">{timeFilteredStats.pending}</p>
+                <p className="text-yellow-500 text-xs">₹{timeFilteredStats.pendingAmount.toLocaleString()}</p>
               </div>
             </div>
           </Card>
@@ -366,6 +367,7 @@ const AdminBillPayments = ({ user }) => {
               <div>
                 <p className="text-blue-400 text-xs font-medium">Approved</p>
                 <p className="text-2xl font-bold text-blue-300">{timeFilteredStats.processing}</p>
+                <p className="text-blue-500 text-xs">₹{timeFilteredStats.processingAmount.toLocaleString()}</p>
               </div>
             </div>
           </Card>
@@ -377,6 +379,7 @@ const AdminBillPayments = ({ user }) => {
               <div>
                 <p className="text-green-400 text-xs font-medium">Completed</p>
                 <p className="text-2xl font-bold text-green-300">{timeFilteredStats.completed}</p>
+                <p className="text-green-500 text-xs">₹{timeFilteredStats.completedAmount.toLocaleString()}</p>
               </div>
             </div>
           </Card>
