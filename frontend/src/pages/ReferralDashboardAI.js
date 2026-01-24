@@ -27,6 +27,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 const API = `${BACKEND_URL}/api`;
 
 function ReferralDashboardAI({ user, onLogout }) {
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [earnings, setEarnings] = useState(null);
   const [treeData, setTreeData] = useState(null);
@@ -34,6 +35,15 @@ function ReferralDashboardAI({ user, onLogout }) {
   const [bonusBreakdown, setBonusBreakdown] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // New states for My Referrals and Nearby Users
+  const [directReferrals, setDirectReferrals] = useState([]);
+  const [referrer, setReferrer] = useState(null);
+  const [nearbyUsers, setNearbyUsers] = useState([]);
+  const [userLocation, setUserLocation] = useState(null);
+  const [showLocation, setShowLocation] = useState(true);
+  const [loadingReferrals, setLoadingReferrals] = useState(false);
+  const [loadingNearby, setLoadingNearby] = useState(false);
 
   const referralCode = user?.referral_code || user?.uid?.slice(0, 8).toUpperCase();
 
