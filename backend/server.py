@@ -9293,7 +9293,7 @@ async def get_admin_stats():
     recent_orders = await db.orders.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
     recent_withdrawals = await db.cashback_withdrawals.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
     
-    return {
+    result = {
         "total_prc": round(total_prc_in_circulation, 2),
         "users": {
             "total": total_users,
