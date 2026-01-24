@@ -640,10 +640,10 @@ const AdminBillPayments = ({ user }) => {
                         )}
                         
                         {/* Loan Details */}
-                        {req.details?.loan_account_number && (
+                        {(req.details?.loan_account_number || req.details?.loan_account) && (
                           <div>
-                            <p className="text-gray-500 text-xs">Loan Account</p>
-                            <p className="text-white font-mono">{req.details.loan_account_number}</p>
+                            <p className="text-gray-500 text-xs">Loan Account Number</p>
+                            <p className="text-white font-mono">{req.details.loan_account_number || req.details.loan_account}</p>
                           </div>
                         )}
                         {req.details?.borrower_name && (
@@ -656,6 +656,36 @@ const AdminBillPayments = ({ user }) => {
                           <div>
                             <p className="text-gray-500 text-xs">Lender Name</p>
                             <p className="text-white">{req.details.lender_name}</p>
+                          </div>
+                        )}
+                        {req.details?.loan_type && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Loan Type</p>
+                            <p className="text-white">{req.details.loan_type}</p>
+                          </div>
+                        )}
+                        {req.details?.loan_tenure && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Loan Tenure</p>
+                            <p className="text-white">{req.details.loan_tenure}</p>
+                          </div>
+                        )}
+                        {req.details?.emi_amount && (
+                          <div>
+                            <p className="text-gray-500 text-xs">EMI Amount</p>
+                            <p className="text-white">₹{req.details.emi_amount}</p>
+                          </div>
+                        )}
+                        {req.details?.emi_due_date && (
+                          <div>
+                            <p className="text-gray-500 text-xs">EMI Due Date</p>
+                            <p className="text-white">{req.details.emi_due_date}</p>
+                          </div>
+                        )}
+                        {req.details?.registered_mobile && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Registered Mobile</p>
+                            <p className="text-white">{req.details.registered_mobile}</p>
                           </div>
                         )}
                         
