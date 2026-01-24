@@ -137,11 +137,19 @@ const AdminBillPayments = ({ user }) => {
       );
     }
     
-    // Sort by date (newest first)
-    filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    // Sort based on sortBy option
+    if (sortBy === 'newest') {
+      filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    } else if (sortBy === 'oldest') {
+      filtered.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    } else if (sortBy === 'amount_high') {
+      filtered.sort((a, b) => (b.amount_inr || 0) - (a.amount_inr || 0));
+    } else if (sortBy === 'amount_low') {
+      filtered.sort((a, b) => (a.amount_inr || 0) - (b.amount_inr || 0));
+    }
     
     return filtered;
-  }, [requests, activeTab, timeFilter, searchTerm]);
+  }, [requests, activeTab, timeFilter, searchTerm, sortBy]);
 
   // Calculate time-filtered stats
   const timeFilteredStats = useMemo(() => {
