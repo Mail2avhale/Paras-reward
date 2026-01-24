@@ -99,7 +99,9 @@ const DashboardModern = ({ user, onLogout }) => {
           totalMined: fetchedUserData.total_mined || 0,
           totalRedeemed: fetchedUserData.total_redeemed || 0,
           referralCount: fetchedUserData.referral_count || 0,
-          subscriptionPlan: fetchedUserData.subscription_plan || 'explorer'
+          subscriptionPlan: fetchedUserData.subscription_plan || 'explorer',
+          subscriptionExpiry: fetchedUserData.subscription_expiry || null,
+          subscriptionStart: fetchedUserData.subscription_start || fetchedUserData.vip_activation_date || null
         });
       } else {
         // Fallback to user prop data
@@ -109,7 +111,9 @@ const DashboardModern = ({ user, onLogout }) => {
           totalMined: user.total_mined || 0,
           totalRedeemed: user.total_redeemed || 0,
           referralCount: user.referral_count || 0,
-          subscriptionPlan: user.subscription_plan || 'explorer'
+          subscriptionPlan: user.subscription_plan || 'explorer',
+          subscriptionExpiry: user.subscription_expiry || null,
+          subscriptionStart: user.subscription_start || user.vip_activation_date || null
         });
       }
       
