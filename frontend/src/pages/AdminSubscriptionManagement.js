@@ -95,6 +95,67 @@ const AdminSubscriptionManagement = ({ user }) => {
     elite: 'bg-amber-500/10'
   };
 
+  // Computed: Filter payments by time and search
+  const filteredPayments = React.useMemo(() => {
+    let filtered = [...payments];
+    
+    // Filter by status
+    filtered = filtered.filter(p => p.status === paymentFilter);
+    
+    // Filter by time
+    const now = new Date();
+    if (timeFilter === 'today') {
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      filtered = filtered.filter(p => new Date(p.submitted_at || p.created_at) >= todayStart);
+    } else if (timeFilter === 'week') {
+      const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      filtered = filtered.filter(p => new Date(p.submitted_at || p.created_at) >= weekStart);
+    } else if (timeFilter === 'month') {
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      filtered = filtered.filter(p => new Date(p.submitted_at || p.created_at) >= monthStart);
+    }
+    
+    // Filter by search
+    if (paymentSearch) {
+      const search = paymentSearch.toLowerCase();
+      filtered = filtered.filter(p => 
+        (p.user_name || '').toLowerCase().includes(search) ||
+        (p.user_email || '').toLowerCase().includes(search) ||
+        (p.utr_number || '').toLowerCase().includes(search) ||
+        (p.user_id || '').toLowerCase().includes(search)
+      );
+    }
+    
+    // Sort by date (newest first)
+    filtered.sort((a, b) => new Date(b.submitted_at || b.created_at || 0) - new Date(a.submitted_at || a.created_at || 0));
+    
+    return filtered;
+  }, [payments, paymentFilter, timeFilter, paymentSearch]);
+
+  // Computed: Payment stats based on time filter
+  const paymentStats = React.useMemo(() => {
+    let filtered = [...payments];
+    const now = new Date();
+    
+    if (timeFilter === 'today') {
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      filtered = filtered.filter(p => new Date(p.submitted_at || p.created_at) >= todayStart);
+    } else if (timeFilter === 'week') {
+      const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      filtered = filtered.filter(p => new Date(p.submitted_at || p.created_at) >= weekStart);
+    } else if (timeFilter === 'month') {
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      filtered = filtered.filter(p => new Date(p.submitted_at || p.created_at) >= monthStart);
+    }
+    
+    return {
+      pending: filtered.filter(p => p.status === 'pending').length,
+      approved: filtered.filter(p => p.status === 'approved').length,
+      rejected: filtered.filter(p => p.status === 'rejected').length,
+      totalAmount: filtered.reduce((sum, p) => sum + (p.amount || 0), 0)
+    };
+  }, [payments, timeFilter]);
+
   useEffect(() => {
     // Wait for user to be loaded before checking role
     if (user === null || user === undefined) {
