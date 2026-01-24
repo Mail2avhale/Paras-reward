@@ -168,10 +168,14 @@ const Setup = () => {
                   type="tel"
                   placeholder="10-digit mobile"
                   value={formData.mobile}
-                  onChange={(e) => setFormData({...formData, mobile: e.target.value})}
+                  onChange={(e) => setFormData({...formData, mobile: formatMobile(e.target.value)})}
+                  maxLength={10}
                   required
                   className="py-5"
                 />
+                {formData.mobile && formData.mobile.length > 0 && !validateMobile(formData.mobile).isValid && (
+                  <p className="text-red-500 text-xs mt-1">Enter valid 10-digit mobile (starts with 6-9)</p>
+                )}
               </div>
             </div>
           </div>
