@@ -21,6 +21,7 @@ const API = `${BACKEND_URL}/api`;
 
 const MarketplaceEnhanced = ({ user, onLogout }) => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [cart, setCart] = useState({ items: [] });
@@ -56,7 +57,10 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
       ['startup', 'growth', 'elite'].includes(user.subscription_plan?.toLowerCase());
     
     if (!isVipOrPaidSubscription) {
-      toast.error('Free subscription वर Marketplace access नाही. Startup किंवा Elite plan घ्या आणि shopping करा! 🛒');
+      toast.error(t('paidSubscriptionRequiredMarketplace'), {
+        duration: 4000,
+        style: { fontSize: '16px', fontWeight: '500' }
+      });
       setTimeout(() => navigate('/subscription'), 2000);
       return;
     }
