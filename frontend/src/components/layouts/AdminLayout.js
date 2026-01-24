@@ -8,7 +8,8 @@ import {
   ChevronLeft, ChevronRight, LogOut, Bell, Search,
   Menu, X, Shield, Zap, Wallet, TrendingUp, ChevronDown,
   Globe, Phone, Mail, Image, Share2, Cpu, ToggleLeft,
-  AlertTriangle, Smartphone, Building, Crown, CloudRain, AlertOctagon, Database, Eye
+  AlertTriangle, Smartphone, Building, Crown, CloudRain, AlertOctagon, Database, Eye,
+  ShieldAlert
 } from 'lucide-react';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
@@ -138,6 +139,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'prc-economy', label: 'PRC Emergency Controls', icon: AlertOctagon, path: '/admin/prc-economy' },
         { id: 'user-controls', label: 'User Controls', icon: UserCog, path: '/admin/user-controls' },
         { id: 'security-dashboard', label: 'Security Dashboard', icon: Shield, path: '/admin/security' },
+        { id: 'fraud-dashboard', label: 'Fraud Detection', icon: ShieldAlert, path: '/admin/fraud-dashboard' },
         { id: 'fraud-alerts', label: 'Fraud Alerts', icon: AlertTriangle, path: '/admin/fraud-alerts' },
         { id: 'burn-management', label: 'Burn Management', icon: Activity, path: '/admin/burn-management' },
         { id: 'data-backup', label: 'Data Backup & Archive', icon: Database, path: '/admin/data-backup' },

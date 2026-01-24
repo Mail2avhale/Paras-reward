@@ -94,6 +94,7 @@ const AdminAccountsPayable = lazy(() => import(/* webpackChunkName: "admin" */ "
 const AdminFinancialRatios = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFinancialRatios"));
 const AdminAdsIncome = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAdsIncome"));
 const AdminFraudAlerts = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFraudAlerts"));
+const AdminFraudDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFraudDashboard"));
 const AdminVideoAds = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminVideoAds"));
 const AdminFixedExpenses = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFixedExpenses"));
 const AdminKYC = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminKYC"));
@@ -247,6 +248,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/company-wallets" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminCompanyWallets user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/ads-income" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminAdsIncome user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/fraud-alerts" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminFraudAlerts user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/fraud-dashboard" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminFraudDashboard user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/audit" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminAuditService user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/fixed-expenses" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminFixedExpenses user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/profit-loss" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminProfitLoss user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
