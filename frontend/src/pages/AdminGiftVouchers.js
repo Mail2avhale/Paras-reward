@@ -150,7 +150,9 @@ const AdminGiftVouchers = ({ user }) => {
     
     return {
       pending: filtered.filter(r => r.status === 'pending').length,
+      pendingValue: filtered.filter(r => r.status === 'pending').reduce((sum, r) => sum + (r.denomination || 0), 0),
       completed: filtered.filter(r => r.status === 'completed').length,
+      completedValue: filtered.filter(r => r.status === 'completed').reduce((sum, r) => sum + (r.denomination || 0), 0),
       rejected: filtered.filter(r => r.status === 'rejected').length,
       totalValue: filtered.reduce((sum, r) => sum + (r.denomination || 0), 0)
     };
