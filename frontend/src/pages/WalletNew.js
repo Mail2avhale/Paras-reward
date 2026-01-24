@@ -469,7 +469,7 @@ const WalletNew = ({ user, onLogout }) => {
                   {isFreeUser && (
                     <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
                       <p className="text-xs text-orange-700">
-                        ⚠️ <strong>Free User:</strong> Minimum ₹1000 Redemption. Upgrade to VIP for ₹10 minimum!
+                        ⚠️ <strong>Explorer Plan:</strong> Minimum ₹1000 Redemption. <a href="/subscription" className="text-blue-600 underline">Startup/Elite plan घ्या</a> आणि फक्त ₹10 पासून redeem करा!
                       </p>
                     </div>
                   )}
