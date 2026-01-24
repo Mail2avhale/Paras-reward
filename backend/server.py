@@ -3879,6 +3879,31 @@ async def start_mining(uid: str):
         metadata={"session_start": now.isoformat(), "session_end": session_end.isoformat()}
     )
     
+    # ========== NOTIFY REFERRER WHEN REFERRAL BECOMES ACTIVE ==========
+    if user.get("referred_by"):
+        referrer_uid = user["referred_by"]
+        user_name = user.get("name", "Your referral")
+        
+        # Check if this is the first time this user is mining (no previous mining transactions)
+        previous_mining = await db.transactions.find_one({
+            "user_id": uid,
+            "transaction_type": "mining_started",
+            "created_at": {"$lt": now.isoformat()}
+        })
+        
+        # Only notify if this is the first mining session
+        if not previous_mining:
+            await create_social_notification(
+                user_uid=referrer_uid,
+                notification_type="referral_active",
+                title="⚡ Referral Now Active!",
+                message=f"{user_name} just started mining! You'll earn bonus PRC from their activity.",
+                from_uid=uid,
+                from_name=user_name,
+                icon="🚀",
+                action_url="/network"
+            )
+    
     return {
         "message": "Mining started successfully",
         "session_active": True,
