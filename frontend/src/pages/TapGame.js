@@ -8,12 +8,13 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-// Plan configurations for tap game
+// Plan configurations for tap game (synced with backend)
+// All plans get 100 taps daily, PRC per tap varies by plan
 const PLAN_CONFIG = {
-  explorer: { tapLimit: 100, prcPerTap: 0.01, multiplier: '1x', color: 'gray' },
-  startup: { tapLimit: 200, prcPerTap: 0.015, multiplier: '1.5x', color: 'blue' },
-  growth: { tapLimit: 300, prcPerTap: 0.02, multiplier: '2x', color: 'emerald' },
-  elite: { tapLimit: 400, prcPerTap: 0.03, multiplier: '3x', color: 'amber' }
+  explorer: { tapLimit: 100, prcPerTap: 0.1, multiplier: '1x', color: 'gray', dailyMax: 10 },
+  startup: { tapLimit: 100, prcPerTap: 0.5, multiplier: '5x', color: 'blue', dailyMax: 50 },
+  growth: { tapLimit: 100, prcPerTap: 1.0, multiplier: '10x', color: 'emerald', dailyMax: 100 },
+  elite: { tapLimit: 100, prcPerTap: 2.0, multiplier: '20x', color: 'amber', dailyMax: 200 }
 };
 
 const TapGame = ({ user }) => {
