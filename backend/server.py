@@ -2058,11 +2058,11 @@ async def run_prc_burn_job():
     # Burn free user PRC (48 hours expiry)
     free_result = await burn_expired_prc_for_free_users()
     
-    # Burn expired VIP PRC (5 days after expiry)
-    vip_result = await burn_expired_vip_prc()
+    # Burn expired subscription PRC (5 days after expiry)
+    sub_result = await burn_expired_subscription_prc()
     
-    logging.info(f"PRC burn job complete: Free={free_result}, VIP={vip_result}")
-    return {"free_users": free_result, "expired_vips": vip_result}
+    logging.info(f"PRC burn job complete: Free={free_result}, Subscription={sub_result}")
+    return {"free_users": free_result, "expired_subscriptions": sub_result}
 
 # ==================== END PRC BURN SYSTEM ====================
 
