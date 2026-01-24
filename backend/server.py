@@ -1824,18 +1824,18 @@ async def burn_expired_prc_for_free_users():
         logging.error(f"Error burning expired PRC for free users: {e}")
         return {"users_affected": 0, "total_burned": 0.0}
 
-async def burn_expired_vip_prc():
+async def burn_expired_subscription_prc():
     """
-    Burn PRC for expired VIP users - ONLY PRC mined AFTER expiry that is older than 5 days
-    Logic: When VIP expires, user can still mine but that PRC will be burned after 5 days
+    Burn PRC for expired subscription users - ONLY PRC mined AFTER expiry that is older than 5 days
+    Logic: When subscription expires, user can still mine but that PRC will be burned after 5 days
     """
     try:
         now = datetime.now(timezone.utc)
         
-        # Find all expired VIP users (any expiry in the past)
-        expired_vips = db.users.find({
-            "membership_type": "vip",
-            "vip_expiry": {"$lt": now.isoformat()},
+        # Find all expired subscription users (any expiry in the past)
+        expired_subs = db.users.find({
+            "subscription_plan": {"$in": ["startup", "growth", "elite"]},
+            "subscription_expiry": {"$lt": now.isoformat()},
             "mining_history": {"$exists": True, "$ne": []}
         })
         
