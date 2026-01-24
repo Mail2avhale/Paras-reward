@@ -22317,15 +22317,23 @@ async def send_message(request: Request):
     
     await db.messages.insert_one(message)
     
-    # Create notification for receiver
+    # Check if sender is a referral (for enhanced notification)
+    is_referral = receiver.get("referred_by") == sender_uid or (
+        await db.users.find_one({"uid": sender_uid, "referred_by": receiver_uid})
+    )
+    
+    # Create notification for receiver with referral context
+    notification_title = "💬 Referral Message" if is_referral else "New Message"
+    notification_icon = "🤝" if is_referral else "💬"
+    
     await create_social_notification(
         user_uid=receiver_uid,
-        notification_type="new_message",
-        title="New Message",
+        notification_type="referral_message" if is_referral else "new_message",
+        title=notification_title,
         message=f"{sender_name}: {text[:50]}{'...' if len(text) > 50 else ''}",
         from_uid=sender_uid,
         from_name=sender_name,
-        icon="💬",
+        icon=notification_icon,
         action_url=f"/messages/{sender_uid}"
     )
     
