@@ -612,87 +612,259 @@ const AdminSubscriptionManagement = ({ user }) => {
       )}
 
       {activeTab === 'payments' && (
-        <Card className="p-6 bg-gray-900 border-gray-800">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Payment Verification</h3>
-            <div className="flex gap-2">
-              {['pending', 'approved', 'rejected'].map(status => (
+        <div className="space-y-4">
+          {/* Time Filter Pills */}
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+            <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
+              {[
+                { id: 'today', label: 'Today', icon: '📅' },
+                { id: 'week', label: 'This Week', icon: '📆' },
+                { id: 'month', label: 'This Month', icon: '🗓️' },
+                { id: 'all', label: 'All Time', icon: '♾️' }
+              ].map(tf => (
                 <button
-                  key={status}
-                  onClick={() => { setPaymentFilter(status); fetchPayments(); }}
-                  className={`px-3 py-1 rounded-full text-sm ${
-                    paymentFilter === status
-                      ? 'bg-amber-500/10 text-black'
-                      : 'bg-gray-800 text-gray-400'
+                  key={tf.id}
+                  onClick={() => setTimeFilter(tf.id)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                    timeFilter === tf.id
+                      ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30'
+                      : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
                   }`}
                 >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                  <span className="mr-2">{tf.icon}</span>
+                  {tf.label}
                 </button>
               ))}
             </div>
+            
+            {/* Search */}
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <Input
+                placeholder="Search by name, email, UTR..."
+                value={paymentSearch}
+                onChange={(e) => setPaymentSearch(e.target.value)}
+                className="pl-10 bg-gray-900/50 border-gray-800 text-white placeholder:text-gray-500"
+              />
+            </div>
           </div>
-          <div className="space-y-3">
-            {payments.map((payment, idx) => (
-              <div key={idx} className="p-4 bg-gray-800/50 rounded-xl">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      planColors[payment.subscription_plan] || 'bg-amber-500/10'
-                    }/20`}>
-                      {(() => {
-                        const Icon = planIcons[payment.subscription_plan] || Crown;
-                        return <Icon className={`w-5 h-5 text-${payment.subscription_plan === 'elite' ? 'amber' : payment.subscription_plan === 'growth' ? 'emerald' : 'blue'}-500`} />;
-                      })()}
-                    </div>
-                    <div>
-                      <p className="text-white font-medium">{payment.subscription_plan?.toUpperCase() || 'VIP'} - {payment.plan_type}</p>
-                      <p className="text-purple-400 font-medium">{payment.user_name || 'Unknown User'}</p>
-                      <p className="text-gray-400 text-sm">{payment.user_email || payment.user_id?.slice(0, 20)}</p>
-                      {payment.user_phone && <p className="text-gray-500 text-xs">📱 {payment.user_phone}</p>}
-                      <p className="text-gray-500 text-xs">UTR: {payment.utr_number}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-amber-500 font-bold text-lg">₹{payment.amount}</p>
-                    <p className="text-gray-500 text-xs">{new Date(payment.submitted_at || payment.created_at).toLocaleDateString()}</p>
-                  </div>
+
+          {/* Status Summary Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Card className="p-3 bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 border-yellow-500/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-yellow-500/20">
+                  <Clock className="w-5 h-5 text-yellow-400" />
                 </div>
-                {paymentFilter === 'pending' && (
-                  <div className="flex gap-2 mt-4">
-                    <Button
-                      onClick={() => setSelectedPayment(payment)}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      Review
-                    </Button>
-                    <Button
-                      onClick={() => handleApprovePayment(payment)}
-                      disabled={processing}
-                      className="flex-1 bg-green-600 hover:bg-green-700"
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Approve
-                    </Button>
-                    <Button
-                      onClick={() => handleRejectPayment(payment)}
-                      disabled={processing}
-                      variant="destructive"
-                      className="flex-1"
-                    >
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Reject
-                    </Button>
-                  </div>
-                )}
+                <div>
+                  <p className="text-yellow-400 text-xs font-medium">Pending</p>
+                  <p className="text-2xl font-bold text-yellow-300">{paymentStats.pending}</p>
+                </div>
               </div>
-            ))}
-            {payments.length === 0 && (
-              <p className="text-gray-500 text-center py-8">No {paymentFilter} payments</p>
+            </Card>
+            <Card className="p-3 bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-green-500/20">
+                  <CheckCircle className="w-5 h-5 text-green-400" />
+                </div>
+                <div>
+                  <p className="text-green-400 text-xs font-medium">Approved</p>
+                  <p className="text-2xl font-bold text-green-300">{paymentStats.approved}</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-3 bg-gradient-to-br from-red-500/10 to-red-600/5 border-red-500/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-red-500/20">
+                  <XCircle className="w-5 h-5 text-red-400" />
+                </div>
+                <div>
+                  <p className="text-red-400 text-xs font-medium">Rejected</p>
+                  <p className="text-2xl font-bold text-red-300">{paymentStats.rejected}</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-3 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-amber-500/20">
+                  <DollarSign className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <p className="text-amber-400 text-xs font-medium">Total Value</p>
+                  <p className="text-2xl font-bold text-amber-300">₹{paymentStats.totalAmount.toLocaleString()}</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Status Tabs */}
+          <div className="flex gap-1 p-1 bg-gray-900/50 border border-gray-800 rounded-xl">
+            {[
+              { id: 'pending', label: 'Pending', color: 'yellow', icon: Clock },
+              { id: 'approved', label: 'Approved', color: 'green', icon: CheckCircle },
+              { id: 'rejected', label: 'Rejected', color: 'red', icon: XCircle },
+            ].map(tab => {
+              const Icon = tab.icon;
+              const count = paymentStats[tab.id] || 0;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => { setPaymentFilter(tab.id); }}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg transition-all ${
+                    paymentFilter === tab.id
+                      ? tab.id === 'pending' ? 'bg-yellow-500/20 text-yellow-400 shadow-lg' :
+                        tab.id === 'approved' ? 'bg-green-500/20 text-green-400 shadow-lg' :
+                        'bg-red-500/20 text-red-400 shadow-lg'
+                      : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    paymentFilter === tab.id 
+                      ? `bg-${tab.color}-500/30` 
+                      : 'bg-gray-800'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Payments List */}
+          <div className="space-y-3">
+            {filteredPayments.length === 0 ? (
+              <Card className="p-12 bg-gray-900/30 border-gray-800 text-center">
+                <div className="text-gray-500">
+                  <Crown className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                  <p className="text-lg font-medium">No {paymentFilter} payments</p>
+                  <p className="text-sm mt-1">
+                    {timeFilter !== 'all' && `for ${timeFilter === 'today' ? 'today' : timeFilter === 'week' ? 'this week' : 'this month'}`}
+                  </p>
+                </div>
+              </Card>
+            ) : (
+              filteredPayments.map((payment, idx) => {
+                const isFraud = isPotentialFraud(payment);
+                const Icon = planIcons[payment.subscription_plan] || Crown;
+                
+                return (
+                  <Card 
+                    key={payment.payment_id || idx}
+                    className={`p-4 bg-gray-900/50 border-gray-800 hover:bg-gray-900/80 transition-all ${
+                      isFraud ? 'border-red-500/50 ring-1 ring-red-500/30' : ''
+                    } ${selectedPayment?.payment_id === payment.payment_id ? 'ring-2 ring-amber-500' : ''}`}
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center gap-4">
+                      {/* Plan Icon & User Info */}
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className={`p-3 rounded-xl ${
+                          payment.subscription_plan === 'elite' ? 'bg-amber-500/10' :
+                          payment.subscription_plan === 'growth' ? 'bg-emerald-500/10' :
+                          payment.subscription_plan === 'startup' ? 'bg-blue-500/10' : 'bg-gray-500/10'
+                        }`}>
+                          <Icon className={`w-5 h-5 ${
+                            payment.subscription_plan === 'elite' ? 'text-amber-400' :
+                            payment.subscription_plan === 'growth' ? 'text-emerald-400' :
+                            payment.subscription_plan === 'startup' ? 'text-blue-400' : 'text-gray-400'
+                          }`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-white">{payment.user_name || 'Unknown User'}</p>
+                            <span className={`text-xs px-2 py-0.5 rounded-full border capitalize ${
+                              payment.subscription_plan === 'elite' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                              payment.subscription_plan === 'growth' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                              'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                            }`}>
+                              {payment.subscription_plan || 'VIP'}
+                            </span>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-800 text-gray-400">
+                              {payment.plan_type || 'monthly'}
+                            </span>
+                            {isFraud && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse">
+                                ⚠️ Amount Mismatch
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-gray-500 text-sm truncate">{payment.user_email || payment.user_id}</p>
+                          {payment.user_phone && <p className="text-gray-600 text-xs">📱 {payment.user_phone}</p>}
+                        </div>
+                      </div>
+
+                      {/* Amount & Date */}
+                      <div className="text-right">
+                        <p className={`text-xl font-bold ${isFraud ? 'text-red-400' : 'text-amber-400'}`}>
+                          ₹{(payment.amount || 0).toLocaleString()}
+                        </p>
+                        <p className="text-gray-500 text-xs">
+                          {new Date(payment.submitted_at || payment.created_at).toLocaleDateString('en-IN', {
+                            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                          })}
+                        </p>
+                        <p className="text-gray-600 text-xs font-mono">UTR: {payment.utr_number || 'N/A'}</p>
+                      </div>
+
+                      {/* Quick Actions */}
+                      {paymentFilter === 'pending' && (
+                        <div className="flex gap-2 md:ml-4">
+                          <Button
+                            size="sm"
+                            onClick={() => setSelectedPayment(payment)}
+                            variant="outline"
+                            className="border-gray-700 text-gray-300"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleApprovePayment(payment)}
+                            disabled={processing}
+                            className="bg-green-500/20 hover:bg-green-500/30 text-green-400 border-green-500/30"
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRejectPayment(payment)}
+                            disabled={processing}
+                            className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Fraud Warning Details */}
+                    {isFraud && (
+                      <div className="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                        <p className="text-red-400 text-sm flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4" />
+                          <strong>Potential Fraud:</strong> Amount ₹{payment.amount} doesn't match {payment.subscription_plan} {payment.plan_type} pricing.
+                          {pricingReference?.amount_to_plan_map?.[String(payment.amount)] && (
+                            <span className="text-gray-400">
+                              Expected: {pricingReference.amount_to_plan_map[String(payment.amount)].plan} ({pricingReference.amount_to_plan_map[String(payment.amount)].duration})
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    )}
+                  </Card>
+                );
+              })
             )}
           </div>
-        </Card>
+
+          {/* Results Count */}
+          <div className="text-center text-gray-500 text-sm mt-4">
+            Showing {filteredPayments.length} of {payments.length} payments
+          </div>
+        </div>
       )}
 
       {activeTab === 'pricing' && (
