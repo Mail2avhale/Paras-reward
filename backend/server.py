@@ -32249,12 +32249,12 @@ async def startup_db():
             replace_existing=True
         )
         
-        # Schedule PRC burn for expired VIP users - runs daily at 2 AM
+        # Schedule PRC burn for expired subscription users - runs daily at 2 AM
         scheduler.add_job(
-            burn_expired_vip_prc,
+            burn_expired_subscription_prc,
             CronTrigger(hour=2, minute=0),  # Daily at 2 AM
-            id='burn_expired_vip_prc',
-            name='Burn PRC for expired VIP users (5 day grace period)',
+            id='burn_expired_subscription_prc',
+            name='Burn PRC for expired subscription users (5 day grace period)',
             replace_existing=True
         )
         
