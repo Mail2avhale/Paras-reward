@@ -152,8 +152,11 @@ const AdminBillPayments = ({ user }) => {
     
     return {
       pending: filtered.filter(r => r.status === 'pending').length,
+      pendingAmount: filtered.filter(r => r.status === 'pending').reduce((sum, r) => sum + (r.amount_inr || 0), 0),
       processing: filtered.filter(r => r.status === 'processing' || r.status === 'approved').length,
+      processingAmount: filtered.filter(r => r.status === 'processing' || r.status === 'approved').reduce((sum, r) => sum + (r.amount_inr || 0), 0),
       completed: filtered.filter(r => r.status === 'completed').length,
+      completedAmount: filtered.filter(r => r.status === 'completed').reduce((sum, r) => sum + (r.amount_inr || 0), 0),
       rejected: filtered.filter(r => r.status === 'rejected').length,
       totalAmount: filtered.reduce((sum, r) => sum + (r.amount_inr || 0), 0)
     };
