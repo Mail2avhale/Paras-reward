@@ -389,12 +389,17 @@ const BillPayments = ({ user, onLogout }) => {
                         <Input
                           id="ifsc_code"
                           value={formData.ifsc_code}
-                          onChange={(e) => setFormData({ ...formData, ifsc_code: e.target.value.toUpperCase() })}
+                          onChange={(e) => setFormData({ ...formData, ifsc_code: formatIFSC(e.target.value) })}
                           placeholder="e.g., HDFC0001234"
                           maxLength={11}
                           required
                         />
-                        <p className="text-xs text-gray-500 mt-1">11-character bank IFSC code</p>
+                        {formData.ifsc_code && formData.ifsc_code.length > 0 && !validateIFSC(formData.ifsc_code).isValid && (
+                          <p className="text-red-500 text-xs mt-1">Enter valid IFSC (e.g., SBIN0001234)</p>
+                        )}
+                        {formData.ifsc_code && validateIFSC(formData.ifsc_code).isValid && (
+                          <p className="text-green-500 text-xs mt-1">✓ Bank: {validateIFSC(formData.ifsc_code).bankCode}</p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="customer_id">Customer ID (Optional)</Label>
@@ -425,11 +430,14 @@ const BillPayments = ({ user, onLogout }) => {
                           id="registered_mobile"
                           type="tel"
                           value={formData.registered_mobile}
-                          onChange={(e) => setFormData({ ...formData, registered_mobile: e.target.value })}
+                          onChange={(e) => setFormData({ ...formData, registered_mobile: formatMobile(e.target.value) })}
                           placeholder="10-digit mobile number"
                           maxLength={10}
                           required
                         />
+                        {formData.registered_mobile && formData.registered_mobile.length > 0 && !validateMobile(formData.registered_mobile).isValid && (
+                          <p className="text-red-500 text-xs mt-1">Enter valid 10-digit mobile (starts with 6-9)</p>
+                        )}
                       </div>
                     </div>
 
