@@ -55,8 +55,8 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
       ['startup', 'growth', 'elite'].includes(user.subscription_plan?.toLowerCase());
     
     if (!isVipOrPaidSubscription) {
-      toast.error('VIP membership required to access marketplace');
-      setTimeout(() => navigate('/dashboard'), 2000);
+      toast.error('Free subscription वर Marketplace access नाही. Startup किंवा Elite plan घ्या आणि shopping करा! 🛒');
+      setTimeout(() => navigate('/subscription'), 2000);
       return;
     }
     
