@@ -59,12 +59,12 @@ const NetworkFeed = ({ user }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch global feed
-      const globalRes = await axios.get(`${API}/api/feed/global?limit=${ITEMS_PER_PAGE}&page=1`);
+      // Fetch REAL global live activity (comprehensive feed)
+      const globalRes = await axios.get(`${API}/api/global/live-activity?limit=50`);
       const globalActivities = globalRes.data.activities || [];
       setGlobalFeed(globalActivities);
       setGlobalTotal(globalRes.data.total || globalActivities.length);
-      setHasMoreGlobal(globalActivities.length >= ITEMS_PER_PAGE);
+      setHasMoreGlobal(false); // This endpoint doesn't support pagination
       setGlobalPage(1);
 
       // Fetch network feed if logged in
