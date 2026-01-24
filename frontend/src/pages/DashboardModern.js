@@ -55,7 +55,9 @@ const DashboardModern = ({ user, onLogout }) => {
     totalMined: 0,
     totalRedeemed: 0,
     referralCount: 0,
-    subscriptionPlan: 'explorer'
+    subscriptionPlan: 'explorer',
+    subscriptionExpiry: null,
+    subscriptionStart: null
   });
 
   // Helper function to get plan display name
