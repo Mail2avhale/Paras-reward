@@ -176,7 +176,8 @@ const BillPayments = ({ user, onLogout }) => {
   const getStatusBadge = (status) => {
     const statusConfig = {
       pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending' },
-      processing: { color: 'bg-blue-100 text-blue-800', icon: AlertCircle, label: 'Processing' },
+      processing: { color: 'bg-blue-100 text-blue-800', icon: AlertCircle, label: 'Approved' },
+      approved: { color: 'bg-blue-100 text-blue-800', icon: AlertCircle, label: 'Approved' },
       completed: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Completed' },
       rejected: { color: 'bg-red-100 text-red-800', icon: XCircle, label: 'Rejected' }
     };
