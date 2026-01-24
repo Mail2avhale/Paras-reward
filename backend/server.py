@@ -2626,6 +2626,32 @@ async def register_user(request: Request):
     
     await db.users.insert_one(user_dict)
     
+    # ========== NOTIFY REFERRER ABOUT NEW REFERRAL ==========
+    if user_dict.get("referred_by"):
+        referrer_uid = user_dict["referred_by"]
+        referrer = await db.users.find_one({"uid": referrer_uid}, {"_id": 0, "name": 1})
+        new_user_name = user_dict.get("name", "Someone")
+        
+        # Create notification for the referrer
+        await create_social_notification(
+            user_uid=referrer_uid,
+            notification_type="new_referral",
+            title="🎉 New Referral Joined!",
+            message=f"{new_user_name} just joined using your referral link! Help them get started.",
+            from_uid=user.uid,
+            from_name=new_user_name,
+            icon="👋",
+            action_url=f"/messages/{user.uid}"
+        )
+        
+        # Log to activity
+        await log_activity(
+            user_id=referrer_uid,
+            action_type="new_referral_joined",
+            description=f"New referral: {new_user_name} joined your network",
+            metadata={"new_user_uid": user.uid, "new_user_name": new_user_name}
+        )
+    
     return {
         "message": "Registration successful", 
         "uid": user.uid,
