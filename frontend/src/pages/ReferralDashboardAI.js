@@ -75,6 +75,82 @@ function ReferralDashboardAI({ user, onLogout }) {
     }
   };
 
+  // Fetch direct referrals list
+  const fetchDirectReferrals = async () => {
+    setLoadingReferrals(true);
+    try {
+      const response = await axios.get(`${API}/referrals/${user.uid}/direct-list`);
+      setDirectReferrals(response.data.referrals || []);
+      setReferrer(response.data.referrer);
+    } catch (error) {
+      console.error('Error fetching referrals:', error);
+    } finally {
+      setLoadingReferrals(false);
+    }
+  };
+
+  // Fetch nearby users
+  const fetchNearbyUsers = async () => {
+    setLoadingNearby(true);
+    try {
+      // First update IP location
+      await axios.post(`${API}/user/${user.uid}/update-ip-location`).catch(() => {});
+      
+      const response = await axios.get(`${API}/social/nearby-users/${user.uid}`);
+      setNearbyUsers(response.data.nearby_users || []);
+      setUserLocation(response.data.user_location);
+    } catch (error) {
+      console.error('Error fetching nearby users:', error);
+    } finally {
+      setLoadingNearby(false);
+    }
+  };
+
+  // Toggle location visibility
+  const toggleLocationVisibility = async () => {
+    try {
+      const response = await axios.put(`${API}/user/${user.uid}/location-visibility`, {
+        show_location: !showLocation
+      });
+      setShowLocation(!showLocation);
+      toast.success(response.data.message);
+    } catch (error) {
+      toast.error('Failed to update setting');
+    }
+  };
+
+  // Navigate to messages with a specific user
+  const openMessageWith = (recipientUid) => {
+    navigate(`/messages/${recipientUid}`);
+  };
+
+  // Follow a user
+  const followUser = async (targetUid) => {
+    try {
+      await axios.post(`${API}/social/follow`, {
+        follower_uid: user.uid,
+        following_uid: targetUid
+      });
+      toast.success('Following!');
+      // Update local state
+      setNearbyUsers(prev => prev.map(u => 
+        u.uid === targetUid ? { ...u, is_following: true } : u
+      ));
+    } catch (error) {
+      toast.error('Could not follow user');
+    }
+  };
+
+  // Load data when tab changes
+  useEffect(() => {
+    if (activeTab === 'myreferrals' && directReferrals.length === 0) {
+      fetchDirectReferrals();
+    }
+    if (activeTab === 'nearby' && nearbyUsers.length === 0) {
+      fetchNearbyUsers();
+    }
+  }, [activeTab]);
+
   const handleSuggestionClick = (action) => {
     switch (action) {
       case 'Share Now':
