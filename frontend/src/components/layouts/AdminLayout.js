@@ -30,6 +30,7 @@ const MENU_TO_PERMISSION = {
   // 'stockists': 'stockist', // Removed - stockist system deprecated
   'support': 'support',
   'fraud-alerts': 'fraud',
+  'fraud-dashboard': 'fraud',
   'accounting': 'accounting',
   'profit-loss': 'profit_loss',
   'company-wallets': 'company_wallets',
