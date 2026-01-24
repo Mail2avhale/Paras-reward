@@ -31,7 +31,10 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
       ['startup', 'growth', 'elite'].includes(user.subscription_plan?.toLowerCase());
     
     if (!isVipOrPaidSubscription) {
-      toast.error('Free subscription वर Gift Voucher redeem करता येत नाही. Startup किंवा Elite plan घ्या! 🎁');
+      toast.error(t('paidSubscriptionRequiredGiftVouchers'), {
+        duration: 4000,
+        style: { fontSize: '16px', fontWeight: '500' }
+      });
       setTimeout(() => navigate('/subscription'), 2000);
       return;
     }
