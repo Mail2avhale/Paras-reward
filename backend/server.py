@@ -2642,8 +2642,13 @@ async def login(
 ):
     """User login with email/mobile and password"""
     # Get real IP address
-    real_ip = ip_address or request.client.host if request.client else "unknown"
+    real_ip = get_client_ip(request) or ip_address or "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
+    
+    # ========== FRAUD DETECTION: IP Login Limit ==========
+    ip_ok, ip_msg = await fraud_detector.check_ip_login_limit(real_ip)
+    if not ip_ok:
+        raise HTTPException(status_code=429, detail=ip_msg)
     
     # Check rate limit for login attempts
     allowed, locked_seconds, attempts_left = check_login_rate_limit(identifier)
