@@ -150,7 +150,9 @@ const AdminSubscriptionManagement = ({ user }) => {
     
     return {
       pending: filtered.filter(p => p.status === 'pending').length,
+      pendingAmount: filtered.filter(p => p.status === 'pending').reduce((sum, p) => sum + (p.amount || 0), 0),
       approved: filtered.filter(p => p.status === 'approved').length,
+      approvedAmount: filtered.filter(p => p.status === 'approved').reduce((sum, p) => sum + (p.amount || 0), 0),
       rejected: filtered.filter(p => p.status === 'rejected').length,
       totalAmount: filtered.reduce((sum, p) => sum + (p.amount || 0), 0)
     };
