@@ -298,6 +298,7 @@ const AdminGiftVouchers = ({ user }) => {
               <div>
                 <p className="text-yellow-400 text-xs font-medium">Pending</p>
                 <p className="text-2xl font-bold text-yellow-300">{timeFilteredStats.pending}</p>
+                <p className="text-yellow-500 text-xs">₹{timeFilteredStats.pendingValue?.toLocaleString() || 0}</p>
               </div>
             </div>
           </Card>
@@ -309,6 +310,7 @@ const AdminGiftVouchers = ({ user }) => {
               <div>
                 <p className="text-green-400 text-xs font-medium">Completed</p>
                 <p className="text-2xl font-bold text-green-300">{timeFilteredStats.completed}</p>
+                <p className="text-green-500 text-xs">₹{timeFilteredStats.completedValue?.toLocaleString() || 0}</p>
               </div>
             </div>
           </Card>
