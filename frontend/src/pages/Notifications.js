@@ -119,10 +119,32 @@ const Notifications = ({ user }) => {
         return <UserPlus className="w-5 h-5 text-purple-400" />;
       case 'new_message':
         return <MessageCircle className="w-5 h-5 text-blue-400" />;
+      case 'referral_message':
+        return <MessageCircle className="w-5 h-5 text-green-400" />;
+      case 'new_referral':
+        return <UserPlus className="w-5 h-5 text-emerald-400" />;
+      case 'referral_active':
+        return <Award className="w-5 h-5 text-orange-400" />;
       case 'milestone':
         return <Award className="w-5 h-5 text-amber-400" />;
       default:
         return <Bell className="w-5 h-5 text-gray-400" />;
+    }
+  };
+
+  // Get background color based on notification type
+  const getNotificationBgColor = (type, read) => {
+    if (read) return 'bg-gray-800/50';
+    
+    switch (type) {
+      case 'new_referral':
+        return 'bg-emerald-900/30 border-l-4 border-emerald-500';
+      case 'referral_active':
+        return 'bg-orange-900/30 border-l-4 border-orange-500';
+      case 'referral_message':
+        return 'bg-green-900/30 border-l-4 border-green-500';
+      default:
+        return 'bg-purple-900/20 border-l-4 border-purple-500';
     }
   };
 
