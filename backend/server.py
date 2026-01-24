@@ -1883,8 +1883,8 @@ async def burn_expired_subscription_prc():
                     updated_history.append(entry)
                     continue
                 
-                # Check if this PRC was mined AFTER VIP expiry
-                if mining_time > vip_expiry:
+                # Check if this PRC was mined AFTER subscription expiry
+                if mining_time > sub_expiry:
                     # Check if 5 days have passed since mining
                     burn_threshold = mining_time + timedelta(days=5)
                     if now >= burn_threshold:
@@ -1892,7 +1892,7 @@ async def burn_expired_subscription_prc():
                         burned_amount += amount
                         entry["burned"] = True
                         entry["burned_at"] = now.isoformat()
-                        entry["burn_reason"] = "mined_after_vip_expiry_5days"
+                        entry["burn_reason"] = "mined_after_subscription_expiry_5days"
                 
                 updated_history.append(entry)
             
