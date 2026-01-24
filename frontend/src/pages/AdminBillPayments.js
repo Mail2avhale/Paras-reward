@@ -32,6 +32,15 @@ const AdminBillPayments = ({ user }) => {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [sortBy, setSortBy] = useState('newest'); // Sort option
+
+  // Sort options
+  const sortOptions = [
+    { id: 'newest', label: 'Newest First' },
+    { id: 'oldest', label: 'Oldest First' },
+    { id: 'amount_high', label: 'Amount: High to Low' },
+    { id: 'amount_low', label: 'Amount: Low to High' },
+  ];
 
   // Time filter options
   const timeFilters = [
