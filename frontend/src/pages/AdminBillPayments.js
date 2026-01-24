@@ -568,7 +568,7 @@ const AdminBillPayments = ({ user }) => {
                         </div>
                         <div>
                           <p className="text-gray-500 text-xs">Phone</p>
-                          <p className="text-white">{req.details?.phone_number || req.details?.registered_mobile || 'N/A'}</p>
+                          <p className="text-white">{req.details?.phone_number || req.details?.mobile_number || req.details?.registered_mobile || 'N/A'}</p>
                         </div>
                         <div>
                           <p className="text-gray-500 text-xs">PRC Used</p>
@@ -578,6 +578,26 @@ const AdminBillPayments = ({ user }) => {
                           <p className="text-gray-500 text-xs">Subscription</p>
                           <p className="text-white capitalize">{req.user_subscription_plan || 'N/A'}</p>
                         </div>
+                        
+                        {/* Mobile/DTH Recharge Details */}
+                        {req.details?.operator && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Operator</p>
+                            <p className="text-white">{req.details.operator}</p>
+                          </div>
+                        )}
+                        {req.details?.circle && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Circle</p>
+                            <p className="text-white">{req.details.circle}</p>
+                          </div>
+                        )}
+                        {req.details?.plan_name && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Plan</p>
+                            <p className="text-white">{req.details.plan_name}</p>
+                          </div>
+                        )}
                         
                         {/* Service Provider Details */}
                         {req.details?.service_provider && (
