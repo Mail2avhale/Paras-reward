@@ -379,29 +379,29 @@ const AdminAccountingDashboard = ({ user }) => {
             {/* Income & Expense Breakdown */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Income Breakdown */}
-              <Card className="p-6" data-testid="income-breakdown">
+              <Card className="p-6 cursor-pointer hover:shadow-lg transition-shadow" data-testid="income-breakdown" onClick={() => navigate('/admin/income-sources')}>
                 <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-green-400">
                   <TrendingUp className="h-5 w-5" />
                   Income Breakdown
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center py-2 border-b">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-700 hover:bg-gray-800/50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/income-sources'); }}>
                     <span className="text-gray-400">Ad Revenue</span>
                     <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.income?.ad_revenue || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-b">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-700 hover:bg-gray-800/50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/subscription-management'); }}>
                     <span className="text-gray-400">Subscription</span>
                     <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.income?.subscription || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-b">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-700 hover:bg-gray-800/50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/income-sources'); }}>
                     <span className="text-gray-400">Commission</span>
                     <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.income?.commission || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-b">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-700 hover:bg-gray-800/50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/income-sources'); }}>
                     <span className="text-gray-400">Interest</span>
                     <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.income?.interest || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2">
+                  <div className="flex justify-between items-center py-2 hover:bg-gray-800/50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/income-sources'); }}>
                     <span className="text-gray-400">Penalty/Forfeit</span>
                     <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.income?.penalty_forfeit || 0)}</span>
                   </div>
@@ -409,17 +409,17 @@ const AdminAccountingDashboard = ({ user }) => {
               </Card>
 
               {/* Expense Breakdown */}
-              <Card className="p-6" data-testid="expense-breakdown">
+              <Card className="p-6 cursor-pointer hover:shadow-lg transition-shadow" data-testid="expense-breakdown" onClick={() => navigate('/admin/expenses')}>
                 <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-red-400">
                   <TrendingDown className="h-5 w-5" />
                   Expense Breakdown
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center py-2 border-b">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-700 hover:bg-gray-800/50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/fixed-expenses'); }}>
                     <span className="text-gray-400">Operational Expenses</span>
                     <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.expense?.operational || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2">
+                  <div className="flex justify-between items-center py-2 hover:bg-gray-800/50 px-2 rounded cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate('/admin/expenses'); }}>
                     <span className="text-gray-400">Redemption Payouts</span>
                     <span className="font-semibold">{formatCurrency(quickViewData.masterSummary?.expense?.redeem_payouts || 0)}</span>
                   </div>
