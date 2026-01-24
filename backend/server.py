@@ -9583,6 +9583,163 @@ async def get_subscriptions_chart():
         "trend": trend_data
     }
 
+
+# ========== FRAUD DETECTION ADMIN ROUTES ==========
+
+@api_router.get("/admin/fraud/logs")
+async def get_fraud_logs(
+    page: int = 1,
+    limit: int = 50,
+    risk_level: Optional[str] = None,
+    event_type: Optional[str] = None
+):
+    """Get fraud detection logs"""
+    skip = (page - 1) * limit
+    
+    query = {}
+    if risk_level:
+        query["risk_level"] = risk_level
+    if event_type:
+        query["event_type"] = event_type
+    
+    logs = await db.fraud_logs.find(
+        query,
+        {"_id": 0}
+    ).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
+    
+    total = await db.fraud_logs.count_documents(query)
+    
+    return {
+        "logs": logs,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit
+    }
+
+@api_router.get("/admin/fraud/registration-attempts")
+async def get_registration_attempts(
+    page: int = 1,
+    limit: int = 50,
+    success: Optional[bool] = None
+):
+    """Get registration attempt logs"""
+    skip = (page - 1) * limit
+    
+    query = {}
+    if success is not None:
+        query["success"] = success
+    
+    attempts = await db.registration_attempts.find(
+        query,
+        {"_id": 0}
+    ).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
+    
+    total = await db.registration_attempts.count_documents(query)
+    
+    return {
+        "attempts": attempts,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit
+    }
+
+@api_router.get("/admin/fraud/stats")
+async def get_fraud_stats():
+    """Get fraud detection statistics"""
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    week_start = (now - timedelta(days=7)).isoformat()
+    
+    # Today's blocked registrations
+    blocked_today = await db.registration_attempts.count_documents({
+        "success": False,
+        "timestamp": {"$gte": today_start}
+    })
+    
+    # This week's blocked registrations
+    blocked_week = await db.registration_attempts.count_documents({
+        "success": False,
+        "timestamp": {"$gte": week_start}
+    })
+    
+    # High risk users
+    high_risk_users = await db.users.count_documents({
+        "fraud_risk_level": {"$in": ["high", "blocked"]}
+    })
+    
+    # Duplicate attempts (by reason)
+    duplicate_pipeline = [
+        {"$match": {"success": False, "timestamp": {"$gte": week_start}}},
+        {"$group": {"_id": "$reason", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}}
+    ]
+    duplicate_stats = await db.registration_attempts.aggregate(duplicate_pipeline).to_list(20)
+    
+    # IP-based blocking stats
+    ip_blocks_pipeline = [
+        {"$match": {"success": False, "timestamp": {"$gte": week_start}}},
+        {"$group": {"_id": "$ip_address", "count": {"$sum": 1}}},
+        {"$match": {"count": {"$gte": 3}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 10}
+    ]
+    suspicious_ips = await db.registration_attempts.aggregate(ip_blocks_pipeline).to_list(10)
+    
+    return {
+        "blocked_today": blocked_today,
+        "blocked_this_week": blocked_week,
+        "high_risk_users": high_risk_users,
+        "block_reasons": {item["_id"]: item["count"] for item in duplicate_stats if item["_id"]},
+        "suspicious_ips": [{"ip": item["_id"], "attempts": item["count"]} for item in suspicious_ips if item["_id"]]
+    }
+
+@api_router.get("/admin/fraud/user/{uid}")
+async def get_user_fraud_profile(uid: str):
+    """Get fraud profile for a specific user"""
+    user = await db.users.find_one({"uid": uid}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get related accounts by device
+    device_accounts = []
+    if user.get("device_fingerprint"):
+        device_accounts = await fraud_detector.get_device_accounts(user["device_fingerprint"])
+    
+    # Get related accounts by IP
+    ip_accounts = []
+    if user.get("registration_ip"):
+        ip_accounts = await db.users.find(
+            {"registration_ip": user["registration_ip"], "uid": {"$ne": uid}},
+            {"_id": 0, "uid": 1, "email": 1, "name": 1, "created_at": 1}
+        ).to_list(10)
+    
+    # Check for referral fraud patterns
+    referral_rings = await fraud_detector.detect_referral_rings(uid)
+    
+    # Get fraud logs for this user
+    fraud_logs = await db.fraud_logs.find(
+        {"user_id": uid},
+        {"_id": 0}
+    ).sort("timestamp", -1).limit(20).to_list(20)
+    
+    return {
+        "user": {
+            "uid": user.get("uid"),
+            "name": user.get("name"),
+            "email": user.get("email"),
+            "risk_score": user.get("fraud_risk_score", 0),
+            "risk_level": user.get("fraud_risk_level", "low"),
+            "registration_ip": user.get("registration_ip"),
+            "device_fingerprint": user.get("device_fingerprint"),
+            "created_at": user.get("created_at")
+        },
+        "related_by_device": device_accounts,
+        "related_by_ip": ip_accounts,
+        "referral_rings": referral_rings,
+        "fraud_logs": fraud_logs
+    }
+
+
 # ========== ADMIN USER MANAGEMENT ROUTES ==========
 
 @api_router.get("/admin/check-admin-exists")
