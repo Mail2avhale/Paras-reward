@@ -901,13 +901,9 @@ async def get_user_subscription_info(user: dict) -> dict:
     """Get user's current subscription status and benefits"""
     now = datetime.now(timezone.utc)
     
-    # Check new subscription system first, then legacy
+    # Use subscription_plan only (no legacy VIP support)
     subscription_plan = user.get("subscription_plan", "explorer")
-    subscription_expiry_str = user.get("subscription_expiry") or user.get("vip_expiry")
-    
-    # Legacy VIP migration check
-    if user.get("membership_type") == "vip" and subscription_plan == "explorer":
-        subscription_plan = "startup"  # Migrated VIP users get Startup
+    subscription_expiry_str = user.get("subscription_expiry")
     
     is_expired = False
     days_remaining = 0
