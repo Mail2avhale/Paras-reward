@@ -24,6 +24,9 @@ import jwt
 from collections import defaultdict
 import time
 
+# Import fraud detection
+from fraud_detection import FraudDetector, get_client_ip, generate_device_fingerprint
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
