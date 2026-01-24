@@ -212,9 +212,9 @@ const TapGame = ({ user }) => {
             subscriptionPlan === 'startup' ? 'text-blue-400' :
             'text-gray-400'
           }`}>
-            {hasPaidPlan ? `🎉 ${subscriptionPlan.charAt(0).toUpperCase() + subscriptionPlan.slice(1)} ${globalT('rate')}: ` : `Explorer ${globalT('rate')}: `}
-            <span className="font-bold">{prcPerTap} PRC/{globalT('tapGame').split(' ')[0].toLowerCase()}</span>
-            <span className="text-gray-500"> • {maxTaps} {globalT('tapsToday')}</span>
+            {hasPaidPlan ? `🎉 ${subscriptionPlan.charAt(0).toUpperCase() + subscriptionPlan.slice(1)} ` : 'Explorer '}
+            <span className="font-bold">{planConfig.multiplier}</span>
+            <span className="text-gray-500"> • {prcPerTap} PRC/tap • Max {planConfig.dailyMax} PRC/day</span>
           </p>
         </div>
       </div>
