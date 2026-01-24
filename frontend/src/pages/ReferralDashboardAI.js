@@ -100,11 +100,11 @@ function ReferralDashboardAI({ user, onLogout }) {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
+    { id: 'myreferrals', label: 'My Referrals', icon: MessageCircle },
+    { id: 'nearby', label: 'Nearby', icon: Users },
     { id: 'network', label: 'Levels', icon: Users },
-    { id: 'fraud', label: 'Verify', icon: Shield },
     { id: 'share', label: 'Share', icon: Share2 },
     { id: 'ai', label: 'AI Tips', icon: Brain },
-    { id: 'tree', label: 'Tree', icon: Users },
   ];
 
   return (
