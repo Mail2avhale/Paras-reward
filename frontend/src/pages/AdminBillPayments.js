@@ -685,6 +685,46 @@ const AdminBillPayments = ({ user }) => {
                           </div>
                         )}
                         
+                        {/* Additional Service Details */}
+                        {req.details?.provider && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Provider</p>
+                            <p className="text-white">{req.details.provider}</p>
+                          </div>
+                        )}
+                        {req.details?.subscriber_id && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Subscriber ID</p>
+                            <p className="text-white font-mono">{req.details.subscriber_id}</p>
+                          </div>
+                        )}
+                        {req.details?.billing_unit && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Billing Unit</p>
+                            <p className="text-white">{req.details.billing_unit}</p>
+                          </div>
+                        )}
+                        {req.details?.customer_name && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Customer Name</p>
+                            <p className="text-white">{req.details.customer_name}</p>
+                          </div>
+                        )}
+                        
+                        {/* Card Details */}
+                        {req.details?.cardholder_name && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Cardholder Name</p>
+                            <p className="text-white">{req.details.cardholder_name}</p>
+                          </div>
+                        )}
+                        {req.details?.card_last_4_digits && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Card (Last 4)</p>
+                            <p className="text-white font-mono">****{req.details.card_last_4_digits}</p>
+                          </div>
+                        )}
+                        
                         {/* Admin Notes */}
                         {req.admin_notes && (
                           <div className="col-span-2 md:col-span-4">
