@@ -243,10 +243,14 @@ const Register = () => {
                       type="tel"
                       placeholder="10-digit mobile number"
                       value={userForm.mobile}
-                      onChange={(e) => setUserForm({...userForm, mobile: e.target.value})}
+                      onChange={(e) => setUserForm({...userForm, mobile: formatMobile(e.target.value)})}
+                      maxLength={10}
                       required
                       className="py-5"
                     />
+                    {userForm.mobile && userForm.mobile.length > 0 && !validateMobile(userForm.mobile).isValid && (
+                      <p className="text-red-500 text-xs mt-1">Enter valid 10-digit mobile (starts with 6-9)</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
