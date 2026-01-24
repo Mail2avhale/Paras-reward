@@ -646,6 +646,12 @@ const AdminBillPayments = ({ user }) => {
                             <p className="text-white font-mono">{req.details.loan_account_number}</p>
                           </div>
                         )}
+                        {req.details?.borrower_name && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Borrower Name</p>
+                            <p className="text-white">{req.details.borrower_name}</p>
+                          </div>
+                        )}
                         {req.details?.lender_name && (
                           <div>
                             <p className="text-gray-500 text-xs">Lender Name</p>
