@@ -280,11 +280,14 @@ const BillPayments = ({ user, onLogout }) => {
                       id="phone"
                       type="tel"
                       value={formData.phone_number}
-                      onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, phone_number: formatMobile(e.target.value) })}
                       placeholder="10-digit mobile number"
                       maxLength={10}
                       required
                     />
+                    {formData.phone_number && formData.phone_number.length > 0 && !validateMobile(formData.phone_number).isValid && (
+                      <p className="text-red-500 text-xs mt-1">Enter valid 10-digit mobile (starts with 6-9)</p>
+                    )}
                   </div>
                 )}
 
