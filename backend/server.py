@@ -1917,7 +1917,7 @@ async def burn_expired_subscription_prc():
                     transaction_type="prc_burn",
                     amount=burned_amount,
                     description=f"Burned {burned_amount:.2f} PRC (mined after VIP expiry, 5 days old)",
-                    metadata={"burn_reason": "mined_after_vip_expiry_5days", "vip_expiry": vip_expiry_str}
+                    metadata={"burn_reason": "mined_after_subscription_expiry_5days", "subscription_expiry": sub_expiry_str}
                 )
                 
                 burn_count += 1
