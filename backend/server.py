@@ -9378,6 +9378,11 @@ async def get_admin_stats():
             "vip_payments": recent_vip_payments
         }
     }
+    
+    # Cache the result for 2 minutes (Admin stats don't need to be real-time)
+    await cache.set(admin_stats_key(), result, CacheTTL.ADMIN_STATS)
+    
+    return result
 
 @api_router.get("/admin/charts/user-growth")
 async def get_user_growth_chart():
