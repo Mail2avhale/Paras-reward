@@ -250,8 +250,8 @@ const MarketplaceEnhanced = ({ user, onLogout }) => {
         ['startup', 'growth', 'elite'].includes(freshUserData?.subscription_plan?.toLowerCase());
       
       if (!isVipOrPaidSubscription) {
-        toast.error('Paid subscription required to shop!');
-        navigate('/dashboard');
+        toast.error('Free subscription वर shopping नाही. Startup किंवा Elite plan घ्या! 🛒');
+        navigate('/subscription');
         return;
       }
 
