@@ -572,28 +572,106 @@ const AdminBillPayments = ({ user }) => {
                         </div>
                         <div>
                           <p className="text-gray-500 text-xs">PRC Used</p>
-                          <p className="text-white">{req.prc_amount?.toFixed(2) || 'N/A'} PRC</p>
+                          <p className="text-white">{req.prc_amount?.toFixed(2) || req.total_prc_deducted?.toFixed(2) || 'N/A'} PRC</p>
                         </div>
                         <div>
                           <p className="text-gray-500 text-xs">Subscription</p>
                           <p className="text-white capitalize">{req.user_subscription_plan || 'N/A'}</p>
                         </div>
-                        {req.details?.loan_account_number && (
-                          <div className="col-span-2">
-                            <p className="text-gray-500 text-xs">Loan Account</p>
-                            <p className="text-white">{req.details.loan_account_number}</p>
+                        
+                        {/* Service Provider Details */}
+                        {req.details?.service_provider && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Service Provider</p>
+                            <p className="text-white">{req.details.service_provider}</p>
                           </div>
                         )}
+                        {req.details?.consumer_number && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Consumer Number</p>
+                            <p className="text-white font-mono">{req.details.consumer_number}</p>
+                          </div>
+                        )}
+                        {req.details?.customer_id && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Customer ID</p>
+                            <p className="text-white font-mono">{req.details.customer_id}</p>
+                          </div>
+                        )}
+                        
+                        {/* Bank Account Details */}
+                        {req.details?.account_number && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Account Number</p>
+                            <p className="text-white font-mono">{req.details.account_number}</p>
+                          </div>
+                        )}
+                        {req.details?.account_holder_name && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Account Holder</p>
+                            <p className="text-white">{req.details.account_holder_name}</p>
+                          </div>
+                        )}
+                        {req.details?.bank_name && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Bank Name</p>
+                            <p className="text-white">{req.details.bank_name}</p>
+                          </div>
+                        )}
+                        
+                        {/* Loan Details */}
+                        {req.details?.loan_account_number && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Loan Account</p>
+                            <p className="text-white font-mono">{req.details.loan_account_number}</p>
+                          </div>
+                        )}
+                        {req.details?.lender_name && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Lender Name</p>
+                            <p className="text-white">{req.details.lender_name}</p>
+                          </div>
+                        )}
+                        
+                        {/* Payment Details */}
                         {req.details?.ifsc_code && (
                           <div>
                             <p className="text-gray-500 text-xs">IFSC Code</p>
-                            <p className="text-white">{req.details.ifsc_code}</p>
+                            <p className="text-white font-mono">{req.details.ifsc_code}</p>
                           </div>
                         )}
+                        {req.details?.upi_id && (
+                          <div>
+                            <p className="text-gray-500 text-xs">UPI ID</p>
+                            <p className="text-white">{req.details.upi_id}</p>
+                          </div>
+                        )}
+                        {req.details?.bill_number && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Bill Number</p>
+                            <p className="text-white font-mono">{req.details.bill_number}</p>
+                          </div>
+                        )}
+                        {req.details?.due_date && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Due Date</p>
+                            <p className="text-white">{new Date(req.details.due_date).toLocaleDateString()}</p>
+                          </div>
+                        )}
+                        
+                        {/* Admin Notes */}
                         {req.admin_notes && (
                           <div className="col-span-2 md:col-span-4">
                             <p className="text-gray-500 text-xs">Admin Notes</p>
                             <p className="text-white">{req.admin_notes}</p>
+                          </div>
+                        )}
+                        
+                        {/* Additional Notes from User */}
+                        {req.details?.notes && (
+                          <div className="col-span-2 md:col-span-4">
+                            <p className="text-gray-500 text-xs">User Notes</p>
+                            <p className="text-white">{req.details.notes}</p>
                           </div>
                         )}
                       </div>
