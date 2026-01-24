@@ -331,10 +331,14 @@ const Register = () => {
                       data-testid="reg-pincode"
                       placeholder="6-digit pincode"
                       value={userForm.pincode}
-                      onChange={(e) => setUserForm({...userForm, pincode: e.target.value})}
+                      onChange={(e) => setUserForm({...userForm, pincode: formatPincode(e.target.value)})}
+                      maxLength={6}
                       required
                       className="py-5"
                     />
+                    {userForm.pincode && userForm.pincode.length > 0 && !validatePincode(userForm.pincode).isValid && (
+                      <p className="text-red-500 text-xs mt-1">Enter valid 6-digit pincode</p>
+                    )}
                   </div>
                 </div>
               </div>
