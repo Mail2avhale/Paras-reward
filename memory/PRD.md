@@ -67,7 +67,39 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 
 ## What's Been Implemented
 
-### January 22, 2026 (Current Session - User 360° View)
+### January 24, 2026 (Subscription UI/UX Improvements)
+
+#### Subscription UI Enhancement ✅ (COMPLETED)
+
+**Problem**: Three subscription-related UI/UX issues needed fixing:
+1. "Upgrade to VIP" banner showing for paid users
+2. Free users needed better error messages (not generic "VIP required")
+3. Paid users couldn't see their subscription details (start date, expiry, days remaining)
+
+**Solution - Backend (`backend/server.py`):**
+- Updated `GET /api/user/{uid}` endpoint to include normalized `subscription_start` field
+- Field sources (in priority order): `subscription_start_date`, `subscription_created_at`, `vip_activated_at`, `vip_activation_date`, or fallback to `created_at` for paid users
+
+**Solution - Frontend (`frontend/src/pages/DashboardModern.js`):**
+- Subscription Info Card (lines 643-721) displays for paid users (Startup/Growth/Elite):
+  - **Started**: Activation date in dd MMM yy format
+  - **Expires**: Expiry date in dd MMM yy format
+  - **Days Left**: Calculated remaining days (with color-coding: green for >7 days, red for ≤7)
+  - **Active/Expired** status badge
+  - **Renew Now** warning button when ≤7 days remaining
+- "Upgrade करा!" banner hidden for paid users (condition at line 772)
+- Plan badge displayed in header for paid users
+
+**Verification Results:**
+- ✅ Elite Plan card shows "STARTED: 24 Jan 26", "EXPIRES: 23 Feb 26", "DAYS LEFT: 30"
+- ✅ "✓ Active" status badge visible
+- ✅ No "Upgrade to VIP" banner for Elite user
+- ✅ Premium credit card design with plan-specific styling (Gold for Elite)
+- ✅ 3.0x multiplier displayed correctly
+
+---
+
+### January 22, 2026 (User 360° View)
 
 #### User 360° View Feature ✅ (COMPLETED)
 
