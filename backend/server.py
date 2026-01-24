@@ -27,6 +27,10 @@ import time
 # Import fraud detection
 from fraud_detection import FraudDetector, get_client_ip, generate_device_fingerprint
 
+# Import cache manager and database indexes
+from cache_manager import cache, CacheTTL, user_cache_key, user_balance_key, admin_stats_key, leaderboard_key, global_stats_key
+from db_indexes import create_performance_indexes, get_index_stats
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
