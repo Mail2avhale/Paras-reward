@@ -1842,20 +1842,20 @@ async def burn_expired_subscription_prc():
         burn_count = 0
         total_burned = 0.0
         
-        async for user in expired_vips:
+        async for user in expired_subs:
             uid = user.get("uid")
             mining_history = user.get("mining_history", [])
             prc_balance = user.get("prc_balance", 0)
-            vip_expiry_str = user.get("vip_expiry")
+            sub_expiry_str = user.get("subscription_expiry")
             
-            logging.info(f"[VIP BURN DEBUG] Processing user {uid}: prc_balance={prc_balance}, mining_entries={len(mining_history)}")
+            logging.info(f"[SUB BURN DEBUG] Processing user {uid}: prc_balance={prc_balance}, mining_entries={len(mining_history)}")
             
-            if not mining_history or prc_balance <= 0 or not vip_expiry_str:
-                logging.info(f"[VIP BURN DEBUG] Skipping user {uid}: mining_history={bool(mining_history)}, prc_balance={prc_balance}, vip_expiry={bool(vip_expiry_str)}")
+            if not mining_history or prc_balance <= 0 or not sub_expiry_str:
+                logging.info(f"[SUB BURN DEBUG] Skipping user {uid}: mining_history={bool(mining_history)}, prc_balance={prc_balance}, sub_expiry={bool(sub_expiry_str)}")
                 continue
             
             try:
-                vip_expiry = datetime.fromisoformat(vip_expiry_str.replace('Z', '+00:00'))
+                sub_expiry = datetime.fromisoformat(sub_expiry_str.replace('Z', '+00:00'))
             except:
                 continue
             
