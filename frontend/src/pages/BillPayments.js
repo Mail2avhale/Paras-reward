@@ -57,7 +57,10 @@ const BillPayments = ({ user, onLogout }) => {
       ['startup', 'growth', 'elite'].includes(user.subscription_plan?.toLowerCase());
     
     if (!isVipOrPaidSubscription) {
-      toast.error('Free subscription वर redeem service उपलब्ध नाही. Startup किंवा Elite plan घ्या आणि redeem चा आनंद घ्या! 🎉');
+      toast.error(t('paidSubscriptionRequiredBillPayments'), {
+        duration: 4000,
+        style: { fontSize: '16px', fontWeight: '500' }
+      });
       setTimeout(() => navigate('/subscription'), 2000);
       return;
     }
