@@ -1050,10 +1050,18 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 
 ## Pending/Future Tasks
 
-### P0 (Critical - Needs User Verification)
-- **KYC Document Upload**: Component rewritten and tested - **CONFIRMED WORKING by user on mobile device** ✅
+### P0 (Critical)
+- ~~**Subscription UI/UX Improvements**~~ ✅ COMPLETED (Jan 24, 2026)
+  - ✅ Hide "Upgrade to VIP" banner for paid users
+  - ✅ Show subscription details (Started, Expires, Days Left)
+  - ✅ Better error messages for free users
 
 ### P1 (High Priority)
+- **User-facing Search Bar**: User reported search bar not working on an unspecified user page - needs clarification
+- **Active Referral Status Bug**: Shows "Inactive" for active mining users - backend fix done, awaiting user deployment verification
+- **Admin Dark Theme**: Apply fix across remaining admin pages
+- **Subscription Extend Logic**: Verify extension works correctly
+- **KYC Document Upload on Mobile**: P1 carry-over
 - AdMob + Unity Ads Integration
 - AI Smart Financial Advisor
 - Automated Monthly Reports
