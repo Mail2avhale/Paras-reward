@@ -9063,7 +9063,13 @@ async def promote_user(email: str, role: str):
 
 @api_router.get("/admin/stats")
 async def get_admin_stats():
-    """Get comprehensive admin dashboard KPIs"""
+    """Get comprehensive admin dashboard KPIs with caching"""
+    
+    # Try to get from cache first
+    cached_stats = await cache.get(admin_stats_key())
+    if cached_stats:
+        return cached_stats
+    
     # User Statistics
     total_users = await db.users.count_documents({})
     
