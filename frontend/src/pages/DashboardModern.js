@@ -640,6 +640,86 @@ const DashboardModern = ({ user, onLogout }) => {
         </motion.div>
       </div>
 
+      {/* Subscription Info Card - Only for paid subscribers */}
+      {['startup', 'growth', 'elite'].includes(stats.subscriptionPlan?.toLowerCase()) && (
+        <div className="px-5 mb-4">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`rounded-xl p-4 border ${
+              stats.subscriptionPlan === 'elite' ? 'bg-gradient-to-r from-amber-900/30 to-yellow-900/30 border-amber-500/30' :
+              stats.subscriptionPlan === 'growth' ? 'bg-gradient-to-r from-emerald-900/30 to-green-900/30 border-emerald-500/30' :
+              'bg-gradient-to-r from-blue-900/30 to-indigo-900/30 border-blue-500/30'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Crown className={`w-5 h-5 ${
+                  stats.subscriptionPlan === 'elite' ? 'text-amber-400' :
+                  stats.subscriptionPlan === 'growth' ? 'text-emerald-400' :
+                  'text-blue-400'
+                }`} />
+                <span className={`font-bold ${
+                  stats.subscriptionPlan === 'elite' ? 'text-amber-400' :
+                  stats.subscriptionPlan === 'growth' ? 'text-emerald-400' :
+                  'text-blue-400'
+                }`}>
+                  {stats.subscriptionPlan?.charAt(0).toUpperCase() + stats.subscriptionPlan?.slice(1)} Plan
+                </span>
+              </div>
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                stats.subscriptionExpiry && new Date(stats.subscriptionExpiry) > new Date() 
+                  ? 'bg-green-500/20 text-green-400' 
+                  : 'bg-red-500/20 text-red-400'
+              }`}>
+                {stats.subscriptionExpiry && new Date(stats.subscriptionExpiry) > new Date() ? '✓ Active' : '⚠ Expired'}
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div>
+                <p className="text-gray-500 text-[10px] uppercase tracking-wider">Started</p>
+                <p className="text-white text-sm font-medium">
+                  {stats.subscriptionStart 
+                    ? new Date(stats.subscriptionStart).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })
+                    : '—'}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-[10px] uppercase tracking-wider">Expires</p>
+                <p className="text-white text-sm font-medium">
+                  {stats.subscriptionExpiry 
+                    ? new Date(stats.subscriptionExpiry).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })
+                    : '—'}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-[10px] uppercase tracking-wider">Days Left</p>
+                <p className={`text-sm font-bold ${
+                  stats.subscriptionExpiry && Math.ceil((new Date(stats.subscriptionExpiry) - new Date()) / (1000 * 60 * 60 * 24)) <= 7
+                    ? 'text-red-400'
+                    : 'text-green-400'
+                }`}>
+                  {stats.subscriptionExpiry 
+                    ? Math.max(0, Math.ceil((new Date(stats.subscriptionExpiry) - new Date()) / (1000 * 60 * 60 * 24)))
+                    : '—'}
+                </p>
+              </div>
+            </div>
+            
+            {/* Renewal warning if less than 7 days left */}
+            {stats.subscriptionExpiry && Math.ceil((new Date(stats.subscriptionExpiry) - new Date()) / (1000 * 60 * 60 * 24)) <= 7 && (
+              <button 
+                onClick={() => navigate('/subscription')}
+                className="w-full mt-3 py-2 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm font-medium hover:bg-red-500/30 transition-colors"
+              >
+                ⚠️ Plan expires soon - Renew Now
+              </button>
+            )}
+          </motion.div>
+        </div>
+      )}
+
       {/* Quick Actions */}
       <div className="px-5 mb-4">
         <div className="grid grid-cols-4 gap-3">
