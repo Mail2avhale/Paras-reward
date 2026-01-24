@@ -32793,6 +32793,10 @@ async def startup_db():
     global db_ready
     print("🚀 Starting database initialization...")
     
+    # Initialize cache manager
+    print("📦 Initializing cache system...")
+    await cache.initialize()
+    
     # Verify MongoDB connection with retry logic for Atlas
     # Atlas connections can take longer, especially on cold starts
     max_retries = 10  # More retries for Atlas
@@ -32820,6 +32824,13 @@ async def startup_db():
                 break
     
     if db_ready:
+        try:
+            # Create performance indexes for high-traffic queries
+            await create_performance_indexes(db)
+            print("✅ Performance indexes created")
+        except Exception as e:
+            print(f"⚠️ Error creating performance indexes (non-critical): {e}")
+        
         try:
             # Create indexes with error handling
             await initialize_database_indexes()
