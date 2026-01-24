@@ -738,6 +738,7 @@ const AdminSubscriptionManagement = ({ user }) => {
                 <div>
                   <p className="text-yellow-400 text-xs font-medium">Pending</p>
                   <p className="text-2xl font-bold text-yellow-300">{paymentStats.pending}</p>
+                  <p className="text-yellow-500 text-xs">₹{paymentStats.pendingAmount?.toLocaleString() || 0}</p>
                 </div>
               </div>
             </Card>
@@ -749,6 +750,7 @@ const AdminSubscriptionManagement = ({ user }) => {
                 <div>
                   <p className="text-green-400 text-xs font-medium">Approved</p>
                   <p className="text-2xl font-bold text-green-300">{paymentStats.approved}</p>
+                  <p className="text-green-500 text-xs">₹{paymentStats.approvedAmount?.toLocaleString() || 0}</p>
                 </div>
               </div>
             </Card>
