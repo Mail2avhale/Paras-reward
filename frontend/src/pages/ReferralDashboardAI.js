@@ -356,15 +356,269 @@ function ReferralDashboardAI({ user, onLogout }) {
             </motion.div>
           )}
 
-          {activeTab === 'fraud' && (
+          {/* MY REFERRALS TAB - with messaging */}
+          {activeTab === 'myreferrals' && (
             <motion.div
-              key="fraud"
+              key="myreferrals"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="max-w-2xl mx-auto"
+              className="space-y-4"
             >
-              <AIFraudDetection userId={user.uid} />
+              <Card className="p-6 border-0 shadow-xl">
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <MessageCircle className="w-6 h-6 text-purple-600" />
+                  My Referrals & Messages
+                </h3>
+                <p className="text-gray-500 text-sm mb-6">
+                  Message your referrals directly to help them get started!
+                </p>
+
+                {/* Referrer (person who referred you) */}
+                {referrer && (
+                  <div className="mb-6">
+                    <p className="text-sm text-gray-500 mb-2 font-medium">👆 Referred By</p>
+                    <div className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white font-bold">
+                          {referrer.name?.charAt(0).toUpperCase() || '?'}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{referrer.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {referrer.city && `${referrer.city}, `}{referrer.state}
+                          </p>
+                        </div>
+                      </div>
+                      {referrer.can_message && (
+                        <Button 
+                          size="sm" 
+                          onClick={() => openMessageWith(referrer.uid)}
+                          className="bg-amber-500 hover:bg-amber-600"
+                        >
+                          <Send className="w-4 h-4 mr-1" />
+                          Message
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Direct Referrals List */}
+                <p className="text-sm text-gray-500 mb-2 font-medium">
+                  👇 Your Direct Referrals ({directReferrals.length})
+                </p>
+
+                {loadingReferrals ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                ) : directReferrals.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-xl">
+                    <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">No referrals yet</p>
+                    <p className="text-gray-400 text-sm mb-4">Share your link to invite friends!</p>
+                    <Button onClick={() => setActiveTab('share')} className="bg-purple-600">
+                      Start Sharing
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {directReferrals.map((ref, index) => (
+                      <motion.div
+                        key={ref.uid}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className={`flex items-center justify-between p-4 rounded-xl border ${
+                          ref.is_active 
+                            ? 'bg-green-50 border-green-200' 
+                            : 'bg-gray-50 border-gray-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${
+                            ref.is_active 
+                              ? 'bg-gradient-to-br from-green-500 to-emerald-500' 
+                              : 'bg-gradient-to-br from-gray-400 to-gray-500'
+                          }`}>
+                            {ref.avatar ? (
+                              <img src={ref.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                            ) : (
+                              ref.name?.charAt(0).toUpperCase() || '?'
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-gray-900">{ref.name}</p>
+                              {ref.is_active && (
+                                <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">Active</span>
+                              )}
+                              {ref.subscription_plan !== 'explorer' && (
+                                <Crown className="w-4 h-4 text-amber-500" />
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              {ref.city && `${ref.city}, `}{ref.state} • Joined {new Date(ref.joined_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {ref.can_message && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => openMessageWith(ref.uid)}
+                              className="border-purple-300 text-purple-600 hover:bg-purple-50"
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            </motion.div>
+          )}
+
+          {/* NEARBY USERS TAB */}
+          {activeTab === 'nearby' && (
+            <motion.div
+              key="nearby"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-4"
+            >
+              <Card className="p-6 border-0 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <MapPin className="w-6 h-6 text-purple-600" />
+                    Nearby Users
+                  </h3>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={toggleLocationVisibility}
+                    className={showLocation ? 'border-green-500 text-green-600' : 'border-gray-300'}
+                  >
+                    {showLocation ? <Eye className="w-4 h-4 mr-1" /> : <EyeOff className="w-4 h-4 mr-1" />}
+                    {showLocation ? 'Visible' : 'Hidden'}
+                  </Button>
+                </div>
+
+                {userLocation && (
+                  <div className="mb-4 p-3 bg-purple-50 rounded-lg text-sm">
+                    <span className="text-purple-700">📍 Your location: </span>
+                    <span className="font-medium text-purple-900">
+                      {userLocation.city && `${userLocation.city}, `}{userLocation.state}, {userLocation.country}
+                    </span>
+                  </div>
+                )}
+
+                <p className="text-gray-500 text-sm mb-6">
+                  Connect with users near you! Follow and message them to grow your network.
+                </p>
+
+                {loadingNearby ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                ) : nearbyUsers.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-xl">
+                    <MapPin className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">No nearby users found</p>
+                    <p className="text-gray-400 text-sm">
+                      {!userLocation ? 'Update your profile with your city to see nearby users' : 'Be the first in your area!'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {nearbyUsers.map((nearbyUser, index) => (
+                      <motion.div
+                        key={nearbyUser.uid}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="p-4 bg-gradient-to-br from-white to-gray-50 rounded-xl border border-gray-200 hover:shadow-lg transition-shadow"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold text-lg">
+                              {nearbyUser.avatar ? (
+                                <img src={nearbyUser.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                              ) : (
+                                nearbyUser.name?.charAt(0).toUpperCase() || '?'
+                              )}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-1">
+                                <p className="font-semibold text-gray-900">{nearbyUser.name}</p>
+                                {nearbyUser.is_verified && (
+                                  <Shield className="w-4 h-4 text-blue-500" />
+                                )}
+                              </div>
+                              <p className="text-xs text-purple-600 font-medium">{nearbyUser.distance_label}</p>
+                            </div>
+                          </div>
+                          {nearbyUser.subscription_plan !== 'explorer' && (
+                            <Crown className="w-5 h-5 text-amber-500" />
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+                          <span>{nearbyUser.followers_count} followers</span>
+                          <span>•</span>
+                          <span>{nearbyUser.city}, {nearbyUser.state}</span>
+                        </div>
+
+                        <div className="flex gap-2">
+                          {!nearbyUser.is_following && (
+                            <Button 
+                              size="sm" 
+                              onClick={() => followUser(nearbyUser.uid)}
+                              className="flex-1 bg-purple-600 hover:bg-purple-700"
+                            >
+                              <UserPlus className="w-4 h-4 mr-1" />
+                              Follow
+                            </Button>
+                          )}
+                          {nearbyUser.is_following && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="flex-1 border-green-500 text-green-600"
+                              disabled
+                            >
+                              <Check className="w-4 h-4 mr-1" />
+                              Following
+                            </Button>
+                          )}
+                          {nearbyUser.can_message && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => openMessageWith(nearbyUser.uid)}
+                              className="border-purple-300 text-purple-600 hover:bg-purple-50"
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-6 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                  <p className="text-sm text-amber-800">
+                    <strong>🔒 Privacy:</strong> Only users who have enabled "Show my location" are visible here. 
+                    Toggle the button above to control your visibility.
+                  </p>
+                </div>
+              </Card>
             </motion.div>
           )}
 
