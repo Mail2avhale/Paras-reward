@@ -4071,12 +4071,18 @@ async def get_user_data(uid: str):
     
     # Normalize subscription_start field for frontend compatibility
     # The database may have different field names - pick the most recent/accurate one
+    subscription_plan = user.get("subscription_plan", "explorer")
     subscription_start = (
         user.get("subscription_start_date") or 
         user.get("subscription_created_at") or 
         user.get("vip_activated_at") or
         user.get("vip_activation_date")
     )
+    
+    # If user has a paid subscription but no start date, use created_at as fallback
+    if not subscription_start and subscription_plan in ["startup", "growth", "elite"]:
+        subscription_start = user.get("created_at")
+    
     if subscription_start:
         user["subscription_start"] = subscription_start
     
