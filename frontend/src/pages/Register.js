@@ -7,6 +7,10 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { UserPlus, Store, Mail, Phone, Lock, MapPin, CreditCard, FileText, Gift } from 'lucide-react';
+import { 
+  formatMobile, formatPAN, formatAadhaar, formatPincode,
+  validateMobile, validateEmail, validatePAN, validateAadhaar, validatePincode, validateUPI
+} from '@/utils/indianValidation';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
