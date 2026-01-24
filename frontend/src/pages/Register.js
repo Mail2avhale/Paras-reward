@@ -98,7 +98,34 @@ const Register = () => {
         return;
       }
 
-      const response = await axios.post(`${API}/auth/register`, userForm);
+      // Validate mobile format
+      if (!validateMobile(userForm.mobile).isValid) {
+        toast.error('Please enter a valid 10-digit mobile number');
+        setLoading(false);
+        return;
+      }
+
+      // Validate Aadhaar format if provided
+      if (userForm.aadhaar_number && !validateAadhaar(userForm.aadhaar_number).isValid) {
+        toast.error('Please enter a valid 12-digit Aadhaar number');
+        setLoading(false);
+        return;
+      }
+
+      // Validate PAN format if provided
+      if (userForm.pan_number && !validatePAN(userForm.pan_number).isValid) {
+        toast.error('Please enter a valid PAN number (e.g., ABCDE1234F)');
+        setLoading(false);
+        return;
+      }
+
+      // Get device fingerprint for fraud detection
+      const deviceFingerprint = await getDeviceFingerprint();
+
+      const response = await axios.post(`${API}/auth/register`, {
+        ...userForm,
+        device_fingerprint: deviceFingerprint
+      });
       
       toast.success('Registration successful! Please login.');
       navigate('/login');
