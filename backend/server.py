@@ -4069,6 +4069,17 @@ async def get_user_data(uid: str):
     
     user["total_redeemed"] = round(total_redeemed, 2)
     
+    # Normalize subscription_start field for frontend compatibility
+    # The database may have different field names - pick the most recent/accurate one
+    subscription_start = (
+        user.get("subscription_start_date") or 
+        user.get("subscription_created_at") or 
+        user.get("vip_activated_at") or
+        user.get("vip_activation_date")
+    )
+    if subscription_start:
+        user["subscription_start"] = subscription_start
+    
     return user
 
 # ========== MINING COLLECT ENDPOINT ==========
