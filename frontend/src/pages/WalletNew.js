@@ -106,7 +106,7 @@ const WalletNew = ({ user, onLogout }) => {
     if (!cashbackAmount || parseFloat(cashbackAmount) < minCashbackRedemption) {
       notifications.warning(
         'Minimum Amount Required',
-        `Minimum Redemption is ₹${minCashbackRedemption}. ${isFreeUser ? 'Upgrade to VIP membership for lower minimum Redemption of just ₹10!' : ''}`
+        `Minimum Redemption is ₹${minCashbackRedemption}. ${isFreeUser ? 'Startup किंवा Elite plan घ्या आणि फक्त ₹10 पासून redeem करा!' : ''}`
       );
       return;
     }
