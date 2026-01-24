@@ -306,11 +306,15 @@ const AdminAccountingDashboard = ({ user }) => {
               </Card>
 
               {/* Net P&L */}
-              <Card className={`p-5 border-2 ${
-                (quickViewData.masterSummary?.net_profit_loss || 0) >= 0 
-                  ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-300' 
-                  : 'bg-gradient-to-br from-orange-50 to-red-50 border-orange-300'
-              }`} data-testid="net-pl-card">
+              <Card 
+                className={`p-5 border-2 cursor-pointer hover:shadow-lg transition-shadow ${
+                  (quickViewData.masterSummary?.net_profit_loss || 0) >= 0 
+                    ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-300' 
+                    : 'bg-gradient-to-br from-orange-50 to-red-50 border-orange-300'
+                }`} 
+                data-testid="net-pl-card"
+                onClick={() => navigate('/admin/financial-reports')}
+              >
                 <div className="flex items-center justify-between mb-3">
                   <span className={`text-sm font-medium ${
                     (quickViewData.masterSummary?.net_profit_loss || 0) >= 0 ? 'text-emerald-400' : 'text-orange-400'
@@ -336,7 +340,11 @@ const AdminAccountingDashboard = ({ user }) => {
               </Card>
 
               {/* Cash Balance */}
-              <Card className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-500/30" data-testid="cash-balance-card">
+              <Card 
+                className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-500/30 cursor-pointer hover:shadow-lg transition-shadow" 
+                data-testid="cash-balance-card"
+                onClick={() => navigate('/admin/cash-bank-book')}
+              >
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-blue-400">Cash Balance</span>
                   <div className="p-2 bg-blue-500/20 rounded-lg">
@@ -350,7 +358,11 @@ const AdminAccountingDashboard = ({ user }) => {
               </Card>
 
               {/* Bank Balance */}
-              <Card className="p-5 bg-gradient-to-br from-purple-50 to-violet-50 border-purple-500/30" data-testid="bank-balance-card">
+              <Card 
+                className="p-5 bg-gradient-to-br from-purple-50 to-violet-50 border-purple-500/30 cursor-pointer hover:shadow-lg transition-shadow" 
+                data-testid="bank-balance-card"
+                onClick={() => navigate('/admin/cash-bank-book')}
+              >
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-purple-400">Bank Balance</span>
                   <div className="p-2 bg-purple-500/20 rounded-lg">
