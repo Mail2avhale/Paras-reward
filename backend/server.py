@@ -9384,6 +9384,38 @@ async def get_admin_stats():
     
     return result
 
+
+# ============ SYSTEM PERFORMANCE APIs ============
+
+@api_router.get("/admin/system/cache-stats")
+async def get_cache_statistics():
+    """Get cache system statistics"""
+    stats = await cache.get_stats()
+    return {
+        "cache": stats,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@api_router.get("/admin/system/index-stats")
+async def get_index_statistics():
+    """Get database index statistics"""
+    stats = await get_index_stats(db)
+    return {
+        "indexes": stats,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@api_router.post("/admin/system/clear-cache")
+async def clear_system_cache(key_pattern: str = None):
+    """Clear cache - optionally by pattern"""
+    if key_pattern:
+        deleted = await cache.delete_pattern(key_pattern)
+        return {"message": f"Cleared {deleted} cache keys matching: {key_pattern}"}
+    else:
+        await cache.flush_all()
+        return {"message": "All cache cleared"}
+
+
 @api_router.get("/admin/charts/user-growth")
 async def get_user_growth_chart():
     """Get user registration data for the last 30 days"""
