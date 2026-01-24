@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import Tree from 'react-d3-tree';
@@ -7,7 +8,8 @@ import {
   Users, TrendingUp, Award, Share2, Copy, Check, 
   ChevronRight, Sparkles, Bot, Brain, Trophy,
   Crown, Zap, Gift, ArrowRight, Download, BarChart3,
-  MessageCircle, UserPlus, Coins, Target, Star, Shield
+  MessageCircle, UserPlus, Coins, Target, Star, Shield,
+  MapPin, Eye, EyeOff, Send
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
