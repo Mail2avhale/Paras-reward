@@ -101,15 +101,19 @@ const AIChatbot = ({ user }) => {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110 group"
+        className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-2 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110 group"
         data-testid="chatbot-toggle-btn"
       >
-        <MessageCircle className="w-6 h-6" />
-        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center animate-pulse">
-          AI
+        <img 
+          src={BOT_AVATAR} 
+          alt="AI Assistant" 
+          className="w-12 h-12 rounded-full"
+        />
+        <span className="absolute -top-1 -right-1 bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full animate-pulse font-medium">
+          Online
         </span>
-        <span className="absolute right-full mr-3 bg-gray-900 text-white text-sm px-3 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-          AI Assistant 🤖
+        <span className="absolute right-full mr-3 bg-gray-900 text-white text-sm px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg">
+          🤖 मला विचारा!
         </span>
       </button>
     );
