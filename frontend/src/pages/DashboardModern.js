@@ -664,7 +664,7 @@ const DashboardModern = ({ user, onLogout }) => {
                   stats.subscriptionPlan === 'growth' ? 'text-emerald-400' :
                   'text-blue-400'
                 }`}>
-                  {stats.subscriptionPlan?.charAt(0).toUpperCase() + stats.subscriptionPlan?.slice(1)} Plan
+                  {stats.subscriptionPlan?.charAt(0).toUpperCase() + stats.subscriptionPlan?.slice(1)} {t('planActive')}
                 </span>
               </div>
               <span className={`text-xs px-2 py-1 rounded-full ${
@@ -672,13 +672,13 @@ const DashboardModern = ({ user, onLogout }) => {
                   ? 'bg-green-500/20 text-green-400' 
                   : 'bg-red-500/20 text-red-400'
               }`}>
-                {stats.subscriptionExpiry && new Date(stats.subscriptionExpiry) > new Date() ? '✓ Active' : '⚠ Expired'}
+                {stats.subscriptionExpiry && new Date(stats.subscriptionExpiry) > new Date() ? `✓ ${t('active')}` : `⚠ ${t('expired')}`}
               </span>
             </div>
             
             <div className="grid grid-cols-3 gap-3 text-center">
               <div>
-                <p className="text-gray-500 text-[10px] uppercase tracking-wider">Started</p>
+                <p className="text-gray-500 text-[10px] uppercase tracking-wider">{t('started')}</p>
                 <p className="text-white text-sm font-medium">
                   {stats.subscriptionStart 
                     ? new Date(stats.subscriptionStart).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })
@@ -686,7 +686,7 @@ const DashboardModern = ({ user, onLogout }) => {
                 </p>
               </div>
               <div>
-                <p className="text-gray-500 text-[10px] uppercase tracking-wider">Expires</p>
+                <p className="text-gray-500 text-[10px] uppercase tracking-wider">{t('expires')}</p>
                 <p className="text-white text-sm font-medium">
                   {stats.subscriptionExpiry 
                     ? new Date(stats.subscriptionExpiry).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })
@@ -694,7 +694,7 @@ const DashboardModern = ({ user, onLogout }) => {
                 </p>
               </div>
               <div>
-                <p className="text-gray-500 text-[10px] uppercase tracking-wider">Days Left</p>
+                <p className="text-gray-500 text-[10px] uppercase tracking-wider">{t('daysLeft')}</p>
                 <p className={`text-sm font-bold ${
                   stats.subscriptionExpiry && Math.ceil((new Date(stats.subscriptionExpiry) - new Date()) / (1000 * 60 * 60 * 24)) <= 7
                     ? 'text-red-400'
@@ -713,7 +713,7 @@ const DashboardModern = ({ user, onLogout }) => {
                 onClick={() => navigate('/subscription')}
                 className="w-full mt-3 py-2 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm font-medium hover:bg-red-500/30 transition-colors"
               >
-                ⚠️ Plan expires soon - Renew Now
+                {t('planExpiresSoonRenew')}
               </button>
             )}
           </motion.div>
