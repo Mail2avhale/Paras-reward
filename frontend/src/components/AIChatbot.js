@@ -186,9 +186,11 @@ const AIChatbot = ({ user }) => {
           {isLoading && (
             <div className="flex justify-start">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-white" />
-                </div>
+                <img 
+                  src={BOT_AVATAR} 
+                  alt="Bot" 
+                  className="w-8 h-8 rounded-full animate-bounce"
+                />
                 <div className="bg-white rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
                   <div className="flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
