@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://safe-rewards-hub.preview.emergentagent.com/setup
+   https://social-rewards-app.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
