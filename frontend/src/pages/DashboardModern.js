@@ -866,7 +866,7 @@ const DashboardModern = ({ user, onLogout }) => {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-white text-lg font-bold flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-purple-400" />
-            Services
+            {t('services')}
           </h2>
         </div>
 
@@ -875,13 +875,13 @@ const DashboardModern = ({ user, onLogout }) => {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-white flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-blue-400" />
-              Bill Payments
+              {t('billPayments')}
             </h3>
             <button 
               onClick={() => navigate('/bill-payments')}
               className="text-blue-400 text-xs font-medium flex items-center gap-1"
             >
-              View All <ChevronRight className="w-4 h-4" />
+              {t('viewAll')} <ChevronRight className="w-4 h-4" />
             </button>
           </div>
           <div className="grid grid-cols-5 gap-2">
@@ -892,10 +892,10 @@ const DashboardModern = ({ user, onLogout }) => {
               <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                 <span className="text-xl">📱</span>
               </div>
-              <span className="text-[10px] text-gray-300 text-center">Mobile</span>
+              <span className="text-[10px] text-gray-300 text-center">{t('mobile')}</span>
             </button>
             <button 
-              onClick={() => navigate('/bill-payments?type=dish_recharge')}
+              onClick={() => navigate('/bill-payments?type=dish_recharge')}}
               className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
             >
               <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
