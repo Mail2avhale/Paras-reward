@@ -825,7 +825,7 @@ const DashboardModern = ({ user, onLogout }) => {
                   </div>
                   <div className="text-right">
                     <p className="text-emerald-400 font-bold text-lg">{stats.referralCount}</p>
-                    <p className="text-gray-500 text-xs">Referrals</p>
+                    <p className="text-gray-500 text-xs">{t('referrals')}</p>
                   </div>
                 </div>
               </div>
