@@ -794,7 +794,7 @@ const DashboardModern = ({ user, onLogout }) => {
                     </div>
                     <div>
                       <p className="text-yellow-400 font-bold text-sm">{t('upgradeNow')}</p>
-                      <p className="text-amber-200/60 text-xs">Startup/Elite plan • {t('unlockRedeemServices')}</p>
+                      <p className="text-amber-200/60 text-xs">{t('startupElitePlan')} • {t('unlockRedeemServices')}</p>
                     </div>
                   </div>
                   <div className="bg-yellow-400 text-black px-3 py-1.5 rounded-lg font-bold text-sm">
