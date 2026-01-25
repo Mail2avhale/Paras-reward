@@ -10,6 +10,9 @@ import {
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// Cute bot avatar image
+const BOT_AVATAR = "https://static.prod-images.emergentagent.com/jobs/0e044626-4be3-481a-98d4-3bf7ce958652/images/a388718cd97ac7663c0f76b1ea34d9e34e0d15bb359fe7eaa1a62a872542c4d5.png";
+
 const AIChatbot = ({ user }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
