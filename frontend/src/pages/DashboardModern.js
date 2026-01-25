@@ -945,7 +945,7 @@ const DashboardModern = ({ user, onLogout }) => {
                 <Gift className="w-7 h-7 text-white" />
               </div>
               <h3 className="font-bold text-white text-sm mb-1">{t('giftVouchers')}</h3>
-              <p className="text-[10px] text-gray-400">Amazon, Flipkart & more</p>
+              <p className="text-[10px] text-gray-400">{t('amazonFlipkartMore')}</p>
               <div className="mt-2 px-3 py-1 bg-pink-500 text-white text-[10px] font-semibold rounded-full">
                 {t('redeem')}
               </div>
