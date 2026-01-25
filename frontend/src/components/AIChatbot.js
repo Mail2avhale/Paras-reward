@@ -156,15 +156,17 @@ const AIChatbot = ({ user }) => {
               className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div className={`flex items-start gap-2 max-w-[85%] ${msg.type === 'user' ? 'flex-row-reverse' : ''}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  msg.type === 'user' ? 'bg-purple-600' : 'bg-gradient-to-br from-indigo-500 to-purple-600'
-                }`}>
-                  {msg.type === 'user' ? (
+                {msg.type === 'user' ? (
+                  <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center flex-shrink-0">
                     <User className="w-4 h-4 text-white" />
-                  ) : (
-                    <Bot className="w-4 h-4 text-white" />
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <img 
+                    src={BOT_AVATAR} 
+                    alt="Bot" 
+                    className="w-8 h-8 rounded-full flex-shrink-0"
+                  />
+                )}
                 <div className={`rounded-2xl px-4 py-2.5 ${
                   msg.type === 'user' 
                     ? 'bg-purple-600 text-white rounded-br-md' 
