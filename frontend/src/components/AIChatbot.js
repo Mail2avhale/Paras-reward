@@ -127,12 +127,16 @@ const AIChatbot = ({ user }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <Bot className="w-8 h-8" />
-                <Sparkles className="w-4 h-4 absolute -top-1 -right-1 text-yellow-300 animate-pulse" />
+                <img 
+                  src={BOT_AVATAR} 
+                  alt="AI Assistant" 
+                  className="w-10 h-10 rounded-full border-2 border-white/30"
+                />
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-purple-600"></span>
               </div>
               <div>
-                <h3 className="font-bold">Paras AI Assistant</h3>
-                <p className="text-xs text-purple-200">24/7 available • Marathi & English</p>
+                <h3 className="font-bold">Paras AI सहाय्यक</h3>
+                <p className="text-xs text-purple-200">🟢 Online • मराठी & English</p>
               </div>
             </div>
             <button 
