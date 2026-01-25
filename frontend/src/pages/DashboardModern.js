@@ -962,7 +962,7 @@ const DashboardModern = ({ user, onLogout }) => {
                 <ShoppingBag className="w-7 h-7 text-white" />
               </div>
               <h3 className="font-bold text-white text-sm mb-1">{t('shop')}</h3>
-              <p className="text-[10px] text-gray-400">Products & deals</p>
+              <p className="text-[10px] text-gray-400">{t('productsDeals')}</p>
               <div className="mt-2 px-3 py-1 bg-purple-500 text-white text-[10px] font-semibold rounded-full">
                 {t('explore')}
               </div>
