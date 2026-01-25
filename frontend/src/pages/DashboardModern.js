@@ -980,8 +980,8 @@ const DashboardModern = ({ user, onLogout }) => {
               <TrendingUp className="w-6 h-6 text-white" />
             </div>
             <div className="text-left">
-              <h3 className="font-bold text-white text-sm">Activity</h3>
-              <p className="text-[10px] text-gray-400">Your activity & live feed</p>
+              <h3 className="font-bold text-white text-sm">{t('activity')}</h3>
+              <p className="text-[10px] text-gray-400">{t('activityLiveFeed')}</p>
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-cyan-400" />
