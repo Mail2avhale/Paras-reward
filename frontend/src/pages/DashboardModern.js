@@ -901,7 +901,7 @@ const DashboardModern = ({ user, onLogout }) => {
               <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
                 <span className="text-xl">📺</span>
               </div>
-              <span className="text-[10px] text-gray-300 text-center">DTH</span>
+              <span className="text-[10px] text-gray-300 text-center">{t('dth')}</span>
             </button>
             <button 
               onClick={() => navigate('/bill-payments?type=electricity_bill')}
@@ -910,7 +910,7 @@ const DashboardModern = ({ user, onLogout }) => {
               <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
                 <span className="text-xl">⚡</span>
               </div>
-              <span className="text-[10px] text-gray-300 text-center">Electric</span>
+              <span className="text-[10px] text-gray-300 text-center">{t('electricity')}</span>
             </button>
             <button 
               onClick={() => navigate('/bill-payments?type=credit_card_payment')}
@@ -928,7 +928,7 @@ const DashboardModern = ({ user, onLogout }) => {
               <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
                 <span className="text-xl">🏛️</span>
               </div>
-              <span className="text-[10px] text-gray-300 text-center">Loan</span>
+              <span className="text-[10px] text-gray-300 text-center">{t('loanEmi')}</span>
             </button>
           </div>
         </div>
@@ -944,10 +944,10 @@ const DashboardModern = ({ user, onLogout }) => {
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center mb-3 shadow-lg">
                 <Gift className="w-7 h-7 text-white" />
               </div>
-              <h3 className="font-bold text-white text-sm mb-1">Gift Vouchers</h3>
+              <h3 className="font-bold text-white text-sm mb-1">{t('giftVouchers')}</h3>
               <p className="text-[10px] text-gray-400">Amazon, Flipkart & more</p>
               <div className="mt-2 px-3 py-1 bg-pink-500 text-white text-[10px] font-semibold rounded-full">
-                Redeem
+                {t('redeem')}
               </div>
             </div>
           </button>
@@ -961,10 +961,10 @@ const DashboardModern = ({ user, onLogout }) => {
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center mb-3 shadow-lg">
                 <ShoppingBag className="w-7 h-7 text-white" />
               </div>
-              <h3 className="font-bold text-white text-sm mb-1">Shop</h3>
+              <h3 className="font-bold text-white text-sm mb-1">{t('shop')}</h3>
               <p className="text-[10px] text-gray-400">Products & deals</p>
               <div className="mt-2 px-3 py-1 bg-purple-500 text-white text-[10px] font-semibold rounded-full">
-                Explore
+                {t('explore')}
               </div>
             </div>
           </button>
