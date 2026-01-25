@@ -793,8 +793,8 @@ const DashboardModern = ({ user, onLogout }) => {
                       <Crown className="w-5 h-5 text-yellow-400" />
                     </div>
                     <div>
-                      <p className="text-yellow-400 font-bold text-sm">Upgrade करा!</p>
-                      <p className="text-amber-200/60 text-xs">Startup/Elite plan • Redeem सेवा unlock करा</p>
+                      <p className="text-yellow-400 font-bold text-sm">{t('upgradeNow')}</p>
+                      <p className="text-amber-200/60 text-xs">Startup/Elite plan • {t('unlockRedeemServices')}</p>
                     </div>
                   </div>
                   <div className="bg-yellow-400 text-black px-3 py-1.5 rounded-lg font-bold text-sm">
