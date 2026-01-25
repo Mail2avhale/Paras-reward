@@ -919,7 +919,7 @@ const DashboardModern = ({ user, onLogout }) => {
               <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
                 <span className="text-xl">💳</span>
               </div>
-              <span className="text-[10px] text-gray-300 text-center">Card</span>
+              <span className="text-[10px] text-gray-300 text-center">{t('card')}</span>
             </button>
             <button 
               onClick={() => navigate('/bill-payments?type=loan_emi')}
