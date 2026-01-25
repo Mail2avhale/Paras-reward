@@ -895,7 +895,7 @@ const DashboardModern = ({ user, onLogout }) => {
               <span className="text-[10px] text-gray-300 text-center">{t('mobile')}</span>
             </button>
             <button 
-              onClick={() => navigate('/bill-payments?type=dish_recharge')}}
+              onClick={() => navigate('/bill-payments?type=dish_recharge')}
               className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
             >
               <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
