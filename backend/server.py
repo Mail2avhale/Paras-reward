@@ -32748,6 +32748,9 @@ async def view_archived_data(collection: str, page: int = 1, limit: int = 50):
 # ==================== PARAS LUXURY LIFE ====================
 # Auto-save 20% of earned PRC for luxury products (Mobile, Bike, Car)
 
+# Admin setting for minimum completion to allow redemption (default 100%, can be set to 50%)
+LUXURY_MIN_COMPLETION_PERCENT = 50  # Admin can allow at 50% completion
+
 LUXURY_PRODUCTS = {
     "mobile": {
         "name": "Premium Smartphone",
@@ -32756,18 +32759,18 @@ LUXURY_PRODUCTS = {
         "down_payment_percent": 30,
         "down_payment_prc": 300000,
         "auto_save_percent": 4,
-        "image": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800",
+        "image": "https://images.unsplash.com/photo-1758348844351-48e1ec64cd96?w=1200&q=90",
         "description": "Latest flagship smartphone with premium features",
         "icon": "📱"
     },
     "bike": {
         "name": "Royal Cruiser Bike",
-        "price_inr": 300000,
-        "price_prc": 3000000,
+        "price_inr": 200000,
+        "price_prc": 2000000,
         "down_payment_percent": 30,
-        "down_payment_prc": 900000,
+        "down_payment_prc": 600000,
         "auto_save_percent": 6,
-        "image": "https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800",
+        "image": "https://images.unsplash.com/photo-1701849121939-c08134a19ced?w=1200&q=90",
         "description": "Premium cruiser motorcycle for ultimate riding experience",
         "icon": "🏍️"
     },
