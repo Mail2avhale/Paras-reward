@@ -842,7 +842,7 @@ const AdminSubscriptionManagement = ({ user }) => {
                 </div>
               </Card>
             ) : (
-              filteredPayments.map((payment, idx) => {
+              paginatedPayments.map((payment, idx) => {
                 const isFraud = isPotentialFraud(payment);
                 const Icon = planIcons[payment.subscription_plan] || Crown;
                 
