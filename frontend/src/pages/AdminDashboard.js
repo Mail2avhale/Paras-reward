@@ -13,6 +13,7 @@ import {
   AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
+import NotificationBell from '@/components/NotificationBell';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -120,6 +121,7 @@ const AdminDashboard = ({ user }) => {
           <p className="text-gray-400 text-sm">Platform overview and analytics</p>
         </div>
         <div className="flex items-center gap-3">
+          <NotificationBell user={user} />
           <Button 
             variant="outline" 
             size="sm" 
