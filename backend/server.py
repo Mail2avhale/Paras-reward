@@ -2156,11 +2156,12 @@ async def check_unique_utr(utr_number: str, exclude_id: Optional[str] = None, co
     if collection_type in ["all", "subscription"]:
         collections_to_check.extend([
             ("subscriptions", "subscription_id"),
-            ("vip_subscriptions", "subscription_id")
+            ("vip_subscriptions", "subscription_id"),
+            ("vip_payments", "payment_id")  # Added vip_payments collection
         ])
     
     if collection_type in ["all", "bill_payment"]:
-        collections_to_check.append(("bill_payments", "payment_id"))
+        collections_to_check.append(("bill_payment_requests", "request_id"))
     
     if collection_type in ["all", "gift_voucher"]:
         collections_to_check.append(("gift_voucher_requests", "request_id"))
@@ -2184,6 +2185,11 @@ async def get_utr_usage_info(utr_number: str):
     
     utr_number = utr_number.strip().upper()
     
+    # Check vip_payments first (most common)
+    vip_pay = await db.vip_payments.find_one({"utr_number": utr_number})
+    if vip_pay:
+        return {"type": "Subscription Payment", "id": vip_pay.get("payment_id"), "status": vip_pay.get("status")}
+    
     # Check subscriptions
     sub = await db.subscriptions.find_one({"utr_number": utr_number})
     if sub:
@@ -2194,9 +2200,9 @@ async def get_utr_usage_info(utr_number: str):
         return {"type": "VIP Subscription", "id": vip_sub.get("subscription_id"), "status": vip_sub.get("status")}
     
     # Check bill payments
-    bill = await db.bill_payments.find_one({"utr_number": utr_number})
+    bill = await db.bill_payment_requests.find_one({"utr_number": utr_number})
     if bill:
-        return {"type": "Bill Payment", "id": bill.get("payment_id"), "status": bill.get("status")}
+        return {"type": "Bill Payment", "id": bill.get("request_id"), "status": bill.get("status")}
     
     # Check gift vouchers
     gift = await db.gift_voucher_requests.find_one({"utr_number": utr_number})
