@@ -905,81 +905,121 @@ const RewardsHome = () => {
         </div>
       </section>
 
-      {/* VIP Benefits */}
-      <section id="vip" className="py-20 px-4 sm:px-6 lg:px-8">
+      {/* Subscription Plans - Updated */}
+      <section id="vip" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
         <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
-                <Crown className="h-4 w-4" />
-                Premium Membership
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-medium mb-4">
+              <Crown className="h-4 w-4" />
+              {language === 'mr' ? 'सबस्क्रिप्शन प्लॅन्स' : language === 'hi' ? 'सब्सक्रिप्शन प्लान्स' : 'Subscription Plans'}
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              {language === 'mr' ? 'तुमचा प्लॅन निवडा' : language === 'hi' ? 'अपना प्लान चुनें' : 'Choose Your Plan'}
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              {language === 'mr' 
+                ? 'Explorer पासून Elite पर्यंत - तुमच्या गरजेनुसार प्लॅन निवडा'
+                : language === 'hi'
+                ? 'Explorer से Elite तक - अपनी ज़रूरत के अनुसार प्लान चुनें'
+                : 'From Explorer to Elite - Choose a plan that fits your needs'}
+            </p>
+          </div>
+
+          {/* 4-Tier Plans */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Explorer - Free */}
+            <Card className="p-6 bg-white border-2 border-gray-200 rounded-2xl hover:border-gray-400 transition-all">
+              <div className="text-center mb-4">
+                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Users className="h-6 w-6 text-gray-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Explorer</h3>
+                <div className="mt-2">
+                  <span className="text-3xl font-bold text-gray-900">{t('free')}</span>
+                </div>
               </div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">
-                Unlock <span className="text-yellow-500">VIP Benefits</span>
-              </h2>
-              <p className="text-xl text-gray-600 mb-8">
-                Upgrade to VIP membership and supercharge your earnings with exclusive benefits and higher rewards.
-              </p>
-              
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                {vipBenefits.map((benefit, idx) => {
-                  const Icon = benefit.icon;
-                  return (
-                    <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-                        <Icon className="h-5 w-5 text-yellow-600" />
-                      </div>
-                      <span className="text-gray-700 font-medium">{benefit.text}</span>
-                    </div>
-                  );
-                })}
-              </div>
-              
-              <Button 
-                size="lg" 
-                onClick={() => navigate('/vip-plans')}
-                className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-white font-semibold px-8"
-              >
-                Explore VIP Plans
-                <ArrowRight className="ml-2 h-5 w-5" />
+              <ul className="space-y-2 text-sm text-gray-600 mb-6">
+                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />1x Rewards</li>
+                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />10 PRC/day</li>
+                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />Basic Features</li>
+                <li className="flex items-center gap-2 text-red-400"><Lock className="h-4 w-4" />No Redeem</li>
+              </ul>
+              <Button variant="outline" className="w-full" onClick={() => navigate('/register')}>
+                {language === 'mr' ? 'सुरू करा' : language === 'hi' ? 'शुरू करें' : 'Get Started'}
               </Button>
-            </div>
-            
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-3xl blur-2xl opacity-20 transform -rotate-6"></div>
-              <Card className="relative bg-gradient-to-br from-gray-900 to-gray-800 text-white p-8 rounded-3xl border-2 border-yellow-500/30">
-                <div className="absolute top-4 right-4">
-                  <span className="bg-yellow-500 text-gray-900 text-xs font-bold px-3 py-1 rounded-full">POPULAR</span>
+            </Card>
+
+            {/* Startup */}
+            <Card className="p-6 bg-white border-2 border-blue-200 rounded-2xl hover:border-blue-400 transition-all">
+              <div className="text-center mb-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Zap className="h-6 w-6 text-blue-600" />
                 </div>
-                <Crown className="h-12 w-12 text-yellow-500 mb-4" />
-                <h3 className="text-2xl font-bold mb-2">VIP Gold</h3>
-                <div className="flex items-baseline gap-2 mb-6">
-                  <span className="text-4xl font-bold">₹299</span>
-                  <span className="text-gray-400">/month</span>
+                <h3 className="text-xl font-bold text-gray-900">Startup</h3>
+                <div className="mt-2">
+                  <span className="text-3xl font-bold text-blue-600">₹299</span>
+                  <span className="text-gray-500">{t('perMonth')}</span>
                 </div>
-                <ul className="space-y-3 mb-8">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>5x Rewards Speed</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>25% Extra Referral Bonus</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>Priority Redemptions</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>Exclusive Offers</span>
-                  </li>
-                </ul>
-                <Button className="w-full bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-semibold">
-                  Get VIP Now
-                </Button>
-              </Card>
-            </div>
+              </div>
+              <ul className="space-y-2 text-sm text-gray-600 mb-6">
+                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />1.5x Rewards</li>
+                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />50 PRC/day</li>
+                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />Can Redeem</li>
+                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />Luxury Life</li>
+              </ul>
+              <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => navigate('/register')}>
+                {language === 'mr' ? 'निवडा' : language === 'hi' ? 'चुनें' : 'Choose'}
+              </Button>
+            </Card>
+
+            {/* Growth - Popular */}
+            <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-400 rounded-2xl relative">
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                <span className="bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full">POPULAR</span>
+              </div>
+              <div className="text-center mb-4">
+                <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <TrendingUp className="h-6 w-6 text-purple-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Growth</h3>
+                <div className="mt-2">
+                  <span className="text-3xl font-bold text-purple-600">₹549</span>
+                  <span className="text-gray-500">{t('perMonth')}</span>
+                </div>
+              </div>
+              <ul className="space-y-2 text-sm text-gray-600 mb-6">
+                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />2x Rewards</li>
+                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />100 PRC/day</li>
+                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />Priority Support</li>
+                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />All Features</li>
+              </ul>
+              <Button className="w-full bg-purple-600 hover:bg-purple-700" onClick={() => navigate('/register')}>
+                {language === 'mr' ? 'निवडा' : language === 'hi' ? 'चुनें' : 'Choose'}
+              </Button>
+            </Card>
+
+            {/* Elite - Premium */}
+            <Card className="p-6 bg-gradient-to-br from-amber-50 to-orange-100 border-2 border-amber-400 rounded-2xl">
+              <div className="text-center mb-4">
+                <div className="w-12 h-12 bg-amber-200 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Crown className="h-6 w-6 text-amber-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Elite</h3>
+                <div className="mt-2">
+                  <span className="text-3xl font-bold text-amber-600">₹799</span>
+                  <span className="text-gray-500">{t('perMonth')}</span>
+                </div>
+              </div>
+              <ul className="space-y-2 text-sm text-gray-600 mb-6">
+                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />3x Rewards</li>
+                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />200 PRC/day</li>
+                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />VIP Support</li>
+                <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" />Max Benefits</li>
+              </ul>
+              <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400" onClick={() => navigate('/register')}>
+                {language === 'mr' ? 'निवडा' : language === 'hi' ? 'चुनें' : 'Choose'}
+              </Button>
+            </Card>
           </div>
         </div>
       </section>
