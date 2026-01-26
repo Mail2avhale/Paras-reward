@@ -23,6 +23,15 @@ Build a comprehensive social rewards platform with features including:
 
 ## What's Been Implemented
 
+### January 26, 2026 - In-App Notifications System
+- **Backend notifications** added for all admin processing actions:
+  - Bill Payment: approve, reject, complete
+  - Gift Voucher: approve, reject
+  - Subscription Payment: approve, reject
+  - KYC: verify, reject
+- **NotificationBell component** (already existed) now integrated into Admin Dashboard header
+- Fixed Navbar NotificationBell prop inconsistency (`userId` → `user`)
+
 ### January 26, 2026 - Request Timeline Feature
 - Created reusable `RequestTimeline` component with SLA badges
 - Enhanced Admin pages (Bill Payments, Gift Vouchers, Subscriptions) with:
@@ -73,6 +82,8 @@ Build a comprehensive social rewards platform with features including:
 
 ### Frontend
 - `/app/frontend/src/components/RequestTimeline.js` - Reusable timeline component
+- `/app/frontend/src/components/NotificationBell.js` - In-app notification bell dropdown
+- `/app/frontend/src/pages/AdminDashboard.js` - Admin dashboard with NotificationBell
 - `/app/frontend/src/pages/AdminBillPayments.js` - Admin bill payment management
 - `/app/frontend/src/pages/AdminGiftVouchers.js` - Admin gift voucher management
 - `/app/frontend/src/pages/AdminSubscriptionManagement.js` - Admin subscription management
@@ -83,9 +94,15 @@ Build a comprehensive social rewards platform with features including:
 
 ### Backend
 - `/app/backend/server.py` - Main API server (monolithic, needs refactoring)
+  - `create_notification()` helper function at line ~24133
+  - Bill payment processing at line ~20205
+  - Gift voucher processing at line ~20514
+  - VIP payment processing at line ~17529
+  - KYC verification at line ~6103
 
 ## Database Collections
 - `users` - User accounts with roles, balances, subscription info
+- `notifications` - In-app notifications with user_id, title, message, type, is_read, created_at
 - `bill_payment_requests` - Bill payment requests with `processed_by`, `created_at`, `processed_at`
 - `gift_voucher_requests` - Gift voucher requests with `processed_by`, `created_at`, `processed_at`
 - `vip_payments` - Subscription payment records with `processed_by`, `created_at`, `processed_at`
@@ -102,3 +119,4 @@ Build a comprehensive social rewards platform with features including:
 2. **Environment**: Preview and production use different databases
 3. **Browser Cache**: Users may need hard refresh (Ctrl+Shift+R) after updates
 4. **Admin Login**: admin@paras.com / admin123
+5. **Notification System**: Uses existing `notifications` collection, NotificationBell component polls every 30 seconds
