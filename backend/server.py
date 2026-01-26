@@ -9180,6 +9180,71 @@ async def promote_user(email: str, role: str):
     
     return {"message": f"User promoted to {role} successfully"}
 
+# ==================== PUBLIC STATS ENDPOINT ====================
+@api_router.get("/stats")
+async def get_public_stats():
+    """Get public platform statistics for landing page"""
+    try:
+        # Total registered users
+        total_users = await db.users.count_documents({})
+        
+        # VIP/Premium members (paid subscription users)
+        vip_members = await db.users.count_documents({
+            "subscription_plan": {"$in": ["startup", "growth", "elite"]}
+        })
+        
+        # Total PRC distributed (sum of all total_mined)
+        prc_pipeline = [
+            {"$group": {"_id": None, "total": {"$sum": "$total_mined"}}}
+        ]
+        prc_result = await db.users.aggregate(prc_pipeline).to_list(1)
+        total_prc = prc_result[0]["total"] if prc_result else 0
+        
+        # Total PRC redeemed (from approved bill payments + gift vouchers + orders)
+        total_redeemed = 0
+        
+        # From bill payments (approved/completed)
+        bill_pipeline = [
+            {"$match": {"status": {"$in": ["approved", "completed", "processing"]}}},
+            {"$group": {"_id": None, "total": {"$sum": "$total_prc_deducted"}}}
+        ]
+        bill_result = await db.bill_payment_requests.aggregate(bill_pipeline).to_list(1)
+        if bill_result:
+            total_redeemed += bill_result[0]["total"]
+        
+        # From gift vouchers (approved/completed)
+        gift_pipeline = [
+            {"$match": {"status": {"$in": ["approved", "completed", "processing"]}}},
+            {"$group": {"_id": None, "total": {"$sum": "$total_prc_deducted"}}}
+        ]
+        gift_result = await db.gift_voucher_requests.aggregate(gift_pipeline).to_list(1)
+        if gift_result:
+            total_redeemed += gift_result[0]["total"]
+        
+        # From orders (completed/delivered)
+        order_pipeline = [
+            {"$match": {"status": {"$in": ["completed", "delivered"]}}},
+            {"$group": {"_id": None, "total": {"$sum": "$total_prc"}}}
+        ]
+        order_result = await db.orders.aggregate(order_pipeline).to_list(1)
+        if order_result:
+            total_redeemed += order_result[0]["total"]
+        
+        return {
+            "totalUsers": total_users,
+            "totalPRC": round(total_prc, 2),
+            "vipMembers": vip_members,
+            "totalRedeemed": round(total_redeemed, 2)
+        }
+    except Exception as e:
+        # Return zeros on error to prevent page crash
+        return {
+            "totalUsers": 0,
+            "totalPRC": 0,
+            "vipMembers": 0,
+            "totalRedeemed": 0
+        }
+
 @api_router.get("/admin/stats")
 async def get_admin_stats():
     """Get comprehensive admin dashboard KPIs with caching"""
