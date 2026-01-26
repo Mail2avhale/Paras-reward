@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://social-rewards-app.preview.emergentagent.com",
+    "url": "https://paras-rewards-1.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
