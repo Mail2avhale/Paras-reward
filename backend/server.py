@@ -5534,11 +5534,15 @@ async def approve_vip_payment(payment_id: str, request: Request):
         )
         
         # Update payment status with correction info
+        # Generate TXN number
+        txn_number = f"SUB{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
+        
         await db.vip_payments.update_one(
             {"payment_id": payment_id},
             {
                 "$set": {
                     "status": "approved",
+                    "txn_number": txn_number,
                     "approved_at": now.isoformat(),
                     "approved_by": admin_id,
                     "admin_notes": notes,
