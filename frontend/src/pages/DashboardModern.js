@@ -962,6 +962,43 @@ const DashboardModern = ({ user, onLogout }) => {
           </div>
           <ChevronRight className="w-5 h-5 text-cyan-400" />
         </button>
+
+        {/* Luxury Life Banner - Premium Feature */}
+        {['startup', 'growth', 'elite'].includes(stats.subscriptionPlan?.toLowerCase()) && (
+          <motion.button 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={() => navigate('/luxury-life')}
+            className="w-full mt-4 relative overflow-hidden rounded-2xl border border-amber-500/40 hover:border-amber-500/60 transition-all"
+          >
+            {/* Gold Gradient Background */}
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-900/60 via-yellow-800/40 to-orange-900/60" />
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djZoNnYtNmgtNnptNiA2djZoNnYtNmgtNnptLTYgNmg2djZoLTZ2LTZ6bTYgMGg2djZoLTZ2LTZ6bS0xMi0xMmg2djZoLTZ2LTZ6bTYgMGg2djZoLTZ2LTZ6bS02IDZoNnY2aC02di02em02IDBoNnY2aC02di02eiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
+            
+            <div className="relative z-10 p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-400 via-yellow-300 to-orange-400 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                  <Crown className="w-7 h-7 text-amber-900" />
+                </div>
+                <div className="text-left">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-200 text-base">LUXURY LIFE</h3>
+                    <span className="px-2 py-0.5 bg-amber-500/30 rounded text-[8px] text-amber-300 font-bold">20% AUTO-SAVE</span>
+                  </div>
+                  <p className="text-amber-200/70 text-xs italic mt-0.5">"Smart Saving. Live Better."</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] text-gray-400">📱 Mobile</span>
+                    <span className="text-[10px] text-gray-400">🏍️ Bike</span>
+                    <span className="text-[10px] text-gray-400">🚗 Car</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col items-center">
+                <ChevronRight className="w-6 h-6 text-amber-400" />
+              </div>
+            </div>
+          </motion.button>
+        )}
       </div>
 
       {/* Share App FAB removed */}
