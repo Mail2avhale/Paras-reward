@@ -755,6 +755,156 @@ const RewardsHome = () => {
         </div>
       </section>
 
+      {/* Paras Luxury Life Section - NEW */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-amber-500/20 text-amber-700 px-4 py-2 rounded-full text-sm font-medium mb-4">
+              <Crown className="h-4 w-4" />
+              <span className="animate-pulse">NEW FEATURE</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              {language === 'mr' ? 'पारस लक्झरी लाईफ' : language === 'hi' ? 'पारस लक्ज़री लाइफ' : 'Paras Luxury Life'}
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              {language === 'mr' 
+                ? '"स्मार्ट सेव्हिंग. बेहतर जगा." - तुमच्या कमाईतून 20% आपोआप बचत होते!'
+                : language === 'hi'
+                ? '"स्मार्ट सेविंग। बेहतर जिएं।" - आपकी कमाई से 20% ऑटो-सेव होता है!'
+                : '"Smart Saving. Live Better." - 20% of your earnings auto-save towards luxury goals!'}
+            </p>
+          </div>
+
+          {/* Luxury Products */}
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Mobile */}
+            <div className="group relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-blue-600 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
+              <Card className="relative bg-white rounded-3xl p-6 border-2 border-blue-200 hover:border-blue-400 transition-all overflow-hidden">
+                <div className="absolute top-3 right-3 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  4% {language === 'mr' ? 'बचत' : language === 'hi' ? 'बचत' : 'Save'}
+                </div>
+                <div className="h-40 flex items-center justify-center mb-4">
+                  <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <Smartphone className="h-10 w-10 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-center text-gray-900 mb-2">
+                  {language === 'mr' ? 'प्रीमियम स्मार्टफोन' : language === 'hi' ? 'प्रीमियम स्मार्टफोन' : 'Premium Smartphone'}
+                </h3>
+                <p className="text-center text-gray-500 mb-4">₹1,00,000</p>
+                <div className="bg-blue-50 rounded-xl p-3 text-center">
+                  <p className="text-blue-600 font-medium text-sm">
+                    {language === 'mr' ? 'डाउन पेमेंट' : language === 'hi' ? 'डाउन पेमेंट' : 'Down Payment'}: ₹30,000
+                  </p>
+                </div>
+              </Card>
+            </div>
+
+            {/* Bike */}
+            <div className="group relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-400 to-purple-600 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
+              <Card className="relative bg-white rounded-3xl p-6 border-2 border-purple-200 hover:border-purple-400 transition-all overflow-hidden">
+                <div className="absolute top-3 right-3 bg-purple-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  6% {language === 'mr' ? 'बचत' : language === 'hi' ? 'बचत' : 'Save'}
+                </div>
+                <div className="h-40 flex items-center justify-center mb-4">
+                  <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <Bike className="h-10 w-10 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-center text-gray-900 mb-2">
+                  {language === 'mr' ? 'रॉयल क्रूझर बाइक' : language === 'hi' ? 'रॉयल क्रूज़र बाइक' : 'Royal Cruiser Bike'}
+                </h3>
+                <p className="text-center text-gray-500 mb-4">₹2,00,000</p>
+                <div className="bg-purple-50 rounded-xl p-3 text-center">
+                  <p className="text-purple-600 font-medium text-sm">
+                    {language === 'mr' ? 'डाउन पेमेंट' : language === 'hi' ? 'डाउन पेमेंट' : 'Down Payment'}: ₹60,000
+                  </p>
+                </div>
+              </Card>
+            </div>
+
+            {/* Car */}
+            <div className="group relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
+              <Card className="relative bg-white rounded-3xl p-6 border-2 border-amber-200 hover:border-amber-400 transition-all overflow-hidden">
+                <div className="absolute top-3 right-3 bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  10% {language === 'mr' ? 'बचत' : language === 'hi' ? 'बचत' : 'Save'}
+                </div>
+                <div className="h-40 flex items-center justify-center mb-4">
+                  <div className="w-20 h-20 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <Car className="h-10 w-10 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-center text-gray-900 mb-2">
+                  {language === 'mr' ? 'लक्झरी सेडान कार' : language === 'hi' ? 'लक्ज़री सेडान कार' : 'Luxury Sedan Car'}
+                </h3>
+                <p className="text-center text-gray-500 mb-4">₹12,00,000</p>
+                <div className="bg-amber-50 rounded-xl p-3 text-center">
+                  <p className="text-amber-600 font-medium text-sm">
+                    {language === 'mr' ? 'डाउन पेमेंट' : language === 'hi' ? 'डाउन पेमेंट' : 'Down Payment'}: ₹3,60,000
+                  </p>
+                </div>
+              </Card>
+            </div>
+          </div>
+
+          {/* How Luxury Life Works */}
+          <div className="mt-12 bg-white rounded-3xl p-8 shadow-lg border border-amber-100">
+            <div className="grid md:grid-cols-4 gap-6 text-center">
+              <div className="flex flex-col items-center">
+                <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-3">
+                  <Coins className="h-6 w-6 text-amber-600" />
+                </div>
+                <h4 className="font-semibold text-gray-900 mb-1">
+                  {language === 'mr' ? 'PRC कमवा' : language === 'hi' ? 'PRC कमाएं' : 'Earn PRC'}
+                </h4>
+                <p className="text-gray-500 text-sm">Mining, Tap Game, Referrals</p>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
+                  <TrendingUp className="h-6 w-6 text-green-600" />
+                </div>
+                <h4 className="font-semibold text-gray-900 mb-1">
+                  {language === 'mr' ? '20% आपोआप बचत' : language === 'hi' ? '20% ऑटो-सेव' : '20% Auto-Save'}
+                </h4>
+                <p className="text-gray-500 text-sm">4% Mobile, 6% Bike, 10% Car</p>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                  <Lock className="h-6 w-6 text-blue-600" />
+                </div>
+                <h4 className="font-semibold text-gray-900 mb-1">
+                  {language === 'mr' ? 'सुरक्षित बचत' : language === 'hi' ? 'सुरक्षित बचत' : 'Locked Savings'}
+                </h4>
+                <p className="text-gray-500 text-sm">{language === 'mr' ? 'काढता येत नाही' : language === 'hi' ? 'निकाला नहीं जा सकता' : 'Cannot be withdrawn'}</p>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-3">
+                  <Gift className="h-6 w-6 text-purple-600" />
+                </div>
+                <h4 className="font-semibold text-gray-900 mb-1">
+                  {language === 'mr' ? '50% वर क्लेम करा' : language === 'hi' ? '50% पर क्लेम करें' : 'Claim at 50%'}
+                </h4>
+                <p className="text-gray-500 text-sm">{language === 'mr' ? 'बाकी 70% तुम्ही भरा' : language === 'hi' ? 'बाकी 70% आप दें' : 'Pay remaining 70%'}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center mt-8">
+            <Button 
+              size="lg" 
+              onClick={() => navigate('/register')}
+              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-semibold px-8"
+            >
+              {language === 'mr' ? 'आता सुरू करा' : language === 'hi' ? 'अभी शुरू करें' : 'Start Saving Now'}
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      </section>
+
       {/* VIP Benefits */}
       <section id="vip" className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
