@@ -20578,6 +20578,16 @@ async def process_gift_voucher_request(request: Request):
             }}
         )
         
+        # Notify user about rejection
+        await create_notification(
+            user_id=user_id,
+            title="❌ Gift Voucher Rejected",
+            message=f"Your ₹{voucher_request.get('denomination')} gift voucher request was rejected. Reason: {reject_reason}. PRC has been refunded.",
+            notification_type="gift_voucher",
+            related_id=request_id,
+            icon="❌"
+        )
+        
         return {"message": "Request rejected and PRC refunded", "status": "rejected", "reject_reason": reject_reason}
     
     elif action == "approve":
