@@ -66,7 +66,7 @@ const Navbar = ({ user, onLogout }) => {
             )}
             
             {/* Notification Bell */}
-            {user && <NotificationBell userId={user.uid} />}
+            {user && <NotificationBell user={user} />}
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
