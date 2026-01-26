@@ -135,6 +135,19 @@ const AdminSubscriptionManagement = ({ user }) => {
     return filtered;
   }, [payments, paymentFilter, timeFilter, paymentSearch]);
 
+  // Paginated payments
+  const paginatedPayments = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredPayments.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredPayments, currentPage]);
+
+  const totalPages = Math.ceil(filteredPayments.length / ITEMS_PER_PAGE);
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [paymentFilter, timeFilter, paymentSearch]);
+
   // Computed: Payment stats based on time filter
   const paymentStats = React.useMemo(() => {
     let filtered = [...payments];
