@@ -954,6 +954,16 @@ const AdminSubscriptionManagement = ({ user }) => {
                         </p>
                       </div>
                     )}
+                    
+                    {/* Request Timeline */}
+                    {selectedPayment?.payment_id === payment.payment_id && (
+                      <RequestTimeline
+                        createdAt={payment.submitted_at || payment.created_at}
+                        processedAt={payment.processed_at}
+                        processedBy={payment.processed_by}
+                        status={payment.status}
+                      />
+                    )}
                   </Card>
                 );
               })
