@@ -33238,9 +33238,12 @@ async def get_luxury_claims(status: Optional[str] = None):
         
         claims = await db.luxury_claims.find(query).sort("created_at", -1).to_list(500)
         
-        # Clean ObjectId
+        # Clean ObjectId and normalize field names
         for claim in claims:
             claim["_id"] = str(claim["_id"])
+            # Ensure reject_reason field exists for frontend compatibility
+            if "rejection_reason" in claim:
+                claim["reject_reason"] = claim["rejection_reason"]
         
         # Stats
         total = await db.luxury_claims.count_documents({})
