@@ -33262,6 +33262,116 @@ async def reject_luxury_claim(claim_id: str, admin_id: str, reason: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.post("/admin/luxury-claims/force-redeem/{user_id}/{product_key}")
+async def admin_force_redeem(user_id: str, product_key: str, admin_id: str, notes: Optional[str] = None):
+    """Admin can force create a claim for user even below 50% - Special approval"""
+    try:
+        if product_key not in LUXURY_PRODUCTS:
+            raise HTTPException(status_code=400, detail="Invalid product")
+        
+        product = LUXURY_PRODUCTS[product_key]
+        
+        # Get user
+        user = await db.users.find_one({"uid": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get savings
+        savings = await db.luxury_savings.find_one({"user_id": user_id})
+        if not savings:
+            raise HTTPException(status_code=400, detail="No savings found for this user")
+        
+        savings_key = f"{product_key}_savings"
+        claimed_key = f"{product_key}_claimed"
+        
+        current_savings = savings.get(savings_key, 0)
+        target = product["down_payment_prc"]
+        completion_percent = (current_savings / target) * 100 if target > 0 else 0
+        
+        # Check if already claimed
+        if savings.get(claimed_key, False):
+            raise HTTPException(status_code=400, detail="Product already claimed by user")
+        
+        from datetime import datetime, timezone
+        
+        # Create claim and immediately approve
+        claim_id = f"LUX_{uuid.uuid4().hex[:8].upper()}"
+        
+        await db.luxury_claims.insert_one({
+            "claim_id": claim_id,
+            "user_id": user_id,
+            "user_name": user.get("name", "Unknown"),
+            "user_email": user.get("email", ""),
+            "product_key": product_key,
+            "product_name": product["name"],
+            "product_price_inr": product["price_inr"],
+            "down_payment_prc": target,
+            "down_payment_inr": target / 10,
+            "current_savings_prc": current_savings,
+            "completion_percent": round(completion_percent, 2),
+            "status": "approved",  # Directly approved
+            "admin_force_redeemed": True,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "admin_notes": notes or f"Admin force redeemed at {round(completion_percent, 1)}% completion",
+            "approved_by": admin_id
+        })
+        
+        # Mark as claimed
+        await db.luxury_savings.update_one(
+            {"user_id": user_id},
+            {
+                "$set": {
+                    claimed_key: True,
+                    f"{product_key}_claim_id": claim_id,
+                    f"{product_key}_claim_status": "approved",
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        # Notify user
+        await create_notification(
+            user_id=user_id,
+            title=f"🎉 {product['name']} Approved!",
+            message=f"Great news! Your {product['name']} has been approved by admin at {round(completion_percent, 1)}% completion. Our team will contact you shortly!",
+            notification_type="luxury_approved",
+            related_id=claim_id,
+            icon="🎉"
+        )
+        
+        return {
+            "success": True,
+            "claim_id": claim_id,
+            "completion_percent": round(completion_percent, 2),
+            "message": f"Force redeemed at {round(completion_percent, 1)}% completion"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error in admin force redeem: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/luxury-settings")
+async def get_luxury_settings():
+    """Get luxury life settings"""
+    return {
+        "min_completion_percent": LUXURY_MIN_COMPLETION_PERCENT,
+        "products": [
+            {
+                "key": k,
+                "name": v["name"],
+                "price_inr": v["price_inr"],
+                "down_payment_prc": v["down_payment_prc"],
+                "auto_save_percent": v["auto_save_percent"]
+            }
+            for k, v in LUXURY_PRODUCTS.items()
+        ]
+    }
+
+
 # Include all API routes (must be after all route definitions)
 app.include_router(api_router)
 
