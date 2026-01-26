@@ -645,7 +645,7 @@ const BillPayments = ({ user, onLogout }) => {
             return filteredRequests.length === 0 ? (
             <div className="text-center py-12">
               <Receipt className="h-16 w-16 mx-auto text-gray-700 mb-4" />
-              <p className="text-gray-500">No requests yet</p>
+              <p className="text-gray-500">{statusFilter === 'all' ? 'No requests yet' : `No ${statusFilter} requests`}</p>
             </div>
           ) : (
             <>
@@ -661,13 +661,13 @@ const BillPayments = ({ user, onLogout }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {requests
+                    {filteredRequests
                       .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                       .map((req) => (
                       <tr key={req.request_id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
                         <td className="py-3 px-4 text-sm text-gray-300">{getTypeLabel(req.request_type)}</td>
                         <td className="py-3 px-4 text-sm font-medium text-white">₹{req.amount_inr}</td>
-                        <td className="py-3 px-4 text-sm text-amber-500">{req.total_prc_deducted.toFixed(2)}</td>
+                        <td className="py-3 px-4 text-sm text-amber-500">{req.total_prc_deducted?.toFixed(2) || '0.00'}</td>
                         <td className="py-3 px-4">{getStatusBadge(req.status)}</td>
                         <td className="py-3 px-4 text-sm text-gray-500">
                           {new Date(req.created_at).toLocaleDateString()}
@@ -679,10 +679,10 @@ const BillPayments = ({ user, onLogout }) => {
               </div>
               
               {/* Pagination */}
-              {requests.length > itemsPerPage && (
+              {filteredRequests.length > itemsPerPage && (
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-800">
                   <p className="text-sm text-gray-500">
-                    {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, requests.length)} of {requests.length}
+                    {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredRequests.length)} of {filteredRequests.length}
                   </p>
                   <div className="flex gap-2">
                     <button
@@ -694,11 +694,11 @@ const BillPayments = ({ user, onLogout }) => {
                       Prev
                     </button>
                     <span className="px-3 py-1.5 bg-amber-500/20 text-amber-500 rounded-lg text-sm font-medium">
-                      {currentPage}/{Math.ceil(requests.length / itemsPerPage)}
+                      {currentPage}/{Math.ceil(filteredRequests.length / itemsPerPage)}
                     </span>
                     <button
-                      onClick={() => setCurrentPage(p => Math.min(Math.ceil(requests.length / itemsPerPage), p + 1))}
-                      disabled={currentPage >= Math.ceil(requests.length / itemsPerPage)}
+                      onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredRequests.length / itemsPerPage), p + 1))}
+                      disabled={currentPage >= Math.ceil(filteredRequests.length / itemsPerPage)}
                       className="px-3 py-1.5 bg-gray-800 text-gray-300 rounded-lg text-sm disabled:opacity-50"
                       data-testid="bill-payments-next-page"
                     >
@@ -708,7 +708,8 @@ const BillPayments = ({ user, onLogout }) => {
                 </div>
               )}
             </>
-          )}
+          );
+          })()}
         </div>
       </div>
     </div>
