@@ -4217,33 +4217,37 @@ async def get_user_data(uid: str):
     # Calculate total PRC redeemed from transactions collection (more accurate)
     total_redeemed = 0
     
-    # Method 1: From transactions collection (includes all debit types)
-    redeemed_result = await db.transactions.aggregate([
-        {"$match": {"user_id": uid, "type": {"$in": ["order", "bill_payment_request", "gift_voucher_request", "prc_burn", "prc_rain_loss"]}}},
+    # Calculate total_redeemed from actual request collections with status check
+    # This ensures rejected requests (where PRC was refunded) don't count as redeemed
+    
+    # From orders (only completed/delivered)
+    orders = await db.orders.find(
+        {"user_id": uid, "status": {"$in": ["completed", "delivered"]}}, 
+        {"total_prc": 1, "prc_amount": 1}
+    ).to_list(1000)
+    total_redeemed += sum(o.get("total_prc", 0) or o.get("prc_amount", 0) for o in orders)
+    
+    # From bill payments (only approved/completed - NOT pending/rejected)
+    bill_payments = await db.bill_payment_requests.find(
+        {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}, 
+        {"total_prc_deducted": 1}
+    ).to_list(1000)
+    total_redeemed += sum(bp.get("total_prc_deducted", 0) for bp in bill_payments)
+    
+    # From gift vouchers (only approved/completed - NOT pending/rejected)
+    gift_vouchers = await db.gift_voucher_requests.find(
+        {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}, 
+        {"total_prc_deducted": 1}
+    ).to_list(1000)
+    total_redeemed += sum(gv.get("total_prc_deducted", 0) for gv in gift_vouchers)
+    
+    # Add PRC burns and rain losses from transactions
+    burn_loss_result = await db.transactions.aggregate([
+        {"$match": {"user_id": uid, "type": {"$in": ["prc_burn", "prc_rain_loss"]}}},
         {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
     ]).to_list(1)
-    
-    if redeemed_result:
-        total_redeemed = redeemed_result[0]["total"]
-    else:
-        # Fallback: Calculate from individual collections if no transactions found
-        # From orders
-        orders = await db.orders.find({"user_id": uid, "status": {"$in": ["completed", "delivered"]}}, {"total_prc": 1, "prc_amount": 1}).to_list(1000)
-        total_redeemed += sum(o.get("total_prc", 0) or o.get("prc_amount", 0) for o in orders)
-        
-        # From bill payments (completed/approved)
-        bill_payments = await db.bill_payment_requests.find(
-            {"user_id": uid, "status": {"$in": ["approved", "completed"]}}, 
-            {"total_prc_deducted": 1}
-        ).to_list(1000)
-        total_redeemed += sum(bp.get("total_prc_deducted", 0) for bp in bill_payments)
-        
-        # From gift vouchers (completed/approved)
-        gift_vouchers = await db.gift_voucher_requests.find(
-            {"user_id": uid, "status": {"$in": ["approved", "completed"]}}, 
-            {"total_prc_deducted": 1}
-        ).to_list(1000)
-        total_redeemed += sum(gv.get("total_prc_deducted", 0) for gv in gift_vouchers)
+    if burn_loss_result:
+        total_redeemed += burn_loss_result[0]["total"]
     
     user["total_redeemed"] = round(total_redeemed, 2)
     
