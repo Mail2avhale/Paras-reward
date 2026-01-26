@@ -157,13 +157,18 @@ const DailyRewards = ({ user }) => {
     
     setIsCollecting(true);
     try {
-      // Try to collect rewards
-      const response = await axios.post(`${API}/api/mining/collect/${user.uid}`, {
-        amount: sessionPRC
-      });
+      // Claim mining rewards - uses correct endpoint with 80/20 luxury split
+      const response = await axios.post(`${API}/api/mining/claim/${user.uid}`);
       
-      const collected = response.data?.prc_collected || sessionPRC;
-      toast.success(`🎉 Collected ${collected.toFixed(2)} PRC!`);
+      const data = response.data;
+      const claimed = data.claimed_amount || data.prc_collected || sessionPRC;
+      const luxurySaved = data.luxury_savings?.deducted || 0;
+      
+      if (luxurySaved > 0) {
+        toast.success(`🎉 Collected ${claimed.toFixed(2)} PRC! (₹${luxurySaved.toFixed(2)} saved for Luxury Life)`);
+      } else {
+        toast.success(`🎉 Collected ${claimed.toFixed(2)} PRC!`);
+      }
       
       // Reset local session PRC but keep mining
       setSessionPRC(0);
@@ -173,21 +178,9 @@ const DailyRewards = ({ user }) => {
       fetchUserData();
       
     } catch (error) {
-      // If endpoint doesn't exist, create a manual collect
-      try {
-        await axios.post(`${API}/api/mining/update-balance/${user.uid}`, {
-          amount: sessionPRC
-        });
-        toast.success(`🎉 Collected ${sessionPRC.toFixed(2)} PRC!`);
-        setSessionPRC(0);
-        setSessionStartTime(Date.now());
-        fetchUserData();
-      } catch (e) {
-        // Final fallback - just show success and refresh
-        toast.success(`🎉 Rewards collected!`);
-        setSessionPRC(0);
-        fetchUserData();
-      }
+      console.error('Claim error:', error);
+      const errorMsg = error.response?.data?.detail || 'Failed to collect rewards';
+      toast.error(errorMsg);
     } finally {
       setIsCollecting(false);
     }
