@@ -21340,10 +21340,6 @@ async def end_rain_session(request: Request):
             "luxury_savings": session.get("luxury_savings", 0) if session else 0
         }
     }
-            "prc_lost": session.get("prc_lost", 0) if session else 0,
-            "net_prc": (session.get("prc_gained", 0) - session.get("prc_lost", 0)) if session else 0
-        }
-    }
 
 @api_router.get("/admin/users-at-risk")
 async def get_users_at_risk_of_burn():
