@@ -20214,6 +20214,13 @@ async def process_bill_payment_request(request: Request):
     if action not in ["approve", "reject", "complete"]:
         raise HTTPException(status_code=400, detail="Invalid action. Must be: approve, reject, or complete")
     
+    # Get admin name
+    admin_name = "Admin"
+    if admin_uid:
+        admin_user = await db.users.find_one({"uid": admin_uid}, {"name": 1})
+        if admin_user:
+            admin_name = admin_user.get("name", "Admin")
+    
     # Get request
     bill_request = await db.bill_payment_requests.find_one({"request_id": request_id})
     if not bill_request:
