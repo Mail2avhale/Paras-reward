@@ -32897,30 +32897,17 @@ LUXURY_PRODUCTS = {
 
 async def process_luxury_savings(user_id: str, prc_earned: float):
     """
-    Process luxury savings - deduct 20% from earned PRC for paid users
+    Process luxury savings - deduct 20% from earned PRC for ALL users (free and paid)
     4% -> Mobile, 6% -> Bike, 10% -> Car
     """
     try:
-        # Get user to check if paid plan
+        # Get user
         user = await db.users.find_one({"uid": user_id})
         if not user:
             return None
         
-        # Only for paid plans
-        plan = user.get("subscription_plan", "explorer").lower()
-        if plan not in ["startup", "growth", "elite"]:
-            return None
-        
-        # Check subscription not expired
-        sub_expiry = user.get("subscription_expiry")
-        if sub_expiry:
-            from datetime import datetime, timezone
-            if isinstance(sub_expiry, str):
-                expiry_dt = datetime.fromisoformat(sub_expiry.replace('Z', '+00:00'))
-            else:
-                expiry_dt = sub_expiry
-            if expiry_dt < datetime.now(timezone.utc):
-                return None
+        # Luxury Life is for ALL users (free and paid)
+        # No plan restriction anymore
         
         # Calculate savings for each product
         mobile_save = prc_earned * 0.04  # 4%
