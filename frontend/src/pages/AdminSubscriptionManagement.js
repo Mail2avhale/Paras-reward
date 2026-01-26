@@ -5,19 +5,22 @@ import { toast } from 'sonner';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import Pagination from '../components/Pagination';
 import {
   Crown, CheckCircle, XCircle, Clock, Eye, RefreshCw, Settings,
   Users, TrendingUp, Zap, Rocket, Award, DollarSign, Calendar,
   Search, Filter, ChevronDown, AlertCircle, Bell, ArrowUpRight,
-  ArrowDownRight, Edit2, Save, X
+  ArrowDownRight, Edit2, Save, X, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
+const ITEMS_PER_PAGE = 10;
 
 const AdminSubscriptionManagement = ({ user }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Stats
   const [stats, setStats] = useState({
