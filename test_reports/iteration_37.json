@@ -1,0 +1,78 @@
+{
+  "summary": "Luxury Life 80/20 split bug testing completed. The bug has been FIXED. Mining rewards and tap game now correctly apply 80% to wallet and 20% to luxury savings. Verified with user mail2avhale@gmail.com (UID: 73b95483-f36b-4637-a5ee-d447300c6835).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_luxury_savings_split.py",
+    "/app/test_reports/pytest/luxury_savings_split_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "The 80/20 split logic in claim_mined_rewards (line 4063-4080) is correctly implemented",
+    "process_luxury_savings function (line 33012-33114) correctly calculates 4% mobile, 6% bike, 10% car",
+    "Tap game (line 4542-4551) also correctly applies the 80/20 split",
+    "Debug logs at line 4069-4080 help trace the luxury savings calculation"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_luxury_savings_split.py"
+  ],
+  "success_rate": {
+    "backend": "100% (5/5 tests passed, 1 skipped due to daily tap limit)"
+  },
+  "test_credentials": {
+    "test_user_email": "mail2avhale@gmail.com",
+    "test_user_uid": "73b95483-f36b-4637-a5ee-d447300c6835",
+    "admin_email": "admin@paras.com",
+    "admin_password": "admin123"
+  },
+  "seed_data_creation": "Used existing user mail2avhale@gmail.com for testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Luxury Life 80/20 split is working correctly. Mining rewards claim and tap game both deduct 20% for luxury savings (4% mobile, 6% bike, 10% car). User receives 80% in wallet. The bug was previously present (see mining_history entries before 14:22:08 on 2026-01-26 showing luxury=0) but has been fixed.",
+  "bug_verification": {
+    "reported_issue": "User reported 100% going to wallet, 0% to luxury savings when claiming 107.97 PRC mining rewards",
+    "root_cause": "The luxury savings logic was not being applied correctly in earlier code versions",
+    "current_status": "FIXED",
+    "verification_tests": [
+      {
+        "test": "Mining claim 80/20 split",
+        "result": "PASS",
+        "details": "Claimed 12.5994 PRC total, 10.0795 PRC (80%) to wallet, 2.5199 PRC (20%) to luxury savings"
+      },
+      {
+        "test": "Tap game 80/20 split",
+        "result": "PASS",
+        "details": "10 taps earned 20.0 PRC total, 16.0 PRC (80%) to wallet, 4.0 PRC (20%) to luxury savings"
+      },
+      {
+        "test": "Luxury savings collection update",
+        "result": "PASS",
+        "details": "luxury_savings collection correctly updated with mobile_savings, bike_savings, car_savings"
+      },
+      {
+        "test": "API response includes luxury_savings info",
+        "result": "PASS",
+        "details": "Claim response includes luxury_savings object with deducted amount and breakdown"
+      }
+    ],
+    "evidence": {
+      "mining_history_before_fix": "Entries before 14:22:08 show luxury=0.0000",
+      "mining_history_after_fix": "Entries at 14:22:08 and later show luxury=1.3954, 2.5199, etc.",
+      "backend_logs": "[LUXURY DEBUG] User receives: 10.079544763888888 (80% of 12.599430954861111)"
+    }
+  },
+  "luxury_savings_current_state": {
+    "user": "mail2avhale@gmail.com",
+    "total_savings": "35.84 PRC",
+    "mobile_savings": "7.17 PRC (4%)",
+    "bike_savings": "10.75 PRC (6%)",
+    "car_savings": "17.92 PRC (10%)"
+  }
+}
