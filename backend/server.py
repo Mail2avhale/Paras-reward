@@ -20271,7 +20271,8 @@ async def process_bill_payment_request(request: Request):
                 "reject_reason": reject_reason,
                 "processed_at": datetime.now(timezone.utc).isoformat(),
                 "admin_notes": admin_notes or reject_reason,
-                "processed_by": admin_uid
+                "processed_by": admin_name,
+                "processed_by_uid": admin_uid
             }}
         )
         
