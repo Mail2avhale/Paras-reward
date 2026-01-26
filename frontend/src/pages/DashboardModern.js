@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { 
   TrendingUp, Star, Gift, ArrowUpRight, Clock,
   Home, UserPlus, Gamepad2, User, Zap, Crown, Eye, EyeOff,
-  ChevronRight, Sparkles, ShoppingBag, CreditCard, Users, MessageCircle
+  ChevronRight, Sparkles, ShoppingBag, CreditCard
 } from 'lucide-react';
 import PRCExpiryTimer from '@/components/PRCExpiryTimer';
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
