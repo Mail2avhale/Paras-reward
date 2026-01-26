@@ -467,14 +467,9 @@ const ParasLuxuryLife = () => {
             <Info className="w-5 h-5 text-red-400" />
           </div>
           <div>
-            <h3 className="font-bold text-red-400 mb-2">⚠️ महत्त्वाची सूचना / Important Notice</h3>
+            <h3 className="font-bold text-red-400 mb-2">{t('luxuryImportantNotice')}</h3>
             <p className="text-red-200/80 text-sm leading-relaxed">
-              <strong>राहिलेली 70% रक्कम युजरने स्वतः भरावी लागेल.</strong> कंपनी याबाबत कोणतीही आर्थिक तरतूद करणार नाही. 
-              हे पूर्णपणे युजरची जबाबदारी आहे - Cash किंवा Loan द्वारे.
-            </p>
-            <p className="text-gray-400 text-xs mt-2">
-              The remaining 70% must be paid by the user. The company will NOT provide any financial arrangement for this. 
-              This is entirely the user&apos;s responsibility - via Cash or Loan.
+              {t('luxuryDisclaimer')}
             </p>
           </div>
         </div>
@@ -484,24 +479,24 @@ const ParasLuxuryLife = () => {
       <div className="mx-4 mt-4 p-4 bg-gray-900/50 rounded-xl border border-gray-800">
         <h3 className="font-bold text-white mb-3 flex items-center gap-2">
           <AlertCircle className="w-5 h-5 text-amber-400" />
-          How It Works
+          {t('luxuryHowItWorks')}
         </h3>
         <ul className="space-y-2 text-gray-400 text-sm">
           <li className="flex items-start gap-2">
-            <Lock className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
-            Luxury savings are <span className="text-red-400 font-medium">LOCKED</span> and cannot be withdrawn
+            <Lock className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+            {t('luxurySavingsLocked')}
           </li>
           <li className="flex items-start gap-2">
             <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-            Down payment covers 30% of product value (via your PRC savings)
+            {t('luxuryDownPaymentCovers')}
           </li>
           <li className="flex items-start gap-2">
             <Gift className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-            Claim available at <span className="text-amber-400 font-medium">50% completion</span> (admin approval)
+            {t('luxuryClaimAt50')}
           </li>
           <li className="flex items-start gap-2">
             <Clock className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-            Claims are reviewed within 48 hours
+            {t('luxuryClaimsReviewed')}
           </li>
         </ul>
       </div>
