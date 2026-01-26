@@ -21248,13 +21248,26 @@ async def tap_rain_drop(request: Request):
             # Reduce the loss to not exceed balance
             prc_change = -user_balance if user_balance > 0 else 0
     
+    # Process luxury savings for positive drops (20% auto-deduct)
+    luxury_deduction = 0
+    luxury_savings_result = None
+    wallet_credit = prc_change  # What goes to wallet
+    
+    if prc_change > 0:
+        # Luxury Life savings for positive drops
+        luxury_savings_result = await process_luxury_savings(user_id, prc_change)
+        if luxury_savings_result:
+            luxury_deduction = luxury_savings_result.get("total_saved", 0)
+            wallet_credit = prc_change - luxury_deduction  # 80% to wallet
+    
     # Update user balance if there's a change
     if prc_change != 0:
+        actual_balance_change = wallet_credit if prc_change > 0 else prc_change
         await log_transaction(
             user_id=user_id,
             transaction_type="prc_rain_gain" if prc_change > 0 else "prc_rain_loss",
-            amount=abs(prc_change),
-            description=f"PRC Rain Drop",
+            amount=abs(actual_balance_change),
+            description=f"PRC Rain Drop" + (f" - {round(luxury_deduction, 2)} to Luxury Life" if luxury_deduction > 0 else ""),
             wallet_type="prc"
         )
     
@@ -21265,18 +21278,21 @@ async def tap_rain_drop(request: Request):
         "session_id": session_id,
         "event_type": "PRC_RAIN",
         "drop_color": drop_color,
-        "prc_change": prc_change,
+        "prc_change": prc_change,  # Original change (before luxury deduction)
+        "wallet_credit": wallet_credit if prc_change > 0 else prc_change,  # Actual wallet credit
+        "luxury_savings": luxury_deduction,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.prc_rain_ledger.insert_one(ledger_entry)
     
-    # Update session
+    # Update session - track actual wallet credit for positive, full amount for negative
     update_data = {
         "$inc": {"taps_count": 1},
         "$push": {"drops_tapped": drop_color}
     }
     if prc_change > 0:
-        update_data["$inc"]["prc_gained"] = prc_change
+        update_data["$inc"]["prc_gained"] = wallet_credit  # Track actual wallet credit
+        update_data["$inc"]["luxury_savings"] = luxury_deduction
     else:
         update_data["$inc"]["prc_lost"] = abs(prc_change)
     
