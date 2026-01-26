@@ -4060,15 +4060,15 @@ async def claim_mining(uid: str):
     rate_per_minute, base_rate, total_active_referrals, referral_breakdown = await calculate_mining_rate(uid)
     mined_amount = elapsed_minutes * rate_per_minute
     
-    # Process luxury savings for paid users (20% auto-deduct)
+    # Process luxury savings for ALL users (20% auto-deduct)
     luxury_deduction = 0
     luxury_savings_result = None
-    if is_vip:  # Only for paid plans
-        luxury_savings_result = await process_luxury_savings(uid, mined_amount)
-        if luxury_savings_result:
-            luxury_deduction = luxury_savings_result.get("total_saved", 0)
+    # Luxury Life is now for ALL users (free and paid)
+    luxury_savings_result = await process_luxury_savings(uid, mined_amount)
+    if luxury_savings_result:
+        luxury_deduction = luxury_savings_result.get("total_saved", 0)
     
-    # User receives 80% if paid user with luxury savings, else 100%
+    # User receives 80% (20% goes to luxury savings)
     user_receives = mined_amount - luxury_deduction
     
     # Update user balance (free and VIP users)
@@ -4080,9 +4080,9 @@ async def claim_mining(uid: str):
     
     # Add to mining history for burn tracking
     mining_entry = {
-        "amount": user_receives,  # Only wallet amount
+        "amount": user_receives,  # Only wallet amount (80%)
         "total_mined": mined_amount,  # Full mined amount for records
-        "luxury_savings": luxury_deduction,  # Amount saved for luxury
+        "luxury_savings": luxury_deduction,  # Amount saved for luxury (20%)
         "timestamp": now.isoformat(),
         "burned": False,
         "expires_at": expiry_date,
