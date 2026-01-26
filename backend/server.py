@@ -33115,10 +33115,8 @@ async def claim_luxury_product(user_id: str, product_key: str):
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
-        # Check paid plan
+        # All users can claim (free and paid) - Luxury Life is for everyone
         plan = user.get("subscription_plan", "explorer").lower()
-        if plan not in ["startup", "growth", "elite"]:
-            raise HTTPException(status_code=403, detail="Only paid plan users can claim")
         
         # Get savings
         savings = await db.luxury_savings.find_one({"user_id": user_id})
