@@ -4064,12 +4064,20 @@ async def claim_mining(uid: str):
     luxury_deduction = 0
     luxury_savings_result = None
     # Luxury Life is now for ALL users (free and paid)
-    luxury_savings_result = await process_luxury_savings(uid, mined_amount)
-    if luxury_savings_result:
-        luxury_deduction = luxury_savings_result.get("total_saved", 0)
+    try:
+        luxury_savings_result = await process_luxury_savings(uid, mined_amount)
+        print(f"[LUXURY DEBUG] User {uid}: mined={mined_amount}, luxury_result={luxury_savings_result}")
+        if luxury_savings_result:
+            luxury_deduction = luxury_savings_result.get("total_saved", 0)
+            print(f"[LUXURY DEBUG] Deduction: {luxury_deduction} (20% of {mined_amount})")
+        else:
+            print(f"[LUXURY DEBUG] No luxury result returned for user {uid}")
+    except Exception as e:
+        print(f"[LUXURY ERROR] Failed to process luxury savings: {e}")
     
     # User receives 80% (20% goes to luxury savings)
     user_receives = mined_amount - luxury_deduction
+    print(f"[LUXURY DEBUG] User receives: {user_receives} (80% of {mined_amount})")
     
     # Update user balance (free and VIP users)
     new_balance = user.get("prc_balance", 0) + user_receives
