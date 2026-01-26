@@ -583,11 +583,16 @@ const RewardsHome = () => {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, idx) => {
               const Icon = feature.icon;
               return (
-                <Card key={idx} className="p-6 hover:shadow-xl transition-shadow duration-300 group cursor-pointer border-0 shadow-lg">
+                <Card key={idx} className="p-6 hover:shadow-xl transition-shadow duration-300 group cursor-pointer border-0 shadow-lg relative overflow-hidden">
+                  {feature.isNew && (
+                    <div className="absolute top-3 right-3 bg-gradient-to-r from-pink-500 to-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+                      NEW
+                    </div>
+                  )}
                   <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                     <Icon className="h-7 w-7 text-white" />
                   </div>
