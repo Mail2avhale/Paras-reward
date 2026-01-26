@@ -399,14 +399,6 @@ const RewardsHome = () => {
       link: '/register'
     },
     {
-      icon: Crown,
-      title: t('luxuryLife'),
-      description: t('luxuryLifeDesc'),
-      color: 'from-amber-500 to-orange-600',
-      isNew: true,
-      link: '/register'
-    },
-    {
       icon: CloudRain,
       title: t('prcRain'),
       description: t('prcRainDesc'),
