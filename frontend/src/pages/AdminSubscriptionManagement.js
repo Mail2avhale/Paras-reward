@@ -886,6 +886,8 @@ const AdminSubscriptionManagement = ({ user }) => {
                                 ⚠️ Amount Mismatch
                               </span>
                             )}
+                            {/* SLA Warning Badge for pending payments */}
+                            {payment.status === 'pending' && <SLABadge createdAt={payment.submitted_at || payment.created_at} status={payment.status} />}
                           </div>
                           <p className="text-gray-500 text-sm truncate">{payment.user_email || payment.user_id}</p>
                           {payment.user_phone && <p className="text-gray-600 text-xs">📱 {payment.user_phone}</p>}
