@@ -11,8 +11,9 @@ import {
   ArrowLeft, Clock, CheckCircle, XCircle, Search, Filter, 
   RefreshCw, Loader2, Phone, Zap, Tv, Droplet, CreditCard,
   Eye, User, Calendar, TrendingUp, IndianRupee, Building,
-  ChevronDown, Download, MoreVertical
+  ChevronDown, Download, MoreVertical, AlertTriangle
 } from 'lucide-react';
+import RequestTimeline, { SLABadge } from '../components/RequestTimeline';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 const ITEMS_PER_PAGE = 15;
@@ -805,6 +806,14 @@ const AdminBillPayments = ({ user }) => {
                           </div>
                         )}
                       </div>
+                      
+                      {/* Request Timeline */}
+                      <RequestTimeline
+                        createdAt={req.created_at}
+                        processedAt={req.processed_at}
+                        processedBy={req.processed_by}
+                        status={req.status}
+                      />
                     )}
                   </Card>
                 ))}
