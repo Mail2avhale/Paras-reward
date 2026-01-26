@@ -25,13 +25,13 @@ Build a comprehensive reward and loyalty platform with subscription-based member
    - Explorer users: PRC burns after 2 days inactivity
    - Paid users: PRC never burns
 
-3. **Paras Luxury Life** ✅ COMPLETE (Jan 26, 2026)
+3. **Paras Luxury Life** ✅ COMPLETE
    - Auto-save 20% of ALL earned PRC for luxury products
    - Applies to ALL users (free and paid)
    - Products:
-     - 📱 Mobile (₹1L) - 4% of 20% auto-save - Down payment: 3L PRC (30%)
-     - 🏍️ Bike (₹2L) - 6% of 20% auto-save - Down payment: 6L PRC (30%)
-     - 🚗 Car (₹12L) - 10% of 20% auto-save - Down payment: 36L PRC (30%)
+     - 📱 Mobile (₹1L) - 4% of 20% auto-save - Down payment: 30,000 PRC (30%)
+     - 🏍️ Bike (₹2L) - 6% of 20% auto-save - Down payment: 60,000 PRC (30%)
+     - 🚗 Car (₹12L) - 10% of 20% auto-save - Down payment: 3,60,000 PRC (30%)
    - Savings are LOCKED (no withdrawal)
    - Users can claim at 50% completion
    - Admin approval/rejection workflow with reasons
@@ -51,22 +51,20 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 
 ### Jan 26, 2026 (This Session)
 - ✅ **Verified Admin Luxury Claims Page** - Fully functional
-  - Stats dashboard (Total, Pending, Approved, Rejected)
-  - Search & filter functionality
-  - Approve/Reject buttons with reason modal
-  - Force Redeem (Admin Override) feature
-  - Dark theme properly applied
-- ✅ **Tested PRC Rain Luxury Savings** - 80/20 split working correctly
-  - Positive drops: 80% to wallet, 20% to luxury savings
-  - Negative drops: Full amount deducted from wallet (no luxury impact)
-  - Session summary includes luxury savings total
+- ✅ **Tested PRC Rain Luxury Savings** - 80/20 split working
+- ✅ **Tested User Claim at 50%** - Works correctly
+- ✅ **Tested Admin Approve/Reject/Force Redeem** - All working
+- ✅ **Fixed Total Redeemed Bug** - Rejected requests no longer count
+- ✅ **Updated Landing Page (RewardsHome.js)** with:
+  - New "Paras Luxury Life" feature section
+  - New "PRC Rain" feature card
+  - Updated 4-tier subscription plans display
+  - NEW badges on new features
+  - How Luxury Life Works visual guide
+  - Multi-language translations (English, Hindi, Marathi)
 
 ### Previous Session
 - ✅ **Paras Luxury Life Feature** - Complete implementation
-  - Backend APIs for savings, claims, admin management
-  - Auto-save integration with mining, tap game, PRC rain
-  - Luxury frontend page with HD images and animations
-  - Dashboard banner for ALL users
 - ✅ Removed "Network" and "Messages" buttons from dashboard
 - ✅ Duplicate UTR prevention across all payment types
 - ✅ Rejection workflow with mandatory reasons
@@ -81,21 +79,34 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 /app/
 ├── backend/
 │   └── server.py
-│       - Lines 4063-4170: Mining with luxury savings
-│       - Lines 4530-4600: Tap game with luxury savings
-│       - Lines 21251-21316: PRC Rain with luxury savings
-│       - Lines 32881-33030: process_luxury_savings function
+│       - Lines 4218-4250: Fixed total_redeemed calculation
+│       - Lines 10097-10130: Fixed total_redeemed for user list
 │       - Lines 33231-33400: Admin luxury claims APIs
 └── frontend/
     └── src/
         ├── pages/
+        │   ├── RewardsHome.js (UPDATED: Landing page with new features)
         │   ├── ParasLuxuryLife.js (User luxury savings page)
         │   ├── AdminLuxuryClaims.js (Admin claims management)
         │   └── DashboardModern.js (Luxury banner)
-        ├── components/layouts/
-        │   └── AdminLayout.js (Sidebar with Luxury Claims link)
         └── App.js (Routes)
 ```
+
+---
+
+## Bug Fixes This Session
+
+1. **Total Redeemed Display Bug** (FIXED)
+   - **Problem**: Users saw PRC as "redeemed" even after request rejection
+   - **Cause**: Calculation used transactions table which included ALL debits
+   - **Fix**: Now calculates from actual request collections with status filters
+   - Only counts: `approved`, `completed`, `processing`
+   - Excludes: `pending`, `rejected`
+
+2. **Reject Reason Not Showing** (FIXED)
+   - **Problem**: Rejection reason wasn't displayed in admin panel
+   - **Cause**: Field name mismatch (`rejection_reason` vs `reject_reason`)
+   - **Fix**: Added field mapping in GET endpoint
 
 ---
 
@@ -105,7 +116,7 @@ Build a comprehensive reward and loyalty platform with subscription-based member
 - [ ] Active referral status shows "Inactive" for active users (USER VERIFICATION PENDING)
 
 ### P1 (High Priority)
-- [ ] User-facing search bar functionality (need page details from user)
+- [ ] User-facing search bar functionality (need page details)
 - [ ] Dark Theme fix across ALL Admin pages
 - [ ] Verify Subscription "Extend" Logic
 - [ ] KYC Document Upload on Mobile
