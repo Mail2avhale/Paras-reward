@@ -546,6 +546,8 @@ const AdminBillPayments = ({ user }) => {
                             }`}>
                               {req.status === 'processing' ? 'Approved' : req.status}
                             </span>
+                            {/* SLA Warning Badge */}
+                            {req.status === 'pending' && <SLABadge createdAt={req.created_at} status={req.status} />}
                           </div>
                           <p className="text-gray-500 text-sm truncate">{getTypeLabel(req.request_type)}</p>
                         </div>
