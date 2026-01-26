@@ -32992,7 +32992,7 @@ async def get_luxury_savings(user_id: str):
 
 @api_router.post("/luxury-life/claim/{user_id}/{product_key}")
 async def claim_luxury_product(user_id: str, product_key: str):
-    """Submit claim request for luxury product"""
+    """Submit claim request for luxury product - User can claim at 50% minimum"""
     try:
         if product_key not in LUXURY_PRODUCTS:
             raise HTTPException(status_code=400, detail="Invalid product")
@@ -33019,17 +33019,21 @@ async def claim_luxury_product(user_id: str, product_key: str):
         
         current_savings = savings.get(savings_key, 0)
         target = product["down_payment_prc"]
+        min_required = target * (LUXURY_MIN_COMPLETION_PERCENT / 100)  # 50% minimum
         
         # Check if already claimed
         if savings.get(claimed_key, False):
             raise HTTPException(status_code=400, detail="Product already claimed")
         
-        # Check if enough savings
-        if current_savings < target:
+        # Check if enough savings (50% minimum)
+        if current_savings < min_required:
             raise HTTPException(
                 status_code=400, 
-                detail=f"Insufficient savings. Need {target} PRC, have {round(current_savings, 2)} PRC"
+                detail=f"Minimum {LUXURY_MIN_COMPLETION_PERCENT}% required. Need {round(min_required, 0)} PRC, have {round(current_savings, 2)} PRC"
             )
+        
+        # Calculate completion percentage
+        completion_percent = (current_savings / target) * 100
         
         # Create claim request
         claim_id = f"LUX_{uuid.uuid4().hex[:8].upper()}"
@@ -33045,6 +33049,8 @@ async def claim_luxury_product(user_id: str, product_key: str):
             "product_price_inr": product["price_inr"],
             "down_payment_prc": target,
             "down_payment_inr": target / 10,
+            "current_savings_prc": current_savings,
+            "completion_percent": round(completion_percent, 2),
             "status": "pending",  # pending, approved, rejected
             "created_at": datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat(),
