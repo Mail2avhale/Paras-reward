@@ -945,7 +945,7 @@ const AdminSubscriptionManagement = ({ user }) => {
                       <div className="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
                         <p className="text-red-400 text-sm flex items-center gap-2">
                           <AlertCircle className="w-4 h-4" />
-                          <strong>Potential Fraud:</strong> Amount ₹{payment.amount} doesn't match {payment.subscription_plan} {payment.plan_type} pricing.
+                          <strong>Potential Fraud:</strong> Amount ₹{payment.amount} does not match {payment.subscription_plan} {payment.plan_type} pricing.
                           {pricingReference?.amount_to_plan_map?.[String(payment.amount)] && (
                             <span className="text-gray-400">
                               Expected: {pricingReference.amount_to_plan_map[String(payment.amount)].plan} ({pricingReference.amount_to_plan_map[String(payment.amount)].duration})
