@@ -329,39 +329,45 @@ const RewardsHome = () => {
       icon: Coins,
       title: t('dailyMining'),
       description: t('dailyMiningDesc'),
-      color: 'from-yellow-500 to-amber-600'
+      color: 'from-yellow-500 to-amber-600',
+      link: '/register'
     },
     {
       icon: Users,
       title: t('referralRewards'),
       description: t('referralRewardsDesc'),
-      color: 'from-blue-500 to-blue-600'
+      color: 'from-blue-500 to-blue-600',
+      link: '/register'
     },
     {
       icon: Gift,
       title: t('giftVouchers'),
       description: t('giftVouchersDesc'),
-      color: 'from-purple-500 to-purple-600'
+      color: 'from-purple-500 to-purple-600',
+      link: '/register'
     },
     {
       icon: CreditCard,
       title: t('billPayments'),
       description: t('billPaymentsDesc'),
-      color: 'from-green-500 to-green-600'
+      color: 'from-green-500 to-green-600',
+      link: '/register'
     },
     {
       icon: Crown,
       title: t('luxuryLife'),
       description: t('luxuryLifeDesc'),
       color: 'from-amber-500 to-orange-600',
-      isNew: true
+      isNew: true,
+      link: '/luxury-life'
     },
     {
       icon: CloudRain,
       title: t('prcRain'),
       description: t('prcRainDesc'),
       color: 'from-cyan-500 to-blue-600',
-      isNew: true
+      isNew: true,
+      link: '/prc-rain'
     }
   ];
 
