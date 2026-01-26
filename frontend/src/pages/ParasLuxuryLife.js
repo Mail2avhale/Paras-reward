@@ -410,8 +410,8 @@ const ParasLuxuryLife = () => {
                   }`}>{product.auto_save_percent}% of earnings</span>
                 </div>
 
-                {/* Claim Button */}
-                {isComplete && !isClaimed && (
+                {/* Claim Button - Available at 50% completion */}
+                {product.progress >= 50 && !isClaimed && (
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -435,7 +435,7 @@ const ParasLuxuryLife = () => {
                     ) : (
                       <>
                         <Gift className="w-5 h-5" />
-                        Claim Now
+                        Claim Now ({product.progress.toFixed(0)}% Complete)
                         <ChevronRight className="w-5 h-5" />
                       </>
                     )}
@@ -449,9 +449,10 @@ const ParasLuxuryLife = () => {
                   </div>
                 )}
 
-                {!isComplete && !isClaimed && (
+                {product.progress < 50 && !isClaimed && (
                   <div className="w-full py-3 rounded-xl bg-gray-800/50 border border-gray-700 text-center">
-                    <p className="text-gray-400 text-sm">Keep earning to unlock this reward!</p>
+                    <p className="text-gray-400 text-sm">Reach 50% to unlock claim option!</p>
+                    <p className="text-gray-500 text-xs mt-1">Current: {product.progress.toFixed(1)}% | Need: 50%</p>
                   </div>
                 )}
               </div>
@@ -460,28 +461,48 @@ const ParasLuxuryLife = () => {
         })}
       </div>
 
+      {/* Important Disclaimer - 70% User Responsibility */}
+      <div className="mx-4 mt-6 p-4 bg-red-900/20 rounded-xl border border-red-500/30">
+        <div className="flex items-start gap-3">
+          <div className="p-2 bg-red-500/20 rounded-lg flex-shrink-0">
+            <Info className="w-5 h-5 text-red-400" />
+          </div>
+          <div>
+            <h3 className="font-bold text-red-400 mb-2">⚠️ महत्त्वाची सूचना / Important Notice</h3>
+            <p className="text-red-200/80 text-sm leading-relaxed">
+              <strong>राहिलेली 70% रक्कम युजरने स्वतः भरावी लागेल.</strong> कंपनी याबाबत कोणतीही आर्थिक तरतूद करणार नाही. 
+              हे पूर्णपणे युजरची जबाबदारी आहे - Cash किंवा Loan द्वारे.
+            </p>
+            <p className="text-gray-400 text-xs mt-2">
+              The remaining 70% must be paid by the user. The company will NOT provide any financial arrangement for this. 
+              This is entirely the user&apos;s responsibility - via Cash or Loan.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Info Section */}
-      <div className="mx-4 mt-8 p-4 bg-gray-900/50 rounded-xl border border-gray-800">
+      <div className="mx-4 mt-4 p-4 bg-gray-900/50 rounded-xl border border-gray-800">
         <h3 className="font-bold text-white mb-3 flex items-center gap-2">
           <AlertCircle className="w-5 h-5 text-amber-400" />
-          Important Information
+          How It Works
         </h3>
         <ul className="space-y-2 text-gray-400 text-sm">
           <li className="flex items-start gap-2">
             <Lock className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
-            Luxury savings are locked and cannot be withdrawn
+            Luxury savings are <span className="text-red-400 font-medium">LOCKED</span> and cannot be withdrawn
           </li>
           <li className="flex items-start gap-2">
             <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-            Down payment covers 30% of product value
+            Down payment covers 30% of product value (via your PRC savings)
+          </li>
+          <li className="flex items-start gap-2">
+            <Gift className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+            Claim available at <span className="text-amber-400 font-medium">50% completion</span> (admin approval)
           </li>
           <li className="flex items-start gap-2">
             <Clock className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
             Claims are reviewed within 48 hours
-          </li>
-          <li className="flex items-start gap-2">
-            <Gift className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-            Remaining 70% can be paid via cash or loan
           </li>
         </ul>
       </div>
