@@ -536,7 +536,7 @@ const AdminBillPayments = ({ user }) => {
                           {getTypeIcon(req.request_type)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-semibold text-white truncate">{req.user_name || 'Unknown User'}</p>
                             <span className={`text-xs px-2 py-0.5 rounded-full border ${
                               req.status === 'pending' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' :
