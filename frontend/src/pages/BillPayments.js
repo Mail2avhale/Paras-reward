@@ -28,6 +28,7 @@ const BillPayments = ({ user, onLogout }) => {
   const [selectedType, setSelectedType] = useState('mobile_recharge');
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('all'); // NEW: Status filter
+  const [expandedRequest, setExpandedRequest] = useState(null); // For timeline expansion
   const itemsPerPage = 10;
   const [formData, setFormData] = useState({
     amount_inr: '',
@@ -659,21 +660,50 @@ const BillPayments = ({ user, onLogout }) => {
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">PRC</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Status</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Date</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredRequests
                       .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                       .map((req) => (
-                      <tr key={req.request_id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
-                        <td className="py-3 px-4 text-sm text-gray-300">{getTypeLabel(req.request_type)}</td>
-                        <td className="py-3 px-4 text-sm font-medium text-white">₹{req.amount_inr}</td>
-                        <td className="py-3 px-4 text-sm text-amber-500">{req.total_prc_deducted?.toFixed(2) || '0.00'}</td>
-                        <td className="py-3 px-4">{getStatusBadge(req.status)}</td>
-                        <td className="py-3 px-4 text-sm text-gray-500">
-                          {new Date(req.created_at).toLocaleDateString()}
-                        </td>
-                      </tr>
+                      <React.Fragment key={req.request_id}>
+                        <tr 
+                          className="border-b border-gray-800/50 hover:bg-gray-800/30 cursor-pointer"
+                          onClick={() => setExpandedRequest(expandedRequest === req.request_id ? null : req.request_id)}
+                        >
+                          <td className="py-3 px-4 text-sm text-gray-300">{getTypeLabel(req.request_type)}</td>
+                          <td className="py-3 px-4 text-sm font-medium text-white">₹{req.amount_inr}</td>
+                          <td className="py-3 px-4 text-sm text-amber-500">{req.total_prc_deducted?.toFixed(2) || '0.00'}</td>
+                          <td className="py-3 px-4">{getStatusBadge(req.status)}</td>
+                          <td className="py-3 px-4 text-sm text-gray-500">
+                            {new Date(req.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-400">
+                            {expandedRequest === req.request_id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </td>
+                        </tr>
+                        {/* Expanded Timeline Row */}
+                        {expandedRequest === req.request_id && (
+                          <tr>
+                            <td colSpan={6} className="px-4 py-3 bg-gray-800/30">
+                              <RequestTimeline
+                                createdAt={req.created_at}
+                                processedAt={req.processed_at}
+                                processedBy={req.processed_by}
+                                status={req.status}
+                                variant="compact"
+                              />
+                              {req.admin_notes && (
+                                <div className="mt-3 p-3 bg-gray-700/50 rounded-lg">
+                                  <p className="text-gray-400 text-xs">Admin Notes:</p>
+                                  <p className="text-white text-sm">{req.admin_notes}</p>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
