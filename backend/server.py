@@ -17573,6 +17573,16 @@ async def approve_vip_payment(payment_id: str, uid: str):
             "details": {"amount": payment.get("amount")}
         })
         
+        # Notify user about VIP approval
+        await create_notification(
+            user_id=user_id,
+            title="🎉 VIP Membership Activated!",
+            message=f"Congratulations! Your {payment.get('subscription_plan', 'VIP')} subscription has been approved. Enjoy your premium benefits!",
+            notification_type="subscription",
+            related_id=payment_id,
+            icon="👑"
+        )
+        
         return {"message": "VIP membership approved successfully"}
     except HTTPException:
         raise
@@ -17617,6 +17627,16 @@ async def reject_vip_payment(payment_id: str, request: Request, uid: str):
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "details": {"reason": reason}
         })
+        
+        # Notify user about rejection
+        await create_notification(
+            user_id=payment.get("user_id"),
+            title="❌ Subscription Payment Rejected",
+            message=f"Your subscription payment was rejected. Reason: {reason or 'Not specified'}. Please contact support if you have questions.",
+            notification_type="subscription",
+            related_id=payment_id,
+            icon="❌"
+        )
         
         return {"message": "VIP payment rejected", "reason": reason}
     except HTTPException:
