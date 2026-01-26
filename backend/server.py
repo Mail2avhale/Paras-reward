@@ -32697,6 +32697,514 @@ async def view_archived_data(collection: str, page: int = 1, limit: int = 50):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== PARAS LUXURY LIFE ====================
+# Auto-save 20% of earned PRC for luxury products (Mobile, Bike, Car)
+
+LUXURY_PRODUCTS = {
+    "mobile": {
+        "name": "Premium Smartphone",
+        "price_inr": 100000,
+        "price_prc": 1000000,
+        "down_payment_percent": 30,
+        "down_payment_prc": 300000,
+        "auto_save_percent": 4,
+        "image": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800",
+        "description": "Latest flagship smartphone with premium features",
+        "icon": "📱"
+    },
+    "bike": {
+        "name": "Royal Cruiser Bike",
+        "price_inr": 300000,
+        "price_prc": 3000000,
+        "down_payment_percent": 30,
+        "down_payment_prc": 900000,
+        "auto_save_percent": 6,
+        "image": "https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800",
+        "description": "Premium cruiser motorcycle for ultimate riding experience",
+        "icon": "🏍️"
+    },
+    "car": {
+        "name": "Luxury Sedan Car",
+        "price_inr": 1200000,
+        "price_prc": 12000000,
+        "down_payment_percent": 30,
+        "down_payment_prc": 3600000,
+        "auto_save_percent": 10,
+        "image": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800",
+        "description": "Executive luxury sedan with world-class comfort",
+        "icon": "🚗"
+    }
+}
+
+async def process_luxury_savings(user_id: str, prc_earned: float):
+    """
+    Process luxury savings - deduct 20% from earned PRC for paid users
+    4% -> Mobile, 6% -> Bike, 10% -> Car
+    """
+    try:
+        # Get user to check if paid plan
+        user = await db.users.find_one({"uid": user_id})
+        if not user:
+            return None
+        
+        # Only for paid plans
+        plan = user.get("subscription_plan", "explorer").lower()
+        if plan not in ["startup", "growth", "elite"]:
+            return None
+        
+        # Check subscription not expired
+        sub_expiry = user.get("subscription_expiry")
+        if sub_expiry:
+            from datetime import datetime, timezone
+            if isinstance(sub_expiry, str):
+                expiry_dt = datetime.fromisoformat(sub_expiry.replace('Z', '+00:00'))
+            else:
+                expiry_dt = sub_expiry
+            if expiry_dt < datetime.now(timezone.utc):
+                return None
+        
+        # Calculate savings for each product
+        mobile_save = prc_earned * 0.04  # 4%
+        bike_save = prc_earned * 0.06    # 6%
+        car_save = prc_earned * 0.10     # 10%
+        total_save = mobile_save + bike_save + car_save  # 20%
+        
+        # Get or create luxury savings record
+        luxury_record = await db.luxury_savings.find_one({"user_id": user_id})
+        
+        if luxury_record:
+            # Update existing record
+            new_mobile = luxury_record.get("mobile_savings", 0) + mobile_save
+            new_bike = luxury_record.get("bike_savings", 0) + bike_save
+            new_car = luxury_record.get("car_savings", 0) + car_save
+            new_total = luxury_record.get("total_savings", 0) + total_save
+            
+            await db.luxury_savings.update_one(
+                {"user_id": user_id},
+                {
+                    "$set": {
+                        "mobile_savings": new_mobile,
+                        "bike_savings": new_bike,
+                        "car_savings": new_car,
+                        "total_savings": new_total,
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    },
+                    "$push": {
+                        "savings_history": {
+                            "prc_earned": prc_earned,
+                            "mobile_saved": mobile_save,
+                            "bike_saved": bike_save,
+                            "car_saved": car_save,
+                            "total_saved": total_save,
+                            "timestamp": datetime.now(timezone.utc).isoformat()
+                        }
+                    }
+                }
+            )
+            
+            # Check if any down payment is complete - send notification
+            for product_key, product in LUXURY_PRODUCTS.items():
+                savings_key = f"{product_key}_savings"
+                old_savings = luxury_record.get(savings_key, 0)
+                new_savings = old_savings + (mobile_save if product_key == "mobile" else bike_save if product_key == "bike" else car_save)
+                target = product["down_payment_prc"]
+                
+                # If crossed threshold
+                if old_savings < target <= new_savings:
+                    await create_notification(
+                        user_id=user_id,
+                        title=f"🎉 {product['name']} Down Payment Complete!",
+                        message=f"Congratulations! You've saved enough PRC for the {product['name']} down payment. You can now claim your product!",
+                        notification_type="luxury_milestone",
+                        related_id=product_key,
+                        icon=product["icon"]
+                    )
+        else:
+            # Create new record
+            await db.luxury_savings.insert_one({
+                "user_id": user_id,
+                "mobile_savings": mobile_save,
+                "bike_savings": bike_save,
+                "car_savings": car_save,
+                "total_savings": total_save,
+                "mobile_claimed": False,
+                "bike_claimed": False,
+                "car_claimed": False,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "savings_history": [{
+                    "prc_earned": prc_earned,
+                    "mobile_saved": mobile_save,
+                    "bike_saved": bike_save,
+                    "car_saved": car_save,
+                    "total_saved": total_save,
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                }]
+            })
+        
+        return {
+            "mobile_saved": mobile_save,
+            "bike_saved": bike_save,
+            "car_saved": car_save,
+            "total_saved": total_save
+        }
+        
+    except Exception as e:
+        logging.error(f"Error processing luxury savings: {e}")
+        return None
+
+
+@api_router.get("/luxury-life/savings/{user_id}")
+async def get_luxury_savings(user_id: str):
+    """Get user's luxury savings status"""
+    try:
+        # Check if user exists and has paid plan
+        user = await db.users.find_one({"uid": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        plan = user.get("subscription_plan", "explorer").lower()
+        is_paid = plan in ["startup", "growth", "elite"]
+        
+        # Check subscription expiry
+        is_active = False
+        if is_paid:
+            sub_expiry = user.get("subscription_expiry")
+            if sub_expiry:
+                from datetime import datetime, timezone
+                if isinstance(sub_expiry, str):
+                    expiry_dt = datetime.fromisoformat(sub_expiry.replace('Z', '+00:00'))
+                else:
+                    expiry_dt = sub_expiry
+                is_active = expiry_dt > datetime.now(timezone.utc)
+        
+        # Get savings record
+        savings = await db.luxury_savings.find_one({"user_id": user_id})
+        
+        if not savings:
+            savings = {
+                "mobile_savings": 0,
+                "bike_savings": 0,
+                "car_savings": 0,
+                "total_savings": 0,
+                "mobile_claimed": False,
+                "bike_claimed": False,
+                "car_claimed": False
+            }
+        
+        # Calculate progress for each product
+        products = []
+        for key, product in LUXURY_PRODUCTS.items():
+            savings_key = f"{key}_savings"
+            claimed_key = f"{key}_claimed"
+            current_savings = savings.get(savings_key, 0)
+            target = product["down_payment_prc"]
+            progress = min(100, (current_savings / target) * 100) if target > 0 else 0
+            
+            products.append({
+                "key": key,
+                "name": product["name"],
+                "price_inr": product["price_inr"],
+                "price_prc": product["price_prc"],
+                "down_payment_prc": target,
+                "down_payment_inr": target / 10,  # 10 PRC = ₹1
+                "auto_save_percent": product["auto_save_percent"],
+                "current_savings": round(current_savings, 2),
+                "current_savings_inr": round(current_savings / 10, 2),
+                "progress": round(progress, 2),
+                "is_complete": current_savings >= target,
+                "is_claimed": savings.get(claimed_key, False),
+                "image": product["image"],
+                "description": product["description"],
+                "icon": product["icon"],
+                "remaining_prc": max(0, target - current_savings),
+                "remaining_inr": max(0, (target - current_savings) / 10)
+            })
+        
+        return {
+            "user_id": user_id,
+            "is_eligible": is_paid and is_active,
+            "subscription_plan": plan,
+            "total_savings": round(savings.get("total_savings", 0), 2),
+            "total_savings_inr": round(savings.get("total_savings", 0) / 10, 2),
+            "products": products,
+            "auto_save_rate": 20,  # 20% total
+            "message": "Smart Saving. Live Better." if is_paid else "Upgrade to a paid plan to start saving for luxury products!"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error getting luxury savings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/luxury-life/claim/{user_id}/{product_key}")
+async def claim_luxury_product(user_id: str, product_key: str):
+    """Submit claim request for luxury product"""
+    try:
+        if product_key not in LUXURY_PRODUCTS:
+            raise HTTPException(status_code=400, detail="Invalid product")
+        
+        product = LUXURY_PRODUCTS[product_key]
+        
+        # Get user
+        user = await db.users.find_one({"uid": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Check paid plan
+        plan = user.get("subscription_plan", "explorer").lower()
+        if plan not in ["startup", "growth", "elite"]:
+            raise HTTPException(status_code=403, detail="Only paid plan users can claim")
+        
+        # Get savings
+        savings = await db.luxury_savings.find_one({"user_id": user_id})
+        if not savings:
+            raise HTTPException(status_code=400, detail="No savings found")
+        
+        savings_key = f"{product_key}_savings"
+        claimed_key = f"{product_key}_claimed"
+        
+        current_savings = savings.get(savings_key, 0)
+        target = product["down_payment_prc"]
+        
+        # Check if already claimed
+        if savings.get(claimed_key, False):
+            raise HTTPException(status_code=400, detail="Product already claimed")
+        
+        # Check if enough savings
+        if current_savings < target:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Insufficient savings. Need {target} PRC, have {round(current_savings, 2)} PRC"
+            )
+        
+        # Create claim request
+        claim_id = f"LUX_{uuid.uuid4().hex[:8].upper()}"
+        from datetime import datetime, timezone
+        
+        await db.luxury_claims.insert_one({
+            "claim_id": claim_id,
+            "user_id": user_id,
+            "user_name": user.get("name", "Unknown"),
+            "user_email": user.get("email", ""),
+            "product_key": product_key,
+            "product_name": product["name"],
+            "product_price_inr": product["price_inr"],
+            "down_payment_prc": target,
+            "down_payment_inr": target / 10,
+            "status": "pending",  # pending, approved, rejected
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "admin_notes": None,
+            "approved_by": None
+        })
+        
+        # Mark as claimed (pending approval)
+        await db.luxury_savings.update_one(
+            {"user_id": user_id},
+            {
+                "$set": {
+                    claimed_key: True,
+                    f"{product_key}_claim_id": claim_id,
+                    f"{product_key}_claim_status": "pending",
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        # Send notification
+        await create_notification(
+            user_id=user_id,
+            title=f"🎊 {product['name']} Claim Submitted!",
+            message=f"Your claim for {product['name']} has been submitted. Our team will review and contact you within 48 hours.",
+            notification_type="luxury_claim",
+            related_id=claim_id,
+            icon=product["icon"]
+        )
+        
+        return {
+            "success": True,
+            "claim_id": claim_id,
+            "product": product["name"],
+            "down_payment_prc": target,
+            "down_payment_inr": target / 10,
+            "message": "Claim submitted successfully! Our team will review and contact you within 48 hours."
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error claiming luxury product: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/luxury-life/products")
+async def get_luxury_products():
+    """Get all luxury products info"""
+    products = []
+    for key, product in LUXURY_PRODUCTS.items():
+        products.append({
+            "key": key,
+            **product,
+            "down_payment_inr": product["down_payment_prc"] / 10
+        })
+    return {"products": products}
+
+
+# Admin endpoints for luxury claims
+@api_router.get("/admin/luxury-claims")
+async def get_luxury_claims(status: Optional[str] = None):
+    """Get all luxury claim requests (Admin)"""
+    try:
+        query = {}
+        if status:
+            query["status"] = status
+        
+        claims = await db.luxury_claims.find(query).sort("created_at", -1).to_list(500)
+        
+        # Clean ObjectId
+        for claim in claims:
+            claim["_id"] = str(claim["_id"])
+        
+        # Stats
+        total = await db.luxury_claims.count_documents({})
+        pending = await db.luxury_claims.count_documents({"status": "pending"})
+        approved = await db.luxury_claims.count_documents({"status": "approved"})
+        rejected = await db.luxury_claims.count_documents({"status": "rejected"})
+        
+        return {
+            "claims": claims,
+            "stats": {
+                "total": total,
+                "pending": pending,
+                "approved": approved,
+                "rejected": rejected
+            }
+        }
+        
+    except Exception as e:
+        logging.error(f"Error getting luxury claims: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/luxury-claims/{claim_id}/approve")
+async def approve_luxury_claim(claim_id: str, admin_id: str, notes: Optional[str] = None):
+    """Approve luxury claim (Admin)"""
+    try:
+        from datetime import datetime, timezone
+        
+        claim = await db.luxury_claims.find_one({"claim_id": claim_id})
+        if not claim:
+            raise HTTPException(status_code=404, detail="Claim not found")
+        
+        if claim["status"] != "pending":
+            raise HTTPException(status_code=400, detail="Claim already processed")
+        
+        # Update claim
+        await db.luxury_claims.update_one(
+            {"claim_id": claim_id},
+            {
+                "$set": {
+                    "status": "approved",
+                    "approved_by": admin_id,
+                    "admin_notes": notes,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        # Update savings record
+        product_key = claim["product_key"]
+        await db.luxury_savings.update_one(
+            {"user_id": claim["user_id"]},
+            {
+                "$set": {
+                    f"{product_key}_claim_status": "approved",
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        # Notify user
+        await create_notification(
+            user_id=claim["user_id"],
+            title=f"✅ {claim['product_name']} Claim Approved!",
+            message=f"Great news! Your claim for {claim['product_name']} has been approved. Our team will contact you shortly to proceed.",
+            notification_type="luxury_approved",
+            related_id=claim_id,
+            icon="✅"
+        )
+        
+        return {"success": True, "message": "Claim approved successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error approving claim: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/luxury-claims/{claim_id}/reject")
+async def reject_luxury_claim(claim_id: str, admin_id: str, reason: str):
+    """Reject luxury claim (Admin)"""
+    try:
+        from datetime import datetime, timezone
+        
+        claim = await db.luxury_claims.find_one({"claim_id": claim_id})
+        if not claim:
+            raise HTTPException(status_code=404, detail="Claim not found")
+        
+        if claim["status"] != "pending":
+            raise HTTPException(status_code=400, detail="Claim already processed")
+        
+        # Update claim
+        await db.luxury_claims.update_one(
+            {"claim_id": claim_id},
+            {
+                "$set": {
+                    "status": "rejected",
+                    "rejected_by": admin_id,
+                    "rejection_reason": reason,
+                    "admin_notes": reason,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        # Update savings record - allow re-claim
+        product_key = claim["product_key"]
+        await db.luxury_savings.update_one(
+            {"user_id": claim["user_id"]},
+            {
+                "$set": {
+                    f"{product_key}_claimed": False,
+                    f"{product_key}_claim_status": "rejected",
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        # Notify user
+        await create_notification(
+            user_id=claim["user_id"],
+            title=f"❌ {claim['product_name']} Claim Update",
+            message=f"Your claim for {claim['product_name']} could not be processed. Reason: {reason}. Please contact support for assistance.",
+            notification_type="luxury_rejected",
+            related_id=claim_id,
+            icon="❌"
+        )
+        
+        return {"success": True, "message": "Claim rejected"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error rejecting claim: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Include all API routes (must be after all route definitions)
 app.include_router(api_router)
 
