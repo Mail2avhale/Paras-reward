@@ -32781,7 +32781,7 @@ LUXURY_PRODUCTS = {
         "down_payment_percent": 30,
         "down_payment_prc": 3600000,
         "auto_save_percent": 10,
-        "image": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800",
+        "image": "https://images.unsplash.com/photo-1763789381108-b5622140f2e0?w=1200&q=90",
         "description": "Executive luxury sedan with world-class comfort",
         "icon": "🚗"
     }
