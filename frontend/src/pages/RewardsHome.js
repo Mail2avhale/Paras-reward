@@ -348,6 +348,20 @@ const RewardsHome = () => {
       title: t('billPayments'),
       description: t('billPaymentsDesc'),
       color: 'from-green-500 to-green-600'
+    },
+    {
+      icon: Crown,
+      title: t('luxuryLife'),
+      description: t('luxuryLifeDesc'),
+      color: 'from-amber-500 to-orange-600',
+      isNew: true
+    },
+    {
+      icon: CloudRain,
+      title: t('prcRain'),
+      description: t('prcRainDesc'),
+      color: 'from-cyan-500 to-blue-600',
+      isNew: true
     }
   ];
 
