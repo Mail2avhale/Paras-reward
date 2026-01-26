@@ -957,9 +957,62 @@ const AdminSubscriptionManagement = ({ user }) => {
             )}
           </div>
 
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-6">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="border-gray-700"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={currentPage === pageNum ? "bg-amber-500 text-black" : "border-gray-700"}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="border-gray-700"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+
           {/* Results Count */}
           <div className="text-center text-gray-500 text-sm mt-4">
-            Showing {filteredPayments.length} of {payments.length} payments
+            Showing {paginatedPayments.length} of {filteredPayments.length} payments
+            {filteredPayments.length !== payments.length && ` (filtered from ${payments.length} total)`}
           </div>
         </div>
       )}
