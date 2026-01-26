@@ -20287,7 +20287,8 @@ async def process_bill_payment_request(request: Request):
             {"$set": {
                 "status": "processing",
                 "admin_notes": admin_notes,
-                "processed_by": admin_uid
+                "processed_by": admin_name,
+                "processed_by_uid": admin_uid
             }}
         )
         
