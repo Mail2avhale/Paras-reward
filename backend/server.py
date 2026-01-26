@@ -21301,12 +21301,19 @@ async def tap_rain_drop(request: Request):
         update_data
     )
     
-    return {
+    response = {
         "success": True,
         "prc_change": prc_change,
+        "wallet_credit": wallet_credit if prc_change > 0 else prc_change,
+        "luxury_savings": luxury_deduction,
         "is_negative": is_negative,
         "taps_remaining": session.get("max_taps", 15) - session.get("taps_count", 0) - 1
     }
+    
+    if luxury_deduction > 0:
+        response["luxury_message"] = f"₹{round(luxury_deduction/10, 2)} saved for Luxury Life! 🏆"
+    
+    return response
 
 @api_router.post("/prc-rain/end-session")
 async def end_rain_session(request: Request):
