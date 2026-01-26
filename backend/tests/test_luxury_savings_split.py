@@ -298,10 +298,20 @@ class TestAdminVerification:
         print(f"Total Mined: {data.get('financial_stats', {}).get('total_mined')}")
         
         # Check recent transactions
-        transactions = data.get('transactions', [])
-        print(f"\nRecent Transactions ({len(transactions)}):")
-        for txn in transactions[:5]:
-            print(f"  - {txn.get('type')}: {txn.get('amount')} PRC - {txn.get('description', '')}")
+        transactions = data.get('transactions', {})
+        if isinstance(transactions, dict):
+            # Handle dict format
+            for key, txn_list in transactions.items():
+                if isinstance(txn_list, list):
+                    print(f"\n{key} Transactions ({len(txn_list)}):")
+                    for txn in txn_list[:3]:
+                        if isinstance(txn, dict):
+                            print(f"  - {txn.get('type', 'N/A')}: {txn.get('amount', 'N/A')} - {txn.get('description', '')}")
+        elif isinstance(transactions, list):
+            print(f"\nRecent Transactions ({len(transactions)}):")
+            for txn in transactions[:5]:
+                if isinstance(txn, dict):
+                    print(f"  - {txn.get('type')}: {txn.get('amount')} PRC - {txn.get('description', '')}")
 
 
 if __name__ == "__main__":
