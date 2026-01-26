@@ -118,6 +118,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'subscriptions', label: 'Subscription Management', icon: Crown, path: '/admin/subscriptions' },
         { id: 'bill-payments', label: 'Bill Payments', icon: FileText, path: '/admin/bill-payments' },
         { id: 'gift-vouchers', label: 'Gift Vouchers', icon: Gift, path: '/admin/gift-vouchers' },
+        { id: 'luxury-claims', label: 'Luxury Life Claims', icon: Crown, path: '/admin/luxury-claims' },
       ]
     },
     finance: {
