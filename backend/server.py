@@ -4463,6 +4463,7 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
     # Get user's subscription info
     sub_info = await get_user_subscription_info(user)
     plan = sub_info["plan"]
+    is_paid = plan in ["startup", "growth", "elite"]
     
     # Get PRC per tap and tap limit from SUBSCRIPTION_PLANS
     plan_config = SUBSCRIPTION_PLANS.get(plan, SUBSCRIPTION_PLANS["explorer"])
@@ -4480,11 +4481,22 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
     taps_to_add = min(tap_data.taps, remaining_taps)
     prc_earned = round(taps_to_add * prc_per_tap, 2)
     
+    # Process luxury savings for paid users (20% auto-deduct)
+    luxury_deduction = 0
+    luxury_savings_result = None
+    if is_paid and sub_info.get("is_active", False):
+        luxury_savings_result = await process_luxury_savings(uid, prc_earned)
+        if luxury_savings_result:
+            luxury_deduction = luxury_savings_result.get("total_saved", 0)
+    
+    # User receives 80% if paid user, else 100%
+    user_receives = prc_earned - luxury_deduction
+    
     # Update user
     await db.users.update_one(
         {"uid": uid},
         {
-            "$inc": {"prc_balance": prc_earned, "total_mined": prc_earned},
+            "$inc": {"prc_balance": user_receives, "total_mined": prc_earned},
             "$set": {"taps_today": current_taps + taps_to_add, "last_tap_date": today}
         }
     )
@@ -4497,9 +4509,9 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
         "user_id": uid,
         "type": "credit",
         "wallet_type": "prc",
-        "amount": prc_earned,
-        "description": f"Tap game rewards ({taps_to_add} taps)",
-        "balance_after": user.get("prc_balance", 0) + prc_earned,
+        "amount": user_receives,
+        "description": f"Tap game rewards ({taps_to_add} taps)" + (f" - {round(luxury_deduction, 2)} to Luxury Life" if luxury_deduction > 0 else ""),
+        "balance_after": user.get("prc_balance", 0) + user_receives,
         "created_at": now.isoformat()
     })
     
@@ -4518,19 +4530,29 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
     await log_activity(
         user_id=uid,
         action_type="tap_game",
-        description=f"Played tap game: {taps_to_add} taps, earned {prc_earned} PRC",
-        metadata={"taps": taps_to_add, "prc_earned": prc_earned, "prc_per_tap": prc_per_tap, "plan": plan}
+        description=f"Played tap game: {taps_to_add} taps, earned {prc_earned} PRC (wallet: {user_receives}, luxury: {luxury_deduction})",
+        metadata={"taps": taps_to_add, "prc_earned": prc_earned, "prc_per_tap": prc_per_tap, "plan": plan, "luxury_savings": luxury_deduction}
     )
     
-    return {
+    response = {
         "taps_added": taps_to_add, 
         "remaining_taps": remaining_taps - taps_to_add, 
-        "prc_earned": prc_earned,
+        "prc_earned": user_receives,  # What user receives in wallet
+        "total_earned": prc_earned,   # Total before deduction
         "prc_per_tap": prc_per_tap,
         "max_taps": max_taps,
         "subscription_plan": plan,
         "daily_prc_potential": max_taps * prc_per_tap
     }
+    
+    # Add luxury savings info
+    if luxury_deduction > 0:
+        response["luxury_savings"] = {
+            "deducted": round(luxury_deduction, 2),
+            "message": f"₹{round(luxury_deduction/10, 2)} auto-saved for Luxury Life! 🏆"
+        }
+    
+    return response
 
 # ========== REFERRAL ROUTES ==========
 @api_router.get("/referral/code/{uid}")
