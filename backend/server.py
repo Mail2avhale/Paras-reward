@@ -6095,23 +6095,38 @@ async def get_kyc_documents():
 @api_router.post("/kyc/{kyc_id}/verify")
 async def verify_kyc(kyc_id: str, action: VIPPaymentAction):
     """Verify or reject KYC (Admin)"""
-    kyc = await db.kyc_documents.find_one({"kyc_id": kyc_id})
-    if not kyc:
-        raise HTTPException(status_code=404, detail="KYC not found")
-    
-    status = "verified" if action.action == "approve" else "rejected"
-    
-    await db.kyc_documents.update_one(
-        {"kyc_id": kyc_id},
-        {"$set": {"status": status, "verified_at": datetime.now(timezone.utc).isoformat()}}
-    )
-    
-    await db.users.update_one(
-        {"uid": kyc["user_id"]},
-        {"$set": {"kyc_status": status}}
-    )
-    
-    return {"message": f"KYC {status} successfully"}
+    try:
+        kyc = await db.kyc_documents.find_one({"kyc_id": kyc_id})
+        if not kyc:
+            raise HTTPException(status_code=404, detail="KYC document not found")
+        
+        # Check if already verified/rejected
+        current_status = kyc.get("status", "pending")
+        if current_status in ["verified", "rejected"]:
+            return {"message": f"KYC already {current_status}", "status": current_status}
+        
+        status = "verified" if action.action == "approve" else "rejected"
+        
+        await db.kyc_documents.update_one(
+            {"kyc_id": kyc_id},
+            {"$set": {
+                "status": status, 
+                "verified_at": datetime.now(timezone.utc).isoformat(),
+                "verified_by": getattr(action, 'admin_id', None)
+            }}
+        )
+        
+        await db.users.update_one(
+            {"uid": kyc["user_id"]},
+            {"$set": {"kyc_status": status}}
+        )
+        
+        return {"message": f"KYC {status} successfully", "status": status}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"KYC verify error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to verify KYC: {str(e)}")
 
 # ========== MARKETPLACE ROUTES ==========
 @api_router.post("/products", response_model=Product)
