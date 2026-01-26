@@ -18,6 +18,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
   const [currentUser, setCurrentUser] = useState(user);
   const [selectedDenomination, setSelectedDenomination] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState('all'); // NEW: Status filter
   const itemsPerPage = 10;
 
   useEffect(() => {
