@@ -3,18 +3,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Crown, Sparkles, Lock, ChevronRight, ArrowLeft,
   Smartphone, Bike, Car, Trophy, Gift, TrendingUp,
-  CheckCircle2, Clock, AlertCircle, Star
+  CheckCircle2, Clock, AlertCircle, Star, Info
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
-// HD Product Images from Unsplash
+// HD Product Images - High Quality
 const PRODUCT_IMAGES = {
-  mobile: 'https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=1200&q=90',
-  bike: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=1200&q=90',
-  car: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1200&q=90'
+  mobile: 'https://images.unsplash.com/photo-1758348844351-48e1ec64cd96?w=1200&q=90',
+  bike: 'https://images.unsplash.com/photo-1701849121939-c08134a19ced?w=1200&q=90',
+  car: 'https://images.unsplash.com/photo-1763789381108-b5622140f2e0?w=1200&q=90'
 };
 
 const PRODUCT_ICONS = {
