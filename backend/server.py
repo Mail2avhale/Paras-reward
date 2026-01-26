@@ -4093,24 +4093,37 @@ async def claim_mining(uid: str):
     await create_notification(
         user_id=uid,
         title="Mining Rewards Claimed! ⛏️",
-        message=f"You've claimed {round(mined_amount, 2)} PRC from mining{validity_msg}. New balance: {round(new_balance, 2)} PRC",
+        message=f"You've claimed {round(user_receives, 2)} PRC from mining{validity_msg}. New balance: {round(new_balance, 2)} PRC" + (f" ({round(luxury_deduction, 2)} PRC saved for Luxury Life)" if luxury_deduction > 0 else ""),
         notification_type="mining",
         related_id=None,
         icon="⛏️"
     )
     
     # Return success response
-    return {
+    response = {
         "success": True,
-        "amount": round(mined_amount, 4),  # Frontend expects 'amount'
-        "claimed_amount": round(mined_amount, 4),
+        "amount": round(user_receives, 4),  # Frontend expects 'amount' - this is what user receives
+        "claimed_amount": round(user_receives, 4),
+        "total_mined_this_session": round(mined_amount, 4),  # Full amount before deduction
         "new_balance": round(new_balance, 4),
         "total_mined": round(new_total_mined, 4),
         "membership_type": membership_type,
         "validity": "2 days" if not is_vip else "lifetime",
         "expires_at": expiry_date,
-        "message": f"Successfully claimed {round(mined_amount, 2)} PRC!"
+        "message": f"Successfully claimed {round(user_receives, 2)} PRC!"
     }
+    
+    # Add luxury savings info for paid users
+    if luxury_deduction > 0:
+        response["luxury_savings"] = {
+            "deducted": round(luxury_deduction, 4),
+            "mobile": round(luxury_savings_result.get("mobile_saved", 0), 4),
+            "bike": round(luxury_savings_result.get("bike_saved", 0), 4),
+            "car": round(luxury_savings_result.get("car_saved", 0), 4),
+            "message": f"₹{round(luxury_deduction/10, 2)} auto-saved for Luxury Life! 🏆"
+        }
+    
+    return response
 
 # ========== USER DATA ENDPOINT ==========
 @api_router.get("/user/{uid}")
