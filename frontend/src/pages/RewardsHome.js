@@ -7,7 +7,7 @@ import {
   ChevronRight, Star, Zap, Award, CreditCard, ShoppingBag,
   FileText, Phone, Mail, MapPin, ArrowRight, CheckCircle,
   Play, Crown, Percent, Clock, Target, Sparkles, Globe, ChevronDown,
-  Car, Bike, CloudRain, Lock, Gem, Heart, Trophy, Wallet
+  CloudRain, Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
