@@ -33085,13 +33085,13 @@ async def get_luxury_savings(user_id: str):
         
         return {
             "user_id": user_id,
-            "is_eligible": is_paid and is_active,
+            "is_eligible": True,  # ALL users are now eligible for Luxury Life
             "subscription_plan": plan,
             "total_savings": round(savings.get("total_savings", 0), 2),
             "total_savings_inr": round(savings.get("total_savings", 0) / 10, 2),
             "products": products,
             "auto_save_rate": 20,  # 20% total
-            "message": "Smart Saving. Live Better." if is_paid else "Upgrade to a paid plan to start saving for luxury products!"
+            "message": "Smart Saving. Live Better."
         }
         
     except HTTPException:
