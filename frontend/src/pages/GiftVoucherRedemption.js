@@ -256,14 +256,51 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
             <p className="text-gray-500 text-xs">{t('processingTime')}</p>
           </div>
           
-          {requests.length === 0 ? (
+          {/* Status Filter Tabs */}
+          <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+            {[
+              { id: 'all', label: t('all') || 'All', count: requests.length },
+              { id: 'pending', label: t('pending') || 'Pending', count: requests.filter(r => r.status === 'pending').length, color: 'yellow' },
+              { id: 'approved', label: t('approved') || 'Approved', count: requests.filter(r => r.status === 'approved' || r.status === 'processing').length, color: 'blue' },
+              { id: 'completed', label: t('completed') || 'Completed', count: requests.filter(r => r.status === 'completed').length, color: 'green' },
+              { id: 'rejected', label: t('rejected') || 'Rejected', count: requests.filter(r => r.status === 'rejected').length, color: 'red' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => { setStatusFilter(tab.id); setCurrentPage(1); }}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                  statusFilter === tab.id
+                    ? tab.color === 'yellow' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                    : tab.color === 'blue' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                    : tab.color === 'green' ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                    : tab.color === 'red' ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                    : 'bg-gray-700 text-white border border-gray-600'
+                    : 'bg-gray-800/50 text-gray-400 border border-gray-700'
+                }`}
+              >
+                {tab.label}
+                <span className={`px-1.5 py-0.5 rounded-full text-xs ${statusFilter === tab.id ? 'bg-white/20' : 'bg-gray-700'}`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+          
+          {(() => {
+            const filteredRequests = statusFilter === 'all' 
+              ? requests 
+              : statusFilter === 'approved'
+              ? requests.filter(r => r.status === 'approved' || r.status === 'processing')
+              : requests.filter(r => r.status === statusFilter);
+            
+            return filteredRequests.length === 0 ? (
             <div className="text-center py-8">
               <Gift className="w-12 h-12 mx-auto text-gray-700 mb-3" />
-              <p className="text-gray-500">{t('noVoucherRequestsYet')}</p>
+              <p className="text-gray-500">{statusFilter === 'all' ? t('noVoucherRequestsYet') : `No ${statusFilter} requests`}</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {requests.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((req) => (
+              {filteredRequests.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((req) => (
                 <div key={req.request_id} className="bg-gray-800/50 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
@@ -281,6 +318,13 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
                     <span className="text-amber-500 font-semibold">{req.total_prc_deducted?.toFixed(2)} PRC</span>
                   </div>
                   
+                  {req.rejection_reason && req.status === 'rejected' && (
+                    <div className="mt-3 p-3 bg-red-500/10 rounded-lg border border-red-500/30">
+                      <p className="text-red-400 text-xs mb-1">Rejection Reason:</p>
+                      <p className="text-red-300 text-sm">{req.rejection_reason}</p>
+                    </div>
+                  )}
+                  
                   {req.voucher_code && (
                     <div className="mt-3 p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/30">
                       <p className="text-emerald-400 text-xs mb-1">{t('voucherCode')}</p>
@@ -291,10 +335,10 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
               ))}
               
               {/* Pagination */}
-              {requests.length > itemsPerPage && (
+              {filteredRequests.length > itemsPerPage && (
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-800">
                   <p className="text-gray-500 text-sm">
-                    {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, requests.length)} of {requests.length}
+                    {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredRequests.length)} of {filteredRequests.length}
                   </p>
                   <div className="flex gap-2">
                     <button
@@ -306,11 +350,11 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
                       {t('prev')}
                     </button>
                     <span className="px-3 py-1.5 bg-amber-500/20 text-amber-500 rounded-lg text-sm font-medium">
-                      {currentPage}/{Math.ceil(requests.length / itemsPerPage)}
+                      {currentPage}/{Math.ceil(filteredRequests.length / itemsPerPage)}
                     </span>
                     <button
-                      onClick={() => setCurrentPage(p => Math.min(Math.ceil(requests.length / itemsPerPage), p + 1))}
-                      disabled={currentPage >= Math.ceil(requests.length / itemsPerPage)}
+                      onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredRequests.length / itemsPerPage), p + 1))}
+                      disabled={currentPage >= Math.ceil(filteredRequests.length / itemsPerPage)}
                       className="px-3 py-1.5 bg-gray-800 text-gray-300 rounded-lg text-sm disabled:opacity-50"
                       data-testid="gift-vouchers-next-page"
                     >
@@ -320,7 +364,8 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
                 </div>
               )}
             </div>
-          )}
+          );
+          })()}
         </div>
       </div>
     </div>
