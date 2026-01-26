@@ -287,57 +287,56 @@ const ParasLuxuryLife = () => {
                   : ''
               }`}
             >
-              {/* Product Image Background */}
-              <div className="absolute inset-0">
+              {/* HD Product Image - Prominent Display */}
+              <div className="relative h-48 overflow-hidden">
                 <img 
                   src={PRODUCT_IMAGES[product.key]} 
                   alt={product.name}
-                  className="w-full h-full object-cover opacity-30"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/50" />
+                {/* Gradient overlay for text readability */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                
+                {/* Product badge */}
+                <div className="absolute top-3 left-3">
+                  <div className={`px-3 py-1.5 rounded-full backdrop-blur-md ${
+                    product.key === 'mobile' ? 'bg-blue-500/40 text-blue-200' :
+                    product.key === 'bike' ? 'bg-purple-500/40 text-purple-200' :
+                    'bg-amber-500/40 text-amber-200'
+                  }`}>
+                    <span className="text-xs font-bold">{product.auto_save_percent}% AUTO-SAVE</span>
+                  </div>
+                </div>
+
+                {/* Status badges */}
+                {isComplete && !isClaimed && (
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                    className="absolute top-3 right-3 px-3 py-1 bg-green-500 rounded-full flex items-center gap-1"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span className="text-xs font-bold">READY!</span>
+                  </motion.div>
+                )}
+                
+                {isClaimed && (
+                  <div className="absolute top-3 right-3 px-3 py-1 bg-amber-500/80 rounded-full flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    <span className="text-xs font-bold">CLAIMED</span>
+                  </div>
+                )}
+
+                {/* Product name overlay */}
+                <div className="absolute bottom-3 left-3 right-3">
+                  <h3 className="font-black text-white text-xl drop-shadow-lg">{product.name}</h3>
+                  <p className="text-gray-200 text-sm drop-shadow">{product.description}</p>
+                </div>
               </div>
 
               {/* Content */}
-              <div className="relative p-5">
-                {/* Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-3 rounded-xl ${
-                      product.key === 'mobile' ? 'bg-blue-500/30' :
-                      product.key === 'bike' ? 'bg-purple-500/30' :
-                      'bg-amber-500/30'
-                    }`}>
-                      <ProductIcon className={`w-6 h-6 ${
-                        product.key === 'mobile' ? 'text-blue-400' :
-                        product.key === 'bike' ? 'text-purple-400' :
-                        'text-amber-400'
-                      }`} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-white text-lg">{product.name}</h3>
-                      <p className="text-gray-400 text-sm">{product.description}</p>
-                    </div>
-                  </div>
-                  
-                  {isComplete && !isClaimed && (
-                    <motion.div
-                      animate={{ scale: [1, 1.1, 1] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                      className="px-3 py-1 bg-green-500 rounded-full flex items-center gap-1"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span className="text-xs font-bold">READY!</span>
-                    </motion.div>
-                  )}
-                  
-                  {isClaimed && (
-                    <div className="px-3 py-1 bg-amber-500/50 rounded-full flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      <span className="text-xs font-bold">CLAIMED</span>
-                    </div>
-                  )}
-                </div>
-
+              <div className="relative p-5 bg-gradient-to-b from-gray-900 to-black">
                 {/* Price Info */}
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
