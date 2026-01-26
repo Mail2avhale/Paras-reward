@@ -5,7 +5,8 @@ import {
   Coins, Gift, Users, TrendingUp, Shield, Smartphone, 
   ChevronRight, Star, Zap, Award, CreditCard, ShoppingBag,
   FileText, Phone, Mail, MapPin, ArrowRight, CheckCircle,
-  Play, Crown, Percent, Clock, Target, Sparkles, Globe, ChevronDown
+  Play, Crown, Percent, Clock, Target, Sparkles, Globe, ChevronDown,
+  Car, Bike, CloudRain, Lock, Gem
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
