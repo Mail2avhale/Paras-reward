@@ -593,7 +593,11 @@ const RewardsHome = () => {
             {features.map((feature, idx) => {
               const Icon = feature.icon;
               return (
-                <Card key={idx} className="p-6 hover:shadow-xl transition-shadow duration-300 group cursor-pointer border-0 shadow-lg relative overflow-hidden">
+                <Card 
+                  key={idx} 
+                  className="p-6 hover:shadow-xl transition-shadow duration-300 group cursor-pointer border-0 shadow-lg relative overflow-hidden"
+                  onClick={() => navigate(feature.link)}
+                >
                   {feature.isNew && (
                     <div className="absolute top-3 right-3 bg-gradient-to-r from-pink-500 to-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
                       NEW
@@ -604,8 +608,9 @@ const RewardsHome = () => {
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">{feature.title}</h3>
                   <p className="text-gray-600">{feature.description}</p>
-                  <div className="mt-4 flex items-center text-blue-600 font-medium">
-                    Learn more <ChevronRight className="h-4 w-4 ml-1" />
+                  <div className="mt-4 flex items-center text-blue-600 font-medium group-hover:text-blue-700">
+                    {language === 'mr' ? 'अधिक जाणून घ्या' : language === 'hi' ? 'और जानें' : 'Learn more'} 
+                    <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </Card>
               );
