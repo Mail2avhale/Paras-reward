@@ -4014,16 +4014,29 @@ async def claim_mining(uid: str):
     rate_per_minute, base_rate, total_active_referrals, referral_breakdown = await calculate_mining_rate(uid)
     mined_amount = elapsed_minutes * rate_per_minute
     
+    # Process luxury savings for paid users (20% auto-deduct)
+    luxury_deduction = 0
+    luxury_savings_result = None
+    if is_vip:  # Only for paid plans
+        luxury_savings_result = await process_luxury_savings(uid, mined_amount)
+        if luxury_savings_result:
+            luxury_deduction = luxury_savings_result.get("total_saved", 0)
+    
+    # User receives 80% if paid user with luxury savings, else 100%
+    user_receives = mined_amount - luxury_deduction
+    
     # Update user balance (free and VIP users)
-    new_balance = user.get("prc_balance", 0) + mined_amount
-    new_total_mined = user.get("total_mined", 0) + mined_amount
+    new_balance = user.get("prc_balance", 0) + user_receives
+    new_total_mined = user.get("total_mined", 0) + mined_amount  # Total mined tracks full amount
     
     # Calculate expiry date (2 days for free users, never for VIP)
     expiry_date = None if is_vip else (now + timedelta(days=2)).isoformat()
     
     # Add to mining history for burn tracking
     mining_entry = {
-        "amount": mined_amount,
+        "amount": user_receives,  # Only wallet amount
+        "total_mined": mined_amount,  # Full mined amount for records
+        "luxury_savings": luxury_deduction,  # Amount saved for luxury
         "timestamp": now.isoformat(),
         "burned": False,
         "expires_at": expiry_date,
