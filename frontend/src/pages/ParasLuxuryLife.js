@@ -209,7 +209,7 @@ const ParasLuxuryLife = () => {
               transition={{ delay: 0.2 }}
               className="text-amber-200/80 text-lg italic"
             >
-              "Smart Saving. Live Better."
+              &ldquo;Smart Saving. Live Better.&rdquo;
             </motion.p>
           </div>
         </div>
