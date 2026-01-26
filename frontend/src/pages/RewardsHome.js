@@ -97,37 +97,6 @@ const FeatureCard = ({ icon: Icon, title, description, color, isNew, onClick, ct
   </motion.div>
 );
 
-// Luxury product card
-const LuxuryProductCard = ({ icon: Icon, name, price, downPayment, savePercent, color, borderColor, bgColor }) => (
-  <motion.div
-    whileHover={{ y: -10, rotateY: 5 }}
-    className="relative group perspective-1000"
-  >
-    <div className={`absolute inset-0 bg-gradient-to-br ${color} rounded-3xl blur-2xl opacity-20 group-hover:opacity-40 transition-opacity`} />
-    <Card className={`relative bg-white rounded-3xl p-6 border-2 ${borderColor} hover:border-opacity-100 transition-all overflow-hidden`}>
-      <div className={`absolute top-3 right-3 ${bgColor} text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg`}>
-        {savePercent}% Auto-Save
-      </div>
-      <div className="h-32 flex items-center justify-center mb-4 relative">
-        <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-10 rounded-2xl`} />
-        <motion.div 
-          whileHover={{ scale: 1.1, rotate: 5 }}
-          className={`w-20 h-20 bg-gradient-to-br ${color} rounded-2xl flex items-center justify-center shadow-2xl`}
-        >
-          <Icon className="h-10 w-10 text-white" />
-        </motion.div>
-      </div>
-      <h3 className="text-xl font-bold text-center text-gray-900 mb-1">{name}</h3>
-      <p className="text-center text-gray-400 text-sm mb-3">Worth ₹{price}</p>
-      <div className={`${bgColor}/10 rounded-xl p-3 text-center`}>
-        <p className={`font-semibold text-sm`} style={{ color: bgColor.includes('blue') ? '#3B82F6' : bgColor.includes('purple') ? '#8B5CF6' : '#F59E0B' }}>
-          Down Payment: ₹{downPayment}
-        </p>
-      </div>
-    </Card>
-  </motion.div>
-);
-
 // Subscription plan card
 const PlanCard = ({ name, price, features, color, icon: Icon, isPopular, onClick, ctaText }) => (
   <motion.div
