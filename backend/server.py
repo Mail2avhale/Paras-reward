@@ -20094,6 +20094,7 @@ async def process_bill_payment_request(request: Request):
     action = data.get("action")  # approve, reject, complete
     admin_notes = data.get("admin_notes", "")
     admin_uid = data.get("admin_uid")
+    reject_reason = data.get("reject_reason", "")
     
     if action not in ["approve", "reject", "complete"]:
         raise HTTPException(status_code=400, detail="Invalid action. Must be: approve, reject, or complete")
@@ -20111,6 +20112,10 @@ async def process_bill_payment_request(request: Request):
     if action == "reject":
         if current_status == "completed":
             raise HTTPException(status_code=400, detail="Cannot reject completed request")
+        
+        # Require reject reason
+        if not reject_reason:
+            raise HTTPException(status_code=400, detail="Reject reason is required")
         
         # Refund PRC to user
         user = await db.users.find_one({"uid": user_id}, {"_id": 0})
@@ -20133,7 +20138,7 @@ async def process_bill_payment_request(request: Request):
             transaction_type="bill_payment_refund",
             amount=total_prc,
             description=f"Bill payment request rejected - Refund (Request ID: {request_id[:8]})",
-            metadata={"request_id": request_id, "reason": "rejected"}
+            metadata={"request_id": request_id, "reason": reject_reason}
         )
         
         # Update request status
@@ -20141,13 +20146,14 @@ async def process_bill_payment_request(request: Request):
             {"request_id": request_id},
             {"$set": {
                 "status": "rejected",
+                "reject_reason": reject_reason,
                 "processed_at": datetime.now(timezone.utc).isoformat(),
-                "admin_notes": admin_notes,
+                "admin_notes": admin_notes or reject_reason,
                 "processed_by": admin_uid
             }}
         )
         
-        return {"message": "Request rejected and PRC refunded", "status": "rejected"}
+        return {"message": "Request rejected and PRC refunded", "status": "rejected", "reject_reason": reject_reason}
     
     elif action == "approve":
         if current_status != "pending":
@@ -20168,17 +20174,31 @@ async def process_bill_payment_request(request: Request):
         if current_status not in ["pending", "processing"]:
             raise HTTPException(status_code=400, detail=f"Cannot complete request with status: {current_status}")
         
+        # Generate TXN number
+        txn_number = f"BP{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
+        
         await db.bill_payment_requests.update_one(
             {"request_id": request_id},
             {"$set": {
                 "status": "completed",
+                "txn_number": txn_number,
                 "processed_at": datetime.now(timezone.utc).isoformat(),
                 "admin_notes": admin_notes,
                 "processed_by": admin_uid
             }}
         )
         
-        return {"message": "Request marked as completed", "status": "completed"}
+        # Notify user
+        await create_notification(
+            user_id=user_id,
+            title="✅ Bill Payment Complete!",
+            message=f"Your ₹{bill_request.get('amount_inr')} {bill_request.get('request_type').replace('_', ' ')} is done. TXN: {txn_number}",
+            notification_type="bill_payment",
+            related_id=request_id,
+            icon="✅"
+        )
+        
+        return {"message": "Request marked as completed", "status": "completed", "txn_number": txn_number}
 
 # ==================== GIFT VOUCHER REDEMPTION ENDPOINTS ====================
 
