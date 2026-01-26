@@ -5931,6 +5931,10 @@ async def reject_vip_payment(payment_id: str, request: Request):
         admin_id = data.get("admin_id")
         reason = data.get("reason", "")
         
+        # Require reject reason
+        if not reason:
+            raise HTTPException(status_code=400, detail="Reject reason is required")
+        
         # Get payment
         payment = await db.vip_payments.find_one({"payment_id": payment_id})
         if not payment:
@@ -5949,9 +5953,20 @@ async def reject_vip_payment(payment_id: str, request: Request):
                     "status": "rejected",
                     "rejected_at": now.isoformat(),
                     "rejected_by": admin_id,
-                    "rejection_reason": reason
+                    "rejection_reason": reason,
+                    "reject_reason": reason  # Consistent field name
                 }
             }
+        )
+        
+        # Notify user
+        await create_notification(
+            user_id=payment.get("user_id"),
+            title="❌ Subscription Payment Rejected",
+            message=f"Your subscription payment was rejected. Reason: {reason}",
+            notification_type="subscription",
+            related_id=payment_id,
+            icon="❌"
         )
         
         # Log activity
@@ -5965,7 +5980,7 @@ async def reject_vip_payment(payment_id: str, request: Request):
             "timestamp": now.isoformat()
         })
         
-        return {"success": True, "message": "Payment rejected"}
+        return {"success": True, "message": "Payment rejected", "reject_reason": reason}
     except HTTPException:
         raise
     except Exception as e:
