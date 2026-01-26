@@ -179,7 +179,7 @@ const Navbar = ({ user, onLogout }) => {
 
           {/* Mobile Navigation */}
           <div className="md:hidden flex items-center gap-2">
-            {user && <NotificationBell userId={user.uid} />}
+            {user && <NotificationBell user={user} />}
             {user ? (
               <DropdownMenu>
               <DropdownMenuTrigger asChild>
