@@ -814,7 +814,6 @@ const AdminBillPayments = ({ user }) => {
                         processedBy={req.processed_by}
                         status={req.status}
                       />
-                    </div>
                     )}
                   </Card>
                 ))}
