@@ -20355,6 +20355,7 @@ async def process_gift_voucher_request(request: Request):
     voucher_details = data.get("voucher_details", {})
     admin_notes = data.get("admin_notes", "")
     admin_uid = data.get("admin_uid")
+    reject_reason = data.get("reject_reason", "")
     
     if action not in ["approve", "reject"]:
         raise HTTPException(status_code=400, detail="Invalid action. Must be: approve or reject")
@@ -20371,6 +20372,10 @@ async def process_gift_voucher_request(request: Request):
     if action == "reject":
         if current_status == "completed":
             raise HTTPException(status_code=400, detail="Cannot reject completed request")
+        
+        # Require reject reason
+        if not reject_reason:
+            raise HTTPException(status_code=400, detail="Reject reason is required")
         
         # Refund PRC to user
         user = await db.users.find_one({"uid": user_id}, {"_id": 0})
@@ -20393,7 +20398,7 @@ async def process_gift_voucher_request(request: Request):
             transaction_type="gift_voucher_refund",
             amount=total_prc,
             description=f"Gift voucher request rejected - Refund (Request ID: {request_id[:8]})",
-            metadata={"request_id": request_id, "reason": "rejected"}
+            metadata={"request_id": request_id, "reason": reject_reason}
         )
         
         # Update request status
@@ -20401,13 +20406,14 @@ async def process_gift_voucher_request(request: Request):
             {"request_id": request_id},
             {"$set": {
                 "status": "rejected",
+                "reject_reason": reject_reason,
                 "processed_at": datetime.now(timezone.utc).isoformat(),
-                "admin_notes": admin_notes,
+                "admin_notes": admin_notes or reject_reason,
                 "processed_by": admin_uid
             }}
         )
         
-        return {"message": "Request rejected and PRC refunded", "status": "rejected"}
+        return {"message": "Request rejected and PRC refunded", "status": "rejected", "reject_reason": reject_reason}
     
     elif action == "approve":
         if current_status != "pending":
@@ -20416,11 +20422,15 @@ async def process_gift_voucher_request(request: Request):
         if not voucher_code:
             raise HTTPException(status_code=400, detail="Voucher code is required for approval")
         
+        # Generate TXN number
+        txn_number = f"GV{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
+        
         # Update request status
         await db.gift_voucher_requests.update_one(
             {"request_id": request_id},
             {"$set": {
                 "status": "completed",
+                "txn_number": txn_number,
                 "voucher_code": voucher_code,
                 "voucher_details": voucher_details,
                 "processed_at": datetime.now(timezone.utc).isoformat(),
@@ -20429,9 +20439,20 @@ async def process_gift_voucher_request(request: Request):
             }}
         )
         
+        # Notify user
+        await create_notification(
+            user_id=user_id,
+            title="🎁 Gift Voucher Ready!",
+            message=f"Your ₹{voucher_request.get('denomination')} gift voucher is ready. TXN: {txn_number}",
+            notification_type="gift_voucher",
+            related_id=request_id,
+            icon="🎁"
+        )
+        
         return {
             "message": "Gift voucher approved and provided to user",
             "status": "completed",
+            "txn_number": txn_number,
             "voucher_code": voucher_code
         }
 
