@@ -193,6 +193,62 @@ const homeTranslations = {
     mr: "सर्व हक्क राखीव",
     hi: "सर्वाधिकार सुरक्षित",
     en: "All rights reserved"
+  },
+  // New Feature Translations
+  luxuryLife: {
+    mr: "पारस लक्झरी लाईफ",
+    hi: "पारस लक्ज़री लाइफ",
+    en: "Paras Luxury Life"
+  },
+  luxuryLifeDesc: {
+    mr: "स्मार्ट सेव्हिंग. बेहतर जगा. तुमच्या PRC कमाईतून 20% आपोआप बचत होते - मोबाइल, बाइक किंवा कार मिळवा!",
+    hi: "स्मार्ट सेविंग। बेहतर जिएं। आपकी PRC कमाई से 20% ऑटो-सेव होता है - मोबाइल, बाइक या कार पाएं!",
+    en: "Smart Saving. Live Better. 20% of your PRC earnings auto-saves towards luxury goals - get a Mobile, Bike, or Car!"
+  },
+  prcRain: {
+    mr: "PRC रेन",
+    hi: "PRC रेन",
+    en: "PRC Rain"
+  },
+  prcRainDesc: {
+    mr: "आकाशातून पडणारे PRC ड्रॉप्स टॅप करा! जिंका किंवा हरा - मजेशीर गेम.",
+    hi: "आसमान से गिरते PRC ड्रॉप्स टैप करें! जीतें या हारें - मज़ेदार गेम।",
+    en: "Tap falling PRC drops from the sky! Win or lose - exciting gamified experience."
+  },
+  subscriptionPlans: {
+    mr: "सबस्क्रिप्शन प्लॅन्स",
+    hi: "सब्सक्रिप्शन प्लान्स",
+    en: "Subscription Plans"
+  },
+  explorer: {
+    mr: "एक्सप्लोरर",
+    hi: "एक्सप्लोरर",
+    en: "Explorer"
+  },
+  startup: {
+    mr: "स्टार्टअप",
+    hi: "स्टार्टअप",
+    en: "Startup"
+  },
+  growth: {
+    mr: "ग्रोथ",
+    hi: "ग्रोथ",
+    en: "Growth"
+  },
+  elite: {
+    mr: "एलीट",
+    hi: "एलीट",
+    en: "Elite"
+  },
+  free: {
+    mr: "विनामूल्य",
+    hi: "मुफ्त",
+    en: "FREE"
+  },
+  perMonth: {
+    mr: "/महिना",
+    hi: "/महीना",
+    en: "/month"
   }
 };
 
