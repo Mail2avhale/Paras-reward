@@ -1,150 +1,104 @@
-# Paras Reward Platform - PRD
+# PARAS Rewards Platform - Product Requirements Document
 
 ## Original Problem Statement
-Build a comprehensive reward and loyalty platform with subscription-based membership system, PRC (Platform Reward Currency) mining, marketplace, gift voucher redemption, bill payment services.
+Build a comprehensive social rewards platform with features including:
+- User authentication and KYC verification
+- Mining and PRC (Paras Rewards Coin) earning mechanisms
+- VIP subscription tiers (Basic, Growth, Elite)
+- Bill payments and gift voucher redemption using PRC
+- "Paras Luxury Life" - Automated savings for luxury products (mobile, bike, car)
+- Admin dashboard for managing users, payments, and platform operations
+- Referral system with activity tracking
 
-## Core Requirements
+## User Personas
+1. **Regular Users**: Earn PRC through mining, tap games, referrals; redeem for bill payments/gift vouchers
+2. **VIP Subscribers**: Enhanced earning rates and features based on tier
+3. **Admins**: Manage platform operations, approve/reject requests, monitor fraud
 
-### User Types
-- **Admin**: Full platform control
-- **Manager**: Regional management
-- **User/Customer**: End user
-
-### Key Features
-
-1. **4-Tier Subscription System**
-   | Plan | Multiplier | Tap Limit | Daily PRC | Ref Weight | Can Redeem | Price |
-   |------|------------|-----------|-----------|------------|------------|-------|
-   | Explorer | 1.0x | 100 | 10 PRC | 1.0x | ❌ | FREE |
-   | Startup | 1.5x | 100 | 50 PRC | 1.2x | ✅ | ₹299/mo |
-   | Growth | 2.0x | 100 | 100 PRC | 1.5x | ✅ | ₹549/mo |
-   | Elite | 3.0x | 100 | 200 PRC | 2.0x | ✅ | ₹799/mo |
-
-2. **PRC (Platform Reward Currency)**
-   - Mining system with subscription multiplier
-   - Explorer users: PRC burns after 2 days inactivity
-   - Paid users: PRC never burns
-
-3. **Paras Luxury Life** ✅ COMPLETE
-   - Auto-save 20% of ALL earned PRC for luxury products
-   - Applies to ALL users (free and paid)
-   - Products:
-     - 📱 Mobile (₹1L) - 4% of 20% auto-save - Down payment: 30,000 PRC (30%)
-     - 🏍️ Bike (₹2L) - 6% of 20% auto-save - Down payment: 60,000 PRC (30%)
-     - 🚗 Car (₹12L) - 10% of 20% auto-save - Down payment: 3,60,000 PRC (30%)
-   - Savings are LOCKED (no withdrawal)
-   - Users can claim at 50% completion
-   - Admin approval/rejection workflow with reasons
-   - Admin can force-redeem at any percentage
-   - Integrated with: Mining, Tap Game, PRC Rain
-
-4. **Marketplace** - Product ordering with PRC
-5. **Bill Payment Services** - Mobile, Electric, DTH, Loan EMI
-6. **Gift Voucher Redemption** - PhonePe, Amazon, Flipkart
-7. **5-Level Referral System**
-8. **Social Features** - Referral messaging, nearby users
-9. **Multi-language Support** - 9 Indian languages
-
----
+## Core Architecture
+- **Frontend**: React with Tailwind CSS, Shadcn/UI components
+- **Backend**: FastAPI (Python) with MongoDB
+- **State Management**: React Context API
+- **Authentication**: JWT-based
 
 ## What's Been Implemented
 
-### Jan 26, 2026 (This Session)
-- ✅ **Verified Admin Luxury Claims Page** - Fully functional
-- ✅ **Tested PRC Rain Luxury Savings** - 80/20 split working
-- ✅ **Tested User Claim at 50%** - Works correctly
-- ✅ **Tested Admin Approve/Reject/Force Redeem** - All working
-- ✅ **Fixed Total Redeemed Bug** - Rejected requests no longer count
-- ✅ **Updated Landing Page (RewardsHome.js)** with:
-  - New "Paras Luxury Life" feature section
-  - New "PRC Rain" feature card
-  - Updated 4-tier subscription plans display
-  - NEW badges on new features
-  - How Luxury Life Works visual guide
-  - Multi-language translations (English, Hindi, Marathi)
+### January 26, 2026 - Request Timeline Feature
+- Created reusable `RequestTimeline` component with SLA badges
+- Enhanced Admin pages (Bill Payments, Gift Vouchers, Subscriptions) with:
+  - SLA warning badges (yellow >48h, red >96h)
+  - Visual timeline showing request submission and processing timestamps
+  - Admin name display (`processed_by`)
+  - Processing time calculation
+- Enhanced User pages (Bill Payments, Gift Voucher Redemption) with:
+  - Expandable rows/cards showing compact timeline view
+- Cleaned up unused `LuxuryProductCard` component from RewardsHome.js
 
-### Previous Session
-- ✅ **Paras Luxury Life Feature** - Complete implementation
-- ✅ Removed "Network" and "Messages" buttons from dashboard
-- ✅ Duplicate UTR prevention across all payment types
-- ✅ Rejection workflow with mandatory reasons
-- ✅ Approval workflow with TXN IDs
-- ✅ Browser cache-busting mechanism
+### Previous Session - Bug Fixes & Enhancements
+- Fixed critical 80/20 luxury savings split bug (frontend API endpoint mismatch)
+- Fixed "Total Redeemed" calculation to exclude rejected requests
+- Complete redesign of landing page (RewardsHome.js) for AdMob compliance
+- Created public `/api/stats` endpoint for landing page statistics
+- Added pagination to AdminSubscriptionManagement.js
+- Added status filter tabs to user-facing Bill Payments and Gift Voucher pages
 
----
+## Pending Issues (P0-P1)
 
-## Code Architecture
+### P0 - Critical
+- None currently
 
-```
-/app/
-├── backend/
-│   └── server.py
-│       - Lines 4218-4250: Fixed total_redeemed calculation
-│       - Lines 10097-10130: Fixed total_redeemed for user list
-│       - Lines 33231-33400: Admin luxury claims APIs
-└── frontend/
-    └── src/
-        ├── pages/
-        │   ├── RewardsHome.js (UPDATED: Landing page with new features)
-        │   ├── ParasLuxuryLife.js (User luxury savings page)
-        │   ├── AdminLuxuryClaims.js (Admin claims management)
-        │   └── DashboardModern.js (Luxury banner)
-        └── App.js (Routes)
-```
+### P1 - High Priority
+1. **Active referral status bug** - Shows "Inactive" for active mining users (USER VERIFICATION PENDING, recurring issue)
+2. **KYC "Failed to approve" error** - Admin cannot approve KYC (BLOCKED - needs user logs from production)
+3. **User-facing search bar** - Functionality is broken
+4. **Dark Theme for Admin pages** - Inconsistent styling across admin pages
+5. **Subscription "Extend" Logic** - Needs verification
+6. **KYC Document Upload on Mobile** - Not working properly
 
----
+## Upcoming Tasks (P1)
+- Architect for Play Store Release (user-only frontend version)
 
-## Bug Fixes This Session
+## Future/Backlog Tasks (P2-P3)
 
-1. **Total Redeemed Display Bug** (FIXED)
-   - **Problem**: Users saw PRC as "redeemed" even after request rejection
-   - **Cause**: Calculation used transactions table which included ALL debits
-   - **Fix**: Now calculates from actual request collections with status filters
-   - Only counts: `approved`, `completed`, `processing`
-   - Excludes: `pending`, `rejected`
+### P2
+- Full Redis Integration (replace in-memory cache)
+- ML Risk Scoring for fraud detection
+- AdMob + Unity Ads Integration
+- Shareable Achievement Cards
 
-2. **Reject Reason Not Showing** (FIXED)
-   - **Problem**: Rejection reason wasn't displayed in admin panel
-   - **Cause**: Field name mismatch (`rejection_reason` vs `reject_reason`)
-   - **Fix**: Added field mapping in GET endpoint
+### P3
+- Refactor monolithic `backend/server.py` into modules
 
----
+## Key Files Reference
 
-## Pending Issues
+### Frontend
+- `/app/frontend/src/components/RequestTimeline.js` - Reusable timeline component
+- `/app/frontend/src/pages/AdminBillPayments.js` - Admin bill payment management
+- `/app/frontend/src/pages/AdminGiftVouchers.js` - Admin gift voucher management
+- `/app/frontend/src/pages/AdminSubscriptionManagement.js` - Admin subscription management
+- `/app/frontend/src/pages/BillPayments.js` - User bill payment page
+- `/app/frontend/src/pages/GiftVoucherRedemption.js` - User gift voucher page
+- `/app/frontend/src/pages/RewardsHome.js` - Public landing page
+- `/app/frontend/src/pages/Mining.js` - Mining/PRC collection
 
-### P0 (Critical)
-- [ ] Active referral status shows "Inactive" for active users (USER VERIFICATION PENDING)
+### Backend
+- `/app/backend/server.py` - Main API server (monolithic, needs refactoring)
 
-### P1 (High Priority)
-- [ ] User-facing search bar functionality (need page details)
-- [ ] Dark Theme fix across ALL Admin pages
-- [ ] Verify Subscription "Extend" Logic
-- [ ] KYC Document Upload on Mobile
+## Database Collections
+- `users` - User accounts with roles, balances, subscription info
+- `bill_payment_requests` - Bill payment requests with `processed_by`, `created_at`, `processed_at`
+- `gift_voucher_requests` - Gift voucher requests with `processed_by`, `created_at`, `processed_at`
+- `vip_payments` - Subscription payment records with `processed_by`, `created_at`, `processed_at`
+- `luxury_savings` - User luxury savings (mobile, bike, car)
+- `mining_history` - Mining activity records
+- `kyc_submissions` - KYC verification documents
 
----
+## Test Reports
+- `/app/test_reports/iteration_37.json` - Latest test report (luxury savings split fix)
+- `/app/backend/tests/test_luxury_savings_split.py` - Luxury savings test file
 
-## Upcoming Tasks (P2)
-- [ ] Architect for Play Store Release
-- [ ] Full Redis Integration
-- [ ] ML Risk Scoring
-- [ ] AdMob + Unity Ads Integration
-- [ ] Shareable Achievement Cards
-
-## Future Tasks (P3)
-- [ ] Refactor monolithic server.py
-
----
-
-## Key APIs
-
-### Luxury Life APIs
-- `GET /api/luxury-life/savings/{user_id}` - Get user savings
-- `POST /api/luxury-life/claim/{user_id}/{product_key}` - Submit claim
-- `GET /api/admin/luxury-claims` - List all claims (Admin)
-- `POST /api/admin/luxury-claims/{claim_id}/approve` - Approve claim
-- `POST /api/admin/luxury-claims/{claim_id}/reject` - Reject with reason
-- `POST /api/admin/luxury-claims/force-redeem/{user_id}/{product_key}` - Admin override
-
-### DB Collections
-- `luxury_savings`: User savings per product
-- `luxury_claims`: Claim requests with status tracking
+## Critical Notes for Developers
+1. **User Communication**: Start responses with `समजलं!` (Marathi acknowledgment)
+2. **Environment**: Preview and production use different databases
+3. **Browser Cache**: Users may need hard refresh (Ctrl+Shift+R) after updates
+4. **Admin Login**: admin@paras.com / admin123
