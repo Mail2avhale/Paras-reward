@@ -2141,29 +2141,69 @@ async def check_unique_fields(field_name: str, value: str, exclude_uid: Optional
     existing = await db.users.find_one(query)
     return existing is None
 
-async def check_unique_utr(utr_number: str, exclude_subscription_id: Optional[str] = None):
-    """Check if UTR number is unique across subscriptions"""
+async def check_unique_utr(utr_number: str, exclude_id: Optional[str] = None, collection_type: str = "all"):
+    """
+    Check if UTR number is unique across all payment collections
+    collection_type: 'all', 'subscription', 'bill_payment', 'gift_voucher'
+    """
     if not utr_number:
         return True
     
     utr_number = utr_number.strip().upper()
     
-    # Check in subscriptions collection
-    query = {"utr_number": utr_number}
-    if exclude_subscription_id:
-        query["subscription_id"] = {"$ne": exclude_subscription_id}
+    collections_to_check = []
     
-    existing_sub = await db.subscriptions.find_one(query)
-    if existing_sub:
-        return False
+    if collection_type in ["all", "subscription"]:
+        collections_to_check.extend([
+            ("subscriptions", "subscription_id"),
+            ("vip_subscriptions", "subscription_id")
+        ])
     
-    # Check in vip_subscriptions collection
-    query_vip = {"utr_number": utr_number}
-    if exclude_subscription_id:
-        query_vip["subscription_id"] = {"$ne": exclude_subscription_id}
+    if collection_type in ["all", "bill_payment"]:
+        collections_to_check.append(("bill_payments", "payment_id"))
     
-    existing_vip = await db.vip_subscriptions.find_one(query_vip)
-    return existing_vip is None
+    if collection_type in ["all", "gift_voucher"]:
+        collections_to_check.append(("gift_voucher_requests", "request_id"))
+    
+    for coll_name, id_field in collections_to_check:
+        query = {"utr_number": utr_number}
+        if exclude_id:
+            query[id_field] = {"$ne": exclude_id}
+        
+        existing = await db[coll_name].find_one(query)
+        if existing:
+            return False
+    
+    return True
+
+
+async def get_utr_usage_info(utr_number: str):
+    """Get info about where UTR is already used"""
+    if not utr_number:
+        return None
+    
+    utr_number = utr_number.strip().upper()
+    
+    # Check subscriptions
+    sub = await db.subscriptions.find_one({"utr_number": utr_number})
+    if sub:
+        return {"type": "Subscription", "id": sub.get("subscription_id"), "status": sub.get("status")}
+    
+    vip_sub = await db.vip_subscriptions.find_one({"utr_number": utr_number})
+    if vip_sub:
+        return {"type": "VIP Subscription", "id": vip_sub.get("subscription_id"), "status": vip_sub.get("status")}
+    
+    # Check bill payments
+    bill = await db.bill_payments.find_one({"utr_number": utr_number})
+    if bill:
+        return {"type": "Bill Payment", "id": bill.get("payment_id"), "status": bill.get("status")}
+    
+    # Check gift vouchers
+    gift = await db.gift_voucher_requests.find_one({"utr_number": utr_number})
+    if gift:
+        return {"type": "Gift Voucher", "id": gift.get("request_id"), "status": gift.get("status")}
+    
+    return None
 
 async def get_duplicate_field_owner(field_name: str, value: str):
     """Get the user who already has this field value (for error messages)"""
