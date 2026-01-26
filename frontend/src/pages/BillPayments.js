@@ -603,7 +603,46 @@ const BillPayments = ({ user, onLogout }) => {
             <p className="text-sm text-gray-500">Processing: 3-7 days</p>
           </div>
           
-          {requests.length === 0 ? (
+          {/* Status Filter Tabs */}
+          <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+            {[
+              { id: 'all', label: 'All', count: requests.length },
+              { id: 'pending', label: 'Pending', count: requests.filter(r => r.status === 'pending').length, color: 'yellow' },
+              { id: 'approved', label: 'Approved', count: requests.filter(r => r.status === 'approved' || r.status === 'processing').length, color: 'blue' },
+              { id: 'completed', label: 'Completed', count: requests.filter(r => r.status === 'completed').length, color: 'green' },
+              { id: 'rejected', label: 'Rejected', count: requests.filter(r => r.status === 'rejected').length, color: 'red' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => { setStatusFilter(tab.id); setCurrentPage(1); }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                  statusFilter === tab.id
+                    ? tab.color === 'yellow' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                    : tab.color === 'blue' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                    : tab.color === 'green' ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                    : tab.color === 'red' ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                    : 'bg-gray-700 text-white border border-gray-600'
+                    : 'bg-gray-800/50 text-gray-400 border border-gray-700 hover:bg-gray-800'
+                }`}
+              >
+                {tab.label}
+                <span className={`px-2 py-0.5 rounded-full text-xs ${
+                  statusFilter === tab.id ? 'bg-white/20' : 'bg-gray-700'
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+          
+          {(() => {
+            const filteredRequests = statusFilter === 'all' 
+              ? requests 
+              : statusFilter === 'approved'
+              ? requests.filter(r => r.status === 'approved' || r.status === 'processing')
+              : requests.filter(r => r.status === statusFilter);
+            
+            return filteredRequests.length === 0 ? (
             <div className="text-center py-12">
               <Receipt className="h-16 w-16 mx-auto text-gray-700 mb-4" />
               <p className="text-gray-500">No requests yet</p>
