@@ -6129,6 +6129,26 @@ async def verify_kyc(kyc_id: str, action: VIPPaymentAction):
             {"$set": {"kyc_status": status}}
         )
         
+        # Notify user about KYC status
+        if status == "verified":
+            await create_notification(
+                user_id=kyc["user_id"],
+                title="✅ KYC Verified!",
+                message="Your KYC verification is complete. You now have full access to all platform features.",
+                notification_type="kyc",
+                related_id=kyc_id,
+                icon="✅"
+            )
+        else:
+            await create_notification(
+                user_id=kyc["user_id"],
+                title="❌ KYC Rejected",
+                message="Your KYC verification was rejected. Please re-upload your documents with clear images.",
+                notification_type="kyc",
+                related_id=kyc_id,
+                icon="❌"
+            )
+        
         return {"message": f"KYC {status} successfully", "status": status}
     except HTTPException:
         raise
