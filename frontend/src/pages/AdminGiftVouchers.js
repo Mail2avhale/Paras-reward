@@ -10,8 +10,9 @@ import Pagination from '@/components/Pagination';
 import { 
   ArrowLeft, Gift, Clock, CheckCircle, XCircle, Search, 
   RefreshCw, Loader2, Eye, User, CreditCard, Calendar,
-  IndianRupee, Tag, ShoppingBag, ChevronDown
+  IndianRupee, Tag, ShoppingBag, ChevronDown, AlertTriangle
 } from 'lucide-react';
+import RequestTimeline, { SLABadge } from '../components/RequestTimeline';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 const ITEMS_PER_PAGE = 15;
@@ -476,6 +477,8 @@ const AdminGiftVouchers = ({ user }) => {
                               }`}>
                                 {req.status}
                               </span>
+                              {/* SLA Warning Badge */}
+                              {req.status === 'pending' && <SLABadge createdAt={req.created_at} status={req.status} />}
                             </div>
                             <p className="text-purple-400 text-sm font-medium">{brand.name}</p>
                             <p className="text-gray-500 text-sm truncate">{req.user_email}</p>
@@ -604,6 +607,14 @@ const AdminGiftVouchers = ({ user }) => {
                               <p className="text-white">{req.admin_notes}</p>
                             </div>
                           )}
+                          
+                          {/* Request Timeline */}
+                          <RequestTimeline
+                            createdAt={req.created_at}
+                            processedAt={req.processed_at}
+                            processedBy={req.processed_by}
+                            status={req.status}
+                          />
                         </div>
                       )}
                     </Card>
