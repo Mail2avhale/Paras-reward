@@ -985,7 +985,7 @@ const DashboardModern = ({ user, onLogout }) => {
                     <h3 className="font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-200 text-base">LUXURY LIFE</h3>
                     <span className="px-2 py-0.5 bg-amber-500/30 rounded text-[8px] text-amber-300 font-bold">20% AUTO-SAVE</span>
                   </div>
-                  <p className="text-amber-200/70 text-xs italic mt-0.5">"Smart Saving. Live Better."</p>
+                  <p className="text-amber-200/70 text-xs italic mt-0.5">&ldquo;Smart Saving. Live Better.&rdquo;</p>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-[10px] text-gray-400">📱 Mobile</span>
                     <span className="text-[10px] text-gray-400">🏍️ Bike</span>
