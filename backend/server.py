@@ -20308,7 +20308,8 @@ async def process_bill_payment_request(request: Request):
                 "txn_number": txn_number,
                 "processed_at": datetime.now(timezone.utc).isoformat(),
                 "admin_notes": admin_notes,
-                "processed_by": admin_uid
+                "processed_by": admin_name,
+                "processed_by_uid": admin_uid
             }}
         )
         
