@@ -4527,15 +4527,15 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
     taps_to_add = min(tap_data.taps, remaining_taps)
     prc_earned = round(taps_to_add * prc_per_tap, 2)
     
-    # Process luxury savings for paid users (20% auto-deduct)
+    # Process luxury savings for ALL users (20% auto-deduct)
     luxury_deduction = 0
     luxury_savings_result = None
-    if is_paid and sub_info.get("is_active", False):
-        luxury_savings_result = await process_luxury_savings(uid, prc_earned)
-        if luxury_savings_result:
-            luxury_deduction = luxury_savings_result.get("total_saved", 0)
+    # Luxury Life is now for ALL users
+    luxury_savings_result = await process_luxury_savings(uid, prc_earned)
+    if luxury_savings_result:
+        luxury_deduction = luxury_savings_result.get("total_saved", 0)
     
-    # User receives 80% if paid user, else 100%
+    # User receives 80% (20% goes to luxury savings)
     user_receives = prc_earned - luxury_deduction
     
     # Update user
