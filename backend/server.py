@@ -21336,6 +21336,11 @@ async def end_rain_session(request: Request):
             "taps": session.get("taps_count", 0) if session else 0,
             "prc_gained": session.get("prc_gained", 0) if session else 0,
             "prc_lost": session.get("prc_lost", 0) if session else 0,
+            "net_prc": (session.get("prc_gained", 0) - session.get("prc_lost", 0)) if session else 0,
+            "luxury_savings": session.get("luxury_savings", 0) if session else 0
+        }
+    }
+            "prc_lost": session.get("prc_lost", 0) if session else 0,
             "net_prc": (session.get("prc_gained", 0) - session.get("prc_lost", 0)) if session else 0
         }
     }
