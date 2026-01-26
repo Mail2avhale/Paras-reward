@@ -4,9 +4,10 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Gift, Clock, CheckCircle, XCircle, AlertCircle,
-  Sparkles, Award, TrendingUp, Wallet
+  Sparkles, Award, TrendingUp, Wallet, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import RequestTimeline from '../components/RequestTimeline';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
@@ -19,6 +20,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
   const [selectedDenomination, setSelectedDenomination] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('all'); // NEW: Status filter
+  const [expandedRequest, setExpandedRequest] = useState(null); // For timeline expansion
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -302,7 +304,10 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
             <div className="space-y-3">
               {filteredRequests.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((req) => (
                 <div key={req.request_id} className="bg-gray-800/50 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-2">
+                  <div 
+                    className="flex items-center justify-between mb-2 cursor-pointer"
+                    onClick={() => setExpandedRequest(expandedRequest === req.request_id ? null : req.request_id)}
+                  >
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">{denominations.find(d => d.value === req.denomination)?.icon || '🎁'}</span>
                       <div>
@@ -310,13 +315,29 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
                         <p className="text-gray-500 text-xs">{new Date(req.created_at).toLocaleDateString()}</p>
                       </div>
                     </div>
-                    {getStatusBadge(req.status)}
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(req.status)}
+                      {expandedRequest === req.request_id ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                    </div>
                   </div>
                   
                   <div className="flex justify-between text-sm mt-2">
                     <span className="text-gray-500">{t('prcDeducted')}:</span>
                     <span className="text-amber-500 font-semibold">{req.total_prc_deducted?.toFixed(2)} PRC</span>
                   </div>
+                  
+                  {/* Expanded Timeline Section */}
+                  {expandedRequest === req.request_id && (
+                    <div className="mt-4 pt-4 border-t border-gray-700">
+                      <RequestTimeline
+                        createdAt={req.created_at}
+                        processedAt={req.processed_at}
+                        processedBy={req.processed_by}
+                        status={req.status}
+                        variant="compact"
+                      />
+                    </div>
+                  )}
                   
                   {req.rejection_reason && req.status === 'rejected' && (
                     <div className="mt-3 p-3 bg-red-500/10 rounded-lg border border-red-500/30">
