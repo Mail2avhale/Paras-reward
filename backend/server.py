@@ -20276,6 +20276,16 @@ async def process_bill_payment_request(request: Request):
             }}
         )
         
+        # Notify user about rejection
+        await create_notification(
+            user_id=user_id,
+            title="❌ Bill Payment Rejected",
+            message=f"Your ₹{bill_request.get('amount_inr')} {bill_request.get('request_type', '').replace('_', ' ')} request was rejected. Reason: {reject_reason}. PRC has been refunded.",
+            notification_type="bill_payment",
+            related_id=request_id,
+            icon="❌"
+        )
+        
         return {"message": "Request rejected and PRC refunded", "status": "rejected", "reject_reason": reject_reason}
     
     elif action == "approve":
@@ -20290,6 +20300,16 @@ async def process_bill_payment_request(request: Request):
                 "processed_by": admin_name,
                 "processed_by_uid": admin_uid
             }}
+        )
+        
+        # Notify user about approval
+        await create_notification(
+            user_id=user_id,
+            title="🎉 Bill Payment Approved!",
+            message=f"Your ₹{bill_request.get('amount_inr')} {bill_request.get('request_type', '').replace('_', ' ')} has been approved and is being processed.",
+            notification_type="bill_payment",
+            related_id=request_id,
+            icon="🎉"
         )
         
         return {"message": "Request approved and set to processing", "status": "processing"}
