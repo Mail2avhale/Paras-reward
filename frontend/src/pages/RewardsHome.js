@@ -367,7 +367,7 @@ const RewardsHome = () => {
       description: t('prcRainDesc'),
       color: 'from-cyan-500 to-blue-600',
       isNew: true,
-      link: '/prc-rain'
+      link: '/register'
     }
   ];
 
