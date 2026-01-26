@@ -596,6 +596,7 @@ const AdminBillPayments = ({ user }) => {
 
                     {/* Expanded Details */}
                     {selectedRequest?.request_id === req.request_id && (
+                      <>
                       <div className="mt-4 pt-4 border-t border-gray-800 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
                           <p className="text-gray-500 text-xs">Email</p>
@@ -814,6 +815,7 @@ const AdminBillPayments = ({ user }) => {
                         processedBy={req.processed_by}
                         status={req.status}
                       />
+                      </>
                     )}
                   </Card>
                 ))}
