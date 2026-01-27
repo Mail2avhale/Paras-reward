@@ -20531,30 +20531,28 @@ async def get_all_gift_voucher_requests(status: Optional[str] = None, search: Op
     
     requests = await db.gift_voucher_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
     
-    # Get statistics
-    total_pending = await db.gift_voucher_requests.count_documents({"status": "pending"})
-    total_completed = await db.gift_voucher_requests.count_documents({"status": "completed"})
-    total_rejected = await db.gift_voucher_requests.count_documents({"status": "rejected"})
+    # Use aggregation pipeline for efficient stats calculation
+    stats_pipeline = [
+        {"$group": {
+            "_id": "$status",
+            "count": {"$sum": 1},
+            "total_value": {"$sum": "$denomination"}
+        }}
+    ]
+    stats_result = await db.gift_voucher_requests.aggregate(stats_pipeline).to_list(10)
     
-    # Calculate total value
-    total_value_pending = 0
-    total_value_completed = 0
-    
-    async for req in db.gift_voucher_requests.find({"status": "pending"}):
-        total_value_pending += req.get("denomination", 0)
-    
-    async for req in db.gift_voucher_requests.find({"status": "completed"}):
-        total_value_completed += req.get("denomination", 0)
+    # Parse aggregation results
+    stats_by_status = {s["_id"]: {"count": s["count"], "value": s["total_value"]} for s in stats_result}
     
     return {
         "requests": requests,
         "count": len(requests),
         "stats": {
-            "pending": total_pending,
-            "completed": total_completed,
-            "rejected": total_rejected,
-            "total_value_pending": total_value_pending,
-            "total_value_completed": total_value_completed
+            "pending": stats_by_status.get("pending", {}).get("count", 0),
+            "completed": stats_by_status.get("completed", {}).get("count", 0),
+            "rejected": stats_by_status.get("rejected", {}).get("count", 0),
+            "total_value_pending": stats_by_status.get("pending", {}).get("value", 0),
+            "total_value_completed": stats_by_status.get("completed", {}).get("value", 0)
         }
     }
 
