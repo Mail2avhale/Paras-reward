@@ -17,8 +17,8 @@ const NotificationBell = ({ user }) => {
   useEffect(() => {
     if (user?.uid) {
       fetchUnreadCount();
-      // Poll for new notifications every 30 seconds
-      const interval = setInterval(fetchUnreadCount, 30000);
+      // Poll for new notifications every 60 seconds (increased from 30s for performance)
+      const interval = setInterval(fetchUnreadCount, 60000);
       return () => clearInterval(interval);
     }
   }, [user]);
