@@ -10,6 +10,10 @@ import hashlib
 from datetime import datetime, timezone
 from typing import Optional, Any, Callable
 from functools import wraps
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Try to import upstash-redis first (HTTP-based, works everywhere)
 UPSTASH_AVAILABLE = False
@@ -21,13 +25,12 @@ try:
 except ImportError:
     pass
 
-# Fallback to regular redis-py if upstash not available
-if not UPSTASH_AVAILABLE:
-    try:
-        import redis.asyncio as redis
-        REDIS_AVAILABLE = True
-    except ImportError:
-        pass
+# Also check if redis-py is available for local Redis fallback
+try:
+    import redis.asyncio as redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    pass
 
 # In-memory cache fallback
 _memory_cache = {}
