@@ -21677,9 +21677,10 @@ async def update_settings(
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=["*"] if os.environ.get('CORS_ORIGINS', '*') == '*' else os.environ.get('CORS_ORIGINS', '*').split(','),
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_origin_regex=".*",  # Allow all origins including subdomains
 )
 
 logging.basicConfig(
