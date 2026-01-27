@@ -4048,7 +4048,7 @@ async def get_mining_status(uid: str):
     rate_per_minute, base_rate, active_referrals, referral_breakdown = await calculate_mining_rate(uid)
     mining_rate_per_hour = rate_per_minute * 60
     
-    return {
+    result = {
         "current_balance": user.get("prc_balance", 0),
         "mining_rate": mining_rate_per_hour,  # New field name
         "mining_rate_per_hour": mining_rate_per_hour,  # Backward compatibility
@@ -4063,6 +4063,11 @@ async def get_mining_status(uid: str):
         "mined_this_session": round(mined_this_session, 2),
         "is_mining": session_active
     }
+    
+    # Cache for 30 seconds
+    await cache.set(cache_key, result, ttl=30)
+    
+    return result
 
 @api_router.post("/mining/claim/{uid}")
 async def claim_mining(uid: str):
