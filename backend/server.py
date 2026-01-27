@@ -5532,6 +5532,8 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
 async def approve_vip_payment(payment_id: str, request: Request):
     """Approve VIP payment and activate membership with fraud prevention"""
     try:
+        print(f"VIP Payment approve request: payment_id={payment_id}")
+        
         data = await request.json()
         admin_id = data.get("admin_id")
         notes = data.get("notes", "")
@@ -5541,12 +5543,19 @@ async def approve_vip_payment(payment_id: str, request: Request):
         # Get payment
         payment = await db.vip_payments.find_one({"payment_id": payment_id})
         if not payment:
-            raise HTTPException(status_code=404, detail="Payment not found")
+            print(f"VIP Payment not found: {payment_id}")
+            raise HTTPException(status_code=404, detail=f"Payment not found: {payment_id}")
         
-        if payment.get("status") != "pending":
-            raise HTTPException(status_code=400, detail="Payment already processed")
+        current_status = payment.get("status")
+        if current_status != "pending":
+            print(f"VIP Payment already processed: {payment_id} status={current_status}")
+            # Return success for already approved (idempotent)
+            if current_status == "approved":
+                return {"message": "Payment already approved", "status": "approved", "success": True}
+            raise HTTPException(status_code=400, detail=f"Payment already {current_status}")
         
         user_id = payment.get("user_id")
+        print(f"Processing VIP payment for user: {user_id}")
         
         # Use corrected plan/duration if admin specified (fraud prevention)
         original_plan = payment.get("subscription_plan", "startup")
