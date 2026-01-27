@@ -232,17 +232,22 @@ const AdminBillPayments = ({ user }) => {
   const handleQuickReject = async (req, e) => {
     e.stopPropagation();
     const reason = window.prompt('Rejection reason:');
-    if (reason === null) return;
+    if (reason === null) return; // User cancelled
+    if (!reason.trim()) {
+      toast.error('Rejection reason is required');
+      return;
+    }
     
     try {
       setProcessing(true);
       await axios.post(`${API}/api/admin/bill-payment/process`, {
         request_id: req.request_id,
         action: 'reject',
-        admin_notes: reason,
+        reject_reason: reason.trim(),
+        admin_notes: reason.trim(),
         admin_uid: user.uid
       });
-      toast.success('Request rejected');
+      toast.success('Request rejected and PRC refunded');
       fetchRequests();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to reject');
