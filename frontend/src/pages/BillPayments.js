@@ -694,7 +694,15 @@ const BillPayments = ({ user, onLogout }) => {
                                 status={req.status}
                                 variant="compact"
                               />
-                              {req.admin_notes && (
+                              {/* Show rejection reason prominently */}
+                              {req.status === 'rejected' && (req.reject_reason || req.admin_notes) && (
+                                <div className="mt-3 p-3 bg-red-500/10 rounded-lg border border-red-500/30">
+                                  <p className="text-red-400 text-xs font-medium">❌ Rejection Reason:</p>
+                                  <p className="text-red-300 text-sm mt-1">{req.reject_reason || req.admin_notes}</p>
+                                </div>
+                              )}
+                              {/* Show admin notes for other statuses */}
+                              {req.status !== 'rejected' && req.admin_notes && (
                                 <div className="mt-3 p-3 bg-gray-700/50 rounded-lg">
                                   <p className="text-gray-400 text-xs">Admin Notes:</p>
                                   <p className="text-white text-sm">{req.admin_notes}</p>
