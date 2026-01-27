@@ -220,8 +220,10 @@ const AdminBillPayments = ({ user }) => {
         action: 'approve',
         admin_uid: user.uid
       });
-      toast.success('Request approved!');
-      fetchRequests();
+      toast.success('Request approved! Moved to Approved tab.');
+      await fetchRequests();
+      // Optionally switch to processing/approved tab
+      setActiveTab('processing');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to approve');
     } finally {
