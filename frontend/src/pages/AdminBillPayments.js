@@ -249,8 +249,10 @@ const AdminBillPayments = ({ user }) => {
         admin_notes: reason.trim(),
         admin_uid: user.uid
       });
-      toast.success('Request rejected and PRC refunded');
-      fetchRequests();
+      toast.success('Request rejected and PRC refunded. Moved to Rejected tab.');
+      await fetchRequests();
+      // Switch to rejected tab
+      setActiveTab('rejected');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to reject');
     } finally {
