@@ -114,15 +114,29 @@ const AdminKYC = ({ user }) => {
     e.stopPropagation();
     if (!window.confirm(`Approve KYC for ${doc.user_name || doc.user_id}?`)) return;
     
+    // Store kyc_id immediately before any async operations
+    const kycId = doc.kyc_id;
+    const userName = doc.user_name || doc.user_id;
+    
     try {
       setProcessing(true);
-      await axios.post(`${API}/kyc/${doc.kyc_id}/verify`, {
+      await axios.post(`${API}/kyc/${kycId}/verify`, {
         action: 'approve',
         admin_id: user?.uid
       });
-      toast.success('KYC Approved!');
-      fetchKYCDocuments();
+      toast.success(`KYC Approved for ${userName}!`);
+      
+      // Optimistic local update instead of full refetch
+      setKycDocuments(prev => prev.map(d => 
+        d.kyc_id === kycId 
+          ? {...d, status: 'verified', verified_at: new Date().toISOString()} 
+          : d
+      ));
+      
+      // Background refresh after delay
+      setTimeout(() => fetchKYCDocuments(), 3000);
     } catch (error) {
+      console.error('KYC approve error:', error);
       toast.error(error.response?.data?.detail || 'Failed to approve');
     } finally {
       setProcessing(false);
