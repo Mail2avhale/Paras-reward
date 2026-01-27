@@ -6180,18 +6180,23 @@ async def get_kyc_documents():
 async def verify_kyc(kyc_id: str, action: VIPPaymentAction):
     """Verify or reject KYC (Admin)"""
     try:
+        print(f"KYC verify request: kyc_id={kyc_id}, action={action.action}")
+        
         kyc = await db.kyc_documents.find_one({"kyc_id": kyc_id})
         if not kyc:
-            raise HTTPException(status_code=404, detail="KYC document not found")
+            print(f"KYC not found: {kyc_id}")
+            raise HTTPException(status_code=404, detail=f"KYC document not found: {kyc_id}")
         
         # Check if already verified/rejected
         current_status = kyc.get("status", "pending")
         if current_status in ["verified", "rejected"]:
-            return {"message": f"KYC already {current_status}", "status": current_status}
+            print(f"KYC already {current_status}: {kyc_id}")
+            return {"message": f"KYC already {current_status}", "status": current_status, "success": True}
         
         status = "verified" if action.action == "approve" else "rejected"
         
-        await db.kyc_documents.update_one(
+        # Update KYC document
+        result = await db.kyc_documents.update_one(
             {"kyc_id": kyc_id},
             {"$set": {
                 "status": status, 
@@ -6199,37 +6204,45 @@ async def verify_kyc(kyc_id: str, action: VIPPaymentAction):
                 "verified_by": getattr(action, 'admin_id', None)
             }}
         )
+        print(f"KYC update result: modified={result.modified_count}")
         
-        await db.users.update_one(
+        # Update user KYC status
+        user_result = await db.users.update_one(
             {"uid": kyc["user_id"]},
             {"$set": {"kyc_status": status}}
         )
+        print(f"User KYC status update: modified={user_result.modified_count}")
         
         # Notify user about KYC status
-        if status == "verified":
-            await create_notification(
-                user_id=kyc["user_id"],
-                title="✅ KYC Verified!",
-                message="Your KYC verification is complete. You now have full access to all platform features.",
-                notification_type="kyc",
-                related_id=kyc_id,
-                icon="✅"
-            )
-        else:
-            await create_notification(
-                user_id=kyc["user_id"],
-                title="❌ KYC Rejected",
-                message="Your KYC verification was rejected. Please re-upload your documents with clear images.",
-                notification_type="kyc",
-                related_id=kyc_id,
-                icon="❌"
-            )
+        try:
+            if status == "verified":
+                await create_notification(
+                    user_id=kyc["user_id"],
+                    title="✅ KYC Verified!",
+                    message="Your KYC verification is complete. You now have full access to all platform features.",
+                    notification_type="kyc",
+                    related_id=kyc_id,
+                    icon="✅"
+                )
+            else:
+                await create_notification(
+                    user_id=kyc["user_id"],
+                    title="❌ KYC Rejected",
+                    message="Your KYC verification was rejected. Please re-upload your documents with clear images.",
+                    notification_type="kyc",
+                    related_id=kyc_id,
+                    icon="❌"
+                )
+        except Exception as notif_error:
+            print(f"Notification error (non-blocking): {notif_error}")
         
-        return {"message": f"KYC {status} successfully", "status": status}
+        return {"message": f"KYC {status} successfully", "status": status, "success": True}
     except HTTPException:
         raise
     except Exception as e:
         print(f"KYC verify error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to verify KYC: {str(e)}")
 
 # ========== MARKETPLACE ROUTES ==========
