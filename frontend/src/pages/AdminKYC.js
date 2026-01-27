@@ -158,8 +158,21 @@ const AdminKYC = ({ user }) => {
         admin_id: user?.uid
       });
       toast.success(`KYC ${action === 'approve' ? 'approved' : 'rejected'} successfully`);
+      
+      // Optimistic local update instead of full refetch (FASTER!)
+      const newStatus = action === 'approve' ? 'verified' : 'rejected';
+      setDocuments(prev => prev.map(doc => 
+        doc.kyc_id === kycId 
+          ? {...doc, status: newStatus, verified_at: new Date().toISOString()} 
+          : doc
+      ));
+      
       setSelectedDoc(null);
-      fetchKYCDocuments();
+      
+      // Background refresh (non-blocking)
+      setTimeout(() => {
+        fetchKYCDocuments();
+      }, 2000);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to update KYC status');
     } finally {
