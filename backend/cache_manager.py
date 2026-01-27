@@ -1,6 +1,7 @@
 """
 Cache Manager for Paras Rewards Platform
-Implements Redis caching for high-performance data access
+Implements Redis caching with Upstash Redis (HTTP-based) support
+Includes fallback to local Redis and in-memory cache
 """
 
 import os
@@ -10,13 +11,23 @@ from datetime import datetime, timezone
 from typing import Optional, Any, Callable
 from functools import wraps
 
-# Try to import redis, fallback to in-memory cache if not available
+# Try to import upstash-redis first (HTTP-based, works everywhere)
+UPSTASH_AVAILABLE = False
+REDIS_AVAILABLE = False
+
 try:
-    import redis.asyncio as redis
-    REDIS_AVAILABLE = True
+    from upstash_redis.asyncio import Redis as UpstashRedis
+    UPSTASH_AVAILABLE = True
 except ImportError:
-    REDIS_AVAILABLE = False
-    print("⚠️ Redis not available, using in-memory cache")
+    pass
+
+# Fallback to regular redis-py if upstash not available
+if not UPSTASH_AVAILABLE:
+    try:
+        import redis.asyncio as redis
+        REDIS_AVAILABLE = True
+    except ImportError:
+        pass
 
 # In-memory cache fallback
 _memory_cache = {}
@@ -25,36 +36,62 @@ _cache_expiry = {}
 
 class CacheManager:
     """
-    Unified cache manager supporting Redis and in-memory fallback
+    Unified cache manager supporting:
+    1. Upstash Redis (HTTP-based, cloud hosted) - PREFERRED
+    2. Local Redis (TCP-based)
+    3. In-memory fallback
     """
     
     def __init__(self):
         self.redis_client = None
         self.use_redis = False
+        self.use_upstash = False
         self.default_ttl = 300  # 5 minutes default
+        self.connection_type = "none"
         
     async def initialize(self):
-        """Initialize Redis connection"""
-        if not REDIS_AVAILABLE:
-            print("📦 Using in-memory cache (Redis not installed)")
-            return
-            
-        redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+        """Initialize Redis connection - tries Upstash first, then local Redis, then in-memory"""
         
-        try:
-            self.redis_client = redis.from_url(
-                redis_url,
-                encoding="utf-8",
-                decode_responses=True
-            )
-            # Test connection
-            await self.redis_client.ping()
-            self.use_redis = True
-            print(f"✅ Redis connected: {redis_url}")
-        except Exception as e:
-            print(f"⚠️ Redis connection failed: {e}")
-            print("📦 Falling back to in-memory cache")
-            self.use_redis = False
+        # 1. Try Upstash Redis first (recommended for production)
+        upstash_url = os.environ.get("UPSTASH_REDIS_REST_URL")
+        upstash_token = os.environ.get("UPSTASH_REDIS_REST_TOKEN")
+        
+        if UPSTASH_AVAILABLE and upstash_url and upstash_token:
+            try:
+                self.redis_client = UpstashRedis(url=upstash_url, token=upstash_token)
+                # Test connection
+                await self.redis_client.ping()
+                self.use_redis = True
+                self.use_upstash = True
+                self.connection_type = "upstash"
+                print(f"✅ Upstash Redis connected successfully")
+                return
+            except Exception as e:
+                print(f"⚠️ Upstash Redis connection failed: {e}")
+        
+        # 2. Try local Redis as fallback
+        if REDIS_AVAILABLE:
+            redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+            try:
+                self.redis_client = redis.from_url(
+                    redis_url,
+                    encoding="utf-8",
+                    decode_responses=True
+                )
+                await self.redis_client.ping()
+                self.use_redis = True
+                self.use_upstash = False
+                self.connection_type = "local_redis"
+                print(f"✅ Local Redis connected: {redis_url}")
+                return
+            except Exception as e:
+                print(f"⚠️ Redis connection failed: {e}")
+        
+        # 3. Fall back to in-memory cache
+        print("📦 Falling back to in-memory cache")
+        self.use_redis = False
+        self.use_upstash = False
+        self.connection_type = "in_memory"
     
     async def get(self, key: str) -> Optional[Any]:
         """Get value from cache"""
@@ -62,7 +99,13 @@ class CacheManager:
             if self.use_redis and self.redis_client:
                 value = await self.redis_client.get(key)
                 if value:
-                    return json.loads(value)
+                    # Upstash returns string, local redis with decode_responses also returns string
+                    if isinstance(value, str):
+                        try:
+                            return json.loads(value)
+                        except json.JSONDecodeError:
+                            return value
+                    return value
             else:
                 # In-memory fallback
                 if key in _memory_cache:
@@ -83,7 +126,12 @@ class CacheManager:
             json_value = json.dumps(value, default=str)
             
             if self.use_redis and self.redis_client:
-                await self.redis_client.setex(key, ttl, json_value)
+                if self.use_upstash:
+                    # Upstash uses setex method
+                    await self.redis_client.setex(key, ttl, json_value)
+                else:
+                    # Local redis
+                    await self.redis_client.setex(key, ttl, json_value)
             else:
                 # In-memory fallback
                 _memory_cache[key] = value
@@ -110,12 +158,19 @@ class CacheManager:
         """Delete all keys matching pattern"""
         try:
             if self.use_redis and self.redis_client:
-                keys = []
-                async for key in self.redis_client.scan_iter(match=pattern):
-                    keys.append(key)
-                if keys:
-                    await self.redis_client.delete(*keys)
-                return len(keys)
+                if self.use_upstash:
+                    # Upstash doesn't support SCAN, so we need to track keys differently
+                    # For now, just delete the exact pattern key
+                    await self.redis_client.delete(pattern)
+                    return 1
+                else:
+                    # Local redis supports scan_iter
+                    keys = []
+                    async for key in self.redis_client.scan_iter(match=pattern):
+                        keys.append(key)
+                    if keys:
+                        await self.redis_client.delete(*keys)
+                    return len(keys)
             else:
                 # In-memory fallback
                 import fnmatch
@@ -132,7 +187,11 @@ class CacheManager:
         """Clear all cache"""
         try:
             if self.use_redis and self.redis_client:
-                await self.redis_client.flushdb()
+                if self.use_upstash:
+                    # Upstash: Use FLUSHDB command
+                    await self.redis_client.flushdb()
+                else:
+                    await self.redis_client.flushdb()
             else:
                 _memory_cache.clear()
                 _cache_expiry.clear()
@@ -141,23 +200,67 @@ class CacheManager:
             print(f"Cache flush error: {e}")
             return False
     
+    async def incr(self, key: str, amount: int = 1) -> int:
+        """Increment a counter atomically"""
+        try:
+            if self.use_redis and self.redis_client:
+                if self.use_upstash:
+                    return await self.redis_client.incrby(key, amount)
+                else:
+                    return await self.redis_client.incrby(key, amount)
+            else:
+                # In-memory fallback
+                current = _memory_cache.get(key, 0)
+                new_value = int(current) + amount
+                _memory_cache[key] = new_value
+                return new_value
+        except Exception as e:
+            print(f"Cache incr error: {e}")
+            return 0
+    
+    async def expire(self, key: str, ttl: int) -> bool:
+        """Set expiration on a key"""
+        try:
+            if self.use_redis and self.redis_client:
+                await self.redis_client.expire(key, ttl)
+            else:
+                # In-memory fallback
+                if key in _memory_cache:
+                    _cache_expiry[key] = datetime.now(timezone.utc).timestamp() + ttl
+            return True
+        except Exception as e:
+            print(f"Cache expire error: {e}")
+            return False
+    
     async def get_stats(self) -> dict:
         """Get cache statistics"""
         try:
             if self.use_redis and self.redis_client:
-                info = await self.redis_client.info("memory")
-                keys_count = await self.redis_client.dbsize()
-                return {
-                    "type": "redis",
-                    "connected": True,
-                    "keys": keys_count,
-                    "memory_used": info.get("used_memory_human", "N/A"),
-                    "memory_peak": info.get("used_memory_peak_human", "N/A")
-                }
+                if self.use_upstash:
+                    # Upstash provides limited info
+                    return {
+                        "type": "upstash_redis",
+                        "connected": True,
+                        "connection_type": self.connection_type,
+                        "keys": "N/A (Upstash)",
+                        "memory_used": "N/A (Upstash managed)"
+                    }
+                else:
+                    info = await self.redis_client.info("memory")
+                    keys_count = await self.redis_client.dbsize()
+                    return {
+                        "type": "local_redis",
+                        "connected": True,
+                        "connection_type": self.connection_type,
+                        "keys": keys_count,
+                        "memory_used": info.get("used_memory_human", "N/A"),
+                        "memory_peak": info.get("used_memory_peak_human", "N/A")
+                    }
             else:
                 return {
-                    "type": "in-memory",
+                    "type": "in_memory",
                     "connected": True,
+                    "connection_type": self.connection_type,
                     "keys": len(_memory_cache),
                     "memory_used": "N/A"
                 }
@@ -167,6 +270,69 @@ class CacheManager:
 
 # Global cache instance
 cache = CacheManager()
+
+
+# ============ RATE LIMITING ============
+
+class RateLimiter:
+    """
+    Distributed rate limiter using Redis
+    Implements sliding window counter algorithm
+    """
+    
+    RATE_LIMIT_PREFIX = "rate_limit:"
+    
+    @staticmethod
+    async def is_allowed(identifier: str, endpoint: str = "global", 
+                        max_requests: int = 60, window_seconds: int = 60) -> tuple:
+        """
+        Check if request is allowed under rate limit
+        Returns: (allowed: bool, remaining: int, reset_in: int)
+        """
+        try:
+            key = f"{RateLimiter.RATE_LIMIT_PREFIX}{identifier}:{endpoint}"
+            
+            # Get current count
+            current = await cache.get(key)
+            current_count = int(current) if current else 0
+            
+            if current_count >= max_requests:
+                # Rate limit exceeded
+                return False, 0, window_seconds
+            
+            # Increment counter
+            new_count = await cache.incr(key)
+            
+            # Set expiry on first request
+            if new_count == 1:
+                await cache.expire(key, window_seconds)
+            
+            remaining = max(0, max_requests - new_count)
+            return True, remaining, window_seconds
+            
+        except Exception as e:
+            print(f"Rate limiter error: {e}")
+            # Fail open - allow request on error
+            return True, max_requests, 0
+    
+    @staticmethod
+    async def get_status(identifier: str, endpoint: str = "global", 
+                        max_requests: int = 60) -> dict:
+        """Get current rate limit status for identifier"""
+        try:
+            key = f"{RateLimiter.RATE_LIMIT_PREFIX}{identifier}:{endpoint}"
+            current = await cache.get(key)
+            current_count = int(current) if current else 0
+            
+            return {
+                "identifier": identifier,
+                "endpoint": endpoint,
+                "current": current_count,
+                "limit": max_requests,
+                "remaining": max(0, max_requests - current_count)
+            }
+        except Exception as e:
+            return {"error": str(e)}
 
 
 # ============ CACHE KEY GENERATORS ============
@@ -194,6 +360,12 @@ def global_stats_key() -> str:
 
 def product_list_key() -> str:
     return "products:list"
+
+def notification_count_key(uid: str) -> str:
+    return f"notification_count:{uid}"
+
+def session_key(session_id: str) -> str:
+    return f"session:{session_id}"
 
 
 # ============ CACHE DECORATORS ============
@@ -288,3 +460,5 @@ class CacheTTL:
     ADMIN_STATS = 120      # Admin dashboard stats
     PRODUCTS = 1800        # Product list
     GLOBAL_STATS = 180     # Public stats
+    RATE_LIMIT = 60        # Rate limit window
+    SESSION = 86400        # Session TTL (24 hours)
