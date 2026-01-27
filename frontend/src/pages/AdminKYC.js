@@ -161,7 +161,7 @@ const AdminKYC = ({ user }) => {
       
       // Optimistic local update instead of full refetch (FASTER!)
       const newStatus = action === 'approve' ? 'verified' : 'rejected';
-      setDocuments(prev => prev.map(doc => 
+      setKycDocuments(prev => prev.map(doc => 
         doc.kyc_id === kycId 
           ? {...doc, status: newStatus, verified_at: new Date().toISOString()} 
           : doc
