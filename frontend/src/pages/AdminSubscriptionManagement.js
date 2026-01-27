@@ -213,37 +213,29 @@ const AdminSubscriptionManagement = ({ user }) => {
 
   const fetchStats = async () => {
     try {
-      // Get user counts by subscription plan
-      const usersRes = await axios.get(`${API}/api/admin/users?limit=1000`);
-      const allUsers = usersRes.data.users || usersRes.data || [];
+      // Use a lightweight stats endpoint instead of fetching all users
+      const [statsRes, pendingRes] = await Promise.all([
+        axios.get(`${API}/api/admin/subscription-stats`).catch(() => ({ data: null })),
+        axios.get(`${API}/api/admin/vip-payments?status=pending&limit=1`)
+      ]);
       
-      const planCounts = {
-        explorer: 0,
-        startup: 0,
-        growth: 0,
-        elite: 0
-      };
-      
-      allUsers.forEach(u => {
-        const plan = u.subscription_plan || 'explorer';
-        if (planCounts[plan] !== undefined) {
-          planCounts[plan]++;
-        } else {
-          planCounts.explorer++;
-        }
-      });
-      
-      // Get pending payments count
-      const pendingRes = await axios.get(`${API}/api/admin/vip-payments?status=pending`);
-      const pendingCount = Array.isArray(pendingRes.data) ? pendingRes.data.length : pendingRes.data.total || 0;
-      
-      setStats({
-        totalUsers: allUsers.length,
-        ...planCounts,
-        pendingPayments: pendingCount,
-        monthlyRevenue: (planCounts.startup * 299) + (planCounts.growth * 549) + (planCounts.elite * 799),
-        expiringThisWeek: 0 // TODO: Calculate from subscription_expiry
-      });
+      // If stats endpoint exists, use it
+      if (statsRes.data && statsRes.data.plan_counts) {
+        setStats({
+          totalUsers: statsRes.data.total_users || 0,
+          ...statsRes.data.plan_counts,
+          pendingPayments: pendingRes.data?.total || 0,
+          monthlyRevenue: statsRes.data.monthly_revenue || 0,
+          expiringThisWeek: statsRes.data.expiring_this_week || 0
+        });
+      } else {
+        // Fallback: Get counts from payments only (faster than fetching all users)
+        const pendingCount = pendingRes.data?.total || (Array.isArray(pendingRes.data) ? pendingRes.data.length : 0);
+        setStats(prev => ({
+          ...prev,
+          pendingPayments: pendingCount
+        }));
+      }
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
