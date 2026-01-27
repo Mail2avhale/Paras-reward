@@ -21674,14 +21674,26 @@ async def update_settings(
 
 # Note: app.include_router moved to after all route definitions
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=["*"] if os.environ.get('CORS_ORIGINS', '*') == '*' else os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-    allow_origin_regex=".*",  # Allow all origins including subdomains
-)
+# CORS Configuration - Allow all origins for flexibility
+# Note: When allow_credentials=True, we need specific origins OR use allow_origin_regex
+cors_origins = os.environ.get('CORS_ORIGINS', '*')
+if cors_origins == '*':
+    # Use regex to allow all origins when credentials are needed
+    app.add_middleware(
+        CORSMiddleware,
+        allow_credentials=True,
+        allow_origin_regex=".*",  # Match any origin
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_credentials=True,
+        allow_origins=cors_origins.split(','),
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 logging.basicConfig(
     level=logging.INFO,
