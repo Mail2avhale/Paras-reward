@@ -3987,6 +3987,11 @@ async def start_mining(uid: str):
                 action_url="/network"
             )
     
+    # Invalidate caches after mining starts
+    await cache.delete(f"mining_status:{uid}")
+    await cache.delete(f"mining_rate:{uid}")
+    await cache.delete(f"user_data:{uid}")
+    
     return {
         "message": "Mining started successfully",
         "session_active": True,
