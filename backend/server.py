@@ -6068,24 +6068,40 @@ async def submit_kyc(uid: str, kyc_data: KYCSubmit):
 
 @api_router.get("/kyc/list")
 async def get_kyc_documents():
-    """Get all KYC documents with user details (Admin)"""
-    docs = await db.kyc_documents.find({}, {"_id": 0}).to_list(1000)
+    """Get all KYC documents with user details (Admin) - Optimized with batch lookup"""
+    docs = await db.kyc_documents.find({}, {"_id": 0}).sort("submitted_at", -1).to_list(1000)
     
-    # Enrich with user details
-    enriched_docs = []
+    if not docs:
+        return []
+    
+    # Batch fetch all user details in ONE query
+    user_ids = list(set(doc.get("user_id") for doc in docs if doc.get("user_id")))
+    users_data = {}
+    
+    if user_ids:
+        users_cursor = db.users.find(
+            {"uid": {"$in": user_ids}}, 
+            {"_id": 0, "uid": 1, "name": 1, "email": 1, "phone": 1, "mobile": 1, "city": 1, "state": 1}
+        )
+        async for user in users_cursor:
+            users_data[user.get("uid")] = user
+    
+    # Enrich documents with cached user data
     for doc in docs:
         if isinstance(doc.get('submitted_at'), str):
-            doc['submitted_at'] = datetime.fromisoformat(doc['submitted_at'])
+            try:
+                doc['submitted_at'] = datetime.fromisoformat(doc['submitted_at'].replace('Z', '+00:00'))
+            except:
+                pass
         if doc.get('verified_at') and isinstance(doc['verified_at'], str):
-            doc['verified_at'] = datetime.fromisoformat(doc['verified_at'])
+            try:
+                doc['verified_at'] = datetime.fromisoformat(doc['verified_at'].replace('Z', '+00:00'))
+            except:
+                pass
         
-        # Fetch user details
-        user = await db.users.find_one(
-            {"uid": doc.get("user_id")}, 
-            {"_id": 0, "name": 1, "email": 1, "phone": 1, "mobile": 1, "city": 1, "state": 1}
-        )
-        
-        if user:
+        user_id = doc.get("user_id")
+        if user_id and user_id in users_data:
+            user = users_data[user_id]
             doc["user_name"] = user.get("name", "Unknown")
             doc["user_email"] = user.get("email", "")
             doc["user_phone"] = user.get("phone") or user.get("mobile", "")
@@ -6095,10 +6111,8 @@ async def get_kyc_documents():
             doc["user_name"] = "Unknown User"
             doc["user_email"] = ""
             doc["user_phone"] = ""
-        
-        enriched_docs.append(doc)
     
-    return enriched_docs
+    return docs
 
 @api_router.post("/kyc/{kyc_id}/verify")
 async def verify_kyc(kyc_id: str, action: VIPPaymentAction):
