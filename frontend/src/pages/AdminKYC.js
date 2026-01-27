@@ -112,6 +112,7 @@ const AdminKYC = ({ user }) => {
   // Quick action handlers
   const handleQuickApprove = async (doc, e) => {
     e.stopPropagation();
+    if (processing) return; // Prevent multiple clicks
     if (!window.confirm(`Approve KYC for ${doc.user_name || doc.user_id}?`)) return;
     
     // Store kyc_id immediately before any async operations
