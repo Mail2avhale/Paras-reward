@@ -59,6 +59,11 @@ class CacheManager:
         upstash_url = os.environ.get("UPSTASH_REDIS_REST_URL")
         upstash_token = os.environ.get("UPSTASH_REDIS_REST_TOKEN")
         
+        # Debug: Print what we found
+        print(f"   UPSTASH_AVAILABLE: {UPSTASH_AVAILABLE}")
+        print(f"   UPSTASH_URL configured: {bool(upstash_url)}")
+        print(f"   UPSTASH_TOKEN configured: {bool(upstash_token)}")
+        
         if UPSTASH_AVAILABLE and upstash_url and upstash_token:
             try:
                 self.redis_client = UpstashRedis(url=upstash_url, token=upstash_token)
@@ -72,8 +77,8 @@ class CacheManager:
             except Exception as e:
                 print(f"⚠️ Upstash Redis connection failed: {e}")
         
-        # 2. Try local Redis as fallback
-        if REDIS_AVAILABLE:
+        # 2. Try local Redis as fallback (only if Upstash not configured)
+        if REDIS_AVAILABLE and not upstash_url:
             redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
             try:
                 self.redis_client = redis.from_url(
