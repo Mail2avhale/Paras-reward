@@ -30,6 +30,13 @@ const DailyRewards = ({ user }) => {
 
   // Fetch user data and mining status
   const fetchUserData = useCallback(async () => {
+    // Set a timeout to prevent infinite loading on slow networks
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setUserData(user);
+      console.warn('Mining data fetch timeout - using fallback');
+    }, 10000); // 10 second timeout
+    
     try {
       // Fetch both user data and mining status in parallel
       const [userResponse, miningResponse] = await Promise.all([
@@ -75,6 +82,7 @@ const DailyRewards = ({ user }) => {
       console.error('Error fetching user data:', error);
       setUserData(user);
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   }, [user]);
