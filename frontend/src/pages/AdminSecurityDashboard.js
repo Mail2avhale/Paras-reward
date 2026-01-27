@@ -107,7 +107,7 @@ const AdminSecurityDashboard = ({ user }) => {
     loadData();
     
     // Poll for new alerts every 30 seconds
-    const alertInterval = setInterval(fetchUnreadCount, 30000);
+    const alertInterval = setInterval(fetchUnreadCount, 60000);
     return () => clearInterval(alertInterval);
   }, [fetchDashboard, fetchIpWhitelist, fetchAuditLogs, fetchAlerts, fetchUnreadCount]);
 
