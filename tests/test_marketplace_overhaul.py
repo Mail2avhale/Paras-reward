@@ -8,7 +8,7 @@ import os
 import uuid
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://rewardsapp-2.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://rewardflow-13.preview.emergentagent.com')
 
 # Test credentials
 ADMIN_EMAIL = "admin@paras.com"
