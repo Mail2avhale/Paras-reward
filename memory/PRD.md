@@ -1,122 +1,86 @@
-# PARAS Rewards Platform - Product Requirements Document
+# Paras Reward - Product Requirements Document
 
-## Original Problem Statement
-Build a comprehensive social rewards platform with features including:
-- User authentication and KYC verification
-- Mining and PRC (Paras Rewards Coin) earning mechanisms
-- VIP subscription tiers (Basic, Growth, Elite)
-- Bill payments and gift voucher redemption using PRC
-- "Paras Luxury Life" - Automated savings for luxury products (mobile, bike, car)
-- Admin dashboard for managing users, payments, and platform operations
-- Referral system with activity tracking
+## Project Overview
+A social rewards platform where users can earn PRC (Paras Reward Coins) through daily activities, referrals, and mining. Users can redeem PRC for gift vouchers, bill payments, and marketplace products.
 
-## User Personas
-1. **Regular Users**: Earn PRC through mining, tap games, referrals; redeem for bill payments/gift vouchers
-2. **VIP Subscribers**: Enhanced earning rates and features based on tier
-3. **Admins**: Manage platform operations, approve/reject requests, monitor fraud
+## Core Features (Implemented)
+- ✅ User Authentication & Registration
+- ✅ Daily Mining/Rewards System
+- ✅ 4-Tier Subscription Plans (Explorer, Startup, Growth, Elite)
+- ✅ Referral System with Multi-level Rewards
+- ✅ KYC Verification System
+- ✅ Gift Voucher Redemption
+- ✅ Bill Payment Requests
+- ✅ Admin Dashboard with Analytics
+- ✅ Request Timeline with SLA Warnings
+- ✅ In-App Notification System
+- ✅ Marketplace & Orders
 
-## Core Architecture
-- **Frontend**: React with Tailwind CSS, Shadcn/UI components
-- **Backend**: FastAPI (Python) with MongoDB
-- **State Management**: React Context API
-- **Authentication**: JWT-based
+## Recent Changes (January 2027)
 
-## What's Been Implemented
+### January 27, 2027
+- **Fixed P0 Regression**: Admin pages were failing to load data
+  - Fixed incorrect API endpoints in AdminDashboard.js
+  - `/api/admin/orders` → `/api/admin/orders/all`
+  - `/api/admin/kyc` → `/api/kyc/list`
 
-### January 26, 2026 - In-App Notifications System
-- **Backend notifications** added for all admin processing actions:
-  - Bill Payment: approve, reject, complete
-  - Gift Voucher: approve, reject
-  - Subscription Payment: approve, reject
-  - KYC: verify, reject
-- **NotificationBell component** (already existed) now integrated into Admin Dashboard header
-- Fixed Navbar NotificationBell prop inconsistency (`userId` → `user`)
+- **Performance Optimization**: Reduced excessive API polling
+  - All polling intervals increased from 30s to 60s
+  - Affected components: NotificationContext, NotificationBell, AdminDashboard, 
+    AdminBillPayments, AdminGiftVouchers, AdminKYC, AdminSecurityDashboard, 
+    PRCRain, LiveActivityFeed, LiveTransparencyPanel
 
-### January 26, 2026 - Request Timeline Feature
-- Created reusable `RequestTimeline` component with SLA badges
-- Enhanced Admin pages (Bill Payments, Gift Vouchers, Subscriptions) with:
-  - SLA warning badges (yellow >48h, red >96h)
-  - Visual timeline showing request submission and processing timestamps
-  - Admin name display (`processed_by`)
-  - Processing time calculation
-- Enhanced User pages (Bill Payments, Gift Voucher Redemption) with:
-  - Expandable rows/cards showing compact timeline view
-- Cleaned up unused `LuxuryProductCard` component from RewardsHome.js
+### Previous Session
+- Implemented Request Timeline UI with SLA warning badges
+- Integrated in-app notification system for admin actions
+- Fixed deployment failure (.gitignore blocking .env files)
+- Fixed CORS configuration
+- Optimized N+1 query issues in backend
+- Fixed bill payment rejection issue
+- Fixed KYC/Subscription race conditions
 
-### Previous Session - Bug Fixes & Enhancements
-- Fixed critical 80/20 luxury savings split bug (frontend API endpoint mismatch)
-- Fixed "Total Redeemed" calculation to exclude rejected requests
-- Complete redesign of landing page (RewardsHome.js) for AdMob compliance
-- Created public `/api/stats` endpoint for landing page statistics
-- Added pagination to AdminSubscriptionManagement.js
-- Added status filter tabs to user-facing Bill Payments and Gift Voucher pages
+## Architecture
 
-## Pending Issues (P0-P1)
+### Frontend (React)
+- `/app/frontend/src/pages/` - Main pages
+- `/app/frontend/src/components/` - Reusable components
+- `/app/frontend/src/context/` - React contexts
+- UI: Shadcn/UI components + Tailwind CSS
 
-### P0 - Critical
-- None currently
+### Backend (FastAPI + MongoDB)
+- `/app/backend/server.py` - Main API server
+- `/app/backend/models.py` - Data models
+- Database: MongoDB
+
+## Pending Issues (Priority Order)
 
 ### P1 - High Priority
-1. **Active referral status bug** - Shows "Inactive" for active mining users (USER VERIFICATION PENDING, recurring issue)
-2. **KYC "Failed to approve" error** - Admin cannot approve KYC (BLOCKED - needs user logs from production)
-3. **User-facing search bar** - Functionality is broken
-4. **Dark Theme for Admin pages** - Inconsistent styling across admin pages
-5. **Subscription "Extend" Logic** - Needs verification
-6. **KYC Document Upload on Mobile** - Not working properly
+1. Active referral status shows "Inactive" for active mining users (verification pending)
+2. User-facing search bar functionality broken
+3. Apply Dark Theme to all Admin pages
+4. Verify Subscription "Extend" Logic
+5. KYC Document Upload on Mobile
 
-## Upcoming Tasks (P1)
-- Architect for Play Store Release (user-only frontend version)
+### P2 - Medium Priority
+1. Improve user subscription purchase flow
 
-## Future/Backlog Tasks (P2-P3)
-
-### P2
-- Full Redis Integration (replace in-memory cache)
-- ML Risk Scoring for fraud detection
+## Upcoming Tasks
+- Play Store Release Architecture
+- Full Redis Integration
+- ML Risk Scoring
 - AdMob + Unity Ads Integration
 - Shareable Achievement Cards
 
-### P3
-- Refactor monolithic `backend/server.py` into modules
+## API Endpoints Reference
+- `/api/admin/orders/all` - Get admin orders
+- `/api/kyc/list` - Get all KYC documents
+- `/api/admin/vip-payments` - Get subscription payments
+- `/api/admin/gift-voucher/requests` - Get gift voucher requests
+- `/api/admin/subscription-stats` - Get subscription statistics
 
-## Key Files Reference
-
-### Frontend
-- `/app/frontend/src/components/RequestTimeline.js` - Reusable timeline component
-- `/app/frontend/src/components/NotificationBell.js` - In-app notification bell dropdown
-- `/app/frontend/src/pages/AdminDashboard.js` - Admin dashboard with NotificationBell
-- `/app/frontend/src/pages/AdminBillPayments.js` - Admin bill payment management
-- `/app/frontend/src/pages/AdminGiftVouchers.js` - Admin gift voucher management
-- `/app/frontend/src/pages/AdminSubscriptionManagement.js` - Admin subscription management
-- `/app/frontend/src/pages/BillPayments.js` - User bill payment page
-- `/app/frontend/src/pages/GiftVoucherRedemption.js` - User gift voucher page
-- `/app/frontend/src/pages/RewardsHome.js` - Public landing page
-- `/app/frontend/src/pages/Mining.js` - Mining/PRC collection
-
-### Backend
-- `/app/backend/server.py` - Main API server (monolithic, needs refactoring)
-  - `create_notification()` helper function at line ~24133
-  - Bill payment processing at line ~20205
-  - Gift voucher processing at line ~20514
-  - VIP payment processing at line ~17529
-  - KYC verification at line ~6103
-
-## Database Collections
-- `users` - User accounts with roles, balances, subscription info
-- `notifications` - In-app notifications with user_id, title, message, type, is_read, created_at
-- `bill_payment_requests` - Bill payment requests with `processed_by`, `created_at`, `processed_at`
-- `gift_voucher_requests` - Gift voucher requests with `processed_by`, `created_at`, `processed_at`
-- `vip_payments` - Subscription payment records with `processed_by`, `created_at`, `processed_at`
-- `luxury_savings` - User luxury savings (mobile, bike, car)
-- `mining_history` - Mining activity records
-- `kyc_submissions` - KYC verification documents
-
-## Test Reports
-- `/app/test_reports/iteration_37.json` - Latest test report (luxury savings split fix)
-- `/app/backend/tests/test_luxury_savings_split.py` - Luxury savings test file
-
-## Critical Notes for Developers
-1. **User Communication**: Start responses with `समजलं!` (Marathi acknowledgment)
-2. **Environment**: Preview and production use different databases
-3. **Browser Cache**: Users may need hard refresh (Ctrl+Shift+R) after updates
-4. **Admin Login**: admin@paras.com / admin123
-5. **Notification System**: Uses existing `notifications` collection, NotificationBell component polls every 30 seconds
+## Environment
+- Frontend: React on port 3000
+- Backend: FastAPI on port 8001
+- Database: MongoDB (MONGO_URL from backend/.env)
+- Preview URL: https://rewardflow-13.preview.emergentagent.com
+- Production: https://parasreward.com
