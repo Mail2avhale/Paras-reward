@@ -439,6 +439,15 @@ async def api_health_check():
         "service": "paras-reward-api"
     }
 
+@api_router.get("/cache/stats")
+async def get_cache_stats():
+    """Get cache system statistics"""
+    stats = await cache.get_stats()
+    return {
+        "cache": stats,
+        "status": "connected" if stats.get("connected") else "disconnected"
+    }
+
 @app.get("/")
 async def root():
     """Root endpoint"""
