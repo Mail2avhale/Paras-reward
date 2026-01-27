@@ -59,11 +59,6 @@ class CacheManager:
         upstash_url = os.environ.get("UPSTASH_REDIS_REST_URL")
         upstash_token = os.environ.get("UPSTASH_REDIS_REST_TOKEN")
         
-        # Debug: Print what we found
-        print(f"   UPSTASH_AVAILABLE: {UPSTASH_AVAILABLE}")
-        print(f"   UPSTASH_URL configured: {bool(upstash_url)}")
-        print(f"   UPSTASH_TOKEN configured: {bool(upstash_token)}")
-        
         if UPSTASH_AVAILABLE and upstash_url and upstash_token:
             try:
                 self.redis_client = UpstashRedis(url=upstash_url, token=upstash_token)
