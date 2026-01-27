@@ -181,6 +181,8 @@ const AdminKYC = ({ user }) => {
   };
 
   const handleVerify = async (kycId, action) => {
+    if (processing) return; // Prevent multiple clicks
+    
     try {
       setProcessing(true);
       await axios.post(`${API}/kyc/${kycId}/verify`, {
@@ -202,8 +204,9 @@ const AdminKYC = ({ user }) => {
       // Background refresh (non-blocking)
       setTimeout(() => {
         fetchKYCDocuments();
-      }, 2000);
+      }, 3000);
     } catch (error) {
+      console.error('KYC verify error:', error);
       toast.error(error.response?.data?.detail || 'Failed to update KYC status');
     } finally {
       setProcessing(false);
