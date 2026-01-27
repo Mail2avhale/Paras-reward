@@ -2361,6 +2361,9 @@ async def calculate_mining_rate(uid: str):
     """
     Calculate mining rate per minute with subscription multiplier and multi-level referral bonuses
     
+    OPTIMIZED: Uses Redis caching to avoid expensive referral calculations on every call
+    Cache TTL: 5 minutes (referral counts don't change frequently)
+    
     NEW FORMULA:
     - Base Rate: 50 (decreases by 1 per 200 users, min 20)
     - Daily Multiplier: Current day of month
@@ -2374,6 +2377,17 @@ async def calculate_mining_rate(uid: str):
     
     Daily_Reward = Day × ((BR × User_Multiplier) + Referral_Bonus)
     """
+    # Try to get from cache first
+    cache_key = f"mining_rate:{uid}"
+    cached_rate = await cache.get(cache_key)
+    if cached_rate:
+        return (
+            cached_rate.get('per_minute_rate', 0),
+            cached_rate.get('base_rate', 50),
+            cached_rate.get('total_active_referrals', 0),
+            cached_rate.get('referral_breakdown', {})
+        )
+    
     user = await db.users.find_one({"uid": uid})
     if not user:
         return 0, 0, 0, {}
