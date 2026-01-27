@@ -14,7 +14,7 @@ import {
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 const ITEMS_PER_PAGE = 10;
-const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
+const AUTO_REFRESH_INTERVAL = 60000; // 60 seconds - optimized for performance
 
 const AdminKYC = ({ user }) => {
   const [kycDocuments, setKycDocuments] = useState([]);
