@@ -195,6 +195,7 @@ const AdminGiftVouchers = ({ user }) => {
         request_id: requestId,
         action,
         voucher_code: voucherCode,
+        reject_reason: adminNotes,
         admin_notes: adminNotes,
         admin_uid: user.uid
       });
@@ -203,7 +204,9 @@ const AdminGiftVouchers = ({ user }) => {
       setSelectedRequest(null);
       setVoucherCode('');
       setAdminNotes('');
-      fetchRequests();
+      await fetchRequests();
+      // Switch to appropriate tab
+      setActiveTab(action === 'approve' ? 'completed' : 'rejected');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to process request');
     } finally {
@@ -229,8 +232,9 @@ const AdminGiftVouchers = ({ user }) => {
         admin_notes: reason.trim(),
         admin_uid: user.uid
       });
-      toast.success('Request rejected and PRC refunded');
-      fetchRequests();
+      toast.success('Request rejected and PRC refunded. Moved to Rejected tab.');
+      await fetchRequests();
+      setActiveTab('rejected');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to reject');
     } finally {
