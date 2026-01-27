@@ -4316,6 +4316,9 @@ async def get_user_data(uid: str):
     if subscription_start:
         user["subscription_start"] = subscription_start
     
+    # Cache the result for 2 minutes
+    await cache.set(cache_key, user, ttl=120)
+    
     return user
 
 # ========== MINING COLLECT ENDPOINT ==========
