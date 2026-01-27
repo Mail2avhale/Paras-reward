@@ -52,12 +52,22 @@ function OfflineIndicator() {
   const checkQueuedActions = async () => {
     try {
       const db = await openDB();
+      if (!db.objectStoreNames.contains('offline-queue')) {
+        // Store doesn't exist, no queued actions
+        setQueuedActions(0);
+        db.close();
+        return;
+      }
       const tx = db.transaction('offline-queue', 'readonly');
       const store = tx.objectStore('offline-queue');
-      const count = await store.count();
-      setQueuedActions(count);
+      const request = store.count();
+      request.onsuccess = () => {
+        setQueuedActions(request.result);
+      };
+      tx.oncomplete = () => db.close();
     } catch (error) {
-      console.error('Error checking queued actions:', error);
+      // Silently handle - IndexedDB not available or not initialized
+      setQueuedActions(0);
     }
   };
 
@@ -66,6 +76,12 @@ function OfflineIndicator() {
       const request = indexedDB.open('paras-offline-db', 1);
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result);
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains('offline-queue')) {
+          db.createObjectStore('offline-queue', { keyPath: 'id', autoIncrement: true });
+        }
+      };
     });
   };
 
