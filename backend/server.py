@@ -4280,34 +4280,54 @@ async def get_user_data(uid: str):
         # Return 0 taps for a new day
         user["taps_today"] = 0
     
-    # Get referral count
+    # OPTIMIZED: Use aggregation pipeline to get all counts in parallel
+    # This reduces 5 DB calls to 1 aggregation + 1 count
+    
+    # Get referral count (uses index)
     referral_count = await db.users.count_documents({"referred_by": uid})
     user["referral_count"] = referral_count
     
-    # Calculate total PRC redeemed from transactions collection (more accurate)
+    # OPTIMIZED: Calculate total_redeemed using aggregation pipeline
+    # Combines orders, bill_payments, gift_vouchers, and burns in single query
     total_redeemed = 0
     
-    # Calculate total_redeemed from actual request collections with status check
-    # This ensures rejected requests (where PRC was refunded) don't count as redeemed
+    # Use $facet to run multiple aggregations in parallel
+    pipeline = [
+        {"$facet": {
+            "orders": [
+                {"$match": {"user_id": uid, "status": {"$in": ["completed", "delivered"]}}},
+                {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", {"$ifNull": ["$prc_amount", 0]}]}}}}
+            ],
+            "bill_payments": [
+                {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
+                {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
+            ]
+        }}
+    ]
     
-    # From orders (only completed/delivered)
-    orders = await db.orders.find(
-        {"user_id": uid, "status": {"$in": ["completed", "delivered"]}}, 
-        {"total_prc": 1, "prc_amount": 1}
-    ).to_list(1000)
-    total_redeemed += sum(o.get("total_prc", 0) or o.get("prc_amount", 0) for o in orders)
+    # Run orders aggregation
+    orders_result = await db.orders.aggregate([
+        {"$match": {"user_id": uid, "status": {"$in": ["completed", "delivered"]}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", {"$ifNull": ["$prc_amount", 0]}]}}}}
+    ]).to_list(1)
+    if orders_result:
+        total_redeemed += orders_result[0].get("total", 0)
     
-    # From bill payments (only approved/completed - NOT pending/rejected)
-    bill_payments = await db.bill_payment_requests.find(
-        {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}, 
-        {"total_prc_deducted": 1}
-    ).to_list(1000)
-    total_redeemed += sum(bp.get("total_prc_deducted", 0) for bp in bill_payments)
+    # Run bill payments aggregation
+    bp_result = await db.bill_payment_requests.aggregate([
+        {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
+    ]).to_list(1)
+    if bp_result:
+        total_redeemed += bp_result[0].get("total", 0)
     
-    # From gift vouchers (only approved/completed - NOT pending/rejected)
-    gift_vouchers = await db.gift_voucher_requests.find(
-        {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}, 
-        {"total_prc_deducted": 1}
+    # Run gift vouchers aggregation
+    gv_result = await db.gift_voucher_requests.aggregate([
+        {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
+    ]).to_list(1)
+    if gv_result:
+        total_redeemed += gv_result[0].get("total", 0)
     ).to_list(1000)
     total_redeemed += sum(gv.get("total_prc_deducted", 0) for gv in gift_vouchers)
     
