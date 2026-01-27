@@ -1,183 +1,132 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { WifiOff, Wifi, CheckCircle, X } from 'lucide-react';
+import axios from 'axios';
+
+const API = process.env.REACT_APP_BACKEND_URL;
 
 function OfflineIndicator() {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(true); // Default to online
+  const [showOfflineBanner, setShowOfflineBanner] = useState(false);
   const [showSyncSuccess, setShowSyncSuccess] = useState(false);
-  const [queuedActions, setQueuedActions] = useState(0);
+  const [dismissed, setDismissed] = useState(false);
+  const checkIntervalRef = useRef(null);
+  const lastOnlineCheckRef = useRef(Date.now());
 
-  // Clear stale queued actions (older than 5 minutes)
-  const clearStaleActions = useCallback(async () => {
+  // Actually verify connectivity by making a real API call
+  const verifyConnectivity = useCallback(async () => {
     try {
-      const db = await openDB();
-      if (!db.objectStoreNames.contains('offline-queue')) {
-        db.close();
-        return;
+      // Try to fetch a lightweight endpoint
+      const response = await axios.get(`${API}/api/health`, { 
+        timeout: 5000,
+        // Don't use cache for this check
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      
+      if (response.status === 200) {
+        setIsOnline(true);
+        setShowOfflineBanner(false);
+        lastOnlineCheckRef.current = Date.now();
+        return true;
       }
-      
-      const tx = db.transaction('offline-queue', 'readwrite');
-      const store = tx.objectStore('offline-queue');
-      
-      // Clear all actions if online (they should have been processed)
-      if (navigator.onLine) {
-        store.clear();
-      }
-      
-      tx.oncomplete = () => {
-        db.close();
-        setQueuedActions(0);
-      };
     } catch (error) {
-      console.log('Could not clear stale actions');
+      // Only show offline if we've been failing for more than 10 seconds
+      // This prevents false positives from temporary network hiccups
+      const timeSinceLastOnline = Date.now() - lastOnlineCheckRef.current;
+      if (timeSinceLastOnline > 10000) {
+        setIsOnline(false);
+        if (!dismissed) {
+          setShowOfflineBanner(true);
+        }
+      }
+      return false;
     }
-  }, []);
+    return true;
+  }, [dismissed]);
 
-  // Dismiss the sync banner manually
-  const handleDismiss = async () => {
-    await clearStaleActions();
-    setQueuedActions(0);
+  // Dismiss handler
+  const handleDismiss = () => {
+    setDismissed(true);
+    setShowOfflineBanner(false);
   };
 
   useEffect(() => {
+    // Initial check - assume online if page loaded successfully
+    setIsOnline(true);
+    setShowOfflineBanner(false);
+    
+    // Listen for browser online/offline events as hints, but verify with real check
     const handleOnline = () => {
       setIsOnline(true);
-      // When coming back online, try to sync and then clear
-      if ('serviceWorker' in navigator && 'sync' in navigator.serviceWorker) {
-        navigator.serviceWorker.ready.then((registration) => {
-          registration.sync.register('sync-offline-queue');
-        }).catch(() => {
-          // If sync fails, just clear the queue
-          clearStaleActions();
-        });
-      } else {
-        // No service worker sync, just clear
-        clearStaleActions();
-      }
+      setShowOfflineBanner(false);
+      setDismissed(false);
+      lastOnlineCheckRef.current = Date.now();
+      
+      // Show sync success briefly
+      setShowSyncSuccess(true);
+      setTimeout(() => setShowSyncSuccess(false), 2000);
     };
 
     const handleOffline = () => {
-      setIsOnline(false);
-    };
-
-    // Listen for service worker messages
-    const handleMessage = (event) => {
-      if (event.data.type === 'SYNC_SUCCESS') {
-        setShowSyncSuccess(true);
-        setTimeout(() => {
-          setShowSyncSuccess(false);
-          clearStaleActions();
-        }, 2000);
-      }
+      // Don't immediately show offline - verify first
+      // The browser's offline event can be unreliable
+      setTimeout(() => {
+        verifyConnectivity();
+      }, 2000);
     };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('message', handleMessage);
-    }
 
-    // Check queued actions on mount
-    checkQueuedActions();
-    
-    // If online on mount and there are queued actions, clear them after 3 seconds
-    // (they are likely stale from a previous session)
-    const clearTimer = setTimeout(() => {
-      if (navigator.onLine) {
-        clearStaleActions();
+    // Periodic connectivity check every 30 seconds (only if showing offline)
+    checkIntervalRef.current = setInterval(() => {
+      if (!isOnline || showOfflineBanner) {
+        verifyConnectivity();
       }
-    }, 3000);
+    }, 30000);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.removeEventListener('message', handleMessage);
+      if (checkIntervalRef.current) {
+        clearInterval(checkIntervalRef.current);
       }
-      clearTimeout(clearTimer);
     };
-  }, [clearStaleActions]);
+  }, [isOnline, showOfflineBanner, verifyConnectivity]);
 
-  const checkQueuedActions = async () => {
-    try {
-      const db = await openDB();
-      if (!db.objectStoreNames.contains('offline-queue')) {
-        setQueuedActions(0);
-        db.close();
-        return;
-      }
-      const tx = db.transaction('offline-queue', 'readonly');
-      const store = tx.objectStore('offline-queue');
-      const request = store.count();
-      request.onsuccess = () => {
-        setQueuedActions(request.result);
-      };
-      tx.oncomplete = () => db.close();
-    } catch (error) {
-      setQueuedActions(0);
-    }
-  };
-
-  const openDB = () => {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open('paras-offline-db', 1);
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        if (!db.objectStoreNames.contains('offline-queue')) {
-          db.createObjectStore('offline-queue', { keyPath: 'id', autoIncrement: true });
-        }
-      };
-    });
-  };
-
-  // Don't show anything if online and no queued actions
-  if (isOnline && queuedActions === 0 && !showSyncSuccess) {
+  // Don't show anything if online or dismissed
+  if (!showOfflineBanner && !showSyncSuccess) {
     return null;
   }
 
   return (
     <>
-      {/* Offline Banner */}
-      {!isOnline && (
+      {/* Offline Banner - with dismiss button */}
+      {showOfflineBanner && !dismissed && (
         <div className="fixed top-0 left-0 right-0 z-[9999] bg-yellow-500 text-white px-4 py-3 shadow-lg">
           <div className="container mx-auto flex items-center justify-center gap-3">
-            <WifiOff className="w-5 h-5" />
-            <span className="font-medium">
-              You're offline. {queuedActions > 0 && `${queuedActions} action${queuedActions > 1 ? 's' : ''} queued for sync.`}
+            <WifiOff className="w-5 h-5 flex-shrink-0" />
+            <span className="font-medium text-sm">
+              You're offline. Some features may not work.
             </span>
+            <button 
+              onClick={handleDismiss}
+              className="ml-2 p-1 hover:bg-yellow-600 rounded flex-shrink-0"
+              title="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
 
       {/* Sync Success Banner */}
-      {showSyncSuccess && isOnline && (
+      {showSyncSuccess && (
         <div className="fixed top-0 left-0 right-0 z-[9999] bg-green-500 text-white px-4 py-3 shadow-lg animate-slide-down">
           <div className="container mx-auto flex items-center justify-center gap-3">
             <CheckCircle className="w-5 h-5" />
             <span className="font-medium">
-              Synced successfully!
+              Back online!
             </span>
-          </div>
-        </div>
-      )}
-
-      {/* Queued Actions Indicator - with dismiss button */}
-      {isOnline && queuedActions > 0 && !showSyncSuccess && (
-        <div className="fixed top-0 left-0 right-0 z-[9999] bg-blue-500 text-white px-4 py-2 shadow-lg">
-          <div className="container mx-auto flex items-center justify-center gap-3">
-            <Wifi className="w-5 h-5 animate-pulse" />
-            <span className="text-sm font-medium">
-              Syncing {queuedActions} action{queuedActions > 1 ? 's' : ''}...
-            </span>
-            <button 
-              onClick={handleDismiss}
-              className="ml-2 p-1 hover:bg-blue-600 rounded"
-              title="Dismiss"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
         </div>
       )}
