@@ -3997,7 +3997,14 @@ async def start_mining(uid: str):
 
 @api_router.get("/mining/status/{uid}")
 async def get_mining_status(uid: str):
-    """Get current mining status with session info"""
+    """Get current mining status with session info - cached for 30 seconds"""
+    
+    # Short cache for mining status (30 seconds) - needs to be relatively fresh
+    cache_key = f"mining_status:{uid}"
+    cached_status = await cache.get(cache_key)
+    if cached_status:
+        return cached_status
+    
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
