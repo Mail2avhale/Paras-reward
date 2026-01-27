@@ -351,13 +351,25 @@ const AdminSubscriptionManagement = ({ user }) => {
         notes: actionNotes
       });
       toast.success('Payment rejected');
+      
+      // Optimistic local update instead of full refetch (FASTER!)
+      setPayments(prev => prev.map(p => 
+        p.payment_id === payment.payment_id 
+          ? {...p, status: 'rejected', rejected_at: new Date().toISOString()} 
+          : p
+      ));
+      setStats(prev => ({...prev, pendingPayments: Math.max(0, (prev.pendingPayments || 0) - 1)}));
+      
       setSelectedPayment(null);
       setActionNotes('');
       setCorrectPlan('');
       setCorrectDuration('');
       setShowPlanCorrection(false);
-      fetchPayments();
-      fetchStats();
+      
+      // Background refresh (non-blocking)
+      setTimeout(() => {
+        fetchPayments();
+      }, 2000);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to reject payment');
     } finally {
