@@ -157,7 +157,19 @@ const DashboardModern = ({ user, onLogout }) => {
       
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      // Use fallback data from user prop
+      setUserData(user);
+      setStats({
+        prcBalance: user?.prc_balance || 0,
+        totalMined: user?.total_mined || 0,
+        totalRedeemed: user?.total_redeemed || 0,
+        referralCount: user?.referral_count || 0,
+        subscriptionPlan: user?.subscription_plan || 'explorer',
+        subscriptionExpiry: user?.subscription_expiry || null,
+        subscriptionStart: user?.subscription_start || user?.vip_activation_date || null
+      });
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   }, [user]);
