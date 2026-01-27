@@ -339,10 +339,10 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
                     </div>
                   )}
                   
-                  {req.rejection_reason && req.status === 'rejected' && (
+                  {(req.rejection_reason || req.reject_reason || req.admin_notes) && req.status === 'rejected' && (
                     <div className="mt-3 p-3 bg-red-500/10 rounded-lg border border-red-500/30">
-                      <p className="text-red-400 text-xs mb-1">Rejection Reason:</p>
-                      <p className="text-red-300 text-sm">{req.rejection_reason}</p>
+                      <p className="text-red-400 text-xs mb-1">❌ Rejection Reason:</p>
+                      <p className="text-red-300 text-sm">{req.rejection_reason || req.reject_reason || req.admin_notes}</p>
                     </div>
                   )}
                   
