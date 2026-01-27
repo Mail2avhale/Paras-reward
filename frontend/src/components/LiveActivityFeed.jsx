@@ -52,7 +52,7 @@ const LiveActivityFeed = ({ translations = {}, maxItems = 5 }) => {
     fetchActivities();
     
     // Refresh every 30 seconds
-    const fetchInterval = setInterval(fetchActivities, 30000);
+    const fetchInterval = setInterval(fetchActivities, 60000);
     
     return () => clearInterval(fetchInterval);
   }, []);

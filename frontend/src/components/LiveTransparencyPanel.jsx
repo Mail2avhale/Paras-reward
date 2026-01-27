@@ -72,7 +72,7 @@ const LiveTransparencyPanel = ({ translations = {} }) => {
     fetchLiveStats();
     
     // Refresh every 30 seconds
-    const interval = setInterval(fetchLiveStats, 30000);
+    const interval = setInterval(fetchLiveStats, 60000);
     
     return () => clearInterval(interval);
   }, []);
