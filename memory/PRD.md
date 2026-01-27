@@ -15,29 +15,29 @@ A social rewards platform where users can earn PRC (Paras Reward Coins) through 
 - ✅ Request Timeline with SLA Warnings
 - ✅ In-App Notification System
 - ✅ Marketplace & Orders
+- ✅ **Upstash Redis Caching** (NEW)
 
 ## Recent Changes (January 2027)
 
 ### January 27, 2027
-- **Fixed P0 Regression**: Admin pages were failing to load data
-  - Fixed incorrect API endpoints in AdminDashboard.js
-  - `/api/admin/orders` → `/api/admin/orders/all`
-  - `/api/admin/kyc` → `/api/kyc/list`
+- **Upstash Redis Integration Complete**
+  - Cloud-hosted Redis caching enabled
+  - API response caching for better performance
+  - Cache stats endpoint: `GET /api/cache/stats`
+  - Credentials: `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`
 
-- **Performance Optimization**: Reduced excessive API polling
+- **Bug Fixes:**
+  - Fixed IndexedDB error in OfflineIndicator.js
+  - Added 10-second loading timeout to prevent infinite loading
+  - Proper fallback data implementation for slow networks
+
+- **Performance Optimization:**
   - All polling intervals increased from 30s to 60s
-  - Affected components: NotificationContext, NotificationBell, AdminDashboard, 
-    AdminBillPayments, AdminGiftVouchers, AdminKYC, AdminSecurityDashboard, 
-    PRCRain, LiveActivityFeed, LiveTransparencyPanel
+  - Affected: NotificationContext, NotificationBell, AdminDashboard, 
+    AdminBillPayments, AdminGiftVouchers, AdminKYC, etc.
 
-### Previous Session
-- Implemented Request Timeline UI with SLA warning badges
-- Integrated in-app notification system for admin actions
-- Fixed deployment failure (.gitignore blocking .env files)
-- Fixed CORS configuration
-- Optimized N+1 query issues in backend
-- Fixed bill payment rejection issue
-- Fixed KYC/Subscription race conditions
+- **Fixed P0 Regression:** Admin pages were failing to load data
+  - Fixed incorrect API endpoints in AdminDashboard.js
 
 ## Architecture
 
@@ -47,10 +47,18 @@ A social rewards platform where users can earn PRC (Paras Reward Coins) through 
 - `/app/frontend/src/context/` - React contexts
 - UI: Shadcn/UI components + Tailwind CSS
 
-### Backend (FastAPI + MongoDB)
+### Backend (FastAPI + MongoDB + Redis)
 - `/app/backend/server.py` - Main API server
-- `/app/backend/models.py` - Data models
-- Database: MongoDB
+- `/app/backend/cache_manager.py` - Redis/Upstash cache manager
+- Database: MongoDB + Upstash Redis (caching)
+
+### Environment Variables (Production)
+```
+MONGO_URL=<your_mongodb_url>
+DB_NAME=prc_rewards
+UPSTASH_REDIS_REST_URL=https://safe-warthog-9980.upstash.io
+UPSTASH_REDIS_REST_TOKEN=<your_token>
+```
 
 ## Pending Issues (Priority Order)
 
@@ -65,22 +73,21 @@ A social rewards platform where users can earn PRC (Paras Reward Coins) through 
 1. Improve user subscription purchase flow
 
 ## Upcoming Tasks
-- Play Store Release Architecture
-- Full Redis Integration
-- ML Risk Scoring
+- **ML Risk Scoring** - Fraud detection and user risk assessment
+- **Play Store Release Architecture** - PWA or WebView wrapper
 - AdMob + Unity Ads Integration
 - Shareable Achievement Cards
 
 ## API Endpoints Reference
-- `/api/admin/orders/all` - Get admin orders
-- `/api/kyc/list` - Get all KYC documents
-- `/api/admin/vip-payments` - Get subscription payments
-- `/api/admin/gift-voucher/requests` - Get gift voucher requests
-- `/api/admin/subscription-stats` - Get subscription statistics
+- `GET /api/cache/stats` - Cache system statistics (NEW)
+- `GET /api/admin/orders/all` - Get admin orders
+- `GET /api/kyc/list` - Get all KYC documents
+- `GET /api/admin/vip-payments` - Get subscription payments
+- `GET /api/admin/gift-voucher/requests` - Get gift voucher requests
 
 ## Environment
 - Frontend: React on port 3000
 - Backend: FastAPI on port 8001
-- Database: MongoDB (MONGO_URL from backend/.env)
+- Database: MongoDB + Upstash Redis
 - Preview URL: https://rewardflow-13.preview.emergentagent.com
 - Production: https://parasreward.com
