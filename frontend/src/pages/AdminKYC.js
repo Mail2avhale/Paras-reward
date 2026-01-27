@@ -146,6 +146,7 @@ const AdminKYC = ({ user }) => {
 
   const handleQuickReject = async (doc, e) => {
     e.stopPropagation();
+    if (processing) return; // Prevent multiple clicks
     const reason = window.prompt('Rejection reason (optional):');
     if (reason === null) return; // User cancelled
     
