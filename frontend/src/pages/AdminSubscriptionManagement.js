@@ -252,15 +252,6 @@ const AdminSubscriptionManagement = ({ user }) => {
       setPayments([]);
     }
   };
-        ...(Array.isArray(approvedRes.data) ? approvedRes.data : approvedRes.data.payments || []),
-        ...(Array.isArray(rejectedRes.data) ? rejectedRes.data : rejectedRes.data.payments || [])
-      ];
-      
-      setPayments(allPayments);
-    } catch (error) {
-      console.error('Error fetching payments:', error);
-    }
-  };
 
   const fetchPricing = async () => {
     try {
