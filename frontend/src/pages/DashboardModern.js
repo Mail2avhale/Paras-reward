@@ -82,6 +82,12 @@ const DashboardModern = ({ user, onLogout }) => {
   }, [user]);
 
   const fetchDashboardData = useCallback(async () => {
+    // Set a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      console.warn('Dashboard data fetch timeout - using fallback data');
+    }, 10000); // 10 second timeout
+    
     try {
       setLoading(true);
       
