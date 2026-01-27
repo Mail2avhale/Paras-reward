@@ -4215,7 +4215,14 @@ async def claim_mining(uid: str):
 # ========== USER DATA ENDPOINT ==========
 @api_router.get("/user/{uid}")
 async def get_user_data(uid: str):
-    """Get user details - Comprehensive user data endpoint"""
+    """Get user details - Comprehensive user data endpoint with caching"""
+    
+    # Try to get from cache first (cache for 2 minutes)
+    cache_key = f"user_data:{uid}"
+    cached_user = await cache.get(cache_key)
+    if cached_user:
+        return cached_user
+    
     user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
