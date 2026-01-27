@@ -59,13 +59,16 @@ export function NotificationProvider({ children, userId }) {
     [addToast]
   );
 
-  // Poll for new notifications
+  // Poll for new notifications - OPTIMIZED: Reduced polling frequency
   useEffect(() => {
     if (!userId) return;
 
+    let isMounted = true;
     const pollNotifications = async () => {
+      if (!isMounted) return;
       try {
         const response = await fetch(`${BACKEND_URL}/api/notifications/${userId}?limit=5`);
+        if (!response.ok) return;
         const data = await response.json();
         const notifications = data.notifications || [];
 
@@ -82,18 +85,21 @@ export function NotificationProvider({ children, userId }) {
           }
         });
 
-        setLastChecked(Date.now());
+        if (isMounted) setLastChecked(Date.now());
       } catch (error) {
         console.error('Error polling notifications:', error);
       }
     };
 
-    // Poll immediately and then every 30 seconds
+    // Poll immediately and then every 60 seconds (increased from 30s)
     pollNotifications();
-    const interval = setInterval(pollNotifications, 30000);
+    const interval = setInterval(pollNotifications, 60000);
 
-    return () => clearInterval(interval);
-  }, [userId, lastChecked, addToast]);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [userId, addToast]); // Removed lastChecked from deps to prevent re-renders
 
   const value = {
     toasts,
