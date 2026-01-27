@@ -190,14 +190,16 @@ const AdminSubscriptionManagement = ({ user }) => {
 
   const fetchAllData = async () => {
     setLoading(true);
+    // Fetch only essential data initially, others can load in background
     await Promise.all([
-      fetchStats(),
       fetchPayments(),
-      fetchPricing(),
-      fetchUsers(),
       fetchPricingReference()
     ]);
     setLoading(false);
+    // Load non-critical data in background
+    fetchStats();
+    fetchPricing();
+    fetchUsers();
   };
 
   const fetchPricingReference = async () => {
