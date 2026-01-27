@@ -4328,8 +4328,6 @@ async def get_user_data(uid: str):
     ]).to_list(1)
     if gv_result:
         total_redeemed += gv_result[0].get("total", 0)
-    ).to_list(1000)
-    total_redeemed += sum(gv.get("total_prc_deducted", 0) for gv in gift_vouchers)
     
     # Add PRC burns and rain losses from transactions
     burn_loss_result = await db.transactions.aggregate([
@@ -4337,7 +4335,7 @@ async def get_user_data(uid: str):
         {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
     ]).to_list(1)
     if burn_loss_result:
-        total_redeemed += burn_loss_result[0]["total"]
+        total_redeemed += burn_loss_result[0].get("total", 0)
     
     user["total_redeemed"] = round(total_redeemed, 2)
     
