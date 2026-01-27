@@ -295,6 +295,12 @@ const AdminSubscriptionManagement = ({ user }) => {
   };
 
   const handleApprovePayment = async (payment) => {
+    if (processing) return; // Prevent multiple clicks
+    
+    // Store payment_id immediately before any async operations
+    const paymentId = payment.payment_id;
+    const userName = payment.user_name || payment.user_id;
+    
     try {
       setProcessing(true);
       
@@ -310,17 +316,17 @@ const AdminSubscriptionManagement = ({ user }) => {
         requestData.correct_duration = correctDuration || payment.plan_type;
       }
       
-      await axios.post(`${API}/api/admin/vip-payment/${payment.payment_id}/approve`, requestData);
+      await axios.post(`${API}/api/admin/vip-payment/${paymentId}/approve`, requestData);
       
       if (showPlanCorrection && (correctPlan || correctDuration)) {
-        toast.success(`Payment approved with corrected plan: ${correctPlan || payment.subscription_plan} (${correctDuration || payment.plan_type})`);
+        toast.success(`Payment approved for ${userName} with corrected plan!`);
       } else {
-        toast.success('Payment approved! User subscription activated.');
+        toast.success(`Payment approved for ${userName}! Subscription activated.`);
       }
       
       // Optimistic local update instead of full refetch (FASTER!)
       setPayments(prev => prev.map(p => 
-        p.payment_id === payment.payment_id 
+        p.payment_id === paymentId 
           ? {...p, status: 'approved', approved_at: new Date().toISOString()} 
           : p
       ));
@@ -333,11 +339,12 @@ const AdminSubscriptionManagement = ({ user }) => {
       setCorrectDuration('');
       setShowPlanCorrection(false);
       
-      // Background refresh (non-blocking)
+      // Background refresh (non-blocking) - longer delay to prevent race conditions
       setTimeout(() => {
         fetchPayments();
-      }, 2000);
+      }, 3000);
     } catch (error) {
+      console.error('Subscription approve error:', error);
       toast.error(error.response?.data?.detail || 'Failed to approve payment');
     } finally {
       setProcessing(false);
