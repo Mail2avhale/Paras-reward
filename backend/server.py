@@ -5035,6 +5035,55 @@ async def update_subscription_pricing(request: Request):
     
     return {"success": True, "pricing": pricing}
 
+@api_router.get("/admin/subscription-stats")
+async def get_subscription_stats():
+    """Get subscription statistics using fast aggregation queries"""
+    try:
+        # Use aggregation for fast counting
+        plan_counts_pipeline = [
+            {"$group": {
+                "_id": {"$ifNull": ["$subscription_plan", "explorer"]},
+                "count": {"$sum": 1}
+            }}
+        ]
+        plan_counts_result = await db.users.aggregate(plan_counts_pipeline).to_list(10)
+        
+        plan_counts = {"explorer": 0, "startup": 0, "growth": 0, "elite": 0}
+        total_users = 0
+        for item in plan_counts_result:
+            plan = item["_id"] or "explorer"
+            if plan in plan_counts:
+                plan_counts[plan] = item["count"]
+            else:
+                plan_counts["explorer"] += item["count"]
+            total_users += item["count"]
+        
+        # Count expiring this week
+        now = datetime.now(timezone.utc)
+        week_later = now + timedelta(days=7)
+        expiring_count = await db.users.count_documents({
+            "subscription_expiry": {
+                "$gte": now.isoformat(),
+                "$lte": week_later.isoformat()
+            }
+        })
+        
+        # Pending payments count
+        pending_payments = await db.vip_payments.count_documents({"status": "pending"})
+        
+        # Calculate approximate revenue
+        monthly_revenue = (plan_counts["startup"] * 299) + (plan_counts["growth"] * 549) + (plan_counts["elite"] * 799)
+        
+        return {
+            "total_users": total_users,
+            "plan_counts": plan_counts,
+            "pending_payments": pending_payments,
+            "expiring_this_week": expiring_count,
+            "monthly_revenue": monthly_revenue
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 @api_router.get("/admin/subscription/pricing")
 async def get_admin_subscription_pricing():
     """Admin: Get current subscription pricing"""
