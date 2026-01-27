@@ -80,11 +80,11 @@ const AdminDashboard = ({ user }) => {
   useEffect(() => {
     fetchAllData();
     fetchChartData();
-    // Auto-refresh every 30 seconds
+    // Auto-refresh every 60 seconds (increased from 30s for performance)
     const interval = setInterval(() => {
       fetchAllData();
       fetchChartData();
-    }, 30000);
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 
