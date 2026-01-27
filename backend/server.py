@@ -4227,6 +4227,11 @@ async def claim_mining(uid: str):
             "message": f"₹{round(luxury_deduction/10, 2)} auto-saved for Luxury Life! 🏆"
         }
     
+    # Invalidate caches after mining claim
+    await cache.delete(f"mining_status:{uid}")
+    await cache.delete(f"mining_rate:{uid}")
+    await cache.delete(f"user_data:{uid}")
+    
     return response
 
 # ========== USER DATA ENDPOINT ==========
