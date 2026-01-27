@@ -1,19 +1,57 @@
-import React, { useState, useEffect } from 'react';
-import { WifiOff, Wifi, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { WifiOff, Wifi, CheckCircle, X } from 'lucide-react';
 
 function OfflineIndicator() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showSyncSuccess, setShowSyncSuccess] = useState(false);
   const [queuedActions, setQueuedActions] = useState(0);
 
+  // Clear stale queued actions (older than 5 minutes)
+  const clearStaleActions = useCallback(async () => {
+    try {
+      const db = await openDB();
+      if (!db.objectStoreNames.contains('offline-queue')) {
+        db.close();
+        return;
+      }
+      
+      const tx = db.transaction('offline-queue', 'readwrite');
+      const store = tx.objectStore('offline-queue');
+      
+      // Clear all actions if online (they should have been processed)
+      if (navigator.onLine) {
+        store.clear();
+      }
+      
+      tx.oncomplete = () => {
+        db.close();
+        setQueuedActions(0);
+      };
+    } catch (error) {
+      console.log('Could not clear stale actions');
+    }
+  }, []);
+
+  // Dismiss the sync banner manually
+  const handleDismiss = async () => {
+    await clearStaleActions();
+    setQueuedActions(0);
+  };
+
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      // Trigger background sync
+      // When coming back online, try to sync and then clear
       if ('serviceWorker' in navigator && 'sync' in navigator.serviceWorker) {
         navigator.serviceWorker.ready.then((registration) => {
           registration.sync.register('sync-offline-queue');
+        }).catch(() => {
+          // If sync fails, just clear the queue
+          clearStaleActions();
         });
+      } else {
+        // No service worker sync, just clear
+        clearStaleActions();
       }
     };
 
@@ -25,8 +63,10 @@ function OfflineIndicator() {
     const handleMessage = (event) => {
       if (event.data.type === 'SYNC_SUCCESS') {
         setShowSyncSuccess(true);
-        setTimeout(() => setShowSyncSuccess(false), 3000);
-        checkQueuedActions();
+        setTimeout(() => {
+          setShowSyncSuccess(false);
+          clearStaleActions();
+        }, 2000);
       }
     };
 
@@ -39,6 +79,14 @@ function OfflineIndicator() {
 
     // Check queued actions on mount
     checkQueuedActions();
+    
+    // If online on mount and there are queued actions, clear them after 3 seconds
+    // (they are likely stale from a previous session)
+    const clearTimer = setTimeout(() => {
+      if (navigator.onLine) {
+        clearStaleActions();
+      }
+    }, 3000);
 
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -46,14 +94,14 @@ function OfflineIndicator() {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.removeEventListener('message', handleMessage);
       }
+      clearTimeout(clearTimer);
     };
-  }, []);
+  }, [clearStaleActions]);
 
   const checkQueuedActions = async () => {
     try {
       const db = await openDB();
       if (!db.objectStoreNames.contains('offline-queue')) {
-        // Store doesn't exist, no queued actions
         setQueuedActions(0);
         db.close();
         return;
@@ -66,7 +114,6 @@ function OfflineIndicator() {
       };
       tx.oncomplete = () => db.close();
     } catch (error) {
-      // Silently handle - IndexedDB not available or not initialized
       setQueuedActions(0);
     }
   };
@@ -110,13 +157,13 @@ function OfflineIndicator() {
           <div className="container mx-auto flex items-center justify-center gap-3">
             <CheckCircle className="w-5 h-5" />
             <span className="font-medium">
-              Back online! Syncing your queued actions...
+              Synced successfully!
             </span>
           </div>
         </div>
       )}
 
-      {/* Queued Actions Indicator */}
+      {/* Queued Actions Indicator - with dismiss button */}
       {isOnline && queuedActions > 0 && !showSyncSuccess && (
         <div className="fixed top-0 left-0 right-0 z-[9999] bg-blue-500 text-white px-4 py-2 shadow-lg">
           <div className="container mx-auto flex items-center justify-center gap-3">
@@ -124,6 +171,13 @@ function OfflineIndicator() {
             <span className="text-sm font-medium">
               Syncing {queuedActions} action{queuedActions > 1 ? 's' : ''}...
             </span>
+            <button 
+              onClick={handleDismiss}
+              className="ml-2 p-1 hover:bg-blue-600 rounded"
+              title="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
