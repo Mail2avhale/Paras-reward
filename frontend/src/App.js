@@ -47,9 +47,26 @@ const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
 const ForgotPasswordNew = lazy(() => import("@/pages/ForgotPasswordNew"));
 const SupportTickets = lazy(() => import("@/pages/SupportTickets"));
 // Dashboard.js, DashboardNew.js, DashboardPremium.js removed - not in use
-const DailyRewards = lazy(() => import("@/pages/Mining")); // Renamed for AdMob compliance
-const TapGame = lazy(() => import("@/pages/TapGame"));
+
+// CRITICAL PAGES - Preload after initial render for faster navigation
 const DashboardModern = lazy(() => import("@/pages/DashboardModern"));
+const DailyRewards = lazy(() => import("@/pages/Mining")); // Renamed for AdMob compliance
+
+// Preload critical pages after initial render
+const preloadCriticalPages = () => {
+  // Preload after 2 seconds to not block initial render
+  setTimeout(() => {
+    import("@/pages/DashboardModern");
+    import("@/pages/Mining");
+  }, 2000);
+};
+
+// Call preload when module loads
+if (typeof window !== 'undefined') {
+  preloadCriticalPages();
+}
+
+const TapGame = lazy(() => import("@/pages/TapGame"));
 const Referrals = lazy(() => import("@/pages/ReferralsEnhanced"));
 const Marketplace = lazy(() => import("@/pages/Marketplace"));
 const MarketplaceEnhanced = lazy(() => import("@/pages/MarketplaceEnhanced"));
