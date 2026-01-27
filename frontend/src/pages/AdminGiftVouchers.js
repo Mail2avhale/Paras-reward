@@ -215,16 +215,21 @@ const AdminGiftVouchers = ({ user }) => {
     e.stopPropagation();
     const reason = window.prompt('Rejection reason:');
     if (reason === null) return;
+    if (!reason.trim()) {
+      toast.error('Rejection reason is required');
+      return;
+    }
     
     try {
       setProcessing(true);
       await axios.post(`${API}/api/admin/gift-voucher/process`, {
         request_id: req.request_id,
         action: 'reject',
-        admin_notes: reason,
+        reject_reason: reason.trim(),
+        admin_notes: reason.trim(),
         admin_uid: user.uid
       });
-      toast.success('Request rejected');
+      toast.success('Request rejected and PRC refunded');
       fetchRequests();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to reject');
