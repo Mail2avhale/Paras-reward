@@ -38,14 +38,17 @@ const AdminDashboard = ({ user }) => {
       const [statsRes, deliveryRes, ordersRes, kycRes] = await Promise.all([
         axios.get(`${API}/api/admin/stats`).catch(() => ({ data: {} })),
         axios.get(`${API}/api/admin/delivery-partners/stats`).catch(() => ({ data: {} })),
-        axios.get(`${API}/api/admin/orders?limit=5`).catch(() => ({ data: { orders: [] } })),
-        axios.get(`${API}/api/admin/kyc?status=pending&limit=5`).catch(() => ({ data: { documents: [] } }))
+        axios.get(`${API}/api/admin/orders/all?limit=5`).catch(() => ({ data: { orders: [] } })),
+        axios.get(`${API}/api/kyc/list`).catch(() => ({ data: [] }))
       ]);
       
       setStats(statsRes.data);
       setDeliveryStats(deliveryRes.data);
       setRecentOrders(ordersRes.data.orders || []);
-      setPendingKYC(kycRes.data.documents || []);
+      // Filter KYC documents to show only pending ones (limit 5)
+      const allKyc = Array.isArray(kycRes.data) ? kycRes.data : [];
+      const pendingKycDocs = allKyc.filter(k => k.status === 'pending').slice(0, 5);
+      setPendingKYC(pendingKycDocs);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
