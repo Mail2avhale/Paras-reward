@@ -148,16 +148,30 @@ const AdminKYC = ({ user }) => {
     const reason = window.prompt('Rejection reason (optional):');
     if (reason === null) return; // User cancelled
     
+    // Store kyc_id immediately before any async operations
+    const kycId = doc.kyc_id;
+    const userName = doc.user_name || doc.user_id;
+    
     try {
       setProcessing(true);
-      await axios.post(`${API}/kyc/${doc.kyc_id}/verify`, {
+      await axios.post(`${API}/kyc/${kycId}/verify`, {
         action: 'reject',
         admin_id: user?.uid,
         notes: reason
       });
-      toast.success('KYC Rejected');
-      fetchKYCDocuments();
+      toast.success(`KYC Rejected for ${userName}`);
+      
+      // Optimistic local update instead of full refetch
+      setKycDocuments(prev => prev.map(d => 
+        d.kyc_id === kycId 
+          ? {...d, status: 'rejected', verified_at: new Date().toISOString()} 
+          : d
+      ));
+      
+      // Background refresh after delay
+      setTimeout(() => fetchKYCDocuments(), 3000);
     } catch (error) {
+      console.error('KYC reject error:', error);
       toast.error(error.response?.data?.detail || 'Failed to reject');
     } finally {
       setProcessing(false);
