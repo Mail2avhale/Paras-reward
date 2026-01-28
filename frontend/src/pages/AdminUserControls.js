@@ -270,6 +270,9 @@ const AdminUserControls = () => {
   const openUserModal = (user) => {
     setSelectedUser(user);
     setShowUserModal(true);
+    setShowPasswordReset(false);
+    setTempPassword('');
+    setGeneratedPassword('');
   };
 
   const handleSaveUserSettings = () => {
