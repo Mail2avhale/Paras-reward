@@ -373,23 +373,6 @@ const ReferralsEnhanced = ({ user }) => {
       setLoading(false);
     }
   };
-        
-        setReferralStats({ total: refCount, active: 0, vip: 0 });
-        setReferralLevels([1, 2, 3, 4, 5].map(level => ({
-          level,
-          users: [],
-          count: level === 1 ? refCount : 0,
-          active_count: 0
-        })));
-      }
-      
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      setUserData(user);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Check localStorage for first-time celebration (persists across sessions)
   useEffect(() => {
