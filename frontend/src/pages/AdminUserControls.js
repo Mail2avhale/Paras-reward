@@ -52,8 +52,9 @@ const AdminUserControls = () => {
     
     setResettingPassword(true);
     try {
-      const response = await axios.post(`${API}/api/admin/users/${selectedUser.uid}/action`, {
+      const response = await axios.post(`${API}/api/admin/user-360/action`, {
         action: 'reset_password',
+        user_id: selectedUser.uid,
         admin_id: 'admin',
         temp_password: tempPassword || ''
       });
