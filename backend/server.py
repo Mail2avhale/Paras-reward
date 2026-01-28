@@ -4218,6 +4218,100 @@ async def claim_mining(uid: str):
     }
     
     # Add luxury savings info for paid users
+
+
+# ============ USER DASHBOARD COMBINED API ============
+
+@api_router.get("/user/{uid}/dashboard")
+async def get_user_dashboard_combined(uid: str):
+    """
+    Combined API for User Dashboard - returns ALL data in ONE call.
+    This reduces multiple API calls to 1, significantly improving load time.
+    Cached for 30 seconds.
+    """
+    cache_key = f"user:dashboard:{uid}"
+    
+    # Try cache first
+    cached = await cache.get(cache_key)
+    if cached:
+        return cached
+    
+    # Get user data (this already does all the heavy lifting)
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "password": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Check mining session validity
+    mining_active = False
+    mining_session_end = None
+    remaining_hours = 0
+    mined_this_session = 0
+    
+    if user.get("mining_start_time"):
+        start_time = user["mining_start_time"]
+        if isinstance(start_time, str):
+            start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+        if start_time.tzinfo is None:
+            start_time = start_time.replace(tzinfo=timezone.utc)
+        
+        session_end = start_time + timedelta(hours=24)
+        if now < session_end:
+            mining_active = True
+            mining_session_end = session_end.isoformat()
+            remaining_hours = (session_end - now).total_seconds() / 3600
+            
+            # Calculate mined this session
+            elapsed_hours = (now - start_time).total_seconds() / 3600
+            base_rate = user.get("mining_rate", 0.5)
+            mined_this_session = elapsed_hours * base_rate
+    
+    # Get referral count (indexed query - fast)
+    referral_count = await db.users.count_documents({"referred_by": uid})
+    
+    # Get recent activity (last 5)
+    recent_activity = await db.transactions.find(
+        {"user_id": uid},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(5).to_list(5)
+    
+    # Get subscription info
+    subscription_plan = user.get("subscription_plan", "explorer")
+    subscription_expiry = user.get("subscription_expiry")
+    
+    # Build response
+    result = {
+        "user": {
+            "uid": uid,
+            "name": user.get("name", ""),
+            "email": user.get("email", ""),
+            "prc_balance": round(user.get("prc_balance", 0), 4),
+            "total_mined": round(user.get("total_mined", 0), 4),
+            "total_redeemed": round(user.get("total_redeemed", 0), 2),
+            "referral_count": referral_count,
+            "referral_code": user.get("referral_code", ""),
+            "subscription_plan": subscription_plan,
+            "subscription_expiry": subscription_expiry,
+            "mining_rate": user.get("mining_rate", 0.5),
+            "created_at": user.get("created_at"),
+            "profile_image": user.get("profile_image")
+        },
+        "mining": {
+            "active": mining_active,
+            "session_end": mining_session_end,
+            "remaining_hours": round(remaining_hours, 2),
+            "mined_this_session": round(mined_this_session, 4),
+            "session_start": user.get("mining_start_time")
+        },
+        "recent_activity": recent_activity,
+        "cached_at": now.isoformat()
+    }
+    
+    # Cache for 30 seconds
+    await cache.set(cache_key, result, ttl=30)
+    
+    return result
     if luxury_deduction > 0:
         response["luxury_savings"] = {
             "deducted": round(luxury_deduction, 4),
