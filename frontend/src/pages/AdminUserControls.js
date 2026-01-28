@@ -7,7 +7,7 @@ import {
   Settings, Users, Search, Pause, Play, Target, Bell,
   Shield, Zap, ChevronRight, ChevronDown, ArrowLeft,
   RefreshCw, Filter, UserCog, AlertTriangle, Check,
-  X, Clock, Coins, TrendingUp
+  X, Clock, Coins, TrendingUp, Key, Copy
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
