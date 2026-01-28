@@ -782,7 +782,7 @@ Download now & start earning!`;
               <div>
                 <p className="text-white font-bold">Referral Applied!</p>
                 <p className="text-green-400 text-sm">
-                  You joined via {userData.referred_by_name}'s referral
+                  You joined via {userData.referred_by_name}&apos;s referral
                 </p>
               </div>
             </div>
