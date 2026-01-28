@@ -31,6 +31,13 @@ A social rewards platform where users can earn PRC (Paras Reward Coins) through 
   - Untapped Potential banner showing bonus opportunity from inactive users
   - New API endpoint: `GET /api/referrals/{user_id}/network-analytics`
 
+- **Apply Referral Code Feature** (User Request)
+  - Added "Referral Code आहे का?" button on /referrals page
+  - Users without a referrer can now apply a referral code
+  - Input field with Apply button and Marathi instructions
+  - Shows confirmation when referral is already applied
+  - API endpoint: `POST /api/referrals/apply` (existing)
+
 ### January 27, 2027
 - **Upstash Redis Integration Complete**
   - Cloud-hosted Redis caching enabled
