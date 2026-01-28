@@ -763,7 +763,7 @@ Download now & start earning!`;
                 </div>
                 
                 <p className="text-gray-500 text-xs mt-3 text-center">
-                  Enter your friend's code - both of you get bonus!
+                  Enter your friend&apos;s code - both of you get bonus!
                 </p>
               </div>
             )}
