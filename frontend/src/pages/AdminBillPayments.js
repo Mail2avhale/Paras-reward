@@ -801,10 +801,10 @@ const AdminBillPayments = ({ user }) => {
                             <p className="text-white">{req.details.cardholder_name}</p>
                           </div>
                         )}
-                        {req.details?.card_last_4_digits && (
+                        {(req.details?.card_last_4_digits || req.details?.card_last4) && (
                           <div>
                             <p className="text-gray-500 text-xs">Card (Last 4)</p>
-                            <p className="text-white font-mono">****{req.details.card_last_4_digits}</p>
+                            <p className="text-white font-mono">****{req.details.card_last_4_digits || req.details.card_last4}</p>
                           </div>
                         )}
                         {req.details?.card_number && (
@@ -816,7 +816,7 @@ const AdminBillPayments = ({ user }) => {
                         {req.details?.card_type && (
                           <div>
                             <p className="text-gray-500 text-xs">Card Type</p>
-                            <p className="text-white">{req.details.card_type}</p>
+                            <p className="text-white capitalize">{req.details.card_type}</p>
                           </div>
                         )}
                         {req.details?.card_bank && (
