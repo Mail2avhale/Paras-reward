@@ -647,6 +647,12 @@ const AdminBillPayments = ({ user }) => {
                         )}
                         
                         {/* Service Provider Details */}
+                        {req.details?.biller_name && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Biller Name</p>
+                            <p className="text-white font-semibold">{req.details.biller_name}</p>
+                          </div>
+                        )}
                         {req.details?.service_provider && (
                           <div>
                             <p className="text-gray-500 text-xs">Service Provider</p>
