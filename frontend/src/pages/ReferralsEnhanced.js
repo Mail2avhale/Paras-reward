@@ -126,6 +126,11 @@ const ReferralsEnhanced = ({ user }) => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [previousTotal, setPreviousTotal] = useState(null);
   const [rewardProgress, setRewardProgress] = useState(null);  // NEW: Reward progress tracker
+  
+  // Apply Referral Code State
+  const [applyCodeInput, setApplyCodeInput] = useState('');
+  const [applyingCode, setApplyingCode] = useState(false);
+  const [showApplySection, setShowApplySection] = useState(false);
 
   // Confetti celebration function
   const triggerConfetti = useCallback(() => {
