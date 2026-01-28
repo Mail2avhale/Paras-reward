@@ -10916,13 +10916,26 @@ async def user_360_quick_action(request: Request):
         result_message = f"Daily PRC cap set to {cap}" if cap > 0 else "Daily PRC cap removed (unlimited)"
         
     elif action == "reset_password":
-        # Generate a temporary password reset token
-        reset_token = str(uuid.uuid4())
+        # Admin can set a temporary password directly
+        temp_password = data.get("temp_password", "")
+        if not temp_password:
+            # Generate a random temporary password
+            temp_password = f"Temp{uuid.uuid4().hex[:6].upper()}"
+        
+        # Hash the temporary password
+        hashed_password = bcrypt.hashpw(temp_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
         await db.users.update_one(
             {"uid": user_id},
-            {"$set": {"reset_token": reset_token, "updated_at": now.isoformat()}}
+            {"$set": {
+                "password": hashed_password,
+                "password_reset_required": True,
+                "password_reset_at": now.isoformat(),
+                "password_reset_by": admin_id,
+                "updated_at": now.isoformat()
+            }}
         )
-        result_message = "Password reset initiated. User will need to use forgot password flow."
+        result_message = f"Password reset successful. Temporary password: {temp_password}"
         
     elif action == "send_notification":
         message = data.get("message", "")
