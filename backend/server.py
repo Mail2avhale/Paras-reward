@@ -9693,6 +9693,77 @@ async def get_admin_stats():
     return result
 
 
+# ============ COMBINED ADMIN DASHBOARD API ============
+
+@api_router.get("/admin/dashboard-all")
+async def get_admin_dashboard_all():
+    """
+    Combined API for Admin Dashboard - returns ALL data in ONE call.
+    This reduces 8 API calls to 1, significantly improving load time.
+    Cached for 5 minutes.
+    """
+    cache_key = "admin:dashboard:all"
+    
+    # Try cache first
+    cached = await cache.get(cache_key)
+    if cached:
+        return cached
+    
+    # Get all data in parallel
+    stats_task = get_admin_stats()
+    
+    # Charts data
+    from datetime import timedelta
+    today = datetime.now(timezone.utc)
+    thirty_days_ago = today - timedelta(days=30)
+    
+    # Run all queries in parallel
+    results = await asyncio.gather(
+        stats_task,
+        # User growth - last 30 days
+        db.users.aggregate([
+            {"$match": {"created_at": {"$gte": thirty_days_ago.isoformat()}}},
+            {"$group": {
+                "_id": {"$substr": ["$created_at", 0, 10]},
+                "count": {"$sum": 1}
+            }},
+            {"$sort": {"_id": 1}},
+            {"$limit": 30}
+        ]).to_list(30),
+        # Recent orders
+        db.orders.find(
+            {},
+            {"_id": 0, "order_id": 1, "user_id": 1, "status": 1, "created_at": 1, "total_prc_price": 1}
+        ).sort("created_at", -1).limit(5).to_list(5),
+        # Pending KYC count
+        db.kyc_documents.count_documents({"status": "pending"}),
+        # Delivery partners stats
+        db.delivery_partners.count_documents({}),
+        return_exceptions=True
+    )
+    
+    stats, user_growth_raw, recent_orders, pending_kyc, delivery_partners = results
+    
+    # Format user growth for chart
+    user_growth = [{"date": item["_id"], "users": item["count"]} for item in (user_growth_raw or [])]
+    
+    combined_result = {
+        "stats": stats if not isinstance(stats, Exception) else {},
+        "charts": {
+            "user_growth": user_growth
+        },
+        "recent_orders": recent_orders if not isinstance(recent_orders, Exception) else [],
+        "pending_kyc_count": pending_kyc if not isinstance(pending_kyc, Exception) else 0,
+        "delivery_partners_count": delivery_partners if not isinstance(delivery_partners, Exception) else 0,
+        "cached_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Cache for 5 minutes
+    await cache.set(cache_key, combined_result, ttl=300)
+    
+    return combined_result
+
+
 # ============ SYSTEM PERFORMANCE APIs ============
 
 @api_router.get("/admin/system/cache-stats")
