@@ -86,12 +86,49 @@ const DashboardModern = ({ user, onLogout }) => {
     const timeoutId = setTimeout(() => {
       setLoading(false);
       console.warn('Dashboard data fetch timeout - using fallback data');
-    }, 10000); // 10 second timeout
+    }, 8000); // 8 second timeout
     
     try {
       setLoading(true);
       
-      // Parallel API calls for faster loading
+      // Try combined API first (faster - single request)
+      try {
+        const combinedRes = await axios.get(`${API}/api/user/${user.uid}/dashboard`);
+        
+        if (combinedRes.data?.user) {
+          const userData = combinedRes.data.user;
+          const miningData = combinedRes.data.mining;
+          
+          setUserData({
+            ...userData,
+            mining_active: miningData.active,
+            mining_session_end: miningData.session_end,
+            mining_start_time: miningData.session_start
+          });
+          
+          setStats({
+            prcBalance: userData.prc_balance || 0,
+            totalMined: userData.total_mined || 0,
+            totalRedeemed: userData.total_redeemed || 0,
+            referralCount: userData.referral_count || 0,
+            subscriptionPlan: userData.subscription_plan || 'explorer',
+            subscriptionExpiry: userData.subscription_expiry || null,
+            subscriptionStart: userData.subscription_start || null
+          });
+          
+          // Set recent activity from combined response
+          const activities = combinedRes.data.recent_activity || [];
+          setRecentTransactions(activities.slice(0, 5));
+          
+          clearTimeout(timeoutId);
+          setLoading(false);
+          return; // Success - exit early
+        }
+      } catch (combinedError) {
+        console.log('Combined API failed, trying fallback');
+      }
+      
+      // Fallback to individual API calls
       const [userResult, activityResult] = await Promise.allSettled([
         axios.get(`${API}/api/user/${user.uid}`),
         axios.get(`${API}/api/user/${user.uid}/recent-activity?limit=10`)
