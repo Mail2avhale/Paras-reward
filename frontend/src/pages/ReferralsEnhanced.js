@@ -1576,6 +1576,312 @@ Download now & start earning!`;
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* NEW: Network Analytics Modal */}
+      <AnimatePresence>
+        {showNetworkAnalytics && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex flex-col"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-800">
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setShowNetworkAnalytics(false)}
+                  className="p-2 hover:bg-gray-800 rounded-lg"
+                >
+                  <ArrowLeft className="w-5 h-5 text-white" />
+                </button>
+                <div>
+                  <h2 className="text-lg font-bold text-white">Network Analytics</h2>
+                  <p className="text-xs text-gray-400">Insights & growth opportunities</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowNetworkAnalytics(false)}
+                className="text-gray-500 hover:text-white p-2"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="flex-1 overflow-auto p-4">
+              {analyticsLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                    <p className="text-gray-400">Loading analytics...</p>
+                  </div>
+                </div>
+              ) : networkAnalytics ? (
+                <div className="space-y-4">
+                  {/* Network Health Score */}
+                  <div className="bg-gradient-to-br from-gray-900 to-gray-950 border border-gray-800 rounded-2xl p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-white font-bold flex items-center gap-2">
+                        <Activity className="w-5 h-5 text-emerald-400" />
+                        Network Health Score
+                      </h3>
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        networkAnalytics.network_health_score >= 80 ? 'bg-green-500/20 text-green-400' :
+                        networkAnalytics.network_health_score >= 60 ? 'bg-yellow-500/20 text-yellow-400' :
+                        networkAnalytics.network_health_score >= 40 ? 'bg-orange-500/20 text-orange-400' :
+                        'bg-red-500/20 text-red-400'
+                      }`}>
+                        {getHealthScoreLabel(networkAnalytics.network_health_score)}
+                      </span>
+                    </div>
+                    
+                    {/* Score Display */}
+                    <div className="flex items-center gap-4">
+                      <div className="relative w-24 h-24">
+                        <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+                          <circle cx="50" cy="50" r="40" stroke="#374151" strokeWidth="8" fill="none" />
+                          <circle 
+                            cx="50" cy="50" r="40" 
+                            stroke={networkAnalytics.network_health_score >= 80 ? '#10b981' : 
+                                    networkAnalytics.network_health_score >= 60 ? '#eab308' :
+                                    networkAnalytics.network_health_score >= 40 ? '#f97316' : '#ef4444'}
+                            strokeWidth="8" 
+                            fill="none" 
+                            strokeLinecap="round"
+                            strokeDasharray={`${networkAnalytics.network_health_score * 2.51} 251`}
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className={`text-2xl font-bold ${getHealthScoreColor(networkAnalytics.network_health_score)}`}>
+                            {Math.round(networkAnalytics.network_health_score)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">Activity Rate</span>
+                            <span className="text-white">{networkAnalytics.activity_rate}%</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">Network Size</span>
+                            <span className="text-white">{networkAnalytics.total_network_size} users</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">Current Bonus</span>
+                            <span className="text-emerald-400">+{networkAnalytics.current_bonus_percent}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bonus Opportunity */}
+                  {networkAnalytics.bonus_opportunity > 0 && (
+                    <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/10 border border-amber-500/30 rounded-2xl p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-amber-500/30 flex items-center justify-center">
+                          <Target className="w-6 h-6 text-amber-400" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-white font-bold">Untapped Potential</p>
+                          <p className="text-amber-400 text-sm">
+                            Activate inactive users to gain +{networkAnalytics.bonus_opportunity}% extra bonus!
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Subscription Distribution */}
+                  <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4">
+                    <h4 className="text-white font-bold mb-3 flex items-center gap-2">
+                      <Crown className="w-4 h-4 text-amber-400" />
+                      Subscription Distribution
+                    </h4>
+                    <div className="space-y-2">
+                      {[
+                        { key: 'elite', label: 'Elite', color: 'purple', icon: '👑' },
+                        { key: 'growth', label: 'Growth', color: 'blue', icon: '🚀' },
+                        { key: 'startup', label: 'Startup', color: 'amber', icon: '⭐' },
+                        { key: 'explorer', label: 'Explorer (Free)', color: 'gray', icon: '🌱' }
+                      ].map(plan => {
+                        const count = networkAnalytics.subscription_distribution[plan.key] || 0;
+                        const percent = networkAnalytics.total_network_size > 0 
+                          ? (count / networkAnalytics.total_network_size * 100) 
+                          : 0;
+                        return (
+                          <div key={plan.key} className="flex items-center gap-2">
+                            <span className="w-6 text-center">{plan.icon}</span>
+                            <span className="text-gray-400 text-sm w-28">{plan.label}</span>
+                            <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full bg-${plan.color}-500 rounded-full transition-all`}
+                                style={{ width: `${percent}%` }}
+                              />
+                            </div>
+                            <span className="text-white text-sm w-8 text-right">{count}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Level Distribution */}
+                  <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4">
+                    <h4 className="text-white font-bold mb-3 flex items-center gap-2">
+                      <Users className="w-4 h-4 text-cyan-400" />
+                      Level Distribution
+                    </h4>
+                    <div className="space-y-2">
+                      {networkAnalytics.level_distribution?.map(level => (
+                        <div key={level.level} className="flex items-center gap-2">
+                          <span className={`w-8 text-xs px-2 py-0.5 rounded text-center ${
+                            level.level === 1 ? 'bg-amber-500/20 text-amber-400' :
+                            level.level === 2 ? 'bg-blue-500/20 text-blue-400' :
+                            level.level === 3 ? 'bg-emerald-500/20 text-emerald-400' :
+                            level.level === 4 ? 'bg-purple-500/20 text-purple-400' :
+                            'bg-pink-500/20 text-pink-400'
+                          }`}>
+                            L{level.level}
+                          </span>
+                          <div className="flex-1 flex items-center gap-2">
+                            <div className="flex-1 h-3 bg-gray-800 rounded-full overflow-hidden">
+                              <div className="h-full flex">
+                                <div 
+                                  className="h-full bg-green-500"
+                                  style={{ width: level.total > 0 ? `${(level.active / level.total) * 100}%` : '0%' }}
+                                />
+                                <div 
+                                  className="h-full bg-gray-600"
+                                  style={{ width: level.total > 0 ? `${((level.total - level.active) / level.total) * 100}%` : '0%' }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          <span className="text-xs text-gray-400 w-16 text-right">
+                            {level.active}/{level.total}
+                          </span>
+                          <span className="text-xs text-amber-400 w-12 text-right">
+                            +{level.bonus_percent}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-gray-700/50 flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-green-500 rounded"></div>
+                        <span className="text-gray-400">Active</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-gray-600 rounded"></div>
+                        <span className="text-gray-400">Inactive</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Top Performers */}
+                  {networkAnalytics.top_performers?.length > 0 && (
+                    <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4">
+                      <h4 className="text-white font-bold mb-3 flex items-center gap-2">
+                        <Crown className="w-4 h-4 text-amber-400" />
+                        Top Performers
+                      </h4>
+                      <div className="space-y-2">
+                        {networkAnalytics.top_performers.map((performer, idx) => (
+                          <div 
+                            key={performer.uid} 
+                            className="flex items-center gap-3 p-2 bg-gray-800/50 rounded-xl"
+                          >
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                              idx === 0 ? 'bg-amber-500/30 text-amber-400' :
+                              idx === 1 ? 'bg-gray-400/30 text-gray-300' :
+                              idx === 2 ? 'bg-orange-600/30 text-orange-400' :
+                              'bg-gray-700 text-gray-400'
+                            }`}>
+                              {idx + 1}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white text-sm font-medium truncate">{performer.name}</p>
+                              <p className="text-xs text-gray-500">Level {performer.level}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-emerald-400 text-sm font-bold">{performer.prc_balance} PRC</p>
+                              <span className={`text-xs ${performer.is_active ? 'text-green-400' : 'text-gray-500'}`}>
+                                {performer.is_active ? '● Active' : '○ Inactive'}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Re-engagement Opportunities */}
+                  {networkAnalytics.reengagement_opportunities?.length > 0 && (
+                    <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4">
+                      <h4 className="text-white font-bold mb-3 flex items-center gap-2">
+                        <Bell className="w-4 h-4 text-orange-400" />
+                        Re-engage These Users
+                      </h4>
+                      <p className="text-gray-400 text-xs mb-3">
+                        These users were active before. Send them a reminder!
+                      </p>
+                      <div className="space-y-2">
+                        {networkAnalytics.reengagement_opportunities.slice(0, 5).map((user, idx) => (
+                          <div 
+                            key={user.uid || idx} 
+                            className="flex items-center justify-between p-2 bg-orange-500/10 border border-orange-500/20 rounded-xl"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-sm font-bold">
+                                {user.name?.charAt(0)?.toUpperCase() || '?'}
+                              </div>
+                              <div>
+                                <p className="text-white text-sm">{user.name}</p>
+                                <p className="text-xs text-gray-500">Level {user.level}</p>
+                              </div>
+                            </div>
+                            <button 
+                              onClick={() => {
+                                const msg = `Hey ${user.name}! 👋 Miss you on PARAS REWARD! Come back and claim your daily rewards 🎁`;
+                                window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+                              }}
+                              className="px-3 py-1 bg-green-500/20 text-green-400 text-xs rounded-full hover:bg-green-500/30 transition-all"
+                            >
+                              Remind
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Total Earnings */}
+                  <div className="bg-gradient-to-r from-emerald-500/20 to-teal-600/10 border border-emerald-500/30 rounded-2xl p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-gray-400 text-sm">Total Referral Earnings</p>
+                        <p className="text-3xl font-bold text-emerald-400">{networkAnalytics.total_earned_prc} PRC</p>
+                      </div>
+                      <div className="w-14 h-14 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                        <TrendingUp className="w-7 h-7 text-emerald-400" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-10">
+                  <BarChart3 className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-400">No analytics available</p>
+                  <p className="text-gray-500 text-sm">Start building your network to see insights!</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
