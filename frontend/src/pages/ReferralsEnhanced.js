@@ -540,6 +540,38 @@ Download now & start earning!`;
     return 'Critical';
   };
 
+  // Apply Referral Code Function
+  const handleApplyReferralCode = async () => {
+    if (!applyCodeInput.trim()) {
+      toast.error('कृपया referral code टाका');
+      return;
+    }
+    
+    setApplyingCode(true);
+    try {
+      const response = await axios.post(`${API}/api/referrals/apply`, {
+        uid: user?.uid,
+        referral_code: applyCodeInput.trim().toUpperCase()
+      });
+      
+      toast.success(`🎉 ${response.data.message}`);
+      toast.success(`${response.data.referrer_name} यांचा referral code apply झाला!`);
+      setApplyCodeInput('');
+      setShowApplySection(false);
+      
+      // Refresh user data
+      fetchData();
+    } catch (error) {
+      const errorMsg = error.response?.data?.detail || 'Referral code apply करता आले नाही';
+      toast.error(errorMsg);
+    } finally {
+      setApplyingCode(false);
+    }
+  };
+
+  // Check if user already has a referrer
+  const hasReferrer = userData?.referred_by || user?.referred_by;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
