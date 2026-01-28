@@ -44,8 +44,8 @@ const MENU_TO_PERMISSION = {
   'audit': 'audit',
   'subscriptions': 'subscription_payment',  // Replaces vip_payment
   'withdrawals': 'withdrawals',
-  'gift-voucher': 'gift_voucher',
-  'bill-payment': 'bill_payment',
+  'gift-vouchers': 'gift_vouchers',  // Fixed: was 'gift-voucher'
+  'bill-payments': 'bill_payments',   // Fixed: was 'bill-payment'
   'payment-settings': 'system_settings',
   'system-settings': 'system_settings',
   'web-settings': 'system_settings',
