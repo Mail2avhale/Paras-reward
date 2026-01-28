@@ -39,6 +39,45 @@ const AdminUserControls = () => {
     utility_only_mode: false,
     notifications_enabled: true
   });
+  
+  // Password reset state
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [tempPassword, setTempPassword] = useState('');
+  const [generatedPassword, setGeneratedPassword] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
+
+  // Reset password function
+  const handleResetPassword = async () => {
+    if (!selectedUser) return;
+    
+    setResettingPassword(true);
+    try {
+      const response = await axios.post(`${API}/api/admin/users/${selectedUser.uid}/action`, {
+        action: 'reset_password',
+        admin_id: 'admin',
+        temp_password: tempPassword || ''
+      });
+      
+      // Extract the generated password from response
+      const message = response.data.message || '';
+      const passwordMatch = message.match(/Temporary password: (\w+)/);
+      if (passwordMatch) {
+        setGeneratedPassword(passwordMatch[1]);
+      }
+      
+      toast.success('Password reset successful!');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to reset password');
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
+  // Copy password to clipboard
+  const copyPassword = () => {
+    navigator.clipboard.writeText(generatedPassword);
+    toast.success('Password copied to clipboard!');
+  };
 
   // Fix negative balances function
   const fixNegativeBalances = async () => {
