@@ -180,16 +180,27 @@ const AdminLayout = ({ children, user, onLogout }) => {
 
   // Check route permissions and redirect if unauthorized
   useEffect(() => {
+    // Wait for permissions to load before checking
     if (!permissionsLoaded) return;
-    if (user?.role === 'admin') return; // Admin has full access
+    
+    // Admin has full access
+    if (user?.role === 'admin') return;
+    
+    // Dashboard is always accessible
+    if (location.pathname === '/admin') return;
     
     const currentPath = location.pathname;
     const requiredPermission = ROUTE_TO_PERMISSION[currentPath];
     
-    // If route requires permission and user doesn't have it, redirect
-    if (requiredPermission && !userPermissions.includes(requiredPermission)) {
-      console.log(`Access denied to ${currentPath}, redirecting to /admin`);
-      navigate('/admin');
+    // If this route requires a permission, check it
+    if (requiredPermission) {
+      const hasAccess = userPermissions.includes(requiredPermission);
+      console.log(`Route ${currentPath} requires ${requiredPermission}, user has: ${hasAccess}`);
+      
+      if (!hasAccess) {
+        console.log(`Access denied to ${currentPath}, redirecting to /admin`);
+        navigate('/admin');
+      }
     }
   }, [location.pathname, permissionsLoaded, userPermissions, user, navigate]);
 
