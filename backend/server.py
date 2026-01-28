@@ -28144,7 +28144,7 @@ async def update_accounting_settings(request: Request):
 # ==================== MANAGER ROLE ACCESS CONTROL ====================
 
 # Default permissions for manager role
-DEFAULT_MANAGER_PERMISSIONS = ["users", "vip_payment", "kyc"]
+DEFAULT_MANAGER_PERMISSIONS = ["users", "subscription_payment", "kyc", "bill_payments", "gift_vouchers"]
 
 # All available admin pages/permissions
 ALL_ADMIN_PERMISSIONS = [
@@ -28156,7 +28156,6 @@ ALL_ADMIN_PERMISSIONS = [
     {"id": "marketplace", "label": "Marketplace", "category": "Operations"},
     {"id": "video_ads", "label": "Video Ads", "category": "Operations"},
     {"id": "prc_rain", "label": "PRC Rain Drop", "category": "Operations"},
-    {"id": "stockist", "label": "Stockist Management", "category": "Operations"},
     {"id": "support", "label": "Support Tickets", "category": "Operations"},
     {"id": "fraud", "label": "Fraud Alerts", "category": "Security"},
     {"id": "company_wallets", "label": "Company Wallets", "category": "Finance"},
@@ -28166,10 +28165,10 @@ ALL_ADMIN_PERMISSIONS = [
     {"id": "redeem_settings", "label": "Redeem Settings", "category": "Finance"},
     {"id": "capital", "label": "Capital & Liabilities", "category": "Finance"},
     {"id": "accounting", "label": "Accounting Dashboard", "category": "Finance"},
-    {"id": "vip_payment", "label": "VIP Payment Verification", "category": "Payments"},
+    {"id": "subscription_payment", "label": "Subscription Payment Verification", "category": "Payments"},
     {"id": "withdrawals", "label": "Withdrawals", "category": "Payments"},
-    {"id": "gift_voucher", "label": "Gift Voucher Requests", "category": "Payments"},
-    {"id": "bill_payment", "label": "Bill Payment Requests", "category": "Payments"},
+    {"id": "gift_vouchers", "label": "Gift Voucher Requests", "category": "Payments"},
+    {"id": "bill_payments", "label": "Bill Payment Requests", "category": "Payments"},
     {"id": "system_settings", "label": "System Settings", "category": "Settings"},
     {"id": "audit", "label": "Audit Service", "category": "Settings"},
     {"id": "prc_analytics", "label": "PRC Analytics", "category": "Analytics"},
