@@ -15,9 +15,21 @@ A social rewards platform where users can earn PRC (Paras Reward Coins) through 
 - ✅ Request Timeline with SLA Warnings
 - ✅ In-App Notification System
 - ✅ Marketplace & Orders
-- ✅ **Upstash Redis Caching** (NEW)
+- ✅ **Upstash Redis Caching**
+- ✅ **Network Analytics Dashboard** (NEW - January 28, 2027)
 
 ## Recent Changes (January 2027)
+
+### January 28, 2027
+- **Network Analytics Feature Complete** (P0 - Improved Referral/Downline View)
+  - New comprehensive Network Analytics modal on /referrals page
+  - Network Health Score (0-100) with color-coded status indicators
+  - Subscription Distribution visualization (Elite, Growth, Startup, Explorer)
+  - Level Distribution (L1-L5) with active/inactive breakdown per level
+  - Top Performers section showing highest earning referrals
+  - Re-engagement Opportunities with "Remind" buttons for inactive users
+  - Untapped Potential banner showing bonus opportunity from inactive users
+  - New API endpoint: `GET /api/referrals/{user_id}/network-analytics`
 
 ### January 27, 2027
 - **Upstash Redis Integration Complete**
@@ -33,8 +45,7 @@ A social rewards platform where users can earn PRC (Paras Reward Coins) through 
 
 - **Performance Optimization:**
   - All polling intervals increased from 30s to 60s
-  - Affected: NotificationContext, NotificationBell, AdminDashboard, 
-    AdminBillPayments, AdminGiftVouchers, AdminKYC, etc.
+  - Affected: NotificationContext, NotificationBell, AdminDashboard, etc.
 
 - **Fixed P0 Regression:** Admin pages were failing to load data
   - Fixed incorrect API endpoints in AdminDashboard.js
@@ -74,12 +85,13 @@ UPSTASH_REDIS_REST_TOKEN=<your_token>
 
 ## Upcoming Tasks
 - **ML Risk Scoring** - Fraud detection and user risk assessment
-- **Play Store Release Architecture** - PWA or WebView wrapper
+- **Play Store Release Architecture** - PWA or WebView wrapper (awaiting user decision)
 - AdMob + Unity Ads Integration
 - Shareable Achievement Cards
 
 ## API Endpoints Reference
-- `GET /api/cache/stats` - Cache system statistics (NEW)
+- `GET /api/cache/stats` - Cache system statistics
+- `GET /api/referrals/{user_id}/network-analytics` - Network analytics dashboard (NEW)
 - `GET /api/admin/orders/all` - Get admin orders
 - `GET /api/kyc/list` - Get all KYC documents
 - `GET /api/admin/vip-payments` - Get subscription payments
@@ -91,3 +103,7 @@ UPSTASH_REDIS_REST_TOKEN=<your_token>
 - Database: MongoDB + Upstash Redis
 - Preview URL: https://rewards-plus.preview.emergentagent.com
 - Production: https://parasreward.com
+
+## Test Credentials
+- Admin: `admin@paras.com` / `admin123`
+- Manager: `manager@paras.com` / `manager123`
