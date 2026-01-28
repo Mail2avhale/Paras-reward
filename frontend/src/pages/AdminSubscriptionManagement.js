@@ -298,11 +298,6 @@ const AdminSubscriptionManagement = ({ user }) => {
       setUsers([]);
     }
   };
-      setUsers(response.data.users || response.data || []);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-  };
 
   // Debounced server-side user search
   useEffect(() => {
