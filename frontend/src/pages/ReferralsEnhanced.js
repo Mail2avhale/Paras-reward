@@ -224,6 +224,12 @@ const ReferralsEnhanced = ({ user }) => {
   const [expandedLevels, setExpandedLevels] = useState({});  // Track which levels are expanded
   const [showNetworkTree, setShowNetworkTree] = useState(false);
   const [networkTree, setNetworkTree] = useState(null);
+  
+  // NEW: Network Analytics State
+  const [networkAnalytics, setNetworkAnalytics] = useState(null);
+  const [showNetworkAnalytics, setShowNetworkAnalytics] = useState(false);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (user?.uid) {
