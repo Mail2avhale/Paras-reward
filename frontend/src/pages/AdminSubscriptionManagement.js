@@ -181,7 +181,8 @@ const AdminSubscriptionManagement = ({ user }) => {
       return; // Still loading user
     }
     
-    if (user.role !== 'admin') {
+    // Allow both admin and manager roles
+    if (user.role !== 'admin' && user.role !== 'manager') {
       navigate('/dashboard');
       return;
     }
