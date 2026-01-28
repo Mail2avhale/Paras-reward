@@ -505,6 +505,36 @@ Download now & start earning!`;
     }
   };
 
+  // NEW: Fetch comprehensive network analytics
+  const fetchNetworkAnalytics = async () => {
+    setAnalyticsLoading(true);
+    try {
+      const response = await axios.get(`${API}/api/referrals/${user.uid}/network-analytics`);
+      setNetworkAnalytics(response.data);
+    } catch (error) {
+      console.error('Error fetching network analytics:', error);
+      toast.error('Failed to load network analytics');
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  };
+
+  // Get health score color
+  const getHealthScoreColor = (score) => {
+    if (score >= 80) return 'text-green-400';
+    if (score >= 60) return 'text-yellow-400';
+    if (score >= 40) return 'text-orange-400';
+    return 'text-red-400';
+  };
+
+  // Get health score label
+  const getHealthScoreLabel = (score) => {
+    if (score >= 80) return 'Excellent';
+    if (score >= 60) return 'Good';
+    if (score >= 40) return 'Needs Attention';
+    return 'Critical';
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
