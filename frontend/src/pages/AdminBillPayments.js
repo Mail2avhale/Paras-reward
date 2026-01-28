@@ -807,6 +807,36 @@ const AdminBillPayments = ({ user }) => {
                             <p className="text-white font-mono">****{req.details.card_last_4_digits}</p>
                           </div>
                         )}
+                        {req.details?.card_number && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Card Number</p>
+                            <p className="text-white font-mono">{req.details.card_number}</p>
+                          </div>
+                        )}
+                        {req.details?.card_type && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Card Type</p>
+                            <p className="text-white">{req.details.card_type}</p>
+                          </div>
+                        )}
+                        {req.details?.card_bank && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Card Bank</p>
+                            <p className="text-white">{req.details.card_bank}</p>
+                          </div>
+                        )}
+                        {req.details?.card_expiry && (
+                          <div>
+                            <p className="text-gray-500 text-xs">Card Expiry</p>
+                            <p className="text-white">{req.details.card_expiry}</p>
+                          </div>
+                        )}
+                        {req.details?.billing_address && (
+                          <div className="col-span-2">
+                            <p className="text-gray-500 text-xs">Billing Address</p>
+                            <p className="text-white">{req.details.billing_address}</p>
+                          </div>
+                        )}
                         
                         {/* Admin Notes */}
                         {req.admin_notes && (
