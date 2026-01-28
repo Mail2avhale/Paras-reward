@@ -24162,6 +24162,163 @@ async def get_referral_bonus_breakdown(user_id: str):
     
     return breakdown
 
+@api_router.get("/referrals/{user_id}/network-analytics")
+async def get_network_analytics(user_id: str):
+    """
+    Get comprehensive network analytics for improved downline visualization.
+    Includes:
+    - Network health score (0-100)
+    - Growth trends
+    - Engagement metrics
+    - Top performers
+    - Re-engagement opportunities
+    """
+    user = await db.users.find_one({"uid": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Get all referrals by level
+    referrals_by_level = await get_multi_level_referrals(user_id, max_levels=5)
+    
+    # Flatten all referrals
+    all_referrals = []
+    for level_key, users in referrals_by_level.items():
+        level_num = int(level_key.split("_")[1])
+        for u in users:
+            u["level"] = level_num
+            all_referrals.append(u)
+    
+    total_network = len(all_referrals)
+    
+    # Calculate active users
+    active_users = []
+    inactive_users = []
+    
+    for ref in all_referrals:
+        is_active, reason = await check_user_active_status(ref.get("uid"), ref)
+        ref["is_active"] = is_active
+        ref["active_reason"] = reason
+        if is_active:
+            active_users.append(ref)
+        else:
+            inactive_users.append(ref)
+    
+    active_count = len(active_users)
+    
+    # Calculate network health score (0-100)
+    health_score = 0
+    if total_network > 0:
+        # Base: activity rate (40% weight)
+        activity_rate = (active_count / total_network) * 100
+        health_score += activity_rate * 0.4
+        
+        # Subscription quality (30% weight)
+        paid_count = len([r for r in all_referrals if r.get("subscription_plan", "explorer") in ["startup", "growth", "elite"]])
+        subscription_rate = (paid_count / total_network) * 100
+        health_score += subscription_rate * 0.3
+        
+        # Level depth (15% weight) - more levels = healthier network
+        levels_with_users = len([k for k, v in referrals_by_level.items() if len(v) > 0])
+        depth_score = (levels_with_users / 5) * 100
+        health_score += depth_score * 0.15
+        
+        # Recent growth (15% weight)
+        recent_joins = len([r for r in all_referrals if r.get("created_at") and r.get("created_at") > (now - timedelta(days=30)).isoformat()])
+        growth_score = min(100, recent_joins * 10)  # 10 new users in month = 100%
+        health_score += growth_score * 0.15
+    
+    # Get top performers (highest PRC balance in network)
+    top_performers = sorted(
+        [r for r in all_referrals if r.get("prc_balance", 0) > 0],
+        key=lambda x: x.get("prc_balance", 0),
+        reverse=True
+    )[:5]
+    
+    # Get re-engagement opportunities (inactive users who were once active)
+    reengagement_opportunities = sorted(
+        inactive_users,
+        key=lambda x: x.get("created_at", ""),
+        reverse=True
+    )[:10]
+    
+    # Calculate subscription distribution
+    subscription_dist = {
+        "explorer": len([r for r in all_referrals if r.get("subscription_plan", "explorer") == "explorer"]),
+        "startup": len([r for r in all_referrals if r.get("subscription_plan") == "startup"]),
+        "growth": len([r for r in all_referrals if r.get("subscription_plan") == "growth"]),
+        "elite": len([r for r in all_referrals if r.get("subscription_plan") == "elite"])
+    }
+    
+    # Calculate level distribution
+    level_distribution = []
+    for level_num in range(1, 6):
+        level_key = f"level_{level_num}"
+        level_users = referrals_by_level.get(level_key, [])
+        level_active = len([u for u in level_users if any(r.get("uid") == u.get("uid") and r.get("is_active") for r in all_referrals)])
+        level_distribution.append({
+            "level": level_num,
+            "total": len(level_users),
+            "active": level_active,
+            "bonus_percent": {1: 10, 2: 5, 3: 2.5, 4: 1.5, 5: 1}.get(level_num, 0)
+        })
+    
+    # Calculate potential earnings if all were active
+    total_potential_bonus = sum([
+        ld["total"] * ld["bonus_percent"]
+        for ld in level_distribution
+    ])
+    
+    current_bonus = sum([
+        ld["active"] * ld["bonus_percent"]
+        for ld in level_distribution
+    ])
+    
+    # Get referral earnings
+    referral_earnings = await db.transactions.aggregate([
+        {"$match": {"user_id": user_id, "type": "referral"}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]).to_list(1)
+    total_earned = referral_earnings[0]["total"] if referral_earnings else 0
+    
+    return {
+        "network_health_score": round(health_score, 1),
+        "total_network_size": total_network,
+        "active_users": active_count,
+        "inactive_users": len(inactive_users),
+        "activity_rate": round((active_count / total_network * 100) if total_network > 0 else 0, 1),
+        "subscription_distribution": subscription_dist,
+        "level_distribution": level_distribution,
+        "current_bonus_percent": round(current_bonus, 1),
+        "potential_bonus_percent": round(total_potential_bonus, 1),
+        "bonus_opportunity": round(total_potential_bonus - current_bonus, 1),
+        "total_earned_prc": round(total_earned, 2),
+        "top_performers": [
+            {
+                "uid": p.get("uid"),
+                "name": p.get("name", "User"),
+                "level": p.get("level"),
+                "subscription_plan": p.get("subscription_plan", "explorer"),
+                "prc_balance": round(p.get("prc_balance", 0), 2),
+                "is_active": p.get("is_active", False)
+            }
+            for p in top_performers
+        ],
+        "reengagement_opportunities": [
+            {
+                "uid": r.get("uid"),
+                "name": r.get("name", "User"),
+                "email": r.get("email", "")[:3] + "***@***",  # Partially hide
+                "level": r.get("level"),
+                "subscription_plan": r.get("subscription_plan", "explorer"),
+                "joined_at": r.get("created_at"),
+                "last_activity": r.get("mining_start_time") or r.get("last_login")
+            }
+            for r in reengagement_opportunities
+        ]
+    }
+
 @api_router.post("/ai/referral-suggestions")
 async def get_ai_referral_suggestions(uid: str):
     """AI-powered suggestions to improve referral network"""
