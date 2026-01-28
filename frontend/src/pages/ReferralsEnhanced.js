@@ -239,11 +239,12 @@ const ReferralsEnhanced = ({ user }) => {
   useEffect(() => {
     if (user?.uid) {
       fetchData();
-      fetchLiveActivity();
+      // Fetch live activity in background after 2 seconds (non-blocking)
+      setTimeout(() => fetchLiveActivity(), 2000);
     }
   }, [user]);
 
-  // Fetch live activity (recent referral achievements)
+  // Fetch live activity (recent referral achievements) - low priority
   const fetchLiveActivity = async () => {
     try {
       const response = await axios.get(`${API}/api/referrals/live-activity`);
