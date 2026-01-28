@@ -688,6 +688,98 @@ Download now & start earning!`;
         </div>
       </div>
 
+      {/* Apply Referral Code Section */}
+      {!hasReferrer && (
+        <div className="px-5 mb-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-br from-pink-500/20 to-rose-600/10 border border-pink-500/30 rounded-2xl overflow-hidden"
+          >
+            {!showApplySection ? (
+              <button
+                onClick={() => setShowApplySection(true)}
+                className="w-full p-4 flex items-center justify-between hover:bg-pink-500/10 transition-all"
+                data-testid="apply-referral-code-btn"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center">
+                    <Gift className="w-6 h-6 text-pink-400" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-white font-bold">Referral Code आहे का?</p>
+                    <p className="text-pink-400 text-sm">Apply करा आणि bonus मिळवा!</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-6 h-6 text-pink-400" />
+              </button>
+            ) : (
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-white font-bold flex items-center gap-2">
+                    <Gift className="w-5 h-5 text-pink-400" />
+                    Apply Referral Code
+                  </h3>
+                  <button 
+                    onClick={() => setShowApplySection(false)}
+                    className="text-gray-500 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                </div>
+                
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={applyCodeInput}
+                    onChange={(e) => setApplyCodeInput(e.target.value.toUpperCase())}
+                    placeholder="Referral Code टाका"
+                    className="flex-1 bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-pink-500 uppercase tracking-widest font-mono"
+                    maxLength={10}
+                    data-testid="apply-referral-code-input"
+                  />
+                  <button
+                    onClick={handleApplyReferralCode}
+                    disabled={applyingCode || !applyCodeInput.trim()}
+                    className="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl text-white font-bold hover:from-pink-400 hover:to-rose-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    data-testid="apply-referral-code-submit"
+                  >
+                    {applyingCode ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      'Apply'
+                    )}
+                  </button>
+                </div>
+                
+                <p className="text-gray-500 text-xs mt-3 text-center">
+                  मित्राचा referral code टाकून दोघांना bonus मिळेल!
+                </p>
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
+
+      {/* Show if already referred */}
+      {hasReferrer && userData?.referred_by_name && (
+        <div className="px-5 mb-6">
+          <div className="bg-gradient-to-br from-green-500/20 to-emerald-600/10 border border-green-500/30 rounded-2xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+                <Check className="w-6 h-6 text-green-400" />
+              </div>
+              <div>
+                <p className="text-white font-bold">Referral Applied!</p>
+                <p className="text-green-400 text-sm">
+                  तुम्ही {userData.referred_by_name} यांच्या referral ने join झालात
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* AI Referral Coach */}
       <div className="px-5 mb-6">
         <AIReferralCoach 
