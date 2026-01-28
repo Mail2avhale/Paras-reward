@@ -4342,12 +4342,58 @@ async def get_user_data(uid: str):
     # Normalize subscription_start field for frontend compatibility
     # The database may have different field names - pick the most recent/accurate one
     subscription_plan = user.get("subscription_plan", "explorer")
+    subscription_expiry = user.get("subscription_expiry")
     subscription_start = (
         user.get("subscription_start_date") or 
         user.get("subscription_created_at") or 
         user.get("vip_activated_at") or
         user.get("vip_activation_date")
     )
+    
+    # SYNC FIX: If user has approved VIP payment but subscription_plan is not set correctly
+    # This can happen if payment was approved but user data wasn't synced properly
+    if subscription_plan == "explorer" or not subscription_expiry:
+        # Check for approved subscription payment
+        latest_payment = await db.vip_payments.find_one(
+            {"user_id": uid, "status": "approved"},
+            sort=[("approved_at", -1)]
+        )
+        
+        if latest_payment:
+            # Get plan and expiry from approved payment
+            payment_plan = latest_payment.get("subscription_plan", "startup")
+            payment_expiry = latest_payment.get("subscription_end") or latest_payment.get("new_expiry")
+            payment_start = latest_payment.get("subscription_start") or latest_payment.get("approved_at") or latest_payment.get("vip_activated_at")
+            
+            # Check if payment expiry is still valid
+            now = datetime.now(timezone.utc)
+            if payment_expiry:
+                try:
+                    expiry_dt = datetime.fromisoformat(str(payment_expiry).replace('Z', '+00:00'))
+                    if expiry_dt > now:
+                        # Valid subscription from payment - sync to user
+                        subscription_plan = payment_plan
+                        subscription_expiry = payment_expiry
+                        subscription_start = payment_start
+                        
+                        # Also update the user document for consistency
+                        await db.users.update_one(
+                            {"uid": uid},
+                            {"$set": {
+                                "subscription_plan": payment_plan,
+                                "subscription_expiry": payment_expiry,
+                                "vip_activated_at": payment_start,
+                                "membership_type": "vip"
+                            }}
+                        )
+                        print(f"[SYNC] Updated user {uid} subscription from approved payment: {payment_plan}")
+                except Exception as e:
+                    print(f"[SYNC] Error parsing payment expiry: {e}")
+    
+    # Update user dict with correct values
+    user["subscription_plan"] = subscription_plan
+    if subscription_expiry:
+        user["subscription_expiry"] = subscription_expiry
     
     # If user has a paid subscription but no start date, use created_at as fallback
     if not subscription_start and subscription_plan in ["startup", "growth", "elite"]:
