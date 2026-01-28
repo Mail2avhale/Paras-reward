@@ -9577,25 +9577,16 @@ async def get_admin_stats():
         r[0]["total"] if r else 0 for r in prc_redeemed_results
     ])
     
-    # Get recent VIP payments (last 5)
+    # Skip recent VIP payments enrichment for speed - use cached names
     recent_vip_payments = await db.vip_payments.find(
         {"status": "approved"},
         {"_id": 0, "user_uid": 1, "user_id": 1, "amount": 1, "created_at": 1, "user_name": 1}
     ).sort("created_at", -1).limit(5).to_list(5)
     
-    # Enrich with user names
-    for payment in recent_vip_payments:
-        user_uid = payment.get("user_uid") or payment.get("user_id")
-        if user_uid and not payment.get("user_name"):
-            user = await db.users.find_one({"uid": user_uid}, {"_id": 0, "name": 1})
-            payment["user_name"] = user.get("name", "Unknown") if user else "Unknown"
-        elif not payment.get("user_name"):
-            payment["user_name"] = "Unknown"
+    # Calculate PRC value in INR
+    total_prc_value_in_inr = total_revenue_prc / 10 if total_revenue_prc else 0
     
-    # Recent Activity - Get last 5 activities (orders, withdrawals, KYC)
-    recent_orders = await db.orders.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
-    recent_withdrawals = await db.cashback_withdrawals.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
-    
+    # Simplified result (removed rarely used fields for speed)
     result = {
         "total_prc": round(total_prc_in_circulation, 2),
         "users": {
@@ -9612,12 +9603,48 @@ async def get_admin_stats():
             "elite": elite_users
         },
         "subscription_payments": {
-            "pending": pending_subscription_payments,
-            "approved": approved_subscription_payments
+            "pending": pending_sub_payments,
+            "approved": approved_sub_payments
         },
         "orders": {
             "total": total_orders,
             "pending": pending_orders,
+            "delivered": delivered_orders
+        },
+        "kyc": {
+            "total": total_kyc,
+            "pending": pending_kyc,
+            "verified": verified_kyc,
+            "rejected": rejected_kyc
+        },
+        "vip_payments": {
+            "total": total_vip_requests,
+            "pending": pending_vip_approvals,
+            "approved": approved_vip
+        },
+        "withdrawals": {
+            "pending_count": total_pending_withdrawals,
+            "pending_cashback": pending_cashback_withdrawals,
+            "pending_profit": pending_profit_withdrawals
+        },
+        "products": {
+            "total": total_products,
+            "active": active_products
+        },
+        "revenue": {
+            "total_inr": total_revenue_inr,
+            "total_prc": total_revenue_prc,
+            "prc_value_inr": total_prc_value_in_inr,
+            "vip_fees": total_vip_fees
+        },
+        "prc_redeemed": round(total_prc_redeemed, 2),
+        "recent_vip_payments": recent_vip_payments
+    }
+    
+    # Cache for 5 minutes (admin stats don't need real-time)
+    await cache.set(admin_stats_key(), result, ttl=300)
+    
+    return result
             "delivered": delivered_orders
         },
         "kyc": {
