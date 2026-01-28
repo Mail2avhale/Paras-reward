@@ -294,23 +294,35 @@ const ReferralsEnhanced = ({ user }) => {
   };
 
   const fetchData = async () => {
+    // Set timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      console.warn('Referrals data fetch timeout');
+    }, 10000);
+    
     try {
       setLoading(true);
       
-      const userResponse = await axios.get(`${API}/api/user/${user.uid}`);
-      setUserData(userResponse.data);
+      // Try to fetch all data in parallel with timeout
+      const [userResult, levelsResult] = await Promise.race([
+        Promise.allSettled([
+          axios.get(`${API}/api/user/${user.uid}`),
+          axios.get(`${API}/api/referrals/${user.uid}/levels`)
+        ]),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 12000))
+      ]).catch(() => [{ status: 'rejected' }, { status: 'rejected' }]);
       
-      // Fetch reward progress for the subscription reward tracker
-      try {
-        const rewardResponse = await axios.get(`${API}/api/referrals/${user.uid}/reward-progress`);
-        setRewardProgress(rewardResponse.data);
-      } catch (e) {
-        console.log('Reward progress API not available:', e);
+      // Process user data
+      if (userResult?.status === 'fulfilled') {
+        setUserData(userResult.value.data);
+      } else {
+        // Use prop data as fallback
+        setUserData(user);
       }
       
-      try {
-        const levelsResponse = await axios.get(`${API}/api/referrals/${user.uid}/levels`);
-        const levels = levelsResponse.data.levels || [];
+      // Process levels data
+      if (levelsResult?.status === 'fulfilled') {
+        const levels = levelsResult.value.data.levels || [];
         setReferralLevels(levels);
         
         let totalCount = 0, activeCount = 0, vipCount = 0;
@@ -321,32 +333,46 @@ const ReferralsEnhanced = ({ user }) => {
           vipCount += users.filter(u => ['startup', 'growth', 'elite'].includes(u.subscription_plan?.toLowerCase())).length;
         });
         
-        // Check for milestone achievements (5, 10, 25, 50, 100)
+        // Check for milestone achievements
         checkMilestoneAchievement(totalCount);
         
-        // Check for first referral celebration!
+        // Check for first referral celebration
         if (previousTotal !== null && previousTotal === 0 && totalCount === 1) {
-          // First friend joined! Trigger celebration
           setShowCelebration(true);
           triggerConfetti();
           toast.success('🎉 Your first friend joined! Keep inviting!', { duration: 5000 });
         }
         setPreviousTotal(totalCount);
-        
         setReferralStats({ total: totalCount, active: activeCount, vip: vipCount });
-      } catch (e) {
-        const refCount = userResponse.data.referral_count || 0;
-        
-        // Check for milestone achievements
+      } else {
+        // Fallback: use user's referral count
+        const refCount = (userResult?.status === 'fulfilled' ? userResult.value.data : user)?.referral_count || 0;
         checkMilestoneAchievement(refCount);
         
-        // Check for first referral using user data
         if (previousTotal !== null && previousTotal === 0 && refCount === 1) {
           setShowCelebration(true);
           triggerConfetti();
           toast.success('🎉 Your first friend joined! Keep inviting!', { duration: 5000 });
         }
         setPreviousTotal(refCount);
+        setReferralStats({ total: refCount, active: 0, vip: 0 });
+      }
+      
+      // Fetch reward progress in background (non-blocking)
+      axios.get(`${API}/api/referrals/${user.uid}/reward-progress`)
+        .then(res => setRewardProgress(res.data))
+        .catch(() => {});
+      
+    } catch (error) {
+      console.error('Error fetching referral data:', error);
+      // Use fallback data
+      setUserData(user);
+      setReferralStats({ total: user?.referral_count || 0, active: 0, vip: 0 });
+    } finally {
+      clearTimeout(timeoutId);
+      setLoading(false);
+    }
+  };
         
         setReferralStats({ total: refCount, active: 0, vip: 0 });
         setReferralLevels([1, 2, 3, 4, 5].map(level => ({
