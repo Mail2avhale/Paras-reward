@@ -24,6 +24,7 @@ const AdminDashboard = ({ user }) => {
   const [recentOrders, setRecentOrders] = useState([]);
   const [pendingKYC, setPendingKYC] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   
   // Chart data states
   const [userGrowthData, setUserGrowthData] = useState([]);
@@ -32,13 +33,18 @@ const AdminDashboard = ({ user }) => {
   const [subscriptionData, setSubscriptionData] = useState({ distribution: [], trend: [] });
   const [chartsLoading, setChartsLoading] = useState(true);
 
-  // OPTIMIZED: Single API call for all dashboard data
+  // OPTIMIZED: Single API call for all dashboard data with timeout
   const fetchDashboardData = async () => {
     setLoading(true);
     setChartsLoading(true);
+    setLoadError(false);
+    
     try {
-      // Try combined API first (faster - single request)
-      const combinedRes = await axios.get(`${API}/api/admin/dashboard-all`).catch(() => null);
+      // Try combined API first with 15 second timeout
+      const combinedRes = await Promise.race([
+        axios.get(`${API}/api/admin/dashboard-all`).catch(() => null),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
+      ]);
       
       if (combinedRes?.data?.stats) {
         // Use combined data
