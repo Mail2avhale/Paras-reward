@@ -341,18 +341,53 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Refresh user data from server to ensure subscription info is current
+  const refreshUserData = async (uid) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/user/${uid}`);
+      if (response.ok) {
+        const freshData = await response.json();
+        // Preserve role from stored user (API might not return it)
+        const storedUser = JSON.parse(localStorage.getItem("paras_user") || "{}");
+        const updatedUser = {
+          ...storedUser,
+          ...freshData,
+          role: freshData.role || storedUser.role || 'user'
+        };
+        setUser(updatedUser);
+        localStorage.setItem("paras_user", JSON.stringify(updatedUser));
+        return updatedUser;
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+    }
+    return null;
+  };
+
   useEffect(() => {
     // Check if user is logged in
     const storedUser = localStorage.getItem("paras_user");
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      
+      // Immediately refresh user data in background to get latest subscription info
+      refreshUserData(parsedUser.uid).then(() => {
+        setLoading(false);
+      }).catch(() => {
+        setLoading(false);
+      });
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
-  const handleLogin = (userData) => {
+  const handleLogin = async (userData) => {
     setUser(userData);
     localStorage.setItem("paras_user", JSON.stringify(userData));
+    
+    // Refresh to get complete user data including subscription
+    setTimeout(() => refreshUserData(userData.uid), 100);
   };
 
   const handleLogout = () => {
