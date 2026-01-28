@@ -266,8 +266,17 @@ const AdminSubscriptionManagement = ({ user }) => {
 
   const fetchUsers = async (searchTerm = '') => {
     try {
+      // Only fetch users when actually needed (search or filter active)
+      // Limit to 50 users max for performance
       const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
-      const response = await axios.get(`${API}/api/admin/users?limit=500${searchParam}`);
+      const response = await axios.get(`${API}/api/admin/users?limit=50${searchParam}`);
+      const data = response.data;
+      setUsers(Array.isArray(data) ? data : (data.users || []));
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setUsers([]);
+    }
+  };
       setUsers(response.data.users || response.data || []);
     } catch (error) {
       console.error('Error fetching users:', error);
