@@ -163,6 +163,36 @@ const AdminLayout = ({ children, user, onLogout }) => {
     }
   };
 
+  // Map route paths to permission IDs
+  const ROUTE_TO_PERMISSION = {
+    '/admin/bill-payments': 'bill_payments',
+    '/admin/gift-vouchers': 'gift_vouchers',
+    '/admin/subscriptions': 'subscription_payment',
+    '/admin/kyc': 'kyc',
+    '/admin/users': 'users',
+    '/admin/user-360': 'users',
+    '/admin/orders': 'orders',
+    '/admin/marketplace': 'marketplace',
+    '/admin/support': 'support',
+    '/admin/fraud-dashboard': 'fraud',
+    '/admin/analytics': 'analytics',
+  };
+
+  // Check route permissions and redirect if unauthorized
+  useEffect(() => {
+    if (!permissionsLoaded) return;
+    if (user?.role === 'admin') return; // Admin has full access
+    
+    const currentPath = location.pathname;
+    const requiredPermission = ROUTE_TO_PERMISSION[currentPath];
+    
+    // If route requires permission and user doesn't have it, redirect
+    if (requiredPermission && !userPermissions.includes(requiredPermission)) {
+      console.log(`Access denied to ${currentPath}, redirecting to /admin`);
+      navigate('/admin');
+    }
+  }, [location.pathname, permissionsLoaded, userPermissions, user, navigate]);
+
   const isActive = (path) => {
     // Handle paths with query params
     if (path.includes('?')) {
