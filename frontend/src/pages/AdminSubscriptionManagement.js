@@ -188,20 +188,40 @@ const AdminSubscriptionManagement = ({ user }) => {
       return;
     }
     fetchAllData();
+    
+    // Loading timeout - show content after 10 seconds even if data not loaded
+    const timeout = setTimeout(() => {
+      setLoadingTimeout(true);
+      setLoading(false);
+    }, 10000);
+    
+    return () => clearTimeout(timeout);
   }, [user, navigate]);
 
   const fetchAllData = async () => {
     setLoading(true);
-    // Fetch only essential data initially, others can load in background
-    await Promise.all([
-      fetchPayments(),
-      fetchPricingReference()
-    ]);
+    setLoadingTimeout(false);
+    
+    try {
+      // Fetch only essential data with timeout
+      await Promise.race([
+        Promise.all([
+          fetchPayments(),
+          fetchPricingReference()
+        ]),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
+      ]);
+    } catch (error) {
+      console.error('Error or timeout loading data:', error);
+      toast.error('Data loading slow. Showing available data.');
+    }
+    
     setLoading(false);
-    // Load non-critical data in background
-    fetchStats();
-    fetchPricing();
-    fetchUsers();
+    
+    // Load non-critical data in background (don't wait)
+    fetchStats().catch(console.error);
+    fetchPricing().catch(console.error);
+    // Don't auto-fetch users - let user search when needed
   };
 
   const fetchPricingReference = async () => {
