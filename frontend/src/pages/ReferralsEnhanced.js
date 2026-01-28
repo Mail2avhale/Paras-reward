@@ -735,7 +735,7 @@ Download now & start earning!`;
                     onChange={(e) => setApplyCodeInput(e.target.value.toUpperCase())}
                     placeholder="Referral Code टाका"
                     className="flex-1 bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-pink-500 uppercase tracking-widest font-mono"
-                    maxLength={10}
+                    maxLength={15}
                     data-testid="apply-referral-code-input"
                   />
                   <button
