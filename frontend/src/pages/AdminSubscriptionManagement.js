@@ -20,6 +20,7 @@ const ITEMS_PER_PAGE = 10;
 const AdminSubscriptionManagement = ({ user }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [currentPage, setCurrentPage] = useState(1);
   
