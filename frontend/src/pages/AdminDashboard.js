@@ -156,7 +156,7 @@ const AdminDashboard = ({ user }) => {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => { fetchAllData(); fetchChartData(); }}
+            onClick={() => fetchDashboardData()}
             className="text-gray-300 border-gray-700"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${loading || chartsLoading ? 'animate-spin' : ''}`} />
