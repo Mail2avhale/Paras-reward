@@ -1,0 +1,21 @@
+=== BACKUP LIST - Files to be deleted ===
+Date: Wed Jan 28 15:36:35 UTC 2026
+
+BankingWallet.js (15K)
+Wallet.js (12K)
+WalletNew.js (39K)
+Register.js (29K)
+GamificationDashboard.js (17K)
+Leaderboard.js (8.6K)
+AdminActivityLogs.js (14K)
+AdminFlashSales.js (11K)
+FinancialManagementAdmin.js (29K)
+StockMovementApproval.js (24K)
+StockMovementSimple.js (15K)
+AdvancedOrderManagement.js (19K)
+Login.js (4.0K)
+ForgotPassword.js (6.9K)
+TermsAndConditions.js (9.2K)
+ReferralDashboard.js (18K)
+ReferralDashboardAI.js (28K)
+Marketplace.js (31K)
