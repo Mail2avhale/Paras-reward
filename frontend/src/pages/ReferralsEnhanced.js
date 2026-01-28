@@ -555,7 +555,7 @@ Download now & start earning!`;
       });
       
       toast.success(`🎉 ${response.data.message}`);
-      toast.success(`${response.data.referrer_name} यांचा referral code apply झाला!`);
+      toast.success(`Referred by ${response.data.referrer_name}!`);
       setApplyCodeInput('');
       setShowApplySection(false);
       
