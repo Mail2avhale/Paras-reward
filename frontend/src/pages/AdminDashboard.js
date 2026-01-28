@@ -60,22 +60,32 @@ const AdminDashboard = ({ user }) => {
       }
     } catch (error) {
       console.error('Error fetching dashboard:', error);
-      // Fallback
-      await fetchAllDataLegacy();
+      setLoadError(true);
+      // Show timeout message but still try to show page
+      toast.error('Dashboard loading slow. Please wait or refresh.');
+      // Try fallback with shorter timeout
+      try {
+        await fetchAllDataLegacy();
+      } catch (e) {
+        console.error('Fallback also failed:', e);
+      }
     } finally {
       setLoading(false);
       setChartsLoading(false);
     }
   };
 
-  // Legacy fetch (fallback)
+  // Legacy fetch (fallback) with timeout
   const fetchAllDataLegacy = async () => {
     try {
-      const [statsRes, deliveryRes, ordersRes, kycRes] = await Promise.all([
-        axios.get(`${API}/api/admin/stats`).catch(() => ({ data: {} })),
-        axios.get(`${API}/api/admin/delivery-partners/stats`).catch(() => ({ data: {} })),
-        axios.get(`${API}/api/admin/orders/all?limit=5`).catch(() => ({ data: { orders: [] } })),
-        axios.get(`${API}/api/kyc/list`).catch(() => ({ data: [] }))
+      const [statsRes, deliveryRes, ordersRes, kycRes] = await Promise.race([
+        Promise.all([
+          axios.get(`${API}/api/admin/stats`).catch(() => ({ data: {} })),
+          axios.get(`${API}/api/admin/delivery-partners/stats`).catch(() => ({ data: {} })),
+          axios.get(`${API}/api/admin/orders/all?limit=5`).catch(() => ({ data: { orders: [] } })),
+          axios.get(`${API}/api/kyc/list`).catch(() => ({ data: [] }))
+        ]),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
       ]);
       
       setStats(statsRes.data);
