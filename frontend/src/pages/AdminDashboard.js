@@ -32,8 +32,38 @@ const AdminDashboard = ({ user }) => {
   const [subscriptionData, setSubscriptionData] = useState({ distribution: [], trend: [] });
   const [chartsLoading, setChartsLoading] = useState(true);
 
-  const fetchAllData = async () => {
+  // OPTIMIZED: Single API call for all dashboard data
+  const fetchDashboardData = async () => {
     setLoading(true);
+    setChartsLoading(true);
+    try {
+      // Try combined API first (faster - single request)
+      const combinedRes = await axios.get(`${API}/api/admin/dashboard-all`).catch(() => null);
+      
+      if (combinedRes?.data?.stats) {
+        // Use combined data
+        setStats(combinedRes.data.stats);
+        setRecentOrders(combinedRes.data.recent_orders || []);
+        setUserGrowthData(combinedRes.data.charts?.user_growth || []);
+        // Set delivery stats from combined
+        setDeliveryStats({ total_partners: combinedRes.data.delivery_partners_count || 0 });
+        setPendingKYC([]); // Will be fetched separately if needed
+      } else {
+        // Fallback to individual calls
+        await fetchAllDataLegacy();
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard:', error);
+      // Fallback
+      await fetchAllDataLegacy();
+    } finally {
+      setLoading(false);
+      setChartsLoading(false);
+    }
+  };
+
+  // Legacy fetch (fallback)
+  const fetchAllDataLegacy = async () => {
     try {
       const [statsRes, deliveryRes, ordersRes, kycRes] = await Promise.all([
         axios.get(`${API}/api/admin/stats`).catch(() => ({ data: {} })),
@@ -45,18 +75,18 @@ const AdminDashboard = ({ user }) => {
       setStats(statsRes.data);
       setDeliveryStats(deliveryRes.data);
       setRecentOrders(ordersRes.data.orders || []);
-      // Filter KYC documents to show only pending ones (limit 5)
       const allKyc = Array.isArray(kycRes.data) ? kycRes.data : [];
       const pendingKycDocs = allKyc.filter(k => k.status === 'pending').slice(0, 5);
       setPendingKYC(pendingKycDocs);
     } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error in legacy fetch:', error);
     }
   };
 
   const fetchChartData = async () => {
+    // Charts are now included in combined API, this is fallback only
+    if (userGrowthData.length > 0) return; // Skip if already loaded
+    
     setChartsLoading(true);
     try {
       const [userGrowth, prc, orders, subs] = await Promise.all([
@@ -78,13 +108,11 @@ const AdminDashboard = ({ user }) => {
   };
 
   useEffect(() => {
-    fetchAllData();
-    fetchChartData();
-    // Auto-refresh every 60 seconds (increased from 30s for performance)
+    fetchDashboardData();
+    // Auto-refresh every 2 minutes (increased for better performance)
     const interval = setInterval(() => {
-      fetchAllData();
-      fetchChartData();
-    }, 60000);
+      fetchDashboardData();
+    }, 120000);
     return () => clearInterval(interval);
   }, []);
 
