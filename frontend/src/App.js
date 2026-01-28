@@ -74,9 +74,7 @@ const SubscriptionPlans = lazy(() => import("@/pages/SubscriptionPlans"));
 // Removed: Leaderboard (feature removed for AdMob compliance)
 const ReferralEarningsHistory = lazy(() => import("@/pages/ReferralEarningsHistory"));
 const ProfileAdvanced = lazy(() => import("@/pages/ProfileAdvanced"));
-const ReferralDashboard = lazy(() => import("@/pages/ReferralDashboard"));
-const ReferralDashboardAI = lazy(() => import("@/pages/ReferralDashboardAI"));
-// Removed: GamificationDashboard/Achievements for AdMob compliance
+// Removed: ReferralDashboard, ReferralDashboardAI - using ReferralsEnhanced
 const FlashSalesPage = lazy(() => import("@/pages/FlashSalesPage"));
 const MyActivity = lazy(() => import("@/pages/MyActivity"));
 
