@@ -1127,6 +1127,29 @@ Download now & start earning!`;
         </button>
       </div>
 
+      {/* NEW: Network Analytics Button */}
+      <div className="px-5 mb-6">
+        <button
+          onClick={() => {
+            setShowNetworkAnalytics(true);
+            fetchNetworkAnalytics();
+          }}
+          className="w-full bg-gradient-to-r from-emerald-500/20 to-teal-600/10 border border-emerald-500/30 rounded-2xl p-4 flex items-center justify-between hover:from-emerald-500/30 hover:to-teal-600/20 transition-all"
+          data-testid="view-network-analytics"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+              <BarChart3 className="w-6 h-6 text-emerald-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-white font-bold">Network Analytics</p>
+              <p className="text-emerald-400 text-sm">Health score, insights & opportunities</p>
+            </div>
+          </div>
+          <ChevronRight className="w-6 h-6 text-emerald-400" />
+        </button>
+      </div>
+
       {/* View Earnings History */}
       <div className="px-5 mb-6">
         <button
