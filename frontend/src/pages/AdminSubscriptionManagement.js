@@ -524,10 +524,33 @@ const AdminSubscriptionManagement = ({ user }) => {
     return matchesSearch && matchesPlan;
   });
 
+  // Better loading state with timeout indicator
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="space-y-6 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Subscription Management</h1>
+            <p className="text-gray-400">Loading data...</p>
+          </div>
+          <div className="animate-spin w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full"></div>
+        </div>
+        
+        {loadingTimeout && (
+          <div className="bg-amber-500/20 border border-amber-500/30 rounded-lg p-4">
+            <p className="text-amber-400">⏳ Database is slow. Data will appear shortly...</p>
+            <p className="text-gray-400 text-sm mt-1">This may take 30-60 seconds on first load.</p>
+          </div>
+        )}
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[1,2,3,4].map(i => (
+            <div key={i} className="bg-gray-900/50 border border-gray-800 rounded-xl p-6 animate-pulse">
+              <div className="h-4 bg-gray-700 rounded w-1/2 mb-4"></div>
+              <div className="h-8 bg-gray-700 rounded w-3/4"></div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
