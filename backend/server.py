@@ -10922,8 +10922,8 @@ async def user_360_quick_action(request: Request):
             # Generate a random temporary password
             temp_password = f"Temp{uuid.uuid4().hex[:6].upper()}"
         
-        # Hash the temporary password
-        hashed_password = bcrypt.hashpw(temp_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        # Hash the temporary password using pwd_context
+        hashed_password = pwd_context.hash(temp_password)
         
         await db.users.update_one(
             {"uid": user_id},
