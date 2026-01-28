@@ -338,7 +338,11 @@ function AppContent({ user, handleLogin, handleLogout }) {
 }
 
 function App() {
-  const [user, setUser] = useState(null);
+  // Initialize user from localStorage synchronously
+  const [user, setUser] = useState(() => {
+    const storedUser = localStorage.getItem("paras_user");
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
   const [loading, setLoading] = useState(true);
 
   // Refresh user data from server to ensure subscription info is current
@@ -365,22 +369,15 @@ function App() {
   };
 
   useEffect(() => {
-    // Check if user is logged in
-    const storedUser = localStorage.getItem("paras_user");
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      
-      // Immediately refresh user data in background to get latest subscription info
-      refreshUserData(parsedUser.uid).then(() => {
-        setLoading(false);
-      }).catch(() => {
+    // If user exists, refresh data from server
+    if (user?.uid) {
+      refreshUserData(user.uid).finally(() => {
         setLoading(false);
       });
     } else {
       setLoading(false);
     }
-  }, []);
+  }, []); // Run once on mount
 
   const handleLogin = async (userData) => {
     setUser(userData);
