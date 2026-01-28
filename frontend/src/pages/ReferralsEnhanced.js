@@ -543,7 +543,7 @@ Download now & start earning!`;
   // Apply Referral Code Function
   const handleApplyReferralCode = async () => {
     if (!applyCodeInput.trim()) {
-      toast.error('कृपया referral code टाका');
+      toast.error('Please enter a referral code');
       return;
     }
     
@@ -562,7 +562,7 @@ Download now & start earning!`;
       // Refresh user data
       fetchData();
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Referral code apply करता आले नाही';
+      const errorMsg = error.response?.data?.detail || 'Failed to apply referral code';
       toast.error(errorMsg);
     } finally {
       setApplyingCode(false);
@@ -707,8 +707,8 @@ Download now & start earning!`;
                     <Gift className="w-6 h-6 text-pink-400" />
                   </div>
                   <div className="text-left">
-                    <p className="text-white font-bold">Referral Code आहे का?</p>
-                    <p className="text-pink-400 text-sm">Apply करा आणि bonus मिळवा!</p>
+                    <p className="text-white font-bold">Have a Referral Code?</p>
+                    <p className="text-pink-400 text-sm">Apply now and get bonus!</p>
                   </div>
                 </div>
                 <ChevronRight className="w-6 h-6 text-pink-400" />
@@ -733,7 +733,7 @@ Download now & start earning!`;
                     type="text"
                     value={applyCodeInput}
                     onChange={(e) => setApplyCodeInput(e.target.value.toUpperCase())}
-                    placeholder="Referral Code टाका"
+                    placeholder="Enter Referral Code"
                     className="flex-1 bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-pink-500 uppercase tracking-widest font-mono"
                     maxLength={15}
                     data-testid="apply-referral-code-input"
@@ -753,7 +753,7 @@ Download now & start earning!`;
                 </div>
                 
                 <p className="text-gray-500 text-xs mt-3 text-center">
-                  मित्राचा referral code टाकून दोघांना bonus मिळेल!
+                  Enter your friend's code - both of you get bonus!
                 </p>
               </div>
             )}
@@ -772,7 +772,7 @@ Download now & start earning!`;
               <div>
                 <p className="text-white font-bold">Referral Applied!</p>
                 <p className="text-green-400 text-sm">
-                  तुम्ही {userData.referred_by_name} यांच्या referral ने join झालात
+                  You joined via {userData.referred_by_name}'s referral
                 </p>
               </div>
             </div>
