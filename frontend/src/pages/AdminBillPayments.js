@@ -84,7 +84,8 @@ const AdminBillPayments = ({ user }) => {
   }, []);
 
   useEffect(() => {
-    if (!user || user.role !== 'admin') {
+    // Allow both admin and manager roles
+    if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
       navigate('/admin');
       return;
     }
