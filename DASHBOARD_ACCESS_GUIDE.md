@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://rewardflow-13.preview.emergentagent.com/setup
+   https://rewards-plus.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
