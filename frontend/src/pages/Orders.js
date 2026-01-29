@@ -135,6 +135,87 @@ const Orders = ({ user, onLogout }) => {
         </div>
       </div>
 
+      {/* User Stats Summary */}
+      {userStats && (
+        <div className="px-5 mb-4">
+          <div className="bg-gradient-to-r from-amber-500/10 to-purple-500/10 rounded-2xl p-4 border border-amber-500/20">
+            <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-amber-500" />
+              Your Redemption Summary
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Total PRC Redeemed */}
+              <div className="bg-gray-900/50 rounded-xl p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Coins className="w-4 h-4 text-amber-500" />
+                  <p className="text-gray-400 text-xs">PRC Redeemed</p>
+                </div>
+                <p className="text-white font-bold text-lg">{(userStats.total_prc_redeemed || 0).toLocaleString()}</p>
+                <p className="text-gray-500 text-xs">≈ ₹{((userStats.total_prc_redeemed || 0) * 0.1).toFixed(2)}</p>
+              </div>
+              
+              {/* Total Earned */}
+              <div className="bg-gray-900/50 rounded-xl p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Wallet className="w-4 h-4 text-emerald-500" />
+                  <p className="text-gray-400 text-xs">Total Earned</p>
+                </div>
+                <p className="text-emerald-400 font-bold text-lg">{(userStats.total_earned || 0).toLocaleString()}</p>
+                <p className="text-gray-500 text-xs">≈ ₹{((userStats.total_earned || 0) * 0.1).toFixed(2)}</p>
+              </div>
+              
+              {/* Cashback Received */}
+              <div className="bg-gray-900/50 rounded-xl p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Gift className="w-4 h-4 text-purple-500" />
+                  <p className="text-gray-400 text-xs">Cashback</p>
+                </div>
+                <p className="text-purple-400 font-bold text-lg">₹{(userStats.total_cashback || 0).toFixed(2)}</p>
+              </div>
+              
+              {/* Orders Count */}
+              <div className="bg-gray-900/50 rounded-xl p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Package className="w-4 h-4 text-blue-500" />
+                  <p className="text-gray-400 text-xs">Total Orders</p>
+                </div>
+                <p className="text-blue-400 font-bold text-lg">{userStats.total_orders || 0}</p>
+                <p className="text-gray-500 text-xs">{userStats.delivered_orders || 0} delivered</p>
+              </div>
+            </div>
+            
+            {/* Earnings Breakdown */}
+            {userStats.earnings_breakdown && (
+              <div className="mt-3 pt-3 border-t border-gray-700">
+                <p className="text-gray-400 text-xs mb-2">Earnings Breakdown</p>
+                <div className="flex flex-wrap gap-2">
+                  {userStats.earnings_breakdown.mining > 0 && (
+                    <span className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded-full text-xs">
+                      Mining: {userStats.earnings_breakdown.mining.toFixed(2)} PRC
+                    </span>
+                  )}
+                  {userStats.earnings_breakdown.referral > 0 && (
+                    <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-xs">
+                      Referral: {userStats.earnings_breakdown.referral.toFixed(2)} PRC
+                    </span>
+                  )}
+                  {userStats.earnings_breakdown.tap_game > 0 && (
+                    <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs">
+                      Tap Game: {userStats.earnings_breakdown.tap_game.toFixed(2)} PRC
+                    </span>
+                  )}
+                  {userStats.earnings_breakdown.cashback > 0 && (
+                    <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded-full text-xs">
+                      Cashback: {userStats.earnings_breakdown.cashback.toFixed(2)} PRC
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="px-5">
         {orders.length === 0 ? (
           <div data-testid="no-orders" className="bg-gray-900/50 rounded-2xl p-8 border border-gray-800 text-center">
