@@ -24241,7 +24241,7 @@ async def get_referral_earnings_history(user_id: str, period: str = "all"):
 async def get_referral_levels(user_id: str):
     """
     Get referral count by level (5 levels deep) with user details.
-    Uses AGGRESSIVE search - checks ALL possible referred_by formats.
+    Uses SUPER AGGRESSIVE search - checks ALL possible referred_by formats including regex.
     """
     now = datetime.now(timezone.utc)
     
@@ -24252,30 +24252,73 @@ async def get_referral_levels(user_id: str):
     
     # Build ALL possible search values for this user
     search_values = []
-    if user.get("uid"):
-        search_values.append(user["uid"])
-    if user.get("referral_code"):
-        search_values.append(user["referral_code"])
-        # Also add lowercase version
-        search_values.append(user["referral_code"].lower())
-        search_values.append(user["referral_code"].upper())
-    if user.get("email"):
-        search_values.append(user["email"])
-        search_values.append(user["email"].lower())
-    if user.get("name"):
-        search_values.append(user["name"])
     
-    # Remove duplicates and None values
-    search_values = list(set([v for v in search_values if v]))
+    # Add UID
+    uid = user.get("uid")
+    if uid:
+        search_values.append(uid)
+        # Also add short version (first 8 chars)
+        search_values.append(uid[:8])
     
-    # AGGRESSIVE SEARCH: Find ALL users who might be referred by this user
+    # Add referral code with all variations
+    ref_code = user.get("referral_code")
+    if ref_code:
+        search_values.append(ref_code)
+        search_values.append(ref_code.lower())
+        search_values.append(ref_code.upper())
+        # Remove prefix if exists (like "USER" or "ADMIN")
+        for prefix in ["USER", "ADMIN", "REF"]:
+            if ref_code.upper().startswith(prefix):
+                search_values.append(ref_code[len(prefix):])
+                search_values.append(ref_code[len(prefix):].lower())
+    
+    # Add email
+    email = user.get("email")
+    if email:
+        search_values.append(email)
+        search_values.append(email.lower())
+        search_values.append(email.upper())
+        # Add email username part
+        if "@" in email:
+            search_values.append(email.split("@")[0])
+    
+    # Add name
+    name = user.get("name")
+    if name:
+        search_values.append(name)
+        search_values.append(name.lower())
+        search_values.append(name.upper())
+    
+    # Add phone if exists
+    phone = user.get("phone")
+    if phone:
+        search_values.append(phone)
+        # Remove +91 or other prefixes
+        search_values.append(phone.replace("+91", "").replace(" ", ""))
+    
+    # Remove duplicates and None/empty values
+    search_values = list(set([v for v in search_values if v and len(str(v)) > 2]))
+    
+    # SUPER AGGRESSIVE SEARCH: Find ALL users who might be referred by this user
     all_direct_referrals = []
     try:
+        # First try exact match
         async for referred_user in db.users.find(
             {"referred_by": {"$in": search_values}},
             {"_id": 0}
         ):
             all_direct_referrals.append(referred_user)
+        
+        # If no results, try case-insensitive regex search
+        if not all_direct_referrals and ref_code:
+            regex_pattern = f"^{ref_code}$"
+            async for referred_user in db.users.find(
+                {"referred_by": {"$regex": regex_pattern, "$options": "i"}},
+                {"_id": 0}
+            ):
+                if referred_user not in all_direct_referrals:
+                    all_direct_referrals.append(referred_user)
+                    
     except Exception as e:
         print(f"Error searching referrals: {e}")
     
