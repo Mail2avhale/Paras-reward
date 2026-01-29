@@ -49,7 +49,7 @@ const MarketplaceNew = ({ user, onLogout }) => {
       setLoading(true);
       const [userRes, productsRes, cartRes] = await Promise.all([
         axios.get(`${API}/api/user/${user.uid}`),
-        axios.get(`${API}/api/marketplace/products`),
+        axios.get(`${API}/api/products`),
         axios.get(`${API}/api/cart/${user.uid}`)
       ]);
       
