@@ -1310,19 +1310,38 @@ async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
         ...
         'level_5': [list of level 5 referrals]
     }
+    
+    NOTE: referred_by can contain either UID or referral_code, so we check both
     """
     referrals_by_level = {}
     current_level_uids = [user_id]
     
+    # Get the referral code for the root user
+    root_user = await db.users.find_one({"uid": user_id}, {"_id": 0, "referral_code": 1})
+    current_level_ref_codes = [root_user.get("referral_code")] if root_user and root_user.get("referral_code") else []
+    
     for level in range(1, max_levels + 1):
         # Get users referred by current level users
         next_level_uids = []
+        next_level_ref_codes = []
         
-        # Find all users whose referred_by matches any UID in current level
+        # Build query to match both UID and referral_code in referred_by field
+        query_conditions = []
+        if current_level_uids:
+            query_conditions.append({"referred_by": {"$in": current_level_uids}})
+        if current_level_ref_codes:
+            query_conditions.append({"referred_by": {"$in": current_level_ref_codes}})
+        
+        if not query_conditions:
+            break
+            
+        # Find all users whose referred_by matches any UID or referral_code in current level
         referred_users = []
-        async for referred_user in db.users.find({"referred_by": {"$in": current_level_uids}}, {"_id": 0}):
+        async for referred_user in db.users.find({"$or": query_conditions}, {"_id": 0}):
             referred_users.append(referred_user)
             next_level_uids.append(referred_user.get("uid"))
+            if referred_user.get("referral_code"):
+                next_level_ref_codes.append(referred_user.get("referral_code"))
         
         # Store this level's referrals
         if referred_users:
@@ -1330,6 +1349,7 @@ async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
         
         # Move to next level
         current_level_uids = next_level_uids
+        current_level_ref_codes = next_level_ref_codes
         
         # Stop if no more referrals at this level
         if not current_level_uids:
