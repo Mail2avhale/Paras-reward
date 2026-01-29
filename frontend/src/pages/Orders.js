@@ -35,6 +35,7 @@ const Orders = ({ user, onLogout }) => {
 
   useEffect(() => {
     fetchOrders();
+    fetchUserStats();
   }, []);
 
   const fetchOrders = async () => {
@@ -47,6 +48,15 @@ const Orders = ({ user, onLogout }) => {
       setOrders([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUserStats = async () => {
+    try {
+      const response = await axios.get(`${API}/user/${user.uid}/redemption-stats`);
+      setUserStats(response.data);
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
     }
   };
 
