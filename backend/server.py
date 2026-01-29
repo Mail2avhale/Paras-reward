@@ -24516,10 +24516,18 @@ async def get_user_full_debug(user_id: str):
     """
     COMPREHENSIVE DEBUG: Returns ALL relevant data for a user to diagnose issues.
     Use this in production to understand what's happening.
+    user_id can be UID or email address.
     """
+    # Support both UID and email
     user = await db.users.find_one({"uid": user_id}, {"_id": 0, "password": 0})
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        # Try by email
+        user = await db.users.find_one({"email": user_id}, {"_id": 0, "password": 0})
+    if not user:
+        # Try by email lowercase
+        user = await db.users.find_one({"email": user_id.lower()}, {"_id": 0, "password": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail=f"User not found with UID or email: {user_id}")
     
     now = datetime.now(timezone.utc)
     
