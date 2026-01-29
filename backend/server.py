@@ -24242,13 +24242,18 @@ async def get_referral_levels(user_id: str):
     """
     Get referral count by level (5 levels deep) with user details.
     Uses SUPER AGGRESSIVE search - checks ALL possible referred_by formats including regex.
+    user_id can be UID or email.
     """
     now = datetime.now(timezone.utc)
     
-    # Get user info
+    # Get user info - support both UID and email
     user = await db.users.find_one({"uid": user_id}, {"_id": 0})
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        user = await db.users.find_one({"email": user_id}, {"_id": 0})
+    if not user:
+        user = await db.users.find_one({"email": user_id.lower()}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail=f"User not found: {user_id}")
     
     # Build ALL possible search values for this user
     search_values = []
