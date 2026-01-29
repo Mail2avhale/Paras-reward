@@ -24296,6 +24296,73 @@ async def get_referral_levels(user_id: str):
 
 
 @api_router.get("/referrals/{user_id}/debug-referred-by")
+async def debug_referred_by(user_id: str):
+    """
+    DEBUG ENDPOINT: Check how users are stored in referred_by field.
+    This helps diagnose why referrals might not be counting correctly.
+    """
+    user = await db.users.find_one({"uid": user_id}, {"_id": 0, "uid": 1, "referral_code": 1, "referral_count": 1, "name": 1})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    uid = user.get("uid")
+    ref_code = user.get("referral_code")
+    
+    # Count by UID
+    count_by_uid = await db.users.count_documents({"referred_by": uid})
+    
+    # Count by referral code
+    count_by_code = await db.users.count_documents({"referred_by": ref_code})
+    
+    # Count by EITHER (this is what our fix does)
+    count_by_either = await db.users.count_documents({
+        "$or": [{"referred_by": uid}, {"referred_by": ref_code}]
+    })
+    
+    # Get sample referred_by values to see the format
+    sample_referrals = []
+    async for u in db.users.find(
+        {"$or": [{"referred_by": uid}, {"referred_by": ref_code}]},
+        {"_id": 0, "name": 1, "email": 1, "referred_by": 1, "created_at": 1}
+    ).limit(10):
+        sample_referrals.append({
+            "name": u.get("name"),
+            "email": u.get("email", "")[:30],
+            "referred_by": u.get("referred_by"),
+            "created_at": str(u.get("created_at"))[:19]
+        })
+    
+    # Get ALL unique referred_by values in the database
+    pipeline = [
+        {"$match": {"referred_by": {"$exists": True, "$ne": None, "$ne": ""}}},
+        {"$group": {"_id": "$referred_by", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 20}
+    ]
+    all_referred_by_formats = await db.users.aggregate(pipeline).to_list(20)
+    
+    return {
+        "user_info": {
+            "uid": uid,
+            "referral_code": ref_code,
+            "stored_referral_count": user.get("referral_count"),
+            "name": user.get("name")
+        },
+        "referral_counts": {
+            "by_uid": count_by_uid,
+            "by_referral_code": count_by_code,
+            "by_either_combined": count_by_either,
+            "note": "If 'by_either_combined' matches your Network Analytics total, the fix is working"
+        },
+        "sample_referrals": sample_referrals,
+        "all_referred_by_formats_in_db": [
+            {"referred_by": r["_id"], "count": r["count"]} 
+            for r in all_referred_by_formats
+        ]
+    }
+
+
+@api_router.get("/referrals/{user_id}/reward-progress")
 async def get_referral_reward_progress(user_id: str):
     """
     Get the referral reward progress for a user.
