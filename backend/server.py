@@ -1311,48 +1311,59 @@ async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
         'level_5': [list of level 5 referrals]
     }
     
-    NOTE: referred_by can contain either UID or referral_code, so we check both
+    NOTE: referred_by can contain UID, referral_code, email, or name - we check ALL
     """
     referrals_by_level = {}
-    current_level_uids = [user_id]
     
-    # Get the referral code for the root user
-    root_user = await db.users.find_one({"uid": user_id}, {"_id": 0, "referral_code": 1})
-    current_level_ref_codes = [root_user.get("referral_code")] if root_user and root_user.get("referral_code") else []
+    # Get ALL info for the root user
+    root_user = await db.users.find_one({"uid": user_id}, {"_id": 0, "uid": 1, "referral_code": 1, "email": 1, "name": 1})
+    if not root_user:
+        return referrals_by_level
+    
+    # Build initial search values - all possible ways this user could be referenced
+    def get_search_values(user_doc):
+        values = []
+        if user_doc.get("uid"):
+            values.append(user_doc["uid"])
+        if user_doc.get("referral_code"):
+            values.append(user_doc["referral_code"])
+        if user_doc.get("email"):
+            values.append(user_doc["email"])
+        if user_doc.get("name"):
+            values.append(user_doc["name"])
+        return [v for v in values if v]  # Filter out None/empty
+    
+    current_level_search_values = get_search_values(root_user)
     
     for level in range(1, max_levels + 1):
-        # Get users referred by current level users
-        next_level_uids = []
-        next_level_ref_codes = []
-        
-        # Build query to match both UID and referral_code in referred_by field
-        query_conditions = []
-        if current_level_uids:
-            query_conditions.append({"referred_by": {"$in": current_level_uids}})
-        if current_level_ref_codes:
-            query_conditions.append({"referred_by": {"$in": current_level_ref_codes}})
-        
-        if not query_conditions:
+        if not current_level_search_values:
             break
             
-        # Find all users whose referred_by matches any UID or referral_code in current level
+        # Find all users whose referred_by matches any of our search values
         referred_users = []
-        async for referred_user in db.users.find({"$or": query_conditions}, {"_id": 0}):
-            referred_users.append(referred_user)
-            next_level_uids.append(referred_user.get("uid"))
-            if referred_user.get("referral_code"):
-                next_level_ref_codes.append(referred_user.get("referral_code"))
+        next_level_search_values = []
+        
+        try:
+            async for referred_user in db.users.find(
+                {"referred_by": {"$in": current_level_search_values}},
+                {"_id": 0}
+            ):
+                referred_users.append(referred_user)
+                # Collect search values for next level
+                next_level_search_values.extend(get_search_values(referred_user))
+        except Exception as e:
+            print(f"Error in get_multi_level_referrals level {level}: {e}")
+            break
         
         # Store this level's referrals
         if referred_users:
             referrals_by_level[f'level_{level}'] = referred_users
         
-        # Move to next level
-        current_level_uids = next_level_uids
-        current_level_ref_codes = next_level_ref_codes
+        # Move to next level with deduplicated search values
+        current_level_search_values = list(set(next_level_search_values))
         
         # Stop if no more referrals at this level
-        if not current_level_uids:
+        if not current_level_search_values:
             break
     
     return referrals_by_level
