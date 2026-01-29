@@ -12348,6 +12348,166 @@ async def get_user_orders(user_id: str):
         order["_id"] = str(order["_id"])
     return orders
 
+
+@api_router.get("/user/{user_id}/all-requests")
+async def get_user_all_requests(user_id: str, page: int = 1, limit: int = 10, request_type: str = "all"):
+    """
+    Get all redemption requests for a user with pagination.
+    Includes: orders, bill_payments, gift_vouchers, recharges
+    
+    request_type: all, orders, bill_payment, gift_voucher
+    """
+    try:
+        all_requests = []
+        
+        # Get orders if needed
+        if request_type in ["all", "orders"]:
+            orders = await db.orders.find(
+                {"user_id": user_id},
+                {"_id": 0}
+            ).sort("created_at", -1).to_list(500)
+            
+            for order in orders:
+                all_requests.append({
+                    "id": order.get("order_id"),
+                    "type": "order",
+                    "type_label": "Product Order",
+                    "title": order.get("product_name", "Product Order"),
+                    "description": f"Qty: {order.get('quantity', 1)}",
+                    "amount_prc": order.get("total_prc", order.get("prc_amount", 0)),
+                    "amount_inr": order.get("product_price", 0),
+                    "status": order.get("status", "pending"),
+                    "created_at": order.get("created_at"),
+                    "processed_at": order.get("delivered_at"),
+                    "icon": "package",
+                    "details": {
+                        "product_id": order.get("product_id"),
+                        "product_name": order.get("product_name"),
+                        "quantity": order.get("quantity", 1),
+                        "delivery_address": order.get("delivery_address"),
+                        "tracking_id": order.get("tracking_id")
+                    }
+                })
+        
+        # Get bill payment requests if needed
+        if request_type in ["all", "bill_payment"]:
+            bill_requests = await db.bill_payment_requests.find(
+                {"user_id": user_id},
+                {"_id": 0}
+            ).sort("created_at", -1).to_list(500)
+            
+            type_labels = {
+                "mobile_recharge": "Mobile Recharge",
+                "dish_recharge": "DTH Recharge",
+                "electricity_bill": "Electricity Bill",
+                "credit_card_payment": "Credit Card Payment",
+                "loan_emi": "Loan EMI",
+                "gas_bill": "Gas Bill",
+                "water_bill": "Water Bill",
+                "broadband": "Broadband Bill",
+                "insurance": "Insurance Premium"
+            }
+            
+            type_icons = {
+                "mobile_recharge": "smartphone",
+                "dish_recharge": "tv",
+                "electricity_bill": "zap",
+                "credit_card_payment": "credit-card",
+                "loan_emi": "building",
+                "gas_bill": "flame",
+                "water_bill": "droplet",
+                "broadband": "wifi",
+                "insurance": "shield"
+            }
+            
+            for req in bill_requests:
+                req_type = req.get("request_type", "bill_payment")
+                all_requests.append({
+                    "id": req.get("request_id"),
+                    "type": "bill_payment",
+                    "type_label": type_labels.get(req_type, "Bill Payment"),
+                    "title": type_labels.get(req_type, req_type.replace("_", " ").title()),
+                    "description": f"₹{req.get('amount_inr', 0)} payment",
+                    "amount_prc": req.get("total_prc_deducted", req.get("prc_required", 0)),
+                    "amount_inr": req.get("amount_inr", 0),
+                    "status": req.get("status", "pending"),
+                    "created_at": req.get("created_at"),
+                    "processed_at": req.get("processed_at"),
+                    "icon": type_icons.get(req_type, "receipt"),
+                    "details": req.get("details", {}),
+                    "admin_notes": req.get("admin_notes"),
+                    "service_charge": req.get("service_charge_amount", 0)
+                })
+        
+        # Get gift voucher requests if needed
+        if request_type in ["all", "gift_voucher"]:
+            voucher_requests = await db.gift_voucher_requests.find(
+                {"user_id": user_id},
+                {"_id": 0}
+            ).sort("created_at", -1).to_list(500)
+            
+            for req in voucher_requests:
+                all_requests.append({
+                    "id": req.get("request_id"),
+                    "type": "gift_voucher",
+                    "type_label": "Gift Voucher",
+                    "title": f"₹{req.get('denomination', 0)} Gift Voucher",
+                    "description": f"Voucher Code: {req.get('voucher_code', 'Pending')}",
+                    "amount_prc": req.get("total_prc_deducted", req.get("prc_required", 0)),
+                    "amount_inr": req.get("denomination", 0),
+                    "status": req.get("status", "pending"),
+                    "created_at": req.get("created_at"),
+                    "processed_at": req.get("processed_at"),
+                    "icon": "gift",
+                    "details": {
+                        "denomination": req.get("denomination"),
+                        "voucher_code": req.get("voucher_code"),
+                        "voucher_details": req.get("voucher_details")
+                    },
+                    "admin_notes": req.get("admin_notes"),
+                    "service_charge": req.get("service_charge_amount", 0)
+                })
+        
+        # Sort all requests by created_at (newest first)
+        all_requests.sort(key=lambda x: x.get("created_at") or "", reverse=True)
+        
+        # Calculate totals
+        total_count = len(all_requests)
+        total_pages = (total_count + limit - 1) // limit if limit > 0 else 1
+        
+        # Apply pagination
+        start_idx = (page - 1) * limit
+        end_idx = start_idx + limit
+        paginated_requests = all_requests[start_idx:end_idx]
+        
+        # Calculate summary stats
+        summary = {
+            "total_orders": len([r for r in all_requests if r["type"] == "order"]),
+            "total_bill_payments": len([r for r in all_requests if r["type"] == "bill_payment"]),
+            "total_vouchers": len([r for r in all_requests if r["type"] == "gift_voucher"]),
+            "pending_count": len([r for r in all_requests if r["status"] == "pending"]),
+            "completed_count": len([r for r in all_requests if r["status"] in ["completed", "delivered"]]),
+            "total_prc_used": sum(r.get("amount_prc", 0) for r in all_requests if r["status"] not in ["rejected", "cancelled"]),
+            "total_inr_value": sum(r.get("amount_inr", 0) for r in all_requests if r["status"] not in ["rejected", "cancelled"])
+        }
+        
+        return {
+            "requests": paginated_requests,
+            "pagination": {
+                "current_page": page,
+                "total_pages": total_pages,
+                "total_count": total_count,
+                "limit": limit,
+                "has_next": page < total_pages,
+                "has_prev": page > 1
+            },
+            "summary": summary
+        }
+    except Exception as e:
+        print(f"Error fetching all requests: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.get("/orders/{order_id}")
 async def get_order(order_id: str):
     """Get order details"""
