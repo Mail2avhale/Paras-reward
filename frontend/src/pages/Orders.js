@@ -402,7 +402,7 @@ const Orders = ({ user, onLogout }) => {
                         </div>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(request.status)} flex items-center gap-1`}>
                           {getStatusIcon(request.status)}
-                          {request.status}
+                          {getStatusLabel(request.status)}
                         </span>
                       </div>
                       
