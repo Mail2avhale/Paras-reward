@@ -1271,7 +1271,10 @@ async def check_user_active_status(user_uid: str, user_data: dict = None) -> tup
         bonus_collection = await db.transactions.find_one({
             "user_id": user_uid,
             "type": "mining",
-            "created_at": {"$gte": twenty_four_hours_ago.isoformat()}
+            "$or": [
+                {"created_at": {"$gte": twenty_four_hours_ago.isoformat()}},
+                {"timestamp": {"$gte": twenty_four_hours_ago.isoformat()}}
+            ]
         })
         if bonus_collection:
             return True, "bonus_collected_24h"
@@ -1283,7 +1286,10 @@ async def check_user_active_status(user_uid: str, user_data: dict = None) -> tup
         game_activity = await db.transactions.find_one({
             "user_id": user_uid,
             "type": {"$in": ["tap_game", "prc_rain_gain", "prc_rain_loss"]},
-            "created_at": {"$gte": twenty_four_hours_ago.isoformat()}
+            "$or": [
+                {"created_at": {"$gte": twenty_four_hours_ago.isoformat()}},
+                {"timestamp": {"$gte": twenty_four_hours_ago.isoformat()}}
+            ]
         })
         if game_activity:
             return True, "game_played_24h"
