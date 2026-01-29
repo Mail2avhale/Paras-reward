@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Package, Clock, CheckCircle, Truck, ShoppingBag, Trash2, AlertCircle, ArrowLeft, Copy } from 'lucide-react';
+import { Package, Clock, CheckCircle, Truck, ShoppingBag, Trash2, AlertCircle, ArrowLeft, Copy, TrendingUp, Coins, Wallet, Gift } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -23,6 +23,7 @@ const Orders = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [deleteOrderId, setDeleteOrderId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [userStats, setUserStats] = useState(null);
   const itemsPerPage = 10;
 
   // Pagination calculations
