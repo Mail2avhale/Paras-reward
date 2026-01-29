@@ -24240,31 +24240,100 @@ async def get_referral_earnings_history(user_id: str, period: str = "all"):
 @api_router.get("/referrals/{user_id}/levels")
 async def get_referral_levels(user_id: str):
     """
-    Get referral count by level (5 levels deep) with user details
-    Active = ANY of:
-      1. Active mining session
-      2. Bonus collected in last 24h
-      3. Tap Game or Rain Drop played in last 24h
+    Get referral count by level (5 levels deep) with user details.
+    Uses AGGRESSIVE search - checks ALL possible referred_by formats.
     """
-    
-    level_counts = await count_active_referrals_by_level(user_id)
-    referrals_by_level = await get_multi_level_referrals(user_id, max_levels=5)
-    
-    levels = []
     now = datetime.now(timezone.utc)
     
+    # Get user info
+    user = await db.users.find_one({"uid": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Build ALL possible search values for this user
+    search_values = []
+    if user.get("uid"):
+        search_values.append(user["uid"])
+    if user.get("referral_code"):
+        search_values.append(user["referral_code"])
+        # Also add lowercase version
+        search_values.append(user["referral_code"].lower())
+        search_values.append(user["referral_code"].upper())
+    if user.get("email"):
+        search_values.append(user["email"])
+        search_values.append(user["email"].lower())
+    if user.get("name"):
+        search_values.append(user["name"])
+    
+    # Remove duplicates and None values
+    search_values = list(set([v for v in search_values if v]))
+    
+    # AGGRESSIVE SEARCH: Find ALL users who might be referred by this user
+    all_direct_referrals = []
+    try:
+        async for referred_user in db.users.find(
+            {"referred_by": {"$in": search_values}},
+            {"_id": 0}
+        ):
+            all_direct_referrals.append(referred_user)
+    except Exception as e:
+        print(f"Error searching referrals: {e}")
+    
+    # Build levels dictionary
+    referrals_by_level = {"level_1": all_direct_referrals}
+    
+    # Get Level 2-5 referrals
+    current_level_users = all_direct_referrals
+    for level in range(2, 6):
+        if not current_level_users:
+            break
+            
+        # Build search values for this level
+        level_search_values = []
+        for u in current_level_users:
+            if u.get("uid"):
+                level_search_values.append(u["uid"])
+            if u.get("referral_code"):
+                level_search_values.append(u["referral_code"])
+                level_search_values.append(u["referral_code"].lower())
+                level_search_values.append(u["referral_code"].upper())
+            if u.get("email"):
+                level_search_values.append(u["email"])
+            if u.get("name"):
+                level_search_values.append(u["name"])
+        
+        level_search_values = list(set([v for v in level_search_values if v]))
+        
+        if not level_search_values:
+            break
+        
+        # Find next level users
+        next_level_users = []
+        try:
+            async for referred_user in db.users.find(
+                {"referred_by": {"$in": level_search_values}},
+                {"_id": 0}
+            ):
+                next_level_users.append(referred_user)
+        except Exception as e:
+            print(f"Error searching level {level}: {e}")
+        
+        if next_level_users:
+            referrals_by_level[f"level_{level}"] = next_level_users
+        
+        current_level_users = next_level_users
+    
+    # Build response with user details and activity status
+    levels = []
     for level_num in range(1, 6):
         level_key = f"level_{level_num}"
         users = referrals_by_level.get(level_key, [])
         
-        # Get detailed user info and activity status
         user_details = []
         active_count = 0
         
         for u in users:
             user_uid = u.get("uid")
-            
-            # Use the unified active status checker
             is_active, active_reason = await check_user_active_status(user_uid, u)
             
             if is_active:
@@ -24279,10 +24348,8 @@ async def get_referral_levels(user_id: str):
                 "subscription_plan": u.get("subscription_plan", "explorer"),
                 "joined_at": u.get("created_at"),
                 "session_end": u.get("mining_session_end"),
-                # DEBUG fields
-                "mining_active_raw": u.get("mining_active"),
-                "mining_start": u.get("mining_start_time"),
-                "active_reason": active_reason
+                "active_reason": active_reason,
+                "referred_by_value": u.get("referred_by")  # DEBUG: Show what value matched
             })
         
         levels.append({
@@ -24293,15 +24360,19 @@ async def get_referral_levels(user_id: str):
             "bonus_percent": {1: 10, 2: 5, 3: 3, 4: 2, 5: 1}.get(level_num, 0)
         })
     
+    total_count = sum(l["count"] for l in levels)
+    total_active = sum(l["active_count"] for l in levels)
+    
     return {
         "levels": levels,
-        "total": sum(l["count"] for l in levels),
-        "total_active": sum(l["active_count"] for l in levels),
+        "total": total_count,
+        "total_active": total_active,
         "debug_timestamp": now.isoformat(),
-        # DEBUG: Show what we searched for
         "debug_search_info": {
             "user_uid": user_id,
-            "user_referral_code": (await db.users.find_one({"uid": user_id}, {"referral_code": 1}))["referral_code"] if await db.users.find_one({"uid": user_id}) else None
+            "user_referral_code": user.get("referral_code"),
+            "search_values_used": search_values[:5],  # Show first 5
+            "stored_referral_count": user.get("referral_count", 0)
         }
     }
 
