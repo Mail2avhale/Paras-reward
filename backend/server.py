@@ -24425,10 +24425,16 @@ async def debug_referred_by(user_id: str):
     """
     DEBUG ENDPOINT: Check how users are stored in referred_by field.
     This helps diagnose why referrals might not be counting correctly.
+    user_id can be UID or email address.
     """
+    # Support both UID and email
     user = await db.users.find_one({"uid": user_id}, {"_id": 0, "uid": 1, "referral_code": 1, "referral_count": 1, "name": 1, "email": 1})
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        user = await db.users.find_one({"email": user_id}, {"_id": 0, "uid": 1, "referral_code": 1, "referral_count": 1, "name": 1, "email": 1})
+    if not user:
+        user = await db.users.find_one({"email": user_id.lower()}, {"_id": 0, "uid": 1, "referral_code": 1, "referral_count": 1, "name": 1, "email": 1})
+    if not user:
+        raise HTTPException(status_code=404, detail=f"User not found. Use your UID or email. Example: /api/referrals/your@email.com/debug-referred-by")
     
     uid = user.get("uid")
     ref_code = user.get("referral_code")
