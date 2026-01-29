@@ -24286,11 +24286,16 @@ async def get_referral_levels(user_id: str):
         "levels": levels,
         "total": sum(l["count"] for l in levels),
         "total_active": sum(l["active_count"] for l in levels),
-        "debug_timestamp": now.isoformat()
+        "debug_timestamp": now.isoformat(),
+        # DEBUG: Show what we searched for
+        "debug_search_info": {
+            "user_uid": user_id,
+            "user_referral_code": (await db.users.find_one({"uid": user_id}, {"referral_code": 1}))["referral_code"] if await db.users.find_one({"uid": user_id}) else None
+        }
     }
 
 
-@api_router.get("/referrals/{user_id}/reward-progress")
+@api_router.get("/referrals/{user_id}/debug-referred-by")
 async def get_referral_reward_progress(user_id: str):
     """
     Get the referral reward progress for a user.
