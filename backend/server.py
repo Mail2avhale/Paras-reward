@@ -4745,16 +4745,98 @@ async def get_user_redeemed_stats(uid: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-    
-    return {
-        "message": "Coins claimed successfully",
-        "amount": round(mined_amount, 2),
-        "new_balance": round(new_balance, 2),
-        "valid_prc": round(await get_valid_prc_balance(uid), 2),
-        "membership_type": membership_type,
-        "expires_at": expiry_date,
-        "note": "Lifetime validity" if is_vip else "Valid for 2 days - Upgrade to VIP for lifetime validity"
-    }
+@api_router.get("/user/{uid}/redemption-stats")
+async def get_user_redemption_stats(uid: str):
+    """
+    Comprehensive stats for user's PRC redemption and earnings.
+    Shows:
+    - Total PRC redeemed (spent on orders)
+    - Total money value of redemptions
+    - Total PRC earned (mining, referral, tap game, etc.)
+    - Cashback received
+    - Orders count
+    """
+    try:
+        # Get user data
+        user = await db.users.find_one({"uid": uid}, {"_id": 0})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # ========== REDEMPTION STATS ==========
+        # Get all orders for this user
+        all_orders = await db.orders.find(
+            {"user_id": uid},
+            {"_id": 0, "total_prc": 1, "prc_amount": 1, "cashback_amount": 1, "status": 1}
+        ).to_list(1000)
+        
+        total_prc_redeemed = sum(order.get("total_prc", order.get("prc_amount", 0)) for order in all_orders if order.get("status") != "cancelled")
+        total_cashback = sum(order.get("cashback_amount", 0) for order in all_orders if order.get("status") == "delivered")
+        total_orders = len(all_orders)
+        delivered_orders = len([o for o in all_orders if o.get("status") == "delivered"])
+        
+        # ========== EARNINGS STATS ==========
+        # Get all credit transactions
+        credit_types = ["mining", "tap_game", "referral", "cashback", "admin_credit", "prc_rain_gain", "profit_share"]
+        
+        earnings_pipeline = [
+            {"$match": {"user_id": uid, "type": {"$in": credit_types}}},
+            {"$group": {
+                "_id": "$type",
+                "total": {"$sum": "$amount"}
+            }}
+        ]
+        
+        earnings_result = await db.transactions.aggregate(earnings_pipeline).to_list(100)
+        
+        # Build earnings breakdown
+        earnings_breakdown = {
+            "mining": 0,
+            "referral": 0,
+            "tap_game": 0,
+            "cashback": 0,
+            "rain_game": 0,
+            "other": 0
+        }
+        
+        total_earned = 0
+        for item in earnings_result:
+            amount = item.get("total", 0)
+            total_earned += amount
+            
+            if item["_id"] == "mining":
+                earnings_breakdown["mining"] = round(amount, 2)
+            elif item["_id"] == "referral":
+                earnings_breakdown["referral"] = round(amount, 2)
+            elif item["_id"] == "tap_game":
+                earnings_breakdown["tap_game"] = round(amount, 2)
+            elif item["_id"] in ["cashback", "admin_credit", "profit_share"]:
+                earnings_breakdown["cashback"] += round(amount, 2)
+            elif item["_id"] == "prc_rain_gain":
+                earnings_breakdown["rain_game"] = round(amount, 2)
+            else:
+                earnings_breakdown["other"] += round(amount, 2)
+        
+        # Also include total_mined from user record if available
+        if user.get("total_mined", 0) > earnings_breakdown["mining"]:
+            earnings_breakdown["mining"] = round(user.get("total_mined", 0), 2)
+            total_earned = sum(earnings_breakdown.values())
+        
+        return {
+            "total_prc_redeemed": round(total_prc_redeemed, 2),
+            "total_money_value": round(total_prc_redeemed * 0.1, 2),  # 1 PRC = ₹0.10
+            "total_earned": round(total_earned, 2),
+            "total_cashback": round(total_cashback, 2),
+            "total_orders": total_orders,
+            "delivered_orders": delivered_orders,
+            "current_balance": round(user.get("prc_balance", 0), 2),
+            "earnings_breakdown": earnings_breakdown
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error getting redemption stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # ========== TAP GAME ROUTES ==========
 @api_router.post("/game/tap/{uid}")
