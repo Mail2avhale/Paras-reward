@@ -23,37 +23,39 @@ BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 class TestMiningClaimFlow:
     """Test the complete mining claim flow - verifying the fix for session reset"""
     
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        """Setup test user credentials"""
-        self.admin_email = "admin@paras.com"
-        self.admin_password = "admin123"
-        self.test_uid = None
+    test_uid = None
+    initial_balance = 0
+    session_was_active = False
+    mined_before_claim = 0
+    claimed_amount = 0
+    new_balance = 0
+    
+    @classmethod
+    def login(cls):
+        """Login and get user UID"""
+        response = requests.post(
+            f"{BASE_URL}/api/auth/login",
+            params={"identifier": "admin@paras.com", "password": "admin123"}
+        )
+        if response.status_code == 200:
+            cls.test_uid = response.json().get("uid")
+        return response
         
     def test_01_login_and_get_user(self):
         """Test login and get user UID"""
-        # Login
-        response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": self.admin_email,
-            "password": self.admin_password
-        })
+        response = self.__class__.login()
         assert response.status_code == 200, f"Login failed: {response.text}"
         data = response.json()
         assert "uid" in data, "No uid in login response"
-        self.__class__.test_uid = data["uid"]
-        print(f"✅ Login successful, UID: {self.test_uid}")
+        print(f"✅ Login successful, UID: {self.__class__.test_uid}")
         
     def test_02_get_mining_status_initial(self):
         """Test getting initial mining status"""
-        uid = getattr(self.__class__, 'test_uid', None)
-        if not uid:
-            # Try to login again
-            response = requests.post(f"{BASE_URL}/api/auth/login", json={
-                "email": "admin@paras.com",
-                "password": "admin123"
-            })
-            uid = response.json().get("uid")
-            self.__class__.test_uid = uid
+        if not self.__class__.test_uid:
+            self.__class__.login()
+            
+        uid = self.__class__.test_uid
+        assert uid, "No test UID available"
             
         response = requests.get(f"{BASE_URL}/api/mining/status/{uid}")
         assert response.status_code == 200, f"Mining status failed: {response.text}"
@@ -71,9 +73,11 @@ class TestMiningClaimFlow:
         
     def test_03_start_mining_session(self):
         """Test starting a mining session"""
-        uid = getattr(self.__class__, 'test_uid', None)
-        if not uid:
-            pytest.skip("No test UID available")
+        if not self.__class__.test_uid:
+            self.__class__.login()
+            
+        uid = self.__class__.test_uid
+        assert uid, "No test UID available"
             
         response = requests.post(f"{BASE_URL}/api/mining/start/{uid}")
         assert response.status_code == 200, f"Start mining failed: {response.text}"
@@ -90,9 +94,11 @@ class TestMiningClaimFlow:
         
     def test_04_verify_session_active(self):
         """Verify mining session is active after starting"""
-        uid = getattr(self.__class__, 'test_uid', None)
-        if not uid:
-            pytest.skip("No test UID available")
+        if not self.__class__.test_uid:
+            self.__class__.login()
+            
+        uid = self.__class__.test_uid
+        assert uid, "No test UID available"
             
         response = requests.get(f"{BASE_URL}/api/mining/status/{uid}")
         assert response.status_code == 200
@@ -105,9 +111,11 @@ class TestMiningClaimFlow:
         
     def test_05_wait_for_prc_accumulation(self):
         """Wait a few seconds for PRC to accumulate"""
-        uid = getattr(self.__class__, 'test_uid', None)
-        if not uid:
-            pytest.skip("No test UID available")
+        if not self.__class__.test_uid:
+            self.__class__.login()
+            
+        uid = self.__class__.test_uid
+        assert uid, "No test UID available"
             
         # Wait 3 seconds for some PRC to accumulate
         print("⏳ Waiting 3 seconds for PRC accumulation...")
@@ -123,9 +131,11 @@ class TestMiningClaimFlow:
         
     def test_06_claim_mining_rewards(self):
         """Test claiming mining rewards - THE MAIN FIX TEST"""
-        uid = getattr(self.__class__, 'test_uid', None)
-        if not uid:
-            pytest.skip("No test UID available")
+        if not self.__class__.test_uid:
+            self.__class__.login()
+            
+        uid = self.__class__.test_uid
+        assert uid, "No test UID available"
             
         # Get balance before claim
         status_before = requests.get(f"{BASE_URL}/api/mining/status/{uid}").json()
@@ -164,9 +174,11 @@ class TestMiningClaimFlow:
         
     def test_07_verify_session_reset_after_claim(self):
         """Verify session is properly reset after claim"""
-        uid = getattr(self.__class__, 'test_uid', None)
-        if not uid:
-            pytest.skip("No test UID available")
+        if not self.__class__.test_uid:
+            self.__class__.login()
+            
+        uid = self.__class__.test_uid
+        assert uid, "No test UID available"
             
         # Small delay to ensure cache is invalidated
         time.sleep(1)
@@ -193,16 +205,18 @@ class TestMiningClaimFlow:
         
     def test_08_verify_balance_updated(self):
         """Verify balance was updated correctly"""
-        uid = getattr(self.__class__, 'test_uid', None)
-        if not uid:
-            pytest.skip("No test UID available")
+        if not self.__class__.test_uid:
+            self.__class__.login()
+            
+        uid = self.__class__.test_uid
+        assert uid, "No test UID available"
             
         response = requests.get(f"{BASE_URL}/api/mining/status/{uid}")
         assert response.status_code == 200
         data = response.json()
         
         current_balance = data.get("current_balance", 0)
-        expected_balance = getattr(self.__class__, 'new_balance', 0)
+        expected_balance = self.__class__.new_balance
         
         # Balance should match what was returned in claim response
         assert abs(current_balance - expected_balance) < 0.01, \
@@ -212,9 +226,11 @@ class TestMiningClaimFlow:
         
     def test_09_mining_continues_after_claim(self):
         """Verify mining continues after claim (session stays active)"""
-        uid = getattr(self.__class__, 'test_uid', None)
-        if not uid:
-            pytest.skip("No test UID available")
+        if not self.__class__.test_uid:
+            self.__class__.login()
+            
+        uid = self.__class__.test_uid
+        assert uid, "No test UID available"
             
         # Wait a bit for more PRC to accumulate
         print("⏳ Waiting 2 seconds to verify mining continues...")
@@ -235,9 +251,11 @@ class TestMiningClaimFlow:
         
     def test_10_second_claim_works(self):
         """Test that a second claim also works correctly"""
-        uid = getattr(self.__class__, 'test_uid', None)
-        if not uid:
-            pytest.skip("No test UID available")
+        if not self.__class__.test_uid:
+            self.__class__.login()
+            
+        uid = self.__class__.test_uid
+        assert uid, "No test UID available"
             
         # Wait for more PRC
         print("⏳ Waiting 2 seconds before second claim...")
@@ -258,15 +276,21 @@ class TestMiningClaimFlow:
 class TestMiningEndpointResponses:
     """Test mining endpoint response structures"""
     
+    @staticmethod
+    def get_uid():
+        """Get user UID via login"""
+        response = requests.post(
+            f"{BASE_URL}/api/auth/login",
+            params={"identifier": "admin@paras.com", "password": "admin123"}
+        )
+        if response.status_code == 200:
+            return response.json().get("uid")
+        return None
+    
     def test_mining_status_response_structure(self):
         """Verify mining status endpoint returns all required fields"""
-        # Login first
-        login_resp = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "admin@paras.com",
-            "password": "admin123"
-        })
-        assert login_resp.status_code == 200
-        uid = login_resp.json().get("uid")
+        uid = self.get_uid()
+        assert uid, "Failed to get UID"
         
         response = requests.get(f"{BASE_URL}/api/mining/status/{uid}")
         assert response.status_code == 200
@@ -291,11 +315,8 @@ class TestMiningEndpointResponses:
         
     def test_mining_start_response_structure(self):
         """Verify mining start endpoint returns all required fields"""
-        login_resp = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "admin@paras.com",
-            "password": "admin123"
-        })
-        uid = login_resp.json().get("uid")
+        uid = self.get_uid()
+        assert uid, "Failed to get UID"
         
         response = requests.post(f"{BASE_URL}/api/mining/start/{uid}")
         assert response.status_code == 200
@@ -315,11 +336,8 @@ class TestMiningEndpointResponses:
         
     def test_mining_claim_response_structure(self):
         """Verify mining claim endpoint returns all required fields including session reset"""
-        login_resp = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "admin@paras.com",
-            "password": "admin123"
-        })
-        uid = login_resp.json().get("uid")
+        uid = self.get_uid()
+        assert uid, "Failed to get UID"
         
         # Ensure session is active
         requests.post(f"{BASE_URL}/api/mining/start/{uid}")
