@@ -66,7 +66,7 @@ if (typeof window !== 'undefined') {
 
 const TapGame = lazy(() => import("@/pages/TapGame"));
 const Referrals = lazy(() => import("@/pages/ReferralsEnhanced"));
-const Marketplace = lazy(() => import("@/pages/MarketplaceEnhanced"));
+const Marketplace = lazy(() => import("@/pages/MarketplaceNew"));
 const Orders = lazy(() => import("@/pages/Orders"));
 // VIPMembership removed - replaced by SubscriptionPlans (new 4-tier system)
 const SubscriptionPlans = lazy(() => import("@/pages/SubscriptionPlans"));
