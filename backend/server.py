@@ -4224,6 +4224,16 @@ async def claim_mining(uid: str):
             "total_saved": luxury_savings_result.get("total_saved", 0)
         }
     
+    # CRITICAL: Invalidate mining status cache so next fetch gets fresh data
+    await cache.delete(f"mining_status:{uid}")
+    await cache.delete(f"user:dashboard:{uid}")
+    
+    # Add new session info so frontend can update immediately
+    response["session_reset"] = True
+    response["new_session_start"] = now.isoformat()
+    response["new_session_end"] = (now + timedelta(hours=24)).isoformat()
+    response["remaining_hours"] = 24
+    
     return response
 
 
