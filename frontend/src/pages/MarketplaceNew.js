@@ -50,11 +50,15 @@ const MarketplaceNew = ({ user, onLogout }) => {
       const [userRes, productsRes, cartRes] = await Promise.all([
         axios.get(`${API}/api/user/${user.uid}`),
         axios.get(`${API}/api/products`),
-        axios.get(`${API}/api/cart/${user.uid}`)
+        axios.get(`${API}/api/cart/${user.uid}`).catch(() => ({ data: { items: [] } }))
       ]);
       
       setUserData(userRes.data);
-      const activeProducts = productsRes.data.filter(p => p.is_active !== false);
+      // Handle both array and object response formats
+      const productsData = productsRes.data.products || productsRes.data;
+      const activeProducts = Array.isArray(productsData) 
+        ? productsData.filter(p => p.is_active !== false)
+        : [];
       setProducts(activeProducts);
       setFilteredProducts(activeProducts);
       setCart(cartRes.data || { items: [] });
