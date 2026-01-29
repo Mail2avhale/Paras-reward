@@ -1,59 +1,83 @@
 <analysis>**original_problem_statement:**
-The user's primary goal is to enhance their social rewards platform. This session focused on fixing numerous critical bugs and performance issues reported by the user, integrating a caching layer with Redis, and beginning an investigation into UI/UX improvements for the referral system.
+The user's primary goal is to improve the performance and user experience of their social rewards platform, which is experiencing significant slowness in the production environment. The user also requested several new features and bug fixes.
 
-Key user requests addressed:
-1.  **Critical Regression (P0):** Fixed an issue where multiple admin pages (Gift Vouchers, KYC, Subscriptions) were failing to load data.
-2.  **Critical Performance Issue (P0):** Addressed user reports of the entire application being extremely slow, especially with a growing user base (400+ users).
-3.  **Critical Bug (P0):** Fixed an issue where the user-facing Rewards page would get stuck in a perpetual loading state.
-4.  **Critical Bug (Manager Role):** Diagnosed and fixed broken page permissions for the Manager role, allowing them to access their designated pages.
-5.  **UX Bug:** Fixed an issue where an Offline banner was incorrectly and persistently displayed to online users.
-6.  **UX Bug:** Fixed an issue where a Syncing 1 action... banner would get stuck on the screen.
-7.  **Data Bug:** Fixed a bug where Biller Name and Credit Card details were missing from the Admin Bill Payments view.
-8.  **Feature Investigation:** The user asked for an improved referral/downline view.
-9.  **Feature Investigation:** The user asked about the best architecture for a Play Store release.
+Key user requests in this session:
+1.  **P0 Performance:** Address extreme slowness on deployed app, particularly on the Admin Dashboard and Subscription Management pages, which were taking over a minute to load or not loading at all.
+2.  **P0 Performance:** Address slow loading on user-facing pages like the Dashboard and Invite page.
+3.  **P0 Feature:** Improve the Referral/Downline view.
+4.  **P1 Feature:** Add a feature for users to apply a referral code after registration if they missed it.
+5.  **P1 Feature:** Add a feature for Admins to reset a user's password.
+6.  **P1 Bug:** A paid user sees a Free Plan on login, which then corrects itself after a few moments.
+7.  **P1 Bug:** The mining feature might be auto-pausing.
+8.  **P1 Task:** Clean up the codebase by removing unused pages and components to reduce app size and improve performance.
+9.  **P1 Usability:** Convert hardcoded Marathi text in the UI to English.
 
 **User's preferred language**: The user communicates in a mix of English and Marathi. The next agent **MUST** start all responses with  and then continue the technical explanation in English.
 
 **what currently exists?**
-The application is a full-stack rewards platform using React, FastAPI, and MongoDB. In this session, a significant number of critical performance bottlenecks and bugs were resolved. **Upstash Redis has been successfully integrated** as a caching layer for the backend, dramatically improving the response times of frequently accessed and computationally expensive API endpoints. The Manager role is now functional, and several persistent UI bugs related to offline indicators have been fixed.
+The application is a full-stack rewards platform (React, FastAPI, MongoDB) that has undergone extensive performance optimization and feature enhancement in this session. The agent implemented a new Network Analytics feature, an Admin Password Reset tool, and an Apply Referral Code function.
+
+Crucially, the agent performed a major cleanup, deleting 45 unused files to reduce the application's bundle size. To combat production slowness, the agent created numerous MongoDB indexes, configured them to be created automatically on backend startup, and consolidated multiple API endpoints on critical pages (Admin Dashboard, User Dashboard, Invite Page) into single, cached endpoints. Loading skeletons and timeouts were also added to prevent pages from hanging indefinitely.
 
 **Last working item**:
--   **Last item agent was working**: Investigating how to improve the referral/downline visualization for users. The agent discovered that an advanced page () and a corresponding backend endpoint () already exist, which provide a tree-like view of the downline. The investigation was paused to address other user requests.
--   **Status**: IN PROGRESS
--   **Agent Testing Done**: N
--   **Which testing method agent to use?**: frontend testing agent. The agent should first manually test the existing  page to understand its functionality, then propose and implement UI/UX improvements.
+-   **Last item agent was working**: Fixing a sync issue where a logged-in user with a paid plan initially sees a Free Plan before the UI updates to the correct plan. The agent identified this as a race condition where stale  data was displayed before fresh data was fetched.
+-   **Status**: IN PROGRESS (Fix implemented, user verification pending)
+-   **Agent Testing Done**: N (The fix was implemented in  to fetch user data on startup, but not yet verified via user flow).
+-   **Which testing method agent to use?**: manual testing by curl. The agent should log in as a user with a known paid plan and verify that the dashboard immediately shows the correct plan without flashing the Free plan first.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1**: Improve referral/downline view (P0)
--   **Issue 2**: Active referral status shows Inactive for active mining users (P1)
+-   **Issue 1**: User Dashboard Plan Sync Issue (P0)
+-   **Issue 2**: Mining auto-pause issue (P1)
 -   **Issue 3**: User-facing search bar functionality is broken (P1)
 -   **Issue 4**: Apply Dark Theme consistently across all Admin pages (P1)
 -   **Issue 5**: Verify Subscription Extend Logic (P1)
 -   **Issue 6**: KYC Document Upload Functionality on Mobile (P1)
+-   **Issue 7**: Active referral status shows Inactive for active mining users (P1)
 
 **Issues Detail:**
--   **Issue 1: Improve referral/downline view**
-    -   **Attempted fixes**: The agent identified the existence of  and the backend API , which already provide an advanced tree view. The work was paused.
+-   **Issue 1: User Dashboard Plan Sync Issue**
+    -   **Attempted fixes**: The agent implemented a fix in  to fetch fresh user data in a  hook on app initialization. This should ensure the  state is up-to-date before any components render.
     -   **Next debug checklist**:
-        1.  Navigate to the  page in the preview environment to visually assess the current implementation.
-        2.  Call the  endpoint to analyze the data structure returned.
-        3.  Propose specific UI/UX enhancements to the user, such as showing each referral's subscription status, mining activity, or total earnings directly within the tree view.
-    -   **Why fix this issue and what will be achieved with the fix?**: A clear and informative downline view is critical for user engagement and motivation in a referral-based rewards platform.
-    -   **Status**: IN PROGRESS
+        1.  Verify the fix by creating a test user with a paid plan.
+        2.  Log out and log back in as that user.
+        3.  Observe the dashboard to see if the Free Plan is shown momentarily or if the correct paid plan appears immediately.
+        4.  If the issue persists, investigate if the  is being updated correctly upon login.
+    -   **Why fix this issue and what will be achieved with the fix?**: This fix will prevent user confusion and provide a more professional and seamless user experience.
+    -   **Status**: USER VERIFICATION PENDING
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: frontend
     -   **Blocked on other issue**: None
 
--   **Issue 2: Active referral status shows Inactive for active mining users**
-    -   **Attempted fixes**: A backend fix was implemented in a previous session.
-    -   **Next debug checklist**: This requires explicit verification. The agent should create a test scenario with a user and their active referral, and check if the status is displayed correctly.
-    -   **Status**: USER VERIFICATION PENDING
-    -   **Is recurring issue?**: Y
+-   **Issue 2: Mining auto-pause issue**
+    -   **Attempted fixes**: None. The agent requested more information from the user.
+    -   **Next debug checklist**:
+        1.  Ask the user for specific steps to reproduce the issue.
+        2.  When does it pause? After a specific time? On app close/re-open?
+        3.  Are there any error messages shown in the UI or console?
+        4.  Review the mining session logic in  and the related backend endpoints (, ).
+    -   **Why fix this issue and what will be achieved with the fix?**: The core mining functionality is critical for user engagement and rewards.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: both
+    -   **Blocked on other issue**: Awaiting user feedback.
+
+-   **Issue 3: User-facing search bar functionality is broken**
+    -   **Attempted fixes**: None. This is a carry-over issue from the previous handoff.
+    -   **Next debug checklist**:
+        1.  Locate the search bar component in the user-facing UI.
+        2.  Identify the API endpoint it calls.
+        3.  Test the search functionality and check browser console/network tabs for errors.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: frontend
+
+**In progress Task List**:
+-   There are no multi-step tasks currently in progress. The last task (fixing the plan sync issue) has been implemented and is pending verification.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   P1: **Architect for Play Store Release**: The agent proposed two options (PWA+TWA vs. Separate Builds). The user needs to make a decision before work can begin.
+    -   P1: **Architect for Play Store Release**: The user needs to decide between PWA+TWA vs. a separate native build before work can begin.
     -   P1: **ML Risk Scoring**: A user-requested future feature.
 -   **Future Tasks:**
     -   P2: Full AdMob + Unity Ads Integration.
@@ -62,18 +86,18 @@ The application is a full-stack rewards platform using React, FastAPI, and Mongo
     -   P3: Refactor the monolithic .
 
 **Completed work in this session**
--   **Critical Regression Fix**: Resolved 404 errors on the  by correcting API endpoints, making all admin pages load correctly.
--   **Performance: Redis Integration**: Successfully integrated Upstash Redis as a backend cache (), significantly speeding up API responses. Reminded the user to add credentials to their production .
--   **Performance: API Optimization**:
-    -   Optimized the heavy  endpoint using  for a 24% speed improvement on initial load and 75% on cached loads.
-    -   Added caching to  and , resulting in ~70% faster responses on cached hits.
-    -   Reduced frontend polling frequency across multiple pages from 30s to 60s to lower server load.
--   **Bug Fix: Manager Role Permissions**:
-    -   Fixed incorrect menu-to-permission mapping in .
-    -   **Removed hard-coded  checks** in , , and , granting managers proper access.
--   **Bug Fix: Admin Bill Payments View**: Added missing  and corrected  fields in  so all details are now visible to admins.
--   **Bug Fix: Perpetual Loading**: Fixed an IndexedDB error in  and added loading timeouts to  and  to prevent pages from getting stuck.
--   **Bug Fix: Incorrect Offline Banners**: Reworked  to use a real API health check instead of the unreliable  and added a dismiss button.
+-   **Feature: Enhanced Referral View**: Implemented a Network Analytics modal on the  page with a new backend endpoint () to show health score, subscription distribution, and top performers.
+-   **Feature: Apply Referral Code**: Added a section on the Invite page for users who missed adding a referral code during signup. This included a new UI component and utilized the existing  endpoint.
+-   **Feature: Admin Password Reset**: Created a new feature in the Admin User Controls page () for admins to reset user passwords. This involved a new backend endpoint ( with ).
+-   **Performance: Major Code Cleanup**: Analyzed and deleted 45 unused files (**18 pages** and **27 components**), reducing the frontend bundle size by ~645KB.
+-   **Performance: Database Indexing**: Identified the lack of MongoDB indexes as a primary cause of production slowness. Created a script () to define 41 indexes across all major collections and configured it to run automatically on backend startup.
+-   **Performance: API Consolidation**:
+    -   **Admin Dashboard**: Replaced 8 separate API calls with a single cached endpoint (), dramatically improving load times.
+    -   **User Dashboard**: Replaced multiple API calls with a single cached endpoint ().
+    -   **Invite Page**: Optimized to use fewer, parallel API calls.
+-   **Bug Fix: UI Hangs**: Added loading skeletons and 15-second timeouts to  and  to prevent the pages from hanging indefinitely on slow network/DB responses.
+-   **Bug Fix: Text Language**: Converted all hardcoded Marathi text in the Apply Referral Code feature to English as requested.
+-   **Bug Fix: Referral Code Input**: Increased the  of the referral code input field to accommodate longer codes.
 
 **Earlier issues found/mentioned but not fixed**
 -   User-facing search bar functionality is broken.
@@ -90,13 +114,16 @@ The application is a full-stack rewards platform using React, FastAPI, and Mongo
 
 
 **Key Technical Concepts**
--   **Redis Caching**: Integrated Upstash Redis () to cache expensive database queries, significantly improving API response times for both user and admin endpoints.
--   **Performance Debugging & Optimization**: Diagnosed and resolved application slowness by analyzing backend logs (excessive polling), optimizing frontend data fetching intervals, and using  in  to run database queries in parallel.
--   **Role-Based Access Control (RBAC)**: Debugged and fixed the Manager role by correcting frontend menu-to-permission mappings and, crucially, removing hard-coded  checks in page components, enabling proper permission-based access.
--   **Frontend Reliability**: Improved the offline indicator feature by replacing the unreliable  with a real API health check to prevent false positives.
+-   **Performance Optimization**: The core theme of the session. Addressed slowness via multiple strategies:
+    -   **Database Indexing**: The most critical fix. Identified lack of indexes and implemented a comprehensive indexing strategy.
+    -   **API Consolidation**: Reduced page load times by combining multiple network requests into single, cached endpoints.
+    -   **Code Refactoring & Cleanup**: Removed dead code (45 files) to reduce the frontend bundle size.
+    -   **UI Robustness**: Added loading skeletons and timeouts to improve perceived performance and prevent UI hangs.
+-   **Role-Based Features**: Added an admin-specific feature (Password Reset) with appropriate backend authorization.
+-   **State Management**: Addressed a race condition by improving the initial state hydration in .
 
 **key DB schema**
--   No database schema changes were made in this session.
+-   **No schema changes**, but a large number of **indexes** were added to almost every collection to improve query performance. Key indexed fields include , , , , , and .
 
 **All files of reference**
 -   
@@ -107,46 +134,58 @@ The application is a full-stack rewards platform using React, FastAPI, and Mongo
 -   
 -   
 -   
--   
--   
+
+**Areas that need refactoring**:
+-   The monolithic  file is still very large and would benefit from being broken down into separate route files (e.g., , ).
+
+**key api endpoints**
+-   ****: New action  added for admin password resets.
+-   ****: New combined endpoint for the Admin Dashboard.
+-   ****: New combined endpoint for the User Dashboard.
+-   ****: New endpoint for the Referral Network Analytics feature.
+-   ****: Existing endpoint leveraged for the Apply Referral Code feature.
 
 **Critical Info for New Agent**
--   **User Communication Style**: Remember to start every response with  before proceeding with the technical details in English.
--   **Production Environment is Key**: The user's production app () has a much larger dataset (~400 users). Performance issues reported by the user often only manifest there. You **MUST** remind the user to deploy the latest code and add the Upstash Redis credentials to their production  file to see the performance benefits.
--   **Pending User Decision**: The user needs to decide on the architecture for the Play Store release (Option A: PWA+TWA vs. Option B: Separate Builds). Do not proceed with this task until the user provides a choice.
+-   **User Communication Style**: Always start every response with  before proceeding with the technical details in English.
+-   **Production Performance**: The user's main concern is production speed. While many optimizations have been made (indexing, caching, code cleanup), the root cause is likely the **MongoDB Atlas Free Tier**, which is not suitable for a production workload. You must manage user expectations and explain that while the app is now much more efficient, the database hardware itself is the ultimate bottleneck. Recommend upgrading to a paid MongoDB Atlas tier (e.g., M10) as the next major step for a significant performance boost.
+-   **Pending User Decision**: The user still needs to decide on the architecture for the Play Store release (PWA+TWA vs. Separate Builds).
 
 **documents and test reports created in this job**
--   /app/memory/PRD.md (Updated with performance optimization details)
+-    (Updated)
+-    (New script to be run in production)
+-    (New index definitions)
+-    (New guide for user)
+-    (From testing the Network Analytics feature)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** What can be done to make the app even faster? (Addressed with further optimizations)
-2.  **User:** What does Syncing 1 Action mean and why does it appear? (Addressed and fixed)
-3.  **User:** The rewards page is still taking too long to open. (Addressed by caching heavy user/mining APIs)
-4.  **User:** How do I add the Redis credentials to my production server? (Addressed with instructions)
-5.  **User:** Will the app be faster now? (Addressed with performance metrics)
-6.  **User:** The user provided Upstash Redis credentials. (Addressed and integrated)
-7.  **User:** I want to add the Upstash Redis credentials. (Awaited credentials)
-8.  **User:** What is the benefit of Redis integration? (Addressed with a detailed explanation)
-9.  **User:** Admin dashboard is slow with 400 users. (Addressed by optimizing and caching admin stats API)
-10. **User:** The Manager role's page access isn't working correctly. (Addressed and fixed)
+1.  **User:** App has a new issue after deployment: slow user view loading and mining auto-pause. (Agent optimized user dashboard).
+2.  **User:** Subscription Management page won't load, Dashboard takes >1 minute. (Agent optimized admin pages, added timeouts).
+3.  **User:** Deployed app is still very slow, even after server upgrade. What are the reasons? (Agent found missing DB indexes).
+4.  **User:** I don't know about my production setup (DB indexes, Redis, server location). Can you check? (Agent explained preview vs. prod and created an auto-indexing solution).
+5.  **User:** Can I get a paid MongoDB version through Emergent to increase speed? (Agent used support agent to clarify this is not an option and recommended external MongoDB Atlas).
+6.  **User:** I deployed and tested, but the admin panel is still very slow. (Agent consolidated 8 admin API calls into 1).
+7.  **User:** Ok, do what you think is better for the cleanup. (Agent proceeded to delete 27 unused components).
+8.  **User:** Now scan the user view and remove anything not needed. (Agent analyzed user-facing components).
+9.  **User:** Yes, delete all unused pages, but make sure the app doesn't break. (Agent proceeded with deletion).
+10. **User:** The app is great, but it's very slow due to many duplicate pages. Can you find and delete them? (Agent started the cleanup task).
 
 **Project Health Check:**
 -   **Broken**: User-facing search bar.
 -   **Mocked**: None.
 
 **3rd Party Integrations**
--   **Upstash Redis**: Newly integrated for caching. Requires  and  environment variables.
+-   **Upstash Redis**: Used for backend caching. Credentials are in the environment.
 
 **Testing status**
--   **Testing agent used after significant changes**: NO
+-   **Testing agent used after significant changes**: YES (For the Network Analytics feature).
 -   **Troubleshoot agent used after agent stuck in loop**: NO
 -   **Test files created**: []
--   **Known regressions**: None. All regressions from the previous session were fixed.
+-   **Known regressions**: None from this session's work.
 
 **Credentials to test flow:**
 -   **Admin:**  / 
 -   **Manager:**  / 
--   **Test User:**  / 
+-   **Test User:**  /  (password may need to be set/reset).
 
 **What agent forgot to execute**
--   The agent performed well, prioritizing user-reported critical issues over its planned work. No significant tasks were forgotten. It consistently addressed new problems as they arose.</analysis>
+-   The agent was very responsive to user requests. The only items not addressed are long-standing backlog issues (like the search bar) or issues where the agent is blocked waiting for user input (mining auto-pause details, Play Store architecture decision). No new tasks were forgotten.</analysis>

@@ -108,7 +108,7 @@ UPSTASH_REDIS_REST_TOKEN=<your_token>
 - Frontend: React on port 3000
 - Backend: FastAPI on port 8001
 - Database: MongoDB + Upstash Redis
-- Preview URL: https://rewards-plus.preview.emergentagent.com
+- Preview URL: https://social-rewards-boost.preview.emergentagent.com
 - Production: https://parasreward.com
 
 ## Test Credentials

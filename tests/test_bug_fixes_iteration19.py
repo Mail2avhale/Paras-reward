@@ -12,7 +12,7 @@ import os
 import uuid
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://rewards-plus.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://social-rewards-boost.preview.emergentagent.com')
 
 # Test user credentials
 TEST_USER_EMAIL = f"test_bugfix19_{uuid.uuid4().hex[:8]}@test.com"
