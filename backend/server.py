@@ -24383,35 +24383,52 @@ async def debug_referred_by(user_id: str):
     DEBUG ENDPOINT: Check how users are stored in referred_by field.
     This helps diagnose why referrals might not be counting correctly.
     """
-    user = await db.users.find_one({"uid": user_id}, {"_id": 0, "uid": 1, "referral_code": 1, "referral_count": 1, "name": 1})
+    user = await db.users.find_one({"uid": user_id}, {"_id": 0, "uid": 1, "referral_code": 1, "referral_count": 1, "name": 1, "email": 1})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
     uid = user.get("uid")
     ref_code = user.get("referral_code")
+    email = user.get("email")
+    name = user.get("name")
     
-    # Count by UID
+    # Build all possible search values
+    search_values = [uid, ref_code]
+    if ref_code:
+        search_values.extend([ref_code.lower(), ref_code.upper()])
+    if email:
+        search_values.extend([email, email.lower()])
+    if name:
+        search_values.append(name)
+    search_values = [v for v in search_values if v]
+    
+    # Count by UID only
     count_by_uid = await db.users.count_documents({"referred_by": uid})
     
-    # Count by referral code
-    count_by_code = await db.users.count_documents({"referred_by": ref_code})
+    # Count by referral code only
+    count_by_code = await db.users.count_documents({"referred_by": ref_code}) if ref_code else 0
     
-    # Count by EITHER (this is what our fix does)
-    count_by_either = await db.users.count_documents({
-        "$or": [{"referred_by": uid}, {"referred_by": ref_code}]
-    })
+    # Count by ALL possible formats (aggressive search)
+    count_by_all = await db.users.count_documents({"referred_by": {"$in": search_values}})
     
-    # Get sample referred_by values to see the format
+    # Get sample referred_by values that match
     sample_referrals = []
     async for u in db.users.find(
-        {"$or": [{"referred_by": uid}, {"referred_by": ref_code}]},
+        {"referred_by": {"$in": search_values}},
         {"_id": 0, "name": 1, "email": 1, "referred_by": 1, "created_at": 1}
-    ).limit(10):
+    ).limit(15):
         sample_referrals.append({
             "name": u.get("name"),
-            "email": u.get("email", "")[:30],
+            "email": u.get("email", "")[:30] if u.get("email") else None,
             "referred_by": u.get("referred_by"),
-            "created_at": str(u.get("created_at"))[:19]
+            "referred_by_type": "UID" if u.get("referred_by") == uid else (
+                "CODE" if u.get("referred_by") == ref_code else (
+                    "EMAIL" if u.get("referred_by") in [email, email.lower() if email else ""] else (
+                        "NAME" if u.get("referred_by") == name else "OTHER"
+                    )
+                )
+            ),
+            "created_at": str(u.get("created_at"))[:19] if u.get("created_at") else None
         })
     
     # Get ALL unique referred_by values in the database
@@ -24419,28 +24436,127 @@ async def debug_referred_by(user_id: str):
         {"$match": {"referred_by": {"$exists": True, "$ne": None, "$ne": ""}}},
         {"$group": {"_id": "$referred_by", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}},
-        {"$limit": 20}
+        {"$limit": 30}
     ]
-    all_referred_by_formats = await db.users.aggregate(pipeline).to_list(20)
+    all_referred_by_formats = await db.users.aggregate(pipeline).to_list(30)
     
     return {
         "user_info": {
             "uid": uid,
             "referral_code": ref_code,
-            "stored_referral_count": user.get("referral_count"),
-            "name": user.get("name")
+            "email": email,
+            "name": name,
+            "stored_referral_count": user.get("referral_count")
         },
+        "search_values_used": search_values,
         "referral_counts": {
-            "by_uid": count_by_uid,
-            "by_referral_code": count_by_code,
-            "by_either_combined": count_by_either,
-            "note": "If 'by_either_combined' matches your Network Analytics total, the fix is working"
+            "by_uid_only": count_by_uid,
+            "by_referral_code_only": count_by_code,
+            "by_all_formats_combined": count_by_all,
+            "explanation": "by_all_formats_combined should match your Network Analytics total"
         },
-        "sample_referrals": sample_referrals,
-        "all_referred_by_formats_in_db": [
-            {"referred_by": r["_id"], "count": r["count"]} 
+        "sample_referrals_found": sample_referrals,
+        "all_referred_by_formats_in_entire_db": [
+            {"referred_by_value": r["_id"], "user_count": r["count"]} 
             for r in all_referred_by_formats
-        ]
+        ],
+        "diagnosis": {
+            "if_by_uid_only_is_0_and_stored_count_is_high": "Users are NOT using UID in referred_by field",
+            "check_all_referred_by_formats_in_entire_db": "Look for your referral_code or any other format",
+            "fix_needed_if": "If you see your referral_code in all_referred_by_formats but by_referral_code_only is 0, there might be a case sensitivity issue"
+        }
+    }
+
+
+@api_router.get("/user/{user_id}/full-debug")
+async def get_user_full_debug(user_id: str):
+    """
+    COMPREHENSIVE DEBUG: Returns ALL relevant data for a user to diagnose issues.
+    Use this in production to understand what's happening.
+    """
+    user = await db.users.find_one({"uid": user_id}, {"_id": 0, "password": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Mining status
+    mining_session_end = user.get("mining_session_end")
+    session_active = False
+    remaining_hours = 0
+    
+    if mining_session_end:
+        try:
+            if isinstance(mining_session_end, str):
+                end_time = datetime.fromisoformat(mining_session_end.replace('Z', '+00:00'))
+            else:
+                end_time = mining_session_end
+            
+            session_active = now < end_time
+            if session_active:
+                remaining_hours = (end_time - now).total_seconds() / 3600
+        except:
+            pass
+    
+    # Calculate mining rate
+    base_rate = 1.0  # PRC per hour
+    plan = user.get("subscription_plan", "explorer").lower()
+    multiplier = {"explorer": 1, "startup": 1.5, "growth": 2, "elite": 3}.get(plan, 1)
+    referral_bonus = user.get("referral_bonus_rate", 0)
+    day_multiplier = user.get("mining_day", 1)
+    mining_rate = day_multiplier * ((base_rate * multiplier) + referral_bonus)
+    
+    # Get referral counts using aggressive search
+    search_values = [user.get("uid"), user.get("referral_code")]
+    if user.get("referral_code"):
+        search_values.extend([user["referral_code"].lower(), user["referral_code"].upper()])
+    if user.get("email"):
+        search_values.append(user["email"])
+    if user.get("name"):
+        search_values.append(user["name"])
+    search_values = [v for v in search_values if v]
+    
+    referral_count_by_search = await db.users.count_documents({"referred_by": {"$in": search_values}})
+    
+    return {
+        "user_basic": {
+            "uid": user.get("uid"),
+            "name": user.get("name"),
+            "email": user.get("email"),
+            "referral_code": user.get("referral_code"),
+            "subscription_plan": user.get("subscription_plan"),
+            "membership_type": user.get("membership_type"),
+            "prc_balance": round(user.get("prc_balance", 0), 2)
+        },
+        "mining_status": {
+            "mining_active_field": user.get("mining_active"),
+            "mining_start_time": str(user.get("mining_start_time")),
+            "mining_session_end": str(user.get("mining_session_end")),
+            "is_session_active_now": session_active,
+            "remaining_hours": round(remaining_hours, 2),
+            "current_time_utc": now.isoformat(),
+            "reason_if_inactive": "Session expired" if not session_active and mining_session_end else "Never started"
+        },
+        "mining_rate_calculation": {
+            "base_rate": base_rate,
+            "plan": plan,
+            "plan_multiplier": multiplier,
+            "referral_bonus_rate": referral_bonus,
+            "mining_day": day_multiplier,
+            "calculated_rate_per_hour": round(mining_rate, 2),
+            "formula": "Day × ((BaseRate × PlanMultiplier) + ReferralBonus)"
+        },
+        "referral_status": {
+            "stored_referral_count": user.get("referral_count"),
+            "actual_count_by_aggressive_search": referral_count_by_search,
+            "referral_bonus_rate": user.get("referral_bonus_rate"),
+            "search_values_used": search_values[:5]
+        },
+        "timestamps": {
+            "user_created_at": str(user.get("created_at")),
+            "last_login": str(user.get("last_login")),
+            "debug_generated_at": now.isoformat()
+        }
     }
 
 
