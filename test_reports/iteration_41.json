@@ -1,0 +1,137 @@
+{
+  "summary": "Tested mining session and referral levels functionality in PREVIEW environment. All 13 backend tests passed. Frontend UI tests confirmed mining session is active with correct plan-based rate (225.1/hour for Elite plan), and referral page shows correct data (Total: 6, Active: 4, Bonus: +35%). The reported issues appear to be PRODUCTION-SPECIFIC and not reproducible in preview.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_mining_referral_issues.py",
+    "/app/test_reports/pytest/mining_referral_issues_results.xml"
+  ],
+  "action_items": [
+    "PRODUCTION INVESTIGATION NEEDED: User reports issues only in production, not preview. Check production database for different data formats in referred_by field",
+    "Check production cache (Redis) for stale mining status data",
+    "Verify production user's mining_session_end is not expired",
+    "Use /api/referrals/{uid}/debug-referred-by endpoint in production to diagnose referral counting issues"
+  ],
+  "critical_code_review_comments": [
+    "Mining.js correctly uses miningData.mining_rate_per_hour || miningData.mining_rate || 1.0 - the 1.0 is only a fallback if API returns no rate",
+    "ReferralsEnhanced.js has proper debug logging at line 339-344 which shows correct data in preview",
+    "Backend get_multi_level_referrals() uses aggressive search checking UID, referral_code, email, and name - this should handle different referred_by formats",
+    "check_user_active_status() correctly checks mining_active flag, session_end, bonus collection, and game activity"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_mining_referral_issues.py"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 tests passed)",
+    "frontend": "100% (all UI flows verified in preview)"
+  },
+  "test_credentials": {
+    "admin_email": "admin@paras.com",
+    "admin_password": "admin123"
+  },
+  "seed_data_creation": "Used existing admin user with Elite subscription and 6 referrals",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Preview environment is fully functional. User reports issues ONLY in production. The debug endpoint /api/referrals/{uid}/debug-referred-by can help diagnose production issues. Mining rate formula: Day × ((BaseRate × UserMultiplier) + ReferralBonus). Elite plan has 3x multiplier.",
+  "features_tested": {
+    "Mining session start": {
+      "status": "PASS",
+      "details": "Session starts correctly, returns session_active=true, remaining_hours=24"
+    },
+    "Mining session persistence": {
+      "status": "PASS",
+      "details": "Session stays active, doesn't auto-pause in preview"
+    },
+    "Reward rate display": {
+      "status": "PASS",
+      "details": "Shows 225.1/hour for Elite plan (not 1.0/hour)"
+    },
+    "Mining status API": {
+      "status": "PASS",
+      "details": "Returns correct session_active, mining_rate_per_hour, remaining_hours"
+    },
+    "Collect rewards functionality": {
+      "status": "PASS",
+      "details": "Claim works, returns session_reset data for UI update"
+    },
+    "Referral levels API": {
+      "status": "PASS",
+      "details": "Returns all 5 levels with correct counts (total=6, active=4)"
+    },
+    "Total Invited count": {
+      "status": "PASS",
+      "details": "Shows 6 (matches API response)"
+    },
+    "Active Users count": {
+      "status": "PASS",
+      "details": "Shows 4 (matches API response)"
+    },
+    "Bonus Rate calculation": {
+      "status": "PASS",
+      "details": "Shows +35.0% (calculated from active referrals)"
+    },
+    "All 5 earning levels display": {
+      "status": "PASS",
+      "details": "Direct: 5/3/2, Level 2: 1/1/0, Levels 3-5: 0/0/0"
+    }
+  },
+  "production_vs_preview_analysis": {
+    "issue": "User reports issues ONLY in production, preview works correctly",
+    "possible_causes": [
+      "Production database has different referred_by field formats (UID vs referral_code vs email)",
+      "Production Redis cache has stale mining status data",
+      "Production user's mining session has actually expired",
+      "Production has different user data than preview"
+    ],
+    "recommended_actions": [
+      "Run /api/referrals/{uid}/debug-referred-by in production to check referred_by formats",
+      "Clear Redis cache for affected user: mining_status:{uid}, mining_rate:{uid}",
+      "Check production user's mining_session_end timestamp",
+      "Compare production vs preview database for the affected user"
+    ]
+  },
+  "api_endpoints_tested": [
+    {
+      "endpoint": "POST /api/auth/login",
+      "status": "PASS",
+      "response": "Returns user data with access_token"
+    },
+    {
+      "endpoint": "GET /api/mining/status/{uid}",
+      "status": "PASS",
+      "response": "Returns session_active=true, mining_rate_per_hour=225.05, remaining_hours=18.33"
+    },
+    {
+      "endpoint": "POST /api/mining/start/{uid}",
+      "status": "PASS",
+      "response": "Returns session_active=true, remaining_hours=24"
+    },
+    {
+      "endpoint": "POST /api/mining/claim/{uid}",
+      "status": "PASS",
+      "response": "Returns success with session_reset data"
+    },
+    {
+      "endpoint": "GET /api/referrals/{uid}/levels",
+      "status": "PASS",
+      "response": "Returns 5 levels with total=6, total_active=4"
+    },
+    {
+      "endpoint": "GET /api/referrals/{uid}/network-analytics",
+      "status": "PASS",
+      "response": "Returns health_score, activity_rate, distributions"
+    },
+    {
+      "endpoint": "GET /api/referrals/{uid}/debug-referred-by",
+      "status": "PASS",
+      "response": "Returns count_by_uid, count_by_code, count_by_either"
+    }
+  ]
+}
