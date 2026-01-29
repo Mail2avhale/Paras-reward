@@ -310,7 +310,7 @@ const ReferralsEnhanced = ({ user }) => {
           axios.get(`${API}/api/user/${user.uid}`),
           axios.get(`${API}/api/referrals/${user.uid}/levels`)
         ]),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 12000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
       ]).catch(() => [{ status: 'rejected' }, { status: 'rejected' }]);
       
       // Process user data
@@ -323,15 +323,24 @@ const ReferralsEnhanced = ({ user }) => {
       
       // Process levels data
       if (levelsResult?.status === 'fulfilled') {
-        const levels = levelsResult.value.data.levels || [];
+        const responseData = levelsResult.value.data;
+        const levels = responseData.levels || [];
         setReferralLevels(levels);
         
-        let totalCount = 0, activeCount = 0, vipCount = 0;
-        levels.forEach(level => {
+        // Use total from API response (more accurate)
+        const totalCount = responseData.total || levels.reduce((sum, l) => sum + (l.count || 0), 0);
+        const activeCount = responseData.total_active || levels.reduce((sum, l) => sum + (l.active_count || 0), 0);
+        const vipCount = levels.reduce((sum, level) => {
           const users = level.users || [];
-          totalCount += users.length;
-          activeCount += users.filter(u => u.is_active).length;
-          vipCount += users.filter(u => ['startup', 'growth', 'elite'].includes(u.subscription_plan?.toLowerCase())).length;
+          return sum + users.filter(u => ['startup', 'growth', 'elite'].includes(u.subscription_plan?.toLowerCase())).length;
+        }, 0);
+        
+        // DEBUG: Log response for troubleshooting
+        console.log('Referral Levels Response:', {
+          total: totalCount,
+          active: activeCount,
+          levels: levels.map(l => ({ level: l.level, count: l.count, active: l.active_count })),
+          debug: responseData.debug_search_info
         });
         
         // Check for milestone achievements
@@ -347,7 +356,9 @@ const ReferralsEnhanced = ({ user }) => {
         setReferralStats({ total: totalCount, active: activeCount, vip: vipCount });
       } else {
         // Fallback: use user's referral count
-        const refCount = (userResult?.status === 'fulfilled' ? userResult.value.data : user)?.referral_count || 0;
+        console.warn('Levels API failed, using fallback. Error:', levelsResult?.reason);
+        const userData = userResult?.status === 'fulfilled' ? userResult.value.data : user;
+        const refCount = userData?.referral_count || 0;
         checkMilestoneAchievement(refCount);
         
         if (previousTotal !== null && previousTotal === 0 && refCount === 1) {
