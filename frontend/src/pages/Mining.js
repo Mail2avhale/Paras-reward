@@ -178,12 +178,29 @@ const DailyRewards = ({ user }) => {
         toast.success(`🎉 Collected ${claimed.toFixed(2)} PRC!`);
       }
       
-      // Reset local session PRC but keep mining
-      setSessionPRC(0);
-      setSessionStartTime(Date.now());
+      // Reset session using response data - this ensures immediate UI update
+      if (data.session_reset) {
+        setSessionPRC(0);
+        setSessionStartTime(new Date(data.new_session_start).getTime());
+        setSessionTimeRemaining(Math.floor(data.remaining_hours * 3600));
+        setIsMining(true);
+      } else {
+        // Fallback: Reset local session PRC but keep mining
+        setSessionPRC(0);
+        setSessionStartTime(Date.now());
+      }
       
-      // Refresh user data to update balance
-      fetchUserData();
+      // Update user balance from response
+      if (data.new_balance && userData) {
+        setUserData(prev => ({
+          ...prev,
+          prc_balance: data.new_balance,
+          total_mined: data.total_mined || prev.total_mined
+        }));
+      }
+      
+      // Refresh user data after a brief delay to ensure cache is cleared
+      setTimeout(() => fetchUserData(), 500);
       
     } catch (error) {
       console.error('Claim error:', error);
