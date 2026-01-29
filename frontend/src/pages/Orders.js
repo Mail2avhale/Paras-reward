@@ -209,6 +209,11 @@ const Orders = ({ user, onLogout }) => {
                       Cashback: {userStats.earnings_breakdown.cashback.toFixed(2)} PRC
                     </span>
                   )}
+                  {userStats.earnings_breakdown.rain_game > 0 && (
+                    <span className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-xs">
+                      Rain Game: {userStats.earnings_breakdown.rain_game.toFixed(2)} PRC
+                    </span>
+                  )}
                 </div>
               </div>
             )}
