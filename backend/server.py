@@ -4217,7 +4217,14 @@ async def claim_mining(uid: str):
         "message": f"Successfully claimed {round(user_receives, 2)} PRC!"
     }
     
-    # Add luxury savings info for paid users
+    # Add luxury savings info if present
+    if luxury_savings_result:
+        response["luxury_savings"] = {
+            "deducted": round(luxury_deduction, 4),
+            "total_saved": luxury_savings_result.get("total_saved", 0)
+        }
+    
+    return response
 
 
 # ============ USER DASHBOARD COMBINED API ============
