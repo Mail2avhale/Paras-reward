@@ -79,25 +79,41 @@ const settingsCategories = [
   }
 ];
 
-// Import the actual settings pages
-import AdminPaymentSettings from './AdminPaymentSettings';
-import AdminSystemSettings from './AdminSystemSettings';
-import AdminWebSettings from './AdminWebSettings';
-import AdminSocialMediaSettings from './AdminSocialMediaSettings';
-import AdminRedeemSettings from './AdminRedeemSettings';
-import AdminVideoAds from './AdminVideoAds';
-import AdminPRCRain from './AdminPRCRain';
-
+// Note: Individual settings pages have been consolidated into AdminSettings
+// Keeping Hub as navigation only, actual settings are in AdminSettings page
 const AdminSettingsHub = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('tab');
 
-  // If a tab is selected, render that settings page
+  // If a tab is selected, redirect to AdminSettings with that tab
   if (activeTab) {
-    const renderSettingsPage = () => {
-      switch (activeTab) {
-        case 'payment':
+    // For now, show a simple placeholder or redirect
+    return (
+      <div className="min-h-screen bg-gray-950 text-white p-6">
+        <button 
+          onClick={() => navigate('/admin/settings-hub')}
+          className="flex items-center gap-2 text-gray-400 hover:text-white mb-6"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Back to Settings Hub
+        </button>
+        <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+          <h2 className="text-xl font-bold mb-4 capitalize">{activeTab.replace('-', ' ')} Settings</h2>
+          <p className="text-gray-400">
+            This settings section is under development. 
+            Please use the main Admin Settings page for configuration.
+          </p>
+          <button
+            onClick={() => navigate('/admin/settings')}
+            className="mt-4 px-4 py-2 bg-amber-500 hover:bg-amber-600 rounded-lg text-white"
+          >
+            Go to Admin Settings
+          </button>
+        </div>
+      </div>
+    );
+  }
           return <AdminPaymentSettings user={user} />;
         case 'system':
           return <AdminSystemSettings user={user} />;
