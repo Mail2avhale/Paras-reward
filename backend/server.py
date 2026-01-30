@@ -6221,6 +6221,13 @@ async def approve_vip_payment(payment_id: str, request: Request):
         else:
             message = f"Payment approved! {duration_days} days subscription activated"
         
+        # Invalidate cache for vip-payments
+        try:
+            await cache.delete("admin_vip_payments:pending:p1:l50")
+            await cache.delete("admin_vip_payments:all:p1:l50")
+        except:
+            pass
+        
         return {"success": True, "message": message, "new_expiry": new_expiry}
     except HTTPException:
         raise
