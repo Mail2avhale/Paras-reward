@@ -296,15 +296,9 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/subscriptions" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSubscriptionManagement user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/bill-payments" element={user ? <BillPayments user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/gift-vouchers" element={user ? <GiftVoucherRedemption user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            <Route path="/manager" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerDashboardNew user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/manager/users" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerUsers user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/manager/orders" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerOrders user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/manager/reports" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerReports user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/manager/products" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerProducts user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/manager/finance" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerFinance user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/manager/communication" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerCommunication user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/manager/support" element={user && user.role === "manager" ? <ManagerLayout user={user} onLogout={handleLogout}><ManagerSupport user={user} onLogout={handleLogout} /></ManagerLayout> : <Navigate to="/dashboard" />} />
-            {/* Manager stockists route removed - stockist system deprecated */}
+            {/* Manager routes now redirect to Admin - Manager uses Admin panel with permission-based access */}
+            <Route path="/manager" element={<Navigate to="/admin" replace />} />
+            <Route path="/manager/*" element={<Navigate to="/admin" replace />} />
             {/* All stockist routes removed - using direct delivery partner model */}
           </Routes>
         </Suspense>
