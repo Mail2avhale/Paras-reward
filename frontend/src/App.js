@@ -12,7 +12,7 @@ import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import AIContextualHelp from "@/components/AIContextualHelp";
 import AdminLayout from "@/components/layouts/AdminLayout";
-import ManagerLayout from "@/components/layouts/ManagerLayout";
+// ManagerLayout removed - Manager uses AdminLayout with permission-based access
 // StockistLayout removed - stockist system deprecated
 
 // Helper function to check if user can access admin pages
