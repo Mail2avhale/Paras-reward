@@ -90,7 +90,7 @@ const ParasLuxuryLife = lazy(() => import("@/pages/ParasLuxuryLife"));
 // These pages are only loaded when admin users access them (~1% of users)
 // This reduces initial bundle size for regular users by ~30%
 const AdminDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminDashboard"));
-const AdminDashboardModern = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminDashboardModern"));
+// AdminDashboardModern removed - not in use
 const AdminAnalytics = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAnalytics"));
 const AdminPRCAnalytics = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPRCAnalytics"));
 const AdminAuditService = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAuditService"));
@@ -116,7 +116,7 @@ const AdminSupport = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/
 const AdminContactSubmissions = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminContactSubmissions"));
 const AdminMarketplace = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminMarketplace"));
 const AdminSettings = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSettings"));
-const AdminPaymentSettings = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPaymentSettings"));
+// AdminPaymentSettings, AdminSystemSettings, AdminWebSettings, AdminSocialMediaSettings, AdminRedeemSettings removed - merged into AdminSettingsHub
 const AdminSettingsHub = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSettingsHub"));
 const AdminSecurityDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSecurityDashboard"));
 // AdminVIPPlans and AdminVIPPaymentVerification removed - replaced by AdminSubscriptionManagement (new 4-tier system)
@@ -127,11 +127,7 @@ const AdminBillPayments = lazy(() => import(/* webpackChunkName: "admin" */ "@/p
 const AdminGiftVouchers = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminGiftVouchers"));
 const AdminServiceCharges = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminServiceCharges"));
 const AdminPolicies = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPolicies"));
-const AdminSystemSettings = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSystemSettings"));
-const AdminWebSettings = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminWebSettings"));
-const AdminSocialMediaSettings = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSocialMediaSettings"));
 const AdminUserLedger = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUserLedger"));
-const AdminRedeemSettings = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminRedeemSettings"));
 const AdminPRCRain = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPRCRain"));
 const AdminAccountingDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAccountingDashboard"));
 const PRCEmergencyControls = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/PRCEmergencyControls"));
