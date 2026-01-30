@@ -12,9 +12,9 @@ const settingsCategories = [
     label: 'Payment Settings', 
     icon: CreditCard, 
     description: 'UPI ID, QR Code, Bank Transfer details for subscriptions',
-    path: '/admin/settings-hub?tab=payment',
+    path: '/admin/settings?tab=payment',
     color: 'from-amber-500 to-orange-500',
-    bgColor: 'bg-amber-500/10/10',
+    bgColor: 'bg-amber-500/10',
     borderColor: 'border-amber-500/30'
   },
   { 
@@ -22,9 +22,9 @@ const settingsCategories = [
     label: 'System Settings', 
     icon: Cpu, 
     description: 'Subscription plans, Mining rates, Referral bonus, Registration control',
-    path: '/admin/settings-hub?tab=system',
+    path: '/admin/settings?tab=system',
     color: 'from-purple-500 to-violet-500',
-    bgColor: 'bg-purple-500/10/10',
+    bgColor: 'bg-purple-500/10',
     borderColor: 'border-purple-500/30'
   },
   { 
@@ -32,9 +32,9 @@ const settingsCategories = [
     label: 'Web Settings', 
     icon: Globe, 
     description: 'Homepage content, SEO settings, banners and app configuration',
-    path: '/admin/settings-hub?tab=web',
+    path: '/admin/settings?tab=web',
     color: 'from-blue-500 to-cyan-500',
-    bgColor: 'bg-blue-500/10/10',
+    bgColor: 'bg-blue-500/10',
     borderColor: 'border-blue-500/30'
   },
   { 
@@ -42,9 +42,9 @@ const settingsCategories = [
     label: 'Social Media', 
     icon: Share2, 
     description: 'Connect social media profiles and configure sharing options',
-    path: '/admin/settings-hub?tab=social',
+    path: '/admin/settings?tab=social',
     color: 'from-pink-500 to-rose-500',
-    bgColor: 'bg-pink-500/10/10',
+    bgColor: 'bg-pink-500/10',
     borderColor: 'border-pink-500/30'
   },
   { 
@@ -52,9 +52,9 @@ const settingsCategories = [
     label: 'Redeem Safety', 
     icon: Shield, 
     description: 'Set withdrawal limits, security thresholds and redemption rules',
-    path: '/admin/settings-hub?tab=redeem',
+    path: '/admin/settings?tab=redeem',
     color: 'from-emerald-500 to-teal-500',
-    bgColor: 'bg-emerald-500/10/10',
+    bgColor: 'bg-emerald-500/10',
     borderColor: 'border-emerald-500/30'
   },
   { 
@@ -62,9 +62,9 @@ const settingsCategories = [
     label: 'Video Ads', 
     icon: Video, 
     description: 'Manage video advertisements, placements and revenue tracking',
-    path: '/admin/settings-hub?tab=video-ads',
+    path: '/admin/video-ads',
     color: 'from-red-500 to-orange-500',
-    bgColor: 'bg-red-500/10/10',
+    bgColor: 'bg-red-500/10',
     borderColor: 'border-red-500/30'
   },
   { 
@@ -72,9 +72,9 @@ const settingsCategories = [
     label: 'PRC Rain Drop', 
     icon: CloudRain, 
     description: 'Configure PRC rain events, drop rates and distribution settings',
-    path: '/admin/settings-hub?tab=prc-rain',
+    path: '/admin/prc-rain',
     color: 'from-indigo-500 to-purple-500',
-    bgColor: 'bg-indigo-500/10/10',
+    bgColor: 'bg-indigo-500/10',
     borderColor: 'border-indigo-500/30'
   }
 ];
