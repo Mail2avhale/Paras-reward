@@ -5149,7 +5149,7 @@ async def get_user_redemption_stats(uid: str):
     """
     Comprehensive stats for user's PRC redemption and earnings.
     Shows:
-    - Total PRC redeemed (spent on orders)
+    - Total PRC redeemed (orders + bill payments + gift vouchers)
     - Total money value of redemptions
     - Total PRC earned (mining, referral, tap game, etc.)
     - Cashback received
@@ -5161,17 +5161,43 @@ async def get_user_redemption_stats(uid: str):
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
-        # ========== REDEMPTION STATS ==========
-        # Get all orders for this user
+        total_prc_redeemed = 0
+        
+        # ========== 1. ORDERS REDEMPTION ==========
         all_orders = await db.orders.find(
             {"user_id": uid},
             {"_id": 0, "total_prc": 1, "prc_amount": 1, "cashback_amount": 1, "status": 1}
         ).to_list(1000)
         
-        total_prc_redeemed = sum(order.get("total_prc", order.get("prc_amount", 0)) for order in all_orders if order.get("status") != "cancelled")
+        orders_redeemed = sum(order.get("total_prc", order.get("prc_amount", 0)) for order in all_orders if order.get("status") not in ["cancelled", "refunded"])
+        total_prc_redeemed += orders_redeemed
         total_cashback = sum(order.get("cashback_amount", 0) for order in all_orders if order.get("status") == "delivered")
         total_orders = len(all_orders)
         delivered_orders = len([o for o in all_orders if o.get("status") == "delivered"])
+        
+        # ========== 2. BILL PAYMENTS REDEMPTION ==========
+        bill_payments = await db.bill_payment_requests.aggregate([
+            {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
+        ]).to_list(1)
+        if bill_payments and bill_payments[0].get("total"):
+            total_prc_redeemed += bill_payments[0]["total"]
+        
+        # ========== 3. GIFT VOUCHERS REDEMPTION ==========
+        gift_vouchers = await db.gift_voucher_requests.aggregate([
+            {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
+        ]).to_list(1)
+        if gift_vouchers and gift_vouchers[0].get("total"):
+            total_prc_redeemed += gift_vouchers[0]["total"]
+        
+        # ========== 4. LOAN PAYMENTS (if any) ==========
+        loan_payments = await db.loan_payments.aggregate([
+            {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", 0]}}}}
+        ]).to_list(1)
+        if loan_payments and loan_payments[0].get("total"):
+            total_prc_redeemed += loan_payments[0]["total"]
         
         # ========== EARNINGS STATS ==========
         # Get all credit transactions
