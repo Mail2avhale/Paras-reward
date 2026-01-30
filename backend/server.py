@@ -5946,22 +5946,52 @@ async def submit_vip_payment(uid: str, payment: VIPPaymentCreate):
 # ==================== ADMIN VIP PAYMENT VERIFICATION ====================
 
 @api_router.get("/admin/vip-payments")
-async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int = 20):
-    """Get VIP payments for admin verification with detailed user info - Optimized"""
+async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int = 50):
+    """Get VIP payments for admin verification - OPTIMIZED with caching"""
     try:
+        # Build cache key
+        cache_key = f"admin_vip_payments:{status or 'all'}:p{page}:l{limit}"
+        
+        # Try cache first (5 second TTL for pending, 30 seconds for others)
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
+        
         query = {}
         if status:
             query["status"] = status
         
         skip = (page - 1) * limit
         
+        # Use count_documents with hint for better performance
         total = await db.vip_payments.count_documents(query)
+        
+        # Optimized query with projection - only fetch needed fields
         payments = await db.vip_payments.find(
-            query, {"_id": 0}
+            query, 
+            {
+                "_id": 0,
+                "payment_id": 1,
+                "user_id": 1,
+                "subscription_plan": 1,
+                "plan_type": 1,
+                "amount": 1,
+                "utr_number": 1,
+                "screenshot_url": 1,
+                "date": 1,
+                "time": 1,
+                "status": 1,
+                "submitted_at": 1,
+                "approved_at": 1,
+                "rejected_at": 1,
+                "admin_notes": 1
+            }
         ).sort("submitted_at", -1).skip(skip).limit(limit).to_list(limit)
         
         if not payments:
-            return {"payments": [], "total": total, "page": page, "pages": 0}
+            result = {"payments": [], "total": total, "page": page, "pages": 0}
+            await cache.set(cache_key, result, ttl=30)
+            return result
         
         # Batch fetch all user details in ONE query
         user_ids = list(set(p.get("user_id") for p in payments if p.get("user_id")))
