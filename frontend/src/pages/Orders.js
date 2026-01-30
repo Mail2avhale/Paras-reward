@@ -432,9 +432,10 @@ const Orders = ({ user, onLogout }) => {
                       </div>
                       
                       {/* Admin Notes if rejected */}
-                      {request.admin_notes && request.status === 'rejected' && (
-                        <div className="mt-2 p-2 bg-red-500/10 rounded-lg">
-                          <p className="text-red-400 text-xs">Note: {request.admin_notes}</p>
+                      {request.status === 'rejected' && (request.admin_notes || request.reject_reason || request.rejection_reason) && (
+                        <div className="mt-2 p-3 bg-red-500/10 rounded-lg border border-red-500/30">
+                          <p className="text-red-400 text-xs font-semibold mb-1">❌ Rejection Reason:</p>
+                          <p className="text-red-300 text-sm">{request.admin_notes || request.reject_reason || request.rejection_reason}</p>
                         </div>
                       )}
                       
