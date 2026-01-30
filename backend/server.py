@@ -31669,23 +31669,6 @@ async def get_live_activity_feed():
         logging.error(f"Error getting live activity: {e}")
         # Return empty instead of mock data
         return {"activities": []}
-                final_activities.append(milestone_activities[milestone_idx])
-                milestone_idx += 1
-            final_activities.append(activity)
-        
-        # Add remaining milestones at the end
-        while milestone_idx < len(milestone_activities):
-            final_activities.append(milestone_activities[milestone_idx])
-            milestone_idx += 1
-        
-        # If no real transactions, return empty to trigger frontend fallback
-        if not final_activities:
-            return {"activities": []}
-        
-        return {"activities": final_activities[:20]}
-    except Exception as e:
-        logging.error(f"Error fetching live activity: {e}")
-        return {"activities": []}
 
 
 def _get_time_ago(timestamp_str):
