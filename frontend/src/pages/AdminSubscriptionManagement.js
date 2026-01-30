@@ -283,12 +283,6 @@ const AdminSubscriptionManagement = ({ user }) => {
       fetchPayments();
     }
   }, [paymentFilter]);
-      setPayments(allPayments);
-    } catch (error) {
-      console.error('Error fetching payments:', error);
-      setPayments([]);
-    }
-  };
 
   const fetchPricing = async () => {
     try {
