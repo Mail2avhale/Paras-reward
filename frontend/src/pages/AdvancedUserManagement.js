@@ -246,11 +246,9 @@ const AdvancedUserManagement = () => {
 
   const getRoleBadge = (role) => {
     const colors = {
-      admin: 'bg-red-100 text-red-700',
-      master_stockist: 'bg-purple-100 text-purple-700',
-      sub_stockist: 'bg-blue-100 text-blue-700',
-      outlet: 'bg-green-100 text-green-700',
-      user: 'bg-gray-100 text-gray-700'
+      admin: 'bg-red-500/20 text-red-400',
+      manager: 'bg-purple-500/20 text-purple-400',
+      user: 'bg-gray-500/20 text-gray-400'
     };
     return colors[role] || colors.user;
   };
