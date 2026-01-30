@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://mining-referral-fix.preview.emergentagent.com",
+    "url": "https://role-manager-merge.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

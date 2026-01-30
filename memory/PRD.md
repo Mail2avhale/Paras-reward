@@ -165,7 +165,7 @@ UPSTASH_REDIS_REST_TOKEN=<your_token>
 - Frontend: React on port 3000
 - Backend: FastAPI on port 8001
 - Database: MongoDB + Upstash Redis
-- Preview URL: https://mining-referral-fix.preview.emergentagent.com
+- Preview URL: https://role-manager-merge.preview.emergentagent.com
 - Production: https://parasreward.com
 
 ## Test Credentials

@@ -1,127 +1,125 @@
 <analysis>**original_problem_statement:**
-The user's primary goal is to resolve critical bugs and discrepancies appearing in the production environment that are not present in the preview environment. The user is also focused on improving and cleaning up the application.
+The user's primary goal for this session was to enhance the application by introducing a permission-based manager role, cleaning up the codebase, and fixing several critical bugs and performance issues, especially those present only in the deployed production environment.
 
 Key user requests in this session:
-1.  **P0 Bug:** Fix failed to collect reward error in the mining feature.
-2.  **P0 Bug:** Resolve an issue where the mining session does not reset correctly after collecting rewards.
-3.  **P0 Bug:** The referral page on the deployed app shows incorrect data (total users, active users, bonus rate) and fails to display referral levels, despite working in the preview environment. This is a recurring and high-frustration issue for the user.
-4.  **P0 Bug:** Mining session auto-pauses and reward rate doesn't show in production.
-5.  **P0 Bug:** An admin-approved redemption request still shows as pending or processing in the user's view.
-6.  **P1 Feature:** Implement a completely new UI design for the marketplace page, based on an image provided by the user.
-7.  **P1 Feature:** Enhance the My Orders page to show a summary of total PRC redeemed/earned and display all types of redemption requests (bill payments, vouchers, etc.) with pagination.
-8.  **P1 Task:** Perform a comprehensive cleanup of the codebase, deleting all unused pages, components, and resources (e.g., old marketplace, cashback wallets, franchise panels, old home pages) to improve performance.
+1.  **P0 Feature/Refactor:** Merge the Manager role into the Admin panel. Managers should have limited access to admin pages based on checkbox permissions set by an Admin.
+2.  **P0 Task:** Clean up all old and unused Manager pages and code.
+3.  **P0 Feature:** Implement strict validation for UTR numbers on subscription payments: must be a unique 12-digit number. Add fraud prevention measures.
+4.  **P0 Bug:** The Admin dashboard graphs are not loading in the production app.
+5.  **P0 Bug:** Admin dashboard cards (Total Users, PRC Distributed) show incorrect data in the production app. This is a recurring data discrepancy issue between preview and production.
+6.  **P0 Bug:** The Total Redeemed PRC value is incorrect on the user's dashboard and My Orders page.
+7.  **P1 Bug:** The Admin Subscription Payment page loads slowly.
+8.  **P1 Task:** Create database indexes to optimize and speed up the live application.
+9.  **P1 Feature:** When an admin rejects a redemption request, the user must see the reason for rejection.
+10. **P1 Feature:** Enhance the Live Feed to show real, unique, and engaging global user activity instead of mock data.
+11. **P1 Task:** Optimize the Admin KYC verification page for faster loading.
+12. **P1 Change Request:** Change the minimum account age required for redemption from 7 days to 3 days.
+13. **P1 Bug:** Tabs in the Admin Settings Hub are broken and show a placeholder message.
 
 **User's preferred language**: The user communicates in a mix of English and Marathi. The next agent **MUST** start all responses with  and then continue the technical explanation in English.
 
 **what currently exists?**
-The application is a full-stack rewards platform. During this session, the agent successfully fixed critical bugs in the mining reward collection flow, implemented a brand-new marketplace page from a user-provided design, and completely overhauled the My Requests (Orders) page to be a comprehensive hub for all user redemptions. A major code cleanup was also performed.
+The application is a full-stack rewards platform. In this session, the agent successfully merged the Manager role into the Admin panel, controlled by a dynamic permissions system. This involved a major cleanup of all legacy Manager-specific pages. The agent also implemented significant backend optimizations, including adding comprehensive database indexes, caching several slow APIs, and implementing pagination on admin pages (KYC, Subscriptions) to fix performance issues. Key features like UTR validation (with fraud prevention) and displaying rejection reasons were added. A critical bug in the total redeemed calculation was fixed. The backend API for the global live feed was completely rewritten to be more dynamic and engaging.
 
-However, a critical and persistent discrepancy exists between the preview and production environments regarding the referral system. The agent has implemented several increasingly robust fixes and added multiple diagnostic API endpoints to help debug the data format issues in the live production database, which appears to be the root cause.
+However, the core issue of data discrepancies between the preview and production environments (e.g., dashboard stats, referral counts from previous forks) remains a primary concern, though the agent has added tools (cache clearing, re-indexing APIs) to help debug it.
 
 **Last working item**:
--   **Last item agent was working**: Performing a comprehensive code cleanup to improve application speed and maintainability. The agent identified and removed old, unused Home/Landing pages (, ) and their corresponding routes from .
--   **Status**: FINISHED
--   **Agent Testing Done**: Y (The agent verified the application builds successfully with yarn run v1.22.22
-info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. after the changes.)
--   **Which testing method agent to use?**: NA
+-   **Last item agent was working**: Revamping the Live Feed to show real and engaging global activity. The user reported seeing mock data. The agent found the responsible API () and completely rewrote the backend logic to generate a diverse feed from real user actions like achievements, redemptions, level-ups, and subscriptions.
+-   **Status**: IN PROGRESS
+-   **Agent Testing Done**: Y (The backend API was tested via  and confirmed to return new, varied, and engaging activity messages.)
+-   **Which testing method agent to use?**: Frontend testing agent or screenshot tool. The agent needs to verify that the frontend page ( or ) correctly calls the updated API and renders the new data format, as the user's last message was Live feed done or not.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1**: Referral page data discrepancy in Production (P0 - CRITICAL BLOCKER)
--   **Issue 2**: Mining auto-pause and reward rate not showing in Production (P1)
--   **Issue 3**: Admin approved requests status display on user view (P1)
--   **Issue 4**: User-facing search bar functionality is broken (P1)
+-   **Issue 1**: Live Feed Frontend Verification (P0 - HIGHEST)
+-   **Issue 2**: Referral page data discrepancy in Production (P0 - CRITICAL)
+-   **Issue 3**: Admin dashboard cards/graphs showing incorrect data in Production (P0 - CRITICAL)
+-   **Issue 4**: Mining auto-pause and reward rate not showing in Production (P1)
+-   **Issue 5**: User-facing search bar functionality is broken (P1)
 
 **Issues Detail:**
--   **Issue 1: Referral page data discrepancy in Production**
-    -   **Attempted fixes**: The user reports that on the deployed app, the referral page shows incorrect total/active counts and no level data. The agent has tried multiple fixes, assuming the  field in the production database contains inconsistent data (UID, referral_code, email, name, case variations).
-        1.  Refactored the backend function  multiple times to perform an aggressive search using  queries with various potential formats, including case-insensitive regex.
-        2.  Created new API endpoints for diagnostics:  and  which can be run by the user on the production URL to inspect the data formats in the live database.
-        3.  The user provided output from the debug endpoint, which confirmed the agent's logic works for the user's own referrals. However, the issue persists on the frontend, suggesting the problem is either with how the frontend calls the API or a deeper data inconsistency affecting other users.
+-   **Issue 1: Live Feed Frontend Verification**
+    -   **Attempted fixes**: The agent completely rewrote the backend API  in  to generate dynamic and varied activity strings based on real user data from multiple database collections.
     -   **Next debug checklist**:
-        1.  Confirm with the user that the latest code with all fixes has been deployed.
-        2.  Ask the user to hard-refresh the referral page and check the browser's developer console (F12) for any errors or for the  log which contains the  info.
-        3.  Analyze the debug info from the console log to find the exact discrepancy. The issue is almost certainly a data format problem in the production database that is not present in the preview environment.
-        4.  Review  to ensure it correctly calls the  endpoint and processes the response.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is the most critical issue causing user frustration and consuming credits. Resolving it will restore a core feature of the application and the user's confidence.
-    -   **Status**: BLOCKED (Awaiting user to provide production console logs/output).
+        1.  Identify the frontend component that displays the live feed (likely  or ).
+        2.  Verify it calls the  endpoint.
+        3.  Ensure the frontend correctly renders the new, more complex response from the API.
+        4.  Take a screenshot of the live feed page to confirm it no longer shows mock data.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is the last task the user requested and will complete the Live Feed enhancement, providing a more engaging user experience.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: frontend
+    -   **Blocked on other issue**: None
+
+-   **Issue 2: Referral page data discrepancy in Production**
+    -   **Attempted fixes**: (From previous forks) The agent implemented aggressive search logic and created multiple diagnostic API endpoints. This was not worked on in the current session.
+    -   **Next debug checklist**: Re-engage the user on this. Ask them to run the diagnostic endpoints ( or ) on their production URL and check the browser console to finally diagnose the data format issue in the live database.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a long-standing, high-frustration issue for the user and a critical blocker for a core feature.
+    -   **Status**: BLOCKED (Awaiting user action on production).
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: both
     -   **Blocked on other issue**: None
 
--   **Issue 2: Mining auto-pause and reward rate not showing in Production**
-    -   **Attempted fixes**: None directly. The agent created a comprehensive debug endpoint  which includes mining status information.
+-   **Issue 3: Admin dashboard cards/graphs showing incorrect data in Production**
+    -   **Attempted fixes**: The agent identified the relevant APIs (, ) and added aggressive caching and timeout handling. A new API () was created for the user to manually clear the production cache.
     -   **Next debug checklist**:
-        1.  Ask the user to run the  endpoint on production.
-        2.  Analyze the  section of the output to check , , , and .
-        3.  Review the mining logic in  and the status endpoint  in .
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a core user engagement feature.
-    -   **Status**: NOT STARTED
-    -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: both
-    -   **Blocked on other issue**: Issue 1 (Referral Discrepancy)
-
--   **Issue 3: Admin approved requests status display on user view**
-    -   **Attempted fixes**: The agent identified that the backend sets the status to  when an admin approves a request. A frontend fix was implemented in  to display items with processing status as Approved with a green badge, matching the user's expectation.
-    -   **Next debug checklist**: User needs to test this on the deployed application to confirm the visual fix is working as intended for requests that have been approved by an admin.
-    -   **Why fix this issue and what will be achieved with the fix?**: It removes confusion for the end-user about the true status of their redemption request.
+        1.  Confirm with the user if they have run the cache-clearing endpoint on production.
+        2.  Ask the user to hard-refresh the admin dashboard after clearing the cache and provide a new screenshot.
+        3.  If the issue persists, the problem is likely a fundamental data difference in the production database, similar to the referral issue.
+    -   **Why fix this issue and what will be achieved with the fix?**: The admin dashboard is useless if it shows incorrect data. Fixing it is essential for business operations.
     -   **Status**: USER VERIFICATION PENDING
-    -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: frontend
-    -   **Blocked on other issue**: None
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: both
+    -   **Blocked on other issue**: May be related to Issue 2.
 
--   **Issue 4: User-facing search bar functionality is broken**
-    -   **Attempted fixes**: None. This is a carry-over issue.
-    -   **Next debug checklist**: Locate the component, identify its API endpoint, and test for errors in the browser console.
+-   **Issue 4 & 5 (from previous handoff, not started)**:
+    -   Mining auto-pause/reward rate issue in Production.
+    -   Broken user-facing search bar.
     -   **Status**: NOT STARTED
-    -   **Is recurring issue?**: N
+
+**In progress Task List**:
+-   **Task 1: Live Feed Implementation**
+    -   **Where to resume**: The backend API is complete. The next step is to verify the frontend component ( or ) correctly displays the new dynamic feed.
+    -   **What will be achieved with this?**: A dynamic, engaging global activity feed that replaces the old static/mock data.
+    -   **Status**: IN PROGRESS
     -   **Should Test frontend/backend/both after fix?**: frontend
+    -   **Blocked on something**: None
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   P1: **Architect for Play Store Release**: The user needs to decide between PWA+TWA vs. a separate native build.
-    -   P1: **ML Risk Scoring**: A user-requested future feature.
+    -   **P0: Architect for App Separation:** The user wants to split the app so that the user-facing part remains on the main domain, while the admin/manager panel moves to a subdomain like . This is a significant architectural change that needs planning.
+    -   **P1: Architect for Play Store Release**: Decide between PWA+TWA vs. a separate native build.
 -   **Future Tasks:**
+    -   P1: ML Risk Scoring.
     -   P2: Full AdMob + Unity Ads Integration.
-    -   P2: Implement Shareable Achievement Cards.
-    -   P2: Improve user subscription flow ().
+    -   P2: Shareable Achievement Cards.
     -   P3: Refactor the monolithic .
 
 **Completed work in this session**
--   **Bug Fix: Failed to collect reward**: Fixed a missing  statement in the  endpoint in .
--   **Bug Fix: Mining session not resetting**: Resolved a caching issue by invalidating the mining status cache upon claim and returning fresh session data in the response. Updated .
--   **Feature: New Marketplace Page**: Created a new page  from a user-provided design, fixed API calls, and updated the  route in  to use it.
--   **Feature: Redemption History & Summary**: Overhauled  into a My Requests page.
-    -   Added a new backend endpoint  to fetch marketplace orders, bill payments, and voucher requests.
-    -   Added a new endpoint  to calculate and show a summary of PRC redeemed, total earnings, and cashback.
-    -   Implemented a tabbed UI to filter requests by type.
--   **Task: Comprehensive Code Cleanup**:
-    -   Scanned for and deleted unused pages and components (, old  pages, etc.).
-    -   Identified and restored components that were wrongly deleted but were in use (, , etc.), fixing the build.
-    -   Removed stale imports and routes from .
-    -   Deleted the old  page.
-
-**Earlier issues found/mentioned but not fixed**
--   Apply Dark Theme consistently across all Admin pages.
--   Verify Subscription Extend Logic.
--   KYC Document Upload Functionality on Mobile.
+-   **Feature: Manager Role Refactor**: Merged the Manager role into the Admin panel, controlled by a new permissions system. All old Manager pages were deleted, and routes in  were updated to redirect managers to .
+-   **Feature: UTR Validation & Fraud Prevention**: Enhanced  with real-time UTR uniqueness checks and updated the backend subscription endpoint with 12-digit validation, rate limiting, and IP tracking.
+-   **Optimization: Admin Pages**: Implemented server-side pagination and caching for Admin KYC and Subscription Management pages to fix slow loading times.
+-   **Optimization: Database Indexing**: Added a comprehensive set of database indexes across multiple collections (, , , etc.) in  and created an API endpoint () to manage them.
+-   **Optimization: Admin Dashboard Charts**: Implemented caching and timeouts for all dashboard chart APIs to prevent them from failing in production.
+-   **Bug Fix: Broken Admin Settings Hub**: Fixed broken tabs by creating a new  page and updating  to navigate to the correct routes instead of showing a placeholder.
+-   **Bug Fix: Incorrect Total Redeemed**: Fixed the  endpoint to correctly calculate  by including bill payments and gift vouchers.
+-   **Feature: Rejection Reasons**: Verified that all admin rejection flows (Bills, Vouchers, KYC) require a reason and that this reason is displayed to the user on their respective history pages.
+-   **Change Request: Redemption Rules**: Updated the minimum account age for redemption from 7 to 3 days in .
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork**: Referral data inconsistency between preview and production environments. This was the main focus of the second half of the session and remains the primary blocker.
--   **Recurrence count**: 3+
--   **Status**: BLOCKED
+-   **Issue recurrence in previous fork**: Referral data inconsistency between preview and production environments.
+-   **Recurrence count**: 4+
+-   **Status**: BLOCKED (Still the most critical underlying issue).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Production vs. Preview Debugging**: The session highlighted the critical difference between the two environments. The agent adapted by creating special diagnostic API endpoints (, ) to allow the user to retrieve data structure information from the production database without the agent having direct access.
--   **Defensive API Logic**: The referral-counting function in  was refactored to be highly defensive, searching for referrals using multiple identifiers (UID, referral code, email, name) and case-insensitive regex to handle potential data inconsistencies in production.
--   **Cache Management**: Fixed a bug caused by stale cached data by implementing explicit cache invalidation after a state-changing operation (claiming mining rewards).
--   **Systematic Code Cleanup**: The agent demonstrated a process for identifying and removing dead code: listing all files, checking for imports/routes in , identifying un-routed pages, and then deleting them while verifying the build process.
-
-**key DB schema**
--   No schema changes. The main database interaction involved resolving inconsistencies in how data is stored and queried in the  collection (the  field) and the  collection ( vs. ).
+-   **Role-Based Access Control (RBAC):** Merged the Manager role into the Admin scope, using a  array in the user's database document to control UI/API access.
+-   **API Performance Optimization:** Used a combination of backend caching (Redis), server-side pagination, and comprehensive database indexing to improve application speed, particularly for the production environment.
+-   **Fraud Prevention:** Implemented rate limiting (per IP and per UTR) and IP address tracking on the backend for sensitive payment submission endpoints.
+-   **Real-time Frontend Validation:** Used  with debouncing on the frontend () to call a backend API for real-time validation of UTR uniqueness before form submission.
+-   **Production Debugging Tools**: Created dedicated admin APIs to manage the production environment without direct access, including  and .
 
 **All files of reference**
 -   
@@ -130,58 +128,40 @@ info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this comm
 -   
 -   
 -   
-
-**Areas that need refactoring**:
--   The monolithic  file has grown even larger and is a prime candidate for being split into a routes-based structure.
-
-**key api endpoints**
--   ****: (New) Fetches all redemption requests (orders, bills, vouchers) for the user.
--   ****: (New) Provides a summary of user earnings and redemptions.
--   ****: (New) A more robust version of the levels endpoint.
--   ****: (New) Diagnostic tool to inspect referral data formats in production.
--   ****: (New) Comprehensive diagnostic tool for both mining and referral status.
+-   
+-   
+-   The entire  directory was deleted.
 
 **Critical Info for New Agent**
--   **THE MAIN BLOCKER IS THE PRODUCTION DATABASE.** Do not trust the preview environment for data-related issues, especially referrals. The user is extremely frustrated with this issue and the credits it has cost. Your first priority is to resolve it.
--   **You are blocked waiting for the user.** The user must run one of the diagnostic endpoints on their production URL and provide you with the output. The most comprehensive one is: . You need this data to understand the problem.
--   **Do not re-implement the referral logic again.** The current logic in  is already very robust. The problem is in the data itself. Wait for the debug output.
--   **Maintain the communication style**: Start every message with .
--   **Reassure the user**: Acknowledge their frustration and explain that the diagnostic endpoints are the final step needed to precisely identify and fix the production-specific problem.
+-   **THE MAIN BLOCKER IS STILL THE PRODUCTION DATA DISCREPANCY.** This was the top issue in the last handoff and it remains unresolved. User reports of incorrect referral counts (previous fork) and incorrect dashboard stats (this fork) are symptoms of this core problem. The user is highly frustrated by this. **Do not trust the preview environment for data-related issues.**
+-   Your first task is to finish the **Live Feed** feature by verifying the frontend.
+-   After that, you **MUST** prioritize tackling the production data discrepancy. Re-engage the user and guide them to use the debug tools (, , and the user-specific debug endpoints from the previous fork) on their live production app.
+-   The user has a tendency to switch priorities. Acknowledge new requests but try to steer the conversation back to fixing the critical production bugs.
+-   Remember to start every message with .
 
 **documents and test reports created in this job**
--   
--   
--   
+-   /app/test_reports/iteration_42.json
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Provided a screenshot showing the  URL is incomplete. (Agent fixed it to allow email.)
-2.  **User:** Provided the full JSON output from the production  endpoint. (Agent analyzed it.)
-3.  **User:** Requests a major cleanup of all unused pages and code (old marketplace, cashback, franchise, mining pages). (Agent started cleanup.)
-4.  **User:** Also cleanup duplicate/unused home and landing pages. (Agent did this.)
-5.  **User:** Asks what other cleanup can be done for speed, mentioning temp files. (Agent started a deeper scan.)
-6.  **User:** (LATEST) Reports the referral level issue is still not fixed in production, admin-approved requests show pending, and asks to match env/prod databases. The user is very frustrated about credits being spent.
-7.  **User:** (LATEST) Reports that after deployment, the referral count issue persists. Asks the agent to delete and re-implement the feature from scratch.
-8.  **User:** (LATEST) Reports a new issue: mining session auto-pauses and reward rate is not showing. Asks for a full test of mining and all 5 referral levels.
-9.  **User:** (LATEST) Provides screenshots showing the referral page not loading level data in production.
-10. **User:** (LATEST) After the agent provided a fix for referral levels, the user stated that level-wise users are still not being displayed and shared a screenshot of the issue.
+1.  **User:** Asks to make redemption conditions stricter.
+2.  **User:** Asks to update the minimum account age for redemption from 7 to 3 days.
+3.  **User:** Asks to speed up the Admin KYC verification page.
+4.  **User:** Reports that the preview environment is not loading.
+5.  **User:** Reports that when an admin rejects a request, the reason should be visible to the user. Also reports the account age still shows 7 days (agent clarified it needs deployment).
+6.  **User:** Reports that tabs in the Admin Settings Hub are broken and just show a placeholder.
+7.  **User:** Recharged credits.
+8.  **User:** Reports that the Total Redeemed PRC is not showing correctly on the dashboard card and in My Orders.
+9.  **User:** Reports that the Live Feed is showing mock data and asks for it to be made unique and engaging.
+10. **User (LATEST & PENDING):** Live feed done or not - This is the immediate pending question the agent needs to address.
 
 **Project Health Check:**
--   **Broken**: Referral level display (Production only), User-facing search bar.
--   **Mocked**: None.
+-   **Broken**: Referral level display (Production only), User-facing search bar, Admin Dashboard stats (Production only).
+-   **Mocked**: None (Live feed was the last mocked item, and the backend has been fixed).
 
 **3rd Party Integrations**
 -   **Upstash Redis**: Used for backend caching.
 
 **Testing status**
--   **Testing agent used after significant changes**: YES (Used multiple times for mining and referral features).
--   **Troubleshoot agent used after agent stuck in loop**: NO
+-   **Testing agent used after significant changes**: YES (Used to test rejection reason flow).
 -   **Test files created**: []
--   **Known regressions**: The referral page data display in production.
-
-**Credentials to test flow:**
--   **Admin:**  / 
--   **Manager:**  / 
--   **Test User:**  / 
-
-**What agent forgot to execute**
--   The agent prioritized the user's immediate and high-frustration bugs and feature requests. Backlog items from the previous handoff (dark theme, subscription logic verification, KYC) were not addressed, which was a correct prioritization decision given the critical production issues.</analysis>
+-   **Known regressions**: The referral page data display in production is a known, persistent regression. The incorrect admin dashboard stats in production is a newly reported but related issue.</analysis>
