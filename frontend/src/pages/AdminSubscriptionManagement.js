@@ -265,9 +265,24 @@ const AdminSubscriptionManagement = ({ user }) => {
 
   const fetchPayments = async () => {
     try {
-      // Fetch all payments in ONE call (backend handles filtering efficiently)
-      const response = await axios.get(`${API}/api/admin/vip-payments?limit=200`);
+      // Fetch pending payments first (most important for admin)
+      // Use server-side filtering for better performance
+      const statusParam = paymentFilter !== 'all' ? `&status=${paymentFilter}` : '';
+      const response = await axios.get(`${API}/api/admin/vip-payments?limit=50${statusParam}`);
       const allPayments = response.data.payments || response.data || [];
+      setPayments(allPayments);
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+      setPayments([]);
+    }
+  };
+
+  // Refetch when filter changes
+  useEffect(() => {
+    if (!loading) {
+      fetchPayments();
+    }
+  }, [paymentFilter]);
       setPayments(allPayments);
     } catch (error) {
       console.error('Error fetching payments:', error);
