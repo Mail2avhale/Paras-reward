@@ -31429,85 +31429,246 @@ async def record_milestone_achievement(request: Request):
 @api_router.get("/public/live-activity")
 async def get_live_activity_feed():
     """
-    Get live activity feed for social proof
-    Google Play Compliant - No amounts, no earnings in INR
-    
-    Format: "User from {city} {action}"
+    Get live activity feed for social proof - ENHANCED VERSION
+    Shows real-time user activities with engaging descriptions
     """
     try:
-        # Get recent milestone achievements (last 24 hours)
-        twenty_four_hours_ago = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
-        recent_milestones = await db.milestone_achievements.find(
-            {"created_at": {"$gte": twenty_four_hours_ago}},
-            {"_id": 0}
-        ).sort("created_at", -1).limit(10).to_list(10)
-        
-        # Get recent transactions (last 50) - include all activity types
-        all_activity_types = [
-            "mining", "tap_game", "order", "gift_voucher_request", "bill_payment_request",
-            "prc_rain_gain", "prc_rain_loss", "cashback", "referral", "admin_credit"
-        ]
-        
-        recent_transactions = await db.transactions.find(
-            {"type": {"$in": all_activity_types}},
-            {"_id": 0, "user_id": 1, "type": 1, "created_at": 1}
-        ).sort("created_at", -1).limit(50).to_list(50)
-        
         activities = []
-        cities = ["Mumbai", "Pune", "Nashik", "Nagpur", "Thane", "Kolhapur", "Aurangabad", "Solapur", "Sangli", "Satara", "Amravati", "Nanded", "Akola", "Latur", "Jalgaon"]
         
-        # Action mapping - key matches frontend actionTemplates
-        action_map = {
-            "mining": {"action": "mining", "text": "earned PRC via mining"},
-            "tap_game": {"action": "tap_game", "text": "played tap game"},
-            "order": {"action": "order", "text": "placed an order"},
-            "gift_voucher_request": {"action": "voucher", "text": "claimed a gift voucher"},
-            "bill_payment_request": {"action": "redeem", "text": "redeemed rewards"},
-            "prc_rain_gain": {"action": "mining", "text": "earned PRC bonus"},
-            "prc_rain_loss": {"action": "tap_game", "text": "participated in PRC rain"},
-            "cashback": {"action": "redeem", "text": "earned cashback"},
-            "referral": {"action": "mining", "text": "earned referral bonus"},
-            "admin_credit": {"action": "mining", "text": "earned bonus PRC"}
-        }
+        # ========== 1. RECENT SUBSCRIPTIONS (Most Valuable) ==========
+        recent_subs = await db.vip_payments.find(
+            {"status": "approved"},
+            {"_id": 0, "user_id": 1, "subscription_plan": 1, "approved_at": 1}
+        ).sort("approved_at", -1).limit(10).to_list(10)
         
-        import random
+        for sub in recent_subs:
+            user = await db.users.find_one({"uid": sub.get("user_id")}, {"_id": 0, "name": 1, "city": 1, "state": 1})
+            if user:
+                city = user.get("city") or user.get("state") or "India"
+                name = (user.get("name", "User") or "User")[:3] + "***"
+                plan = sub.get("subscription_plan", "VIP").capitalize()
+                
+                # Engaging subscription messages
+                sub_messages = {
+                    "startup": ["joined the Startup squad! 🚀", "unlocked Startup benefits! ⭐", "became a Startup member! 💪"],
+                    "growth": ["leveled up to Growth! 📈", "unlocked Growth power! 🔥", "joined Growth elite! 🌟"],
+                    "elite": ["achieved Elite status! 👑", "joined the Elite club! 💎", "unlocked Elite rewards! 🏆"]
+                }
+                import random
+                plan_lower = sub.get("subscription_plan", "startup").lower()
+                message = random.choice(sub_messages.get(plan_lower, ["upgraded their plan! ⭐"]))
+                
+                activities.append({
+                    "city": city,
+                    "name": name,
+                    "action": "subscription",
+                    "icon": "👑" if plan_lower == "elite" else "🚀" if plan_lower == "growth" else "⭐",
+                    "text": message,
+                    "highlight": True,
+                    "plan": plan,
+                    "time_ago": _get_time_ago(sub.get("approved_at")),
+                    "color": "amber" if plan_lower == "elite" else "purple" if plan_lower == "growth" else "blue"
+                })
         
-        # Add milestone achievements to activity feed
-        for milestone in recent_milestones:
-            city = milestone.get("city", random.choice(cities))
-            activities.append({
-                "city": city,
-                "action": "milestone",  # Special type for milestone
-                "text": f"unlocked {milestone.get('milestone_title', 'badge')} {milestone.get('milestone_badge', '🎉')}",
-                "time_ago": _get_time_ago(milestone.get("created_at")),
-                "is_milestone": True,
-                "milestone_badge": milestone.get("milestone_badge"),
-                "milestone_title": milestone.get("milestone_title"),
-                "milestone_color": milestone.get("milestone_color", "amber")
-            })
+        # ========== 2. NEW USER REGISTRATIONS ==========
+        twenty_four_hours_ago = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+        new_users = await db.users.find(
+            {"created_at": {"$gte": twenty_four_hours_ago}},
+            {"_id": 0, "name": 1, "city": 1, "state": 1, "created_at": 1, "referred_by": 1}
+        ).sort("created_at", -1).limit(15).to_list(15)
         
-        for txn in recent_transactions[:15]:  # Show last 15 for more variety
-            city = random.choice(cities)
-            txn_type = txn.get("type", "mining")
-            action_info = action_map.get(txn_type, {"action": "mining", "text": "earned rewards"})
+        for user in new_users:
+            city = user.get("city") or user.get("state") or "India"
+            name = (user.get("name", "User") or "User")[:3] + "***"
+            is_referral = bool(user.get("referred_by"))
+            
+            join_messages = [
+                "joined the community! 🎉",
+                "started their PRC journey! 🌟", 
+                "became a member! 💫",
+                "joined the reward family! 🎊"
+            ]
+            referral_messages = [
+                "joined via referral! 🤝",
+                "got invited & joined! 🔗",
+                "came through a friend! 👥"
+            ]
+            
+            import random
+            message = random.choice(referral_messages if is_referral else join_messages)
             
             activities.append({
                 "city": city,
-                "action": action_info["action"],  # Key for frontend icon matching
-                "text": action_info["text"],       # Display text
-                "time_ago": _get_time_ago(txn.get("created_at"))
+                "name": name,
+                "action": "registration",
+                "icon": "🤝" if is_referral else "👋",
+                "text": message,
+                "time_ago": _get_time_ago(user.get("created_at")),
+                "color": "green" if is_referral else "blue"
             })
         
-        # Sort by time and shuffle slightly to mix milestones with other activities
-        # Keep milestones at top but not all bunched together
-        milestone_activities = [a for a in activities if a.get("is_milestone")]
-        other_activities = [a for a in activities if not a.get("is_milestone")]
+        # ========== 3. BILL PAYMENT REDEMPTIONS ==========
+        recent_bills = await db.bill_payment_requests.find(
+            {"status": {"$in": ["approved", "completed"]}},
+            {"_id": 0, "user_id": 1, "bill_type": 1, "amount_inr": 1, "approved_at": 1, "created_at": 1}
+        ).sort("approved_at", -1).limit(10).to_list(10)
         
-        # Interleave: put one milestone every 3-4 regular activities
+        for bill in recent_bills:
+            user = await db.users.find_one({"uid": bill.get("user_id")}, {"_id": 0, "name": 1, "city": 1, "state": 1})
+            if user:
+                city = user.get("city") or user.get("state") or "India"
+                name = (user.get("name", "User") or "User")[:3] + "***"
+                bill_type = bill.get("bill_type", "bill").replace("_", " ").title()
+                
+                bill_messages = [
+                    f"paid their {bill_type}! 💸",
+                    f"redeemed for {bill_type}! ✅",
+                    f"cleared {bill_type} with PRC! 🎯"
+                ]
+                import random
+                
+                activities.append({
+                    "city": city,
+                    "name": name,
+                    "action": "redeem",
+                    "icon": "💳",
+                    "text": random.choice(bill_messages),
+                    "time_ago": _get_time_ago(bill.get("approved_at") or bill.get("created_at")),
+                    "color": "emerald"
+                })
+        
+        # ========== 4. GIFT VOUCHER CLAIMS ==========
+        recent_vouchers = await db.gift_voucher_requests.find(
+            {"status": {"$in": ["approved", "completed"]}},
+            {"_id": 0, "user_id": 1, "voucher_type": 1, "approved_at": 1, "created_at": 1}
+        ).sort("approved_at", -1).limit(8).to_list(8)
+        
+        for voucher in recent_vouchers:
+            user = await db.users.find_one({"uid": voucher.get("user_id")}, {"_id": 0, "name": 1, "city": 1, "state": 1})
+            if user:
+                city = user.get("city") or user.get("state") or "India"
+                name = (user.get("name", "User") or "User")[:3] + "***"
+                voucher_type = voucher.get("voucher_type", "gift").replace("_", " ").title()
+                
+                activities.append({
+                    "city": city,
+                    "name": name,
+                    "action": "voucher",
+                    "icon": "🎁",
+                    "text": f"claimed {voucher_type} voucher! 🎁",
+                    "time_ago": _get_time_ago(voucher.get("approved_at") or voucher.get("created_at")),
+                    "color": "pink"
+                })
+        
+        # ========== 5. MILESTONES & ACHIEVEMENTS ==========
+        recent_milestones = await db.milestone_achievements.find(
+            {},
+            {"_id": 0, "user_id": 1, "milestone_title": 1, "milestone_badge": 1, "created_at": 1}
+        ).sort("created_at", -1).limit(10).to_list(10)
+        
+        for milestone in recent_milestones:
+            user = await db.users.find_one({"uid": milestone.get("user_id")}, {"_id": 0, "name": 1, "city": 1, "state": 1})
+            if user:
+                city = user.get("city") or user.get("state") or "India"
+                name = (user.get("name", "User") or "User")[:3] + "***"
+                badge = milestone.get("milestone_badge", "🏆")
+                title = milestone.get("milestone_title", "Achievement")
+                
+                activities.append({
+                    "city": city,
+                    "name": name,
+                    "action": "milestone",
+                    "icon": badge,
+                    "text": f"unlocked '{title}'! {badge}",
+                    "highlight": True,
+                    "time_ago": _get_time_ago(milestone.get("created_at")),
+                    "color": "amber"
+                })
+        
+        # ========== 6. MINING EARNINGS (Recent) ==========
+        six_hours_ago = (datetime.now(timezone.utc) - timedelta(hours=6)).isoformat()
+        mining_txns = await db.transactions.find(
+            {"type": "mining", "timestamp": {"$gte": six_hours_ago}},
+            {"_id": 0, "user_id": 1, "amount": 1, "timestamp": 1}
+        ).sort("timestamp", -1).limit(10).to_list(10)
+        
+        for txn in mining_txns:
+            user = await db.users.find_one({"uid": txn.get("user_id")}, {"_id": 0, "name": 1, "city": 1, "state": 1})
+            if user:
+                city = user.get("city") or user.get("state") or "India"
+                name = (user.get("name", "User") or "User")[:3] + "***"
+                amount = txn.get("amount", 0)
+                
+                mining_messages = [
+                    f"mined {amount:.1f} PRC! ⛏️",
+                    f"earned {amount:.1f} PRC mining! 💰",
+                    f"collected {amount:.1f} PRC! ✨"
+                ]
+                import random
+                
+                activities.append({
+                    "city": city,
+                    "name": name,
+                    "action": "mining",
+                    "icon": "⛏️",
+                    "text": random.choice(mining_messages),
+                    "time_ago": _get_time_ago(txn.get("timestamp")),
+                    "color": "yellow"
+                })
+        
+        # ========== 7. TAP GAME PLAYS ==========
+        tap_txns = await db.transactions.find(
+            {"type": "tap_game", "timestamp": {"$gte": six_hours_ago}},
+            {"_id": 0, "user_id": 1, "amount": 1, "timestamp": 1}
+        ).sort("timestamp", -1).limit(8).to_list(8)
+        
+        for txn in tap_txns:
+            user = await db.users.find_one({"uid": txn.get("user_id")}, {"_id": 0, "name": 1, "city": 1, "state": 1})
+            if user:
+                city = user.get("city") or user.get("state") or "India"
+                name = (user.get("name", "User") or "User")[:3] + "***"
+                
+                activities.append({
+                    "city": city,
+                    "name": name,
+                    "action": "tap_game",
+                    "icon": "👆",
+                    "text": "played Tap Game! 🎮",
+                    "time_ago": _get_time_ago(txn.get("timestamp")),
+                    "color": "cyan"
+                })
+        
+        # ========== SHUFFLE & PRIORITIZE ==========
+        import random
+        
+        # Separate by priority
+        high_priority = [a for a in activities if a.get("highlight")]
+        normal_priority = [a for a in activities if not a.get("highlight")]
+        
+        # Shuffle within categories
+        random.shuffle(high_priority)
+        random.shuffle(normal_priority)
+        
+        # Interleave: 1 high priority every 3-4 normal
         final_activities = []
-        milestone_idx = 0
-        for i, activity in enumerate(other_activities[:15]):
-            if milestone_idx < len(milestone_activities) and i % 3 == 0:
+        high_idx = 0
+        for i, activity in enumerate(normal_priority[:25]):
+            if high_idx < len(high_priority) and i % 4 == 0:
+                final_activities.append(high_priority[high_idx])
+                high_idx += 1
+            final_activities.append(activity)
+        
+        # Add remaining high priority
+        while high_idx < len(high_priority) and len(final_activities) < 30:
+            final_activities.append(high_priority[high_idx])
+            high_idx += 1
+        
+        return {"activities": final_activities[:25]}
+        
+    except Exception as e:
+        logging.error(f"Error getting live activity: {e}")
+        # Return empty instead of mock data
+        return {"activities": []}
                 final_activities.append(milestone_activities[milestone_idx])
                 milestone_idx += 1
             final_activities.append(activity)
