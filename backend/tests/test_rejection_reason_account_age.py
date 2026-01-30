@@ -110,10 +110,10 @@ class TestBillPaymentRejectionReasonDisplay:
     def test_user_requests_include_rejection_fields(self):
         """User's all-requests endpoint should include rejection reason fields"""
         # First login as admin to get a test user
-        admin_response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "admin@paras.com",
-            "password": "admin123"
-        })
+        admin_response = requests.post(
+            f"{BASE_URL}/api/auth/login",
+            params={"identifier": "admin@paras.com", "password": "admin123"}
+        )
         
         if admin_response.status_code != 200:
             pytest.skip("Admin login failed")
