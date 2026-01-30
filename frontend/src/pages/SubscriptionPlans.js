@@ -534,30 +534,87 @@ const SubscriptionPlans = ({ user }) => {
           {/* Payment Form */}
           <div className="space-y-4">
             <div>
-              <label className="block text-gray-400 text-sm mb-2">{t('utrNumber')} *</label>
-              <input
-                type="text"
-                value={formData.utr_number}
-                onChange={(e) => setFormData({...formData, utr_number: formatUTR(e.target.value)})}
-                placeholder="Enter 12+ digit UTR number"
-                maxLength={35}
-                className="w-full p-4 bg-gray-900 border border-gray-700 rounded-xl text-white focus:border-amber-500 outline-none font-mono tracking-wider"
-                data-testid="utr-input"
-              />
-              {formData.utr_number && formData.utr_number.length > 0 && (
-                <div className="mt-1">
-                  {validateUTR(formData.utr_number).isValid ? (
-                    <p className="text-green-400 text-xs flex items-center gap-1">
-                      <CheckCircle className="w-3 h-3" />
-                      {validateUTR(formData.utr_number).hint}
+              <label className="block text-gray-400 text-sm mb-2">{t('utrNumber')} * (फक्त 12 अंक)</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={formData.utr_number}
+                  onChange={handleUTRChange}
+                  placeholder="123456789012"
+                  maxLength={12}
+                  className={`w-full p-4 bg-gray-900 border rounded-xl text-white focus:outline-none font-mono tracking-widest text-lg ${
+                    utrValidationResult?.valid === false 
+                      ? 'border-red-500 focus:border-red-500' 
+                      : utrValidationResult?.valid === true 
+                        ? 'border-green-500 focus:border-green-500'
+                        : 'border-gray-700 focus:border-amber-500'
+                  }`}
+                  data-testid="utr-input"
+                />
+                {utrValidating && (
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+                {!utrValidating && utrValidationResult?.valid === true && (
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    <CheckCircle className="w-6 h-6 text-green-500" />
+                  </div>
+                )}
+                {!utrValidating && utrValidationResult?.valid === false && (
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    <AlertCircle className="w-6 h-6 text-red-500" />
+                  </div>
+                )}
+              </div>
+              
+              {/* UTR Validation Feedback */}
+              <div className="mt-2">
+                {formData.utr_number.length > 0 && formData.utr_number.length < 12 && (
+                  <p className="text-amber-400 text-xs flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {formData.utr_number.length}/12 अंक - {12 - formData.utr_number.length} remaining
+                  </p>
+                )}
+                
+                {utrValidationResult?.valid === true && (
+                  <p className="text-green-400 text-sm flex items-center gap-1 font-medium">
+                    <CheckCircle className="w-4 h-4" />
+                    ✓ UTR number योग्य आहे
+                  </p>
+                )}
+                
+                {utrValidationResult?.valid === false && utrValidationResult?.error === 'UTR_ALREADY_USED' && (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mt-2">
+                    <p className="text-red-400 text-sm font-bold flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5" />
+                      ⚠️ UTR ALREADY IN USE
                     </p>
-                  ) : (
-                    <p className="text-red-400 text-xs flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3" />
-                      {validateUTR(formData.utr_number).error}
+                    <p className="text-red-300 text-xs mt-1">
+                      हा UTR आधीच वापरला गेला आहे! कृपया योग्य UTR number टाका.
                     </p>
-                  )}
-                </div>
+                    {utrValidationResult?.details && (
+                      <p className="text-red-300/70 text-xs mt-1">
+                        Used in: {utrValidationResult.details.type} (Status: {utrValidationResult.details.status})
+                      </p>
+                    )}
+                  </div>
+                )}
+                
+                {utrValidationResult?.valid === false && utrValidationResult?.error === 'UTR_FORMAT_INVALID' && (
+                  <p className="text-red-400 text-xs flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {utrValidationResult.message}
+                  </p>
+                )}
+              </div>
+              
+              {/* Helper text */}
+              <p className="text-gray-500 text-xs mt-2">
+                UPI/IMPS payment चा 12 अंकी UTR number टाका
+              </p>
+            </div>
               )}
               <p className="text-gray-600 text-xs mt-1">
                 IMPS: 12 digits | NEFT: 16 chars | RTGS: 22 chars | UPI: 12+ chars
