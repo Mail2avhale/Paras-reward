@@ -80,9 +80,16 @@ A social rewards platform where users can earn PRC (Paras Reward Coins) through 
 
 ## Architecture
 
+### Role System (Simplified)
+- **User** - Regular app users
+- **Manager** - Admin panel access with restricted permissions (set by Admin)
+- **Admin** - Full admin panel access
+
 ### Frontend (React)
 - `/app/frontend/src/pages/` - Main pages
 - `/app/frontend/src/components/` - Reusable components
+- `/app/frontend/src/components/layouts/AdminLayout.js` - Admin & Manager panel layout with permission filtering
+- `/app/frontend/src/components/ManagerPermissions.js` - Permission checkbox UI component
 - `/app/frontend/src/context/` - React contexts
 - UI: Shadcn/UI components + Tailwind CSS
 
@@ -90,6 +97,11 @@ A social rewards platform where users can earn PRC (Paras Reward Coins) through 
 - `/app/backend/server.py` - Main API server
 - `/app/backend/cache_manager.py` - Redis/Upstash cache manager
 - Database: MongoDB + Upstash Redis (caching)
+
+### Manager Permissions API
+- `GET /api/admin/permissions/list` - Get all available permissions
+- `GET /api/admin/user/{uid}/permissions` - Get user's current permissions
+- `PUT /api/admin/user/{uid}/permissions` - Update manager permissions
 
 ### Environment Variables (Production)
 ```
