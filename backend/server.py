@@ -12681,7 +12681,7 @@ async def update_redemption_rules(request: Request):
     
     redemption_rules = {
         "kyc_required": data.get("kyc_required", True),
-        "min_account_age_days": int(data.get("min_account_age_days", 7)),
+        "min_account_age_days": int(data.get("min_account_age_days", 3)),
         "min_redemption_prc": float(data.get("min_redemption_prc", 100)),
         "max_daily_redemptions": int(data.get("max_daily_redemptions", 3)),
         "cooldown_minutes": int(data.get("cooldown_minutes", 5)),
