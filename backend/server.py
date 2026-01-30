@@ -10741,7 +10741,7 @@ async def get_user_growth_chart():
 
 @api_router.get("/admin/charts/prc-circulation")
 async def get_prc_circulation_chart():
-    """Get PRC circulation trend for the last 30 days - CACHED"""
+    """Get PRC circulation trend for the last 30 days - PRODUCTION FIX"""
     from datetime import timedelta
     
     # Try cache first
@@ -10754,44 +10754,48 @@ async def get_prc_circulation_chart():
         end_date = datetime.now(timezone.utc)
         start_date = end_date - timedelta(days=30)
         
-        # Simplified aggregation for better performance
-        pipeline = [
-            {
-                "$match": {
-                    "created_at": {
-                        "$gte": start_date.isoformat(),
-                        "$lte": end_date.isoformat()
-                    },
-                    "wallet_type": "prc"
-                }
-            },
-            {
-                "$group": {
-                    "_id": {"$substr": ["$created_at", 0, 10]},  # Extract YYYY-MM-DD
-                    "earned": {
-                        "$sum": {
-                            "$cond": [{"$eq": ["$type", "credit"]}, "$amount", 0]
-                        }
-                    },
-                    "spent": {
-                        "$sum": {
-                            "$cond": [{"$eq": ["$type", "debit"]}, "$amount", 0]
-                        }
-                    }
-                }
-            },
-            {"$sort": {"_id": 1}}
-        ]
-        
-        result = await asyncio.wait_for(
-            db.transactions.aggregate(pipeline).to_list(None),
-            timeout=10.0
+        # PRODUCTION FIX: Use direct iteration for date format compatibility
+        all_txns = await asyncio.wait_for(
+            db.transactions.find(
+                {"wallet_type": "prc"},
+                {"_id": 0, "created_at": 1, "timestamp": 1, "type": 1, "amount": 1}
+            ).to_list(None),
+            timeout=15.0
         )
         
-        # Fill in missing dates
-        date_data = {item["_id"]: {"earned": item["earned"], "spent": item["spent"]} for item in result}
-        chart_data = []
+        # Process transactions per day
+        date_data = {}
+        for txn in all_txns:
+            date_val = txn.get("created_at") or txn.get("timestamp")
+            if not date_val:
+                continue
+            
+            try:
+                # Handle both string and datetime objects
+                if isinstance(date_val, str):
+                    date_str = date_val[:10]
+                elif hasattr(date_val, 'strftime'):
+                    date_str = date_val.strftime("%Y-%m-%d")
+                else:
+                    continue
+                
+                # Check if within range
+                if not (start_date.strftime("%Y-%m-%d") <= date_str <= end_date.strftime("%Y-%m-%d")):
+                    continue
+                
+                if date_str not in date_data:
+                    date_data[date_str] = {"earned": 0, "spent": 0}
+                
+                amount = txn.get("amount", 0) or 0
+                if txn.get("type") == "credit":
+                    date_data[date_str]["earned"] += amount
+                elif txn.get("type") == "debit":
+                    date_data[date_str]["spent"] += amount
+            except Exception:
+                continue
         
+        # Build chart data
+        chart_data = []
         for i in range(30):
             date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
             data = date_data.get(date, {"earned": 0, "spent": 0})
@@ -10807,7 +10811,8 @@ async def get_prc_circulation_chart():
         return response
         
     except asyncio.TimeoutError:
-        return {"data": [], "error": "Query timeout"}
+        logging.error("PRC circulation chart timeout")
+        return {"data": [], "error": "Query timeout - database slow"}
     except Exception as e:
         print(f"PRC circulation chart error: {e}")
         return {"data": [], "error": str(e)}
