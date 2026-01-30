@@ -10273,61 +10273,65 @@ async def clear_system_cache(key_pattern: str = None):
 
 @api_router.get("/admin/charts/user-growth")
 async def get_user_growth_chart():
-    """Get user registration data for the last 30 days"""
+    """Get user registration data for the last 30 days - CACHED"""
     from datetime import timedelta
     
-    end_date = datetime.now(timezone.utc)
-    start_date = end_date - timedelta(days=30)
+    # Try cache first (cache for 5 minutes)
+    cache_key = "chart:user_growth:30d"
+    cached = await cache.get(cache_key)
+    if cached:
+        return cached
     
-    # Aggregate users by registration date
-    pipeline = [
-        {
-            "$match": {
-                "created_at": {
-                    "$gte": start_date.isoformat(),
-                    "$lte": end_date.isoformat()
-                }
-            }
-        },
-        {
-            "$addFields": {
-                "date_parsed": {
-                    "$dateFromString": {
-                        "dateString": "$created_at",
-                        "onError": None
+    try:
+        end_date = datetime.now(timezone.utc)
+        start_date = end_date - timedelta(days=30)
+        
+        # Simplified aggregation for better performance
+        pipeline = [
+            {
+                "$match": {
+                    "created_at": {
+                        "$gte": start_date.isoformat(),
+                        "$lte": end_date.isoformat()
                     }
                 }
-            }
-        },
-        {
-            "$match": {"date_parsed": {"$ne": None}}
-        },
-        {
-            "$group": {
-                "_id": {
-                    "$dateToString": {"format": "%Y-%m-%d", "date": "$date_parsed"}
-                },
-                "count": {"$sum": 1}
-            }
-        },
-        {"$sort": {"_id": 1}}
-    ]
-    
-    result = await db.users.aggregate(pipeline).to_list(None)
-    
-    # Fill in missing dates with 0
-    date_counts = {item["_id"]: item["count"] for item in result}
-    chart_data = []
-    
-    for i in range(30):
-        date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
-        chart_data.append({
-            "date": date,
-            "name": (start_date + timedelta(days=i)).strftime("%d %b"),
-            "users": date_counts.get(date, 0)
-        })
-    
-    return {"data": chart_data}
+            },
+            {
+                "$group": {
+                    "_id": {"$substr": ["$created_at", 0, 10]},  # Extract YYYY-MM-DD
+                    "count": {"$sum": 1}
+                }
+            },
+            {"$sort": {"_id": 1}}
+        ]
+        
+        result = await asyncio.wait_for(
+            db.users.aggregate(pipeline).to_list(None),
+            timeout=10.0  # 10 second timeout
+        )
+        
+        # Fill in missing dates with 0
+        date_counts = {item["_id"]: item["count"] for item in result}
+        chart_data = []
+        
+        for i in range(30):
+            date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
+            chart_data.append({
+                "date": date,
+                "name": (start_date + timedelta(days=i)).strftime("%d %b"),
+                "users": date_counts.get(date, 0)
+            })
+        
+        response = {"data": chart_data}
+        await cache.set(cache_key, response, ttl=300)  # Cache 5 minutes
+        return response
+        
+    except asyncio.TimeoutError:
+        # Return empty data on timeout
+        return {"data": [], "error": "Query timeout"}
+    except Exception as e:
+        print(f"User growth chart error: {e}")
+        return {"data": [], "error": str(e)}
 
 @api_router.get("/admin/charts/prc-circulation")
 async def get_prc_circulation_chart():
