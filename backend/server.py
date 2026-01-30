@@ -5945,6 +5945,22 @@ async def submit_vip_payment(uid: str, payment: VIPPaymentCreate):
 
 # ==================== ADMIN VIP PAYMENT VERIFICATION ====================
 
+@api_router.get("/admin/vip-payments/pending-count")
+async def get_pending_payments_count():
+    """Super fast endpoint to get just the pending payments count"""
+    try:
+        # Try cache first
+        cached = await cache.get("pending_payments_count")
+        if cached is not None:
+            return {"count": cached}
+        
+        count = await db.vip_payments.count_documents({"status": "pending"})
+        await cache.set("pending_payments_count", count, ttl=10)  # 10 second cache
+        return {"count": count}
+    except Exception as e:
+        return {"count": 0, "error": str(e)}
+
+
 @api_router.get("/admin/vip-payments")
 async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int = 50):
     """Get VIP payments for admin verification - OPTIMIZED with caching"""
