@@ -10526,28 +10526,37 @@ async def get_subscriptions_chart():
             },
             {"$sort": {"_id": 1}}
         ]
-        {"$sort": {"_id": 1}}
-    ]
-    
-    purchases = await db.subscription_payments.aggregate(pipeline).to_list(None)
-    
-    date_data = {item["_id"]: item for item in purchases}
-    trend_data = []
-    
-    for i in range(7):
-        date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
-        data = date_data.get(date, {"count": 0, "revenue": 0})
-        trend_data.append({
-            "date": date,
-            "name": (start_date + timedelta(days=i)).strftime("%a"),
-            "purchases": data.get("count", 0),
-            "revenue": data.get("revenue", 0)
-        })
-    
-    return {
-        "distribution": distribution,
-        "trend": trend_data
-    }
+        
+        purchases = await asyncio.wait_for(
+            db.subscription_payments.aggregate(pipeline).to_list(None),
+            timeout=10.0
+        )
+        
+        date_data = {item["_id"]: item for item in purchases}
+        trend_data = []
+        
+        for i in range(7):
+            date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
+            data = date_data.get(date, {"count": 0, "revenue": 0})
+            trend_data.append({
+                "date": date,
+                "name": (start_date + timedelta(days=i)).strftime("%a"),
+                "purchases": data.get("count", 0),
+                "revenue": data.get("revenue", 0)
+            })
+        
+        response = {
+            "distribution": distribution,
+            "trend": trend_data
+        }
+        await cache.set(cache_key, response, ttl=300)
+        return response
+        
+    except asyncio.TimeoutError:
+        return {"distribution": [], "trend": [], "error": "Query timeout"}
+    except Exception as e:
+        print(f"Subscriptions chart error: {e}")
+        return {"distribution": [], "trend": [], "error": str(e)}
 
 
 # ========== FRAUD DETECTION ADMIN ROUTES ==========
