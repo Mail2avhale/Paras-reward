@@ -615,11 +615,6 @@ const SubscriptionPlans = ({ user }) => {
                 UPI/IMPS payment चा 12 अंकी UTR number टाका
               </p>
             </div>
-              )}
-              <p className="text-gray-600 text-xs mt-1">
-                IMPS: 12 digits | NEFT: 16 chars | RTGS: 22 chars | UPI: 12+ chars
-              </p>
-            </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
