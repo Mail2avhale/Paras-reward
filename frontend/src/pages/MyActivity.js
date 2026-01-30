@@ -194,14 +194,15 @@ const MyActivity = ({ user }) => {
                 <Card 
                   key={index}
                   className="bg-gray-800/50 border-gray-700 p-4"
+                  data-testid={`live-activity-card-${index}`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">
-                      {activity.user?.charAt(0) || 'U'}
+                      {activity.icon || (activity.name || activity.user || 'U').charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-white">
-                        <span className="font-medium text-purple-400">{activity.user || 'User***'}</span>
+                        <span className="font-medium text-purple-400">{activity.name || activity.user || 'User***'}</span>
                         {' '}{activity.text || activity.action}
                       </p>
                       {activity.amount && (
@@ -212,7 +213,7 @@ const MyActivity = ({ user }) => {
                       <p className="text-gray-500 text-xs mt-1 flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {activity.city && `${activity.city} • `}
-                        {formatTime(activity.timestamp)}
+                        {activity.time_ago || formatTime(activity.timestamp)}
                       </p>
                     </div>
                   </div>
