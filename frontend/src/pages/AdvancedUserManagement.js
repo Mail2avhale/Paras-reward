@@ -311,9 +311,7 @@ const AdvancedUserManagement = () => {
               <option value="">All Roles</option>
               <option value="user">User</option>
               <option value="admin">Admin</option>
-              <option value="master_stockist">Master Stockist</option>
-              <option value="sub_stockist">Sub Stockist</option>
-              <option value="outlet">Outlet</option>
+              <option value="manager">Manager</option>
             </select>
           </div>
 
