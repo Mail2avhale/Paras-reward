@@ -10031,12 +10031,23 @@ async def get_public_stats():
             "subscription_plan": {"$in": ["startup", "growth", "elite"]}
         })
         
-        # Total PRC distributed (sum of all total_mined)
+        # Total PRC distributed - check multiple possible fields
+        # Try total_mined first, then prc_balance as fallback
         prc_pipeline = [
-            {"$group": {"_id": None, "total": {"$sum": "$total_mined"}}}
+            {"$group": {"_id": None, 
+                "total_mined": {"$sum": {"$ifNull": ["$total_mined", 0]}},
+                "total_prc_balance": {"$sum": {"$ifNull": ["$prc_balance", 0]}}
+            }}
         ]
         prc_result = await db.users.aggregate(prc_pipeline).to_list(1)
-        total_prc = prc_result[0]["total"] if prc_result else 0
+        
+        if prc_result:
+            # Use whichever is higher (total_mined shows lifetime, prc_balance shows current)
+            total_mined = prc_result[0].get("total_mined", 0) or 0
+            total_balance = prc_result[0].get("total_prc_balance", 0) or 0
+            total_prc = max(total_mined, total_balance)
+        else:
+            total_prc = 0
         
         # Total PRC redeemed (from approved bill payments + gift vouchers + orders)
         total_redeemed = 0
@@ -10044,28 +10055,28 @@ async def get_public_stats():
         # From bill payments (approved/completed)
         bill_pipeline = [
             {"$match": {"status": {"$in": ["approved", "completed", "processing"]}}},
-            {"$group": {"_id": None, "total": {"$sum": "$total_prc_deducted"}}}
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}}}}
         ]
         bill_result = await db.bill_payment_requests.aggregate(bill_pipeline).to_list(1)
-        if bill_result:
+        if bill_result and bill_result[0].get("total"):
             total_redeemed += bill_result[0]["total"]
         
         # From gift vouchers (approved/completed)
         gift_pipeline = [
             {"$match": {"status": {"$in": ["approved", "completed", "processing"]}}},
-            {"$group": {"_id": None, "total": {"$sum": "$total_prc_deducted"}}}
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}}}}
         ]
         gift_result = await db.gift_voucher_requests.aggregate(gift_pipeline).to_list(1)
-        if gift_result:
+        if gift_result and gift_result[0].get("total"):
             total_redeemed += gift_result[0]["total"]
         
         # From orders (completed/delivered)
         order_pipeline = [
             {"$match": {"status": {"$in": ["completed", "delivered"]}}},
-            {"$group": {"_id": None, "total": {"$sum": "$total_prc"}}}
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", "$total_prc_price"]}}}}
         ]
         order_result = await db.orders.aggregate(order_pipeline).to_list(1)
-        if order_result:
+        if order_result and order_result[0].get("total"):
             total_redeemed += order_result[0]["total"]
         
         return {
@@ -10075,6 +10086,7 @@ async def get_public_stats():
             "totalRedeemed": round(total_redeemed, 2)
         }
     except Exception as e:
+        print(f"Stats error: {e}")
         # Return zeros on error to prevent page crash
         return {
             "totalUsers": 0,
@@ -10082,6 +10094,55 @@ async def get_public_stats():
             "vipMembers": 0,
             "totalRedeemed": 0
         }
+
+
+@api_router.get("/debug/stats-breakdown")
+async def get_stats_breakdown():
+    """Debug endpoint to see where stats come from"""
+    try:
+        total_users = await db.users.count_documents({})
+        
+        # Subscription breakdown
+        explorer = await db.users.count_documents({"$or": [
+            {"subscription_plan": "explorer"},
+            {"subscription_plan": {"$exists": False}},
+            {"subscription_plan": None}
+        ]})
+        startup = await db.users.count_documents({"subscription_plan": "startup"})
+        growth = await db.users.count_documents({"subscription_plan": "growth"})
+        elite = await db.users.count_documents({"subscription_plan": "elite"})
+        
+        # PRC breakdown
+        prc_pipeline = [
+            {"$group": {"_id": None, 
+                "total_mined": {"$sum": {"$ifNull": ["$total_mined", 0]}},
+                "total_prc_balance": {"$sum": {"$ifNull": ["$prc_balance", 0]}},
+                "user_count": {"$sum": 1}
+            }}
+        ]
+        prc_result = await db.users.aggregate(prc_pipeline).to_list(1)
+        
+        # Sample users to verify data
+        sample = await db.users.find({}, {
+            "_id": 0, "uid": 1, "name": 1, "email": 1,
+            "subscription_plan": 1, "prc_balance": 1, "total_mined": 1
+        }).limit(10).to_list(10)
+        
+        return {
+            "database": db.name,
+            "total_users": total_users,
+            "subscription_breakdown": {
+                "explorer_or_none": explorer,
+                "startup": startup,
+                "growth": growth,
+                "elite": elite,
+                "vip_total": startup + growth + elite
+            },
+            "prc_stats": prc_result[0] if prc_result else {},
+            "sample_users": sample
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
 @api_router.get("/admin/stats")
 async def get_admin_stats():
