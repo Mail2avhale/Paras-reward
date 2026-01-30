@@ -21,6 +21,15 @@ A social rewards platform where users can earn PRC (Paras Reward Coins) through 
 ## Recent Changes (January 2027)
 
 ### January 30, 2027
+- **UTR Validation & Fraud Prevention Implemented** ✅
+  - UTR strictly limited to 12 digits only (IMPS/UPI format)
+  - Real-time UTR duplicate check API: `GET /api/utr/validate/{utr_number}`
+  - Shows "UTR ALREADY IN USE" message if duplicate
+  - Rate limiting: Max 5 payment submissions per 24 hours
+  - Duplicate amount detection within 1 hour
+  - IP tracking for fraud investigation
+  - Visual feedback: Green checkmark for valid, Red warning for duplicates
+
 - **Manager Role Permissions System Implemented** ✅
   - Manager now uses Admin panel with permission-based access control
   - Admin can set which pages Manager can access via checkbox UI
