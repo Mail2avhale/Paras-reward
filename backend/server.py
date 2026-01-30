@@ -5376,7 +5376,7 @@ async def get_user_subscription(uid: str):
 
 @api_router.post("/subscription/payment/{uid}")
 async def submit_subscription_payment(uid: str, request: Request):
-    """Submit subscription payment for verification"""
+    """Submit subscription payment for verification with fraud prevention"""
     data = await request.json()
     
     plan = data.get("plan")  # startup, growth, elite
@@ -5387,25 +5387,79 @@ async def submit_subscription_payment(uid: str, request: Request):
     payment_date = data.get("date")
     payment_time = data.get("time")
     
+    # ==================== FRAUD PREVENTION ====================
+    
+    # 1. Validate plan
     if plan not in ["startup", "growth", "elite"]:
         raise HTTPException(status_code=400, detail="Invalid plan")
     
     if duration not in SUBSCRIPTION_DURATIONS:
         raise HTTPException(status_code=400, detail="Invalid duration")
     
-    # Check if UTR number is unique across ALL collections
+    # 2. STRICT UTR VALIDATION - Must be exactly 12 digits
     if utr_number:
-        utr_number = utr_number.strip().upper()
+        # Remove all non-digits and validate
+        utr_cleaned = ''.join(filter(str.isdigit, utr_number))
+        
+        if len(utr_cleaned) != 12:
+            raise HTTPException(
+                status_code=400,
+                detail=f"UTR number फक्त 12 अंकी असावा. Current: {len(utr_cleaned)} digits"
+            )
+        
+        utr_number = utr_cleaned  # Use cleaned version
+        
+        # 3. Check for duplicate UTR
         if not await check_unique_utr(utr_number):
             utr_info = await get_utr_usage_info(utr_number)
             info_msg = f" (Used in {utr_info['type']}, Status: {utr_info['status']})" if utr_info else ""
             raise HTTPException(
                 status_code=400, 
-                detail=f"Your request already submitted! UTR number '{utr_number}' आधीच वापरला गेला आहे{info_msg}. कृपया योग्य UTR number टाका."
+                detail=f"UTR ALREADY IN USE! UTR number '{utr_number}' आधीच वापरला गेला आहे{info_msg}. कृपया योग्य UTR number टाका."
             )
+    else:
+        raise HTTPException(status_code=400, detail="UTR number आवश्यक आहे")
     
+    # 4. Rate limiting - Check how many payment submissions from this user in last 24 hours
     now = datetime.now(timezone.utc)
+    yesterday = (now - timedelta(hours=24)).isoformat()
+    
+    recent_submissions = await db.vip_payments.count_documents({
+        "user_id": uid,
+        "submitted_at": {"$gte": yesterday}
+    })
+    
+    if recent_submissions >= 5:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many payment submissions. कृपया 24 तासांनंतर पुन्हा प्रयत्न करा."
+        )
+    
+    # 5. Check for suspicious patterns - same amount submissions in short time
+    recent_same_amount = await db.vip_payments.count_documents({
+        "user_id": uid,
+        "amount": amount,
+        "submitted_at": {"$gte": (now - timedelta(hours=1)).isoformat()}
+    })
+    
+    if recent_same_amount >= 2:
+        raise HTTPException(
+            status_code=429,
+            detail="Duplicate amount submission detected. कृपया काही वेळाने पुन्हा प्रयत्न करा."
+        )
+    
+    # 6. Screenshot required
+    if not screenshot:
+        raise HTTPException(status_code=400, detail="Payment screenshot आवश्यक आहे")
+    
+    # ==================== CREATE PAYMENT RECORD ====================
+    
     payment_id = str(uuid.uuid4())
+    
+    # Get client IP for fraud tracking (if available)
+    client_ip = request.headers.get("X-Forwarded-For", request.headers.get("X-Real-IP", "unknown"))
+    if client_ip and "," in client_ip:
+        client_ip = client_ip.split(",")[0].strip()
     
     payment_doc = {
         "payment_id": payment_id,
@@ -5419,10 +5473,23 @@ async def submit_subscription_payment(uid: str, request: Request):
         "time": payment_time,
         "status": "pending",
         "submitted_at": now.isoformat(),
-        "created_at": now.isoformat()
+        "created_at": now.isoformat(),
+        # Fraud prevention metadata
+        "client_ip": client_ip,
+        "user_agent": request.headers.get("User-Agent", "unknown")[:200],
+        "fraud_flags": [],
+        "verification_attempts": 0
     }
     
     await db.vip_payments.insert_one(payment_doc)
+    
+    # Log activity
+    await log_activity(
+        user_id=uid,
+        action_type="payment_submission",
+        description=f"Submitted payment for {plan} ({duration})",
+        metadata={"payment_id": payment_id, "amount": amount, "utr": utr_number[-4:]}  # Only last 4 digits for security
+    )
     
     return {
         "success": True,
