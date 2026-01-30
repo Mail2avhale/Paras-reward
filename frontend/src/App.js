@@ -140,7 +140,7 @@ const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption")
 const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
 
 // ============ MANAGER PAGES - Code Split into separate chunk ============
-const ManagerDashboard = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/ManagerDashboard"));
+// ManagerDashboard.js removed - using ManagerDashboardNew
 const ManagerDashboardNew = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerDashboardNew"));
 const ManagerUsers = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerUsers"));
 const ManagerOrders = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerOrders"));
