@@ -10670,6 +10670,96 @@ async def clear_system_cache(key_pattern: str = None):
         return {"message": "All cache cleared"}
 
 
+@api_router.get("/admin/system/dashboard-diagnostic")
+async def dashboard_diagnostic():
+    """
+    DIAGNOSTIC: Check database data and help debug production issues.
+    Returns sample data from each collection to verify date formats.
+    """
+    try:
+        # Sample user with date
+        sample_user = await db.users.find_one({}, {"_id": 0, "uid": 1, "created_at": 1, "timestamp": 1, "name": 1})
+        
+        # Sample transaction
+        sample_txn = await db.transactions.find_one(
+            {"wallet_type": "prc"},
+            {"_id": 0, "user_id": 1, "created_at": 1, "timestamp": 1, "type": 1, "amount": 1}
+        )
+        
+        # Sample order
+        sample_order = await db.orders.find_one({}, {"_id": 0, "order_id": 1, "created_at": 1, "timestamp": 1, "status": 1})
+        
+        # Sample subscription payment
+        sample_sub = await db.subscription_payments.find_one(
+            {},
+            {"_id": 0, "user_id": 1, "created_at": 1, "approved_at": 1, "timestamp": 1, "status": 1}
+        )
+        
+        # Counts
+        user_count = await db.users.count_documents({})
+        txn_count = await db.transactions.count_documents({})
+        order_count = await db.orders.count_documents({})
+        sub_count = await db.subscription_payments.count_documents({})
+        
+        # Check date field existence
+        users_with_created_at = await db.users.count_documents({"created_at": {"$exists": True}})
+        users_with_timestamp = await db.users.count_documents({"timestamp": {"$exists": True}})
+        
+        return {
+            "status": "ok",
+            "counts": {
+                "users": user_count,
+                "transactions": txn_count,
+                "orders": order_count,
+                "subscription_payments": sub_count
+            },
+            "date_field_analysis": {
+                "users_with_created_at": users_with_created_at,
+                "users_with_timestamp": users_with_timestamp
+            },
+            "samples": {
+                "user": sample_user,
+                "transaction": sample_txn,
+                "order": sample_order,
+                "subscription_payment": sample_sub
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@api_router.post("/admin/system/refresh-dashboard")
+async def refresh_dashboard_data():
+    """
+    Force refresh all dashboard data by clearing cache and returning fresh stats.
+    Use this on production when data seems stale.
+    """
+    try:
+        # Clear all dashboard-related cache
+        await cache.flush_all()
+        
+        # Fetch fresh data (this will re-cache it)
+        stats = await get_admin_stats()
+        user_growth = await get_user_growth_chart()
+        prc_chart = await get_prc_circulation_chart()
+        
+        return {
+            "status": "success",
+            "message": "Dashboard cache cleared and data refreshed",
+            "fresh_stats": {
+                "total_users": stats.get("users", {}).get("total", 0),
+                "total_prc": stats.get("total_prc", 0),
+                "user_growth_days": len(user_growth.get("data", [])),
+                "prc_circulation_days": len(prc_chart.get("data", []))
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logging.error(f"Dashboard refresh error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
 @api_router.get("/admin/charts/user-growth")
 async def get_user_growth_chart():
     """Get user registration data for the last 30 days - PRODUCTION FIX"""
