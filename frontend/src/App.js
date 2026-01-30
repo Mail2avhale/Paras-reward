@@ -191,7 +191,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
             <Route path="/" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <RewardsHome />} />
-            <Route path="/home-old" element={<Home user={user} onLogout={handleLogout} />} />
+            {/* home-old route removed - using RewardsHome */}
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/faq" element={<FAQ />} />
             <Route path="/blog" element={<Blog />} />
@@ -214,7 +214,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             
             {/* Protected Routes */}
             <Route path="/dashboard" element={user ? <DashboardModern user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-            <Route path="/fintech" element={user ? <HomeFintech user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            {/* fintech route removed - not in use */}
             <Route path="/support" element={user ? <SupportTickets user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/daily-rewards" element={user ? <DailyRewards user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/mining" element={<Navigate to="/daily-rewards" />} /> {/* Redirect old route */}
