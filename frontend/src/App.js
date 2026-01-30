@@ -139,19 +139,10 @@ const BillPayments = lazy(() => import("@/pages/BillPayments"));
 const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption"));
 const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
 
-// ============ MANAGER PAGES - Code Split into separate chunk ============
-// ManagerDashboard.js removed - using ManagerDashboardNew
-const ManagerDashboardNew = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerDashboardNew"));
-const ManagerUsers = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerUsers"));
-const ManagerOrders = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerOrders"));
-const ManagerReports = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerReports"));
-const ManagerProducts = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerProducts"));
-const ManagerFinance = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerFinance"));
-const ManagerCommunication = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerCommunication"));
-const ManagerSupport = lazy(() => import(/* webpackChunkName: "manager" */ "@/pages/manager/ManagerSupport"));
-// ManagerStockists removed - stockist system deprecated
-
-// ============ STOCKIST PAGES REMOVED - Direct Delivery by Partner Model ============
+// ============ MANAGER PAGES REMOVED ============
+// Manager now uses Admin panel with restricted permissions
+// All manager/* pages deleted - Manager uses /admin with permission-based access
+// ManagerLayout removed - Manager uses AdminLayout with filtered menu items
 
 // ============ STATIC PAGES ============
 const Setup = lazy(() => import("@/pages/Setup"));
