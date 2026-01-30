@@ -280,7 +280,7 @@ const AdminKYC = ({ user }) => {
       <div className="grid grid-cols-3 gap-4 mb-6">
         <Card 
           className={`p-4 cursor-pointer transition-all ${statusFilter === 'pending' ? 'ring-2 ring-yellow-500' : ''} bg-yellow-500/10 border-yellow-500/30`}
-          onClick={() => setStatusFilter('pending')}
+          onClick={() => handleStatusChange('pending')}
         >
           <div className="flex items-center justify-between">
             <div>
@@ -292,7 +292,7 @@ const AdminKYC = ({ user }) => {
         </Card>
         <Card 
           className={`p-4 cursor-pointer transition-all ${statusFilter === 'verified' ? 'ring-2 ring-green-500' : ''} bg-green-500/10 border-green-500/30`}
-          onClick={() => setStatusFilter('verified')}
+          onClick={() => handleStatusChange('verified')}
         >
           <div className="flex items-center justify-between">
             <div>
@@ -304,7 +304,7 @@ const AdminKYC = ({ user }) => {
         </Card>
         <Card 
           className={`p-4 cursor-pointer transition-all ${statusFilter === 'rejected' ? 'ring-2 ring-red-500' : ''} bg-red-500/10 border-red-500/30`}
-          onClick={() => setStatusFilter('rejected')}
+          onClick={() => handleStatusChange('rejected')}
         >
           <div className="flex items-center justify-between">
             <div>
