@@ -498,6 +498,98 @@ async def get_index_status():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@api_router.post("/admin/cache/clear")
+async def clear_admin_cache():
+    """
+    Clear all admin dashboard caches to force fresh data load.
+    Use this when production data seems incorrect/stale.
+    """
+    try:
+        cache_keys_to_clear = [
+            "admin:stats",
+            "admin:dashboard:all",
+            "chart:user_growth:30d",
+            "chart:prc_circulation:30d",
+            "chart:orders:30d",
+            "chart:subscriptions:7d",
+            "admin_vip_payments:pending:p1:l50",
+            "admin_vip_payments:all:p1:l50",
+            "pending_payments_count"
+        ]
+        
+        cleared = []
+        for key in cache_keys_to_clear:
+            try:
+                await cache.delete(key)
+                cleared.append(key)
+            except:
+                pass
+        
+        return {
+            "success": True,
+            "message": "Admin cache cleared successfully",
+            "cleared_keys": cleared,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/debug/stats-live")
+async def get_admin_stats_live():
+    """
+    Get admin stats WITHOUT cache - for debugging production issues.
+    Shows real-time data directly from database.
+    """
+    try:
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Direct database queries without cache
+        total_users = await db.users.count_documents({})
+        
+        # Subscription breakdown
+        startup_users = await db.users.count_documents({"subscription_plan": "startup"})
+        growth_users = await db.users.count_documents({"subscription_plan": "growth"})
+        elite_users = await db.users.count_documents({"subscription_plan": "elite"})
+        vip_users = startup_users + growth_users + elite_users
+        
+        # PRC totals
+        prc_result = await db.users.aggregate([
+            {"$group": {"_id": None, "total_prc": {"$sum": "$prc_balance"}}}
+        ]).to_list(1)
+        total_prc = prc_result[0]["total_prc"] if prc_result else 0
+        
+        # Orders
+        total_orders = await db.orders.count_documents({})
+        pending_orders = await db.orders.count_documents({"status": "pending"})
+        
+        # New users today
+        new_today = await db.users.count_documents({"created_at": {"$gte": today_start.isoformat()}})
+        
+        # Sample user data to verify
+        sample_users = await db.users.find({}, {"_id": 0, "uid": 1, "name": 1, "subscription_plan": 1, "prc_balance": 1}).limit(5).to_list(5)
+        
+        return {
+            "live_data": True,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "stats": {
+                "total_users": total_users,
+                "vip_users": vip_users,
+                "startup_users": startup_users,
+                "growth_users": growth_users,
+                "elite_users": elite_users,
+                "total_prc": round(total_prc, 2),
+                "total_orders": total_orders,
+                "pending_orders": pending_orders,
+                "new_users_today": new_today
+            },
+            "sample_users": sample_users
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/")
 async def root():
     """Root endpoint"""
