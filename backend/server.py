@@ -1327,7 +1327,7 @@ async def check_redemption_allowed(user: dict, prc_amount: float) -> dict:
         }
     checks_passed["kyc_verified"] = True
     
-    # ===== CHECK 5: Account Age (Minimum 7 days) =====
+    # ===== CHECK 5: Account Age (Minimum 3 days) =====
     account_created = user.get("created_at")
     if account_created:
         try:
@@ -1336,7 +1336,7 @@ async def check_redemption_allowed(user: dict, prc_amount: float) -> dict:
                 created_date = created_date.replace(tzinfo=timezone.utc)
             
             account_age_days = (datetime.now(timezone.utc) - created_date).days
-            min_account_age = 7  # Minimum 7 days
+            min_account_age = 3  # Minimum 3 days
             
             if account_age_days < min_account_age:
                 return {
