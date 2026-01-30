@@ -10672,7 +10672,7 @@ async def clear_system_cache(key_pattern: str = None):
 
 @api_router.get("/admin/charts/user-growth")
 async def get_user_growth_chart():
-    """Get user registration data for the last 30 days - CACHED"""
+    """Get user registration data for the last 30 days - PRODUCTION FIX"""
     from datetime import timedelta
     
     # Try cache first (cache for 5 minutes)
@@ -10685,34 +10685,41 @@ async def get_user_growth_chart():
         end_date = datetime.now(timezone.utc)
         start_date = end_date - timedelta(days=30)
         
-        # Simplified aggregation for better performance
-        pipeline = [
-            {
-                "$match": {
-                    "created_at": {
-                        "$gte": start_date.isoformat(),
-                        "$lte": end_date.isoformat()
-                    }
-                }
-            },
-            {
-                "$group": {
-                    "_id": {"$substr": ["$created_at", 0, 10]},  # Extract YYYY-MM-DD
-                    "count": {"$sum": 1}
-                }
-            },
-            {"$sort": {"_id": 1}}
-        ]
-        
-        result = await asyncio.wait_for(
-            db.users.aggregate(pipeline).to_list(None),
-            timeout=10.0  # 10 second timeout
+        # PRODUCTION FIX: Use direct iteration instead of aggregation for reliability
+        # This handles both string dates and native MongoDB dates
+        all_users = await asyncio.wait_for(
+            db.users.find(
+                {},
+                {"_id": 0, "created_at": 1, "timestamp": 1}
+            ).to_list(None),
+            timeout=15.0
         )
         
-        # Fill in missing dates with 0
-        date_counts = {item["_id"]: item["count"] for item in result}
-        chart_data = []
+        # Count users per day
+        date_counts = {}
+        for user in all_users:
+            # Try multiple date fields (production compatibility)
+            date_val = user.get("created_at") or user.get("timestamp")
+            if not date_val:
+                continue
+            
+            try:
+                # Handle both string and datetime objects
+                if isinstance(date_val, str):
+                    date_str = date_val[:10]  # "YYYY-MM-DD"
+                elif hasattr(date_val, 'strftime'):
+                    date_str = date_val.strftime("%Y-%m-%d")
+                else:
+                    continue
+                
+                # Check if within range
+                if start_date.strftime("%Y-%m-%d") <= date_str <= end_date.strftime("%Y-%m-%d"):
+                    date_counts[date_str] = date_counts.get(date_str, 0) + 1
+            except Exception:
+                continue
         
+        # Build chart data for all 30 days
+        chart_data = []
         for i in range(30):
             date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
             chart_data.append({
@@ -10722,14 +10729,14 @@ async def get_user_growth_chart():
             })
         
         response = {"data": chart_data}
-        await cache.set(cache_key, response, ttl=300)  # Cache 5 minutes
+        await cache.set(cache_key, response, ttl=300)
         return response
         
     except asyncio.TimeoutError:
-        # Return empty data on timeout
-        return {"data": [], "error": "Query timeout"}
+        logging.error("User growth chart timeout")
+        return {"data": [], "error": "Query timeout - database slow"}
     except Exception as e:
-        print(f"User growth chart error: {e}")
+        logging.error(f"User growth chart error: {e}")
         return {"data": [], "error": str(e)}
 
 @api_router.get("/admin/charts/prc-circulation")
