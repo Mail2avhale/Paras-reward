@@ -6991,12 +6991,41 @@ async def submit_kyc(uid: str, kyc_data: KYCSubmit):
     return kyc_doc
 
 @api_router.get("/kyc/list")
-async def get_kyc_documents():
-    """Get all KYC documents with user details (Admin) - Optimized with batch lookup"""
-    docs = await db.kyc_documents.find({}, {"_id": 0}).sort("submitted_at", -1).to_list(1000)
+async def get_kyc_documents(
+    status: str = None,
+    page: int = 1,
+    limit: int = 20
+):
+    """Get KYC documents with pagination and filtering - OPTIMIZED"""
+    
+    # Build cache key
+    cache_key = f"kyc_list:{status or 'all'}:p{page}:l{limit}"
+    
+    # Try cache first (30 second TTL)
+    cached = await cache.get(cache_key)
+    if cached:
+        return cached
+    
+    # Build query
+    query = {}
+    if status:
+        query["status"] = status
+    
+    skip = (page - 1) * limit
+    
+    # Get total count
+    total = await db.kyc_documents.count_documents(query)
+    
+    # Get documents with pagination
+    docs = await db.kyc_documents.find(
+        query, 
+        {"_id": 0}
+    ).sort("submitted_at", -1).skip(skip).limit(limit).to_list(limit)
     
     if not docs:
-        return []
+        result = {"documents": [], "total": total, "page": page, "pages": 0, "pending_count": 0}
+        await cache.set(cache_key, result, ttl=30)
+        return result
     
     # Batch fetch all user details in ONE query
     user_ids = list(set(doc.get("user_id") for doc in docs if doc.get("user_id")))
@@ -7036,7 +7065,34 @@ async def get_kyc_documents():
             doc["user_email"] = ""
             doc["user_phone"] = ""
     
-    return docs
+    # Get pending count for badge
+    pending_count = await db.kyc_documents.count_documents({"status": "pending"})
+    
+    result = {
+        "documents": docs,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit,
+        "pending_count": pending_count
+    }
+    
+    # Cache for 30 seconds (shorter for pending to show updates quickly)
+    cache_ttl = 10 if status == "pending" else 30
+    await cache.set(cache_key, result, ttl=cache_ttl)
+    
+    return result
+
+
+@api_router.get("/kyc/pending-count")
+async def get_kyc_pending_count():
+    """Fast endpoint for pending KYC count only"""
+    cached = await cache.get("kyc_pending_count")
+    if cached is not None:
+        return {"count": cached}
+    
+    count = await db.kyc_documents.count_documents({"status": "pending"})
+    await cache.set("kyc_pending_count", count, ttl=15)
+    return {"count": count}
 
 @api_router.post("/kyc/{kyc_id}/verify")
 async def verify_kyc(kyc_id: str, action: VIPPaymentAction):
