@@ -27,6 +27,10 @@ const SubscriptionPlans = ({ user }) => {
   const [submitting, setSubmitting] = useState(false);
   const [currentSubscription, setCurrentSubscription] = useState(null);
   
+  // UTR validation state
+  const [utrValidating, setUtrValidating] = useState(false);
+  const [utrValidationResult, setUtrValidationResult] = useState(null);
+  
   // Steps: 1=Select Plan, 2=Select Duration, 3=Payment Info, 4=Upload Proof
   const [currentStep, setCurrentStep] = useState(1);
   
