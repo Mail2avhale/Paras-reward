@@ -115,14 +115,6 @@ const AdminKYC = ({ user }) => {
       doc.user_email?.toLowerCase().includes(search)
     );
   }, [kycDocuments, searchTerm]);
-  }, [kycDocuments, statusFilter, searchTerm]);
-
-  // Pagination
-  const totalPages = Math.ceil(sortedAndFilteredDocs.length / ITEMS_PER_PAGE);
-  const paginatedDocs = sortedAndFilteredDocs.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
 
   // Quick action handlers
   const handleQuickApprove = async (doc, e) => {
