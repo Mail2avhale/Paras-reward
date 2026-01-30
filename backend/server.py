@@ -34945,6 +34945,34 @@ async def initialize_database_indexes():
     except Exception as e:
         print(f"⚠️  UTR number index setup (vip_subscriptions): {e}")
     
+    # ==================== VIP PAYMENTS INDEXES (For Fast Admin Loading) ====================
+    try:
+        existing_indexes = await db.vip_payments.index_information()
+        
+        # Index for status filtering (most common query)
+        if "status_1_submitted_at_-1" not in existing_indexes:
+            await db.vip_payments.create_index([("status", 1), ("submitted_at", -1)])
+            print("✅ Created compound index on vip_payments (status + submitted_at)")
+        
+        # Index for UTR uniqueness check
+        if "utr_number_1" not in existing_indexes:
+            await db.vip_payments.create_index("utr_number", unique=True, sparse=True)
+            print("✅ Created unique UTR index on vip_payments")
+        
+        # Index for user queries
+        if "user_id_1" not in existing_indexes:
+            await db.vip_payments.create_index("user_id")
+            print("✅ Created user_id index on vip_payments")
+        
+        # Index for date range queries
+        if "submitted_at_-1" not in existing_indexes:
+            await db.vip_payments.create_index([("submitted_at", -1)])
+            print("✅ Created submitted_at index on vip_payments")
+            
+        print("✅ VIP payments indexes ready")
+    except Exception as e:
+        print(f"⚠️  VIP payments indexes: {e}")
+    
     # Video ads indexes
     try:
         await db.video_ads.create_index("video_ad_id", unique=True)
