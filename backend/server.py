@@ -10475,55 +10475,57 @@ async def get_orders_chart():
 
 @api_router.get("/admin/charts/subscriptions")
 async def get_subscriptions_chart():
-    """Get subscription distribution and recent purchases"""
+    """Get subscription distribution and recent purchases - CACHED"""
     from datetime import timedelta
     
-    # Current distribution
-    explorer = await db.users.count_documents({"$or": [
-        {"subscription_plan": "explorer"},
-        {"subscription_plan": {"$exists": False}}
-    ]})
-    startup = await db.users.count_documents({"subscription_plan": "startup"})
-    growth = await db.users.count_documents({"subscription_plan": "growth"})
-    elite = await db.users.count_documents({"subscription_plan": "elite"})
+    # Try cache first
+    cache_key = "chart:subscriptions:7d"
+    cached = await cache.get(cache_key)
+    if cached:
+        return cached
     
-    distribution = [
-        {"name": "Explorer", "value": explorer, "fill": "#6b7280"},
-        {"name": "Startup", "value": startup, "fill": "#3b82f6"},
-        {"name": "Growth", "value": growth, "fill": "#8b5cf6"},
-        {"name": "Elite", "value": elite, "fill": "#f59e0b"}
-    ]
-    
-    # Recent subscription purchases (last 7 days trend)
-    end_date = datetime.now(timezone.utc)
-    start_date = end_date - timedelta(days=7)
-    
-    pipeline = [
-        {
-            "$match": {
-                "created_at": {"$gte": start_date.isoformat()},
-                "status": "approved"
-            }
-        },
-        {
-            "$addFields": {
-                "date_parsed": {
-                    "$dateFromString": {"dateString": "$created_at", "onError": None}
+    try:
+        # Current distribution - run in parallel
+        explorer_task = db.users.count_documents({"$or": [
+            {"subscription_plan": "explorer"},
+            {"subscription_plan": {"$exists": False}}
+        ]})
+        startup_task = db.users.count_documents({"subscription_plan": "startup"})
+        growth_task = db.users.count_documents({"subscription_plan": "growth"})
+        elite_task = db.users.count_documents({"subscription_plan": "elite"})
+        
+        explorer, startup, growth, elite = await asyncio.wait_for(
+            asyncio.gather(explorer_task, startup_task, growth_task, elite_task),
+            timeout=10.0
+        )
+        
+        distribution = [
+            {"name": "Explorer", "value": explorer, "fill": "#6b7280"},
+            {"name": "Startup", "value": startup, "fill": "#3b82f6"},
+            {"name": "Growth", "value": growth, "fill": "#8b5cf6"},
+            {"name": "Elite", "value": elite, "fill": "#f59e0b"}
+        ]
+        
+        # Recent subscription purchases (last 7 days trend)
+        end_date = datetime.now(timezone.utc)
+        start_date = end_date - timedelta(days=7)
+        
+        pipeline = [
+            {
+                "$match": {
+                    "created_at": {"$gte": start_date.isoformat()},
+                    "status": "approved"
                 }
-            }
-        },
-        {
-            "$match": {"date_parsed": {"$ne": None}}
-        },
-        {
-            "$group": {
-                "_id": {
-                    "$dateToString": {"format": "%Y-%m-%d", "date": "$date_parsed"}
-                },
-                "count": {"$sum": 1},
-                "revenue": {"$sum": "$amount"}
-            }
-        },
+            },
+            {
+                "$group": {
+                    "_id": {"$substr": ["$created_at", 0, 10]},
+                    "count": {"$sum": 1},
+                    "revenue": {"$sum": "$amount"}
+                }
+            },
+            {"$sort": {"_id": 1}}
+        ]
         {"$sort": {"_id": 1}}
     ]
     
