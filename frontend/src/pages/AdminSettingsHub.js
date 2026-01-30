@@ -86,9 +86,35 @@ const AdminSettingsHub = ({ user, onLogout }) => {
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('tab');
 
-  // If a tab is selected, redirect to AdminSettings with that tab
+  // Map tabs to their actual routes
+  const tabRoutes = {
+    'redeem-safety': '/admin/redeem-limits',
+    'prc-rain': '/admin/prc-rain',
+    'payment': '/admin/settings?tab=payment',
+    'system': '/admin/settings?tab=system',
+    'web': '/admin/settings?tab=web',
+    'social': '/admin/settings?tab=social',
+    'video-ads': '/admin/video-ads',
+  };
+
+  // If a tab is selected, redirect to the actual page
+  useEffect(() => {
+    if (activeTab && tabRoutes[activeTab]) {
+      navigate(tabRoutes[activeTab]);
+    }
+  }, [activeTab, navigate]);
+
+  // If tab is being redirected, show loading
+  if (activeTab && tabRoutes[activeTab]) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white p-6 flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  // If unknown tab, show message
   if (activeTab) {
-    // For now, show a simple placeholder or redirect
     return (
       <div className="min-h-screen bg-gray-950 text-white p-6">
         <button 
@@ -101,8 +127,7 @@ const AdminSettingsHub = ({ user, onLogout }) => {
         <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
           <h2 className="text-xl font-bold mb-4 capitalize">{activeTab.replace('-', ' ')} Settings</h2>
           <p className="text-gray-400">
-            This settings section is under development. 
-            Please use the main Admin Settings page for configuration.
+            This settings section is being moved to Admin Settings.
           </p>
           <button
             onClick={() => navigate('/admin/settings')}
