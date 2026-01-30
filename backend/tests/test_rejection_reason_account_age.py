@@ -196,10 +196,10 @@ class TestGiftVoucherRejection:
     def test_gift_voucher_requests_endpoint(self):
         """Test gift voucher requests endpoint"""
         # Login as admin
-        admin_response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "admin@paras.com",
-            "password": "admin123"
-        })
+        admin_response = requests.post(
+            f"{BASE_URL}/api/auth/login",
+            params={"identifier": "admin@paras.com", "password": "admin123"}
+        )
         
         if admin_response.status_code != 200:
             pytest.skip("Admin login failed")
