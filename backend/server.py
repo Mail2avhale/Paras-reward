@@ -12646,7 +12646,7 @@ async def get_redemption_rules():
     
     default_rules = {
         "kyc_required": True,
-        "min_account_age_days": 7,
+        "min_account_age_days": 3,
         "min_redemption_prc": 100,
         "max_daily_redemptions": 3,
         "cooldown_minutes": 5,
