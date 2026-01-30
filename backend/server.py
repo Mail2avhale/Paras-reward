@@ -10820,7 +10820,7 @@ async def get_prc_circulation_chart():
 
 @api_router.get("/admin/charts/orders")
 async def get_orders_chart():
-    """Get orders trend for the last 30 days - CACHED"""
+    """Get orders trend for the last 30 days - PRODUCTION FIX"""
     from datetime import timedelta
     
     # Try cache first
@@ -10833,36 +10833,48 @@ async def get_orders_chart():
         end_date = datetime.now(timezone.utc)
         start_date = end_date - timedelta(days=30)
         
-        pipeline = [
-            {
-                "$match": {
-                    "created_at": {
-                        "$gte": start_date.isoformat(),
-                        "$lte": end_date.isoformat()
-                    }
-                }
-            },
-            {
-                "$group": {
-                    "_id": {"$substr": ["$created_at", 0, 10]},
-                    "orders": {"$sum": 1},
-                    "delivered": {
-                        "$sum": {"$cond": [{"$eq": ["$status", "delivered"]}, 1, 0]}
-                    },
-                    "revenue": {"$sum": "$total_prc"}
-                }
-            },
-            {"$sort": {"_id": 1}}
-        ]
-        
-        result = await asyncio.wait_for(
-            db.orders.aggregate(pipeline).to_list(None),
-            timeout=10.0
+        # PRODUCTION FIX: Use direct iteration for date format compatibility
+        all_orders = await asyncio.wait_for(
+            db.orders.find(
+                {},
+                {"_id": 0, "created_at": 1, "timestamp": 1, "status": 1, "total_prc": 1, "total_prc_price": 1}
+            ).to_list(None),
+            timeout=15.0
         )
         
-        date_data = {item["_id"]: item for item in result}
-        chart_data = []
+        # Process orders per day
+        date_data = {}
+        for order in all_orders:
+            date_val = order.get("created_at") or order.get("timestamp")
+            if not date_val:
+                continue
+            
+            try:
+                # Handle both string and datetime objects
+                if isinstance(date_val, str):
+                    date_str = date_val[:10]
+                elif hasattr(date_val, 'strftime'):
+                    date_str = date_val.strftime("%Y-%m-%d")
+                else:
+                    continue
+                
+                # Check if within range
+                if not (start_date.strftime("%Y-%m-%d") <= date_str <= end_date.strftime("%Y-%m-%d")):
+                    continue
+                
+                if date_str not in date_data:
+                    date_data[date_str] = {"orders": 0, "delivered": 0, "revenue": 0}
+                
+                date_data[date_str]["orders"] += 1
+                if order.get("status") == "delivered":
+                    date_data[date_str]["delivered"] += 1
+                revenue = order.get("total_prc") or order.get("total_prc_price") or 0
+                date_data[date_str]["revenue"] += revenue
+            except Exception:
+                continue
         
+        # Build chart data
+        chart_data = []
         for i in range(30):
             date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
             data = date_data.get(date, {"orders": 0, "delivered": 0, "revenue": 0})
@@ -10879,9 +10891,10 @@ async def get_orders_chart():
         return response
         
     except asyncio.TimeoutError:
-        return {"data": [], "error": "Query timeout"}
+        logging.error("Orders chart timeout")
+        return {"data": [], "error": "Query timeout - database slow"}
     except Exception as e:
-        print(f"Orders chart error: {e}")
+        logging.error(f"Orders chart error: {e}")
         return {"data": [], "error": str(e)}
 
 @api_router.get("/admin/charts/subscriptions")
