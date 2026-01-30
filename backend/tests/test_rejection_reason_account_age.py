@@ -62,10 +62,10 @@ class TestAdminBillPaymentRejection:
     @pytest.fixture
     def admin_login(self):
         """Login as admin"""
-        response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "admin@paras.com",
-            "password": "admin123"
-        })
+        response = requests.post(
+            f"{BASE_URL}/api/auth/login",
+            params={"identifier": "admin@paras.com", "password": "admin123"}
+        )
         if response.status_code != 200:
             pytest.skip("Admin login failed")
         return response.json()
