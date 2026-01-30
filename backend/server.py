@@ -7154,6 +7154,14 @@ async def verify_kyc(kyc_id: str, action: VIPPaymentAction):
         except Exception as notif_error:
             print(f"Notification error (non-blocking): {notif_error}")
         
+        # Invalidate KYC cache
+        try:
+            await cache.delete("kyc_pending_count")
+            await cache.delete("kyc_list:pending:p1:l20")
+            await cache.delete("kyc_list:all:p1:l20")
+        except:
+            pass
+        
         return {"message": f"KYC {status} successfully", "status": status, "success": True}
     except HTTPException:
         raise
