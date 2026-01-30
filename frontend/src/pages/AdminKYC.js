@@ -97,47 +97,24 @@ const AdminKYC = ({ user }) => {
   useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(() => {
-      fetchKYCDocuments();
+      fetchKYCDocuments(currentPage, statusFilter);
     }, AUTO_REFRESH_INTERVAL);
     return () => clearInterval(interval);
-  }, [autoRefresh, fetchKYCDocuments]);
+  }, [autoRefresh, currentPage, statusFilter]);
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter]);
-
-  // Sort and filter documents - Pending first
-  const sortedAndFilteredDocs = React.useMemo(() => {
-    let filtered = kycDocuments;
-
-    // Filter by status
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(doc => doc.status === statusFilter);
-    }
-
-    // Filter by search
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      filtered = filtered.filter(doc =>
-        doc.user_id?.toLowerCase().includes(search) ||
-        doc.aadhaar_number?.toLowerCase().includes(search) ||
-        doc.pan_number?.toLowerCase().includes(search) ||
-        doc.user_name?.toLowerCase().includes(search) ||
-        doc.user_email?.toLowerCase().includes(search)
-      );
-    }
-
-    // Sort: Pending first, then by date (newest first)
-    return filtered.sort((a, b) => {
-      // Priority order: pending > verified > rejected
-      const statusOrder = { pending: 0, verified: 1, rejected: 2 };
-      const statusDiff = (statusOrder[a.status] || 3) - (statusOrder[b.status] || 3);
-      if (statusDiff !== 0) return statusDiff;
-      
-      // Then by date (newest first)
-      return new Date(b.submitted_at || 0) - new Date(a.submitted_at || 0);
-    });
+  // Filter by search (client-side for current page)
+  const filteredDocs = React.useMemo(() => {
+    if (!searchTerm) return kycDocuments;
+    
+    const search = searchTerm.toLowerCase();
+    return kycDocuments.filter(doc =>
+      doc.user_id?.toLowerCase().includes(search) ||
+      doc.aadhaar_number?.toLowerCase().includes(search) ||
+      doc.pan_number?.toLowerCase().includes(search) ||
+      doc.user_name?.toLowerCase().includes(search) ||
+      doc.user_email?.toLowerCase().includes(search)
+    );
+  }, [kycDocuments, searchTerm]);
   }, [kycDocuments, statusFilter, searchTerm]);
 
   // Pagination
