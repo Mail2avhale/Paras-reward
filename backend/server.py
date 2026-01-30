@@ -35050,16 +35050,150 @@ async def initialize_database_indexes():
     
     # Orders indexes
     try:
-        await db.orders.create_index("order_id", unique=True)
-        await db.orders.create_index("user_id")
+        existing_indexes = await db.orders.index_information()
+        if "order_id_1" not in existing_indexes:
+            await db.orders.create_index("order_id", unique=True)
+        if "user_id_1" not in existing_indexes:
+            await db.orders.create_index("user_id")
+        if "status_1" not in existing_indexes:
+            await db.orders.create_index("status")
+        if "created_at_-1" not in existing_indexes:
+            await db.orders.create_index([("created_at", -1)])
+        print("✅ Orders indexes ready")
     except Exception as e:
         print(f"⚠️  Orders indexes: {e}")
     
     # Products indexes
     try:
-        await db.products.create_index("product_id", unique=True)
+        existing_indexes = await db.products.index_information()
+        if "product_id_1" not in existing_indexes:
+            await db.products.create_index("product_id", unique=True)
+        if "is_active_1" not in existing_indexes:
+            await db.products.create_index("is_active")
+        if "category_1" not in existing_indexes:
+            await db.products.create_index("category")
+        print("✅ Products indexes ready")
     except Exception as e:
         print(f"⚠️  Products index: {e}")
+    
+    # ==================== REFERRALS INDEXES (Critical for Speed) ====================
+    try:
+        existing_indexes = await db.users.index_information()
+        # Index for referral lookups - THIS IS CRITICAL
+        if "referral_code_1" not in existing_indexes:
+            await db.users.create_index("referral_code", unique=True, sparse=True)
+            print("✅ Created referral_code index")
+        if "referred_by_1" not in existing_indexes:
+            await db.users.create_index("referred_by")
+            print("✅ Created referred_by index")
+        # Compound index for referral queries with date
+        if "referred_by_1_created_at_-1" not in existing_indexes:
+            await db.users.create_index([("referred_by", 1), ("created_at", -1)])
+            print("✅ Created compound referral index")
+        print("✅ Referral indexes ready")
+    except Exception as e:
+        print(f"⚠️  Referral indexes: {e}")
+    
+    # ==================== TRANSACTIONS INDEXES ====================
+    try:
+        existing_indexes = await db.transactions.index_information()
+        if "user_id_1" not in existing_indexes:
+            await db.transactions.create_index("user_id")
+        if "created_at_-1" not in existing_indexes:
+            await db.transactions.create_index([("created_at", -1)])
+        if "type_1" not in existing_indexes:
+            await db.transactions.create_index("type")
+        # Compound index for user transaction history
+        if "user_id_1_created_at_-1" not in existing_indexes:
+            await db.transactions.create_index([("user_id", 1), ("created_at", -1)])
+        print("✅ Transactions indexes ready")
+    except Exception as e:
+        print(f"⚠️  Transactions indexes: {e}")
+    
+    # ==================== MINING INDEXES ====================
+    try:
+        existing_indexes = await db.mining_sessions.index_information()
+        if "user_id_1" not in existing_indexes:
+            await db.mining_sessions.create_index("user_id")
+        if "status_1" not in existing_indexes:
+            await db.mining_sessions.create_index("status")
+        print("✅ Mining indexes ready")
+    except Exception as e:
+        print(f"⚠️  Mining indexes: {e}")
+    
+    # ==================== BILL PAYMENTS INDEXES ====================
+    try:
+        existing_indexes = await db.bill_payments.index_information()
+        if "user_id_1" not in existing_indexes:
+            await db.bill_payments.create_index("user_id")
+        if "status_1" not in existing_indexes:
+            await db.bill_payments.create_index("status")
+        if "utr_number_1" not in existing_indexes:
+            await db.bill_payments.create_index("utr_number", unique=True, sparse=True)
+        if "created_at_-1" not in existing_indexes:
+            await db.bill_payments.create_index([("created_at", -1)])
+        # Compound index for admin queries
+        if "status_1_created_at_-1" not in existing_indexes:
+            await db.bill_payments.create_index([("status", 1), ("created_at", -1)])
+        print("✅ Bill payments indexes ready")
+    except Exception as e:
+        print(f"⚠️  Bill payments indexes: {e}")
+    
+    # ==================== GIFT VOUCHERS INDEXES ====================
+    try:
+        existing_indexes = await db.gift_vouchers.index_information()
+        if "user_id_1" not in existing_indexes:
+            await db.gift_vouchers.create_index("user_id")
+        if "status_1" not in existing_indexes:
+            await db.gift_vouchers.create_index("status")
+        if "created_at_-1" not in existing_indexes:
+            await db.gift_vouchers.create_index([("created_at", -1)])
+        print("✅ Gift vouchers indexes ready")
+    except Exception as e:
+        print(f"⚠️  Gift vouchers indexes: {e}")
+    
+    # ==================== NOTIFICATIONS INDEXES ====================
+    try:
+        existing_indexes = await db.notifications.index_information()
+        if "user_id_1" not in existing_indexes:
+            await db.notifications.create_index("user_id")
+        if "read_1" not in existing_indexes:
+            await db.notifications.create_index("read")
+        if "created_at_-1" not in existing_indexes:
+            await db.notifications.create_index([("created_at", -1)])
+        # Compound for unread notifications query
+        if "user_id_1_read_1_created_at_-1" not in existing_indexes:
+            await db.notifications.create_index([("user_id", 1), ("read", 1), ("created_at", -1)])
+        print("✅ Notifications indexes ready")
+    except Exception as e:
+        print(f"⚠️  Notifications indexes: {e}")
+    
+    # ==================== ACTIVITY LOGS INDEXES ====================
+    try:
+        existing_indexes = await db.activity_logs.index_information()
+        if "user_id_1" not in existing_indexes:
+            await db.activity_logs.create_index("user_id")
+        if "timestamp_-1" not in existing_indexes:
+            await db.activity_logs.create_index([("timestamp", -1)])
+        if "action_type_1" not in existing_indexes:
+            await db.activity_logs.create_index("action_type")
+        print("✅ Activity logs indexes ready")
+    except Exception as e:
+        print(f"⚠️  Activity logs indexes: {e}")
+    
+    # ==================== KYC DOCUMENTS INDEXES ====================
+    try:
+        existing_indexes = await db.kyc_documents.index_information()
+        if "user_id_1" not in existing_indexes:
+            await db.kyc_documents.create_index("user_id")
+        if "status_1" not in existing_indexes:
+            await db.kyc_documents.create_index("status")
+        # Compound for admin KYC queue
+        if "status_1_submitted_at_-1" not in existing_indexes:
+            await db.kyc_documents.create_index([("status", 1), ("submitted_at", -1)])
+        print("✅ KYC documents indexes ready")
+    except Exception as e:
+        print(f"⚠️  KYC documents indexes: {e}")
     
     # Manager actions index (for audit logging)
     try:
