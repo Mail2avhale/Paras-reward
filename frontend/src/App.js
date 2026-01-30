@@ -262,6 +262,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/settings/web" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=web" replace /> : <Navigate to="/dashboard" />} />
             <Route path="/admin/settings/social" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=social" replace /> : <Navigate to="/dashboard" />} />
             <Route path="/admin/settings/redeem" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=redeem" replace /> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/redeem-settings" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminRedeemSettings user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/prc-rain" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminPRCRain user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/user-ledger" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminUserLedger user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/capital" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminCapitalManagement user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
