@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://social-rewards-boost.preview.emergentagent.com/setup
+   https://mining-referral-fix.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

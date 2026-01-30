@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://social-rewards-boost.preview.emergentagent.com",
+    "url": "https://mining-referral-fix.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
