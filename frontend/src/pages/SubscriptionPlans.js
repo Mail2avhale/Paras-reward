@@ -113,16 +113,60 @@ const SubscriptionPlans = ({ user }) => {
     return selectedPlan.pricing[selectedDuration] || selectedPlan.pricing.monthly;
   };
 
+  // Real-time UTR validation with debounce
+  const validateUTROnServer = async (utrNumber) => {
+    const cleaned = utrNumber.replace(/[^0-9]/g, '');
+    
+    // Only validate if we have 12 digits
+    if (cleaned.length !== 12) {
+      setUtrValidationResult(null);
+      return;
+    }
+    
+    setUtrValidating(true);
+    try {
+      const response = await axios.get(`${API}/api/utr/validate/${cleaned}`);
+      setUtrValidationResult(response.data);
+      
+      if (!response.data.valid && response.data.error === 'UTR_ALREADY_USED') {
+        toast.error('⚠️ UTR ALREADY IN USE - हा UTR आधीच वापरला गेला आहे!');
+      }
+    } catch (error) {
+      console.error('UTR validation error:', error);
+      setUtrValidationResult(null);
+    } finally {
+      setUtrValidating(false);
+    }
+  };
+
+  // Handle UTR input change with validation
+  const handleUTRChange = (e) => {
+    const formatted = formatUTR(e.target.value);
+    setFormData({...formData, utr_number: formatted});
+    setUtrValidationResult(null); // Reset validation
+    
+    // Validate when 12 digits entered
+    if (formatted.length === 12) {
+      validateUTROnServer(formatted);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!formData.utr_number || !formData.screenshot_url) {
       toast.error('Please fill all required fields');
       return;
     }
 
-    // Validate UTR format
+    // Validate UTR format (must be exactly 12 digits)
     const utrValidation = validateUTR(formData.utr_number);
     if (!utrValidation.isValid) {
-      toast.error(utrValidation.error || 'Please enter a valid UTR number');
+      toast.error(utrValidation.error || 'UTR number फक्त 12 अंकी असावा');
+      return;
+    }
+
+    // Check if UTR validation failed (duplicate)
+    if (utrValidationResult && !utrValidationResult.valid) {
+      toast.error('⚠️ UTR ALREADY IN USE - कृपया योग्य UTR number टाका');
       return;
     }
 
@@ -145,7 +189,13 @@ const SubscriptionPlans = ({ user }) => {
       
     } catch (error) {
       console.error('Submit error:', error);
-      toast.error(error.response?.data?.detail || 'Failed to submit payment');
+      const errorMsg = error.response?.data?.detail || 'Failed to submit payment';
+      // Show specific message for UTR duplicate
+      if (errorMsg.includes('UTR') || errorMsg.includes('आधीच')) {
+        toast.error('⚠️ UTR ALREADY IN USE - ' + errorMsg);
+      } else {
+        toast.error(errorMsg);
+      }
     } finally {
       setSubmitting(false);
     }
