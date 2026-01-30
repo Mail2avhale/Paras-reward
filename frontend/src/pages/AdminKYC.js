@@ -150,7 +150,7 @@ const AdminKYC = ({ user }) => {
       ));
       
       // Background refresh after delay
-      setTimeout(() => fetchKYCDocuments(), 3000);
+      setTimeout(() => fetchKYCDocuments(currentPage, statusFilter), 2000);
     } catch (error) {
       console.error('KYC approve error:', error);
       toast.error(error.response?.data?.detail || 'Failed to approve');
@@ -186,7 +186,7 @@ const AdminKYC = ({ user }) => {
       ));
       
       // Background refresh after delay
-      setTimeout(() => fetchKYCDocuments(), 3000);
+      setTimeout(() => fetchKYCDocuments(currentPage, statusFilter), 2000);
     } catch (error) {
       console.error('KYC reject error:', error);
       toast.error(error.response?.data?.detail || 'Failed to reject');
