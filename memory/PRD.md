@@ -21,6 +21,21 @@ A social rewards platform where users can earn PRC (Paras Reward Coins) through 
 ## Recent Changes (January 2027)
 
 ### January 30, 2027
+- **Database Indexes & Optimization for Production Speed** ✅
+  - Created comprehensive indexes for ALL collections:
+    - `users`: referral_code, referred_by, compound indexes
+    - `vip_payments`: status+submitted_at, utr_number, user_id
+    - `transactions`: user_id+created_at compound
+    - `orders`, `products`: status, created_at indexes
+    - `bill_payments`, `gift_vouchers`: status+date compounds
+    - `notifications`: user_id+read+created_at compound
+    - `kyc_documents`: status+submitted_at compound
+  - Added Admin endpoints:
+    - `POST /api/admin/db/create-indexes` - Trigger index creation
+    - `GET /api/admin/db/index-status` - Check all indexes
+  - Added caching on vip-payments API (5-30 sec TTL)
+  - Reduced default limit from 200 to 50 for faster loads
+
 - **UTR Validation & Fraud Prevention Implemented** ✅
   - UTR strictly limited to 12 digits only (IMPS/UPI format)
   - Real-time UTR duplicate check API: `GET /api/utr/validate/{utr_number}`
