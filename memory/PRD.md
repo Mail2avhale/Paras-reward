@@ -20,6 +20,15 @@ A social rewards platform where users can earn PRC (Paras Reward Coins) through 
 
 ## Recent Changes (January 2027)
 
+### January 30, 2027
+- **Code Cleanup Completed**
+  - Deleted unused files (~1,258 lines of dead code):
+    - `AIChatbot.js` (257 lines) - AIChatbotEnhanced is used instead
+    - `PRCAnalytics.js` (266 lines) - Never imported anywhere  
+    - `ManagerDashboard.js` (735 lines) - Replaced by ManagerDashboardNew
+  - Cleaned up unused imports in App.js
+  - Build verified: PASS
+
 ### January 28, 2027
 - **Network Analytics Feature Complete** (P0 - Improved Referral/Downline View)
   - New comprehensive Network Analytics modal on /referrals page
