@@ -34,8 +34,7 @@ const LoadingFallback = () => (
 );
 
 // Lazy load all pages for better performance
-const HomeFintech = lazy(() => import("@/pages/HomeFintech"));
-const Home = lazy(() => import("@/pages/Home"));
+// Home.js and HomeFintech.js removed - using RewardsHome as main landing page
 const HowItWorks = lazy(() => import("@/pages/HowItWorks"));
 const FAQ = lazy(() => import("@/pages/FAQ"));
 const Blog = lazy(() => import("@/pages/Blog"));
