@@ -448,6 +448,56 @@ async def get_cache_stats():
         "status": "connected" if stats.get("connected") else "disconnected"
     }
 
+
+# ==================== DATABASE OPTIMIZATION ADMIN ENDPOINTS ====================
+
+@api_router.post("/admin/db/create-indexes")
+async def create_all_indexes():
+    """
+    Admin endpoint to manually trigger index creation on production database.
+    Call this after deployment to ensure all indexes are created.
+    """
+    try:
+        await initialize_database_indexes()
+        return {
+            "success": True,
+            "message": "All database indexes created/verified successfully",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating indexes: {str(e)}")
+
+
+@api_router.get("/admin/db/index-status")
+async def get_index_status():
+    """Get status of all database indexes for monitoring"""
+    try:
+        collections_to_check = [
+            "users", "orders", "products", "transactions", "vip_payments",
+            "bill_payments", "gift_vouchers", "notifications", "activity_logs",
+            "kyc_documents", "mining_sessions", "subscriptions", "vip_subscriptions"
+        ]
+        
+        index_status = {}
+        for coll_name in collections_to_check:
+            try:
+                coll = db[coll_name]
+                indexes = await coll.index_information()
+                index_status[coll_name] = {
+                    "index_count": len(indexes),
+                    "indexes": list(indexes.keys())
+                }
+            except Exception as e:
+                index_status[coll_name] = {"error": str(e)}
+        
+        return {
+            "success": True,
+            "collections": index_status,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/")
 async def root():
     """Root endpoint"""
