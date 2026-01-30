@@ -12636,6 +12636,69 @@ async def delete_product(product_id: str):
     await db.products.delete_one({"product_id": product_id})
     return {"message": "Product deleted successfully"}
 
+
+# ==================== STRICT REDEMPTION SETTINGS (Admin) ====================
+
+@api_router.get("/admin/settings/redemption-rules")
+async def get_redemption_rules():
+    """Get all redemption rules and settings"""
+    settings = await db.settings.find_one({}, {"_id": 0, "redemption_rules": 1, "monthly_redeem_settings": 1})
+    
+    default_rules = {
+        "kyc_required": True,
+        "min_account_age_days": 7,
+        "min_redemption_prc": 100,
+        "max_daily_redemptions": 3,
+        "cooldown_minutes": 5,
+        "subscription_required": True,
+        "allowed_plans": ["startup", "growth", "elite"]
+    }
+    
+    monthly_settings = settings.get("monthly_redeem_settings", {}) if settings else {}
+    rules = settings.get("redemption_rules", default_rules) if settings else default_rules
+    
+    return {
+        "monthly_limit_settings": {
+            "multiplier_1": monthly_settings.get("multiplier_1", 5),
+            "multiplier_2": monthly_settings.get("multiplier_2", 10),
+            "referral_bonus_percent": monthly_settings.get("referral_bonus_percent", 20),
+            "enabled": monthly_settings.get("enabled", True)
+        },
+        "strict_rules": rules,
+        "plan_limits": {
+            "explorer": {"can_redeem": False, "monthly_limit": 0},
+            "startup": {"can_redeem": True, "monthly_limit": "299 × 5 × 10 = 14,950 PRC"},
+            "growth": {"can_redeem": True, "monthly_limit": "549 × 5 × 10 = 27,450 PRC"},
+            "elite": {"can_redeem": True, "monthly_limit": "799 × 5 × 10 = 39,950 PRC"}
+        }
+    }
+
+
+@api_router.put("/admin/settings/redemption-rules")
+async def update_redemption_rules(request: Request):
+    """Update strict redemption rules"""
+    data = await request.json()
+    
+    redemption_rules = {
+        "kyc_required": data.get("kyc_required", True),
+        "min_account_age_days": int(data.get("min_account_age_days", 7)),
+        "min_redemption_prc": float(data.get("min_redemption_prc", 100)),
+        "max_daily_redemptions": int(data.get("max_daily_redemptions", 3)),
+        "cooldown_minutes": int(data.get("cooldown_minutes", 5)),
+        "subscription_required": data.get("subscription_required", True),
+        "allowed_plans": data.get("allowed_plans", ["startup", "growth", "elite"]),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.settings.update_one(
+        {},
+        {"$set": {"redemption_rules": redemption_rules}},
+        upsert=True
+    )
+    
+    return {"message": "Redemption rules updated", "rules": redemption_rules}
+
+
 @api_router.get("/admin/settings/marketplace")
 async def get_marketplace_settings():
     """Get marketplace settings including PRC to INR rate"""
