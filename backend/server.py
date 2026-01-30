@@ -10899,7 +10899,7 @@ async def get_orders_chart():
 
 @api_router.get("/admin/charts/subscriptions")
 async def get_subscriptions_chart():
-    """Get subscription distribution and recent purchases - CACHED"""
+    """Get subscription distribution and recent purchases - PRODUCTION FIX"""
     from datetime import timedelta
     
     # Try cache first
@@ -10912,7 +10912,9 @@ async def get_subscriptions_chart():
         # Current distribution - run in parallel
         explorer_task = db.users.count_documents({"$or": [
             {"subscription_plan": "explorer"},
-            {"subscription_plan": {"$exists": False}}
+            {"subscription_plan": {"$exists": False}},
+            {"subscription_plan": None},
+            {"subscription_plan": ""}
         ]})
         startup_task = db.users.count_documents({"subscription_plan": "startup"})
         growth_task = db.users.count_documents({"subscription_plan": "growth"})
@@ -10930,35 +10932,45 @@ async def get_subscriptions_chart():
             {"name": "Elite", "value": elite, "fill": "#f59e0b"}
         ]
         
-        # Recent subscription purchases (last 7 days trend)
+        # Recent subscription purchases (last 7 days trend) - PRODUCTION FIX
         end_date = datetime.now(timezone.utc)
         start_date = end_date - timedelta(days=7)
         
-        pipeline = [
-            {
-                "$match": {
-                    "created_at": {"$gte": start_date.isoformat()},
-                    "status": "approved"
-                }
-            },
-            {
-                "$group": {
-                    "_id": {"$substr": ["$created_at", 0, 10]},
-                    "count": {"$sum": 1},
-                    "revenue": {"$sum": "$amount"}
-                }
-            },
-            {"$sort": {"_id": 1}}
-        ]
-        
-        purchases = await asyncio.wait_for(
-            db.subscription_payments.aggregate(pipeline).to_list(None),
+        # Use direct iteration for date format compatibility
+        all_payments = await asyncio.wait_for(
+            db.subscription_payments.find(
+                {"status": "approved"},
+                {"_id": 0, "created_at": 1, "timestamp": 1, "approved_at": 1, "amount": 1}
+            ).to_list(None),
             timeout=10.0
         )
         
-        date_data = {item["_id"]: item for item in purchases}
-        trend_data = []
+        date_data = {}
+        for payment in all_payments:
+            date_val = payment.get("approved_at") or payment.get("created_at") or payment.get("timestamp")
+            if not date_val:
+                continue
+            
+            try:
+                if isinstance(date_val, str):
+                    date_str = date_val[:10]
+                elif hasattr(date_val, 'strftime'):
+                    date_str = date_val.strftime("%Y-%m-%d")
+                else:
+                    continue
+                
+                if not (start_date.strftime("%Y-%m-%d") <= date_str <= end_date.strftime("%Y-%m-%d")):
+                    continue
+                
+                if date_str not in date_data:
+                    date_data[date_str] = {"count": 0, "revenue": 0}
+                
+                date_data[date_str]["count"] += 1
+                date_data[date_str]["revenue"] += payment.get("amount", 0) or 0
+            except Exception:
+                continue
         
+        trend_data = []
         for i in range(7):
             date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
             data = date_data.get(date, {"count": 0, "revenue": 0})
@@ -10977,9 +10989,10 @@ async def get_subscriptions_chart():
         return response
         
     except asyncio.TimeoutError:
-        return {"distribution": [], "trend": [], "error": "Query timeout"}
+        logging.error("Subscriptions chart timeout")
+        return {"distribution": [], "trend": [], "error": "Query timeout - database slow"}
     except Exception as e:
-        print(f"Subscriptions chart error: {e}")
+        logging.error(f"Subscriptions chart error: {e}")
         return {"distribution": [], "trend": [], "error": str(e)}
 
 
