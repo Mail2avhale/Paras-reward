@@ -2259,6 +2259,76 @@ async def get_utr_usage_info(utr_number: str):
     
     return None
 
+
+# ==================== UTR VALIDATION API ====================
+
+@api_router.get("/utr/validate/{utr_number}")
+async def validate_utr_number(utr_number: str):
+    """
+    Real-time UTR validation endpoint
+    - Checks if UTR is exactly 12 digits
+    - Checks if UTR is already used (duplicate check)
+    Returns validation result for frontend to show immediate feedback
+    """
+    # Clean the UTR - remove non-digits
+    cleaned_utr = ''.join(filter(str.isdigit, utr_number))
+    
+    # Validate format: must be exactly 12 digits
+    if len(cleaned_utr) != 12:
+        return {
+            "valid": False,
+            "error": "UTR_FORMAT_INVALID",
+            "message": "UTR number फक्त 12 अंकी असावा",
+            "details": f"Current: {len(cleaned_utr)} digits, Required: 12 digits"
+        }
+    
+    # Check for duplicates across all collections
+    is_unique = await check_unique_utr(cleaned_utr)
+    
+    if not is_unique:
+        # Get details about where it's used
+        usage_info = await get_utr_usage_info(cleaned_utr)
+        return {
+            "valid": False,
+            "error": "UTR_ALREADY_USED",
+            "message": "UTR ALREADY IN USE",
+            "message_mr": "हा UTR आधीच वापरला गेला आहे!",
+            "details": usage_info
+        }
+    
+    return {
+        "valid": True,
+        "cleaned": cleaned_utr,
+        "message": "UTR number valid",
+        "message_mr": "UTR number योग्य आहे ✓"
+    }
+
+
+@api_router.post("/utr/check-bulk")
+async def check_bulk_utr(request: Request):
+    """
+    Bulk UTR check for admin - check multiple UTRs at once
+    Useful for fraud detection
+    """
+    data = await request.json()
+    utr_list = data.get("utr_numbers", [])
+    
+    results = []
+    for utr in utr_list:
+        cleaned = ''.join(filter(str.isdigit, str(utr)))
+        is_unique = await check_unique_utr(cleaned) if len(cleaned) == 12 else True
+        usage = await get_utr_usage_info(cleaned) if not is_unique else None
+        results.append({
+            "utr": utr,
+            "cleaned": cleaned,
+            "valid_format": len(cleaned) == 12,
+            "is_unique": is_unique,
+            "usage_info": usage
+        })
+    
+    return {"results": results}
+
+
 async def get_duplicate_field_owner(field_name: str, value: str):
     """Get the user who already has this field value (for error messages)"""
     if not value:
