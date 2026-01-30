@@ -1267,49 +1267,205 @@ async def get_user_monthly_redemption_usage(user_id: str, subscription_start: st
 
 async def check_redemption_allowed(user: dict, prc_amount: float) -> dict:
     """
-    Check if user can redeem the specified PRC amount
-    Returns: {"allowed": bool, "reason": str, "remaining": float}
+    STRICT REDEMPTION CHECK - All conditions must pass
+    Returns: {"allowed": bool, "reason": str, "remaining": float, "checks": dict}
     """
+    checks_passed = {}
+    user_uid = user.get("uid")
+    
+    # ===== CHECK 1: System Enabled =====
     redeem_settings = await get_monthly_redeem_limit_settings()
-    
     if not redeem_settings.get("enabled", True):
-        return {"allowed": True, "reason": "System disabled", "remaining": float('inf')}
+        return {"allowed": True, "reason": "System disabled", "remaining": float('inf'), "checks": {"system": "disabled"}}
+    checks_passed["system_enabled"] = True
     
-    # Calculate limit
+    # ===== CHECK 2: Subscription Plan (Free users CANNOT redeem) =====
+    subscription_plan = user.get("subscription_plan", "explorer")
+    plan_config = SUBSCRIPTION_PLANS.get(subscription_plan, SUBSCRIPTION_PLANS["explorer"])
+    
+    if not plan_config.get("can_redeem", False):
+        return {
+            "allowed": False,
+            "reason": "Redemption requires paid subscription. Please upgrade to Startup, Growth or Elite plan.",
+            "reason_mr": "Redemption साठी paid subscription आवश्यक आहे. कृपया Startup, Growth किंवा Elite plan घ्या.",
+            "remaining": 0,
+            "limit": 0,
+            "checks": {"subscription": "free_user_blocked"}
+        }
+    checks_passed["subscription_valid"] = True
+    
+    # ===== CHECK 3: Subscription Not Expired =====
+    subscription_expiry_str = user.get("subscription_expiry")
+    if subscription_expiry_str and subscription_plan != "explorer":
+        try:
+            expiry = datetime.fromisoformat(subscription_expiry_str.replace('Z', '+00:00'))
+            if expiry.tzinfo is None:
+                expiry = expiry.replace(tzinfo=timezone.utc)
+            
+            now = datetime.now(timezone.utc)
+            if expiry < now:
+                return {
+                    "allowed": False,
+                    "reason": "Subscription expired. Please renew to continue redemptions.",
+                    "reason_mr": "तुमची subscription संपली आहे. कृपया renew करा.",
+                    "remaining": 0,
+                    "checks": {"subscription": "expired"}
+                }
+        except:
+            pass
+    checks_passed["subscription_active"] = True
+    
+    # ===== CHECK 4: KYC Verification Required =====
+    kyc_status = user.get("kyc_status", "not_submitted")
+    if kyc_status != "verified":
+        return {
+            "allowed": False,
+            "reason": "KYC verification required for redemptions. Please complete your KYC.",
+            "reason_mr": "Redemption साठी KYC verification आवश्यक आहे. कृपया KYC complete करा.",
+            "remaining": 0,
+            "checks": {"kyc": kyc_status}
+        }
+    checks_passed["kyc_verified"] = True
+    
+    # ===== CHECK 5: Account Age (Minimum 7 days) =====
+    account_created = user.get("created_at")
+    if account_created:
+        try:
+            created_date = datetime.fromisoformat(account_created.replace('Z', '+00:00'))
+            if created_date.tzinfo is None:
+                created_date = created_date.replace(tzinfo=timezone.utc)
+            
+            account_age_days = (datetime.now(timezone.utc) - created_date).days
+            min_account_age = 7  # Minimum 7 days
+            
+            if account_age_days < min_account_age:
+                return {
+                    "allowed": False,
+                    "reason": f"Account must be at least {min_account_age} days old. Your account is {account_age_days} days old.",
+                    "reason_mr": f"Account किमान {min_account_age} दिवस जुने असावे. तुमचे account {account_age_days} दिवस जुने आहे.",
+                    "remaining": 0,
+                    "checks": {"account_age": account_age_days}
+                }
+        except:
+            pass
+    checks_passed["account_age_ok"] = True
+    
+    # ===== CHECK 6: Monthly Limit Calculation =====
     limit_info = await calculate_user_monthly_redeem_limit(user)
     monthly_limit = limit_info.get("limit", 0)
     
-    # Free users cannot redeem
     if monthly_limit == 0:
         return {
             "allowed": False,
-            "reason": "Service temporarily unavailable",
+            "reason": "No redemption limit available.",
             "remaining": 0,
-            "limit": 0
+            "limit": 0,
+            "checks": {"limit": "zero"}
         }
+    checks_passed["limit_available"] = True
     
-    # Get current usage
+    # ===== CHECK 7: Current Usage vs Limit =====
     subscription_start = user.get("subscription_start_date") or user.get("subscription_created_at")
-    current_usage = await get_user_monthly_redemption_usage(user.get("uid"), subscription_start)
-    
+    current_usage = await get_user_monthly_redemption_usage(user_uid, subscription_start)
     remaining = monthly_limit - current_usage
     
     if current_usage + prc_amount > monthly_limit:
         return {
             "allowed": False,
-            "reason": "Service temporarily unavailable",
+            "reason": f"Monthly limit exceeded. Limit: {monthly_limit:.0f} PRC, Used: {current_usage:.0f} PRC, Remaining: {max(0, remaining):.0f} PRC",
+            "reason_mr": f"Monthly limit संपली. Limit: {monthly_limit:.0f} PRC, वापरलेले: {current_usage:.0f} PRC, शिल्लक: {max(0, remaining):.0f} PRC",
             "remaining": max(0, remaining),
             "limit": monthly_limit,
-            "current_usage": current_usage
+            "current_usage": current_usage,
+            "checks": {"limit": "exceeded"}
         }
+    checks_passed["within_limit"] = True
     
+    # ===== CHECK 8: Minimum Redemption Amount =====
+    min_redemption = 100  # Minimum 100 PRC per redemption
+    if prc_amount < min_redemption:
+        return {
+            "allowed": False,
+            "reason": f"Minimum redemption amount is {min_redemption} PRC.",
+            "reason_mr": f"किमान redemption amount {min_redemption} PRC आहे.",
+            "remaining": remaining,
+            "checks": {"min_amount": prc_amount}
+        }
+    checks_passed["min_amount_ok"] = True
+    
+    # ===== CHECK 9: Daily Redemption Limit (Max 3 per day) =====
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_redemptions = 0
+    
+    # Count today's bill payments
+    today_bills = await db.bill_payment_requests.count_documents({
+        "user_id": user_uid,
+        "created_at": {"$gte": today_start.isoformat()}
+    })
+    today_redemptions += today_bills
+    
+    # Count today's voucher requests
+    today_vouchers = await db.gift_voucher_requests.count_documents({
+        "user_id": user_uid,
+        "created_at": {"$gte": today_start.isoformat()}
+    })
+    today_redemptions += today_vouchers
+    
+    # Count today's orders
+    today_orders = await db.orders.count_documents({
+        "user_id": user_uid,
+        "created_at": {"$gte": today_start.isoformat()}
+    })
+    today_redemptions += today_orders
+    
+    max_daily_redemptions = 3
+    if today_redemptions >= max_daily_redemptions:
+        return {
+            "allowed": False,
+            "reason": f"Daily redemption limit reached. Maximum {max_daily_redemptions} redemptions per day.",
+            "reason_mr": f"आजचे redemption limit संपले. दिवसाला maximum {max_daily_redemptions} redemptions.",
+            "remaining": remaining,
+            "checks": {"daily_limit": today_redemptions}
+        }
+    checks_passed["daily_limit_ok"] = True
+    
+    # ===== CHECK 10: Cooldown Period (5 minutes between redemptions) =====
+    five_minutes_ago = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
+    
+    recent_bill = await db.bill_payment_requests.find_one({
+        "user_id": user_uid,
+        "created_at": {"$gte": five_minutes_ago}
+    })
+    recent_voucher = await db.gift_voucher_requests.find_one({
+        "user_id": user_uid,
+        "created_at": {"$gte": five_minutes_ago}
+    })
+    recent_order = await db.orders.find_one({
+        "user_id": user_uid,
+        "created_at": {"$gte": five_minutes_ago}
+    })
+    
+    if recent_bill or recent_voucher or recent_order:
+        return {
+            "allowed": False,
+            "reason": "Please wait 5 minutes between redemptions.",
+            "reason_mr": "कृपया redemptions मध्ये 5 मिनिटे थांबा.",
+            "remaining": remaining,
+            "checks": {"cooldown": "active"}
+        }
+    checks_passed["cooldown_ok"] = True
+    
+    # ===== ALL CHECKS PASSED =====
     return {
         "allowed": True,
         "reason": "OK",
         "remaining": remaining - prc_amount,
         "limit": monthly_limit,
-        "current_usage": current_usage
+        "current_usage": current_usage,
+        "checks": checks_passed
     }
+
+
 async def get_base_rate():
     """Calculate mining base rate based on total users"""
     # Fetch total users
