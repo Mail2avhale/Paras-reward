@@ -185,49 +185,28 @@ export const formatPincode = (value) => {
 };
 
 // ========== UTR NUMBER ==========
-// UTR (Unique Transaction Reference) formats:
-// - IMPS: 12 digits (numeric)
-// - NEFT: 16 characters (alphanumeric) - BANKCODE + DATE + SEQUENCE
-// - RTGS: 22 characters (alphanumeric)
-// - UPI: 12+ digits or alphanumeric (varies by bank)
+// UTR (Unique Transaction Reference) - STRICT 12 DIGIT FORMAT ONLY
+// For IMPS/UPI payments which are most common for subscription payments
 export const validateUTR = (utr) => {
-  const cleaned = utr?.toUpperCase().replace(/[^A-Z0-9]/g, '') || '';
+  // Remove all non-numeric characters
+  const cleaned = utr?.replace(/[^0-9]/g, '') || '';
   const length = cleaned.length;
   
-  // Determine UTR type based on format
-  let utrType = 'unknown';
-  let isValid = false;
-  
-  if (/^\d{12}$/.test(cleaned)) {
-    // IMPS: 12 digits
-    utrType = 'IMPS';
-    isValid = true;
-  } else if (/^[A-Z]{4}[A-Z0-9]{12}$/.test(cleaned) && length === 16) {
-    // NEFT: 4 letter bank code + 12 alphanumeric
-    utrType = 'NEFT';
-    isValid = true;
-  } else if (/^[A-Z0-9]{22}$/.test(cleaned) && length === 22) {
-    // RTGS: 22 alphanumeric
-    utrType = 'RTGS';
-    isValid = true;
-  } else if (/^[A-Z0-9]{12,35}$/.test(cleaned) && length >= 12) {
-    // UPI/Other: 12-35 alphanumeric (flexible for various banks)
-    utrType = 'UPI/Bank Transfer';
-    isValid = true;
-  }
+  // STRICT: Only 12 digits allowed
+  const isValid = /^\d{12}$/.test(cleaned);
   
   return {
     isValid,
     cleaned,
-    utrType,
-    error: !isValid ? 'Enter valid UTR number (12+ characters)' : null,
-    hint: isValid ? `Detected: ${utrType}` : null
+    utrType: isValid ? 'IMPS/UPI' : 'unknown',
+    error: !isValid ? 'UTR number फक्त 12 अंकी असावा' : null,
+    hint: isValid ? '✓ Valid 12-digit UTR' : (length > 0 ? `${length}/12 digits` : null)
   };
 };
 
 export const formatUTR = (value) => {
-  // Uppercase and remove special characters, limit to 35
-  return value?.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 35) || '';
+  // STRICT: Only numbers, limit to exactly 12 digits
+  return value?.replace(/[^0-9]/g, '').slice(0, 12) || '';
 };
 
 // ========== VEHICLE NUMBER ==========
