@@ -6045,12 +6045,18 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
             payment["user_previous_payments"] = prev_payments_map.get(user_id, 0)
             payment["user_total_orders"] = 0  # Skip for performance, not critical
         
-        return {
+        result = {
             "payments": payments,
             "total": total,
             "page": page,
             "pages": (total + limit - 1) // limit
         }
+        
+        # Cache the result (5 seconds for pending, 30 for others)
+        cache_ttl = 5 if status == "pending" else 30
+        await cache.set(cache_key, result, ttl=cache_ttl)
+        
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
