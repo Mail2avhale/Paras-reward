@@ -13,8 +13,8 @@ import {
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
-const ITEMS_PER_PAGE = 10;
-const AUTO_REFRESH_INTERVAL = 60000; // 60 seconds - optimized for performance
+const ITEMS_PER_PAGE = 20;
+const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds for faster updates
 
 const AdminKYC = ({ user }) => {
   const [kycDocuments, setKycDocuments] = useState([]);
@@ -24,24 +24,31 @@ const AdminKYC = ({ user }) => {
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalDocs, setTotalDocs] = useState(0);
   const [stats, setStats] = useState({ pending: 0, verified: 0, rejected: 0 });
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
-  // Fetch KYC documents
-  const fetchKYCDocuments = useCallback(async () => {
+  // Fetch KYC documents with server-side pagination
+  const fetchKYCDocuments = useCallback(async (page = 1, status = statusFilter) => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/kyc/list`);
-      const docs = response.data || [];
-      setKycDocuments(docs);
+      const statusParam = status !== 'all' ? `&status=${status}` : '';
+      const response = await axios.get(`${API}/kyc/list?page=${page}&limit=${ITEMS_PER_PAGE}${statusParam}`);
       
-      // Calculate stats
-      setStats({
-        pending: docs.filter(d => d.status === 'pending').length,
-        verified: docs.filter(d => d.status === 'verified').length,
-        rejected: docs.filter(d => d.status === 'rejected').length
-      });
+      const data = response.data || {};
+      const docs = data.documents || [];
+      
+      setKycDocuments(docs);
+      setTotalPages(data.pages || 1);
+      setTotalDocs(data.total || 0);
+      
+      // Update pending count from response
+      if (data.pending_count !== undefined) {
+        setStats(prev => ({ ...prev, pending: data.pending_count }));
+      }
+      
       setLastRefresh(new Date());
     } catch (error) {
       console.error('Error fetching KYC documents:', error);
@@ -49,11 +56,42 @@ const AdminKYC = ({ user }) => {
     } finally {
       setLoading(false);
     }
+  }, [statusFilter]);
+
+  // Fetch stats separately (fast endpoint)
+  const fetchStats = useCallback(async () => {
+    try {
+      const [pendingRes, verifiedRes, rejectedRes] = await Promise.all([
+        axios.get(`${API}/kyc/list?status=pending&limit=1`),
+        axios.get(`${API}/kyc/list?status=verified&limit=1`),
+        axios.get(`${API}/kyc/list?status=rejected&limit=1`)
+      ]);
+      setStats({
+        pending: pendingRes.data?.total || 0,
+        verified: verifiedRes.data?.total || 0,
+        rejected: rejectedRes.data?.total || 0
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
   }, []);
 
   useEffect(() => {
-    fetchKYCDocuments();
-  }, [fetchKYCDocuments]);
+    fetchKYCDocuments(1, statusFilter);
+    fetchStats();
+  }, [statusFilter]);
+
+  // Handle page change
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    fetchKYCDocuments(newPage, statusFilter);
+  };
+
+  // Handle status filter change
+  const handleStatusChange = (newStatus) => {
+    setStatusFilter(newStatus);
+    setCurrentPage(1);
+  };
 
   // Auto-refresh for pending items
   useEffect(() => {
