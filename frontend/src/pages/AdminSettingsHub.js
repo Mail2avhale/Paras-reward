@@ -52,7 +52,7 @@ const settingsCategories = [
     label: 'Redeem Safety', 
     icon: Shield, 
     description: 'Set withdrawal limits, security thresholds and redemption rules',
-    path: '/admin/settings?tab=redeem',
+    path: '/admin/redeem-settings',
     color: 'from-emerald-500 to-teal-500',
     bgColor: 'bg-emerald-500/10',
     borderColor: 'border-emerald-500/30'
