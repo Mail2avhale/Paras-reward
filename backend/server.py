@@ -10421,61 +10421,57 @@ async def get_orders_chart():
     try:
         end_date = datetime.now(timezone.utc)
         start_date = end_date - timedelta(days=30)
-    
-    pipeline = [
-        {
-            "$match": {
-                "created_at": {
-                    "$gte": start_date.isoformat(),
-                    "$lte": end_date.isoformat()
-                }
-            }
-        },
-        {
-            "$addFields": {
-                "date_parsed": {
-                    "$dateFromString": {
-                        "dateString": "$created_at",
-                        "onError": None
+        
+        pipeline = [
+            {
+                "$match": {
+                    "created_at": {
+                        "$gte": start_date.isoformat(),
+                        "$lte": end_date.isoformat()
                     }
                 }
-            }
-        },
-        {
-            "$match": {"date_parsed": {"$ne": None}}
-        },
-        {
-            "$group": {
-                "_id": {
-                    "$dateToString": {"format": "%Y-%m-%d", "date": "$date_parsed"}
-                },
-                "orders": {"$sum": 1},
-                "delivered": {
-                    "$sum": {"$cond": [{"$eq": ["$status", "delivered"]}, 1, 0]}
-                },
-                "revenue": {"$sum": "$total_prc"}
-            }
-        },
-        {"$sort": {"_id": 1}}
-    ]
-    
-    result = await db.orders.aggregate(pipeline).to_list(None)
-    
-    date_data = {item["_id"]: item for item in result}
-    chart_data = []
-    
-    for i in range(30):
-        date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
-        data = date_data.get(date, {"orders": 0, "delivered": 0, "revenue": 0})
-        chart_data.append({
-            "date": date,
-            "name": (start_date + timedelta(days=i)).strftime("%d %b"),
-            "orders": data.get("orders", 0),
-            "delivered": data.get("delivered", 0),
-            "revenue": round(data.get("revenue", 0), 2)
-        })
-    
-    return {"data": chart_data}
+            },
+            {
+                "$group": {
+                    "_id": {"$substr": ["$created_at", 0, 10]},
+                    "orders": {"$sum": 1},
+                    "delivered": {
+                        "$sum": {"$cond": [{"$eq": ["$status", "delivered"]}, 1, 0]}
+                    },
+                    "revenue": {"$sum": "$total_prc"}
+                }
+            },
+            {"$sort": {"_id": 1}}
+        ]
+        
+        result = await asyncio.wait_for(
+            db.orders.aggregate(pipeline).to_list(None),
+            timeout=10.0
+        )
+        
+        date_data = {item["_id"]: item for item in result}
+        chart_data = []
+        
+        for i in range(30):
+            date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
+            data = date_data.get(date, {"orders": 0, "delivered": 0, "revenue": 0})
+            chart_data.append({
+                "date": date,
+                "name": (start_date + timedelta(days=i)).strftime("%d %b"),
+                "orders": data.get("orders", 0),
+                "delivered": data.get("delivered", 0),
+                "revenue": round(data.get("revenue", 0), 2)
+            })
+        
+        response = {"data": chart_data}
+        await cache.set(cache_key, response, ttl=300)
+        return response
+        
+    except asyncio.TimeoutError:
+        return {"data": [], "error": "Query timeout"}
+    except Exception as e:
+        print(f"Orders chart error: {e}")
+        return {"data": [], "error": str(e)}
 
 @api_router.get("/admin/charts/subscriptions")
 async def get_subscriptions_chart():
