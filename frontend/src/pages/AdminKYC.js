@@ -343,23 +343,23 @@ const AdminKYC = ({ user }) => {
           </div>
         </div>
         <div className="mt-2 text-sm text-gray-500">
-          Showing {paginatedDocs.length} of {sortedAndFilteredDocs.length} documents
+          Showing {filteredDocs.length} of {totalDocs} documents (Page {currentPage} of {totalPages})
         </div>
       </Card>
 
       {/* Documents List */}
-      {loading && paginatedDocs.length === 0 ? (
+      {loading && filteredDocs.length === 0 ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
         </div>
-      ) : paginatedDocs.length === 0 ? (
+      ) : filteredDocs.length === 0 ? (
         <Card className="p-12 text-center bg-gray-900 border-gray-800">
           <FileText className="w-16 h-16 mx-auto text-gray-600 mb-4" />
           <p className="text-gray-400">No KYC documents found</p>
         </Card>
       ) : (
         <div className="space-y-3">
-          {paginatedDocs.map((doc) => (
+          {filteredDocs.map((doc) => (
             <Card
               key={doc.kyc_id}
               className={`p-4 bg-gray-900 border-gray-800 hover:border-gray-700 transition-all cursor-pointer ${
