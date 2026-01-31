@@ -613,7 +613,7 @@ const AdminUser360 = ({ user: adminUser }) => {
                 </Button>
                 <Button
                   onClick={() => {
-                    if (confirm('Send password reset email?')) handleQuickAction('reset_password');
+                    if (confirm('Generate a new temporary password for this user?')) handleQuickAction('reset_password');
                   }}
                   disabled={processing}
                   variant="outline"
