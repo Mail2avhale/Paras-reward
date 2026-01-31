@@ -59,13 +59,42 @@ const AdminUser360 = ({ user: adminUser }) => {
     
     setProcessing(true);
     try {
-      await axios.post(`${API}/api/admin/user-360/action`, {
+      const response = await axios.post(`${API}/api/admin/user-360/action`, {
         user_id: userData.user.uid,
         action,
         admin_id: adminUser?.uid,
         ...params
       });
-      toast.success(`Action "${action}" completed successfully`);
+      
+      // Special handling for password reset - show the temporary password
+      if (action === 'reset_password' && response.data?.message) {
+        const passwordMatch = response.data.message.match(/Temporary password: (\w+)/);
+        if (passwordMatch) {
+          const tempPassword = passwordMatch[1];
+          // Show password in a more prominent way
+          toast.success(
+            <div>
+              <p className="font-bold">Password Reset Successful!</p>
+              <p className="mt-1">Temporary Password: <span className="font-mono bg-gray-800 px-2 py-1 rounded">{tempPassword}</span></p>
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(tempPassword);
+                  toast.success('Password copied!');
+                }}
+                className="mt-2 text-xs underline"
+              >
+                Click to copy
+              </button>
+            </div>,
+            { duration: 15000 }  // Show for 15 seconds
+          );
+        } else {
+          toast.success(response.data.message);
+        }
+      } else {
+        toast.success(`Action "${action}" completed successfully`);
+      }
+      
       handleSearch(); // Refresh data
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Action failed');
