@@ -22,7 +22,7 @@ Build a comprehensive rewards platform (PARAS REWARD) with:
    - 24-hour mining sessions
    - Subscription-based reward rates
    - Luxury Life auto-savings (20% deduction)
-   - Real-time balance updates
+   - Real-time balance updates (FIXED: Cache invalidation on collect)
 
 3. **Subscription System**
    - Explorer (Free), Startup, Growth, Elite tiers
@@ -30,29 +30,43 @@ Build a comprehensive rewards platform (PARAS REWARD) with:
    - Fraud prevention (rate limiting, IP tracking)
 
 4. **Admin Dashboard**
+   - Redesigned WITHOUT charts (cleaner, faster)
    - User management with pagination
    - KYC verification workflow
    - Subscription payment approvals
-   - Charts and analytics (User Growth, PRC Circulation, Orders, Subscriptions)
    - System diagnostic tools
 
 5. **Manager Role (Merged into Admin)**
    - Permission-based access control
    - Dynamic menu based on assigned permissions
 
+6. **Weekly Redemption Limits (NEW - Jan 31, 2026)**
+   - VIP tier-based limits per service type
+   - Monday-Sunday weekly reset cycle
+   - Smart "partner issue" rejection messages
+   - Cooldown timer after first redemption
+
 ---
 
 ## Recent Changes (January 2026)
 
 ### January 31, 2026
-- **Bug Fix:** "Collect Rewards" balance not updating
-  - Root cause: `user_data:{uid}` cache not invalidated after mining claim
-  - Fix: Added cache invalidation in `/mining/claim` and `/mining/collect` endpoints
+- **NEW FEATURE:** VIP-Based Weekly Redemption Limits
+  - Per-service limits: Mobile, DTH, Electricity, Credit Card, EMI, Gift Voucher, Shopping
+  - Limits vary by subscription tier (Explorer → Elite)
+  - Smart rejection messages (partner issues, not "limit reached")
+  - Cooldown timer shows days until Monday reset
+  - New API: `GET /api/user/{uid}/weekly-limits`
 
-- **Production Fix:** Admin dashboard charts
-  - Rewrote all chart APIs to handle multiple date formats
-  - Added diagnostic and refresh endpoints
-  - Increased timeouts for large datasets
+- **Bug Fix:** "Collect Rewards" balance not updating
+  - Added `user_data:{uid}` cache invalidation
+
+- **UI Change:** Removed "REDEEMED" from dashboard card (per user request)
+
+- **Admin Dashboard Redesign:**
+  - Removed all charts (User Growth, PRC Flow, Orders, Subscriptions)
+  - Added clean stat cards with progress bars
+  - Better visual hierarchy
 
 ### January 30, 2026
 - Merged Manager role into Admin panel
@@ -62,6 +76,23 @@ Build a comprehensive rewards platform (PARAS REWARD) with:
 - Corrected "Total Redeemed PRC" calculation
 - Updated redemption minimum account age (7 days → 3 days)
 - Rewrote Live Feed API for dynamic content
+
+---
+
+## Weekly Redemption Limits Configuration
+
+| Service | Explorer | Startup | Growth | Elite |
+|---------|----------|---------|--------|-------|
+| Mobile Recharge | 1 | 2 | 3 | 5 |
+| DTH Recharge | 1 | 2 | 3 | 5 |
+| Electricity Bill | 1 | 1 | 2 | 3 |
+| Credit Card | 1 | 1 | 2 | 3 |
+| EMI Payment | 1 | 1 | 2 | 3 |
+| Gift Voucher | 1 | 2 | 3 | 5 |
+| Shopping | 10 | 15 | 20 | 999 (Unlimited) |
+
+**Reset:** Every Monday 00:00 UTC
+**User Messaging:** Partner/technical issues (never mentions "limit")
 
 ---
 
@@ -85,7 +116,7 @@ Build a comprehensive rewards platform (PARAS REWARD) with:
 ## Architecture
 
 ### Backend: FastAPI + MongoDB
-- Main file: `/app/backend/server.py` (31,000+ lines)
+- Main file: `/app/backend/server.py` (32,000+ lines)
 - Database: MongoDB with Upstash Redis caching
 - Authentication: JWT tokens
 
@@ -97,12 +128,12 @@ Build a comprehensive rewards platform (PARAS REWARD) with:
 ### Key API Endpoints
 | Endpoint | Purpose |
 |----------|---------|
+| `/api/user/{uid}/weekly-limits` | Get weekly redemption limits per service |
+| `/api/bill-payment/request` | Submit bill payment (with weekly limit check) |
+| `/api/gift-voucher/request` | Request gift voucher (with weekly limit check) |
+| `/api/orders/checkout` | Shopping checkout (with weekly limit check) |
 | `/api/mining/claim/{uid}` | Claim mining rewards |
-| `/api/user/{uid}` | Get user data (cached 2 min) |
 | `/api/admin/stats` | Admin dashboard statistics |
-| `/api/admin/charts/*` | Dashboard chart data |
-| `/api/admin/system/clear-cache` | Clear all caches |
-| `/api/admin/system/dashboard-diagnostic` | Debug production data |
 
 ---
 
