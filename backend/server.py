@@ -7500,6 +7500,12 @@ async def checkout(request: Request):
         raise HTTPException(status_code=403, detail=redeem_check["reason"])
     # ===================================
     
+    # ===== WEEKLY SERVICE LIMIT CHECK (VIP Tier Based) =====
+    weekly_check = await check_weekly_service_limit(user, "shopping")
+    if not weekly_check["allowed"]:
+        raise HTTPException(status_code=429, detail=weekly_check["reason"])
+    # ======================================================
+    
     # Get delivery charge configuration (10% of PRC value in cash as default)
     # PRC to cash conversion: 10 PRC = ₹1, so total_prc/10 = cash equivalent
     config = await db.system_config.find_one({"config_type": "delivery"})
