@@ -5011,6 +5011,11 @@ async def collect_mining_rewards(uid: str, request: MiningCollectRequest = None)
         metadata={"amount": prc_to_collect, "new_balance": new_balance}
     )
     
+    # CRITICAL: Invalidate ALL user caches so next fetch gets fresh data
+    await cache.delete(f"mining_status:{uid}")
+    await cache.delete(f"user:dashboard:{uid}")
+    await cache.delete(f"user_data:{uid}")
+    
     return {
         "success": True,
         "prc_collected": round(prc_to_collect, 4),
