@@ -4629,9 +4629,10 @@ async def claim_mining(uid: str):
             "total_saved": luxury_savings_result.get("total_saved", 0)
         }
     
-    # CRITICAL: Invalidate mining status cache so next fetch gets fresh data
+    # CRITICAL: Invalidate ALL user caches so next fetch gets fresh data
     await cache.delete(f"mining_status:{uid}")
     await cache.delete(f"user:dashboard:{uid}")
+    await cache.delete(f"user_data:{uid}")  # FIX: Clear user data cache for balance update
     
     # Add new session info so frontend can update immediately
     response["session_reset"] = True
