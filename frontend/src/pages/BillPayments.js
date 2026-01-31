@@ -228,6 +228,13 @@ const BillPayments = ({ user, onLogout }) => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Create Request Form */}
           <div className="lg:col-span-2">
+            {/* Profile Completion Prompt - Show before form */}
+            <RedemptionProfilePrompt 
+              user={user}
+              userData={currentUser}
+              onContinue={() => {}}
+            />
+            
             <div className="bg-gray-900/50 rounded-2xl p-5 border border-gray-800">
               <h2 className="text-lg font-bold text-white mb-4">Create New Request</h2>
 
