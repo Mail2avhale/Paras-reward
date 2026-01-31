@@ -1100,6 +1100,207 @@ async def get_user_subscription_info(user: dict) -> dict:
     }
 
 # ========== REDEMPTION LIMIT SYSTEM ==========
+
+# ===== VIP-TIER BASED WEEKLY SERVICE LIMITS =====
+# Each user can make limited redemptions per service type per week (Monday-Sunday)
+# Limits vary by subscription tier
+WEEKLY_SERVICE_LIMITS = {
+    "explorer": {
+        "mobile_recharge": 1,
+        "dish_recharge": 1,  # DTH
+        "electricity_bill": 1,
+        "credit_card_payment": 1,
+        "loan_emi": 1,
+        "gift_voucher": 1,
+        "shopping": 10
+    },
+    "startup": {
+        "mobile_recharge": 2,
+        "dish_recharge": 2,
+        "electricity_bill": 1,
+        "credit_card_payment": 1,
+        "loan_emi": 1,
+        "gift_voucher": 2,
+        "shopping": 15
+    },
+    "growth": {
+        "mobile_recharge": 3,
+        "dish_recharge": 3,
+        "electricity_bill": 2,
+        "credit_card_payment": 2,
+        "loan_emi": 2,
+        "gift_voucher": 3,
+        "shopping": 20
+    },
+    "elite": {
+        "mobile_recharge": 5,
+        "dish_recharge": 5,
+        "electricity_bill": 3,
+        "credit_card_payment": 3,
+        "loan_emi": 3,
+        "gift_voucher": 5,
+        "shopping": 999  # Unlimited for Elite
+    }
+}
+
+# Smart partner issue messages for when limit is reached
+PARTNER_ISSUE_MESSAGES = {
+    "mobile_recharge": "Our telecom partner is experiencing high transaction volume for this service. Service will be available from {next_monday}.",
+    "dish_recharge": "Our DTH payment gateway partner has reached processing capacity. Please try again from {next_monday}.",
+    "electricity_bill": "Our electricity board partner gateway is under scheduled maintenance. Available from {next_monday}.",
+    "credit_card_payment": "Our banking partner has reached daily processing limits for credit card payments. Available from {next_monday}.",
+    "loan_emi": "Our EMI processing partner is experiencing technical issues. Service resumes from {next_monday}.",
+    "gift_voucher": "Our gift card partner inventory is being replenished. New vouchers available from {next_monday}.",
+    "shopping": "Our logistics partner has reached weekly dispatch capacity. Next available slot from {next_monday}."
+}
+
+def get_current_week_bounds():
+    """Get Monday 00:00 and Sunday 23:59:59 of the current week"""
+    now = datetime.now(timezone.utc)
+    # Monday is 0, Sunday is 6
+    days_since_monday = now.weekday()
+    monday = (now - timedelta(days=days_since_monday)).replace(hour=0, minute=0, second=0, microsecond=0)
+    sunday = monday + timedelta(days=6, hours=23, minutes=59, seconds=59)
+    next_monday = monday + timedelta(days=7)
+    return monday, sunday, next_monday
+
+async def get_weekly_service_usage(user_id: str, service_type: str) -> dict:
+    """Get user's redemption count for a specific service this week (Mon-Sun)"""
+    monday, sunday, next_monday = get_current_week_bounds()
+    monday_str = monday.isoformat()
+    
+    count = 0
+    first_redemption_time = None
+    
+    if service_type in ["mobile_recharge", "dish_recharge", "electricity_bill", "credit_card_payment", "loan_emi"]:
+        # Bill payment types
+        pipeline = [
+            {
+                "$match": {
+                    "user_id": user_id,
+                    "request_type": service_type,
+                    "created_at": {"$gte": monday_str}
+                }
+            },
+            {"$sort": {"created_at": 1}},
+            {"$limit": 100}
+        ]
+        results = await db.bill_payment_requests.aggregate(pipeline).to_list(100)
+        count = len(results)
+        if results:
+            first_redemption_time = results[0].get("created_at")
+            
+    elif service_type == "gift_voucher":
+        pipeline = [
+            {
+                "$match": {
+                    "user_id": user_id,
+                    "created_at": {"$gte": monday_str}
+                }
+            },
+            {"$sort": {"created_at": 1}},
+            {"$limit": 100}
+        ]
+        results = await db.gift_voucher_requests.aggregate(pipeline).to_list(100)
+        count = len(results)
+        if results:
+            first_redemption_time = results[0].get("created_at")
+            
+    elif service_type == "shopping":
+        pipeline = [
+            {
+                "$match": {
+                    "user_id": user_id,
+                    "created_at": {"$gte": monday_str}
+                }
+            },
+            {"$sort": {"created_at": 1}},
+            {"$limit": 100}
+        ]
+        results = await db.orders.aggregate(pipeline).to_list(100)
+        count = len(results)
+        if results:
+            first_redemption_time = results[0].get("created_at")
+    
+    return {
+        "count": count,
+        "first_redemption_time": first_redemption_time,
+        "week_start": monday.isoformat(),
+        "next_monday": next_monday.isoformat()
+    }
+
+async def check_weekly_service_limit(user: dict, service_type: str) -> dict:
+    """
+    Check if user can make a redemption for specific service type this week.
+    Returns: {"allowed": bool, "reason": str, "cooldown_info": dict}
+    """
+    user_uid = user.get("uid")
+    subscription_plan = user.get("subscription_plan", "explorer").lower()
+    
+    # Get limits for user's subscription tier
+    tier_limits = WEEKLY_SERVICE_LIMITS.get(subscription_plan, WEEKLY_SERVICE_LIMITS["explorer"])
+    max_allowed = tier_limits.get(service_type, 1)
+    
+    # Get current week usage
+    usage = await get_weekly_service_usage(user_uid, service_type)
+    current_count = usage["count"]
+    next_monday = usage["next_monday"]
+    first_redemption = usage["first_redemption_time"]
+    
+    # Calculate days until next Monday
+    _, _, next_mon_dt = get_current_week_bounds()
+    now = datetime.now(timezone.utc)
+    days_until_reset = (next_mon_dt - now).days
+    hours_until_reset = int((next_mon_dt - now).total_seconds() // 3600)
+    
+    # Build cooldown info (show timer on first redemption of week)
+    cooldown_info = None
+    if current_count > 0 and first_redemption:
+        cooldown_info = {
+            "first_redemption_date": first_redemption,
+            "next_reset": next_monday,
+            "days_until_reset": days_until_reset,
+            "hours_until_reset": hours_until_reset,
+            "message": f"Next redemption slot available from Monday. {days_until_reset} days remaining."
+        }
+    
+    # Check if limit reached
+    if current_count >= max_allowed:
+        # Get smart partner message
+        message_template = PARTNER_ISSUE_MESSAGES.get(service_type, 
+            "Our payment partner has reached weekly processing limits. Service available from {next_monday}.")
+        
+        # Format next Monday nicely
+        next_mon_formatted = next_mon_dt.strftime("%A, %B %d")
+        reason = message_template.format(next_monday=next_mon_formatted)
+        
+        return {
+            "allowed": False,
+            "reason": reason,
+            "service_type": service_type,
+            "current_count": current_count,
+            "max_allowed": max_allowed,
+            "subscription_plan": subscription_plan,
+            "cooldown_info": {
+                "next_reset": next_monday,
+                "days_until_reset": days_until_reset,
+                "hours_until_reset": hours_until_reset,
+                "display_timer": f"{days_until_reset}d {hours_until_reset % 24}h until reset"
+            }
+        }
+    
+    # Allowed - include cooldown info if this is first request
+    return {
+        "allowed": True,
+        "reason": "OK",
+        "service_type": service_type,
+        "current_count": current_count,
+        "max_allowed": max_allowed,
+        "remaining_this_week": max_allowed - current_count,
+        "subscription_plan": subscription_plan,
+        "cooldown_info": cooldown_info  # Will be populated after first redemption
+    }
+
 async def get_monthly_redeem_limit_settings():
     """Get monthly redemption limit settings from database"""
     settings = await db.settings.find_one({}, {"_id": 0, "monthly_redeem_settings": 1})
