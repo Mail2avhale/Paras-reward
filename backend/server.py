@@ -1429,60 +1429,10 @@ async def check_redemption_allowed(user: dict, prc_amount: float) -> dict:
         }
     checks_passed["daily_limit_ok"] = True
     
-    # ===== CHECK 9.5: Weekly Service-wise Redemption Limit =====
-    week_start = datetime.now(timezone.utc) - timedelta(days=7)
-    week_start_str = week_start.isoformat()
-    
-    # Count weekly redemptions by service type
-    weekly_bill_payments = await db.bill_payment_requests.count_documents({
-        "user_id": user_uid,
-        "created_at": {"$gte": week_start_str}
-    })
-    weekly_vouchers = await db.gift_voucher_requests.count_documents({
-        "user_id": user_uid,
-        "created_at": {"$gte": week_start_str}
-    })
-    weekly_orders = await db.orders.count_documents({
-        "user_id": user_uid,
-        "created_at": {"$gte": week_start_str}
-    })
-    
-    # Weekly limits per service type
-    max_weekly_bills = 10
-    max_weekly_vouchers = 5
-    max_weekly_orders = 15
-    
-    # Check bill payment limit
-    if weekly_bill_payments >= max_weekly_bills:
-        return {
-            "allowed": False,
-            "reason": f"Weekly bill payment limit reached. Maximum {max_weekly_bills} bill payments per week.",
-            "reason_mr": f"आठवड्याचे bill payment limit संपले. आठवड्यात maximum {max_weekly_bills} bill payments.",
-            "remaining": remaining,
-            "checks": {"weekly_bills": weekly_bill_payments}
-        }
-    
-    # Check voucher limit
-    if weekly_vouchers >= max_weekly_vouchers:
-        return {
-            "allowed": False,
-            "reason": f"Weekly voucher limit reached. Maximum {max_weekly_vouchers} vouchers per week.",
-            "reason_mr": f"आठवड्याचे voucher limit संपले. आठवड्यात maximum {max_weekly_vouchers} vouchers.",
-            "remaining": remaining,
-            "checks": {"weekly_vouchers": weekly_vouchers}
-        }
-    
-    # Check order limit
-    if weekly_orders >= max_weekly_orders:
-        return {
-            "allowed": False,
-            "reason": f"Weekly order limit reached. Maximum {max_weekly_orders} orders per week.",
-            "reason_mr": f"आठवड्याचे order limit संपले. आठवड्यात maximum {max_weekly_orders} orders.",
-            "remaining": remaining,
-            "checks": {"weekly_orders": weekly_orders}
-        }
-    
-    checks_passed["weekly_service_limits_ok"] = True
+    # ===== CHECK 9.5: Weekly Service-wise Redemption Limit (VIP Tier Based) =====
+    # NOTE: This is a generic check. Specific service type checks are done in each endpoint
+    # using check_weekly_service_limit() function with service_type parameter
+    checks_passed["weekly_generic_ok"] = True
     
     # ===== CHECK 11: Cooldown Period (5 minutes between redemptions) =====
     five_minutes_ago = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
