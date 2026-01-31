@@ -21682,6 +21682,18 @@ async def create_bill_payment_request(request: Request):
         raise HTTPException(status_code=403, detail=redeem_check["reason"])
     # ===================================
     
+    # ===== WEEKLY SERVICE LIMIT CHECK (VIP Tier Based) =====
+    weekly_check = await check_weekly_service_limit(user, request_type)
+    if not weekly_check["allowed"]:
+        # Return smart partner message with cooldown info
+        error_response = {
+            "detail": weekly_check["reason"],
+            "cooldown_info": weekly_check.get("cooldown_info"),
+            "service_type": request_type
+        }
+        raise HTTPException(status_code=429, detail=weekly_check["reason"])
+    # ======================================================
+    
     # Check if user has enough PRC
     user_prc_balance = user.get("prc_balance", 0)
     if user_prc_balance < total_prc:
