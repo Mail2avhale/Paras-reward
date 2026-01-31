@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import PRCExpiryTimer from '@/components/PRCExpiryTimer';
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
+import { ProfileCompletionRing, ProfileFloatingReminder } from '@/components/ProfileCompletionComponents';
 import InteractiveWalkthrough, { useWalkthrough } from '@/components/InteractiveWalkthrough';
 import AIChatbotEnhanced from '@/components/AIChatbotEnhanced';
 import PRCRain from '@/components/PRCRain';
