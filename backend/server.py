@@ -4735,21 +4735,7 @@ async def get_user_dashboard_combined(uid: str):
     await cache.set(cache_key, result, ttl=30)
     
     return result
-    if luxury_deduction > 0:
-        response["luxury_savings"] = {
-            "deducted": round(luxury_deduction, 4),
-            "mobile": round(luxury_savings_result.get("mobile_saved", 0), 4),
-            "bike": round(luxury_savings_result.get("bike_saved", 0), 4),
-            "car": round(luxury_savings_result.get("car_saved", 0), 4),
-            "message": f"₹{round(luxury_deduction/10, 2)} auto-saved for Luxury Life! 🏆"
-        }
-    
-    # Invalidate caches after mining claim
-    await cache.delete(f"mining_status:{uid}")
-    await cache.delete(f"mining_rate:{uid}")
-    await cache.delete(f"user_data:{uid}")
-    
-    return response
+
 
 # ========== USER DATA ENDPOINT ==========
 @api_router.get("/user/{uid}")
