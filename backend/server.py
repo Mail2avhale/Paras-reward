@@ -5342,6 +5342,84 @@ async def get_user_redeemed_stats(uid: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.get("/user/{uid}/weekly-limits")
+async def get_user_weekly_limits(uid: str):
+    """
+    Get user's weekly redemption limits and current usage per service type.
+    Shows cooldown timer after first redemption of the week.
+    """
+    try:
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        subscription_plan = user.get("subscription_plan", "explorer").lower()
+        tier_limits = WEEKLY_SERVICE_LIMITS.get(subscription_plan, WEEKLY_SERVICE_LIMITS["explorer"])
+        
+        # Get week bounds
+        monday, sunday, next_monday = get_current_week_bounds()
+        now = datetime.now(timezone.utc)
+        days_until_reset = (next_monday - now).days
+        hours_until_reset = int((next_monday - now).total_seconds() // 3600)
+        
+        # Get usage for each service type
+        services_status = {}
+        has_any_redemption = False
+        first_redemption_date = None
+        
+        service_types = [
+            "mobile_recharge", "dish_recharge", "electricity_bill", 
+            "credit_card_payment", "loan_emi", "gift_voucher", "shopping"
+        ]
+        
+        for service_type in service_types:
+            usage = await get_weekly_service_usage(uid, service_type)
+            max_allowed = tier_limits.get(service_type, 1)
+            current_count = usage["count"]
+            
+            if current_count > 0:
+                has_any_redemption = True
+                if usage["first_redemption_time"]:
+                    if first_redemption_date is None or usage["first_redemption_time"] < first_redemption_date:
+                        first_redemption_date = usage["first_redemption_time"]
+            
+            services_status[service_type] = {
+                "used": current_count,
+                "limit": max_allowed,
+                "remaining": max(0, max_allowed - current_count),
+                "available": current_count < max_allowed,
+                "display_name": service_type.replace("_", " ").title()
+            }
+        
+        # Build cooldown info only if user has made at least one redemption this week
+        cooldown_info = None
+        if has_any_redemption:
+            cooldown_info = {
+                "first_redemption_date": first_redemption_date,
+                "next_reset": next_monday.isoformat(),
+                "next_reset_formatted": next_monday.strftime("%A, %B %d"),
+                "days_until_reset": days_until_reset,
+                "hours_until_reset": hours_until_reset,
+                "display_timer": f"{days_until_reset}d {hours_until_reset % 24}h until weekly reset"
+            }
+        
+        return {
+            "user_id": uid,
+            "subscription_plan": subscription_plan,
+            "week_start": monday.isoformat(),
+            "week_end": sunday.isoformat(),
+            "services": services_status,
+            "cooldown_info": cooldown_info,
+            "message": "Redemption limits reset every Monday at 00:00 UTC"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error getting weekly limits: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.get("/user/{uid}/redemption-stats")
 async def get_user_redemption_stats(uid: str):
     """
