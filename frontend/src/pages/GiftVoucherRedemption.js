@@ -147,6 +147,13 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
 
       {/* Balance Card */}
       <div className="px-5 mb-6">
+        {/* Profile Completion Prompt */}
+        <RedemptionProfilePrompt 
+          user={user}
+          userData={currentUser}
+          onContinue={() => {}}
+        />
+        
         <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 rounded-2xl p-5 border border-amber-500/30">
           <div className="flex items-center justify-between">
             <div>
