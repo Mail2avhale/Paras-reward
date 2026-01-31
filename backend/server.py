@@ -12303,13 +12303,17 @@ async def user_360_quick_action(request: Request):
         # Hash the temporary password using pwd_context
         hashed_password = pwd_context.hash(temp_password)
         
+        # Update BOTH password fields to ensure login works (password_hash takes priority)
         await db.users.update_one(
             {"uid": user_id},
             {"$set": {
                 "password": hashed_password,
+                "password_hash": hashed_password,  # CRITICAL: Also update password_hash
                 "password_reset_required": True,
                 "password_reset_at": now.isoformat(),
                 "password_reset_by": admin_id,
+                "failed_login_attempts": 0,  # Reset failed attempts
+                "locked_until": None,  # Remove any lock
                 "updated_at": now.isoformat()
             }}
         )
