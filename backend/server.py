@@ -22060,6 +22060,12 @@ async def create_gift_voucher_request(request: Request):
         raise HTTPException(status_code=403, detail=redeem_check["reason"])
     # ===================================
     
+    # ===== WEEKLY SERVICE LIMIT CHECK (VIP Tier Based) =====
+    weekly_check = await check_weekly_service_limit(user, "gift_voucher")
+    if not weekly_check["allowed"]:
+        raise HTTPException(status_code=429, detail=weekly_check["reason"])
+    # ======================================================
+    
     # Check if user has enough PRC
     user_prc_balance = user.get("prc_balance", 0)
     if user_prc_balance < total_prc:
