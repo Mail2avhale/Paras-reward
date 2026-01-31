@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import RequestTimeline from '../components/RequestTimeline';
+import { RedemptionProfilePrompt } from '../components/ProfileCompletionComponents';
 import { 
   formatMobile, formatIFSC, formatBankAccount,
   validateMobile, validateIFSC, validateBankAccount
