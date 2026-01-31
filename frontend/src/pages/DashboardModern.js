@@ -1064,6 +1064,12 @@ const DashboardModern = ({ user, onLogout }) => {
         isVip={hasPaidPlan}
       />
 
+      {/* Profile Floating Reminder - Gentle prompt */}
+      <ProfileFloatingReminder 
+        user={user}
+        userData={userData}
+      />
+
       {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-gray-950 border-t border-gray-800 z-50">
         <div className="flex items-center justify-around py-2 px-4 max-w-lg mx-auto">
