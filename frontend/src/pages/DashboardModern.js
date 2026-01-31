@@ -768,6 +768,15 @@ const DashboardModern = ({ user, onLogout }) => {
         </div>
       )}
 
+      {/* Profile Completion Ring - Show if profile is incomplete */}
+      <div className="px-5 mb-4">
+        <ProfileCompletionRing 
+          user={user}
+          userData={userData}
+          onComplete={() => navigate('/profile')}
+        />
+      </div>
+
       {/* Quick Actions */}
       <div className="px-5 mb-4">
         <div className="grid grid-cols-4 gap-3">
