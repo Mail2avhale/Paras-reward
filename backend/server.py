@@ -1484,7 +1484,7 @@ async def check_redemption_allowed(user: dict, prc_amount: float) -> dict:
     
     checks_passed["weekly_service_limits_ok"] = True
     
-    # ===== CHECK 10: Cooldown Period (5 minutes between redemptions) =====
+    # ===== CHECK 11: Cooldown Period (5 minutes between redemptions) =====
     five_minutes_ago = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
     
     recent_bill = await db.bill_payment_requests.find_one({
