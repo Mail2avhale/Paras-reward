@@ -72,6 +72,9 @@ const AdminBillPayments = ({ user }) => {
   const [selectedRequests, setSelectedRequests] = useState([]);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [adminNotes, setAdminNotes] = useState('');
+  const [rejectReason, setRejectReason] = useState('');
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [pendingRejectId, setPendingRejectId] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [stats, setStats] = useState({
