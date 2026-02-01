@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { 
@@ -19,12 +19,14 @@ const API = process.env.REACT_APP_BACKEND_URL || '';
 
 const ProfileAdvanced = ({ user, onLogout }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { language } = useLanguage();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userData, setUserData] = useState(null);
-  const [editMode, setEditMode] = useState(false);
+  // Auto-open edit mode if ?edit=true in URL
+  const [editMode, setEditMode] = useState(searchParams.get('edit') === 'true');
   const [showImageUpload, setShowImageUpload] = useState(false);
   
   // Form data
