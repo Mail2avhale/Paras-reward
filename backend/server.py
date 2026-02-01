@@ -4926,6 +4926,15 @@ async def get_user_dashboard_combined(uid: str):
     subscription_plan = user.get("subscription_plan", "explorer")
     subscription_expiry = user.get("subscription_expiry")
     
+    # Get subscription start date (check multiple possible field names)
+    subscription_start = (
+        user.get("subscription_start_date") or 
+        user.get("subscription_start") or 
+        user.get("subscription_created_at") or 
+        user.get("vip_activation_date") or
+        user.get("vip_activated_at")
+    )
+    
     # Build response
     result = {
         "user": {
