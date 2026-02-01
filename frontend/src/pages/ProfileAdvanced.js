@@ -85,13 +85,13 @@ const ProfileAdvanced = ({ user, onLogout }) => {
       setUserData(data);
       setFormData({
         name: data.name || '',
-        phone: data.phone || data.mobile || '',
-        address: data.address || '',
+        phone: data.mobile || data.phone || '',
+        address: data.address_line1 || data.address || '',
         tahsil: data.tahsil || data.taluka || '',
         district: data.district || '',
         state: data.state || '',
         pincode: data.pincode || '',
-        birthday: data.birthday || ''
+        birthday: data.date_of_birth || data.birthday || ''
       });
       // Set privacy settings
       setIsProfilePublic(data.is_public !== false);
@@ -101,13 +101,13 @@ const ProfileAdvanced = ({ user, onLogout }) => {
       setUserData(user);
       setFormData({
         name: user.name || '',
-        phone: user.phone || '',
-        address: user.address || '',
-        tahsil: user.tahsil || '',
+        phone: user.mobile || user.phone || '',
+        address: user.address_line1 || user.address || '',
+        tahsil: user.tahsil || user.taluka || '',
         district: user.district || '',
         state: user.state || '',
         pincode: user.pincode || '',
-        birthday: user.birthday || ''
+        birthday: user.date_of_birth || user.birthday || ''
       });
     } finally {
       setLoading(false);
