@@ -36,8 +36,6 @@ const DashboardModern = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
   
-  // Interactive Walkthrough for new users
-  const { showWalkthrough, hideWalkthrough } = useWalkthrough();
   
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
