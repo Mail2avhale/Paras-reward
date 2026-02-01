@@ -48,7 +48,13 @@ Build a comprehensive rewards platform (PARAS REWARD) with:
 
 ---
 
-## Recent Changes (January 2026)
+## Recent Changes (January/February 2026)
+
+### February 1, 2026
+- **Bug Fix:** Profile Completion Ring not updating/hiding
+  - Added missing fields (`mobile`, `kyc_status`, `city`, `district`, `state`) to `/api/user/{uid}/dashboard` endpoint
+  - Ring and Floating Reminder now correctly hide when profile is 100% complete
+  - Tested with both complete and incomplete profile scenarios
 
 ### January 31, 2026
 - **NEW FEATURE:** VIP-Based Weekly Redemption Limits
