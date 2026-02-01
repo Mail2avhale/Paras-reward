@@ -4050,10 +4050,27 @@ async def update_profile(uid: str, request: Request):
     
     update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
     
-    await db.users.update_one(
-        {"uid": uid},
-        {"$set": update_data}
-    )
+    # Check if mobile is being updated and if it's already taken by another user
+    if 'mobile' in update_data and update_data['mobile']:
+        existing_user = await db.users.find_one({
+            "mobile": update_data['mobile'],
+            "uid": {"$ne": uid}
+        })
+        if existing_user:
+            raise HTTPException(status_code=400, detail="This mobile number is already registered with another account")
+    
+    try:
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": update_data}
+        )
+    except Exception as e:
+        if "duplicate key" in str(e).lower():
+            raise HTTPException(status_code=400, detail="This mobile number is already registered with another account")
+        raise HTTPException(status_code=500, detail=f"Failed to update profile: {str(e)}")
+    
+    # Clear user cache
+    await cache.delete(f"user_data:{uid}")
     
     return {"message": "Profile updated successfully"}
 
