@@ -713,8 +713,12 @@ const AdminBillPayments = ({ user }) => {
                              request.status === 'rejected' ? '❌ Rejected' :
                              request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                           </span>
-                          {/* Processing Time */}
-                          {request.processing_time && (
+                          {/* Speed Badge for completed */}
+                          {request.status === 'completed' && request.processing_time && (
+                            <SpeedBadge processingTime={request.processing_time} />
+                          )}
+                          {/* Processing Time if no badge */}
+                          {request.processing_time && !['completed'].includes(request.status) && (
                             <span className="text-[10px] text-gray-500">
                               ⏱️ {request.processing_time}
                             </span>
