@@ -201,7 +201,7 @@ export const ProfileFloatingReminder = ({ user, userData, onDismiss }) => {
   
   const handleComplete = () => {
     setVisible(false);
-    navigate('/profile');
+    navigate('/profile?edit=true');
   };
   
   const userName = userData?.name || user?.name || user?.email?.split('@')[0] || 'there';
