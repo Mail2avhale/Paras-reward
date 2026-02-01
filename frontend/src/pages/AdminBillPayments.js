@@ -678,13 +678,32 @@ const AdminBillPayments = ({ user }) => {
                           </Button>
                         </div>
                       ) : (
-                        <span className={`inline-block mt-2 px-2 py-1 rounded text-xs ${
-                          ['approved', 'processing', 'completed'].includes(request.status)
-                            ? 'bg-emerald-500/20 text-emerald-400'
-                            : 'bg-red-500/20 text-red-400'
-                        }`}>
-                          {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                        </span>
+                        <div className="flex flex-col items-end gap-1 mt-2">
+                          <span className={`inline-block px-2 py-1 rounded text-xs ${
+                            request.status === 'completed'
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : request.status === 'processing'
+                              ? 'bg-blue-500/20 text-blue-400'
+                              : 'bg-red-500/20 text-red-400'
+                          }`}>
+                            {request.status === 'processing' ? '⏳ Processing' : 
+                             request.status === 'completed' ? '✅ Completed' :
+                             request.status === 'rejected' ? '❌ Rejected' :
+                             request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                          </span>
+                          {/* Processing Time */}
+                          {request.processing_time && (
+                            <span className="text-[10px] text-gray-500">
+                              ⏱️ {request.processing_time}
+                            </span>
+                          )}
+                          {/* Show processed by */}
+                          {request.processed_by && (
+                            <span className="text-[10px] text-gray-600">
+                              by {request.processed_by}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
