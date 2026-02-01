@@ -141,8 +141,25 @@ export const ProfileFloatingReminder = ({ user, userData, onDismiss }) => {
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   
+  // Merge user and userData
+  const data = { ...user, ...userData };
+  
+  // Check if profile is complete
+  const isProfileComplete = !!(
+    data?.name && data.name.trim() !== '' &&
+    data?.mobile && data.mobile.trim() !== '' &&
+    (data?.city || data?.district || data?.state) &&
+    data?.kyc_status === 'verified'
+  );
+  
   // Check if should show reminder
   useEffect(() => {
+    // Don't show if profile is complete
+    if (isProfileComplete) {
+      setDismissed(true);
+      return;
+    }
+    
     const lastDismissed = localStorage.getItem('profile_reminder_dismissed');
     const dismissCount = parseInt(localStorage.getItem('profile_reminder_dismiss_count') || '0');
     
@@ -165,19 +182,10 @@ export const ProfileFloatingReminder = ({ user, userData, onDismiss }) => {
       }
     }
     
-    // Check if profile is incomplete
-    const isIncomplete = !(
-      (userData?.name || user?.name) &&
-      (userData?.mobile || user?.mobile) &&
-      (userData?.kyc_status === 'verified' || user?.kyc_status === 'verified')
-    );
-    
-    if (isIncomplete) {
-      // Show after 3 seconds
-      const timer = setTimeout(() => setVisible(true), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [user, userData]);
+    // Show after 3 seconds
+    const timer = setTimeout(() => setVisible(true), 3000);
+    return () => clearTimeout(timer);
+  }, [user, userData, isProfileComplete]);
   
   const handleDismiss = () => {
     const currentCount = parseInt(localStorage.getItem('profile_reminder_dismiss_count') || '0');
@@ -192,10 +200,11 @@ export const ProfileFloatingReminder = ({ user, userData, onDismiss }) => {
     navigate('/profile?edit=true');
   };
   
-  const userName = userData?.name || user?.name || user?.email?.split('@')[0] || 'there';
+  const userName = data?.name || user?.email?.split('@')[0] || 'there';
   const firstName = userName.split(' ')[0];
 
-  if (dismissed || !visible) return null;
+  // Don't show if profile complete or dismissed
+  if (isProfileComplete || dismissed || !visible) return null;
 
   return (
     <AnimatePresence>
