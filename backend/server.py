@@ -4954,6 +4954,25 @@ async def get_user_dashboard_combined(uid: str):
                     {"$set": {"vip_activated_at": subscription_start}}
                 )
     
+    # Final fallback: Calculate start date from expiry (assuming 30-day plan)
+    if not subscription_start and subscription_expiry and subscription_plan in ["startup", "growth", "elite"]:
+        try:
+            expiry_dt = subscription_expiry
+            if isinstance(expiry_dt, str):
+                expiry_dt = datetime.fromisoformat(expiry_dt.replace('Z', '+00:00'))
+            if expiry_dt.tzinfo is None:
+                expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+            # Calculate start as expiry minus 30 days
+            start_dt = expiry_dt - timedelta(days=30)
+            subscription_start = start_dt.isoformat()
+            # Sync to user document
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {"vip_activated_at": subscription_start}}
+            )
+        except Exception as e:
+            print(f"Error calculating subscription start: {e}")
+    
     # Build response
     result = {
         "user": {
