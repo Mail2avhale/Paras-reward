@@ -4935,6 +4935,25 @@ async def get_user_dashboard_combined(uid: str):
         user.get("vip_activated_at")
     )
     
+    # If no start date found and user has a paid subscription, try to get from VIP payments
+    if not subscription_start and subscription_plan in ["startup", "growth", "elite"]:
+        latest_payment = await db.vip_payments.find_one(
+            {"user_id": uid, "status": "approved"},
+            sort=[("approved_at", -1)]
+        )
+        if latest_payment:
+            subscription_start = (
+                latest_payment.get("subscription_start") or
+                latest_payment.get("approved_at") or
+                latest_payment.get("created_at")
+            )
+            # Also sync this to the user document for future queries
+            if subscription_start:
+                await db.users.update_one(
+                    {"uid": uid},
+                    {"$set": {"vip_activated_at": subscription_start}}
+                )
+    
     # Build response
     result = {
         "user": {
