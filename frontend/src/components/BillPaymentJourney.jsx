@@ -165,19 +165,37 @@ export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, pro
   const [hasTriggeredConfetti, setHasTriggeredConfetti] = useState(false);
   
   const steps = [
-    { id: 'submitted', label: 'Submitted', icon: FileText, labelMr: 'सबमिट' },
-    { id: 'processing', label: 'Processing', icon: Loader2, labelMr: 'प्रोसेसिंग' },
-    { id: 'completed', label: 'Completed', icon: CheckCircle, labelMr: 'पूर्ण' }
+    { id: 'submitted', label: 'Submitted', icon: FileText },
+    { id: 'processing', label: 'Processing', icon: Loader2 },
+    { id: 'completed', label: 'Completed', icon: CheckCircle }
   ];
   
   const getStepStatus = (stepId) => {
+    // Handle rejected status
     if (status === 'rejected') {
       if (stepId === 'submitted') return 'completed';
       if (stepId === 'processing') return 'rejected';
       return 'pending';
     }
     
+    // Step 1: Submitted - always completed once request exists
     if (stepId === 'submitted') return 'completed';
+    
+    // Step 2: Processing
+    if (stepId === 'processing') {
+      if (status === 'pending') return 'pending';
+      if (status === 'processing' || status === 'approved') return 'current';
+      if (status === 'completed') return 'completed';
+      return 'pending';
+    }
+    
+    // Step 3: Completed
+    if (stepId === 'completed') {
+      if (status === 'completed') return 'completed';
+      return 'pending';
+    }
+    
+    return 'pending';
     if (stepId === 'processing') {
       if (status === 'processing') return 'current';
       if (status === 'completed') return 'completed';
