@@ -361,7 +361,7 @@ export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, pro
                     ? 'text-blue-400'
                     : 'text-gray-500'
                 }`}>
-                  {step.labelMr}
+                  {step.label}
                 </span>
               </motion.div>
             </React.Fragment>
@@ -369,8 +369,8 @@ export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, pro
         })}
       </div>
       
-      {/* Live Timer for pending/processing */}
-      {(status === 'pending' || status === 'processing') && (
+      {/* Live Timer for pending/processing/approved */}
+      {(status === 'pending' || status === 'processing' || status === 'approved') && (
         <div className="flex justify-center">
           <LiveTimer createdAt={createdAt} status={status} />
         </div>
@@ -387,7 +387,7 @@ export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, pro
           <SpeedBadge processingTime={processingTime} />
           <div className="flex items-center gap-2 text-emerald-400 text-sm">
             <Sparkles className="w-4 h-4" />
-            <span>पूर्ण झाले: {processingTime} मध्ये</span>
+            <span>Completed in {processingTime}</span>
           </div>
         </motion.div>
       )}
