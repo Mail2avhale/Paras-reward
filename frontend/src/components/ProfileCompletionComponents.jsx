@@ -115,7 +115,7 @@ export const ProfileCompletionRing = ({ user, userData, onComplete }) => {
           
           <Button 
             size="sm" 
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate('/profile?edit=true')}
             className="h-8 bg-purple-600 hover:bg-purple-700"
           >
             Complete Now
