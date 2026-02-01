@@ -56,6 +56,11 @@ Build a comprehensive rewards platform (PARAS REWARD) with:
   - Ring and Floating Reminder now correctly hide when profile is 100% complete
   - Tested with both complete and incomplete profile scenarios
 
+- **Bug Fix:** Subscription Start Date not showing on subscription card
+  - Added `subscription_start` field to dashboard API
+  - Added fallback logic: VIP payment approved_at → calculated from expiry - 30 days
+  - Auto-syncs calculated start date to user document
+
 ### January 31, 2026
 - **NEW FEATURE:** VIP-Based Weekly Redemption Limits
   - Per-service limits: Mobile, DTH, Electricity, Credit Card, EMI, Gift Voucher, Shopping
