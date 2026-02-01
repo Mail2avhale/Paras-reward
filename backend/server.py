@@ -4932,6 +4932,7 @@ async def get_user_dashboard_combined(uid: str):
             "uid": uid,
             "name": user.get("name", ""),
             "email": user.get("email", ""),
+            "mobile": user.get("mobile", ""),
             "prc_balance": round(user.get("prc_balance", 0), 4),
             "total_mined": round(user.get("total_mined", 0), 4),
             "total_redeemed": round(user.get("total_redeemed", 0), 2),
@@ -4941,7 +4942,12 @@ async def get_user_dashboard_combined(uid: str):
             "subscription_expiry": subscription_expiry,
             "mining_rate": user.get("mining_rate", 0.5),
             "created_at": user.get("created_at"),
-            "profile_image": user.get("profile_image")
+            "profile_image": user.get("profile_image"),
+            # Profile completion fields
+            "kyc_status": user.get("kyc_status", "pending"),
+            "city": user.get("city", ""),
+            "district": user.get("district", ""),
+            "state": user.get("state", "")
         },
         "mining": {
             "active": mining_active,
