@@ -1,76 +1,77 @@
 <analysis>**original_problem_statement:**
-The user's primary goal for this session was to enhance the application by introducing a permission-based manager role, cleaning up the codebase, and fixing several critical bugs and performance issues, especially those present only in the deployed production environment.
+The user's initial goal was to merge the Manager role, clean up the codebase, and fix several critical production bugs related to data discrepancies and performance.
 
-Key user requests in this session:
-1.  **P0 Feature/Refactor:** Merge the Manager role into the Admin panel. Managers should have limited access to admin pages based on checkbox permissions set by an Admin.
-2.  **P0 Task:** Clean up all old and unused Manager pages and code.
-3.  **P0 Feature:** Implement strict validation for UTR numbers on subscription payments: must be a unique 12-digit number. Add fraud prevention measures.
-4.  **P0 Bug:** The Admin dashboard graphs are not loading in the production app.
-5.  **P0 Bug:** Admin dashboard cards (Total Users, PRC Distributed) show incorrect data in the production app. This is a recurring data discrepancy issue between preview and production.
-6.  **P0 Bug:** The Total Redeemed PRC value is incorrect on the user's dashboard and My Orders page.
-7.  **P1 Bug:** The Admin Subscription Payment page loads slowly.
-8.  **P1 Task:** Create database indexes to optimize and speed up the live application.
-9.  **P1 Feature:** When an admin rejects a redemption request, the user must see the reason for rejection.
-10. **P1 Feature:** Enhance the Live Feed to show real, unique, and engaging global user activity instead of mock data.
-11. **P1 Task:** Optimize the Admin KYC verification page for faster loading.
-12. **P1 Change Request:** Change the minimum account age required for redemption from 7 days to 3 days.
-13. **P1 Bug:** Tabs in the Admin Settings Hub are broken and show a placeholder message.
+Over the session, the user's requests evolved to include:
+1.  **Live Feed:** Fix the live feed to show real, engaging data instead of mock data.
+2.  **Admin Dashboard:** Fix broken stats and graphs in production. Subsequently, the user requested to remove all graphs and completely redesign the dashboard for a cleaner, stat-based layout.
+3.  **Mining Balance Bug:** Fix an issue where the user's balance was not updating after collecting mining rewards.
+4.  **UI Fix:** Remove the REDEEMED text from the main dashboard card.
+5.  **Weekly Redemption Limits:** Implement a new feature to limit redemptions per service (Mobile, DTH, etc.) on a weekly basis, with different limits for each VIP tier. The system should show smart rejection messages and a cooldown timer.
+6.  **Admin Password Reset:** Fix a bug where resetting a user's password from the admin panel was not working correctly.
+7.  **Admin Bill Payments Page:** Redesign the page to be more functional with category tabs, status filters, bulk actions, and detailed analytics.
+8.  **Profile Completion Gamification:** Add features to encourage users to complete their profiles, including a progress ring, contextual prompts, and a floating reminder.
+9.  **Remove Welcome Modal:** Remove the welcome tour/modal from the user dashboard.
+10. **Profile Bugs:** Fix an issue where profile information was not being saved correctly and ensure the Complete Now buttons navigate directly to the profile edit page. The profile completion ring should also update correctly and hide when the profile is 100% complete.
 
 **User's preferred language**: The user communicates in a mix of English and Marathi. The next agent **MUST** start all responses with  and then continue the technical explanation in English.
 
 **what currently exists?**
-The application is a full-stack rewards platform. In this session, the agent successfully merged the Manager role into the Admin panel, controlled by a dynamic permissions system. This involved a major cleanup of all legacy Manager-specific pages. The agent also implemented significant backend optimizations, including adding comprehensive database indexes, caching several slow APIs, and implementing pagination on admin pages (KYC, Subscriptions) to fix performance issues. Key features like UTR validation (with fraud prevention) and displaying rejection reasons were added. A critical bug in the total redeemed calculation was fixed. The backend API for the global live feed was completely rewritten to be more dynamic and engaging.
-
-However, the core issue of data discrepancies between the preview and production environments (e.g., dashboard stats, referral counts from previous forks) remains a primary concern, though the agent has added tools (cache clearing, re-indexing APIs) to help debug it.
+The application is a full-stack rewards platform. In this session, the agent successfully addressed a wide range of features and bugs. Key accomplishments include:
+-   **Fixes:** Resolved bugs in the Live Feed API, the Collect Rewards balance update mechanism (by fixing cache invalidation), and the Admin password reset flow. A critical bug preventing profile information from being saved was also fixed.
+-   **Redesigns:** The Admin Dashboard was completely overhauled to remove buggy charts and introduce a modern, data-card-based UI. The Admin Bill Payments page was also redesigned from scratch with advanced filtering, bulk actions, and analytics.
+-   **New Features:** A sophisticated, VIP-tier-based weekly redemption limit system was implemented on the backend. A suite of profile completion encouragement features (Progress Ring, Floating Reminder, Contextual Prompts) was added to the frontend.
+-   **UI/UX:** The main user dashboard was cleaned up by removing the REDEEMED text and the welcome modal.
 
 **Last working item**:
--   **Last item agent was working**: Revamping the Live Feed to show real and engaging global activity. The user reported seeing mock data. The agent found the responsible API () and completely rewrote the backend logic to generate a diverse feed from real user actions like achievements, redemptions, level-ups, and subscriptions.
+-   **Last item agent was working**: The user reported that the Profile Completion Progress Ring was not updating after saving profile information, and the card did not disappear upon completion. The agent implemented a fix in  to correctly calculate the completion percentage based on more profile fields and hide the component when the profile is 100% complete. All bonus-related text was also removed as requested.
 -   **Status**: IN PROGRESS
--   **Agent Testing Done**: Y (The backend API was tested via  and confirmed to return new, varied, and engaging activity messages.)
--   **Which testing method agent to use?**: Frontend testing agent or screenshot tool. The agent needs to verify that the frontend page ( or ) correctly calls the updated API and renders the new data format, as the user's last message was Live feed done or not.
+-   **Agent Testing Done**: N (The code was changed and compiled, but no visual verification was performed to confirm the fix.)
+-   **Which testing method agent to use?**: screenshot tool. The agent should log in as a test user, update the profile to 100%, and verify that the progress ring on the dashboard updates and then disappears.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1**: Live Feed Frontend Verification (P0 - HIGHEST)
--   **Issue 2**: Referral page data discrepancy in Production (P0 - CRITICAL)
--   **Issue 3**: Admin dashboard cards/graphs showing incorrect data in Production (P0 - CRITICAL)
+-   **Issue 1**: Profile Completion Ring Not Updating/Hiding (P0 - HIGHEST)
+-   **Issue 2**: Referral page data discrepancy in Production (P0 - CRITICAL, Recurring)
+-   **Issue 3**: Admin dashboard data discrepancy in Production (P0 - CRITICAL, Recurring)
 -   **Issue 4**: Mining auto-pause and reward rate not showing in Production (P1)
 -   **Issue 5**: User-facing search bar functionality is broken (P1)
 
 **Issues Detail:**
--   **Issue 1: Live Feed Frontend Verification**
-    -   **Attempted fixes**: The agent completely rewrote the backend API  in  to generate dynamic and varied activity strings based on real user data from multiple database collections.
+-   **Issue 1: Profile Completion Ring Not Updating/Hiding**
+    -   **Attempted fixes**: The agent modified  to refine the  logic to include more fields (, , , etc.) and to return  if the completion percentage is 100, effectively hiding the component.
     -   **Next debug checklist**:
-        1.  Identify the frontend component that displays the live feed (likely  or ).
-        2.  Verify it calls the  endpoint.
-        3.  Ensure the frontend correctly renders the new, more complex response from the API.
-        4.  Take a screenshot of the live feed page to confirm it no longer shows mock data.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is the last task the user requested and will complete the Live Feed enhancement, providing a more engaging user experience.
+        1.  Log in as a user with an incomplete profile (e.g., ).
+        2.  Verify the Profile Completion Ring is visible on the dashboard.
+        3.  Click Complete Now, fill in all missing profile details, and save.
+        4.  Navigate back to the dashboard.
+        5.  **Expected Result:** The Profile Completion Ring and Floating Reminder should no longer be visible.
+        6.  If it's still visible, check the browser console for errors and inspect the  state in  to see if it's being refreshed properly after the profile update.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is the last requested feature refinement. Fixing it will complete the profile gamification loop and provide a seamless user experience.
     -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: frontend
     -   **Blocked on other issue**: None
 
 -   **Issue 2: Referral page data discrepancy in Production**
-    -   **Attempted fixes**: (From previous forks) The agent implemented aggressive search logic and created multiple diagnostic API endpoints. This was not worked on in the current session.
-    -   **Next debug checklist**: Re-engage the user on this. Ask them to run the diagnostic endpoints ( or ) on their production URL and check the browser console to finally diagnose the data format issue in the live database.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a long-standing, high-frustration issue for the user and a critical blocker for a core feature.
+    -   **Attempted fixes**: None in this session. This is a long-standing issue from previous forks.
+    -   **Next debug checklist**: Re-engage the user on this. Ask them to use the diagnostic endpoints created in previous forks (, ) on their **production URL** to diagnose the data mismatch.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical, high-frustration issue for the user that breaks a core feature of the application.
     -   **Status**: BLOCKED (Awaiting user action on production).
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: both
     -   **Blocked on other issue**: None
 
--   **Issue 3: Admin dashboard cards/graphs showing incorrect data in Production**
-    -   **Attempted fixes**: The agent identified the relevant APIs (, ) and added aggressive caching and timeout handling. A new API () was created for the user to manually clear the production cache.
+-   **Issue 3: Admin dashboard data discrepancy in Production**
+    -   **Attempted fixes**: The agent created new diagnostic endpoints () and a force-refresh endpoint (). The chart APIs were also rewritten to be more resilient.
     -   **Next debug checklist**:
-        1.  Confirm with the user if they have run the cache-clearing endpoint on production.
-        2.  Ask the user to hard-refresh the admin dashboard after clearing the cache and provide a new screenshot.
-        3.  If the issue persists, the problem is likely a fundamental data difference in the production database, similar to the referral issue.
-    -   **Why fix this issue and what will be achieved with the fix?**: The admin dashboard is useless if it shows incorrect data. Fixing it is essential for business operations.
+        1.  Confirm with the user if they have run the  endpoint on their production server.
+        2.  Ask the user to hard-refresh the admin dashboard and provide a new screenshot of the stats.
+        3.  If stats are still wrong, it confirms a fundamental data difference in the production database that needs deeper investigation, likely related to Issue 2.
+    -   **Why fix this issue and what will be achieved with the fix?**: The admin dashboard is essential for business operations and is useless if it shows incorrect data.
     -   **Status**: USER VERIFICATION PENDING
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: both
-    -   **Blocked on other issue**: May be related to Issue 2.
+    -   **Blocked on other issue**: None
 
 -   **Issue 4 & 5 (from previous handoff, not started)**:
     -   Mining auto-pause/reward rate issue in Production.
@@ -78,17 +79,17 @@ However, the core issue of data discrepancies between the preview and production
     -   **Status**: NOT STARTED
 
 **In progress Task List**:
--   **Task 1: Live Feed Implementation**
-    -   **Where to resume**: The backend API is complete. The next step is to verify the frontend component ( or ) correctly displays the new dynamic feed.
-    -   **What will be achieved with this?**: A dynamic, engaging global activity feed that replaces the old static/mock data.
+-   **Task 1: Profile Completion Feature Verification**
+    -   **Where to resume**: The code changes are complete in . The agent needs to perform a full user flow test: log in, complete the profile, and verify the UI components on the dashboard disappear as expected.
+    -   **What will be achieved with this?**: A polished and fully functional profile completion incentive system.
     -   **Status**: IN PROGRESS
     -   **Should Test frontend/backend/both after fix?**: frontend
     -   **Blocked on something**: None
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   **P0: Architect for App Separation:** The user wants to split the app so that the user-facing part remains on the main domain, while the admin/manager panel moves to a subdomain like . This is a significant architectural change that needs planning.
-    -   **P1: Architect for Play Store Release**: Decide between PWA+TWA vs. a separate native build.
+    -   **P0: Architect for App Separation:** Plan the migration of the admin/manager panel to a separate subdomain (e.g., ).
+    -   **P1: Architect for Play Store Release**: Evaluate PWA+TWA vs. a separate native build.
 -   **Future Tasks:**
     -   P1: ML Risk Scoring.
     -   P2: Full AdMob + Unity Ads Integration.
@@ -96,30 +97,41 @@ However, the core issue of data discrepancies between the preview and production
     -   P3: Refactor the monolithic .
 
 **Completed work in this session**
--   **Feature: Manager Role Refactor**: Merged the Manager role into the Admin panel, controlled by a new permissions system. All old Manager pages were deleted, and routes in  were updated to redirect managers to .
--   **Feature: UTR Validation & Fraud Prevention**: Enhanced  with real-time UTR uniqueness checks and updated the backend subscription endpoint with 12-digit validation, rate limiting, and IP tracking.
--   **Optimization: Admin Pages**: Implemented server-side pagination and caching for Admin KYC and Subscription Management pages to fix slow loading times.
--   **Optimization: Database Indexing**: Added a comprehensive set of database indexes across multiple collections (, , , etc.) in  and created an API endpoint () to manage them.
--   **Optimization: Admin Dashboard Charts**: Implemented caching and timeouts for all dashboard chart APIs to prevent them from failing in production.
--   **Bug Fix: Broken Admin Settings Hub**: Fixed broken tabs by creating a new  page and updating  to navigate to the correct routes instead of showing a placeholder.
--   **Bug Fix: Incorrect Total Redeemed**: Fixed the  endpoint to correctly calculate  by including bill payments and gift vouchers.
--   **Feature: Rejection Reasons**: Verified that all admin rejection flows (Bills, Vouchers, KYC) require a reason and that this reason is displayed to the user on their respective history pages.
--   **Change Request: Redemption Rules**: Updated the minimum account age for redemption from 7 to 3 days in .
+-   **Feature: Admin Dashboard Redesign**: Completely removed charts and redesigned  with a modern, faster, stat-card-based layout.
+-   **Feature: VIP-Based Weekly Redemption Limits**: Implemented a new backend system in  to enforce service-specific weekly redemption limits based on the user's subscription tier.
+-   **Feature: Admin Bill Payments Page Redesign**: Overhauled  with category tabs, status filters, bulk actions, and summary analytics.
+-   **Feature: Profile Completion Gamification**: Created  and integrated a Progress Ring, Floating Reminder, and Contextual Prompts into the , , and  pages.
+-   **Bug Fix: Collect Rewards Balance Not Updating**: Fixed a caching issue in  by ensuring the  endpoint invalidates the correct user data cache key.
+-   **Bug Fix: Admin Password Reset**: Corrected the backend logic in  to update both  and  fields. Updated the frontend  to display the temporary password.
+-   **Bug Fix: Profile Information Not Saving**: Resolved mismatched field names between  and the backend API in  and added error handling for duplicate mobile numbers.
+-   **Bug Fix: Live Feed**: Fixed backend indentation error and frontend data mapping to display dynamic data correctly.
+-   **UI/UX Cleanup**: Removed the REDEEMED text from the user dashboard card and completely removed the welcome tour/modal from .
+
+**Earlier issues found/mentioned but not fixed**
+-   **Issue 1: Referral page data discrepancy in Production**: A critical, long-standing issue where referral data is incorrect on the live site. Status: BLOCKED.
+-   **Issue 2: Mining auto-pause/reward rate in Production**: A bug from a previous session where mining features do not work correctly in production. Status: NOT STARTED.
+-   **Issue 3: User-facing search bar is broken**: A known bug where the main search bar for users is non-functional. Status: NOT STARTED.
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork**: Referral data inconsistency between preview and production environments.
--   **Recurrence count**: 4+
--   **Status**: BLOCKED (Still the most critical underlying issue).
+-   **Issue recurrence in previous fork**: Data inconsistency between preview and production environments (Referral counts, Admin dashboard stats).
+-   **Recurrence count**: 5+
+-   **Status**: BLOCKED (This remains the most critical underlying issue in the project, causing multiple user-reported bugs).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Role-Based Access Control (RBAC):** Merged the Manager role into the Admin scope, using a  array in the user's database document to control UI/API access.
--   **API Performance Optimization:** Used a combination of backend caching (Redis), server-side pagination, and comprehensive database indexing to improve application speed, particularly for the production environment.
--   **Fraud Prevention:** Implemented rate limiting (per IP and per UTR) and IP address tracking on the backend for sensitive payment submission endpoints.
--   **Real-time Frontend Validation:** Used  with debouncing on the frontend () to call a backend API for real-time validation of UTR uniqueness before form submission.
--   **Production Debugging Tools**: Created dedicated admin APIs to manage the production environment without direct access, including  and .
+-   **Backend Caching & Invalidation**: Using Redis for caching API responses and ensuring caches are correctly invalidated after data mutations (e.g., mining claims, profile updates).
+-   **Tiered Feature Logic**: Implementing business rules on the backend that vary based on a user's subscription plan (e.g., VIP weekly redemption limits).
+-   **Resilient API Design**: Rewriting backend endpoints () to gracefully handle data inconsistencies (like different date formats) between environments.
+-   **Component-Based UI Development**: Creating reusable React components () and composing them into larger pages.
+-   **Frontend Routing & State**: Using  and  to control application flow and component states (e.g., opening a profile page directly in edit mode).
+
+**key DB schema**
+-   **users**: , , , , , , , , , , , , , .
+-   **orders**: Stores shopping redemptions, used in weekly limit checks.
+-   **bill_payments**: Stores bill payment requests (, , etc.), used in weekly limit checks. Fields: , , , .
+-   **gift_vouchers**: Stores gift voucher redemptions, used in weekly limit checks.
 
 **All files of reference**
 -   
@@ -130,38 +142,42 @@ However, the core issue of data discrepancies between the preview and production
 -   
 -   
 -   
--   The entire  directory was deleted.
 
 **Critical Info for New Agent**
--   **THE MAIN BLOCKER IS STILL THE PRODUCTION DATA DISCREPANCY.** This was the top issue in the last handoff and it remains unresolved. User reports of incorrect referral counts (previous fork) and incorrect dashboard stats (this fork) are symptoms of this core problem. The user is highly frustrated by this. **Do not trust the preview environment for data-related issues.**
--   Your first task is to finish the **Live Feed** feature by verifying the frontend.
--   After that, you **MUST** prioritize tackling the production data discrepancy. Re-engage the user and guide them to use the debug tools (, , and the user-specific debug endpoints from the previous fork) on their live production app.
--   The user has a tendency to switch priorities. Acknowledge new requests but try to steer the conversation back to fixing the critical production bugs.
--   Remember to start every message with .
+-   **Production Data Discrepancy is the #1 Blocker**: Multiple user-reported bugs (Admin Dashboard, Referrals) are symptoms of a fundamental data difference between the preview and production databases. Do not assume a fix in preview will work in production. Your priority should be to guide the user to use the diagnostic tools on their live app to get to the root cause.
+-   **Verify Last Fix**: Your immediate first task is to test the profile completion flow. Ensure the progress ring updates and disappears correctly after a user completes their profile.
+-   **Language**: Remember to start **every single response** with  before providing the English technical details.
 
 **documents and test reports created in this job**
--   /app/test_reports/iteration_42.json
+-   /app/memory/PRD.md (Updated multiple times with completed features)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Asks to make redemption conditions stricter.
-2.  **User:** Asks to update the minimum account age for redemption from 7 to 3 days.
-3.  **User:** Asks to speed up the Admin KYC verification page.
-4.  **User:** Reports that the preview environment is not loading.
-5.  **User:** Reports that when an admin rejects a request, the reason should be visible to the user. Also reports the account age still shows 7 days (agent clarified it needs deployment).
-6.  **User:** Reports that tabs in the Admin Settings Hub are broken and just show a placeholder.
-7.  **User:** Recharged credits.
-8.  **User:** Reports that the Total Redeemed PRC is not showing correctly on the dashboard card and in My Orders.
-9.  **User:** Reports that the Live Feed is showing mock data and asks for it to be made unique and engaging.
-10. **User (LATEST & PENDING):** Live feed done or not - This is the immediate pending question the agent needs to address.
+1.  **User:** Asks to redesign the Admin Bill Payment page with advanced features. (COMPLETED)
+2.  **User:** Asks for superior ideas to encourage profile completion. (COMPLETED)
+3.  **User:** Selects which profile completion ideas to implement: Progress Ring, Contextual Prompts, and Floating Reminder. (COMPLETED)
+4.  **User:** Asks to remove the welcome modal. (COMPLETED)
+5.  **User:** Requests that the Complete Now button on the profile prompts should open the profile page in edit mode. (COMPLETED)
+6.  **User:** Reports a bug where profile information is not being saved after editing. (COMPLETED)
+7.  **User (LATEST & PENDING ACTION):** Reports that the Profile Completion Ring doesn't update its progress and doesn't disappear when the profile is complete. Also requested to remove the bonus messages. (Agent has implemented a code fix, but it needs verification).
 
 **Project Health Check:**
--   **Broken**: Referral level display (Production only), User-facing search bar, Admin Dashboard stats (Production only).
--   **Mocked**: None (Live feed was the last mocked item, and the backend has been fixed).
+-   **Broken**: Referral level display (Production only), User-facing search bar.
+-   **Mocked**: None.
 
 **3rd Party Integrations**
 -   **Upstash Redis**: Used for backend caching.
 
 **Testing status**
--   **Testing agent used after significant changes**: YES (Used to test rejection reason flow).
+-   **Testing agent used after significant changes**: NO
+-   **Troubleshoot agent used after agent stuck in loop**: NO
 -   **Test files created**: []
--   **Known regressions**: The referral page data display in production is a known, persistent regression. The incorrect admin dashboard stats in production is a newly reported but related issue.</analysis>
+-   **Known regressions**: The data discrepancy issues on the Referral Page and Admin Dashboard in production are long-standing regressions that have not been fixed.
+
+**Credentials to test flow:**
+-   **Admin User**:  / 
+-   **Incomplete Profile User**:  /  (Use this for testing the last working item).
+-   **Complete Profile User**:  (password was reset but is unknown, may need to be reset again for testing).
+
+**What agent forgot to execute**
+- The agent did not perform a final visual verification (screenshot) of the fix for the Profile Completion Ring after implementing the code changes. This is the immediate next step.
+- The agent has not addressed the most critical, long-standing production bugs related to data discrepancies (referrals, admin stats), which were highlighted in the initial handoff.</analysis>
