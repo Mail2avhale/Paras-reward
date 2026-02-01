@@ -198,23 +198,54 @@ const AdminBillPayments = ({ user }) => {
 
   // Handle single request process
   const handleProcess = async (requestId, action) => {
+    // If rejecting, show dialog to get reason
+    if (action === 'reject') {
+      setPendingRejectId(requestId);
+      setShowRejectDialog(true);
+      return;
+    }
+    
+    await executeProcess(requestId, action);
+  };
+
+  // Execute the actual process after getting reject reason
+  const executeProcess = async (requestId, action, reason = '') => {
     setProcessing(true);
     try {
-      await axios.post(`${API}/api/admin/bill-payment/process`, {
+      const payload = {
         request_id: requestId,
         action,
         admin_notes: adminNotes,
         admin_uid: user.uid
-      });
-      toast.success(`Request ${action} successfully`);
+      };
+      
+      // Add reject reason if rejecting
+      if (action === 'reject') {
+        payload.reject_reason = reason || rejectReason;
+      }
+      
+      await axios.post(`${API}/api/admin/bill-payment/process`, payload);
+      toast.success(`Request ${action}ed successfully`);
       setSelectedRequest(null);
       setAdminNotes('');
+      setRejectReason('');
+      setShowRejectDialog(false);
+      setPendingRejectId(null);
       fetchRequests();
     } catch (error) {
       toast.error(error.response?.data?.detail || `Failed to ${action} request`);
     } finally {
       setProcessing(false);
     }
+  };
+
+  // Confirm reject with reason
+  const confirmReject = () => {
+    if (!rejectReason.trim()) {
+      toast.error('Please enter a reject reason');
+      return;
+    }
+    executeProcess(pendingRejectId, 'reject', rejectReason);
   };
 
   // Handle bulk actions
