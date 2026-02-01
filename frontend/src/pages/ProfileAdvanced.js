@@ -117,8 +117,25 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await axios.put(`${API}/api/user/${user.uid}/profile`, formData);
-      toast.success('Profile updated!');
+      // Map frontend field names to backend field names
+      const profileData = {
+        name: formData.name,
+        mobile: formData.phone,  // Backend expects 'mobile' not 'phone'
+        phone: formData.phone,   // Also send as phone for compatibility
+        address_line1: formData.address,  // Backend expects 'address_line1'
+        address: formData.address,  // Also send as address for compatibility
+        tahsil: formData.tahsil,
+        taluka: formData.tahsil,  // Backend also accepts taluka
+        district: formData.district,
+        state: formData.state,
+        pincode: formData.pincode,
+        date_of_birth: formData.birthday,  // Backend expects 'date_of_birth'
+        birthday: formData.birthday,  // Also send as birthday for compatibility
+        city: formData.district || formData.tahsil,  // Add city field
+      };
+      
+      await axios.put(`${API}/api/user/${user.uid}/profile`, profileData);
+      toast.success('Profile updated successfully!');
       setEditMode(false);
       fetchUserData();
     } catch (error) {
