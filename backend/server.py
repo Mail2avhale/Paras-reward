@@ -4016,10 +4016,10 @@ async def update_profile(uid: str, request: Request):
     updatable_fields = [
         # Personal Info
         "first_name", "middle_name", "last_name", "name",
-        "gender", "date_of_birth", "bio",
+        "gender", "date_of_birth", "birthday", "bio",
         # Contact Info
         "mobile", "phone", "alternate_mobile", "email",
-        "address_line1", "address_line2",
+        "address", "address_line1", "address_line2",
         "state", "district", "taluka", "tahsil", "city", "village", "pincode",
         # Emergency Contact
         "emergency_contact_name", "emergency_contact_number",
