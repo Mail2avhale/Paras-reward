@@ -196,16 +196,6 @@ export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, pro
     }
     
     return 'pending';
-    if (stepId === 'processing') {
-      if (status === 'processing') return 'current';
-      if (status === 'completed') return 'completed';
-      return 'pending';
-    }
-    if (stepId === 'completed') {
-      if (status === 'completed') return 'completed';
-      return 'pending';
-    }
-    return 'pending';
   };
   
   // Trigger confetti when status becomes completed
