@@ -846,6 +846,84 @@ const AdminBillPayments = ({ user }) => {
           </Card>
         </div>
       )}
+
+      {/* Reject Reason Dialog */}
+      {showRejectDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md bg-gray-900 border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <XCircle className="w-5 h-5 text-red-400" />
+                Reject Request{pendingRejectId === 'bulk' ? 's' : ''}
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowRejectDialog(false);
+                  setPendingRejectId(null);
+                  setRejectReason('');
+                }}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <p className="text-gray-400 text-sm mb-4">
+              {pendingRejectId === 'bulk' 
+                ? `Please provide a reason for rejecting ${selectedRequests.length} request(s).`
+                : 'Please provide a reason for rejecting this request. The user will be notified and PRC will be refunded.'}
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-gray-400 mb-1 block">Reject Reason *</label>
+                <Input
+                  placeholder="e.g., Invalid bill details, Duplicate request, etc."
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  className="bg-gray-800 border-gray-700 text-white"
+                />
+              </div>
+              
+              {/* Quick Reasons */}
+              <div className="flex flex-wrap gap-2">
+                {['Invalid details', 'Duplicate request', 'Amount mismatch', 'Provider issue', 'User request'].map(reason => (
+                  <button
+                    key={reason}
+                    onClick={() => setRejectReason(reason)}
+                    className="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs text-gray-300 border border-gray-700"
+                  >
+                    {reason}
+                  </button>
+                ))}
+              </div>
+              
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 border-gray-700"
+                  onClick={() => {
+                    setShowRejectDialog(false);
+                    setPendingRejectId(null);
+                    setRejectReason('');
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={pendingRejectId === 'bulk' ? confirmBulkReject : confirmReject}
+                  disabled={processing || !rejectReason.trim()}
+                >
+                  {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                  Confirm Reject
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
