@@ -642,7 +642,12 @@ const AdminBillPayments = ({ user }) => {
                       <div className="flex items-center gap-4 mt-2 text-xs">
                         <span className={`${category.textColor}`}>{category.name}</span>
                         <span className="text-gray-500">{request.details?.phone_number || request.details?.account_number || '-'}</span>
-                        <span className="text-gray-500">{getTimeAgo(request.created_at)}</span>
+                        {/* Live Timer for pending/processing requests */}
+                        {(request.status === 'pending' || request.status === 'processing') ? (
+                          <LiveTimer createdAt={request.created_at} status={request.status} />
+                        ) : (
+                          <span className="text-gray-500">{getTimeAgo(request.created_at)}</span>
+                        )}
                       </div>
                     </div>
 
