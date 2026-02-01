@@ -62,6 +62,15 @@ export const LiveTimer = ({ createdAt, status }) => {
         transition={{ duration: 1, repeat: Infinity }}
         className="text-xs text-blue-400"
       >
+        ago
+      </motion.span>
+    </motion.div>
+  );
+};
+        animate={{ opacity: [1, 0.5, 1] }}
+        transition={{ duration: 1, repeat: Infinity }}
+        className="text-xs text-blue-400"
+      >
         पूर्वी
       </motion.span>
     </motion.div>
