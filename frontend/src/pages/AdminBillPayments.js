@@ -255,29 +255,59 @@ const AdminBillPayments = ({ user }) => {
       return;
     }
 
+    // If bulk rejecting, show dialog
+    if (action === 'reject') {
+      setPendingRejectId('bulk');
+      setShowRejectDialog(true);
+      return;
+    }
+
+    await executeBulkAction(action);
+  };
+
+  // Execute bulk action
+  const executeBulkAction = async (action, reason = '') => {
     setProcessing(true);
     let successCount = 0;
     let failCount = 0;
 
     for (const requestId of selectedRequests) {
       try {
-        await axios.post(`${API}/api/admin/bill-payment/process`, {
+        const payload = {
           request_id: requestId,
           action,
           admin_notes: `Bulk ${action}`,
           admin_uid: user.uid
-        });
+        };
+        
+        if (action === 'reject') {
+          payload.reject_reason = reason || rejectReason;
+        }
+        
+        await axios.post(`${API}/api/admin/bill-payment/process`, payload);
         successCount++;
       } catch (error) {
         failCount++;
       }
     }
 
-    toast.success(`${successCount} requests ${action}, ${failCount} failed`);
+    toast.success(`${successCount} requests ${action}ed, ${failCount} failed`);
     setSelectedRequests([]);
     setShowBulkActions(false);
+    setRejectReason('');
+    setShowRejectDialog(false);
+    setPendingRejectId(null);
     fetchRequests();
     setProcessing(false);
+  };
+
+  // Confirm bulk reject
+  const confirmBulkReject = () => {
+    if (!rejectReason.trim()) {
+      toast.error('Please enter a reject reason');
+      return;
+    }
+    executeBulkAction('reject', rejectReason);
   };
 
   // Toggle request selection
