@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
   User, Phone, Mail, MapPin, Camera, Shield, 
-  ChevronRight, Gift, X, Clock, Sparkles, CheckCircle
+  ChevronRight, X, Sparkles, CheckCircle
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -14,15 +14,16 @@ import { Card } from './ui/card';
 export const ProfileCompletionRing = ({ user, userData, onComplete }) => {
   const navigate = useNavigate();
   
+  // Merge user and userData for checking
+  const data = { ...user, ...userData };
+  
   // Calculate profile completion percentage
   const getCompletionData = () => {
     const checks = [
-      { id: 'name', label: 'Full Name', done: !!(userData?.name || user?.name), points: 5, icon: User },
-      { id: 'email', label: 'Email', done: !!(userData?.email || user?.email), points: 5, icon: Mail },
-      { id: 'mobile', label: 'Mobile Number', done: !!(userData?.mobile || user?.mobile), points: 10, icon: Phone },
-      { id: 'city', label: 'City/Location', done: !!(userData?.city || user?.city), points: 5, icon: MapPin },
-      { id: 'photo', label: 'Profile Photo', done: !!(userData?.profile_picture || user?.profile_picture), points: 5, icon: Camera },
-      { id: 'kyc', label: 'KYC Verified', done: userData?.kyc_status === 'verified' || user?.kyc_status === 'verified', points: 20, icon: Shield },
+      { id: 'name', label: 'Full Name', done: !!(data?.name && data.name.trim() !== ''), points: 20, icon: User },
+      { id: 'mobile', label: 'Mobile Number', done: !!(data?.mobile && data.mobile.trim() !== ''), points: 25, icon: Phone },
+      { id: 'location', label: 'Location', done: !!(data?.city || data?.district || data?.state), points: 15, icon: MapPin },
+      { id: 'kyc', label: 'KYC Verified', done: data?.kyc_status === 'verified', points: 40, icon: Shield },
     ];
     
     const completed = checks.filter(c => c.done);
@@ -30,14 +31,14 @@ export const ProfileCompletionRing = ({ user, userData, onComplete }) => {
     const earnedPoints = completed.reduce((sum, c) => sum + c.points, 0);
     const percentage = Math.round((earnedPoints / totalPoints) * 100);
     
-    return { checks, percentage, earnedPoints, totalPoints, bonusPRC: 50 - (earnedPoints) };
+    return { checks, percentage, earnedPoints, totalPoints, incompleteChecks: checks.filter(c => !c.done) };
   };
   
-  const { checks, percentage, bonusPRC } = getCompletionData();
+  const { checks, percentage, incompleteChecks } = getCompletionData();
   const isComplete = percentage === 100;
   
   // SVG Circle parameters
-  const size = 120;
+  const size = 100;
   const strokeWidth = 8;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -51,7 +52,8 @@ export const ProfileCompletionRing = ({ user, userData, onComplete }) => {
     return '#ef4444'; // red
   };
 
-  if (isComplete) return null; // Don't show if profile is complete
+  // Don't show if profile is complete (100%)
+  if (isComplete) return null;
 
   return (
     <Card className="p-4 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/30 mb-4">
