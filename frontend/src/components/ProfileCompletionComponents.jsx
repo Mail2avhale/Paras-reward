@@ -259,17 +259,20 @@ export const RedemptionProfilePrompt = ({ user, userData, onContinue, onComplete
   const navigate = useNavigate();
   const [show, setShow] = useState(true);
   
+  // Merge data
+  const data = { ...user, ...userData };
+  
   // Check what's missing
   const getMissingItems = () => {
     const missing = [];
-    if (!userData?.kyc_status || userData?.kyc_status !== 'verified') {
-      missing.push({ id: 'kyc', label: 'KYC Verification', icon: Shield, benefit: '2x faster processing' });
+    if (data?.kyc_status !== 'verified') {
+      missing.push({ id: 'kyc', label: 'KYC', icon: Shield });
     }
-    if (!userData?.mobile && !user?.mobile) {
-      missing.push({ id: 'mobile', label: 'Mobile Number', icon: Phone, benefit: 'SMS updates' });
+    if (!data?.mobile || data.mobile.trim() === '') {
+      missing.push({ id: 'mobile', label: 'Mobile', icon: Phone });
     }
-    if (!userData?.name && !user?.name) {
-      missing.push({ id: 'name', label: 'Full Name', icon: User, benefit: 'Personalized service' });
+    if (!data?.name || data.name.trim() === '') {
+      missing.push({ id: 'name', label: 'Name', icon: User });
     }
     return missing;
   };
@@ -295,54 +298,36 @@ export const RedemptionProfilePrompt = ({ user, userData, onContinue, onComplete
       animate={{ opacity: 1, y: 0 }}
       className="mb-4"
     >
-      <Card className="p-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/30">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-            <Sparkles className="w-5 h-5 text-amber-400" />
+      <Card className="p-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/30">
+        <div className="flex items-center gap-3">
+          {/* Missing items */}
+          <div className="flex flex-wrap gap-1 flex-1">
+            {missingItems.map(item => (
+              <span 
+                key={item.id}
+                className="px-2 py-1 bg-gray-800 rounded-lg text-xs flex items-center gap-1"
+              >
+                <item.icon className="w-3 h-3 text-amber-400" />
+                <span className="text-gray-300">{item.label}</span>
+              </span>
+            ))}
           </div>
           
-          <div className="flex-1">
-            <h4 className="font-semibold text-amber-300 mb-1 text-sm">
-              Complete Profile for Faster Processing!
-            </h4>
-            <p className="text-xs text-gray-400 mb-3">
-              {missingItems[0]?.id === 'kyc' 
-                ? 'KYC verified users get 2x faster request processing!'
-                : 'Complete your profile to unlock all benefits.'}
-            </p>
-            
-            {/* Missing items */}
-            <div className="flex flex-wrap gap-2 mb-3">
-              {missingItems.slice(0, 2).map(item => (
-                <span 
-                  key={item.id}
-                  className="px-2 py-1 bg-gray-800 rounded-lg text-xs flex items-center gap-1"
-                >
-                  <item.icon className="w-3 h-3 text-amber-400" />
-                  <span className="text-gray-300">{item.label}</span>
-                </span>
-              ))}
-            </div>
-            
-            <div className="flex gap-2">
-              <Button 
-                size="sm"
-                onClick={handleComplete}
-                className="bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                <CheckCircle className="w-4 h-4 mr-1" />
-                Complete Profile
-              </Button>
-              <Button 
-                size="sm"
-                variant="ghost"
-                onClick={handleContinue}
-                className="text-gray-400 hover:text-white"
-              >
-                Continue Anyway
-              </Button>
-            </div>
-          </div>
+          <Button 
+            size="sm"
+            onClick={handleComplete}
+            className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white"
+          >
+            Complete
+          </Button>
+          <Button 
+            size="sm"
+            variant="ghost"
+            onClick={handleContinue}
+            className="h-7 text-xs text-gray-400 hover:text-white"
+          >
+            Skip
+          </Button>
         </div>
       </Card>
     </motion.div>
