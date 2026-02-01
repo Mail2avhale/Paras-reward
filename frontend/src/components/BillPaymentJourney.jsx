@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { 
   FileText, Clock, Loader2, CheckCircle, XCircle, 
@@ -40,8 +40,9 @@ export const LiveTimer = ({ createdAt, status }) => {
     return () => clearInterval(interval);
   }, [createdAt]);
   
+  // Don't show timer for finished requests
   if (status === 'completed' || status === 'rejected') {
-    return null; // Don't show live timer for finished requests
+    return null;
   }
   
   return (
@@ -63,15 +64,6 @@ export const LiveTimer = ({ createdAt, status }) => {
         className="text-xs text-blue-400"
       >
         ago
-      </motion.span>
-    </motion.div>
-  );
-};
-        animate={{ opacity: [1, 0.5, 1] }}
-        transition={{ duration: 1, repeat: Infinity }}
-        className="text-xs text-blue-400"
-      >
-        पूर्वी
       </motion.span>
     </motion.div>
   );
@@ -108,7 +100,7 @@ export const SpeedBadge = ({ processingTime }) => {
       gradient: "from-yellow-400 to-orange-500",
       bg: "bg-gradient-to-r from-yellow-500/20 to-orange-500/20",
       border: "border-yellow-500/50",
-      glow: "shadow-yellow-500/30"
+      iconColor: '#facc15'
     };
   } else if (minutes <= 240) {
     badge = {
@@ -117,7 +109,7 @@ export const SpeedBadge = ({ processingTime }) => {
       gradient: "from-blue-400 to-cyan-500",
       bg: "bg-gradient-to-r from-blue-500/20 to-cyan-500/20",
       border: "border-blue-500/50",
-      glow: "shadow-blue-500/30"
+      iconColor: '#60a5fa'
     };
   } else if (minutes <= 480) {
     badge = {
@@ -126,7 +118,7 @@ export const SpeedBadge = ({ processingTime }) => {
       gradient: "from-emerald-400 to-green-500",
       bg: "bg-gradient-to-r from-emerald-500/20 to-green-500/20",
       border: "border-emerald-500/50",
-      glow: "shadow-emerald-500/30"
+      iconColor: '#34d399'
     };
   }
   
@@ -139,18 +131,15 @@ export const SpeedBadge = ({ processingTime }) => {
       initial={{ scale: 0, rotate: -180 }}
       animate={{ scale: 1, rotate: 0 }}
       transition={{ type: "spring", stiffness: 200, damping: 15 }}
-      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${badge.bg} border ${badge.border} shadow-lg ${badge.glow}`}
+      className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${badge.bg} border ${badge.border} shadow-lg`}
     >
       <motion.div
-        animate={{ 
-          scale: [1, 1.2, 1],
-          rotate: [0, 10, -10, 0]
-        }}
+        animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
         transition={{ duration: 2, repeat: Infinity }}
       >
-        <Icon className={`w-4 h-4 bg-gradient-to-r ${badge.gradient} bg-clip-text`} style={{ color: badge.gradient.includes('yellow') ? '#facc15' : badge.gradient.includes('blue') ? '#60a5fa' : '#34d399' }} />
+        <Icon className="w-5 h-5" style={{ color: badge.iconColor }} />
       </motion.div>
-      <span className={`text-xs font-bold bg-gradient-to-r ${badge.gradient} bg-clip-text text-transparent`}>
+      <span className={`text-sm font-bold bg-gradient-to-r ${badge.gradient} bg-clip-text text-transparent`}>
         {badge.text}
       </span>
     </motion.div>
@@ -160,8 +149,7 @@ export const SpeedBadge = ({ processingTime }) => {
 // ============================================
 // REQUEST JOURNEY ANIMATION
 // ============================================
-export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, processingTime, onComplete }) => {
-  const [showConfetti, setShowConfetti] = useState(false);
+export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, processingTime }) => {
   const [hasTriggeredConfetti, setHasTriggeredConfetti] = useState(false);
   
   const steps = [
@@ -170,6 +158,7 @@ export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, pro
     { id: 'completed', label: 'Completed', icon: CheckCircle }
   ];
   
+  // Determine step status based on request status
   const getStepStatus = (stepId) => {
     // Handle rejected status
     if (status === 'rejected') {
@@ -201,13 +190,10 @@ export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, pro
   // Trigger confetti when status becomes completed
   useEffect(() => {
     if (status === 'completed' && !hasTriggeredConfetti) {
-      setShowConfetti(true);
       setHasTriggeredConfetti(true);
       
-      // Fire confetti
       const duration = 3000;
       const end = Date.now() + duration;
-      
       const colors = ['#10b981', '#34d399', '#6ee7b7', '#fbbf24', '#f59e0b'];
       
       (function frame() {
@@ -243,7 +229,7 @@ export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, pro
     }
   }, [status, hasTriggeredConfetti]);
   
-  // Special rejected state
+  // Rejected state - special UI
   if (status === 'rejected') {
     return (
       <div className="p-4 bg-gradient-to-r from-red-500/5 to-red-500/10 rounded-xl border border-red-500/20">
@@ -293,9 +279,7 @@ export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, pro
           return (
             <React.Fragment key={step.id}>
               {index > 0 && (
-                <motion.div 
-                  className="flex-1 h-1 mx-2 rounded-full overflow-hidden bg-gray-700"
-                >
+                <motion.div className="flex-1 h-1 mx-2 rounded-full overflow-hidden bg-gray-700">
                   <motion.div
                     initial={{ width: '0%' }}
                     animate={{ 
@@ -410,6 +394,7 @@ export const RequestJourneyCompact = ({ status, processingTime }) => {
           border: 'border-amber-500/30'
         };
       case 'processing':
+      case 'approved':
         return { 
           icon: Loader2, 
           text: 'Processing', 
