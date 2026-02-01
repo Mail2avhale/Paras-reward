@@ -13,6 +13,7 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext';
 import RequestTimeline from '../components/RequestTimeline';
 import { RedemptionProfilePrompt } from '../components/ProfileCompletionComponents';
+import { RequestJourney, LiveTimer, SpeedBadge } from '../components/BillPaymentJourney';
 import { 
   formatMobile, formatIFSC, formatBankAccount,
   validateMobile, validateIFSC, validateBankAccount
