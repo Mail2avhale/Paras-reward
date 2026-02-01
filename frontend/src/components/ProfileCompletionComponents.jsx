@@ -56,8 +56,8 @@ export const ProfileCompletionRing = ({ user, userData, onComplete }) => {
   if (isComplete) return null;
 
   return (
-    <Card className="p-4 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/30 mb-4">
-      <div className="flex items-center gap-4">
+    <Card className="p-3 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/30 mb-4">
+      <div className="flex items-center gap-3">
         {/* Progress Ring */}
         <div className="relative flex-shrink-0">
           <svg width={size} height={size} className="transform -rotate-90">
@@ -83,28 +83,20 @@ export const ProfileCompletionRing = ({ user, userData, onComplete }) => {
               initial={{ strokeDashoffset: circumference }}
               animate={{ strokeDashoffset: offset }}
               transition={{ duration: 1, ease: "easeOut" }}
+              key={percentage} // Re-animate when percentage changes
             />
           </svg>
           {/* Percentage text */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-2xl font-bold text-white">{percentage}%</span>
-            <span className="text-[10px] text-gray-400">Complete</span>
+            <span className="text-xl font-bold text-white">{percentage}%</span>
           </div>
         </div>
         
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-white mb-1 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            Complete Your Profile
-          </h3>
-          <p className="text-xs text-gray-400 mb-2">
-            Unlock {bonusPRC} PRC bonus & faster redemptions!
-          </p>
-          
           {/* Incomplete items */}
           <div className="flex flex-wrap gap-1 mb-2">
-            {checks.filter(c => !c.done).slice(0, 3).map(check => (
+            {incompleteChecks.slice(0, 3).map(check => (
               <span 
                 key={check.id}
                 className="px-2 py-0.5 bg-gray-800 text-gray-400 text-[10px] rounded-full flex items-center gap-1"
@@ -118,21 +110,15 @@ export const ProfileCompletionRing = ({ user, userData, onComplete }) => {
           <Button 
             size="sm" 
             onClick={() => navigate('/profile?edit=true')}
-            className="h-8 bg-purple-600 hover:bg-purple-700"
+            className="h-7 text-xs bg-purple-600 hover:bg-purple-700"
           >
-            Complete Now
-            <ChevronRight className="w-4 h-4 ml-1" />
+            Complete
+            <ChevronRight className="w-3 h-3 ml-1" />
           </Button>
         </div>
-      </div>
-      
-      {/* Bonus indicator */}
-      <div className="mt-3 pt-3 border-t border-gray-700/50 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-amber-400">
-          <Gift className="w-4 h-4" />
-          <span>Earn up to <strong>50 PRC</strong> bonus!</span>
-        </div>
-        <div className="flex gap-1">
+        
+        {/* Progress dots */}
+        <div className="flex flex-col gap-1">
           {checks.map(check => (
             <div 
               key={check.id}
