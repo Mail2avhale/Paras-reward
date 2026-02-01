@@ -4949,6 +4949,7 @@ async def get_user_dashboard_combined(uid: str):
             "referral_code": user.get("referral_code", ""),
             "subscription_plan": subscription_plan,
             "subscription_expiry": subscription_expiry,
+            "subscription_start": subscription_start,
             "mining_rate": user.get("mining_rate", 0.5),
             "created_at": user.get("created_at"),
             "profile_image": user.get("profile_image"),
