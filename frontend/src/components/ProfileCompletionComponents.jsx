@@ -214,41 +214,28 @@ export const ProfileFloatingReminder = ({ user, userData, onDismiss }) => {
         exit={{ opacity: 0, y: 50, scale: 0.9 }}
         className="fixed bottom-24 left-4 right-4 z-40"
       >
-        <Card className="p-4 bg-gradient-to-r from-gray-900 to-gray-800 border-purple-500/30 shadow-xl shadow-purple-500/10">
-          <div className="flex items-start gap-3">
+        <Card className="p-3 bg-gradient-to-r from-gray-900 to-gray-800 border-purple-500/30 shadow-xl shadow-purple-500/10">
+          <div className="flex items-center gap-3">
             {/* Avatar */}
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-lg">👋</span>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+              <User className="w-4 h-4 text-white" />
             </div>
             
             {/* Content */}
             <div className="flex-1 min-w-0">
-              <h4 className="font-semibold text-white mb-1">
-                Hey {firstName}!
-              </h4>
-              <p className="text-sm text-gray-400 mb-3">
-                Complete your profile for faster redemptions & earn <span className="text-amber-400 font-semibold">50 PRC</span> bonus!
+              <p className="text-sm text-gray-300">
+                {firstName}, complete your profile
               </p>
-              
-              <div className="flex gap-2">
-                <Button 
-                  size="sm"
-                  onClick={handleComplete}
-                  className="bg-purple-600 hover:bg-purple-700"
-                >
-                  Complete Now
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-                <Button 
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleDismiss}
-                  className="text-gray-400 hover:text-white"
-                >
-                  Later
-                </Button>
-              </div>
             </div>
+            
+            {/* Actions */}
+            <Button 
+              size="sm"
+              onClick={handleComplete}
+              className="h-7 text-xs bg-purple-600 hover:bg-purple-700"
+            >
+              Complete
+            </Button>
             
             {/* Close button */}
             <button 
