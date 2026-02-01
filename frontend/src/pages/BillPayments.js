@@ -696,23 +696,24 @@ const BillPayments = ({ user, onLogout }) => {
                         {expandedRequest === req.request_id && (
                           <tr>
                             <td colSpan={6} className="px-4 py-3 bg-gray-800/30">
-                              <RequestTimeline
-                                createdAt={req.created_at}
-                                processedAt={req.completed_at || req.processed_at}
-                                processedBy={req.processed_by}
+                              {/* NEW: Request Journey Animation */}
+                              <RequestJourney
                                 status={req.status}
-                                variant="compact"
+                                createdAt={req.created_at}
+                                approvedAt={req.approved_at}
+                                completedAt={req.completed_at}
+                                processingTime={req.processing_time}
                               />
-                              {/* Show processing time for completed requests */}
-                              {req.status === 'completed' && req.processing_time && (
-                                <div className="mt-3 p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/30">
-                                  <p className="text-emerald-400 text-xs font-medium">⏱️ Processing Time:</p>
-                                  <p className="text-emerald-300 text-sm mt-1">{req.processing_time}</p>
-                                  {req.txn_number && (
-                                    <p className="text-emerald-400 text-xs mt-2">TXN: {req.txn_number}</p>
-                                  )}
+                              
+                              {/* TXN Number for completed */}
+                              {req.status === 'completed' && req.txn_number && (
+                                <div className="mt-3 text-center">
+                                  <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs">
+                                    TXN: {req.txn_number}
+                                  </span>
                                 </div>
                               )}
+                              
                               {/* Show rejection reason prominently */}
                               {req.status === 'rejected' && (req.reject_reason || req.admin_notes) && (
                                 <div className="mt-3 p-3 bg-red-500/10 rounded-lg border border-red-500/30">
@@ -720,11 +721,12 @@ const BillPayments = ({ user, onLogout }) => {
                                   <p className="text-red-300 text-sm mt-1">{req.reject_reason || req.admin_notes}</p>
                                 </div>
                               )}
-                              {/* Show admin notes for other statuses */}
-                              {req.status !== 'rejected' && req.status !== 'completed' && req.admin_notes && (
-                                <div className="mt-3 p-3 bg-gray-700/50 rounded-lg">
-                                  <p className="text-gray-400 text-xs">Admin Notes:</p>
-                                  <p className="text-white text-sm">{req.admin_notes}</p>
+                              
+                              {/* Show admin notes for processing status */}
+                              {req.status === 'processing' && req.admin_notes && (
+                                <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
+                                  <p className="text-blue-400 text-xs">Admin Note:</p>
+                                  <p className="text-blue-300 text-sm">{req.admin_notes}</p>
                                 </div>
                               )}
                             </td>
