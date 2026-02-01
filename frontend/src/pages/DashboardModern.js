@@ -234,15 +234,6 @@ const DashboardModern = ({ user, onLogout }) => {
       
       {/* PRC Rain Drop Game */}
       <PRCRain user={user} onComplete={() => fetchDashboardData()} />
-      
-      {/* Interactive Walkthrough for new users */}
-      {showWalkthrough && (
-        <InteractiveWalkthrough 
-          user={user}
-          onComplete={hideWalkthrough}
-          onSkip={hideWalkthrough}
-        />
-      )}
 
       {/* Profile Completion Popup */}
       {showProfilePopup && (
