@@ -61,6 +61,11 @@ Build a comprehensive rewards platform (PARAS REWARD) with:
   - Added fallback logic: VIP payment approved_at → calculated from expiry - 30 days
   - Auto-syncs calculated start date to user document
 
+- **Bug Fix:** Bill Payment reject not updating status
+  - Backend required `reject_reason` but frontend wasn't sending it
+  - Added reject reason dialog with quick-select options
+  - Now both single and bulk reject require and send reason
+
 ### January 31, 2026
 - **NEW FEATURE:** VIP-Based Weekly Redemption Limits
   - Per-service limits: Mobile, DTH, Electricity, Credit Card, EMI, Gift Voucher, Shopping
