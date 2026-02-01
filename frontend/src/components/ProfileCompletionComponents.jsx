@@ -301,7 +301,7 @@ export const RedemptionProfilePrompt = ({ user, userData, onContinue, onComplete
   };
   
   const handleComplete = () => {
-    navigate('/profile');
+    navigate('/profile?edit=true');
     onComplete?.();
   };
 
