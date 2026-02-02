@@ -53,6 +53,17 @@ const AdminAnalytics = ({ user }) => {
     fetchAnalytics();
   }, []);
 
+  // Auto-refresh every 30 seconds when enabled
+  useEffect(() => {
+    let interval;
+    if (autoRefresh) {
+      interval = setInterval(() => {
+        fetchAnalytics(null, null, true); // Silent refresh
+      }, 30000);
+    }
+    return () => clearInterval(interval);
+  }, [autoRefresh]);
+
   const handleDateRangeChange = (range) => {
     setDateRange(range);
     const now = new Date();
