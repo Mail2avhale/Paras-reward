@@ -16541,8 +16541,8 @@ async def get_comprehensive_analytics(
     month_start = today_start.replace(day=1)
     year_start = today_start.replace(month=1, day=1)
     
-    # PRC Rate (1 PRC = X INR)
-    PRC_TO_INR_RATE = 2.0  # Configure this based on your business logic
+    # PRC Rate (10 PRC = ₹1 INR, so 1 PRC = ₹0.1)
+    PRC_TO_INR_RATE = 0.1  # Correct rate: 10 PRC = ₹1
     
     # ===== 1. PRC CIRCULATION STATS =====
     prc_circulation = await asyncio.gather(
