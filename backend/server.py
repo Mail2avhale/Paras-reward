@@ -16507,6 +16507,251 @@ async def get_commission_report():
     }
 
 
+# ========== COMPREHENSIVE ANALYTICS DASHBOARD ==========
+
+@api_router.get("/admin/analytics/comprehensive")
+async def get_comprehensive_analytics(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """
+    Comprehensive Analytics Dashboard API
+    Returns: PRC circulation, redemption stats, user stats, and charts
+    Supports custom date ranges
+    """
+    from datetime import timedelta
+    
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    # Parse date range or use defaults
+    if start_date and end_date:
+        try:
+            range_start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            range_end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        except:
+            range_start = today_start - timedelta(days=30)
+            range_end = now
+    else:
+        range_start = today_start - timedelta(days=30)
+        range_end = now
+    
+    # Calculate time ranges
+    week_start = today_start - timedelta(days=today_start.weekday())
+    month_start = today_start.replace(day=1)
+    year_start = today_start.replace(month=1, day=1)
+    
+    # PRC Rate (1 PRC = X INR)
+    PRC_TO_INR_RATE = 2.0  # Configure this based on your business logic
+    
+    # ===== 1. PRC CIRCULATION STATS =====
+    prc_circulation = await asyncio.gather(
+        # Total PRC in user wallets
+        db.users.aggregate([
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_balance", 0]}}}}
+        ]).to_list(1),
+        # Total PRC ever mined
+        db.users.aggregate([
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_mined", 0]}}}}
+        ]).to_list(1),
+        # Total PRC from referrals
+        db.users.aggregate([
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$referral_earnings", 0]}}}}
+        ]).to_list(1),
+    )
+    
+    total_prc_balance = prc_circulation[0][0]["total"] if prc_circulation[0] else 0
+    total_prc_mined = prc_circulation[1][0]["total"] if prc_circulation[1] else 0
+    total_prc_referrals = prc_circulation[2][0]["total"] if prc_circulation[2] else 0
+    total_prc_circulated = total_prc_balance + total_prc_mined
+    
+    # ===== 2. PRC REDEMPTION STATS (by time period) =====
+    # Helper function for redemption aggregation
+    async def get_redemption_stats(date_filter):
+        results = await asyncio.gather(
+            # Orders
+            db.orders.aggregate([
+                {"$match": {"status": {"$in": ["completed", "delivered"]}, **date_filter}},
+                {"$group": {"_id": None, "total_prc": {"$sum": {"$ifNull": ["$total_prc", 0]}}, "count": {"$sum": 1}}}
+            ]).to_list(1),
+            # Bill Payments
+            db.bill_payment_requests.aggregate([
+                {"$match": {"status": {"$in": ["completed", "approved"]}, **date_filter}},
+                {"$group": {"_id": None, "total_prc": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}, "total_inr": {"$sum": {"$ifNull": ["$amount_inr", 0]}}, "count": {"$sum": 1}}}
+            ]).to_list(1),
+            # Gift Vouchers
+            db.gift_voucher_requests.aggregate([
+                {"$match": {"status": {"$in": ["completed", "approved"]}, **date_filter}},
+                {"$group": {"_id": None, "total_prc": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}, "total_inr": {"$sum": {"$ifNull": ["$amount_inr", 0]}}, "count": {"$sum": 1}}}
+            ]).to_list(1),
+        )
+        
+        total_prc = sum([r[0]["total_prc"] if r else 0 for r in results])
+        total_inr = sum([r[0].get("total_inr", 0) if r else 0 for r in results[1:]])  # Only bill/gift have INR
+        total_count = sum([r[0]["count"] if r else 0 for r in results])
+        
+        return {
+            "total_prc": round(total_prc, 2),
+            "total_inr": round(total_inr, 2),
+            "prc_value_inr": round(total_prc * PRC_TO_INR_RATE, 2),
+            "total_count": total_count,
+            "breakdown": {
+                "orders": {"prc": results[0][0]["total_prc"] if results[0] else 0, "count": results[0][0]["count"] if results[0] else 0},
+                "bill_payments": {"prc": results[1][0]["total_prc"] if results[1] else 0, "inr": results[1][0].get("total_inr", 0) if results[1] else 0, "count": results[1][0]["count"] if results[1] else 0},
+                "gift_vouchers": {"prc": results[2][0]["total_prc"] if results[2] else 0, "inr": results[2][0].get("total_inr", 0) if results[2] else 0, "count": results[2][0]["count"] if results[2] else 0}
+            }
+        }
+    
+    # Get stats for different periods
+    redemption_results = await asyncio.gather(
+        get_redemption_stats({}),  # All time
+        get_redemption_stats({"created_at": {"$gte": today_start.isoformat()}}),  # Today
+        get_redemption_stats({"created_at": {"$gte": week_start.isoformat()}}),  # This week
+        get_redemption_stats({"created_at": {"$gte": month_start.isoformat()}}),  # This month
+        get_redemption_stats({"created_at": {"$gte": year_start.isoformat()}}),  # This year
+        get_redemption_stats({"created_at": {"$gte": range_start.isoformat(), "$lte": range_end.isoformat()}}),  # Custom range
+    )
+    
+    redemption_stats = {
+        "all_time": redemption_results[0],
+        "today": redemption_results[1],
+        "this_week": redemption_results[2],
+        "this_month": redemption_results[3],
+        "this_year": redemption_results[4],
+        "custom_range": {
+            **redemption_results[5],
+            "start_date": range_start.isoformat(),
+            "end_date": range_end.isoformat()
+        }
+    }
+    
+    # ===== 3. USER STATS =====
+    # Calculate active users (active = logged in within 7 days OR has balance > 0 OR has orders)
+    seven_days_ago = now - timedelta(days=7)
+    
+    user_stats = await asyncio.gather(
+        db.users.count_documents({}),  # Total
+        db.users.count_documents({"role": {"$ne": "admin"}}),  # Non-admin total
+        db.users.count_documents({
+            "$or": [
+                {"last_login": {"$gte": seven_days_ago.isoformat()}},
+                {"prc_balance": {"$gt": 0}},
+                {"total_mined": {"$gt": 0}}
+            ]
+        }),  # Active users
+        db.users.count_documents({"subscription_plan": "explorer"}),
+        db.users.count_documents({"subscription_plan": "startup"}),
+        db.users.count_documents({"subscription_plan": "growth"}),
+        db.users.count_documents({"subscription_plan": "elite"}),
+        db.users.count_documents({"kyc_status": "verified"}),
+        db.users.count_documents({"kyc_status": "pending"}),
+        db.users.count_documents({"created_at": {"$gte": today_start.isoformat()}}),  # New today
+        db.users.count_documents({"created_at": {"$gte": week_start.isoformat()}}),  # New this week
+        db.users.count_documents({"created_at": {"$gte": month_start.isoformat()}}),  # New this month
+    )
+    
+    total_users = user_stats[0]
+    non_admin_users = user_stats[1]
+    active_users = user_stats[2]
+    inactive_users = non_admin_users - active_users
+    
+    users = {
+        "total": total_users,
+        "non_admin": non_admin_users,
+        "active": active_users,
+        "inactive": inactive_users,
+        "active_percentage": round((active_users / non_admin_users * 100) if non_admin_users > 0 else 0, 1),
+        "by_plan": {
+            "explorer": user_stats[3],
+            "startup": user_stats[4],
+            "growth": user_stats[5],
+            "elite": user_stats[6]
+        },
+        "paid_users": user_stats[4] + user_stats[5] + user_stats[6],
+        "free_users": user_stats[3],
+        "kyc_verified": user_stats[7],
+        "kyc_pending": user_stats[8],
+        "new_users": {
+            "today": user_stats[9],
+            "this_week": user_stats[10],
+            "this_month": user_stats[11]
+        }
+    }
+    
+    # ===== 4. CHARTS DATA =====
+    # User growth chart (last 30 days)
+    thirty_days_ago = now - timedelta(days=30)
+    user_growth_data = await db.users.aggregate([
+        {"$match": {"created_at": {"$gte": thirty_days_ago.isoformat()}}},
+        {"$addFields": {
+            "date_str": {"$substr": ["$created_at", 0, 10]}
+        }},
+        {"$group": {
+            "_id": "$date_str",
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"_id": 1}}
+    ]).to_list(30)
+    
+    # Redemption trend chart (last 30 days)
+    redemption_trend = await db.bill_payment_requests.aggregate([
+        {"$match": {"created_at": {"$gte": thirty_days_ago.isoformat()}, "status": {"$in": ["completed", "approved"]}}},
+        {"$addFields": {
+            "date_str": {"$substr": ["$created_at", 0, 10]}
+        }},
+        {"$group": {
+            "_id": "$date_str",
+            "total_prc": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}},
+            "total_inr": {"$sum": {"$ifNull": ["$amount_inr", 0]}},
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"_id": 1}}
+    ]).to_list(30)
+    
+    # Plan distribution for pie chart
+    plan_distribution = [
+        {"name": "Explorer (Free)", "value": user_stats[3], "color": "#6b7280"},
+        {"name": "Startup", "value": user_stats[4], "color": "#3b82f6"},
+        {"name": "Growth", "value": user_stats[5], "color": "#8b5cf6"},
+        {"name": "Elite", "value": user_stats[6], "color": "#f59e0b"}
+    ]
+    
+    # Active vs Inactive pie chart
+    activity_distribution = [
+        {"name": "Active Users", "value": active_users, "color": "#10b981"},
+        {"name": "Inactive Users", "value": inactive_users, "color": "#ef4444"}
+    ]
+    
+    charts = {
+        "user_growth": user_growth_data,
+        "redemption_trend": redemption_trend,
+        "plan_distribution": plan_distribution,
+        "activity_distribution": activity_distribution
+    }
+    
+    # ===== 5. TOP USERS BY BALANCE =====
+    top_users = await db.users.find(
+        {"role": {"$ne": "admin"}},
+        {"_id": 0, "uid": 1, "name": 1, "email": 1, "prc_balance": 1, "subscription_plan": 1, "total_mined": 1, "kyc_status": 1, "created_at": 1, "last_login": 1}
+    ).sort("prc_balance", -1).limit(10).to_list(10)
+    
+    return {
+        "prc_circulation": {
+            "total_in_wallets": round(total_prc_balance, 2),
+            "total_mined": round(total_prc_mined, 2),
+            "total_referral_earnings": round(total_prc_referrals, 2),
+            "total_circulated": round(total_prc_circulated, 2),
+            "inr_value": round(total_prc_balance * PRC_TO_INR_RATE, 2),
+            "prc_rate": PRC_TO_INR_RATE
+        },
+        "redemption": redemption_stats,
+        "users": users,
+        "charts": charts,
+        "top_users": top_users,
+        "generated_at": now.isoformat()
+    }
+
+
 # ========== ANALYTICS ENDPOINTS ==========
 
 @api_router.get("/admin/analytics/revenue-trends")
