@@ -1,191 +1,130 @@
 # PARAS REWARD - Product Requirements Document
 
 ## Original Problem Statement
-Build a comprehensive rewards platform (PARAS REWARD) with:
-- User mining/rewards system with daily sessions
-- Multi-tier subscription plans (Explorer, Startup, Growth, Elite)
-- Referral system with level-based bonuses
-- Admin dashboard with analytics
-- Manager role with permission-based access
-- Bill payments, gift vouchers, and product redemption
-- Fraud prevention and security features
+Build a comprehensive rewards and loyalty platform with:
+- PRC (PARAS Reward Coin) earning through mining, referrals, and activities
+- Bill payment redemption system
+- Gamification features (Rain Drop game, achievements)
+- Multi-tier subscription plans (Free, Startup, Growth, Elite)
+- Admin panel for user management and analytics
 
-## Current Status: Production Ready with Minor Issues
+## User Personas
+1. **Regular Users**: Earn PRC through activities, redeem for bill payments
+2. **VIP Subscribers**: Access premium features, higher earning rates
+3. **Admins**: Manage users, approve requests, view analytics
 
-### ✅ Core Features Implemented
-1. **Authentication & User Management**
-   - JWT-based authentication
-   - Role-based access (User, Admin, Manager)
-   - KYC verification system
+## Core Requirements
 
-2. **Mining/Rewards System**
-   - 24-hour mining sessions
-   - Subscription-based reward rates
-   - Luxury Life auto-savings (20% deduction)
-   - Real-time balance updates (FIXED: Cache invalidation on collect)
+### Implemented Features ✅
 
-3. **Subscription System**
-   - Explorer (Free), Startup, Growth, Elite tiers
-   - UTR validation with 12-digit uniqueness check
-   - Fraud prevention (rate limiting, IP tracking)
+#### Bill Payment System (COMPLETED - Dec 2025)
+- [x] Mobile Recharge, DTH, Electricity, Credit Card, Loan/EMI
+- [x] PRC deduction with service charges
+- [x] Admin approval workflow: pending → processing → completed
+- [x] **Gamification Features:**
+  - Live Timer for pending requests
+  - Animated Journey tracker (Submitted → Processing → Completed)
+  - Confetti celebration on completion
+  - Speed Badges (Lightning Fast ≤1h, Quick Service ≤4h, On Time ≤8h)
+  - Processing time calculation and display
+- [x] Rejection reason display with PRC refund
+- [x] TXN number generation
 
-4. **Admin Dashboard**
-   - Redesigned WITHOUT charts (cleaner, faster)
-   - User management with pagination
-   - KYC verification workflow
-   - Subscription payment approvals
-   - System diagnostic tools
+#### Admin Analytics Dashboard (COMPLETED - Dec 2025)
+- [x] New `/admin/analytics` page with recharts
+- [x] Date range filtering (Today, Week, Month, Year, Custom)
+- [x] Real-time auto-refresh toggle
+- [x] PRC circulation stats (10 PRC = ₹1 INR conversion)
+- [x] User breakdown charts (by subscription plan)
+- [x] Key metrics: Total users, Active miners, Revenue
 
-5. **Manager Role (Merged into Admin)**
-   - Permission-based access control
-   - Dynamic menu based on assigned permissions
+#### Profile & Subscription (COMPLETED - Dec 2025)
+- [x] Profile Completion Ring (hides at 100%)
+- [x] Subscription start date display on dashboard
+- [x] KYC verification flow
 
-6. **Weekly Redemption Limits (NEW - Jan 31, 2026)**
-   - VIP tier-based limits per service type
-   - Monday-Sunday weekly reset cycle
-   - Smart "partner issue" rejection messages
-   - Cooldown timer after first redemption
+#### Authentication
+- [x] Email/Password login
+- [x] JWT token authentication
+- [x] Role-based access (user, admin, manager)
 
----
+### Pending Issues 🔴
 
-## Recent Changes (January/February 2026)
+1. **P0: Production Data Discrepancy** - BLOCKED
+   - Referral page shows incorrect counts
+   - Admin dashboard stats mismatch
+   - Needs user action on production server
 
-### February 1, 2026
-- **Bug Fix:** Profile Completion Ring not updating/hiding
-  - Added missing fields (`mobile`, `kyc_status`, `city`, `district`, `state`) to `/api/user/{uid}/dashboard` endpoint
-  - Ring and Floating Reminder now correctly hide when profile is 100% complete
-  - Tested with both complete and incomplete profile scenarios
+2. **P1: Mining Issues (Production)**
+   - Auto-pause not working
+   - Reward rate not displaying
 
-- **Bug Fix:** Subscription Start Date not showing on subscription card
-  - Added `subscription_start` field to dashboard API
-  - Added fallback logic: VIP payment approved_at → calculated from expiry - 30 days
-  - Auto-syncs calculated start date to user document
+3. **P1: Search Bar Broken**
+   - User-facing search functionality not working
 
-- **Bug Fix:** Bill Payment reject not updating status
-  - Backend required `reject_reason` but frontend wasn't sending it
-  - Added reject reason dialog with quick-select options
-  - Now both single and bulk reject require and send reason
+### Upcoming Tasks 🟡
 
-- **Bug Fix:** Bill Payment approve not updating status properly
-  - Added `approved_at` timestamp on approve
-  - Added `processing_time` calculation on complete
-  - Admin can now "Mark Complete" for processing requests
+1. **P0: Rain Drop Game Enhancement**
+   - Combo System
+   - Fever Mode
+   - Golden/Bomb Drops
+   - Leaderboard
+   - Achievements
+   - Power-ups
+   - Visual/Audio enhancements
 
-- **Feature:** Bill Payment Gamification
-  - ⏱️ Real-time live counter (seconds updating)
-  - 🚀 Request Journey Animation (सबमिट → प्रोसेसिंग → पूर्ण)
-  - 🎊 Confetti celebration on completion
-  - ⚡ Speed badges (Lightning Fast, Quick Service, On Time)
+2. **P0: Admin Panel Separation**
+   - Migrate to separate subdomain
+   - Architecture planning
 
-### January 31, 2026
-- **NEW FEATURE:** VIP-Based Weekly Redemption Limits
-  - Per-service limits: Mobile, DTH, Electricity, Credit Card, EMI, Gift Voucher, Shopping
-  - Limits vary by subscription tier (Explorer → Elite)
-  - Smart rejection messages (partner issues, not "limit reached")
-  - Cooldown timer shows days until Monday reset
-  - New API: `GET /api/user/{uid}/weekly-limits`
+3. **P1: Play Store Release**
+   - Evaluate PWA+TWA vs native app
 
-- **Bug Fix:** "Collect Rewards" balance not updating
-  - Added `user_data:{uid}` cache invalidation
+### Future/Backlog 🔵
 
-- **UI Change:** Removed "REDEEMED" from dashboard card (per user request)
+- ML Risk Scoring for fraud detection
+- Full AdMob + Unity Ads Integration
+- Shareable Achievement Cards
+- Server.py refactoring (modular routers)
 
-- **Admin Dashboard Redesign:**
-  - Removed all charts (User Growth, PRC Flow, Orders, Subscriptions)
-  - Added clean stat cards with progress bars
-  - Better visual hierarchy
+## Technical Architecture
 
-### January 30, 2026
-- Merged Manager role into Admin panel
-- Implemented UTR validation with fraud prevention
-- Added database indexes for performance
-- Fixed admin settings hub tabs
-- Corrected "Total Redeemed PRC" calculation
-- Updated redemption minimum account age (7 days → 3 days)
-- Rewrote Live Feed API for dynamic content
+### Backend (FastAPI)
+- `/app/backend/server.py` - Main monolithic server (needs refactoring)
+- MongoDB for data storage
+- Upstash Redis for caching
 
----
-
-## Weekly Redemption Limits Configuration
-
-| Service | Explorer | Startup | Growth | Elite |
-|---------|----------|---------|--------|-------|
-| Mobile Recharge | 1 | 2 | 3 | 5 |
-| DTH Recharge | 1 | 2 | 3 | 5 |
-| Electricity Bill | 1 | 1 | 2 | 3 |
-| Credit Card | 1 | 1 | 2 | 3 |
-| EMI Payment | 1 | 1 | 2 | 3 |
-| Gift Voucher | 1 | 2 | 3 | 5 |
-| Shopping | 10 | 15 | 20 | 999 (Unlimited) |
-
-**Reset:** Every Monday 00:00 UTC
-**User Messaging:** Partner/technical issues (never mentions "limit")
-
----
-
-## Known Issues (Priority Order)
-
-### 🔴 P0 - Critical
-1. **Referral Data Discrepancy (Production Only)**
-   - Referral counts differ between preview and production
-   - Debug endpoints available: `/api/user/{id}/full-debug`
-
-2. **Admin Dashboard Stats (Production Only)**
-   - Some stats may show incorrect values
-   - Use `/api/admin/system/refresh-dashboard` to clear cache
-
-### 🟡 P1 - High Priority
-1. **Search Bar Functionality** - User-facing search not working
-2. **Mining Auto-Pause** - Not showing correctly in production
-
----
-
-## Architecture
-
-### Backend: FastAPI + MongoDB
-- Main file: `/app/backend/server.py` (32,000+ lines)
-- Database: MongoDB with Upstash Redis caching
-- Authentication: JWT tokens
-
-### Frontend: React
-- UI: Shadcn/UI components + Tailwind CSS
-- State: Local state + Context API
-- Routing: React Router v6
+### Frontend (React)
+- `/app/frontend/src/pages/` - Page components
+- `/app/frontend/src/components/` - Reusable components
+  - `BillPaymentJourney.jsx` - Gamification animations
+- Shadcn/UI component library
+- Recharts for data visualization
+- canvas-confetti for celebrations
 
 ### Key API Endpoints
-| Endpoint | Purpose |
-|----------|---------|
-| `/api/user/{uid}/weekly-limits` | Get weekly redemption limits per service |
-| `/api/bill-payment/request` | Submit bill payment (with weekly limit check) |
-| `/api/gift-voucher/request` | Request gift voucher (with weekly limit check) |
-| `/api/orders/checkout` | Shopping checkout (with weekly limit check) |
-| `/api/mining/claim/{uid}` | Claim mining rewards |
-| `/api/admin/stats` | Admin dashboard statistics |
+- `POST /api/admin/analytics-v2` - Advanced analytics with date filtering
+- `POST /api/admin/bill-payment/process` - Approve/Reject/Complete requests
+- `GET /api/user/{uid}/dashboard` - User dashboard data
+- `GET /api/bill-payment/requests/{uid}` - User's bill payment history
+
+### Database Collections
+- `users` - User profiles, balances, subscriptions
+- `bill_payment_requests` - Payment requests with status workflow
+- `vip_payments` - Subscription payments
+- `transactions` - Wallet transaction history
+- `referrals` - Referral relationships
+
+## Business Rules
+- PRC to INR: 10 PRC = ₹1
+- Service charge: 2% on bill payments
+- Processing time target: 3-7 days
+- Speed badges based on completion time
+
+## Test Credentials
+- Admin: `testadmin@emergent.com` / `testpassword`
+- Elite User: `elitetest@test.com` / `testpassword`
+- Test User: `testuser123@emergent.com` / `testpassword`
 
 ---
-
-## Upcoming Tasks
-
-### P0 - Next Sprint
-- Verify admin dashboard fixes on production
-- Debug and fix referral data discrepancy
-- Fix search bar functionality
-
-### P1 - Backlog
-- App separation (user panel vs admin subdomain)
-- Play Store release (PWA+TWA vs native)
-- ML-based fraud risk scoring
-
-### P2 - Future
-- Full AdMob + Unity Ads integration
-- Shareable achievement cards
-- Backend refactoring (break up server.py)
-
----
-
-## Third-Party Integrations
-- **Upstash Redis**: Backend caching
-- **MongoDB**: Primary database
-
-## Test Reports
-- Latest: `/app/test_reports/iteration_42.json`
+Last Updated: February 2, 2026
