@@ -144,11 +144,35 @@ const AdminAnalytics = ({ user }) => {
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <BarChart3 className="w-7 h-7 text-purple-500" />
             Analytics Dashboard
+            {autoRefresh && (
+              <span className="flex items-center gap-1 px-2 py-1 bg-emerald-500/20 rounded-full">
+                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                <span className="text-xs text-emerald-400">LIVE</span>
+              </span>
+            )}
           </h1>
-          <p className="text-gray-400 text-sm mt-1">Comprehensive system analytics</p>
+          <p className="text-gray-400 text-sm mt-1">
+            Comprehensive system analytics 
+            {lastUpdated && (
+              <span className="ml-2 text-gray-500">
+                • Last updated: {lastUpdated.toLocaleTimeString()}
+              </span>
+            )}
+          </p>
         </div>
         
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Auto Refresh Toggle */}
+          <Button
+            size="sm"
+            variant={autoRefresh ? 'default' : 'outline'}
+            onClick={() => setAutoRefresh(!autoRefresh)}
+            className={autoRefresh ? 'bg-emerald-600 hover:bg-emerald-700' : 'border-gray-700'}
+          >
+            <Activity className={`w-4 h-4 mr-1 ${autoRefresh ? 'animate-pulse' : ''}`} />
+            {autoRefresh ? 'Live' : 'Auto'}
+          </Button>
+          
           {/* Date Range Buttons */}
           {['today', 'week', 'month', 'year'].map(range => (
             <Button
