@@ -28,9 +28,11 @@ const AdminAnalytics = ({ user }) => {
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
-  const fetchAnalytics = async (startDate = null, endDate = null) => {
-    setLoading(true);
+  const fetchAnalytics = async (startDate = null, endDate = null, silent = false) => {
+    if (!silent) setLoading(true);
     try {
       let url = `${API}/api/admin/analytics/comprehensive`;
       if (startDate && endDate) {
@@ -38,9 +40,10 @@ const AdminAnalytics = ({ user }) => {
       }
       const res = await axios.get(url);
       setData(res.data);
+      setLastUpdated(new Date());
     } catch (error) {
       console.error('Error fetching analytics:', error);
-      toast.error('Failed to load analytics');
+      if (!silent) toast.error('Failed to load analytics');
     } finally {
       setLoading(false);
     }
