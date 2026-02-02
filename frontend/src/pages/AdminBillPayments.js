@@ -683,25 +683,6 @@ const AdminBillPayments = ({ user }) => {
                             <XCircle className="w-3 h-3" />
                           </Button>
                         </div>
-                      ) : request.status === 'processing' ? (
-                        <div className="flex flex-col items-end gap-1 mt-2">
-                          <span className="inline-block px-2 py-1 rounded text-xs bg-blue-500/20 text-blue-400">
-                            ⏳ Processing
-                          </span>
-                          <Button
-                            size="sm"
-                            onClick={() => handleProcess(request.request_id, 'complete')}
-                            disabled={processing}
-                            className="h-6 px-2 text-xs bg-emerald-600 hover:bg-emerald-700"
-                          >
-                            ✓ Mark Complete
-                          </Button>
-                          {request.processed_by && (
-                            <span className="text-[10px] text-gray-600">
-                              by {request.processed_by}
-                            </span>
-                          )}
-                        </div>
                       ) : (
                         <div className="flex flex-col items-end gap-1 mt-2">
                           <span className={`inline-block px-2 py-1 rounded text-xs ${
