@@ -8,12 +8,16 @@ import {
 
 // ============================================
 // LIVE TIMER COMPONENT
+// Shows elapsed time only for PENDING requests
 // ============================================
 export const LiveTimer = ({ createdAt, status }) => {
   const [timeElapsed, setTimeElapsed] = useState('');
   
   useEffect(() => {
     if (!createdAt) return;
+    
+    // Only run timer for pending status
+    if (status !== 'pending') return;
     
     const updateTimer = () => {
       const created = new Date(createdAt);
@@ -38,10 +42,10 @@ export const LiveTimer = ({ createdAt, status }) => {
     const interval = setInterval(updateTimer, 1000);
     
     return () => clearInterval(interval);
-  }, [createdAt]);
+  }, [createdAt, status]);
   
-  // Don't show timer for finished requests
-  if (status === 'completed' || status === 'rejected') {
+  // Only show timer for PENDING status
+  if (status !== 'pending') {
     return null;
   }
   
@@ -49,34 +53,30 @@ export const LiveTimer = ({ createdAt, status }) => {
     <motion.div 
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/30"
+      className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-lg border border-amber-500/30"
     >
       <motion.div
         animate={{ rotate: 360 }}
         transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
       >
-        <Timer className="w-4 h-4 text-blue-400" />
+        <Clock className="w-4 h-4 text-amber-400" />
       </motion.div>
-      <span className="text-blue-300 text-sm font-mono">{timeElapsed}</span>
-      <motion.span
-        animate={{ opacity: [1, 0.5, 1] }}
-        transition={{ duration: 1, repeat: Infinity }}
-        className="text-xs text-blue-400"
-      >
-        ago
-      </motion.span>
+      <span className="text-amber-300 text-sm font-mono">{timeElapsed}</span>
+      <span className="text-xs text-amber-400">waiting</span>
     </motion.div>
   );
 };
 
 // ============================================
 // SPEED BADGE COMPONENT
+// Shows badge based on processing time
 // ============================================
 export const SpeedBadge = ({ processingTime }) => {
   if (!processingTime) return null;
   
   // Parse processing time to get total minutes
   const parseTime = (timeStr) => {
+    if (!timeStr) return 999;
     let totalMinutes = 0;
     const dayMatch = timeStr.match(/(\d+)d/);
     const hourMatch = timeStr.match(/(\d+)h/);
@@ -86,7 +86,7 @@ export const SpeedBadge = ({ processingTime }) => {
     if (hourMatch) totalMinutes += parseInt(hourMatch[1]) * 60;
     if (minMatch) totalMinutes += parseInt(minMatch[1]);
     
-    return totalMinutes;
+    return totalMinutes || 1; // At least 1 minute
   };
   
   const minutes = parseTime(processingTime);
@@ -97,32 +97,39 @@ export const SpeedBadge = ({ processingTime }) => {
     badge = {
       icon: Zap,
       text: "⚡ Lightning Fast!",
-      gradient: "from-yellow-400 to-orange-500",
-      bg: "bg-gradient-to-r from-yellow-500/20 to-orange-500/20",
-      border: "border-yellow-500/50",
+      bgClass: "bg-gradient-to-r from-yellow-500/20 to-orange-500/20",
+      borderClass: "border-yellow-500/50",
+      textClass: "text-yellow-400",
       iconColor: '#facc15'
     };
   } else if (minutes <= 240) {
     badge = {
       icon: Rocket,
       text: "🚀 Quick Service!",
-      gradient: "from-blue-400 to-cyan-500",
-      bg: "bg-gradient-to-r from-blue-500/20 to-cyan-500/20",
-      border: "border-blue-500/50",
+      bgClass: "bg-gradient-to-r from-blue-500/20 to-cyan-500/20",
+      borderClass: "border-blue-500/50",
+      textClass: "text-blue-400",
       iconColor: '#60a5fa'
     };
   } else if (minutes <= 480) {
     badge = {
       icon: Trophy,
       text: "✨ On Time!",
-      gradient: "from-emerald-400 to-green-500",
-      bg: "bg-gradient-to-r from-emerald-500/20 to-green-500/20",
-      border: "border-emerald-500/50",
+      bgClass: "bg-gradient-to-r from-emerald-500/20 to-green-500/20",
+      borderClass: "border-emerald-500/50",
+      textClass: "text-emerald-400",
       iconColor: '#34d399'
     };
+  } else {
+    badge = {
+      icon: CheckCircle,
+      text: "✓ Completed",
+      bgClass: "bg-gray-500/20",
+      borderClass: "border-gray-500/50",
+      textClass: "text-gray-400",
+      iconColor: '#9ca3af'
+    };
   }
-  
-  if (!badge) return null;
   
   const Icon = badge.icon;
   
@@ -131,7 +138,7 @@ export const SpeedBadge = ({ processingTime }) => {
       initial={{ scale: 0, rotate: -180 }}
       animate={{ scale: 1, rotate: 0 }}
       transition={{ type: "spring", stiffness: 200, damping: 15 }}
-      className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${badge.bg} border ${badge.border} shadow-lg`}
+      className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${badge.bgClass} border ${badge.borderClass} shadow-lg`}
     >
       <motion.div
         animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
@@ -139,7 +146,7 @@ export const SpeedBadge = ({ processingTime }) => {
       >
         <Icon className="w-5 h-5" style={{ color: badge.iconColor }} />
       </motion.div>
-      <span className={`text-sm font-bold bg-gradient-to-r ${badge.gradient} bg-clip-text text-transparent`}>
+      <span className={`text-sm font-bold ${badge.textClass}`}>
         {badge.text}
       </span>
     </motion.div>
@@ -147,7 +154,48 @@ export const SpeedBadge = ({ processingTime }) => {
 };
 
 // ============================================
+// FIRE CONFETTI FUNCTION
+// ============================================
+const fireConfetti = () => {
+  const duration = 3000;
+  const end = Date.now() + duration;
+  const colors = ['#10b981', '#34d399', '#6ee7b7', '#fbbf24', '#f59e0b'];
+  
+  (function frame() {
+    confetti({
+      particleCount: 3,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0, y: 0.8 },
+      colors: colors
+    });
+    confetti({
+      particleCount: 3,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1, y: 0.8 },
+      colors: colors
+    });
+    
+    if (Date.now() < end) {
+      requestAnimationFrame(frame);
+    }
+  }());
+  
+  // Big burst in the middle
+  setTimeout(() => {
+    confetti({
+      particleCount: 100,
+      spread: 100,
+      origin: { y: 0.6 },
+      colors: colors
+    });
+  }, 500);
+};
+
+// ============================================
 // REQUEST JOURNEY ANIMATION
+// Main component showing request progress
 // ============================================
 export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, processingTime }) => {
   const [hasTriggeredConfetti, setHasTriggeredConfetti] = useState(false);
@@ -158,29 +206,34 @@ export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, pro
     { id: 'completed', label: 'Completed', icon: CheckCircle }
   ];
   
+  // Normalize status (backend might send 'approved' instead of 'processing')
+  const normalizedStatus = status === 'approved' ? 'processing' : status;
+  
   // Determine step status based on request status
   const getStepStatus = (stepId) => {
     // Handle rejected status
-    if (status === 'rejected') {
+    if (normalizedStatus === 'rejected') {
       if (stepId === 'submitted') return 'completed';
       if (stepId === 'processing') return 'rejected';
       return 'pending';
     }
     
     // Step 1: Submitted - always completed once request exists
-    if (stepId === 'submitted') return 'completed';
+    if (stepId === 'submitted') {
+      return 'completed';
+    }
     
     // Step 2: Processing
     if (stepId === 'processing') {
-      if (status === 'pending') return 'pending';
-      if (status === 'processing' || status === 'approved') return 'current';
-      if (status === 'completed') return 'completed';
+      if (normalizedStatus === 'pending') return 'pending';
+      if (normalizedStatus === 'processing') return 'current';
+      if (normalizedStatus === 'completed') return 'completed';
       return 'pending';
     }
     
     // Step 3: Completed
     if (stepId === 'completed') {
-      if (status === 'completed') return 'completed';
+      if (normalizedStatus === 'completed') return 'completed';
       return 'pending';
     }
     
@@ -189,48 +242,14 @@ export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, pro
   
   // Trigger confetti when status becomes completed
   useEffect(() => {
-    if (status === 'completed' && !hasTriggeredConfetti) {
+    if (normalizedStatus === 'completed' && !hasTriggeredConfetti) {
       setHasTriggeredConfetti(true);
-      
-      const duration = 3000;
-      const end = Date.now() + duration;
-      const colors = ['#10b981', '#34d399', '#6ee7b7', '#fbbf24', '#f59e0b'];
-      
-      (function frame() {
-        confetti({
-          particleCount: 3,
-          angle: 60,
-          spread: 55,
-          origin: { x: 0, y: 0.8 },
-          colors: colors
-        });
-        confetti({
-          particleCount: 3,
-          angle: 120,
-          spread: 55,
-          origin: { x: 1, y: 0.8 },
-          colors: colors
-        });
-        
-        if (Date.now() < end) {
-          requestAnimationFrame(frame);
-        }
-      }());
-      
-      // Big burst in the middle
-      setTimeout(() => {
-        confetti({
-          particleCount: 100,
-          spread: 100,
-          origin: { y: 0.6 },
-          colors: colors
-        });
-      }, 500);
+      fireConfetti();
     }
-  }, [status, hasTriggeredConfetti]);
+  }, [normalizedStatus, hasTriggeredConfetti]);
   
   // Rejected state - special UI
-  if (status === 'rejected') {
+  if (normalizedStatus === 'rejected') {
     return (
       <div className="p-4 bg-gradient-to-r from-red-500/5 to-red-500/10 rounded-xl border border-red-500/20">
         <div className="flex items-center justify-between">
@@ -252,11 +271,21 @@ export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, pro
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                     stepStatus === 'rejected' 
                       ? 'bg-red-500/20 border-2 border-red-500' 
+                      : stepStatus === 'completed'
+                      ? 'bg-emerald-500/20 border-2 border-emerald-500'
                       : 'bg-gray-700/50 border-2 border-gray-600'
                   }`}>
-                    <Icon className={`w-5 h-5 ${stepStatus === 'rejected' ? 'text-red-400' : 'text-gray-400'}`} />
+                    <Icon className={`w-5 h-5 ${
+                      stepStatus === 'rejected' ? 'text-red-400' : 
+                      stepStatus === 'completed' ? 'text-emerald-400' :
+                      'text-gray-400'
+                    }`} />
                   </div>
-                  <span className={`text-xs mt-2 ${stepStatus === 'rejected' ? 'text-red-400' : 'text-gray-500'}`}>
+                  <span className={`text-xs mt-2 ${
+                    stepStatus === 'rejected' ? 'text-red-400' : 
+                    stepStatus === 'completed' ? 'text-emerald-400' :
+                    'text-gray-500'
+                  }`}>
                     {step.id === 'processing' ? 'Rejected' : step.label}
                   </span>
                 </motion.div>
@@ -283,8 +312,8 @@ export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, pro
                   <motion.div
                     initial={{ width: '0%' }}
                     animate={{ 
-                      width: stepStatus === 'completed' || (stepStatus === 'current' && index === 1) ? '100%' : 
-                             stepStatus === 'current' ? '50%' : '0%'
+                      width: stepStatus === 'completed' ? '100%' : 
+                             stepStatus === 'current' ? '100%' : '0%'
                     }}
                     transition={{ duration: 0.5, delay: index * 0.3 }}
                     className={`h-full ${
@@ -353,25 +382,42 @@ export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, pro
         })}
       </div>
       
-      {/* Live Timer for pending/processing/approved */}
-      {(status === 'pending' || status === 'processing' || status === 'approved') && (
+      {/* Status-specific content */}
+      {normalizedStatus === 'pending' && (
         <div className="flex justify-center">
-          <LiveTimer createdAt={createdAt} status={status} />
+          <LiveTimer createdAt={createdAt} status="pending" />
         </div>
       )}
       
-      {/* Speed Badge for completed */}
-      {status === 'completed' && processingTime && (
+      {normalizedStatus === 'processing' && (
+        <div className="flex justify-center">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center gap-2 px-3 py-2 bg-blue-500/10 rounded-lg border border-blue-500/30"
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            >
+              <Loader2 className="w-4 h-4 text-blue-400" />
+            </motion.div>
+            <span className="text-blue-300 text-sm">Processing your request...</span>
+          </motion.div>
+        </div>
+      )}
+      
+      {normalizedStatus === 'completed' && (
         <motion.div 
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="flex flex-col items-center gap-2"
+          className="flex flex-col items-center gap-3"
         >
-          <SpeedBadge processingTime={processingTime} />
+          {processingTime && <SpeedBadge processingTime={processingTime} />}
           <div className="flex items-center gap-2 text-emerald-400 text-sm">
             <Sparkles className="w-4 h-4" />
-            <span>Completed in {processingTime}</span>
+            <span>Completed {processingTime ? `in ${processingTime}` : 'successfully!'}</span>
           </div>
         </motion.div>
       )}
@@ -383,8 +429,11 @@ export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, pro
 // COMPACT VERSION FOR LIST VIEW
 // ============================================
 export const RequestJourneyCompact = ({ status, processingTime }) => {
+  // Normalize status
+  const normalizedStatus = status === 'approved' ? 'processing' : status;
+  
   const getStatusInfo = () => {
-    switch (status) {
+    switch (normalizedStatus) {
       case 'pending':
         return { 
           icon: Clock, 
@@ -394,7 +443,6 @@ export const RequestJourneyCompact = ({ status, processingTime }) => {
           border: 'border-amber-500/30'
         };
       case 'processing':
-      case 'approved':
         return { 
           icon: Loader2, 
           text: 'Processing', 
@@ -443,7 +491,7 @@ export const RequestJourneyCompact = ({ status, processingTime }) => {
         <Icon className={`w-3.5 h-3.5 ${info.color}`} />
       </motion.div>
       <span className={`text-xs font-medium ${info.color}`}>{info.text}</span>
-      {status === 'completed' && processingTime && (
+      {normalizedStatus === 'completed' && processingTime && (
         <span className="text-[10px] text-gray-500">({processingTime})</span>
       )}
     </div>
