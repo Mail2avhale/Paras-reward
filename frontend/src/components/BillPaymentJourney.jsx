@@ -200,6 +200,9 @@ const fireConfetti = () => {
 export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, processingTime }) => {
   const [hasTriggeredConfetti, setHasTriggeredConfetti] = useState(false);
   
+  // Debug log
+  console.log('RequestJourney rendered with status:', status, 'processingTime:', processingTime);
+  
   const steps = [
     { id: 'submitted', label: 'Submitted', icon: FileText },
     { id: 'processing', label: 'Processing', icon: Loader2 },
