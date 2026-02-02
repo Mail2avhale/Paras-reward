@@ -240,13 +240,19 @@ export const RequestJourney = ({ status, createdAt, approvedAt, completedAt, pro
     return 'pending';
   };
   
-  // Trigger confetti when status becomes completed
+  // Trigger confetti ONLY when status is exactly 'completed'
   useEffect(() => {
-    if (normalizedStatus === 'completed' && !hasTriggeredConfetti) {
+    // Only trigger for completed status (not approved, not processing)
+    const isCompleted = status === 'completed';
+    
+    if (isCompleted && !hasTriggeredConfetti) {
       setHasTriggeredConfetti(true);
-      fireConfetti();
+      // Small delay to ensure UI is ready
+      setTimeout(() => {
+        fireConfetti();
+      }, 100);
     }
-  }, [normalizedStatus, hasTriggeredConfetti]);
+  }, [status, hasTriggeredConfetti]);
   
   // Rejected state - special UI
   if (normalizedStatus === 'rejected') {
