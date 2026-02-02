@@ -22364,32 +22364,71 @@ async def process_bill_payment_request(request: Request):
         return {"message": "Request rejected and PRC refunded", "status": "rejected", "reject_reason": reject_reason}
     
     elif action == "approve":
+        # APPROVE = COMPLETE - Direct completion on approval
         if current_status != "pending":
             raise HTTPException(status_code=400, detail=f"Cannot approve request with status: {current_status}")
         
         now = datetime.now(timezone.utc)
+        
+        # Calculate processing time
+        processing_time_str = None
+        created_at = bill_request.get("created_at")
+        if created_at:
+            try:
+                if isinstance(created_at, str):
+                    created_dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                else:
+                    created_dt = created_at
+                if created_dt.tzinfo is None:
+                    created_dt = created_dt.replace(tzinfo=timezone.utc)
+                
+                time_diff = now - created_dt
+                hours = int(time_diff.total_seconds() // 3600)
+                minutes = int((time_diff.total_seconds() % 3600) // 60)
+                
+                if hours > 24:
+                    days = hours // 24
+                    hours = hours % 24
+                    processing_time_str = f"{days}d {hours}h {minutes}m"
+                elif hours > 0:
+                    processing_time_str = f"{hours}h {minutes}m"
+                else:
+                    processing_time_str = f"{minutes}m"
+            except Exception as e:
+                print(f"Error calculating processing time: {e}")
+        
+        # Generate TXN number
+        txn_number = f"BP{now.strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
+        
         await db.bill_payment_requests.update_one(
             {"request_id": request_id},
             {"$set": {
-                "status": "processing",
+                "status": "completed",
                 "approved_at": now.isoformat(),
+                "completed_at": now.isoformat(),
+                "processing_time": processing_time_str,
+                "txn_number": txn_number,
                 "admin_notes": admin_notes,
                 "processed_by": admin_name,
                 "processed_by_uid": admin_uid
             }}
         )
         
-        # Notify user about approval
+        # Notify user about completion with processing time
+        notify_msg = f"Your ₹{bill_request.get('amount_inr')} {bill_request.get('request_type', '').replace('_', ' ')} is done! TXN: {txn_number}"
+        if processing_time_str:
+            notify_msg += f" (Completed in {processing_time_str})"
+        
         await create_notification(
             user_id=user_id,
-            title="🎉 Bill Payment Approved!",
-            message=f"Your ₹{bill_request.get('amount_inr')} {bill_request.get('request_type', '').replace('_', ' ')} has been approved and is being processed.",
+            title="✅ Bill Payment Complete!",
+            message=notify_msg,
             notification_type="bill_payment",
             related_id=request_id,
-            icon="🎉"
+            icon="✅"
         )
         
-        return {"message": "Request approved and set to processing", "status": "processing"}
+        return {"message": "Request approved and completed!", "status": "completed", "txn_number": txn_number, "processing_time": processing_time_str}
     
     elif action == "complete":
         if current_status not in ["pending", "processing"]:
