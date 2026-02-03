@@ -7389,11 +7389,11 @@ async def get_kyc_documents(
     # Get total count
     total = await db.kyc_documents.count_documents(query)
     
-    # Get documents with pagination
+    # Get documents with pagination - OLDEST FIRST (FIFO processing)
     docs = await db.kyc_documents.find(
         query, 
         {"_id": 0}
-    ).sort("submitted_at", -1).skip(skip).limit(limit).to_list(limit)
+    ).sort("submitted_at", 1).skip(skip).limit(limit).to_list(limit)
     
     if not docs:
         result = {"documents": [], "total": total, "page": page, "pages": 0, "pending_count": 0}
