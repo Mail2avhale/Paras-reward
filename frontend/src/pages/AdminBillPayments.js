@@ -846,36 +846,125 @@ const AdminBillPayments = ({ user }) => {
               </div>
 
               {/* Admin Notes */}
-              <div>
-                <p className="text-xs text-gray-500 mb-2">Admin Notes (Optional)</p>
-                <Input
-                  placeholder="Add notes for this action..."
-                  value={adminNotes}
-                  onChange={(e) => setAdminNotes(e.target.value)}
-                  className="bg-gray-800 border-gray-700"
-                />
-              </div>
+              {selectedRequest.status === 'pending' ? (
+                <div>
+                  <p className="text-xs text-gray-500 mb-2">Admin Notes (Optional)</p>
+                  <Input
+                    placeholder="Add notes for this action..."
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    className="bg-gray-800 border-gray-700"
+                  />
+                </div>
+              ) : (
+                /* Review Section for Completed/Rejected */
+                <div className="space-y-3">
+                  {/* Status Badge */}
+                  <div className={`p-3 rounded-xl ${
+                    selectedRequest.status === 'completed' 
+                      ? 'bg-emerald-500/10 border border-emerald-500/30' 
+                      : 'bg-red-500/10 border border-red-500/30'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <span className={`font-medium ${
+                        selectedRequest.status === 'completed' ? 'text-emerald-400' : 'text-red-400'
+                      }`}>
+                        {selectedRequest.status === 'completed' ? '✅ Completed' : '❌ Rejected'}
+                      </span>
+                      {selectedRequest.processing_time && (
+                        <span className="text-sm text-gray-400">
+                          ⏱️ {selectedRequest.processing_time}
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* TXN Number for completed */}
+                    {selectedRequest.txn_number && (
+                      <div className="mt-2 pt-2 border-t border-gray-700">
+                        <span className="text-xs text-gray-500">TXN Number:</span>
+                        <span className="ml-2 text-emerald-400 font-mono text-sm">{selectedRequest.txn_number}</span>
+                      </div>
+                    )}
+                    
+                    {/* Reject Reason */}
+                    {selectedRequest.reject_reason && (
+                      <div className="mt-2 pt-2 border-t border-gray-700">
+                        <span className="text-xs text-gray-500">Rejection Reason:</span>
+                        <p className="text-red-300 text-sm mt-1">{selectedRequest.reject_reason}</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Processing Info */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {selectedRequest.approved_at && (
+                      <div className="p-2 bg-gray-800 rounded-lg">
+                        <p className="text-[10px] text-gray-500">Approved At</p>
+                        <p className="text-xs text-white">{new Date(selectedRequest.approved_at).toLocaleString()}</p>
+                      </div>
+                    )}
+                    {selectedRequest.completed_at && (
+                      <div className="p-2 bg-gray-800 rounded-lg">
+                        <p className="text-[10px] text-gray-500">Completed At</p>
+                        <p className="text-xs text-white">{new Date(selectedRequest.completed_at).toLocaleString()}</p>
+                      </div>
+                    )}
+                    {selectedRequest.processed_by && (
+                      <div className="p-2 bg-gray-800 rounded-lg">
+                        <p className="text-[10px] text-gray-500">Processed By</p>
+                        <p className="text-xs text-white">{selectedRequest.processed_by}</p>
+                      </div>
+                    )}
+                    {selectedRequest.admin_notes && (
+                      <div className="p-2 bg-gray-800 rounded-lg col-span-2">
+                        <p className="text-[10px] text-gray-500">Admin Notes</p>
+                        <p className="text-xs text-white">{selectedRequest.admin_notes}</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Speed Badge */}
+                  {selectedRequest.status === 'completed' && selectedRequest.processing_time && (
+                    <div className="flex justify-center">
+                      <SpeedBadge processingTime={selectedRequest.processing_time} />
+                    </div>
+                  )}
+                </div>
+              )}
 
-              {/* Actions */}
-              <div className="flex gap-3">
+              {/* Actions - Only for pending requests */}
+              {selectedRequest.status === 'pending' && (
+                <div className="flex gap-3">
+                  <Button
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                    onClick={() => handleProcess(selectedRequest.request_id, 'approve')}
+                    disabled={processing}
+                  >
+                    {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                    Approve
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="flex-1"
+                    onClick={() => handleProcess(selectedRequest.request_id, 'reject')}
+                    disabled={processing}
+                  >
+                    {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                    Reject
+                  </Button>
+                </div>
+              )}
+              
+              {/* Close button for non-pending */}
+              {selectedRequest.status !== 'pending' && (
                 <Button
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                  onClick={() => handleProcess(selectedRequest.request_id, 'approve')}
-                  disabled={processing}
+                  variant="outline"
+                  className="w-full border-gray-700"
+                  onClick={() => setSelectedRequest(null)}
                 >
-                  {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
-                  Approve
+                  Close
                 </Button>
-                <Button
-                  variant="destructive"
-                  className="flex-1"
-                  onClick={() => handleProcess(selectedRequest.request_id, 'reject')}
-                  disabled={processing}
-                >
-                  {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
-                  Reject
-                </Button>
-              </div>
+              )}
             </div>
           </Card>
         </div>
