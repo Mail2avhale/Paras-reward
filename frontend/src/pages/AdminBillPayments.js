@@ -694,6 +694,14 @@ const AdminBillPayments = ({ user }) => {
                              request.status === 'rejected' ? '❌ Rejected' :
                              request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                           </span>
+                          {/* View Details Button for completed/rejected */}
+                          <Button
+                            size="sm"
+                            onClick={() => setSelectedRequest(request)}
+                            className="h-6 px-2 text-xs bg-gray-700 hover:bg-gray-600"
+                          >
+                            <Eye className="w-3 h-3 mr-1" /> Review
+                          </Button>
                           {/* Speed Badge for completed */}
                           {request.status === 'completed' && request.processing_time && (
                             <SpeedBadge processingTime={request.processing_time} />
