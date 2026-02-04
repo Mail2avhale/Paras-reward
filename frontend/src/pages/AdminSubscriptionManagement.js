@@ -452,6 +452,61 @@ const AdminSubscriptionManagement = ({ user }) => {
     }
   };
 
+  // Delete payment handler (for mistakenly approved payments)
+  const handleDeletePayment = (payment) => {
+    setPendingDeletePayment(payment);
+    setDeleteReason('');
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeletePayment = async () => {
+    if (!deleteReason.trim()) {
+      toast.error('Please enter a reason for deletion');
+      return;
+    }
+    
+    if (processing || !pendingDeletePayment) return;
+    
+    const paymentId = pendingDeletePayment.payment_id;
+    const userName = pendingDeletePayment.user_name || pendingDeletePayment.user_id;
+    const wasApproved = pendingDeletePayment.status === 'approved';
+    
+    try {
+      setProcessing(true);
+      await axios.delete(`${API}/api/admin/vip-payment/${paymentId}`, {
+        data: {
+          reason: deleteReason.trim(),
+          admin_id: user?.uid
+        }
+      });
+      
+      if (wasApproved) {
+        toast.success(`Payment deleted & subscription revoked for ${userName}`);
+      } else {
+        toast.success(`Payment deleted for ${userName}`);
+      }
+      
+      // Remove from local state
+      setPayments(prev => prev.filter(p => p.payment_id !== paymentId));
+      
+      // Close modals
+      setShowDeleteModal(false);
+      setPendingDeletePayment(null);
+      setDeleteReason('');
+      setSelectedPayment(null);
+      
+      // Background refresh
+      setTimeout(() => {
+        fetchPayments();
+      }, 2000);
+    } catch (error) {
+      console.error('Payment delete error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to delete payment');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const handleSavePricing = async () => {
     try {
       setProcessing(true);
