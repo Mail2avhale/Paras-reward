@@ -1991,6 +1991,124 @@ const AdminSubscriptionManagement = ({ user }) => {
           </Card>
         </div>
       )}
+      
+      {/* Delete Payment Modal */}
+      {showDeleteModal && pendingDeletePayment && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md bg-gray-900 border-gray-800 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-red-500" />
+                Delete Payment
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setPendingDeletePayment(null);
+                  setDeleteReason('');
+                }}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Payment Info */}
+              <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                <p className="text-sm text-gray-400">Deleting payment for:</p>
+                <p className="font-medium text-white">{pendingDeletePayment.user_name || pendingDeletePayment.user_id}</p>
+                <p className="text-sm text-amber-400">
+                  {pendingDeletePayment.subscription_plan || pendingDeletePayment.plan} - ₹{pendingDeletePayment.amount}
+                </p>
+                <div className={`mt-2 inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${
+                  pendingDeletePayment.status === 'approved' ? 'bg-green-500/20 text-green-400' :
+                  pendingDeletePayment.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                  'bg-orange-500/20 text-orange-400'
+                }`}>
+                  {pendingDeletePayment.status === 'approved' ? <CheckCircle className="w-3 h-3" /> :
+                   pendingDeletePayment.status === 'rejected' ? <XCircle className="w-3 h-3" /> :
+                   <Clock className="w-3 h-3" />}
+                  {pendingDeletePayment.status.charAt(0).toUpperCase() + pendingDeletePayment.status.slice(1)}
+                </div>
+              </div>
+              
+              {/* Warning for approved payments */}
+              {pendingDeletePayment.status === 'approved' && (
+                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                  <p className="text-red-400 text-sm flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    <strong>Warning:</strong> This will also revoke the user's subscription!
+                  </p>
+                </div>
+              )}
+              
+              {/* Deletion Reason */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Reason for Deletion <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={deleteReason}
+                  onChange={(e) => setDeleteReason(e.target.value)}
+                  placeholder="Enter reason for deletion (e.g., Approved by mistake, Test payment, etc.)"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 min-h-[100px]"
+                  required
+                />
+              </div>
+              
+              {/* Quick Reasons */}
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs text-gray-500">Quick select:</span>
+                {['Approved by mistake', 'Test payment', 'Duplicate entry', 'User requested cancellation', 'Fraudulent payment'].map(reason => (
+                  <button
+                    key={reason}
+                    onClick={() => setDeleteReason(reason)}
+                    className="px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 text-gray-300"
+                  >
+                    {reason}
+                  </button>
+                ))}
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 border-gray-700"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setPendingDeletePayment(null);
+                    setDeleteReason('');
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={confirmDeletePayment}
+                  disabled={processing || !deleteReason.trim()}
+                >
+                  {processing ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      {pendingDeletePayment.status === 'approved' ? 'Delete & Revoke' : 'Delete Payment'}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
