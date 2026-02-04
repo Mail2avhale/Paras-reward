@@ -10,7 +10,7 @@ import {
   Crown, CheckCircle, XCircle, Clock, Eye, RefreshCw, Settings,
   Users, TrendingUp, Zap, Rocket, Award, DollarSign, Calendar,
   Search, Filter, ChevronDown, AlertCircle, Bell, ArrowUpRight,
-  ArrowDownRight, Edit2, Save, X, ChevronLeft, ChevronRight, AlertTriangle
+  ArrowDownRight, Edit2, Save, X, ChevronLeft, ChevronRight, AlertTriangle, Trash2
 } from 'lucide-react';
 import RequestTimeline, { SLABadge } from '../components/RequestTimeline';
 
