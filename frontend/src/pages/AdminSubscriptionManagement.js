@@ -1099,6 +1099,31 @@ const AdminSubscriptionManagement = ({ user }) => {
                           </Button>
                         </div>
                       )}
+                      
+                      {/* Actions for Approved/Rejected payments - Delete option */}
+                      {(paymentFilter === 'approved' || payment.status === 'approved' || payment.status === 'rejected') && paymentFilter !== 'pending' && (
+                        <div className="flex gap-2 md:ml-4">
+                          <Button
+                            size="sm"
+                            onClick={() => setSelectedPayment(payment)}
+                            variant="outline"
+                            className="border-gray-700 text-gray-300"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeletePayment(payment)}
+                            disabled={processing}
+                            className="border-red-500/30 text-red-400 hover:bg-red-500/20"
+                            title={payment.status === 'approved' ? 'Delete & Revoke Subscription' : 'Delete Payment'}
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Fraud Warning Details */}
