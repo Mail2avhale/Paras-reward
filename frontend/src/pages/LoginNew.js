@@ -60,6 +60,12 @@ const LoginNew = ({ onLogin }) => {
         return;
       }
 
+      console.log('=== LOGIN DEBUG ===');
+      console.log('API URL:', API);
+      console.log('Identifier:', loginData.identifier);
+      console.log('Password length:', loginData.password.length);
+      console.log('Full URL:', `${API}/auth/login?identifier=${encodeURIComponent(loginData.identifier)}&password=${encodeURIComponent(loginData.password)}`);
+
       const response = await axios.post(
         `${API}/auth/login`,
         null,
