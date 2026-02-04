@@ -11,11 +11,14 @@ import OfflineIndicator from "@/components/OfflineIndicator";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import AIContextualHelp from "@/components/AIContextualHelp";
+import AdminLayout from "@/components/layouts/AdminLayout";
+// ManagerLayout removed - Manager uses AdminLayout with permission-based access
+// StockistLayout removed - stockist system deprecated
 
-// ============================================
-// 📱 LIGHTWEIGHT USER APP - ADMIN ROUTES REMOVED
-// Admin/Manager access via: admin.parasreward.com
-// ============================================
+// Helper function to check if user can access admin pages
+const canAccessAdmin = (user) => {
+  return user && (user.role === "admin" || user.role === "manager");
+};
 
 // Loading component - optimized with skeleton
 const LoadingFallback = () => (
@@ -30,9 +33,8 @@ const LoadingFallback = () => (
   </div>
 );
 
-// ============================================
-// USER PAGES ONLY - Lazy loaded for performance
-// ============================================
+// Lazy load all pages for better performance
+// Home.js and HomeFintech.js removed - using RewardsHome as main landing page
 const HowItWorks = lazy(() => import("@/pages/HowItWorks"));
 const FAQ = lazy(() => import("@/pages/FAQ"));
 const Blog = lazy(() => import("@/pages/Blog"));
@@ -41,19 +43,22 @@ const Login = lazy(() => import("@/pages/LoginNew"));
 const RegisterSimple = lazy(() => import("@/pages/RegisterSimple"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPasswordNew"));
 const SupportTickets = lazy(() => import("@/pages/SupportTickets"));
+// Dashboard.js, DashboardNew.js, DashboardPremium.js removed - not in use
 
 // CRITICAL PAGES - Preload after initial render for faster navigation
 const DashboardModern = lazy(() => import("@/pages/DashboardModern"));
-const DailyRewards = lazy(() => import("@/pages/Mining"));
+const DailyRewards = lazy(() => import("@/pages/Mining")); // Renamed for AdMob compliance
 
 // Preload critical pages after initial render
 const preloadCriticalPages = () => {
+  // Preload after 2 seconds to not block initial render
   setTimeout(() => {
     import("@/pages/DashboardModern");
     import("@/pages/Mining");
   }, 2000);
 };
 
+// Call preload when module loads
 if (typeof window !== 'undefined') {
   preloadCriticalPages();
 }
@@ -62,9 +67,13 @@ const TapGame = lazy(() => import("@/pages/TapGame"));
 const Referrals = lazy(() => import("@/pages/ReferralsEnhanced"));
 const Marketplace = lazy(() => import("@/pages/MarketplaceNew"));
 const Orders = lazy(() => import("@/pages/Orders"));
+// VIPMembership removed - replaced by SubscriptionPlans (new 4-tier system)
 const SubscriptionPlans = lazy(() => import("@/pages/SubscriptionPlans"));
+// Removed: WalletNew (withdrawal functionality removed)
+// Removed: Leaderboard (feature removed for AdMob compliance)
 const ReferralEarningsHistory = lazy(() => import("@/pages/ReferralEarningsHistory"));
 const ProfileAdvanced = lazy(() => import("@/pages/ProfileAdvanced"));
+// Removed: ReferralDashboard, ReferralDashboardAI - using ReferralsEnhanced
 const FlashSalesPage = lazy(() => import("@/pages/FlashSalesPage"));
 const MyActivity = lazy(() => import("@/pages/MyActivity"));
 
@@ -76,12 +85,67 @@ const FollowersList = lazy(() => import("@/pages/FollowersList"));
 const Notifications = lazy(() => import("@/pages/Notifications"));
 const ParasLuxuryLife = lazy(() => import("@/pages/ParasLuxuryLife"));
 
-// Bill Payments & Services
+// ============ ADMIN PAGES - Code Split into separate chunk ============
+// These pages are only loaded when admin users access them (~1% of users)
+// This reduces initial bundle size for regular users by ~30%
+const AdminDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminDashboard"));
+// AdminDashboardModern removed - not in use
+const AdminAnalytics = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAnalytics"));
+const AdminPRCAnalytics = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPRCAnalytics"));
+const AdminAuditService = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAuditService"));
+const AdminProfitLoss = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminProfitLoss"));
+const AdminLiquidity = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminLiquidity"));
+const AdminCompanyWallets = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminCompanyWallets"));
+const AdminCashBankBook = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminCashBankBook"));
+const AdminPRCLedger = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPRCLedger"));
+const AdminFinancialReports = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFinancialReports"));
+const AdminCapitalManagement = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminCapitalManagement"));
+const AdminTrialBalance = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminTrialBalance"));
+const AdminAccountsReceivable = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAccountsReceivable"));
+const AdminAccountsPayable = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAccountsPayable"));
+const AdminFinancialRatios = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFinancialRatios"));
+const AdminAdsIncome = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAdsIncome"));
+const AdminFraudAlerts = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFraudAlerts"));
+const AdminFraudDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFraudDashboard"));
+const AdminVideoAds = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminVideoAds"));
+const AdminFixedExpenses = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFixedExpenses"));
+const AdminKYC = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminKYC"));
+const AdminOrders = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminOrders"));
+const AdminSupport = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSupport"));
+const AdminContactSubmissions = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminContactSubmissions"));
+const AdminMarketplace = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminMarketplace"));
+const AdminSettings = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSettings"));
+// AdminPaymentSettings, AdminSystemSettings, AdminWebSettings, AdminSocialMediaSettings, AdminRedeemSettings removed - merged into AdminSettingsHub
+const AdminSettingsHub = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSettingsHub"));
+const AdminSecurityDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSecurityDashboard"));
+// AdminVIPPlans and AdminVIPPaymentVerification removed - replaced by AdminSubscriptionManagement (new 4-tier system)
+const AdminSubscriptionManagement = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSubscriptionManagement"));
+const AdminBurnDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminBurnDashboard"));
+const AdminDataBackup = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminDataBackup"));
+const AdminBillPayments = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminBillPayments"));
+const AdminGiftVouchers = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminGiftVouchers"));
+const AdminServiceCharges = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminServiceCharges"));
+const AdminPolicies = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPolicies"));
+const AdminUserLedger = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUserLedger"));
+const AdminPRCRain = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPRCRain"));
+const AdminRedeemSettings = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminRedeemSettings"));
+const AdminAccountingDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAccountingDashboard"));
+const PRCEmergencyControls = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/PRCEmergencyControls"));
+const AdminUserControls = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUserControls"));
+const AdvancedUserManagement = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdvancedUserManagement"));
+const AdminDeliveryPartners = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminDeliveryPartners"));
+const AdminUser360 = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUser360"));
+const AdminLuxuryClaims = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminLuxuryClaims"));
 const BillPayments = lazy(() => import("@/pages/BillPayments"));
 const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption"));
 const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
 
-// Static Pages
+// ============ MANAGER PAGES REMOVED ============
+// Manager now uses Admin panel with restricted permissions
+// All manager/* pages deleted - Manager uses /admin with permission-based access
+// ManagerLayout removed - Manager uses AdminLayout with filtered menu items
+
+// ============ STATIC PAGES ============
 const Setup = lazy(() => import("@/pages/Setup"));
 const AboutUs = lazy(() => import("@/pages/AboutUs"));
 const Disclaimer = lazy(() => import("@/pages/Disclaimer"));
@@ -94,25 +158,22 @@ const RewardsHome = lazy(() => import("@/pages/RewardsHome"));
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-// Admin Access Redirect Component
-const AdminRedirect = () => {
-  useEffect(() => {
-    // Redirect admin/manager to separate admin portal
-    toast.info('Admin panel is at admin.parasreward.com', { duration: 5000 });
-  }, []);
-  return <Navigate to="/dashboard" replace />;
-};
-
 function AppContent({ user, handleLogin, handleLogout }) {
   const { toasts, removeToast } = useNotification();
 
-  // Regular users go to dashboard, admin/manager redirected to separate portal
-  const getDefaultRoute = (user) => {
+  // Helper function to get role-based default route
+  const getRoleBasedRoute = (user) => {
     if (!user) return "/";
-    if (user.role === 'admin' || user.role === 'manager' || user.role === 'sub_admin') {
-      return "/admin-redirect";
+    
+    switch (user.role) {
+      case 'admin':
+      case 'sub_admin':
+      case 'manager':  // Manager now goes to admin dashboard with restricted access
+        return "/admin";
+      // Stockist roles deprecated - redirect to dashboard
+      default:
+        return "/dashboard";
     }
-    return "/dashboard";
   };
 
   return (
@@ -121,33 +182,36 @@ function AppContent({ user, handleLogin, handleLogout }) {
       <BrowserRouter>
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={user ? <Navigate to={getDefaultRoute(user)} /> : <RewardsHome />} />
+            <Route path="/" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <RewardsHome />} />
+            {/* home-old route removed - using RewardsHome */}
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/faq" element={<FAQ />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogArticle />} />
-            <Route path="/login" element={user ? <Navigate to={getDefaultRoute(user)} /> : <Login onLogin={handleLogin} />} />
-            <Route path="/register" element={user ? <Navigate to={getDefaultRoute(user)} /> : <RegisterSimple />} />
-            <Route path="/forgot-password" element={user ? <Navigate to={getDefaultRoute(user)} /> : <ForgotPassword />} />
+            <Route path="/login" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <Login onLogin={handleLogin} />} />
+            <Route path="/register" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <RegisterSimple />} />
+            <Route path="/forgot-password" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <ForgotPassword />} />
             <Route path="/setup" element={<Setup />} />
             
             {/* Static Pages */}
             <Route path="/about" element={<AboutUs />} />
             <Route path="/disclaimer" element={<Disclaimer />} />
-            <Route path="/terms" element={<TermsConditions />} />
+            <Route path="/terms" element={<Disclaimer />} />
             <Route path="/contact" element={<ContactUs />} />
+            <Route path="/terms" element={<TermsConditions />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
             <Route path="/refund" element={<RefundPolicy />} />
             <Route path="/rewards-home" element={<RewardsHome />} />
             
-            {/* Protected User Routes */}
+            {/* Protected Routes */}
             <Route path="/dashboard" element={user ? <DashboardModern user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            {/* fintech route removed - not in use */}
             <Route path="/support" element={user ? <SupportTickets user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/daily-rewards" element={user ? <DailyRewards user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-            <Route path="/mining" element={<Navigate to="/daily-rewards" />} />
+            <Route path="/mining" element={<Navigate to="/daily-rewards" />} /> {/* Redirect old route */}
             <Route path="/game" element={user ? <TapGame user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            {/* Removed: Treasure Hunt and Scratch Card games */}
             <Route path="/referrals" element={user ? <Referrals user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/referrals/dashboard" element={<Navigate to="/referrals" replace />} />
             <Route path="/referrals/ai" element={<Navigate to="/referrals" replace />} />
@@ -156,11 +220,15 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/flash-sales" element={user ? <FlashSalesPage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/orders" element={user ? <Orders user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/activity" element={user ? <MyActivity user={user} /> : <Navigate to="/login" />} />
-            <Route path="/vip" element={<Navigate to="/subscription" replace />} />
+            <Route path="/vip" element={<Navigate to="/subscription" replace />} /> {/* Legacy VIP route redirects to new subscription system */}
             <Route path="/subscription" element={user ? <SubscriptionPlans user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/kyc" element={user ? <KYCVerification user={user} /> : <Navigate to="/login" />} />
+            {/* Removed: Wallet/Withdrawal functionality */}
+            {/* Removed: Leaderboard page for AdMob compliance */}
             <Route path="/referral-earnings" element={user ? <ReferralEarningsHistory user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            {/* Removed: Gamification/Achievements page for AdMob compliance */}
             <Route path="/profile" element={user ? <ProfileAdvanced user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            {/* Legacy route redirect - keeping for backward compatibility */}
             <Route path="/profile-advanced" element={<Navigate to="/profile" replace />} />
             
             {/* Social Feature Routes */}
@@ -173,25 +241,70 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/notifications" element={user ? <Notifications user={user} /> : <Navigate to="/login" />} />
             <Route path="/luxury-life" element={user ? <ParasLuxuryLife user={user} /> : <Navigate to="/login" />} />
             
-            {/* Bill Payments & Services */}
+            {/* Stock requests removed - stockist system deprecated */}
+            <Route path="/admin" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminDashboard user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/users" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdvancedUserManagement /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/analytics" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminAnalytics user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/prc-analytics" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminPRCAnalytics user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/company-wallets" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminCompanyWallets user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/ads-income" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminAdsIncome user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/fraud-alerts" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminFraudAlerts user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/fraud-dashboard" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminFraudDashboard user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/audit" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminAuditService user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/fixed-expenses" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminFixedExpenses user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/profit-loss" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminProfitLoss user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/liquidity" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminLiquidity user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/video-ads" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminVideoAds user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/settings-hub" element={canAccessAdmin(user) ? <AdminSettingsHub user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/settings" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=payment" replace /> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/security" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSecurityDashboard user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/settings/system" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=system" replace /> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/settings/web" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=web" replace /> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/settings/social" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=social" replace /> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/settings/redeem" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=redeem" replace /> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/redeem-settings" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminRedeemSettings user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/prc-rain" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminPRCRain user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/user-ledger" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminUserLedger user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/capital" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminCapitalManagement user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/accounting" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminAccountingDashboard user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/cash-bank-book" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminCashBankBook user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/prc-ledger" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminPRCLedger user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/financial-reports" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminFinancialReports user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/capital-management" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminCapitalManagement user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/trial-balance" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminTrialBalance user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/accounts-receivable" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminAccountsReceivable user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/accounts-payable" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminAccountsPayable user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/financial-ratios" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminFinancialRatios user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/prc-economy" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><PRCEmergencyControls user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/user-controls" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminUserControls user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/user-360" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminUser360 user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/vip-plans" element={<Navigate to="/admin/subscriptions" replace />} /> {/* Legacy route redirect */}
+            <Route path="/admin/burn-management" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminBurnDashboard user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/data-backup" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminDataBackup user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/bill-payments" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminBillPayments user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/gift-vouchers" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminGiftVouchers user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/luxury-claims" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminLuxuryClaims user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/service-charges" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminServiceCharges user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/policies" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminPolicies user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/kyc" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminKYC user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/payments" element={<Navigate to="/admin/subscriptions" replace />} /> {/* Legacy route redirect */}
+            <Route path="/admin/orders" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminOrders user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/marketplace" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminMarketplace user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/delivery-partners" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminDeliveryPartners user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            {/* Admin stockists route removed - stockist system deprecated */}
+            <Route path="/admin/support" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSupport user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/contact-submissions" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminContactSubmissions user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/vip-verification" element={<Navigate to="/admin/subscriptions" replace />} /> {/* Legacy route redirect */}
+            <Route path="/admin/subscriptions" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSubscriptionManagement user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/bill-payments" element={user ? <BillPayments user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/gift-vouchers" element={user ? <GiftVoucherRedemption user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
-            
-            {/* ============================================ */}
-            {/* ADMIN ROUTES REMOVED - Use admin.parasreward.com */}
-            {/* ============================================ */}
-            <Route path="/admin-redirect" element={<AdminRedirect />} />
-            <Route path="/admin" element={<AdminRedirect />} />
-            <Route path="/admin/*" element={<AdminRedirect />} />
-            <Route path="/manager" element={<AdminRedirect />} />
-            <Route path="/manager/*" element={<AdminRedirect />} />
-            
-            {/* Catch-all redirect */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* Manager routes now redirect to Admin - Manager uses Admin panel with permission-based access */}
+            <Route path="/manager" element={<Navigate to="/admin" replace />} />
+            <Route path="/manager/*" element={<Navigate to="/admin" replace />} />
+            {/* All stockist routes removed - using direct delivery partner model */}
           </Routes>
         </Suspense>
-        
-        {/* Navigation - Only for regular users */}
+        {/* Professional Navigation System - Only for regular users, not admin/manager roles */}
         {user && !['admin', 'sub_admin', 'manager'].includes(user.role) && (
           <>
             <TopBar user={user} onLogout={handleLogout} />
@@ -207,17 +320,20 @@ function AppContent({ user, handleLogin, handleLogout }) {
 }
 
 function App() {
+  // Initialize user from localStorage synchronously
   const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem("paras_user");
     return storedUser ? JSON.parse(storedUser) : null;
   });
   const [loading, setLoading] = useState(true);
 
+  // Refresh user data from server to ensure subscription info is current
   const refreshUserData = async (uid) => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/user/${uid}`);
       if (response.ok) {
         const freshData = await response.json();
+        // Preserve role from stored user (API might not return it)
         const storedUser = JSON.parse(localStorage.getItem("paras_user") || "{}");
         const updatedUser = {
           ...storedUser,
@@ -235,47 +351,48 @@ function App() {
   };
 
   useEffect(() => {
-    if (user) {
-      refreshUserData(user.uid);
-    }
-    setLoading(false);
-  }, []);
-
-  const handleLogin = async (identifier, password) => {
-    try {
-      const response = await axios.post(`${API}/auth/login`, null, {
-        params: { identifier, password }
+    // If user exists, refresh data from server
+    if (user?.uid) {
+      refreshUserData(user.uid).finally(() => {
+        setLoading(false);
       });
-      
-      const userData = response.data;
-      
-      // Check if admin/manager trying to login - redirect them
-      if (userData.role === 'admin' || userData.role === 'manager' || userData.role === 'sub_admin') {
-        toast.info('Admin/Manager? Use admin.parasreward.com', { duration: 5000 });
-        // Still allow login but they'll be redirected
-      }
-      
-      setUser(userData);
-      localStorage.setItem("paras_user", JSON.stringify(userData));
-      
-      return userData;
-    } catch (error) {
-      throw error;
+    } else {
+      setLoading(false);
     }
+  }, []); // Run once on mount
+
+  const handleLogin = async (userData) => {
+    setUser(userData);
+    localStorage.setItem("paras_user", JSON.stringify(userData));
+    
+    // Refresh to get complete user data including subscription
+    setTimeout(() => refreshUserData(userData.uid), 100);
   };
 
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem("paras_user");
+    toast.success("Logged out successfully");
+    // Redirect to home page after logout
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 500);
   };
 
   if (loading) {
-    return <LoadingFallback />;
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <LanguageProvider>
-      <NotificationProvider>
+      <NotificationProvider userId={user?.uid}>
         <AppContent user={user} handleLogin={handleLogin} handleLogout={handleLogout} />
       </NotificationProvider>
     </LanguageProvider>
