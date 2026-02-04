@@ -392,34 +392,50 @@ const AdminSubscriptionManagement = ({ user }) => {
   };
 
   const handleRejectPayment = async (payment) => {
-    if (processing) return; // Prevent multiple clicks
+    // Show reject modal instead of direct rejection
+    setPendingRejectPayment(payment);
+    setRejectReason('');
+    setShowRejectModal(true);
+  };
+  
+  const confirmRejectPayment = async () => {
+    if (!rejectReason.trim()) {
+      toast.error('Please enter a rejection reason');
+      return;
+    }
     
-    // Store payment_id immediately before any async operations
-    const paymentId = payment.payment_id;
-    const userName = payment.user_name || payment.user_id;
+    if (processing || !pendingRejectPayment) return;
+    
+    const paymentId = pendingRejectPayment.payment_id;
+    const userName = pendingRejectPayment.user_name || pendingRejectPayment.user_id;
     
     try {
       setProcessing(true);
       await axios.post(`${API}/api/admin/vip-payment/${paymentId}/reject`, {
-        notes: actionNotes
+        reason: rejectReason.trim(),
+        admin_id: user?.uid
       });
       toast.success(`Payment rejected for ${userName}`);
       
-      // Optimistic local update instead of full refetch (FASTER!)
+      // Optimistic local update
       setPayments(prev => prev.map(p => 
         p.payment_id === paymentId 
-          ? {...p, status: 'rejected', rejected_at: new Date().toISOString()} 
+          ? {...p, status: 'rejected', rejected_at: new Date().toISOString(), reject_reason: rejectReason} 
           : p
       ));
       setStats(prev => ({...prev, pendingPayments: Math.max(0, (prev.pendingPayments || 0) - 1)}));
       
+      // Close modals
+      setShowRejectModal(false);
+      setPendingRejectPayment(null);
+      setRejectReason('');
       setSelectedPayment(null);
       setActionNotes('');
       setCorrectPlan('');
       setCorrectDuration('');
       setShowPlanCorrection(false);
       
-      // Background refresh (non-blocking) - longer delay to prevent race conditions
+      // Background refresh
       setTimeout(() => {
         fetchPayments();
       }, 3000);
