@@ -100,7 +100,7 @@ const BillPayments = ({ user, onLogout }) => {
     { id: 'mobile_recharge', label: 'Mobile Recharge', icon: Smartphone, color: 'blue', fields: ['phone_number', 'operator'] },
     { id: 'dish_recharge', label: 'DTH/Dish Recharge', icon: Tv, color: 'purple', fields: ['consumer_number', 'operator'] },
     { id: 'electricity_bill', label: 'Electricity Bill', icon: Zap, color: 'yellow', fields: ['consumer_number', 'biller_name'] },
-    { id: 'credit_card_payment', label: 'Credit Card', icon: CreditCard, color: 'green', fields: ['card_last4', 'cardholder_name', 'bank_name', 'card_type'] },
+    { id: 'credit_card_payment', label: 'Credit Card', icon: CreditCard, color: 'green', fields: ['card_last4', 'cardholder_name', 'bank_name', 'linked_mobile', 'card_type'] },
     { id: 'loan_emi', label: 'Loan/EMI', icon: Building, color: 'red', fields: ['loan_account', 'bank_name', 'ifsc_code', 'borrower_name', 'registered_mobile', 'loan_type', 'emi_due_date', 'customer_id', 'loan_tenure', 'emi_amount'] }
   ];
 
