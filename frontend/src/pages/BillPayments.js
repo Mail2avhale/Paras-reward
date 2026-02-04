@@ -41,6 +41,7 @@ const BillPayments = ({ user, onLogout }) => {
     card_last4: '',
     cardholder_name: '',
     card_type: '',
+    linked_mobile: '',  // Credit card linked mobile
     loan_account: '',
     borrower_name: '',
     loan_type: '',
