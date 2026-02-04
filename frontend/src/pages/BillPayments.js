@@ -320,26 +320,55 @@ const BillPayments = ({ user, onLogout }) => {
 
                 {currentType.fields.includes('card_last4') && (
                   <>
-                    <div>
-                      <Label htmlFor="card_last4">Card Number (Last 4 digits) *</Label>
-                      <Input
-                        id="card_last4"
-                        value={formData.card_last4}
-                        onChange={(e) => setFormData({ ...formData, card_last4: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                        placeholder="XXXX"
-                        maxLength={4}
-                        required
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="card_last4">Card Number (Last 4 digits) *</Label>
+                        <Input
+                          id="card_last4"
+                          value={formData.card_last4}
+                          onChange={(e) => setFormData({ ...formData, card_last4: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                          placeholder="XXXX"
+                          maxLength={4}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="cardholder_name">Cardholder Name *</Label>
+                        <Input
+                          id="cardholder_name"
+                          value={formData.cardholder_name}
+                          onChange={(e) => setFormData({ ...formData, cardholder_name: e.target.value })}
+                          placeholder="Name on card"
+                          required
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="cardholder_name">Cardholder Name *</Label>
-                      <Input
-                        id="cardholder_name"
-                        value={formData.cardholder_name}
-                        onChange={(e) => setFormData({ ...formData, cardholder_name: e.target.value })}
-                        placeholder="Name on card"
-                        required
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="bank_name">Issuing Bank *</Label>
+                        <Input
+                          id="bank_name"
+                          value={formData.bank_name}
+                          onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+                          placeholder="e.g., HDFC Bank, SBI, ICICI"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="linked_mobile">Linked Mobile Number *</Label>
+                        <Input
+                          id="linked_mobile"
+                          type="tel"
+                          value={formData.linked_mobile}
+                          onChange={(e) => setFormData({ ...formData, linked_mobile: formatMobile(e.target.value) })}
+                          placeholder="10-digit mobile number"
+                          maxLength={10}
+                          required
+                        />
+                        {formData.linked_mobile && formData.linked_mobile.length > 0 && !validateMobile(formData.linked_mobile).isValid && (
+                          <p className="text-red-500 text-xs mt-1">Enter valid 10-digit mobile (starts with 6-9)</p>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <Label htmlFor="card_type" className="text-gray-300">Card Type *</Label>
@@ -356,16 +385,6 @@ const BillPayments = ({ user, onLogout }) => {
                         <option value="rupay">RuPay</option>
                         <option value="amex">American Express</option>
                       </select>
-                    </div>
-                    <div>
-                      <Label htmlFor="bank_name">Issuing Bank *</Label>
-                      <Input
-                        id="bank_name"
-                        value={formData.bank_name}
-                        onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
-                        placeholder="e.g., HDFC Bank, SBI"
-                        required
-                      />
                     </div>
                   </>
                 )}
