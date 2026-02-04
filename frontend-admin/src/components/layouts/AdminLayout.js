@@ -97,16 +97,16 @@ const AdminLayout = ({ children, user, onLogout }) => {
 
   // Regular menu items (not grouped) - Simplified and organized
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/admin' },
-    { id: 'users', label: 'Users', icon: Users, path: '/admin/users' },
-    { id: 'user-360', label: 'User 360° View', icon: Eye, path: '/admin/user-360' },
-    { id: 'kyc', label: 'KYC Verification', icon: FileText, path: '/admin/kyc' },
-    { id: 'orders', label: 'Orders', icon: ShoppingCart, path: '/admin/orders' },
-    { id: 'delivery-partners', label: 'Delivery Partners', icon: Truck, path: '/admin/delivery-partners' },
-    { id: 'marketplace', label: 'Marketplace', icon: Store, path: '/admin/marketplace' },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
-    { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon, path: '/admin/support' },
-    { id: 'contact-submissions', label: 'Contact Inquiries', icon: Mail, path: '/admin/contact-submissions' },
+    { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/dashboard' },
+    { id: 'users', label: 'Users', icon: Users, path: '/users' },
+    { id: 'user-360', label: 'User 360° View', icon: Eye, path: '/user-360' },
+    { id: 'kyc', label: 'KYC Verification', icon: FileText, path: '/kyc' },
+    { id: 'orders', label: 'Orders', icon: ShoppingCart, path: '/orders' },
+    { id: 'delivery-partners', label: 'Delivery Partners', icon: Truck, path: '/delivery-partners' },
+    { id: 'marketplace', label: 'Marketplace', icon: Store, path: '/marketplace' },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' },
+    { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon, path: '/support' },
+    { id: 'contact-submissions', label: 'Contact Inquiries', icon: Mail, path: '/contact-submissions' },
   ];
 
   // Grouped menu items - Simplified structure
@@ -115,50 +115,50 @@ const AdminLayout = ({ children, user, onLogout }) => {
       label: 'Subscriptions & Payments',
       icon: Crown,
       subItems: [
-        { id: 'subscriptions', label: 'Subscription Management', icon: Crown, path: '/admin/subscriptions' },
-        { id: 'bill-payments', label: 'Bill Payments', icon: FileText, path: '/admin/bill-payments' },
-        { id: 'gift-vouchers', label: 'Gift Vouchers', icon: Gift, path: '/admin/gift-vouchers' },
-        { id: 'luxury-claims', label: 'Luxury Life Claims', icon: Crown, path: '/admin/luxury-claims' },
+        { id: 'subscriptions', label: 'Subscription Management', icon: Crown, path: '/subscriptions' },
+        { id: 'bill-payments', label: 'Bill Payments', icon: FileText, path: '/bill-payments' },
+        { id: 'gift-vouchers', label: 'Gift Vouchers', icon: Gift, path: '/gift-vouchers' },
+        { id: 'luxury-claims', label: 'Luxury Life Claims', icon: Crown, path: '/luxury-claims' },
       ]
     },
     finance: {
       label: 'Finance & Accounting',
       icon: DollarSign,
       subItems: [
-        { id: 'accounting', label: 'Accounting Dashboard', icon: BarChart2, path: '/admin/accounting' },
-        { id: 'company-wallets', label: 'Company Wallets', icon: Wallet, path: '/admin/company-wallets' },
-        { id: 'prc-analytics', label: 'PRC Analytics', icon: Activity, path: '/admin/prc-analytics' },
-        { id: 'prc-ledger', label: 'PRC Ledger', icon: Activity, path: '/admin/prc-ledger' },
-        { id: 'profit-loss', label: 'Profit & Loss', icon: TrendingUp, path: '/admin/profit-loss' },
-        { id: 'user-ledger', label: 'User Ledger', icon: FileText, path: '/admin/user-ledger' },
-        { id: 'liquidity', label: 'Liquidity', icon: DollarSign, path: '/admin/liquidity' },
+        { id: 'accounting', label: 'Accounting Dashboard', icon: BarChart2, path: '/accounting' },
+        { id: 'company-wallets', label: 'Company Wallets', icon: Wallet, path: '/company-wallets' },
+        { id: 'prc-analytics', label: 'PRC Analytics', icon: Activity, path: '/prc-analytics' },
+        { id: 'prc-ledger', label: 'PRC Ledger', icon: Activity, path: '/prc-ledger' },
+        { id: 'profit-loss', label: 'Profit & Loss', icon: TrendingUp, path: '/profit-loss' },
+        { id: 'user-ledger', label: 'User Ledger', icon: FileText, path: '/user-ledger' },
+        { id: 'liquidity', label: 'Liquidity', icon: DollarSign, path: '/liquidity' },
       ]
     },
     controls: {
       label: 'Controls & Security',
       icon: Shield,
       subItems: [
-        { id: 'prc-economy', label: 'PRC Emergency Controls', icon: AlertOctagon, path: '/admin/prc-economy' },
-        { id: 'user-controls', label: 'User Controls', icon: UserCog, path: '/admin/user-controls' },
-        { id: 'security-dashboard', label: 'Security Dashboard', icon: Shield, path: '/admin/security' },
-        { id: 'fraud-dashboard', label: 'Fraud Detection', icon: ShieldAlert, path: '/admin/fraud-dashboard' },
-        { id: 'fraud-alerts', label: 'Fraud Alerts', icon: AlertTriangle, path: '/admin/fraud-alerts' },
-        { id: 'burn-management', label: 'Burn Management', icon: Activity, path: '/admin/burn-management' },
-        { id: 'data-backup', label: 'Data Backup & Archive', icon: Database, path: '/admin/data-backup' },
+        { id: 'prc-economy', label: 'PRC Emergency Controls', icon: AlertOctagon, path: '/prc-economy' },
+        { id: 'user-controls', label: 'User Controls', icon: UserCog, path: '/user-controls' },
+        { id: 'security-dashboard', label: 'Security Dashboard', icon: Shield, path: '/security' },
+        { id: 'fraud-dashboard', label: 'Fraud Detection', icon: ShieldAlert, path: '/fraud-dashboard' },
+        { id: 'fraud-alerts', label: 'Fraud Alerts', icon: AlertTriangle, path: '/fraud-alerts' },
+        { id: 'burn-management', label: 'Burn Management', icon: Activity, path: '/burn-management' },
+        { id: 'data-backup', label: 'Data Backup & Archive', icon: Database, path: '/data-backup' },
       ]
     },
     settings: {
       label: 'Settings',
       icon: Settings,
       subItems: [
-        { id: 'settings-hub', label: 'All Settings', icon: Settings, path: '/admin/settings-hub' },
-        { id: 'payment-settings', label: 'Payment Settings', icon: CreditCard, path: '/admin/settings-hub?tab=payment' },
-        { id: 'system-settings', label: 'System Settings', icon: Cpu, path: '/admin/settings-hub?tab=system' },
-        { id: 'web-settings', label: 'Web Settings', icon: Globe, path: '/admin/settings-hub?tab=web' },
-        { id: 'social-settings', label: 'Social Media', icon: Share2, path: '/admin/settings-hub?tab=social' },
-        { id: 'redeem-settings', label: 'Redeem Safety', icon: Shield, path: '/admin/settings-hub?tab=redeem' },
-        { id: 'video-ads', label: 'Video Ads', icon: Video, path: '/admin/settings-hub?tab=video-ads' },
-        { id: 'prc-rain', label: 'PRC Rain Drop', icon: CloudRain, path: '/admin/settings-hub?tab=prc-rain' },
+        { id: 'settings-hub', label: 'All Settings', icon: Settings, path: '/settings-hub' },
+        { id: 'payment-settings', label: 'Payment Settings', icon: CreditCard, path: '/settings-hub?tab=payment' },
+        { id: 'system-settings', label: 'System Settings', icon: Cpu, path: '/settings-hub?tab=system' },
+        { id: 'web-settings', label: 'Web Settings', icon: Globe, path: '/settings-hub?tab=web' },
+        { id: 'social-settings', label: 'Social Media', icon: Share2, path: '/settings-hub?tab=social' },
+        { id: 'redeem-settings', label: 'Redeem Safety', icon: Shield, path: '/settings-hub?tab=redeem' },
+        { id: 'video-ads', label: 'Video Ads', icon: Video, path: '/settings-hub?tab=video-ads' },
+        { id: 'prc-rain', label: 'PRC Rain Drop', icon: CloudRain, path: '/settings-hub?tab=prc-rain' },
       ]
     }
   };
