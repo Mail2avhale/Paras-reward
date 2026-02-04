@@ -89,6 +89,19 @@ const RainDrop = ({ drop, onTap, disabled }) => {
           
           {/* Bottom Reflection */}
           <ellipse cx="24" cy="50" rx="10" ry="4" fill="rgba(255,255,255,0.15)" />
+          
+          {/* Mystery Symbol - "?" inside drop */}
+          <text 
+            x="24" 
+            y="42" 
+            textAnchor="middle" 
+            fontSize="18" 
+            fontWeight="bold" 
+            fill="rgba(255,255,255,0.85)"
+            style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
+          >
+            ?
+          </text>
         </svg>
 
         {/* Ripple Effect on Tap */}
