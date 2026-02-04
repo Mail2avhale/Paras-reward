@@ -551,7 +551,7 @@ const PRCRain = ({ user, onComplete }) => {
         {/* Instruction for Desktop */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-center z-10">
           <div className="bg-black/50 backdrop-blur rounded-full px-6 py-2 text-white/70 text-sm">
-            💡 Click or tap on drops to collect PRC
+            🎰 Tap fast! Every color is random - Win or Lose!
           </div>
         </div>
 
