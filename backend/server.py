@@ -7301,6 +7301,79 @@ async def reject_vip_payment(payment_id: str, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@api_router.delete("/admin/vip-payment/{payment_id}")
+async def delete_vip_payment(payment_id: str, request: Request):
+    """Delete VIP payment (for mistakenly approved payments)"""
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id")
+        reason = data.get("reason", "Admin deleted")
+        
+        # Get payment
+        payment = await db.vip_payments.find_one({"payment_id": payment_id})
+        if not payment:
+            raise HTTPException(status_code=404, detail="Payment not found")
+        
+        user_id = payment.get("user_id")
+        plan = payment.get("plan")
+        
+        # If payment was approved, we need to revoke the subscription
+        if payment.get("status") == "approved":
+            # Reset user subscription to free/explorer
+            await db.users.update_one(
+                {"uid": user_id},
+                {
+                    "$set": {
+                        "subscription_plan": "explorer",
+                        "subscription_expiry": None,
+                        "vip_expiry": None
+                    }
+                }
+            )
+            
+            # Notify user about subscription revocation
+            await create_notification(
+                user_id=user_id,
+                title="⚠️ Subscription Revoked",
+                message=f"Your {plan} subscription has been revoked. Reason: {reason}. Please contact support if this is an error.",
+                notification_type="subscription",
+                related_id=payment_id,
+                icon="⚠️"
+            )
+        
+        # Delete the payment record
+        await db.vip_payments.delete_one({"payment_id": payment_id})
+        
+        # Log activity
+        now = datetime.now(timezone.utc)
+        await db.activity_logs.insert_one({
+            "log_id": str(uuid.uuid4()),
+            "action": "vip_payment_deleted",
+            "user_id": user_id,
+            "admin_id": admin_id,
+            "payment_id": payment_id,
+            "original_status": payment.get("status"),
+            "reason": reason,
+            "timestamp": now.isoformat()
+        })
+        
+        # Clear cache
+        try:
+            await cache.delete("admin_vip_payments:pending:p1:l50")
+            await cache.delete("admin_vip_payments:all:p1:l50")
+        except:
+            pass
+        
+        return {
+            "success": True, 
+            "message": f"Payment deleted. {'User subscription revoked.' if payment.get('status') == 'approved' else ''}",
+            "revoked_subscription": payment.get("status") == "approved"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ========== KYC ROUTES ==========
 @api_router.post("/kyc/submit/{uid}", response_model=KYCDocument)
 async def submit_kyc(uid: str, kyc_data: KYCSubmit):
