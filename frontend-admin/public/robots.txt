@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /wallet
+Disallow: /profile
+Disallow: /orders
+Disallow: /kyc
+Disallow: /support
+
+Sitemap: https://parasreward.com/sitemap.xml
