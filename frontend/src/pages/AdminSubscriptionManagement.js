@@ -1808,6 +1808,104 @@ const AdminSubscriptionManagement = ({ user }) => {
           </Card>
         </div>
       )}
+      
+      {/* Reject Reason Modal */}
+      {showRejectModal && pendingRejectPayment && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md bg-gray-900 border-gray-800 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <XCircle className="w-5 h-5 text-red-500" />
+                Reject Payment
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setPendingRejectPayment(null);
+                  setRejectReason('');
+                }}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Payment Info */}
+              <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                <p className="text-sm text-gray-400">Rejecting payment for:</p>
+                <p className="font-medium text-white">{pendingRejectPayment.user_name || pendingRejectPayment.user_id}</p>
+                <p className="text-sm text-amber-400">
+                  {pendingRejectPayment.plan_display || pendingRejectPayment.plan} - ₹{pendingRejectPayment.amount}
+                </p>
+              </div>
+              
+              {/* Rejection Reason */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Rejection Reason <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Enter reason for rejection (e.g., Invalid payment proof, Amount mismatch, etc.)"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 min-h-[100px]"
+                  required
+                />
+              </div>
+              
+              {/* Quick Reasons */}
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs text-gray-500">Quick select:</span>
+                {['Invalid payment proof', 'Amount mismatch', 'Duplicate request', 'Fraudulent activity', 'Payment not received'].map(reason => (
+                  <button
+                    key={reason}
+                    onClick={() => setRejectReason(reason)}
+                    className="px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 text-gray-300"
+                  >
+                    {reason}
+                  </button>
+                ))}
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 border-gray-700"
+                  onClick={() => {
+                    setShowRejectModal(false);
+                    setPendingRejectPayment(null);
+                    setRejectReason('');
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={confirmRejectPayment}
+                  disabled={processing || !rejectReason.trim()}
+                >
+                  {processing ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Rejecting...
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Confirm Reject
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
