@@ -526,7 +526,7 @@ const PRCRain = ({ user, onComplete }) => {
             🌧️ TAP THE DROPS! 🌧️
           </div>
           <div className="text-sm text-gray-300/80">
-            Each drop is a surprise - Gain or Loss! 🍀
+            🎲 Every drop is random - Test your luck! 🎲
           </div>
         </div>
 
