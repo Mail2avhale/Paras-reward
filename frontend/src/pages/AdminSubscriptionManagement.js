@@ -60,6 +60,11 @@ const AdminSubscriptionManagement = ({ user }) => {
   const [rejectReason, setRejectReason] = useState('');
   const [pendingRejectPayment, setPendingRejectPayment] = useState(null);
   
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [pendingDeletePayment, setPendingDeletePayment] = useState(null);
+  
   // Time filter and search for payments
   const [timeFilter, setTimeFilter] = useState('all');
   const [paymentSearch, setPaymentSearch] = useState('');
