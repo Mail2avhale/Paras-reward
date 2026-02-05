@@ -26845,6 +26845,19 @@ async def get_network_analytics(user_id: str):
     if total_earned == 0:
         total_earned = user.get("total_referral_earnings", 0)
     
+    # If still no data, estimate from total_mined and network structure
+    # This gives historical users an estimated referral earnings value
+    if total_earned == 0 and total_network > 0 and user.get("total_mined", 0) > 0:
+        # Calculate estimated referral bonus percentage of total mining
+        total_bonus_percent = sum([
+            ld["active"] * ld["bonus_percent"] / 100
+            for ld in level_distribution
+        ])
+        # Estimate that referral bonus was ~X% of their total mining
+        # (This is an approximation since we don't have historical data)
+        estimated_referral_portion = user.get("total_mined", 0) * total_bonus_percent
+        total_earned = estimated_referral_portion
+    
     return {
         "network_health_score": round(health_score, 1),
         "total_network_size": total_network,
