@@ -1818,11 +1818,17 @@ async def check_redemption_allowed(user: dict, prc_amount: float) -> dict:
     checks_passed["cooldown_ok"] = True
     
     # ===== ALL CHECKS PASSED =====
+    carry_forward = limit_info.get("carry_forward", 0)
+    monthly_base = limit_info.get("monthly_limit", monthly_limit)
+    
     return {
         "allowed": True,
         "reason": "OK",
         "remaining": remaining - prc_amount,
         "limit": monthly_limit,
+        "monthly_limit": monthly_base,
+        "carry_forward": carry_forward,
+        "carry_forward_months": limit_info.get("carry_forward_months", 0),
         "current_usage": current_usage,
         "checks": checks_passed
     }
