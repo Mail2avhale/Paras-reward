@@ -1931,15 +1931,6 @@ async def count_active_referrals_by_level(user_id: str):
     
     print(f"✅ Active PAID referrals count: {active_counts}")
     return active_counts
-            
-            if is_active:
-                active_counts[level] += 1
-                print(f"    ✅ Active: {user.get('email')} (reason: {active_reason})")
-            else:
-                print(f"    ⏰ Inactive: {user.get('email')}")
-    
-    print(f"✅ Active referrals count: {active_counts}")
-    return active_counts
 
 async def count_active_referrals_by_level_with_weights(user_id: str):
     """
