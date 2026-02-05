@@ -8,7 +8,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import {
   ArrowLeft, Smartphone, Tv, Zap, CreditCard, Building,
-  Send, Clock, CheckCircle, XCircle, AlertCircle, Receipt, ChevronDown, ChevronUp
+  Send, Clock, CheckCircle, XCircle, AlertCircle, Receipt, ChevronDown, ChevronUp, Info
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import RequestTimeline from '../components/RequestTimeline';
@@ -18,6 +18,7 @@ import {
   formatMobile, formatIFSC, formatBankAccount,
   validateMobile, validateIFSC, validateBankAccount
 } from '@/utils/indianValidation';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
