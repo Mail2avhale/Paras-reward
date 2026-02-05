@@ -547,6 +547,16 @@ const ProfileAdvanced = ({ user, onLogout }) => {
             <span className="flex items-center gap-3 text-black font-semibold">
               <Crown className="w-5 h-5" />
               Upgrade Your Plan
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-3 h-3 text-black/50 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[220px]">
+                    <p className="text-xs">Upgrade to earn faster! Get up to 3x mining speed, higher redemption limits, and exclusive features</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </span>
             <ChevronRight className="w-5 h-5 text-black" />
           </button>
