@@ -4834,19 +4834,22 @@ async def claim_mining(uid: str):
             if rate_per_minute > 0:
                 referral_bonus_portion = (total_bonus / (rate_per_minute * 1440)) * mined_amount
     
-    await db.users.update_one(
-        {"uid": uid},
-        {
-            "$set": {
-                "prc_balance": new_balance,
-                "total_mined": new_total_mined,
-                "mining_start_time": now.isoformat(),  # Reset session start for continuous mining
-                "mining_active": True
-            },
-            "$inc": {"total_referral_earnings": referral_bonus_portion} if referral_bonus_portion > 0 else {},
-            "$push": {"mining_history": mining_entry}
-        }
-    )
+    # Build the update operation
+    update_op = {
+        "$set": {
+            "prc_balance": new_balance,
+            "total_mined": new_total_mined,
+            "mining_start_time": now.isoformat(),  # Reset session start for continuous mining
+            "mining_active": True
+        },
+        "$push": {"mining_history": mining_entry}
+    }
+    
+    # Add referral earnings increment if there was any referral bonus
+    if referral_bonus_portion > 0:
+        update_op["$inc"] = {"total_referral_earnings": referral_bonus_portion}
+    
+    await db.users.update_one({"uid": uid}, update_op)
     
     # Create referral bonus transaction if there was any referral bonus
     if referral_bonus_portion > 0:
