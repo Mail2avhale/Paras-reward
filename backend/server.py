@@ -1909,23 +1909,44 @@ async def count_active_referrals_by_level(user_id: str):
 async def count_active_referrals_by_level_with_weights(user_id: str):
     """
     Count active referrals at each level with subscription weights
+    
+    ⚠️ ANTI-FRAUD: Only PAID subscribers count for referral bonuses!
+    Explorer (FREE) users do NOT contribute to referral mining bonus.
+    This prevents fake account creation for boosting mining rates.
+    
     Active = ANY of:
       1. Active mining session
       2. Bonus collected in last 24h
       3. Tap Game or Rain Drop played in last 24h
+    
+    PAID = subscription_plan NOT in ['explorer', 'free', None, '']
     """
     referrals_by_level = await get_multi_level_referrals(user_id, max_levels=5)
     level_data = {
-        'level_1': {'count': 0, 'weighted_count': 0},
-        'level_2': {'count': 0, 'weighted_count': 0},
-        'level_3': {'count': 0, 'weighted_count': 0},
-        'level_4': {'count': 0, 'weighted_count': 0},
-        'level_5': {'count': 0, 'weighted_count': 0}
+        'level_1': {'count': 0, 'weighted_count': 0, 'free_count': 0},
+        'level_2': {'count': 0, 'weighted_count': 0, 'free_count': 0},
+        'level_3': {'count': 0, 'weighted_count': 0, 'free_count': 0},
+        'level_4': {'count': 0, 'weighted_count': 0, 'free_count': 0},
+        'level_5': {'count': 0, 'weighted_count': 0, 'free_count': 0}
     }
+    
+    # Free/Explorer plan identifiers (case-insensitive)
+    FREE_PLANS = ['explorer', 'free', '', None]
     
     for level, users in referrals_by_level.items():
         for user in users:
             user_uid = user.get("uid")
+            user_plan = (user.get("subscription_plan") or "").lower().strip()
+            
+            # Check if user is on FREE plan
+            is_free_user = user_plan in FREE_PLANS or user_plan == ""
+            
+            if is_free_user:
+                # Track free users but DON'T count them for bonus
+                level_data[level]['free_count'] += 1
+                continue  # Skip free users for referral bonus calculation
+            
+            # Only count PAID users
             is_active, _ = await check_user_active_status(user_uid, user)
             
             if is_active:
