@@ -13684,6 +13684,45 @@ async def get_user_redeem_limit_admin(uid: str):
         "usage_percentage": round((current_usage / total_limit) * 100, 2) if total_limit > 0 else 0
     }
 
+
+
+@api_router.get("/user/{uid}/redeem-limit")
+async def get_user_redeem_limit(uid: str):
+    """
+    Get user's redemption limit with carry forward information.
+    Shows monthly limit, carry forward from previous months, and remaining balance.
+    """
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    limit_info = await calculate_user_monthly_redeem_limit(user)
+    subscription_start = user.get("subscription_start_date") or user.get("subscription_created_at")
+    current_usage = await get_user_monthly_redemption_usage(uid, subscription_start)
+    
+    total_limit = limit_info.get("limit", 0)
+    monthly_limit = limit_info.get("monthly_limit", total_limit)
+    carry_forward = limit_info.get("carry_forward", 0)
+    remaining = max(0, total_limit - current_usage)
+    
+    return {
+        "plan": limit_info.get("plan"),
+        "monthly_limit": round(monthly_limit, 2),
+        "carry_forward": round(carry_forward, 2),
+        "carry_forward_months": limit_info.get("carry_forward_months", 0),
+        "total_limit": round(total_limit, 2),
+        "current_usage": round(current_usage, 2),
+        "remaining": round(remaining, 2),
+        "usage_percentage": round((current_usage / total_limit) * 100, 1) if total_limit > 0 else 0,
+        "referral_bonus": {
+            "paid_referrals": limit_info.get("direct_referrals", 0),
+            "total_referrals": limit_info.get("total_referrals", 0),
+            "free_referrals": limit_info.get("free_referrals", 0),
+            "multiplier": limit_info.get("referral_multiplier", 1.0),
+            "bonus_percent_per_referral": limit_info.get("referral_bonus_percent", 20)
+        }
+    }
+
 # ========== MARKETPLACE (USER) ==========
 
 @api_router.get("/marketplace/products")
