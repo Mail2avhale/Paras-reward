@@ -64,6 +64,16 @@ Build a comprehensive rewards and loyalty platform with:
 
 ### Recently Completed ✅ (Feb 5, 2026)
 
+#### Complete PRC Breakdown with All Categories
+- [x] Added "Luxury Life Savings" card showing accumulated 20% savings with INR value
+- [x] Updated "Complete PRC Breakdown" section with:
+  - **CREDITS (+)**: Total Earned, Admin Credits/Bonuses
+  - **DEDUCTIONS (-)**: Redeemed, Luxury Savings, Service Charges, Expired/Burned, Rain Game Losses, Tap Game Losses, Admin Adjustments
+  - **= Available Balance**: Final result
+- [x] Backend API enhanced with `credits_breakdown`, `deductions_breakdown`, `luxury_life` objects
+- [x] Added all transaction types: admin_credit, admin_debit, penalty, correction, burn, expired
+- Files modified: `backend/server.py`, `Orders.js`
+
 #### PRC Balance Breakdown - "Where did your PRC go?" Section
 - [x] Added complete deductions breakdown on Orders page showing:
   - Total Earned (Mining + Games + Referrals + Cashback)
