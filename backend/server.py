@@ -5820,12 +5820,12 @@ async def get_user_redemption_stats(uid: str):
         
         # Get expired/burned PRC
         expired_result = await db.transactions.aggregate([
-            {"$match": {"user_id": uid, "type": {"$in": ["expired", "prc_burn", "auto_burn"]}}},
+            {"$match": {"user_id": uid, "type": {"$in": ["expired", "prc_burn", "auto_burn", "burn"]}}},
             {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
         ]).to_list(1)
         expired_prc = expired_result[0]["total"] if expired_result else 0
         
-        # Get luxury savings (20% auto-deducted)
+        # Get luxury savings (20% auto-deducted from mining)
         luxury_savings = user.get("luxury_savings", 0)
         
         # Get PRC rain losses
@@ -5835,10 +5835,32 @@ async def get_user_redemption_stats(uid: str):
         ]).to_list(1)
         rain_losses = rain_losses_result[0]["total"] if rain_losses_result else 0
         
+        # Get admin adjustments (credits and debits separately)
+        admin_credits_result = await db.transactions.aggregate([
+            {"$match": {"user_id": uid, "type": {"$in": ["admin_credit", "admin_adjustment", "bonus", "reward"]}, "amount": {"$gt": 0}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        admin_credits = admin_credits_result[0]["total"] if admin_credits_result else 0
+        
+        admin_debits_result = await db.transactions.aggregate([
+            {"$match": {"user_id": uid, "type": {"$in": ["admin_debit", "admin_adjustment", "penalty", "correction"]}, "amount": {"$lt": 0}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+        ]).to_list(1)
+        admin_debits = admin_debits_result[0]["total"] if admin_debits_result else 0
+        
+        # Get tap game losses (if any negative tap transactions)
+        tap_losses_result = await db.transactions.aggregate([
+            {"$match": {"user_id": uid, "type": "tap_game", "amount": {"$lt": 0}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+        ]).to_list(1)
+        tap_losses = tap_losses_result[0]["total"] if tap_losses_result else 0
+        
         # Calculate expected balance vs actual
         current_balance = round(user.get("prc_balance", 0), 2)
-        expected_balance = total_earned - total_prc_redeemed - service_charges - expired_prc - luxury_savings - rain_losses
-        unaccounted = round(total_earned - current_balance - total_prc_redeemed - service_charges - expired_prc - luxury_savings - rain_losses, 2)
+        total_deductions = total_prc_redeemed + service_charges + expired_prc + luxury_savings + rain_losses + admin_debits + tap_losses
+        total_additions = total_earned + admin_credits
+        expected_balance = total_additions - total_deductions
+        unaccounted = round(abs(expected_balance - current_balance), 2)
         
         return {
             "total_prc_redeemed": round(total_prc_redeemed, 2),
@@ -5852,18 +5874,38 @@ async def get_user_redemption_stats(uid: str):
             "deductions_breakdown": {
                 "redeemed": round(total_prc_redeemed, 2),
                 "service_charges": round(service_charges, 2),
-                "expired": round(expired_prc, 2),
+                "expired_burned": round(expired_prc, 2),
                 "luxury_savings": round(luxury_savings, 2),
                 "rain_game_losses": round(rain_losses, 2),
-                "other": round(max(0, unaccounted), 2)
+                "tap_game_losses": round(tap_losses, 2),
+                "admin_debits": round(admin_debits, 2),
+                "unaccounted": round(max(0, unaccounted), 2)
+            },
+            "credits_breakdown": {
+                "mining": earnings_breakdown.get("mining", 0),
+                "tap_game": earnings_breakdown.get("tap_game", 0),
+                "rain_game": earnings_breakdown.get("rain_game", 0),
+                "referral": earnings_breakdown.get("referral", 0),
+                "cashback": earnings_breakdown.get("cashback", 0),
+                "admin_credits": round(admin_credits, 2),
+                "other": earnings_breakdown.get("other", 0)
+            },
+            "luxury_life": {
+                "total_savings": round(luxury_savings, 2),
+                "savings_inr": round(luxury_savings * 0.1, 2),
+                "percent_rate": 20,
+                "status": "accumulating"
             },
             "balance_equation": {
                 "total_earned": round(total_earned, 2),
+                "plus_admin_credits": round(admin_credits, 2),
                 "minus_redeemed": round(total_prc_redeemed, 2),
                 "minus_service_charges": round(service_charges, 2),
-                "minus_expired": round(expired_prc, 2),
+                "minus_expired_burned": round(expired_prc, 2),
                 "minus_luxury_savings": round(luxury_savings, 2),
                 "minus_rain_losses": round(rain_losses, 2),
+                "minus_tap_losses": round(tap_losses, 2),
+                "minus_admin_debits": round(admin_debits, 2),
                 "equals_balance": current_balance
             }
         }
