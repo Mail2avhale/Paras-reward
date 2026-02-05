@@ -638,7 +638,19 @@ const DashboardModern = ({ user, onLogout }) => {
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-gray-600 text-[8px] tracking-widest mb-0.5">MULTIPLIER</p>
+                <div className="flex items-center gap-1 justify-end">
+                  <p className="text-gray-600 text-[8px] tracking-widest mb-0.5">MULTIPLIER</p>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3 h-3 text-gray-500 cursor-help mb-0.5" />
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[200px]">
+                        <p className="text-xs">Mining speed multiplier based on your plan. Elite: 3x, Growth: 2x, Startup: 1.5x, Explorer: 1x</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <p className={`text-sm font-bold ${
                   stats.subscriptionPlan === 'elite' ? 'text-amber-400' :
                   stats.subscriptionPlan === 'growth' ? 'text-emerald-400' :
