@@ -64,20 +64,28 @@ Build a comprehensive rewards and loyalty platform with:
 
 ### Recently Completed ✅ (Feb 5, 2026)
 
+#### Full Carry Forward for Monthly Redeem Limit
+- [x] Implemented full carry forward feature - unused monthly limit now accumulates
+- [x] Created `calculate_carry_forward_limit()` function to calculate unused limits from all previous months
+- [x] Updated `calculate_user_monthly_redeem_limit()` to include carry forward in total limit
+- [x] Added new user-facing API: `GET /api/user/{uid}/redeem-limit` to show limit breakdown
+- [x] Updated admin endpoint with carry forward details
+- [x] Error messages now show carry forward breakdown
+
 #### Total Referral Earnings Fix
 - [x] Fixed "Total Referral Earnings: 0 PRC" bug in Network Analytics page
 - [x] Updated transaction queries to check all referral types: `referral`, `referral_bonus`, `referral_reward`
 - [x] Added referral bonus tracking when mining is claimed (creates separate transaction)
 - [x] Added `total_referral_earnings` field tracking on user document
 - [x] Added estimated historical earnings calculation for users without transaction history
-- Files modified: `backend/server.py`
 
 #### Balance & Label Consistency Fix
 - [x] Unified "Total Earned" → "Lifetime Earnings" label on Mining and Orders pages
 - [x] Mining page now fetches `total_earned` from `/api/user/{uid}/redemption-stats` for data consistency
 - [x] Both pages use same data source for balance and earnings
 - [x] Mining page adds current session PRC (`sessionPRC`) to show running total
-- Files modified: `Mining.js`, `Orders.js`
+
+**Files modified:** `backend/server.py`, `Mining.js`, `Orders.js`
 
 ### Upcoming Tasks 🟡
 
