@@ -242,16 +242,9 @@ const Orders = ({ user, onLogout }) => {
                 <div className="flex items-center gap-2 mb-1">
                   <Coins className="w-4 h-4 text-amber-500" />
                   <p className="text-gray-400 text-xs">PRC Redeemed</p>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="w-3 h-3 text-gray-500 cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[200px]">
-                        <p className="text-xs">Total PRC you have spent on bill payments, gift vouchers, and marketplace orders</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <InfoTooltip>
+                    <p>Total PRC spent on bill payments, gift vouchers, and marketplace orders</p>
+                  </InfoTooltip>
                 </div>
                 <p className="text-white font-bold text-lg">{(userStats.total_prc_redeemed || 0).toLocaleString()}</p>
                 <p className="text-gray-500 text-xs">≈ ₹{((userStats.total_prc_redeemed || 0) * 0.1).toFixed(2)}</p>
@@ -261,17 +254,12 @@ const Orders = ({ user, onLogout }) => {
               <div className="bg-gray-900/50 rounded-xl p-3">
                 <div className="flex items-center gap-2 mb-1">
                   <Wallet className="w-4 h-4 text-emerald-500" />
-                  <p className="text-gray-400 text-xs">Lifetime Earnings</p>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="w-3 h-3 text-gray-500 cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[200px]">
-                        <p className="text-xs">Includes: Mining rewards, Referral bonuses, Tap Game, Rain Drop Game & Cashback</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <p className="text-gray-400 text-xs">Total Earned</p>
+                  <InfoTooltip>
+                    <p className="font-semibold mb-1">All PRC ever earned:</p>
+                    <p>Mining + Games + Referrals + Cashback</p>
+                    <p className="text-amber-400 mt-1 text-[10px]">Note: This ≠ Balance + Redeemed (see breakdown below)</p>
+                  </InfoTooltip>
                 </div>
                 <p className="text-emerald-400 font-bold text-lg">{(userStats.total_earned || 0).toLocaleString()}</p>
                 <p className="text-gray-500 text-xs">≈ ₹{((userStats.total_earned || 0) * 0.1).toFixed(2)}</p>
@@ -282,16 +270,9 @@ const Orders = ({ user, onLogout }) => {
                 <div className="flex items-center gap-2 mb-1">
                   <Gift className="w-4 h-4 text-purple-500" />
                   <p className="text-gray-400 text-xs">Cashback</p>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="w-3 h-3 text-gray-500 cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[200px]">
-                        <p className="text-xs">Cashback earned from completed bill payments and purchases</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <InfoTooltip>
+                    <p>Cashback earned from completed bill payments and purchases</p>
+                  </InfoTooltip>
                 </div>
                 <p className="text-purple-400 font-bold text-lg">₹{(userStats.total_cashback || 0).toFixed(2)}</p>
               </div>
@@ -301,21 +282,101 @@ const Orders = ({ user, onLogout }) => {
                 <div className="flex items-center gap-2 mb-1">
                   <Coins className="w-4 h-4 text-blue-500" />
                   <p className="text-gray-400 text-xs">Balance</p>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="w-3 h-3 text-gray-500 cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[200px]">
-                        <p className="text-xs">Your current available PRC that can be used for redemptions</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <InfoTooltip>
+                    <p>Your current available PRC for redemptions</p>
+                  </InfoTooltip>
                 </div>
                 <p className="text-blue-400 font-bold text-lg">{(userStats.current_balance || 0).toFixed(2)}</p>
                 <p className="text-gray-500 text-xs">PRC available</p>
               </div>
             </div>
+            
+            {/* PRC Balance Equation - Shows where PRC went */}
+            {userStats.deductions_breakdown && (
+              <div className="mt-4 bg-gray-900/70 rounded-xl p-3 border border-gray-700">
+                <div className="flex items-center gap-2 mb-3">
+                  <HelpCircle className="w-4 h-4 text-amber-500" />
+                  <p className="text-white text-sm font-semibold">Where did your PRC go?</p>
+                </div>
+                
+                <div className="space-y-2 text-xs">
+                  {/* Starting Point */}
+                  <div className="flex justify-between items-center py-1.5 border-b border-gray-800">
+                    <span className="text-emerald-400 flex items-center gap-2">
+                      <TrendingUp className="w-3 h-3" /> Total Earned
+                    </span>
+                    <span className="text-emerald-400 font-mono font-bold">+{(userStats.total_earned || 0).toLocaleString()}</span>
+                  </div>
+                  
+                  {/* Deductions */}
+                  <div className="flex justify-between items-center py-1 text-gray-400">
+                    <span className="flex items-center gap-2">
+                      <Receipt className="w-3 h-3 text-amber-500" /> Redeemed (Bills/Vouchers/Orders)
+                    </span>
+                    <span className="text-red-400 font-mono">-{(userStats.deductions_breakdown?.redeemed || 0).toLocaleString()}</span>
+                  </div>
+                  
+                  {userStats.deductions_breakdown?.luxury_savings > 0 && (
+                    <div className="flex justify-between items-center py-1 text-gray-400">
+                      <span className="flex items-center gap-2">
+                        <PiggyBank className="w-3 h-3 text-pink-500" /> Luxury Life Savings (20%)
+                        <InfoTooltip>
+                          <p>20% of your mining earnings are auto-saved for Luxury Life rewards. This is a feature, not a loss!</p>
+                        </InfoTooltip>
+                      </span>
+                      <span className="text-pink-400 font-mono">-{(userStats.deductions_breakdown?.luxury_savings || 0).toLocaleString()}</span>
+                    </div>
+                  )}
+                  
+                  {userStats.deductions_breakdown?.service_charges > 0 && (
+                    <div className="flex justify-between items-center py-1 text-gray-400">
+                      <span className="flex items-center gap-2">
+                        <Percent className="w-3 h-3 text-orange-500" /> Service Charges (2-5%)
+                      </span>
+                      <span className="text-orange-400 font-mono">-{(userStats.deductions_breakdown?.service_charges || 0).toLocaleString()}</span>
+                    </div>
+                  )}
+                  
+                  {userStats.deductions_breakdown?.expired > 0 && (
+                    <div className="flex justify-between items-center py-1 text-gray-400">
+                      <span className="flex items-center gap-2">
+                        <AlertTriangle className="w-3 h-3 text-red-500" /> Expired PRC
+                        <InfoTooltip>
+                          <p>Free users' PRC expires after 2 days if not used. Upgrade to a paid plan to prevent expiry!</p>
+                        </InfoTooltip>
+                      </span>
+                      <span className="text-red-400 font-mono">-{(userStats.deductions_breakdown?.expired || 0).toLocaleString()}</span>
+                    </div>
+                  )}
+                  
+                  {userStats.deductions_breakdown?.rain_game_losses > 0 && (
+                    <div className="flex justify-between items-center py-1 text-gray-400">
+                      <span className="flex items-center gap-2">
+                        <Droplet className="w-3 h-3 text-blue-500" /> Rain Game Losses
+                      </span>
+                      <span className="text-red-400 font-mono">-{(userStats.deductions_breakdown?.rain_game_losses || 0).toLocaleString()}</span>
+                    </div>
+                  )}
+                  
+                  {userStats.deductions_breakdown?.other > 0 && (
+                    <div className="flex justify-between items-center py-1 text-gray-400">
+                      <span className="flex items-center gap-2">
+                        <Info className="w-3 h-3" /> Other Deductions
+                      </span>
+                      <span className="text-gray-400 font-mono">-{(userStats.deductions_breakdown?.other || 0).toLocaleString()}</span>
+                    </div>
+                  )}
+                  
+                  {/* Result */}
+                  <div className="flex justify-between items-center py-2 border-t border-gray-700 mt-2">
+                    <span className="text-blue-400 font-semibold flex items-center gap-2">
+                      <Wallet className="w-3 h-3" /> = Current Balance
+                    </span>
+                    <span className="text-blue-400 font-mono font-bold">{(userStats.current_balance || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Earnings Breakdown */}
             {userStats.earnings_breakdown && (
