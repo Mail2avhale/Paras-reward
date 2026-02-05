@@ -64,6 +64,19 @@ Build a comprehensive rewards and loyalty platform with:
 
 ### Recently Completed ✅ (Feb 5, 2026)
 
+#### PRC Balance Breakdown - "Where did your PRC go?" Section
+- [x] Added complete deductions breakdown on Orders page showing:
+  - Total Earned (Mining + Games + Referrals + Cashback)
+  - Redeemed (Bills/Vouchers/Orders)
+  - Luxury Life Savings (20% auto-saved)
+  - Service Charges (2-5%)
+  - Expired PRC (for free users)
+  - Rain Game Losses
+  - = Current Balance
+- [x] Updated backend API `/api/user/{uid}/redemption-stats` to return `deductions_breakdown`
+- [x] Created mobile-friendly `InfoTooltip` component that works on both hover AND tap
+- Files modified: `backend/server.py`, `Orders.js`, new `InfoTooltip.jsx`
+
 #### Tooltips Added Throughout User Pages
 - [x] **Mining Page**: Balance, Reward Rate, Lifetime Earnings, Referral Weight
 - [x] **Orders Page**: PRC Redeemed, Lifetime Earnings, Cashback, Balance
