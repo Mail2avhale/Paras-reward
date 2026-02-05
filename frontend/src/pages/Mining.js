@@ -39,17 +39,22 @@ const DailyRewards = ({ user }) => {
     }, 10000); // 10 second timeout
     
     try {
-      // Fetch both user data and mining status in parallel
-      const [userResponse, miningResponse] = await Promise.all([
+      // Fetch user data, mining status, and redemption stats in parallel
+      const [userResponse, miningResponse, statsResponse] = await Promise.all([
         axios.get(`${API}/api/user/${user.uid}`),
-        axios.get(`${API}/api/mining/status/${user.uid}`)
+        axios.get(`${API}/api/mining/status/${user.uid}`),
+        axios.get(`${API}/api/user/${user.uid}/redemption-stats`)
       ]);
       
       const data = userResponse.data;
       const miningData = miningResponse.data;
+      const statsData = statsResponse.data;
       
       setUserData(data);
       // Use the actual mining rate from backend (per hour)
+      setMiningRate(miningData.mining_rate_per_hour || miningData.mining_rate || 1.0);
+      // Set lifetime earnings from redemption stats API for consistency
+      setLifetimeEarnings(statsData.total_earned || 0);
       setMiningRate(miningData.mining_rate_per_hour || miningData.mining_rate || 1.0);
       
       // Check mining session status
