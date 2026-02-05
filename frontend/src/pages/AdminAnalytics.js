@@ -252,7 +252,7 @@ const AdminAnalytics = ({ user }) => {
             </div>
             <p className="text-2xl font-bold text-white">{formatPRC(prc.total_mined || 0)}</p>
             <p className="text-xs text-gray-400 mt-1">Total PRC Mined</p>
-            <p className="text-sm text-blue-400 mt-2 font-medium">{formatINR((prc.total_mined || 0) * (prc.prc_rate || 2))}</p>
+            <p className="text-sm text-blue-400 mt-2 font-medium">{formatINR((prc.total_mined || 0) * 0.1)}</p>
           </Card>
 
           {/* Total Circulated */}
@@ -262,7 +262,7 @@ const AdminAnalytics = ({ user }) => {
             </div>
             <p className="text-2xl font-bold text-white">{formatPRC(prc.total_circulated || 0)}</p>
             <p className="text-xs text-gray-400 mt-1">Total Circulated</p>
-            <p className="text-sm text-purple-400 mt-2 font-medium">{formatINR((prc.total_circulated || 0) * (prc.prc_rate || 2))}</p>
+            <p className="text-sm text-purple-400 mt-2 font-medium">{formatINR((prc.total_circulated || 0) * 0.1)}</p>
           </Card>
 
           {/* PRC Rate */}
@@ -270,9 +270,9 @@ const AdminAnalytics = ({ user }) => {
             <div className="flex items-center justify-between mb-2">
               <IndianRupee className="w-8 h-8 text-emerald-500" />
             </div>
-            <p className="text-2xl font-bold text-white">₹{prc.prc_rate || 2}</p>
-            <p className="text-xs text-gray-400 mt-1">1 PRC = INR</p>
-            <p className="text-sm text-emerald-400 mt-2 font-medium">Current Rate</p>
+            <p className="text-2xl font-bold text-white">₹0.1</p>
+            <p className="text-xs text-gray-400 mt-1">1 PRC = ₹0.1 (10 PRC = ₹1)</p>
+            <p className="text-sm text-emerald-400 mt-2 font-medium">Fixed Rate</p>
           </Card>
         </div>
       </div>
