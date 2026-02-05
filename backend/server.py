@@ -5810,6 +5810,36 @@ async def get_user_redemption_stats(uid: str):
             earnings_breakdown["mining"] = round(user.get("total_mined", 0), 2)
             total_earned = sum(earnings_breakdown.values())
         
+        # ========== DEDUCTIONS BREAKDOWN ==========
+        # Get service charges from transactions
+        service_charges_result = await db.transactions.aggregate([
+            {"$match": {"user_id": uid, "type": {"$in": ["service_charge", "fee", "processing_fee"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+        ]).to_list(1)
+        service_charges = service_charges_result[0]["total"] if service_charges_result else 0
+        
+        # Get expired/burned PRC
+        expired_result = await db.transactions.aggregate([
+            {"$match": {"user_id": uid, "type": {"$in": ["expired", "prc_burn", "auto_burn"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+        ]).to_list(1)
+        expired_prc = expired_result[0]["total"] if expired_result else 0
+        
+        # Get luxury savings (20% auto-deducted)
+        luxury_savings = user.get("luxury_savings", 0)
+        
+        # Get PRC rain losses
+        rain_losses_result = await db.transactions.aggregate([
+            {"$match": {"user_id": uid, "type": "prc_rain_loss"}},
+            {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+        ]).to_list(1)
+        rain_losses = rain_losses_result[0]["total"] if rain_losses_result else 0
+        
+        # Calculate expected balance vs actual
+        current_balance = round(user.get("prc_balance", 0), 2)
+        expected_balance = total_earned - total_prc_redeemed - service_charges - expired_prc - luxury_savings - rain_losses
+        unaccounted = round(total_earned - current_balance - total_prc_redeemed - service_charges - expired_prc - luxury_savings - rain_losses, 2)
+        
         return {
             "total_prc_redeemed": round(total_prc_redeemed, 2),
             "total_money_value": round(total_prc_redeemed * 0.1, 2),  # 1 PRC = ₹0.10
@@ -5817,8 +5847,25 @@ async def get_user_redemption_stats(uid: str):
             "total_cashback": round(total_cashback, 2),
             "total_orders": total_orders,
             "delivered_orders": delivered_orders,
-            "current_balance": round(user.get("prc_balance", 0), 2),
-            "earnings_breakdown": earnings_breakdown
+            "current_balance": current_balance,
+            "earnings_breakdown": earnings_breakdown,
+            "deductions_breakdown": {
+                "redeemed": round(total_prc_redeemed, 2),
+                "service_charges": round(service_charges, 2),
+                "expired": round(expired_prc, 2),
+                "luxury_savings": round(luxury_savings, 2),
+                "rain_game_losses": round(rain_losses, 2),
+                "other": round(max(0, unaccounted), 2)
+            },
+            "balance_equation": {
+                "total_earned": round(total_earned, 2),
+                "minus_redeemed": round(total_prc_redeemed, 2),
+                "minus_service_charges": round(service_charges, 2),
+                "minus_expired": round(expired_prc, 2),
+                "minus_luxury_savings": round(luxury_savings, 2),
+                "minus_rain_losses": round(rain_losses, 2),
+                "equals_balance": current_balance
+            }
         }
     except HTTPException:
         raise
