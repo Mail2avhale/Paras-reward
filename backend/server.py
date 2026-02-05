@@ -13660,6 +13660,10 @@ async def get_user_redeem_limit_admin(uid: str):
     subscription_start = user.get("subscription_start_date") or user.get("subscription_created_at")
     current_usage = await get_user_monthly_redemption_usage(uid, subscription_start)
     
+    total_limit = limit_info.get("limit", 0)
+    monthly_limit = limit_info.get("monthly_limit", total_limit)
+    carry_forward = limit_info.get("carry_forward", 0)
+    
     return {
         "user_id": uid,
         "user_name": user.get("name"),
@@ -13667,12 +13671,17 @@ async def get_user_redeem_limit_admin(uid: str):
         "plan_price": limit_info.get("plan_price"),
         "base_limit": limit_info.get("base_limit"),
         "direct_referrals": limit_info.get("direct_referrals"),
+        "total_referrals": limit_info.get("total_referrals"),
+        "free_referrals": limit_info.get("free_referrals"),
         "referral_bonus_percent": limit_info.get("referral_bonus_percent"),
         "referral_multiplier": limit_info.get("referral_multiplier"),
-        "monthly_limit": limit_info.get("limit"),
+        "monthly_limit": monthly_limit,
+        "carry_forward": carry_forward,
+        "carry_forward_months": limit_info.get("carry_forward_months", 0),
+        "total_limit": total_limit,
         "current_usage": current_usage,
-        "remaining": max(0, limit_info.get("limit", 0) - current_usage),
-        "usage_percentage": round((current_usage / limit_info.get("limit", 1)) * 100, 2) if limit_info.get("limit", 0) > 0 else 0
+        "remaining": max(0, total_limit - current_usage),
+        "usage_percentage": round((current_usage / total_limit) * 100, 2) if total_limit > 0 else 0
     }
 
 # ========== MARKETPLACE (USER) ==========
