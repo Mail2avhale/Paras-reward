@@ -459,7 +459,7 @@ const DailyRewards = ({ user }) => {
           >
             <TrendingUp className="w-8 h-8 text-emerald-500 mb-2" />
             <p className="text-gray-400 text-xs">Lifetime Earnings</p>
-            <p className="text-xl font-bold text-white">{((userData?.total_mined || 0) + sessionPRC).toFixed(2)}</p>
+            <p className="text-xl font-bold text-white">{(lifetimeEarnings + sessionPRC).toFixed(2)}</p>
             <p className="text-emerald-400 text-xs">PRC</p>
           </motion.div>
           <motion.div 
