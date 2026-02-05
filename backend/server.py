@@ -4822,6 +4822,18 @@ async def claim_mining(uid: str):
         "membership_type": membership_type
     }
     
+    # Calculate referral bonus portion for tracking
+    referral_bonus_portion = 0
+    if referral_breakdown:
+        total_bonus = sum(ld.get('bonus', 0) for ld in referral_breakdown.values())
+        # Calculate what portion of mined_amount came from referral bonus
+        # Formula: mining = day × ((BR × User_Multiplier) + Referral_Bonus)
+        # Referral portion = (Referral_Bonus / effective_rate) × mined_amount
+        if total_bonus > 0:
+            rate_per_minute, effective_base, _, _ = await calculate_mining_rate(uid)
+            if rate_per_minute > 0:
+                referral_bonus_portion = (total_bonus / (rate_per_minute * 1440)) * mined_amount
+    
     await db.users.update_one(
         {"uid": uid},
         {
@@ -4831,9 +4843,23 @@ async def claim_mining(uid: str):
                 "mining_start_time": now.isoformat(),  # Reset session start for continuous mining
                 "mining_active": True
             },
+            "$inc": {"total_referral_earnings": referral_bonus_portion} if referral_bonus_portion > 0 else {},
             "$push": {"mining_history": mining_entry}
         }
     )
+    
+    # Create referral bonus transaction if there was any referral bonus
+    if referral_bonus_portion > 0:
+        await db.transactions.insert_one({
+            "transaction_id": f"txn_ref_{uuid.uuid4()}",
+            "user_id": uid,
+            "type": "referral_bonus",
+            "amount": referral_bonus_portion,
+            "description": f"Referral bonus from mining ({len(referral_breakdown)} levels active)",
+            "timestamp": now.isoformat(),
+            "created_at": now.isoformat(),
+            "referral_breakdown": referral_breakdown
+        })
     
     # Create transaction record with expiry tracking
     transaction_id = f"txn_{uuid.uuid4()}"
