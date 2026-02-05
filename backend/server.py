@@ -1887,6 +1887,10 @@ async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
 async def count_active_referrals_by_level(user_id: str):
     """
     Count active referrals at each level (up to 5 levels)
+    
+    ⚠️ ANTI-FRAUD: Only PAID subscribers count!
+    Explorer (FREE) users do NOT contribute to referral count.
+    
     Active = ANY of:
       1. Active mining session
       2. Bonus collected in last 24h
@@ -1901,13 +1905,32 @@ async def count_active_referrals_by_level(user_id: str):
         'level_5': 0
     }
     
+    # Free/Explorer plan identifiers
+    FREE_PLANS = ['explorer', 'free', '', None]
+    
     print(f"🔍 Checking active referrals for user {user_id}")
     
     for level, users in referrals_by_level.items():
         print(f"  Level {level}: {len(users)} total referrals")
         for user in users:
             user_uid = user.get("uid")
+            user_plan = (user.get("subscription_plan") or "").lower().strip()
+            
+            # Skip FREE users - they don't count for referral bonus
+            if user_plan in FREE_PLANS or user_plan == "":
+                print(f"    🚫 FREE user skipped: {user.get('email')} (plan: {user_plan})")
+                continue
+            
             is_active, active_reason = await check_user_active_status(user_uid, user)
+            
+            if is_active:
+                active_counts[level] += 1
+                print(f"    ✅ Active PAID: {user.get('email')} (plan: {user_plan}, reason: {active_reason})")
+            else:
+                print(f"    ⏰ Inactive PAID: {user.get('email')}")
+    
+    print(f"✅ Active PAID referrals count: {active_counts}")
+    return active_counts
             
             if is_active:
                 active_counts[level] += 1
