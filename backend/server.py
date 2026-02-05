@@ -25734,13 +25734,20 @@ async def get_referral_stats(user_id: str):
         orders = await db.orders.count_documents({"user_id": user_uid})
         total_orders_from_referrals += orders
     
-    # Get referral earnings from transactions
+    # Get referral earnings from transactions - check all referral-related types
+    referral_types = ["referral", "referral_bonus", "referral_reward"]
     referral_earnings = await db.transactions.aggregate([
-        {"$match": {"user_id": user_id, "type": "referral"}},
+        {"$match": {"user_id": user_id, "type": {"$in": referral_types}}},
         {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
     ]).to_list(1)
     
     total_earned = referral_earnings[0]["total"] if referral_earnings else 0
+    
+    # Also check users collection for total_referral_earnings field if transactions don't have data
+    if total_earned == 0:
+        user = await db.users.find_one({"uid": user_id}, {"_id": 0, "total_referral_earnings": 1})
+        if user:
+            total_earned = user.get("total_referral_earnings", 0)
     
     # Calculate conversion rate (active rate)
     conversion_rate = (active_count / len(direct_referrals) * 100) if direct_referrals else 0
