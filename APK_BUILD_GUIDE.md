@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://bill-gamify.preview.emergentagent.com",
+    "url": "https://mining-orders-sync.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

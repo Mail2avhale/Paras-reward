@@ -1,106 +1,105 @@
 <analysis>**original_problem_statement:**
-The user's primary goals for this session were to address a series of bugs and introduce significant new features. This included:
-1.  **Fix Production Bugs:** Address recurring data discrepancies, a broken search bar, and mining issues.
-2.  **Verify Previous Fix:** Confirm that the Profile Completion Ring now updates and hides correctly.
-3.  **Fix Subscription Date:** Resolve an issue where the subscription start date was not displaying on the user's dashboard.
-4.  **Fix Bill Payment Flow:**
-    *   Correct a bug where rejected requests remained in a 'pending' state.
-    *   Ensure the rejection reason is visible to the end-user.
-    *   Fix an issue where approved requests were stuck in 'processing' and didn't update to 'completed'.
-    *   Display the total time taken to process a request for both admin and user.
-5.  **Gamify Bill Payments:** Enhance the user experience with engaging features like a real-time counter for pending requests, an animated journey/progress tracker, a confetti celebration on completion, and a Speed Badge for fast processing.
-6.  **Advanced Admin Analytics:** Create a new, comprehensive analytics dashboard from scratch, featuring:
-    *   Accurate data for PRC circulation and redemption with correct INR conversion (10 PRC = ₹1).
-    *   Date range filtering (Today, Week, Month, Year, Custom).
-    *   Graphical charts for user breakdowns (e.g., by subscription plan).
-    *   Real-time data with an auto-refresh toggle.
-7.  **Rain Drop Game Ideas:** Provide suggestions for making the existing Rain Drop game more engaging.
+The user's initial goals were to fix production bugs, verify a profile completion fix, and enhance the bill payment and gaming experience. Throughout the session, the scope expanded significantly to include:
+1.  **Logical Change:** Make bill payment  equivalent to , triggering the final state and confetti immediately.
+2.  **New Feature:** Allow admins to  completed bill payment requests.
+3.  **New Feature:** Allow admins to  an approved subscription request if it was approved by mistake, and revoke the user's plan.
+4.  **UX Improvement:** Sort KYC verification requests from oldest to newest (FIFO).
+5.  **Form Enhancement:** Add  and  fields to the Request Credit Card Services form.
+6.  **Architecture:** Separate the user-facing application from the admin panel, with the goal of deploying the admin panel to a separate subdomain ().
+7.  **Bug Fix:** The subscription rejection modal was not appearing; this needed to be fixed.
+8.  **Gamification:** Make the Rain Drop game more unpredictable by removing any color-based hints about positive or negative point values.
+9.  **Anti-Fraud:** Prevent users from inflating their referral bonus and mining rate by adding free (Explorer) users. The logic must be changed so only paid subscribers count towards referral benefits.
+10. **Data Integrity:** Verify all PRC (Points) calculations across the application for consistency and fix any discrepancies, especially the PRC-to-INR conversion rate.
+11. **Bug Fix:** Address a balance mismatch and confusing Total Earned labels between the Mining and Orders pages.
+12. **Critical Bug Fix:** Resolve a complete login failure in the preview environment.
 
 **User's preferred language**: The user communicates in a mix of English and Marathi. The next agent **MUST** start all responses with  and then continue the technical explanation in English.
 
 **what currently exists?**
-The agent successfully implemented a wide range of features and fixes.
--   **Bug Fixes:** The Profile Completion Ring was fully verified and fixed. The subscription start date display issue was resolved. The entire bill payment approval/rejection workflow was overhauled and fixed.
--   **New Features:**
-    -   A comprehensive **Admin Analytics Dashboard** was created at . It provides accurate, real-time data with charts and date-range filters for key business metrics.
-    -   The **Bill Payment** user experience was significantly enhanced with several gamification features: a live timer for pending requests, an animated journey tracker, a confetti celebration on completion, and speed badges.
--   **Enhancements:** The PRC to INR conversion rate was corrected to 10:1 across the application. The new analytics dashboard includes a live-update toggle.
+The application is a full-stack platform with a React frontend and a FastAPI backend. A significant amount of work was completed in this session:
+-   **Core Logic:** The bill payment workflow was updated so that an approve action now immediately sets the request status to completed. The standalone Complete button was removed from the admin UI.
+-   **Admin Features:**
+    -   A Delete feature was added for approved subscription payments, allowing admins to revoke a subscription with a reason.
+    -   A Review modal was added for completed bill payments.
+    -   The subscription rejection flow was fixed with a functioning rejection-reason modal.
+    -   KYC requests are now correctly sorted oldest-first.
+-   **Form Enhancements:** The credit card payment request form now includes Bank Name and Linked Mobile Number fields.
+-   **Gamification:** The Rain Drop game was updated to be more mysterious. All drops now have a  symbol, and UI hints that revealed positive/negative outcomes before tapping have been removed.
+-   **Anti-Fraud:** The backend logic for calculating referral bonuses and team size was updated to exclude free 'Explorer' plan users, preventing manipulation of the system.
+-   **Data Integrity:** Incorrect PRC-to-INR conversion rates were fixed on the Admin Analytics page.
+-   **Architecture Prep:** The codebase was prepared for separating the admin panel. All admin-related frontend code was copied into a new  directory with the correct structure for a separate deployment. A downloadable artifact () containing this deploy-ready code was created. The live production MongoDB URL has been obtained and configured in the  backend's  file.
+-   **Critical Bug Resolution:** A major login failure, introduced by an attempt to create a lightweight , was diagnosed and fixed by reverting to the original, stable .
 
 **Last working item**:
--   **Last item agent was working**: The user reported that the confetti animation and complete message were not working correctly for bill payments. Specifically, confetti was triggering for approved requests. The agent implemented a fix in  to ensure confetti only triggers for requests with a  status and that the correct journey/completion message is shown.
--   **Status**: USER VERIFICATION PENDING
--   **Agent Testing Done**: Y (Agent verified that confetti does NOT show for 'approved' status. The final check on a 'completed' request was interrupted).
--   **Which testing method agent to use?**: screenshot tool. The agent needs to log in, navigate to the user's bill payments page, and click on a **completed** request to verify that the confetti celebration triggers and the correct completion message with the Speed Badge is displayed.
+-   **Last item agent was working**: The user reported that the PRC balance and Total Earned values were inconsistent between the Mining page and the Orders page. The agent analyzed screenshots, confirmed the discrepancy, and began implementing the user's chosen solution: to fix the balance display and unify the Total Earned label to Lifetime Earnings across all relevant pages for consistency.
+-   **Status**: IN PROGRESS
+-   **Agent Testing Done**: N
+-   **Which testing method agent to use?**: screenshot tool. After implementing the fix, the agent must take screenshots of both the  and  pages to verify that the balance value is identical and the Lifetime Earnings label is used consistently.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1**: Confetti & Completion Message Bug for Bill Payments (P0 - HIGHEST)
+-   **Issue 1**: Balance and Label Mismatch on Mining/Orders Pages (P0 - HIGHEST)
 -   **Issue 2**: Referral page data discrepancy in Production (P0 - CRITICAL, Recurring)
 -   **Issue 3**: Admin dashboard data discrepancy in Production (P0 - CRITICAL, Recurring)
 -   **Issue 4**: Mining auto-pause and reward rate not showing in Production (P1)
 -   **Issue 5**: User-facing search bar functionality is broken (P1)
+-   **Issue 6**: Login fails when  is refactored (P1, Recurring)
 
 **Issues Detail:**
--   **Issue 1: Confetti & Completion Message Bug for Bill Payments**
-    -   **Attempted fixes**: The agent completely rewrote  to fix the state management. A  hook now strictly checks for  before triggering the confetti and uses a  hook () to prevent it from firing multiple times. Logic for displaying the timer, speed badge, and journey steps was also corrected.
+-   **Issue 1: Balance and Label Mismatch on Mining/Orders Pages**
+    -   **Attempted fixes**: Analysis is complete. The agent identified the relevant files (, ) and was about to begin coding.
     -   **Next debug checklist**:
-        1.  Log in as a user (e.g., ).
-        2.  Navigate to the Bill Payments page ().
-        3.  Find a request with the status .
-        4.  Click to expand the request details.
-        5.  **Expected Result:** A confetti animation should fire, and the journey view should display the Speed Badge (e.g., ⚡ Lightning Fast!) and the Completed in... message.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is the final step to polish the new gamification feature and ensure it provides a rewarding and bug-free user experience.
-    -   **Status**: USER VERIFICATION PENDING
-    -   **Is recurring issue?**: Y (Bug in a newly developed feature).
+        1.  Locate the state or prop responsible for displaying the user's balance on both  and . Ensure they draw from the same, single source of truth (e.g., a global user context).
+        2.  Find all instances of Total Earned on both pages and replace them with Lifetime Earnings.
+        3.  Ensure the value for Lifetime Earnings is calculated consistently, ideally from a single backend data point representing all accumulated PRC.
+        4.  Use the  tool to verify visual consistency on both pages after the changes.
+    -   **Why fix this issue and what will be achieved with the fix?**: This will eliminate significant user confusion and build trust by ensuring financial data is consistent and accurate across the application.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: frontend
-    -   **Blocked on other issue**: None
 
--   **Issue 2: Referral page data discrepancy in Production**
-    -   **Attempted fixes**: None in this session. This is a long-standing issue.
-    -   **Next debug checklist**: Re-engage the user to use diagnostic endpoints (, ) on their **production URL** to diagnose the data mismatch.
-    -   **Status**: BLOCKED (Awaiting user action on production).
+-   **Issue 2, 3, 4, 5**: These are long-standing production issues from the previous handoff that have not been addressed in this session. They remain critical but are blocked or have not been prioritized.
+    -   **Status**: BLOCKED / NOT STARTED
+
+-   **Issue 6: Login fails when  is refactored**
+    -   **Attempted fixes**: An attempt to create a lightweight  by removing admin code broke the login flow entirely. The fix was to revert  to its original state.
+    -   **Next debug checklist**: When re-attempting the refactor, use a git-like diff to compare the working  with the broken one. The issue was likely in the  component or the  function signature. Proceed with small, incremental changes, testing login after each change.
+    -   **Why fix this issue and what will be achieved with the fix?**: A lightweight user app is a prerequisite for a clean separation of the user and admin frontends, leading to better performance and maintainability.
+    -   **Status**: NOT STARTED (after revert)
     -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: both
-
--   **Issue 3: Admin dashboard data discrepancy in Production**
-    -   **Attempted fixes**: None in this session.
-    -   **Next debug checklist**: Ask the user to compare data on the new  page with their production database. This new dashboard has more robust data-fetching logic.
-    -   **Status**: USER VERIFICATION PENDING
-    -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: both
-
--   **Issue 4 & 5 (from previous handoff, not started)**:
-    -   Mining auto-pause/reward rate issue in Production.
-    -   Broken user-facing search bar.
-    -   **Status**: NOT STARTED
+    -   **Should Test frontend/backend/both after fix?**: frontend
 
 **In progress Task List**:
--   **Task 1: Bill Payment Gamification Feature Verification**
-    -   **Where to resume**: The code in  is ready. The agent needs to perform the final user flow test as described in Issue 1: Next debug checklist.
-    -   **What will be achieved with this?**: A polished and fully functional bill payment experience.
+-   **Task 1: Unify Earnings Display and Fix Balance Mismatch** (P0)
+    -   **Where to resume**: The agent needs to edit the files  and  to implement the required UI changes.
+    -   **What will be achieved with this?**: A consistent and less confusing user experience regarding their earnings and balance.
     -   **Status**: IN PROGRESS
     -   **Should Test frontend/backend/both after fix?**: frontend
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   **P0: Enhance Rain Drop Game**: Implement user-selected ideas: Combo System, Fever Mode, Golden/Bomb Drops, Leaderboard, Achievements, Power-ups, and Visual/Audio enhancements.
-    -   **P0: Architect for App Separation:** Plan the migration of the admin/manager panel to a separate subdomain.
-    -   **P1: Architect for Play Store Release**: Evaluate PWA+TWA vs. a separate native build.
+    -   **P0: Deploy Separated Admin Panel**: The code is prepared in  and the live MongoDB URL is known. The next step is to guide the user on creating a new Emergent project, uploading the zip content, and deploying it to the  subdomain.
+    -   **P1: Lightweight User App Refactor**: Carefully remove admin-related code from the main  without breaking the login functionality again. This is crucial for performance and completes the separation.
+    -   **P1: Frontend Notification for Paid Referrals**: The backend now only counts paid referrals. Add a clear message or tooltip on the referral/mining page to inform users that only paid members in their downline contribute to their bonuses.
+    -   **P1: Enhance Rain Drop Game**: Implement further ideas like a Combo System, Fever Mode, Golden/Bomb Drops, a leaderboard, and achievements.
 -   **Future Tasks:**
-    -   P1: ML Risk Scoring.
+    -   P2: Advanced Offer Management System for admins.
+    -   P2: ML Risk Scoring for payments.
     -   P2: Full AdMob + Unity Ads Integration.
-    -   P2: Shareable Achievement Cards.
+    -   P3: Shareable Achievement Cards for social media.
     -   P3: Refactor the monolithic .
 
 **Completed work in this session**
--   **Feature: Advanced Admin Analytics Dashboard**: Created a new page at  with  for graphical data visualization, date-range filtering, real-time auto-refresh, and accurate PRC circulation/redemption stats. A new backend API  was built to support this.
--   **Feature: Bill Payment Gamification**: Implemented a Live Timer, Animated Journey, Confetti Celebration, and Speed Badges in  and integrated it into the user and admin bill payment pages.
--   **Feature: Bill Payment Process Overhaul**: Reworked the backend and frontend to support a  ->  ->  flow, calculate and display processing time, and enforce a rejection reason.
--   **Bug Fix: Profile Completion Ring**: Fixed the backend API () to return all necessary fields (, , etc.) and verified the component now hides correctly when a profile is 100% complete.
--   **Bug Fix: Subscription Start Date**: Fixed the backend API to correctly calculate and return the  date, which now displays correctly on the user's dashboard.
--   **Bug Fix: Bill Payment Rejection**: Fixed a bug where rejected requests remained pending by adding a mandatory rejection reason modal on the admin page.
--   **Bug Fix: Bill Payment Gamification Bugs**: Fixed multiple bugs in the new gamification features, including the timer not stopping, confetti firing on the wrong status, and incorrect journey animations.
--   **Enhancement: PRC Rate Correction**: Corrected the PRC to INR conversion rate to 10:1 () across all backend calculations and frontend displays.
+-   **Feature: Admin Deletes Approved Subscription**: Admins can now delete an incorrect subscription approval, which also revokes the user's plan.
+-   **Feature:  Workflow**: Implemented logic where approving a bill payment automatically marks it as complete.
+-   **Feature: Admin Panel Separation Prep**: Created a fully structured, deploy-ready  folder and  artifact, configured with the live production MongoDB URL.
+-   **Bug Fix: Subscription Reject Modal**: Fixed the non-appearing modal for rejecting subscription payments.
+-   **Enhancement: Rain Drop Game Mystery Mode**: Made the game unpredictable by removing color hints and adding a ? symbol to drops.
+-   **Enhancement: Anti-Fraud for Referrals**: Backend logic updated to exclude free users from referral bonus calculations.
+-   **Enhancement: KYC Oldest-First Sorting**: Implemented FIFO sorting for admin KYC review.
+-   **Enhancement: Credit Card Form**: Added Bank Name and Linked Mobile Number fields.
+-   **Bug Fix: PRC Rate on Admin Dashboard**: Corrected hardcoded PRC-to-INR conversion rate.
+-   **Bug Fix: Critical Login Failure**: Diagnosed and resolved a login error by reverting a faulty refactor of .
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: Referral page data discrepancy in Production**: A critical, long-standing issue where referral data is incorrect on the live site. Status: BLOCKED.
@@ -108,85 +107,97 @@ The agent successfully implemented a wide range of features and fixes.
 -   **Issue 3: User-facing search bar is broken**: A known bug where the main search bar for users is non-functional. Status: NOT STARTED.
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork**: Data inconsistency between preview and production environments (Referral counts, Admin dashboard stats).
+-   **Issue recurrence in previous fork**: Data inconsistency between preview and production environments remains the most critical underlying issue.
 -   **Recurrence count**: 5+
--   **Status**: BLOCKED (This remains the most critical underlying issue in the project, causing multiple user-reported bugs).
+-   **Status**: BLOCKED (This remains a top-priority blocker for the project).
 
 **Code Architecture**
+The project is being migrated from a single frontend to a dual-frontend architecture sharing one backend.
 
 
 **Key Technical Concepts**
--   **MongoDB Aggregation**: Used extensively in the new  endpoint to calculate complex stats across multiple collections with date filtering.
--   **Data Visualization**: Using the  library to create interactive charts (Pie, Bar) for the new analytics dashboard.
--   **React State & Effects**: Advanced usage of , , and  in  to manage animations, timers, and one-off events like confetti.
--   **Backend API Design**: Building robust APIs with query parameters for dynamic filtering (e.g., , ).
--   **Component-Based Architecture**: Encapsulating complex UI/logic into a reusable component ().
+-   **Monorepo-style Separation**: The codebase is being structured to support two separate frontend deployments (user and admin) from a single logical repository, sharing one backend API and database.
+-   **State Management & UI Consistency**: The current task highlights the need for a robust way to manage and display user data (like PRC balance) consistently across different components/pages.
+-   **Defensive Refactoring**: The  failure underscored the importance of testing critical paths like login after any significant code restructuring.
 
 **key DB schema**
--   **bill_payment_requests**:
-    -   : (Timestamp) Set when an admin approves the request.
-    -   : (Timestamp) Set when an admin marks the request as complete.
-    -   : (String) Calculated duration between creation and completion.
--   **users**: Fields like , ,  (active/inactive) are now used in analytics aggregations.
+-   **vip_payments**:
+    -   : (Boolean, new) Flag to mark a payment as deleted.
+    -   : (Timestamp, new) Records when the deletion occurred.
+    -   : (String, new) Admin who performed the deletion.
+    -   : (String, new) Reason for deletion.
+-   **users**: The  field is now used in referral calculations to differentiate between 'explorer' (free) and paid users.
 
 **All files of reference**
--   
--   
--   
--   
--   
--   
+-   **Core Logic & Endpoints**:
+    -    (Heavily modified for new APIs and logic fixes).
+-   **Admin Panel & Features**:
+    -    (Delete/Reject features added).
+    -    (Approve=Complete logic reflected).
+    -    (Sorting logic changed in backend).
+    -    (PRC rate fixed).
+-   **User-facing Features & Fixes**:
+    -    (Credit card form updated).
+    -    (Mystery mode implemented).
+    -    (Needs balance/label fix).
+    -    (Needs balance/label fix).
+-   **Application Entrypoint**:
+    -    (Reverted to stable version, core of a previous critical bug).
 
 **Areas that need refactoring**:
-- The monolithic  continues to grow and is a candidate for being broken down into a more modular structure (e.g., separate routers for admin, users, payments).
+-   : Needs to be carefully refactored to remove admin code and create a lightweight user application without re-introducing the login bug.
+-   The monolithic  is increasingly complex and is a prime candidate for being split into a modular, router-based structure.
 
 **key api endpoints**
--   : **(NEW)** Comprehensive analytics endpoint with date range filtering.
--   : **(MODIFIED)** Now handles ,  (with ), and  actions.
--   : **(MODIFIED)** Now returns  and profile completion fields.
--   : **(MODIFIED)** Now returns .
+-   : **(NEW)** Soft-deletes a subscription payment and revokes the associated plan.
+-   : **(MODIFIED)** Frontend now uses a modal to send a  payload.
+-   : **(MODIFIED)** The  action now sets the status directly to .
+-   : **(MODIFIED)** Backend query now sorts by  in ascending order (oldest first).
+-    & related referral endpoints: **(MODIFIED)** Backend logic now filters out users with the 'explorer' plan from counts.
 
 **Critical Info for New Agent**
--   **Language**: Remember to start **every single response** with  before providing the English technical details.
--   **Immediate Task**: Your first action should be to fully verify the bill payment gamification fix. Use the screenshot tool on a **completed** request to ensure confetti, speed badge, and completion messages appear correctly.
--   **New Source of Truth**: The new Admin Analytics page at  should be used for all statistical analysis. The old  is now obsolete.
--   **Production Data Discrepancy**: This remains the #1 blocker for the entire project. Do not assume fixes in the preview environment will work in production. Progress on the related bugs is blocked until the user can provide diagnostic data from their live server.
--   **PRC Rate**: The application-wide PRC to INR conversion rate is now **10 PRC = ₹1 INR**.
+-   **Language**: Start every response with  before providing English details.
+-   **Immediate Task**: Your first action is to fix the PRC balance and Lifetime Earnings label inconsistency on the  and  pages.
+-   **Admin Panel Deployment**: This is a top user priority. You have the  artifact and the live MongoDB URL. The next step is to guide the user on deploying this as a new Emergent project. Do not try to re-do the separation work.
+-   **Frontend Fragility**: Be extremely cautious when refactoring . A previous attempt broke login completely. Test login thoroughly after any changes to this file.
+-   **Production Discrepancies**: The root cause of data differences between preview and production is still unknown and is a major, long-standing blocker. Acknowledge this, but focus on the tasks you can complete in the preview environment.
 
 **documents and test reports created in this job**
--    (Updated with completed features)
+-    (A deployable artifact for the separated admin panel).
+-    (Continuously updated with progress).
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Asks to fix the bill payment approval status not updating and add processing time. (COMPLETED)
-2.  **User:** Asks for fun/gamification ideas for bill payments. (COMPLETED)
-3.  **User:** Selects which gamification features to implement (Live Timer, Journey, Confetti, Speed Badge). (COMPLETED)
-4.  **User:** Reports the animated journey is not updating, speed badge isn't showing, and requests English-only labels. (COMPLETED)
-5.  **User:** Asks for ideas to make the Rain Drop game more superior. (IDEAS PROVIDED)
-6.  **User:** Makes a high-priority request to build an advanced, accurate admin analytics dashboard with graphics. (COMPLETED)
-7.  **User:** Reports the PRC rate is wrong (should be 10:1) and asks if homepage cards are real-time. (COMPLETED)
-8.  **User:** Reports that the timer doesn't stop for approved requests and confetti doesn't show on completion. (COMPLETED)
-9.  **User:** Reports a crash due to a missing  icon import. (COMPLETED)
-10. **User (LATEST & PENDING ACTION):** Reports that confetti is still showing for approved requests and the complete message is missing. (Agent has implemented a fix, which now needs final verification).
+1.  **User**: Confirmed they want to proceed with Option B (GitHub Push) for deploying the admin app. (COMPLETED)
+2.  **User**: Reported the new admin deployment from GitHub shows a blank page. (COMPLETED - Agent fixed missing files and created )
+3.  **User**: Reported the Subscription request reject feature is not working (modal doesn't appear). (COMPLETED - Agent fixed it)
+4.  **User**: Requested to make the Rain Drop game unpredictable, so colors don't hint at outcomes. (COMPLETED - Agent added Mystery Mode)
+5.  **User**: Provided context about setting the MongoDB password via Emergent Support. (COMPLETED - Agent obtained and configured the live URL)
+6.  **User**: Asked for the best way to separate the user app (for mobile) and admin panel (for browser) to increase speed. (COMPLETED - Agent recommended a plan)
+7.  **User**: Confirmed to proceed with the separation plan within the current project. (COMPLETED - Agent stripped admin routes, which caused a login bug)
+8.  **User**: Reported a critical login error in the preview environment after the refactor. (COMPLETED - Agent diagnosed and reverted the change, fixing the login)
+9.  **User**: Confirmed login is now working after the revert. (COMPLETED)
+10. **User (LATEST & PENDING ACTION)**: Reported a PRC balance mismatch and confusing labels between the Mining and Orders pages. (IN PROGRESS)
 
 **Project Health Check:**
--   **Broken**: Referral level display (Production only), User-facing search bar.
+-   **Broken**: Referral level display (Production only), User-facing search bar, Mining features (Production only).
 -   **Mocked**: None.
 
 **3rd Party Integrations**
 -   **Upstash Redis**: Used for backend caching.
--   **Recharts**: (New) Used for charts on the Admin Analytics dashboard.
--   **canvas-confetti**: (New) Used for the celebration animation.
+-   **Recharts**: Used for charts on the Admin Analytics dashboard.
+-   **canvas-confetti**: Used for the celebration animation in bill payments.
 
 **Testing status**
 -   **Testing agent used after significant changes**: NO
 -   **Troubleshoot agent used after agent stuck in loop**: NO
--   **Test files created**: None. However, the agent created several Python scripts on-the-fly to populate the database with test data for bill payments.
--   **Known regressions**: The data discrepancy issues on the Referral Page and Admin Dashboard in production are long-standing regressions that have not been fixed.
+-   **Test files created**: None.
+-   **Known regressions**: A major login regression was introduced and fixed during this session. This indicates that refactoring critical files like  is high-risk and requires thorough testing.
 
 **Credentials to test flow:**
 -   **Admin User**:  / 
--   **Incomplete Profile User**:  / 
--   **Elite Plan User**:  / 
+-   **Standard User**:  /  (This user has various test data associated with it)
 
 **What agent forgot to execute**
--   The agent did not complete the final verification step for the last bug fix: confirming that the confetti, speed badge, and completion message work correctly for a **completed** bill payment request. This is the immediate next step.</analysis>
+-   The agent did not complete the final implementation of the 
+wtmp begins Mon Feb  2 14:44:16 2026 (fixing the balance/label mismatch).
+-   The agent created the  for deployment but has not yet guided the user through the final steps of creating a new Emergent project and deploying it, which is the user's ultimate goal for that task.</analysis>

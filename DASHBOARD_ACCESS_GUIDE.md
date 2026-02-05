@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://bill-gamify.preview.emergentagent.com/setup
+   https://mining-orders-sync.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
