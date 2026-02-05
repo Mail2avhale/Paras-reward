@@ -1328,9 +1328,19 @@ async def get_subscription_monthly_price(plan: str) -> float:
 
 async def calculate_user_monthly_redeem_limit(user: dict) -> dict:
     """
-    Calculate user's monthly redemption limit
-    Formula: Base Limit × (1 + (Referrals × Referral Bonus %))
-    Example: 14,950 × (1 + (5 × 0.20)) = 14,950 × 2.0 = 29,900 PRC
+    Calculate user's monthly redemption limit with CARRY FORWARD
+    
+    Formula: (Base Limit × Referral Multiplier) + Carry Forward from Previous Months
+    
+    Base Limit = Plan Price × 5 × 10
+    Referral Multiplier = 1 + (Paid Referrals × 20%)
+    Carry Forward = Sum of unused limits from all previous months
+    
+    Example:
+    - Elite plan: 799 × 5 × 10 = 39,950 PRC base limit
+    - With 5 paid referrals: 39,950 × 2.0 = 79,900 PRC monthly limit
+    - If last month used only 20,000: Carry forward = 59,900 PRC
+    - This month total available = 79,900 + 59,900 = 139,800 PRC
     """
     redeem_settings = await get_monthly_redeem_limit_settings()
     
@@ -1368,11 +1378,21 @@ async def calculate_user_monthly_redeem_limit(user: dict) -> dict:
     # ONLY PAID REFERRALS COUNT
     referral_multiplier = 1 + (direct_referrals * referral_bonus_percent / 100)
     
-    # Final limit
-    total_limit = base_limit * referral_multiplier
+    # Monthly limit (before carry forward)
+    monthly_limit = base_limit * referral_multiplier
+    
+    # Calculate carry forward from previous months
+    carry_forward_data = await calculate_carry_forward_limit(user, monthly_limit)
+    carry_forward = carry_forward_data.get("carry_forward", 0)
+    
+    # Final limit = Monthly limit + Carry forward
+    total_limit = monthly_limit + carry_forward
     
     return {
         "limit": total_limit,
+        "monthly_limit": monthly_limit,  # This month's base limit
+        "carry_forward": carry_forward,   # Accumulated from previous months
+        "carry_forward_months": carry_forward_data.get("months_calculated", 0),
         "base_limit": base_limit,
         "referral_multiplier": referral_multiplier,
         "referral_bonus_percent": referral_bonus_percent,
