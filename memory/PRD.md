@@ -62,6 +62,15 @@ Build a comprehensive rewards and loyalty platform with:
 3. **P1: Search Bar Broken**
    - User-facing search functionality not working
 
+### Recently Completed ✅ (Feb 5, 2026)
+
+#### Balance & Label Consistency Fix
+- [x] Unified "Total Earned" → "Lifetime Earnings" label on Mining and Orders pages
+- [x] Mining page now fetches `total_earned` from `/api/user/{uid}/redemption-stats` for data consistency
+- [x] Both pages use same data source for balance and earnings
+- [x] Mining page adds current session PRC (`sessionPRC`) to show running total
+- Files modified: `Mining.js`, `Orders.js`
+
 ### Upcoming Tasks 🟡
 
 1. **P0: Rain Drop Game Enhancement**
