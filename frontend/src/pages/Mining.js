@@ -22,6 +22,7 @@ const DailyRewards = ({ user }) => {
   const [isStarting, setIsStarting] = useState(false);
   const [isCollecting, setIsCollecting] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState(null);
+  const [lifetimeEarnings, setLifetimeEarnings] = useState(0);
   
   const timerRef = useRef(null);
   
