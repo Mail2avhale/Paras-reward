@@ -1608,15 +1608,6 @@ async def calculate_carry_forward_limit(user: dict, base_monthly_limit: float) -
         "months_calculated": months_diff,
         "breakdown": breakdown
     }
-                "created_at": {"$gte": cycle_start_str}
-            }
-        },
-        {"$group": {"_id": None, "total": {"$sum": "$prc_amount"}}}
-    ]).to_list(1)
-    if loan_payments:
-        total_redeemed += loan_payments[0].get("total", 0)
-    
-    return total_redeemed
 
 async def check_redemption_allowed(user: dict, prc_amount: float) -> dict:
     """
