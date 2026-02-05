@@ -1344,8 +1344,17 @@ async def calculate_user_monthly_redeem_limit(user: dict) -> dict:
     # Get plan monthly price
     plan_price = await get_subscription_monthly_price(plan)
     
-    # Get direct referral count
-    direct_referrals = await db.users.count_documents({"referred_by": user.get("uid")})
+    # Get direct referral count - ONLY PAID USERS COUNT!
+    # Anti-fraud: Free/Explorer users don't contribute to referral bonus
+    FREE_PLANS = ['explorer', 'free', '', None]
+    direct_referrals = await db.users.count_documents({
+        "referred_by": user.get("uid"),
+        "subscription_plan": {"$nin": FREE_PLANS, "$ne": None, "$exists": True}
+    })
+    
+    # Also count total referrals (including free) for display
+    total_referrals = await db.users.count_documents({"referred_by": user.get("uid")})
+    free_referrals = total_referrals - direct_referrals
     
     # Calculate base limit
     m1 = redeem_settings.get("multiplier_1", 5)
@@ -1356,6 +1365,7 @@ async def calculate_user_monthly_redeem_limit(user: dict) -> dict:
     
     # Calculate referral multiplier: 1 + (referrals × bonus_percent / 100)
     # Example: 5 referrals × 20% = 100% extra = 2.0× multiplier
+    # ONLY PAID REFERRALS COUNT
     referral_multiplier = 1 + (direct_referrals * referral_bonus_percent / 100)
     
     # Final limit
@@ -1366,7 +1376,9 @@ async def calculate_user_monthly_redeem_limit(user: dict) -> dict:
         "base_limit": base_limit,
         "referral_multiplier": referral_multiplier,
         "referral_bonus_percent": referral_bonus_percent,
-        "direct_referrals": direct_referrals,
+        "direct_referrals": direct_referrals,  # Only paid count
+        "total_referrals": total_referrals,     # Total including free
+        "free_referrals": free_referrals,       # Free users (don't count)
         "plan": plan,
         "plan_price": plan_price,
         "enabled": True
