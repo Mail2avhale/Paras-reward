@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { 
   TrendingUp, Star, Gift, ArrowUpRight, Clock,
   Home, UserPlus, Gamepad2, User, Zap, Crown, Eye, EyeOff,
-  ChevronRight, Sparkles, ShoppingBag, CreditCard
+  ChevronRight, Sparkles, ShoppingBag, CreditCard, Info
 } from 'lucide-react';
 import PRCExpiryTimer from '@/components/PRCExpiryTimer';
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
@@ -16,6 +16,7 @@ import PRCRain from '@/components/PRCRain';
 import NotificationBell from '@/components/NotificationBell';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSkeleton } from '@/components/skeletons';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
