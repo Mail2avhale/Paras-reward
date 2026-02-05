@@ -64,6 +64,17 @@ Build a comprehensive rewards and loyalty platform with:
 
 ### Recently Completed ✅ (Feb 5, 2026)
 
+#### Tooltips Added Throughout User Pages
+- [x] **Mining Page**: Balance, Reward Rate, Lifetime Earnings, Referral Weight
+- [x] **Orders Page**: PRC Redeemed, Lifetime Earnings, Cashback, Balance
+- [x] **Dashboard**: PRC Balance, Mining Multiplier
+- [x] **Referrals/Network**: Total Referral Earnings, Activity Rate, Network Size, Current Bonus
+- [x] **Bill Payments**: PRC conversion rate and service charge
+- [x] **Profile**: KYC verification, Subscription upgrade
+- [x] **Gift Vouchers**: Available balance
+
+Files modified: `Mining.js`, `Orders.js`, `DashboardModern.js`, `ReferralsEnhanced.js`, `BillPayments.js`, `ProfileAdvanced.js`, `GiftVoucherRedemption.js`
+
 #### Full Carry Forward for Monthly Redeem Limit
 - [x] Implemented full carry forward feature - unused monthly limit now accumulates
 - [x] Created `calculate_carry_forward_limit()` function to calculate unused limits from all previous months
