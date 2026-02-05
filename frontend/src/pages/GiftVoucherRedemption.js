@@ -4,11 +4,12 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Gift, Clock, CheckCircle, XCircle, AlertCircle,
-  Sparkles, Award, TrendingUp, Wallet, ChevronDown, ChevronUp
+  Sparkles, Award, TrendingUp, Wallet, ChevronDown, ChevronUp, Info
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import RequestTimeline from '../components/RequestTimeline';
 import { RedemptionProfilePrompt } from '../components/ProfileCompletionComponents';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
