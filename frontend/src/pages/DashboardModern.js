@@ -585,6 +585,16 @@ const DashboardModern = ({ user, onLogout }) => {
                   {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </button>
                 <p className="text-gray-500 text-[10px] tracking-widest">BALANCE</p>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-3 h-3 text-gray-500 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[200px]">
+                      <p className="text-xs">Your available PRC. Use it for bill payments, vouchers, or marketplace purchases. 10 PRC = ₹1</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <div className="flex items-baseline gap-2">
                 <span 
