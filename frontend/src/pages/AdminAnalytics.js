@@ -607,7 +607,7 @@ const AdminAnalytics = ({ user }) => {
                       <p className="text-emerald-400 font-bold">{formatPRC(topUser.prc_balance || 0)}</p>
                     </td>
                     <td className="py-3 px-4">
-                      <p className="text-white">{formatINR((topUser.prc_balance || 0) * (prc.prc_rate || 2))}</p>
+                      <p className="text-white">{formatINR((topUser.prc_balance || 0) * 0.1)}</p>
                     </td>
                     <td className="py-3 px-4">
                       <span className={`px-2 py-1 rounded text-xs ${
