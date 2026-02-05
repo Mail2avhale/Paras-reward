@@ -5,7 +5,8 @@ import {
   Package, Clock, CheckCircle, Truck, ShoppingBag, Trash2, AlertCircle, 
   ArrowLeft, Copy, TrendingUp, Coins, Wallet, Gift, Smartphone, Tv, Zap,
   CreditCard, Building, Flame, Droplet, Wifi, Shield, Receipt, ChevronLeft,
-  ChevronRight, Filter, RefreshCw, XCircle, Loader2, Info
+  ChevronRight, Filter, RefreshCw, XCircle, Loader2, Info, HelpCircle, X,
+  PiggyBank, AlertTriangle, Percent
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -19,7 +20,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { InfoTooltip, InfoCard } from '@/components/InfoTooltip';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
