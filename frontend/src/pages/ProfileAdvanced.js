@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { 
   User, Lock, ArrowLeft, Eye, EyeOff, Camera, 
   Save, Phone, Mail, Crown, ChevronRight, 
-  LogOut, Trash2, Settings, CreditCard, Shield, FileText, Globe
+  LogOut, Trash2, Settings, CreditCard, Shield, FileText, Globe, Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import ImageCropUpload from '@/components/ImageCropUpload';
 import { LanguageSelectorFull } from '@/components/LanguageSelector';
 import ShareApp from '@/components/ShareApp';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
