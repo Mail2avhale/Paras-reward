@@ -12303,12 +12303,19 @@ async def get_user_360_view(query: str):
             if recent_activity:
                 active_referrals += 1
     
-    # Calculate referral earnings
+    # Calculate referral earnings - check all referral-related transaction types
+    referral_types = ["referral", "referral_bonus", "referral_reward"]
     referral_earnings_result = await db.transactions.aggregate([
-        {"$match": {"user_id": uid, "type": "referral"}},
+        {"$match": {"user_id": uid, "type": {"$in": referral_types}}},
         {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
     ]).to_list(1)
     referral_earnings = referral_earnings_result[0]["total"] if referral_earnings_result else 0
+    
+    # Also check users collection for total_referral_earnings field if transactions don't have data
+    if referral_earnings == 0:
+        user_data = await db.users.find_one({"uid": uid}, {"_id": 0, "total_referral_earnings": 1})
+        if user_data:
+            referral_earnings = user_data.get("total_referral_earnings", 0)
     
     referral_data = {
         "referred_by_name": referred_by_name,
