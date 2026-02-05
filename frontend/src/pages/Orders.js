@@ -291,45 +291,92 @@ const Orders = ({ user, onLogout }) => {
               </div>
             </div>
             
-            {/* PRC Balance Equation - Shows where PRC went */}
+            {/* Luxury Life Savings Card */}
+            {userStats.luxury_life && userStats.luxury_life.total_savings > 0 && (
+              <div className="mt-4 bg-gradient-to-r from-pink-500/20 to-purple-500/20 rounded-xl p-4 border border-pink-500/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <PiggyBank className="w-5 h-5 text-pink-500" />
+                      <p className="text-white font-semibold">Luxury Life Savings</p>
+                      <InfoTooltip>
+                        <p className="font-semibold mb-1">Your Future Rewards!</p>
+                        <p>20% of your mining earnings are automatically saved here. These savings unlock exclusive Luxury Life rewards like premium vouchers, cashback boosts, and special offers!</p>
+                      </InfoTooltip>
+                    </div>
+                    <p className="text-2xl font-bold text-pink-400">{(userStats.luxury_life.total_savings || 0).toLocaleString()} PRC</p>
+                    <p className="text-gray-400 text-xs">≈ ₹{(userStats.luxury_life.savings_inr || 0).toFixed(2)} saved</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center mb-1">
+                      <Sparkles className="w-6 h-6 text-pink-400" />
+                    </div>
+                    <p className="text-xs text-pink-400">20% Auto-Save</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Complete PRC Breakdown */}
             {userStats.deductions_breakdown && (
               <div className="mt-4 bg-gray-900/70 rounded-xl p-3 border border-gray-700">
                 <div className="flex items-center gap-2 mb-3">
                   <HelpCircle className="w-4 h-4 text-amber-500" />
-                  <p className="text-white text-sm font-semibold">Where did your PRC go?</p>
+                  <p className="text-white text-sm font-semibold">Complete PRC Breakdown</p>
                 </div>
                 
-                <div className="space-y-2 text-xs">
-                  {/* Starting Point */}
-                  <div className="flex justify-between items-center py-1.5 border-b border-gray-800">
+                <div className="space-y-1 text-xs">
+                  {/* ===== CREDITS SECTION ===== */}
+                  <p className="text-emerald-500 text-[10px] font-semibold uppercase tracking-wider pt-1">Credits (+)</p>
+                  
+                  {/* Total Earned */}
+                  <div className="flex justify-between items-center py-1.5 bg-emerald-500/10 rounded px-2">
                     <span className="text-emerald-400 flex items-center gap-2">
-                      <TrendingUp className="w-3 h-3" /> Total Earned
+                      <TrendingUp className="w-3 h-3" /> Total Earned (Mining + Games + Referrals)
                     </span>
                     <span className="text-emerald-400 font-mono font-bold">+{(userStats.total_earned || 0).toLocaleString()}</span>
                   </div>
                   
-                  {/* Deductions */}
-                  <div className="flex justify-between items-center py-1 text-gray-400">
+                  {/* Admin Credits */}
+                  {userStats.credits_breakdown?.admin_credits > 0 && (
+                    <div className="flex justify-between items-center py-1 text-gray-400 px-2">
+                      <span className="flex items-center gap-2">
+                        <Shield className="w-3 h-3 text-cyan-500" /> Admin Credits/Bonuses
+                        <InfoTooltip>
+                          <p>Bonus PRC credited by admin for promotions, corrections, or rewards</p>
+                        </InfoTooltip>
+                      </span>
+                      <span className="text-cyan-400 font-mono">+{(userStats.credits_breakdown?.admin_credits || 0).toLocaleString()}</span>
+                    </div>
+                  )}
+                  
+                  {/* ===== DEDUCTIONS SECTION ===== */}
+                  <p className="text-red-500 text-[10px] font-semibold uppercase tracking-wider pt-3">Deductions (-)</p>
+                  
+                  {/* Redeemed */}
+                  <div className="flex justify-between items-center py-1 text-gray-400 px-2">
                     <span className="flex items-center gap-2">
                       <Receipt className="w-3 h-3 text-amber-500" /> Redeemed (Bills/Vouchers/Orders)
                     </span>
                     <span className="text-red-400 font-mono">-{(userStats.deductions_breakdown?.redeemed || 0).toLocaleString()}</span>
                   </div>
                   
+                  {/* Luxury Savings */}
                   {userStats.deductions_breakdown?.luxury_savings > 0 && (
-                    <div className="flex justify-between items-center py-1 text-gray-400">
+                    <div className="flex justify-between items-center py-1 text-gray-400 px-2">
                       <span className="flex items-center gap-2">
                         <PiggyBank className="w-3 h-3 text-pink-500" /> Luxury Life Savings (20%)
                         <InfoTooltip>
-                          <p>20% of your mining earnings are auto-saved for Luxury Life rewards. This is a feature, not a loss!</p>
+                          <p>20% auto-saved from mining for future Luxury Life rewards. Not lost - just saved!</p>
                         </InfoTooltip>
                       </span>
                       <span className="text-pink-400 font-mono">-{(userStats.deductions_breakdown?.luxury_savings || 0).toLocaleString()}</span>
                     </div>
                   )}
                   
+                  {/* Service Charges */}
                   {userStats.deductions_breakdown?.service_charges > 0 && (
-                    <div className="flex justify-between items-center py-1 text-gray-400">
+                    <div className="flex justify-between items-center py-1 text-gray-400 px-2">
                       <span className="flex items-center gap-2">
                         <Percent className="w-3 h-3 text-orange-500" /> Service Charges (2-5%)
                       </span>
@@ -337,20 +384,22 @@ const Orders = ({ user, onLogout }) => {
                     </div>
                   )}
                   
-                  {userStats.deductions_breakdown?.expired > 0 && (
-                    <div className="flex justify-between items-center py-1 text-gray-400">
+                  {/* Expired/Burned */}
+                  {userStats.deductions_breakdown?.expired_burned > 0 && (
+                    <div className="flex justify-between items-center py-1 text-gray-400 px-2">
                       <span className="flex items-center gap-2">
-                        <AlertTriangle className="w-3 h-3 text-red-500" /> Expired PRC
+                        <Flame className="w-3 h-3 text-red-500" /> Expired / Burned PRC
                         <InfoTooltip>
-                          <p>Free users' PRC expires after 2 days if not used. Upgrade to a paid plan to prevent expiry!</p>
+                          <p>PRC that expired (free users) or was burned. Upgrade to prevent expiry!</p>
                         </InfoTooltip>
                       </span>
-                      <span className="text-red-400 font-mono">-{(userStats.deductions_breakdown?.expired || 0).toLocaleString()}</span>
+                      <span className="text-red-400 font-mono">-{(userStats.deductions_breakdown?.expired_burned || 0).toLocaleString()}</span>
                     </div>
                   )}
                   
+                  {/* Rain Game Losses */}
                   {userStats.deductions_breakdown?.rain_game_losses > 0 && (
-                    <div className="flex justify-between items-center py-1 text-gray-400">
+                    <div className="flex justify-between items-center py-1 text-gray-400 px-2">
                       <span className="flex items-center gap-2">
                         <Droplet className="w-3 h-3 text-blue-500" /> Rain Game Losses
                       </span>
@@ -358,21 +407,45 @@ const Orders = ({ user, onLogout }) => {
                     </div>
                   )}
                   
-                  {userStats.deductions_breakdown?.other > 0 && (
-                    <div className="flex justify-between items-center py-1 text-gray-400">
+                  {/* Tap Game Losses */}
+                  {userStats.deductions_breakdown?.tap_game_losses > 0 && (
+                    <div className="flex justify-between items-center py-1 text-gray-400 px-2">
                       <span className="flex items-center gap-2">
-                        <Info className="w-3 h-3" /> Other Deductions
+                        <Gamepad2 className="w-3 h-3 text-purple-500" /> Tap Game Losses
                       </span>
-                      <span className="text-gray-400 font-mono">-{(userStats.deductions_breakdown?.other || 0).toLocaleString()}</span>
+                      <span className="text-red-400 font-mono">-{(userStats.deductions_breakdown?.tap_game_losses || 0).toLocaleString()}</span>
                     </div>
                   )}
                   
-                  {/* Result */}
-                  <div className="flex justify-between items-center py-2 border-t border-gray-700 mt-2">
+                  {/* Admin Debits */}
+                  {userStats.deductions_breakdown?.admin_debits > 0 && (
+                    <div className="flex justify-between items-center py-1 text-gray-400 px-2">
+                      <span className="flex items-center gap-2">
+                        <Shield className="w-3 h-3 text-gray-500" /> Admin Adjustments
+                        <InfoTooltip>
+                          <p>Corrections or adjustments made by admin</p>
+                        </InfoTooltip>
+                      </span>
+                      <span className="text-gray-400 font-mono">-{(userStats.deductions_breakdown?.admin_debits || 0).toLocaleString()}</span>
+                    </div>
+                  )}
+                  
+                  {/* Unaccounted */}
+                  {userStats.deductions_breakdown?.unaccounted > 0 && (
+                    <div className="flex justify-between items-center py-1 text-gray-400 px-2">
+                      <span className="flex items-center gap-2">
+                        <Info className="w-3 h-3" /> Other/Rounding
+                      </span>
+                      <span className="text-gray-500 font-mono">-{(userStats.deductions_breakdown?.unaccounted || 0).toLocaleString()}</span>
+                    </div>
+                  )}
+                  
+                  {/* ===== RESULT ===== */}
+                  <div className="flex justify-between items-center py-2 border-t border-gray-700 mt-3 bg-blue-500/10 rounded px-2">
                     <span className="text-blue-400 font-semibold flex items-center gap-2">
-                      <Wallet className="w-3 h-3" /> = Current Balance
+                      <Wallet className="w-4 h-4" /> = Available Balance
                     </span>
-                    <span className="text-blue-400 font-mono font-bold">{(userStats.current_balance || 0).toLocaleString()}</span>
+                    <span className="text-blue-400 font-mono font-bold text-base">{(userStats.current_balance || 0).toLocaleString()} PRC</span>
                   </div>
                 </div>
               </div>
