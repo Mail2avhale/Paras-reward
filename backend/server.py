@@ -1723,12 +1723,16 @@ async def check_redemption_allowed(user: dict, prc_amount: float) -> dict:
     remaining = monthly_limit - current_usage
     
     if current_usage + prc_amount > monthly_limit:
+        carry_forward = limit_info.get("carry_forward", 0)
+        monthly_base = limit_info.get("monthly_limit", monthly_limit)
         return {
             "allowed": False,
-            "reason": f"Monthly limit exceeded. Limit: {monthly_limit:.0f} PRC, Used: {current_usage:.0f} PRC, Remaining: {max(0, remaining):.0f} PRC",
-            "reason_mr": f"Monthly limit संपली. Limit: {monthly_limit:.0f} PRC, वापरलेले: {current_usage:.0f} PRC, शिल्लक: {max(0, remaining):.0f} PRC",
+            "reason": f"Monthly limit exceeded. Total Limit: {monthly_limit:.0f} PRC (Monthly: {monthly_base:.0f} + Carry Forward: {carry_forward:.0f}), Used: {current_usage:.0f} PRC, Remaining: {max(0, remaining):.0f} PRC",
+            "reason_mr": f"Monthly limit संपली. Total Limit: {monthly_limit:.0f} PRC (Monthly: {monthly_base:.0f} + Carry Forward: {carry_forward:.0f}), वापरलेले: {current_usage:.0f} PRC, शिल्लक: {max(0, remaining):.0f} PRC",
             "remaining": max(0, remaining),
             "limit": monthly_limit,
+            "monthly_limit": monthly_base,
+            "carry_forward": carry_forward,
             "current_usage": current_usage,
             "checks": {"limit": "exceeded"}
         }
