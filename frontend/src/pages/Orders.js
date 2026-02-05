@@ -241,6 +241,16 @@ const Orders = ({ user, onLogout }) => {
                 <div className="flex items-center gap-2 mb-1">
                   <Coins className="w-4 h-4 text-amber-500" />
                   <p className="text-gray-400 text-xs">PRC Redeemed</p>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3 h-3 text-gray-500 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[200px]">
+                        <p className="text-xs">Total PRC you have spent on bill payments, gift vouchers, and marketplace orders</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 <p className="text-white font-bold text-lg">{(userStats.total_prc_redeemed || 0).toLocaleString()}</p>
                 <p className="text-gray-500 text-xs">≈ ₹{((userStats.total_prc_redeemed || 0) * 0.1).toFixed(2)}</p>
@@ -271,6 +281,16 @@ const Orders = ({ user, onLogout }) => {
                 <div className="flex items-center gap-2 mb-1">
                   <Gift className="w-4 h-4 text-purple-500" />
                   <p className="text-gray-400 text-xs">Cashback</p>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3 h-3 text-gray-500 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[200px]">
+                        <p className="text-xs">Cashback earned from completed bill payments and purchases</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 <p className="text-purple-400 font-bold text-lg">₹{(userStats.total_cashback || 0).toFixed(2)}</p>
               </div>
@@ -280,6 +300,16 @@ const Orders = ({ user, onLogout }) => {
                 <div className="flex items-center gap-2 mb-1">
                   <Coins className="w-4 h-4 text-blue-500" />
                   <p className="text-gray-400 text-xs">Balance</p>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3 h-3 text-gray-500 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[200px]">
+                        <p className="text-xs">Your current available PRC that can be used for redemptions</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 <p className="text-blue-400 font-bold text-lg">{(userStats.current_balance || 0).toFixed(2)}</p>
                 <p className="text-gray-500 text-xs">PRC available</p>
