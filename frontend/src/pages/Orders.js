@@ -245,11 +245,11 @@ const Orders = ({ user, onLogout }) => {
                 <p className="text-gray-500 text-xs">≈ ₹{((userStats.total_prc_redeemed || 0) * 0.1).toFixed(2)}</p>
               </div>
               
-              {/* Total Earned */}
+              {/* Lifetime Earnings */}
               <div className="bg-gray-900/50 rounded-xl p-3">
                 <div className="flex items-center gap-2 mb-1">
                   <Wallet className="w-4 h-4 text-emerald-500" />
-                  <p className="text-gray-400 text-xs">Total Earned</p>
+                  <p className="text-gray-400 text-xs">Lifetime Earnings</p>
                 </div>
                 <p className="text-emerald-400 font-bold text-lg">{(userStats.total_earned || 0).toLocaleString()}</p>
                 <p className="text-gray-500 text-xs">≈ ₹{((userStats.total_earned || 0) * 0.1).toFixed(2)}</p>

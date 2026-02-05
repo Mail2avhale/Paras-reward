@@ -452,8 +452,9 @@ const DailyRewards = ({ user }) => {
             className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4"
           >
             <TrendingUp className="w-8 h-8 text-emerald-500 mb-2" />
-            <p className="text-gray-400 text-xs">{globalT('totalEarned')}</p>
+            <p className="text-gray-400 text-xs">Lifetime Earnings</p>
             <p className="text-xl font-bold text-white">{((userData?.total_mined || 0) + sessionPRC).toFixed(2)}</p>
+            <p className="text-emerald-400 text-xs">PRC</p>
           </motion.div>
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
