@@ -251,6 +251,16 @@ const Orders = ({ user, onLogout }) => {
                 <div className="flex items-center gap-2 mb-1">
                   <Wallet className="w-4 h-4 text-emerald-500" />
                   <p className="text-gray-400 text-xs">Lifetime Earnings</p>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3 h-3 text-gray-500 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[200px]">
+                        <p className="text-xs">Includes: Mining rewards, Referral bonuses, Tap Game, Rain Drop Game & Cashback</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 <p className="text-emerald-400 font-bold text-lg">{(userStats.total_earned || 0).toLocaleString()}</p>
                 <p className="text-gray-500 text-xs">≈ ₹{((userStats.total_earned || 0) * 0.1).toFixed(2)}</p>
