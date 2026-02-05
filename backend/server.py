@@ -26789,12 +26789,17 @@ async def get_network_analytics(user_id: str):
         for ld in level_distribution
     ])
     
-    # Get referral earnings
+    # Get referral earnings - check all referral-related transaction types
+    referral_types = ["referral", "referral_bonus", "referral_reward"]
     referral_earnings = await db.transactions.aggregate([
-        {"$match": {"user_id": user_id, "type": "referral"}},
+        {"$match": {"user_id": user_id, "type": {"$in": referral_types}}},
         {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
     ]).to_list(1)
     total_earned = referral_earnings[0]["total"] if referral_earnings else 0
+    
+    # Also check users collection for total_referral_earnings field if transactions don't have data
+    if total_earned == 0:
+        total_earned = user.get("total_referral_earnings", 0)
     
     return {
         "network_health_score": round(health_score, 1),
