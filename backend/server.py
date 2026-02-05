@@ -1478,6 +1478,126 @@ async def get_user_monthly_redemption_usage(user_id: str, subscription_start: st
     
     return total_redeemed
 
+
+async def calculate_carry_forward_limit(user: dict, base_monthly_limit: float) -> dict:
+    """
+    Calculate carry forward limit from previous months
+    Full carry forward: Unused limit from previous months carries forward indefinitely
+    
+    Returns: {
+        "carry_forward": float,  # Total accumulated unused limit
+        "months_calculated": int,
+        "breakdown": list  # Per-month breakdown
+    }
+    """
+    user_id = user.get("uid")
+    subscription_start = user.get("subscription_start_date") or user.get("subscription_start")
+    
+    if not subscription_start:
+        return {"carry_forward": 0, "months_calculated": 0, "breakdown": []}
+    
+    now = datetime.now(timezone.utc)
+    
+    try:
+        start = datetime.fromisoformat(subscription_start.replace('Z', '+00:00'))
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+    except:
+        return {"carry_forward": 0, "months_calculated": 0, "breakdown": []}
+    
+    # Calculate number of complete months since subscription
+    months_diff = (now.year - start.year) * 12 + (now.month - start.month)
+    if now.day < start.day:
+        months_diff -= 1
+    
+    # Only calculate carry forward from previous complete months (not current month)
+    if months_diff <= 0:
+        return {"carry_forward": 0, "months_calculated": 0, "breakdown": []}
+    
+    total_carry_forward = 0
+    breakdown = []
+    
+    # Calculate unused limit for each previous month
+    for month_idx in range(months_diff):
+        cycle_start = start + timedelta(days=30 * month_idx)
+        cycle_end = start + timedelta(days=30 * (month_idx + 1))
+        
+        cycle_start_str = cycle_start.isoformat()
+        cycle_end_str = cycle_end.isoformat()
+        
+        # Get redemptions for this specific month
+        month_redeemed = 0
+        
+        # Bill Payments for this month
+        bill_payments = await db.payment_requests.aggregate([
+            {
+                "$match": {
+                    "user_id": user_id,
+                    "status": {"$in": ["completed", "approved"]},
+                    "created_at": {"$gte": cycle_start_str, "$lt": cycle_end_str}
+                }
+            },
+            {"$group": {"_id": None, "total": {"$sum": "$total_prc_deducted"}}}
+        ]).to_list(1)
+        if bill_payments:
+            month_redeemed += bill_payments[0].get("total", 0)
+        
+        # Gift Vouchers for this month
+        voucher_redemptions = await db.gift_voucher_requests.aggregate([
+            {
+                "$match": {
+                    "user_id": user_id,
+                    "status": {"$in": ["completed", "approved"]},
+                    "created_at": {"$gte": cycle_start_str, "$lt": cycle_end_str}
+                }
+            },
+            {"$group": {"_id": None, "total": {"$sum": "$total_prc_deducted"}}}
+        ]).to_list(1)
+        if voucher_redemptions:
+            month_redeemed += voucher_redemptions[0].get("total", 0)
+        
+        # Marketplace Orders for this month
+        marketplace_orders = await db.orders.aggregate([
+            {
+                "$match": {
+                    "user_id": user_id,
+                    "status": {"$nin": ["cancelled", "refunded"]},
+                    "created_at": {"$gte": cycle_start_str, "$lt": cycle_end_str}
+                }
+            },
+            {"$group": {"_id": None, "total": {"$sum": "$total_prc"}}}
+        ]).to_list(1)
+        if marketplace_orders:
+            month_redeemed += marketplace_orders[0].get("total", 0)
+        
+        # Calculate unused for this month
+        unused = max(0, base_monthly_limit - month_redeemed)
+        total_carry_forward += unused
+        
+        breakdown.append({
+            "month": month_idx + 1,
+            "cycle_start": cycle_start_str,
+            "cycle_end": cycle_end_str,
+            "limit": base_monthly_limit,
+            "used": month_redeemed,
+            "unused": unused
+        })
+    
+    return {
+        "carry_forward": round(total_carry_forward, 2),
+        "months_calculated": months_diff,
+        "breakdown": breakdown
+    }
+                "created_at": {"$gte": cycle_start_str}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": "$prc_amount"}}}
+    ]).to_list(1)
+    if loan_payments:
+        total_redeemed += loan_payments[0].get("total", 0)
+    
+    return total_redeemed
+
 async def check_redemption_allowed(user: dict, prc_amount: float) -> dict:
     """
     STRICT REDEMPTION CHECK - All conditions must pass
