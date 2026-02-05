@@ -25816,10 +25816,11 @@ async def get_referral_stats(user_id: str):
 async def get_referral_earnings(user_id: str):
     """Get detailed referral earnings breakdown"""
     
-    # Get all referral transactions
+    # Get all referral transactions - include all referral-related types
+    referral_types = ["referral", "referral_bonus", "referral_reward"]
     transactions = await db.transactions.find({
         "user_id": user_id,
-        "type": "referral"
+        "type": {"$in": referral_types}
     }).sort("created_at", -1).to_list(length=100)
     
     # Calculate by month
