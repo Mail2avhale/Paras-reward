@@ -6,7 +6,7 @@ import {
   ArrowLeft, Copy, TrendingUp, Coins, Wallet, Gift, Smartphone, Tv, Zap,
   CreditCard, Building, Flame, Droplet, Wifi, Shield, Receipt, ChevronLeft,
   ChevronRight, Filter, RefreshCw, XCircle, Loader2, Info, HelpCircle, X,
-  PiggyBank, AlertTriangle, Percent
+  PiggyBank, AlertTriangle, Percent, Gamepad2, Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
