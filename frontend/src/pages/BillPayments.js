@@ -622,14 +622,28 @@ const BillPayments = ({ user, onLogout }) => {
               <div className="bg-red-500/10 rounded-2xl p-5 border border-red-500/20">
                 <h3 className="font-bold text-red-400 mb-3 flex items-center gap-2">
                   <AlertCircle className="h-5 w-5 text-red-500" />
-                  Security Notice
+                  {selectedType === 'loan_emi' ? 'Pay Your Existing EMIs' : 'Security Notice'}
                 </h3>
-                <ul className="text-xs text-red-300 space-y-2">
-                  <li>✓ Only provide last 4 digits of card</li>
-                  <li>✓ Never share full card number or CVV</li>
-                  <li>✓ Verify bank/lender name correctly</li>
-                  <li>✓ Double-check account details</li>
-                </ul>
+                {selectedType === 'loan_emi' ? (
+                  <div className="space-y-3">
+                    <p className="text-xs text-amber-300 bg-amber-500/10 p-2 rounded-lg">
+                      ⚠️ This is NOT a loan service. Use this to pay your existing loan EMIs using PRC.
+                    </p>
+                    <ul className="text-xs text-red-300 space-y-2">
+                      <li>✓ Enter your existing loan account number</li>
+                      <li>✓ Verify bank/lender name correctly</li>
+                      <li>✓ Double-check IFSC code and borrower name</li>
+                      <li>✓ We will pay the EMI on your behalf</li>
+                    </ul>
+                  </div>
+                ) : (
+                  <ul className="text-xs text-red-300 space-y-2">
+                    <li>✓ Only provide last 4 digits of card</li>
+                    <li>✓ Never share full card number or CVV</li>
+                    <li>✓ Verify bank/lender name correctly</li>
+                    <li>✓ Double-check account details</li>
+                  </ul>
+                )}
               </div>
             )}
           </div>
