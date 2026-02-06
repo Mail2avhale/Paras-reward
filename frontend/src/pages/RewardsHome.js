@@ -320,7 +320,7 @@ const RewardsHome = () => {
       try {
         const [statsRes, contactRes] = await Promise.allSettled([
           axios.get(`${API}/api/stats`),
-          axios.get(`${API}/api/contact-info`)
+          axios.get(`${API}/api/public/contact-info`)
         ]);
         
         if (statsRes.status === 'fulfilled') {
