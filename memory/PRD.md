@@ -1,196 +1,86 @@
 # PARAS REWARD - Product Requirements Document
 
 ## Original Problem Statement
-Build a comprehensive rewards and loyalty platform with:
-- PRC (PARAS Reward Coin) earning through mining, referrals, and activities
-- Bill payment redemption system
-- Gamification features (Rain Drop game, achievements)
-- Multi-tier subscription plans (Free, Startup, Growth, Elite)
-- Admin panel for user management and analytics
+Build a PRC (point-based reward currency) system web application where users can:
+- Earn PRC through mining and referrals
+- Redeem PRC for bill payments and gift vouchers
+- Manage their account and view transaction history
 
-## User Personas
-1. **Regular Users**: Earn PRC through activities, redeem for bill payments
-2. **VIP Subscribers**: Access premium features, higher earning rates
-3. **Admins**: Manage users, approve requests, view analytics
+## Architecture
+- **Frontend**: React.js with Material-UI, Tailwind CSS
+- **Backend**: Python FastAPI (monolithic `server.py`)
+- **Database**: MongoDB
+- **Authentication**: JWT-based custom auth
 
 ## Core Requirements
 
-### Implemented Features ✅
+### User Features
+- Mining PRC (daily claims)
+- Referral system with bonus earnings
+- Bill payments (Electricity, Mobile, DTH, etc.)
+- Gift voucher redemption
+- KYC verification
+- VIP membership subscription
 
-#### Bill Payment System (COMPLETED - Dec 2025, Updated Feb 2026)
-- [x] Mobile Recharge, DTH, Electricity, Credit Card, Loan/EMI
-- [x] PRC deduction with service charges
-- [x] Admin approval workflow: pending → completed (APPROVE = COMPLETE - Feb 2026)
-- [x] **Gamification Features:**
-  - Live Timer for pending requests
-  - Animated Journey tracker (Submitted → Processing → Completed)
-  - Confetti celebration on completion
-  - Speed Badges (Lightning Fast ≤1h, Quick Service ≤4h, On Time ≤8h)
-  - Processing time calculation and display
-- [x] Rejection reason display with PRC refund
-- [x] TXN number generation
+### Admin Features  
+- User management (360 view)
+- KYC approval workflow
+- Transaction monitoring
+- Configurable redemption charges
+- Financial reporting
+- PRC analytics
 
-#### Admin Analytics Dashboard (COMPLETED - Dec 2025)
-- [x] New `/admin/analytics` page with recharts
-- [x] Date range filtering (Today, Week, Month, Year, Custom)
-- [x] Real-time auto-refresh toggle
-- [x] PRC circulation stats (10 PRC = ₹1 INR conversion)
-- [x] User breakdown charts (by subscription plan)
-- [x] Key metrics: Total users, Active miners, Revenue
+## What's Been Implemented (Latest: Dec 2025)
 
-#### Profile & Subscription (COMPLETED - Dec 2025)
-- [x] Profile Completion Ring (hides at 100%)
-- [x] Subscription start date display on dashboard
-- [x] KYC verification flow
-
-#### Authentication
-- [x] Email/Password login
-- [x] JWT token authentication
-- [x] Role-based access (user, admin, manager)
-
-### Pending Issues 🔴
-
-1. **P0: Production Data Discrepancy** - BLOCKED
-   - Referral page shows incorrect counts
-   - Admin dashboard stats mismatch
-   - Needs user action on production server
-
-2. **P1: Mining Issues (Production)**
-   - Auto-pause not working
-   - Reward rate not displaying
-
-3. **P1: Search Bar Broken**
-   - User-facing search functionality not working
-
-### Recently Completed ✅ (Feb 6, 2026)
-
-#### "Loan EMI" → "Pay EMI" Clarity Fix
-- [x] Changed "Loan EMI" label to "Pay EMI" on Dashboard
-- [x] Added sublabel: "Pay your existing loan EMIs" 
-- [x] Added clear disclaimer: "⚠️ This is NOT a loan service. Use this to pay your existing loan EMIs using PRC."
-- [x] Updated security notice with EMI-specific instructions
-- Files modified: `DashboardModern.js`, `BillPayments.js`
-
-#### Complete PRC Breakdown with All Categories
-- [x] Added "Luxury Life Savings" card showing accumulated 20% savings with INR value
-- [x] Updated "Complete PRC Breakdown" section with:
-  - **CREDITS (+)**: Total Earned, Admin Credits/Bonuses
-  - **DEDUCTIONS (-)**: Redeemed, Luxury Savings, Service Charges, Expired/Burned, Rain Game Losses, Tap Game Losses, Admin Adjustments
-  - **= Available Balance**: Final result
-- [x] Backend API enhanced with `credits_breakdown`, `deductions_breakdown`, `luxury_life` objects
-- [x] Added all transaction types: admin_credit, admin_debit, penalty, correction, burn, expired
-- Files modified: `backend/server.py`, `Orders.js`
-
-#### PRC Balance Breakdown - "Where did your PRC go?" Section
-- [x] Added complete deductions breakdown on Orders page showing:
-  - Total Earned (Mining + Games + Referrals + Cashback)
-  - Redeemed (Bills/Vouchers/Orders)
-  - Luxury Life Savings (20% auto-saved)
-  - Service Charges (2-5%)
-  - Expired PRC (for free users)
-  - Rain Game Losses
-  - = Current Balance
-- [x] Updated backend API `/api/user/{uid}/redemption-stats` to return `deductions_breakdown`
-- [x] Created mobile-friendly `InfoTooltip` component that works on both hover AND tap
-- Files modified: `backend/server.py`, `Orders.js`, new `InfoTooltip.jsx`
-
-#### Tooltips Added Throughout User Pages
-- [x] **Mining Page**: Balance, Reward Rate, Lifetime Earnings, Referral Weight
-- [x] **Orders Page**: PRC Redeemed, Lifetime Earnings, Cashback, Balance
-- [x] **Dashboard**: PRC Balance, Mining Multiplier
-- [x] **Referrals/Network**: Total Referral Earnings, Activity Rate, Network Size, Current Bonus
-- [x] **Bill Payments**: PRC conversion rate and service charge
-- [x] **Profile**: KYC verification, Subscription upgrade
-- [x] **Gift Vouchers**: Available balance
-
-Files modified: `Mining.js`, `Orders.js`, `DashboardModern.js`, `ReferralsEnhanced.js`, `BillPayments.js`, `ProfileAdvanced.js`, `GiftVoucherRedemption.js`
-
-#### Full Carry Forward for Monthly Redeem Limit
-- [x] Implemented full carry forward feature - unused monthly limit now accumulates
-- [x] Created `calculate_carry_forward_limit()` function to calculate unused limits from all previous months
-- [x] Updated `calculate_user_monthly_redeem_limit()` to include carry forward in total limit
-- [x] Added new user-facing API: `GET /api/user/{uid}/redeem-limit` to show limit breakdown
-- [x] Updated admin endpoint with carry forward details
-- [x] Error messages now show carry forward breakdown
-
-#### Total Referral Earnings Fix
-- [x] Fixed "Total Referral Earnings: 0 PRC" bug in Network Analytics page
-- [x] Updated transaction queries to check all referral types: `referral`, `referral_bonus`, `referral_reward`
-- [x] Added referral bonus tracking when mining is claimed (creates separate transaction)
-- [x] Added `total_referral_earnings` field tracking on user document
-- [x] Added estimated historical earnings calculation for users without transaction history
-
-#### Balance & Label Consistency Fix
-- [x] Unified "Total Earned" → "Lifetime Earnings" label on Mining and Orders pages
-- [x] Mining page now fetches `total_earned` from `/api/user/{uid}/redemption-stats` for data consistency
-- [x] Both pages use same data source for balance and earnings
-- [x] Mining page adds current session PRC (`sessionPRC`) to show running total
-
-**Files modified:** `backend/server.py`, `Mining.js`, `Orders.js`
-
-### Upcoming Tasks 🟡
-
-1. **P0: Rain Drop Game Enhancement**
-   - Combo System
-   - Fever Mode
-   - Golden/Bomb Drops
-   - Leaderboard
-   - Achievements
-   - Power-ups
-   - Visual/Audio enhancements
-
-2. **P0: Admin Panel Separation**
-   - Migrate to separate subdomain
-   - Architecture planning
-
-3. **P1: Play Store Release**
-   - Evaluate PWA+TWA vs native app
-
-### Future/Backlog 🔵
-
-- ML Risk Scoring for fraud detection
-- Full AdMob + Unity Ads Integration
-- Shareable Achievement Cards
-- Server.py refactoring (modular routers)
-
-## Technical Architecture
-
-### Backend (FastAPI)
-- `/app/backend/server.py` - Main monolithic server (needs refactoring)
-- MongoDB for data storage
-- Upstash Redis for caching
-
-### Frontend (React)
-- `/app/frontend/src/pages/` - Page components
-- `/app/frontend/src/components/` - Reusable components
-  - `BillPaymentJourney.jsx` - Gamification animations
-- Shadcn/UI component library
-- Recharts for data visualization
-- canvas-confetti for celebrations
+### Recently Completed
+- [x] Admin Redemption Charges configuration page
+  - Processing Fee (flat INR)
+  - Admin Charge (percentage)
+  - Formula: Total PRC = (Amount + Processing Fee + Admin Charges) × 10
+- [x] Fixed infinite redirect loop in AdminSettingsHub
+- [x] Mobile-responsive InfoTooltip component across all pages
+- [x] "Pay EMI" feature (renamed from "Loan EMI")
+- [x] Password visibility toggle on registration
+- [x] Full carry-forward for unused monthly PRC limits
+- [x] Detailed PRC breakdown on Orders page
 
 ### Key API Endpoints
-- `POST /api/admin/analytics-v2` - Advanced analytics with date filtering
-- `POST /api/admin/bill-payment/process` - Approve/Reject/Complete requests
-- `GET /api/user/{uid}/dashboard` - User dashboard data
-- `GET /api/bill-payment/requests/{uid}` - User's bill payment history
-
-### Database Collections
-- `users` - User profiles, balances, subscriptions
-- `bill_payment_requests` - Payment requests with status workflow
-- `vip_payments` - Subscription payments
-- `transactions` - Wallet transaction history
-- `referrals` - Referral relationships
-
-## Business Rules
-- PRC to INR: 10 PRC = ₹1
-- Service charge: 2% on bill payments
-- Processing time target: 3-7 days
-- Speed badges based on completion time
+- `/api/redemption/charge-settings` - GET charge settings
+- `/api/admin/redemption/charge-settings` - POST update charges
+- `/api/request-bill-payment` - Submit bill payment
+- `/api/get-charge-breakdown` - Get charge calculation
 
 ## Test Credentials
-- Admin: `testadmin@emergent.com` / `testpassword`
-- Elite User: `elitetest@test.com` / `testpassword`
-- Test User: `testuser123@emergent.com` / `testpassword`
+- Admin: `admin@parasreward.com` / `Admin@123`
 
----
-Last Updated: February 5, 2026
+## Prioritized Backlog
+
+### P0 (Critical)
+- [x] Admin Redemption Charges page - DONE
+- [ ] Production deployment
+
+### P1 (High)
+- [ ] Refactor `main.py` into smaller modules
+  - `routes/users.py`
+  - `routes/transactions.py`
+  - `routes/admin.py`
+
+### P2 (Medium)
+- [ ] Add rate limiting for redemption requests
+- [ ] Email notifications for transactions
+
+### P3 (Low)
+- [ ] Mobile app APK build
+- [ ] Performance optimization
+
+## Database Schema (Key Collections)
+- `users`: User profiles with PRC balance
+- `transactions`: All PRC movements
+- `settings`: App configuration including redemption charges
+- `bill_payment_requests`: Pending/completed payments
+- `gift_voucher_requests`: Voucher redemptions
+
+## Deployment
+- **Preview URL**: https://charge-settings-hub.preview.emergentagent.com
+- **Status**: Ready for production deployment
+- **Action**: Use Emergent "Deploy" button
