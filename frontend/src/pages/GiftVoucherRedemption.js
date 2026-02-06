@@ -76,8 +76,20 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
   ];
 
   const selectedInfo = denominations.find(d => d.value === selectedDenomination);
-  const estimatedServiceCharge = selectedInfo ? selectedInfo.prc * 0.05 : 0;
-  const totalPRC = selectedInfo ? selectedInfo.prc + estimatedServiceCharge : 0;
+  
+  // New charge calculation: Voucher Amount + ₹10 Processing + 20% Admin
+  const voucherAmountINR = selectedDenomination || 0;
+  const processingFeeINR = 10; // Flat ₹10
+  const adminChargePercent = 20; // 20%
+  const adminChargeINR = voucherAmountINR * (adminChargePercent / 100);
+  const totalINR = voucherAmountINR + processingFeeINR + adminChargeINR;
+  
+  // Convert to PRC (10 PRC = ₹1)
+  const prcRate = 10;
+  const voucherAmountPRC = voucherAmountINR * prcRate;
+  const processingFeePRC = processingFeeINR * prcRate;
+  const adminChargePRC = adminChargeINR * prcRate;
+  const totalPRC = totalINR * prcRate;
 
   const handleRedeem = async () => {
     if (!selectedDenomination) {
@@ -86,7 +98,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
     }
 
     if (currentUser.prc_balance < totalPRC) {
-      toast.error(`Insufficient PRC balance. Required: ${totalPRC.toFixed(2)} PRC`);
+      toast.error(`Insufficient PRC balance. Required: ${totalPRC.toFixed(0)} PRC (₹${voucherAmountINR} + ₹${processingFeeINR} processing + ₹${adminChargeINR} admin)`);
       return;
     }
 
