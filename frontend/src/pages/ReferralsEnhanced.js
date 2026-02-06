@@ -2030,16 +2030,9 @@ Download now & start earning!`;
                       <div>
                         <div className="flex items-center gap-1">
                           <p className="text-gray-400 text-sm">Total Referral Earnings</p>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="w-3 h-3 text-gray-500 cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[220px]">
-                                <p className="text-xs">PRC earned from your referral network bonuses. Grows as your team mines and upgrades their plans</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <InfoTooltip>
+                            <p>PRC earned from your referral network bonuses. Grows as your team mines and upgrades their plans</p>
+                          </InfoTooltip>
                         </div>
                         <p className="text-3xl font-bold text-emerald-400">{networkAnalytics.total_earned_prc} PRC</p>
                       </div>
