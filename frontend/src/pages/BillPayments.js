@@ -294,13 +294,28 @@ const BillPayments = ({ user, onLogout }) => {
                     step="0.01"
                     required
                   />
-                  {formData.amount_inr && (
-                    <p className="text-xs text-gray-600 mt-1 flex items-center gap-1 flex-wrap">
-                      PRC Required: {prcRequired.toFixed(2)} + Service Charge: ~{estimatedServiceCharge.toFixed(2)} = {totalPRC.toFixed(2)} PRC
-                      <InfoTooltip>
-                        <p>10 PRC = ₹1. Service charge is 1-3% based on payment type and is included in your monthly limit</p>
-                      </InfoTooltip>
-                    </p>
+                  {formData.amount_inr && amountINR > 0 && (
+                    <div className="mt-3 bg-gray-800/50 rounded-xl p-3 border border-gray-700">
+                      <p className="text-xs text-gray-400 mb-2 font-semibold">Charge Breakdown:</p>
+                      <div className="space-y-1.5 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Bill Amount</span>
+                          <span className="text-white">₹{amountINR.toFixed(2)} = {amountPRC.toFixed(0)} PRC</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Processing Fee (Flat)</span>
+                          <span className="text-orange-400">+ ₹{processingFeeINR.toFixed(2)} = {processingFeePRC.toFixed(0)} PRC</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Admin Charges ({adminChargePercent}%)</span>
+                          <span className="text-orange-400">+ ₹{adminChargeINR.toFixed(2)} = {adminChargePRC.toFixed(0)} PRC</span>
+                        </div>
+                        <div className="flex justify-between pt-2 border-t border-gray-700 font-semibold">
+                          <span className="text-amber-400">Total to Pay</span>
+                          <span className="text-amber-400">₹{totalINR.toFixed(2)} = {totalPRC.toFixed(0)} PRC</span>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
 
