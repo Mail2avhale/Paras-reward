@@ -17850,7 +17850,6 @@ class TicketCreateRequest(BaseModel):
     attachments: List[str] = []
 
 class TicketReplyRequest(BaseModel):
-    ticket_id: str
     user_id: str
     message: str
 
