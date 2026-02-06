@@ -283,16 +283,9 @@ const BillPayments = ({ user, onLogout }) => {
                   {formData.amount_inr && (
                     <p className="text-xs text-gray-600 mt-1 flex items-center gap-1 flex-wrap">
                       PRC Required: {prcRequired.toFixed(2)} + Service Charge: ~{estimatedServiceCharge.toFixed(2)} = {totalPRC.toFixed(2)} PRC
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="w-3 h-3 text-gray-500 cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[220px]">
-                            <p className="text-xs">10 PRC = ₹1. Service charge is 1-3% based on payment type and is included in your monthly limit</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <InfoTooltip>
+                        <p>10 PRC = ₹1. Service charge is 1-3% based on payment type and is included in your monthly limit</p>
+                      </InfoTooltip>
                     </p>
                   )}
                 </div>
