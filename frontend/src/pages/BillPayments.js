@@ -18,7 +18,7 @@ import {
   formatMobile, formatIFSC, formatBankAccount,
   validateMobile, validateIFSC, validateBankAccount
 } from '@/utils/indianValidation';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { InfoTooltip } from '@/components/InfoTooltip';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
