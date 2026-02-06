@@ -1812,45 +1812,30 @@ Download now & start earning!`;
                       <div className="flex-1">
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-400">Activity Rate</span>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Info className="w-3 h-3 text-gray-500 cursor-help inline ml-1" />
-                                </TooltipTrigger>
-                                <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[200px]">
-                                  <p className="text-xs">Percentage of your network members who have been active in the last 7 days</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <span className="text-gray-400 flex items-center gap-1">
+                              Activity Rate
+                              <InfoTooltip>
+                                <p>Percentage of your network members who have been active in the last 7 days</p>
+                              </InfoTooltip>
+                            </span>
                             <span className="text-white">{networkAnalytics.activity_rate}%</span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-400">Network Size</span>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Info className="w-3 h-3 text-gray-500 cursor-help inline ml-1" />
-                                </TooltipTrigger>
-                                <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[200px]">
-                                  <p className="text-xs">Total number of users in your network across all 5 levels</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <span className="text-gray-400 flex items-center gap-1">
+                              Network Size
+                              <InfoTooltip>
+                                <p>Total number of users in your network across all 5 levels</p>
+                              </InfoTooltip>
+                            </span>
                             <span className="text-white">{networkAnalytics.total_network_size} users</span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-400">Current Bonus</span>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Info className="w-3 h-3 text-gray-500 cursor-help inline ml-1" />
-                                </TooltipTrigger>
-                                <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[200px]">
-                                  <p className="text-xs">Extra mining rate bonus from active paid referrals. Only paid subscribers count!</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <span className="text-gray-400 flex items-center gap-1">
+                              Current Bonus
+                              <InfoTooltip>
+                                <p>Extra mining rate bonus from active paid referrals. Only paid subscribers count!</p>
+                              </InfoTooltip>
+                            </span>
                             <span className="text-emerald-400">+{networkAnalytics.current_bonus_percent}%</span>
                           </div>
                         </div>
