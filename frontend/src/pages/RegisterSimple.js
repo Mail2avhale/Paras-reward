@@ -224,12 +224,19 @@ const RegisterSimple = () => {
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
                 id="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Min 6 characters"
                 value={formData.password}
                 onChange={(e) => handleChange('password', e.target.value)}
-                className={`pl-10 ${errors.password ? 'border-red-500' : ''}`}
+                className={`pl-10 pr-10 ${errors.password ? 'border-red-500' : ''}`}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
             </div>
             {errors.password && (
               <div className="flex items-center gap-1 mt-1 text-red-600 text-sm">
@@ -246,12 +253,19 @@ const RegisterSimple = () => {
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
                 id="confirmPassword"
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 placeholder="Re-enter password"
                 value={formData.confirmPassword}
                 onChange={(e) => handleChange('confirmPassword', e.target.value)}
-                className={`pl-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                className={`pl-10 pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
               />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
             </div>
             {errors.confirmPassword && (
               <div className="flex items-center gap-1 mt-1 text-red-600 text-sm">
