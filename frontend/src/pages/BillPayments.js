@@ -422,37 +422,7 @@ const BillPayments = ({ user, onLogout }) => {
                       </div>
                     </div>
 
-                    {/* Row 2: IFSC Code & Customer ID */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="ifsc_code">IFSC Code *</Label>
-                        <Input
-                          id="ifsc_code"
-                          value={formData.ifsc_code}
-                          onChange={(e) => setFormData({ ...formData, ifsc_code: formatIFSC(e.target.value) })}
-                          placeholder="e.g., HDFC0001234"
-                          maxLength={11}
-                          required
-                        />
-                        {formData.ifsc_code && formData.ifsc_code.length > 0 && !validateIFSC(formData.ifsc_code).isValid && (
-                          <p className="text-red-500 text-xs mt-1">Enter valid IFSC (e.g., SBIN0001234)</p>
-                        )}
-                        {formData.ifsc_code && validateIFSC(formData.ifsc_code).isValid && (
-                          <p className="text-green-500 text-xs mt-1">✓ Bank: {validateIFSC(formData.ifsc_code).bankCode}</p>
-                        )}
-                      </div>
-                      <div>
-                        <Label htmlFor="customer_id">Customer ID (Optional)</Label>
-                        <Input
-                          id="customer_id"
-                          value={formData.customer_id}
-                          onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
-                          placeholder="Bank customer ID if available"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Row 3: Borrower Name & Registered Mobile */}
+                    {/* Row 2: Borrower Name & Registered Mobile */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="borrower_name">Borrower Name *</Label>
@@ -465,7 +435,7 @@ const BillPayments = ({ user, onLogout }) => {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="registered_mobile">Registered Mobile Number *</Label>
+                        <Label htmlFor="registered_mobile">Registered Mobile *</Label>
                         <Input
                           id="registered_mobile"
                           type="tel"
@@ -481,70 +451,10 @@ const BillPayments = ({ user, onLogout }) => {
                       </div>
                     </div>
 
-                    {/* Row 4: Loan Type & Loan Tenure */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="loan_type">Loan Type *</Label>
-                        <select
-                          id="loan_type"
-                          value={formData.loan_type}
-                          onChange={(e) => setFormData({ ...formData, loan_type: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          required
-                        >
-                          <option value="">Select loan type</option>
-                          <option value="home_loan">Home Loan</option>
-                          <option value="personal_loan">Personal Loan</option>
-                          <option value="car_loan">Car/Vehicle Loan</option>
-                          <option value="two_wheeler_loan">Two Wheeler Loan</option>
-                          <option value="education_loan">Education Loan</option>
-                          <option value="business_loan">Business Loan</option>
-                          <option value="gold_loan">Gold Loan</option>
-                          <option value="consumer_durable">Consumer Durable Loan</option>
-                          <option value="agriculture_loan">Agriculture Loan</option>
-                          <option value="other">Other</option>
-                        </select>
-                      </div>
-                      <div>
-                        <Label htmlFor="loan_tenure">Remaining Tenure (Optional)</Label>
-                        <Input
-                          id="loan_tenure"
-                          value={formData.loan_tenure}
-                          onChange={(e) => setFormData({ ...formData, loan_tenure: e.target.value })}
-                          placeholder="e.g., 24 months"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Row 5: EMI Due Date & EMI Amount */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="emi_due_date">EMI Due Date *</Label>
-                        <Input
-                          id="emi_due_date"
-                          type="date"
-                          value={formData.emi_due_date}
-                          onChange={(e) => setFormData({ ...formData, emi_due_date: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="emi_amount">Monthly EMI Amount (₹)</Label>
-                        <Input
-                          id="emi_amount"
-                          type="number"
-                          value={formData.emi_amount}
-                          onChange={(e) => setFormData({ ...formData, emi_amount: e.target.value })}
-                          placeholder="Regular EMI amount"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">For reference only</p>
-                      </div>
-                    </div>
-
                     {/* Info Box */}
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
                       <p className="text-sm text-blue-800">
-                        <strong>Note:</strong> Please ensure all details match your loan documents. IFSC code is required for payment processing.
+                        <strong>Note:</strong> Please ensure all details match your loan documents.
                       </p>
                     </div>
                   </>
