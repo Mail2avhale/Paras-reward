@@ -22602,14 +22602,9 @@ async def create_bill_payment_request(request: Request):
     if not access_check["allowed"]:
         raise HTTPException(status_code=403, detail=access_check["reason"])
     
-    # Calculate PRC required (100 INR = 1000 PRC)
-    prc_required = await calculate_bill_payment_prc(amount_inr)
-    
-    # Calculate service charge
-    service_charge = await get_bill_payment_service_charge(amount_inr, prc_required)
-    
-    # Total PRC to deduct
-    total_prc = prc_required + service_charge
+    # Calculate all charges using new formula
+    charges = await calculate_redemption_charges(amount_inr)
+    total_prc = charges["total_prc"]
     
     # ===== REDEMPTION LIMIT CHECK =====
     redeem_check = await check_redemption_allowed(user, total_prc)
@@ -22634,10 +22629,10 @@ async def create_bill_payment_request(request: Request):
     if user_prc_balance < total_prc:
         raise HTTPException(
             status_code=400, 
-            detail=f"Insufficient PRC. Required: {total_prc:.2f} PRC (₹{amount_inr} + service charge), Available: {user_prc_balance:.2f} PRC"
+            detail=f"Insufficient PRC. Required: {total_prc:.2f} PRC (₹{charges['amount_inr']} + ₹{charges['processing_fee_inr']} processing + ₹{charges['admin_charge_inr']} admin = ₹{charges['total_inr']}), Available: {user_prc_balance:.2f} PRC"
         )
     
-    # Create request
+    # Create request with charge breakdown
     bill_request = {
         "request_id": str(uuid.uuid4()),
         "user_id": user_id,
@@ -22646,9 +22641,16 @@ async def create_bill_payment_request(request: Request):
         "user_mobile": user.get("mobile"),
         "request_type": request_type,
         "amount_inr": amount_inr,
-        "prc_required": prc_required,
-        "service_charge_amount": service_charge,
+        "prc_required": charges["amount_prc"],
+        "processing_fee_inr": charges["processing_fee_inr"],
+        "processing_fee_prc": charges["processing_fee_prc"],
+        "admin_charge_inr": charges["admin_charge_inr"],
+        "admin_charge_prc": charges["admin_charge_prc"],
+        "admin_charge_percent": charges["admin_charge_percent"],
+        "service_charge_amount": charges["processing_fee_prc"] + charges["admin_charge_prc"],
+        "total_inr": charges["total_inr"],
         "total_prc_deducted": total_prc,
+        "charge_breakdown": charges,
         "details": details,
         "status": "pending",
         "created_at": datetime.now(timezone.utc).isoformat(),
