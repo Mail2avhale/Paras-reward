@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { AIReferralCoach } from '@/components/AINetworkReferral';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { InfoTooltip } from '@/components/InfoTooltip';
 
 // Network Tree Node Component - defined outside to avoid re-creation
 const TreeNode = ({ node, depth = 0 }) => {
