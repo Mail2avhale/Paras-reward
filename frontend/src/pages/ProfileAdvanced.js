@@ -547,16 +547,9 @@ const ProfileAdvanced = ({ user, onLogout }) => {
             <span className="flex items-center gap-3 text-black font-semibold">
               <Crown className="w-5 h-5" />
               Upgrade Your Plan
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="w-3 h-3 text-black/50 cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[220px]">
-                    <p className="text-xs">Upgrade to earn faster! Get up to 3x mining speed, higher redemption limits, and exclusive features</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <InfoTooltip>
+                <p>Upgrade to earn faster! Get up to 3x mining speed, higher redemption limits, and exclusive features</p>
+              </InfoTooltip>
             </span>
             <ChevronRight className="w-5 h-5 text-black" />
           </button>
@@ -573,16 +566,9 @@ const ProfileAdvanced = ({ user, onLogout }) => {
           <span className="flex items-center gap-3 text-white">
             <FileText className="w-5 h-5 text-blue-500" />
             {t.kycVerification}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="w-3 h-3 text-gray-500 cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[220px]">
-                  <p className="text-xs">KYC verification is required to redeem PRC for bill payments and withdrawals. Complete it once for lifetime access</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <InfoTooltip>
+              <p>KYC verification is required to redeem PRC for bill payments and withdrawals. Complete it once for lifetime access</p>
+            </InfoTooltip>
           </span>
           <div className="flex items-center gap-2">
             <span className={`text-xs px-2 py-1 rounded-full ${
