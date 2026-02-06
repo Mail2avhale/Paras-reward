@@ -2826,42 +2826,85 @@ async def calculate_bill_payment_prc(amount_inr: float):
     """
     return amount_inr * 10
 
-async def get_bill_payment_service_charge(amount_inr: float, prc_required: float):
+async def get_redemption_charge_settings():
     """
-    Calculate service charge for bill payments based on admin settings
-    Returns service charge in PRC
+    Get redemption charge settings from database
+    Returns: {
+        processing_fee_inr: 10,  # Flat processing fee in INR
+        admin_charge_percent: 20,  # Admin charge percentage
+        prc_to_inr_rate: 10  # 10 PRC = 1 INR
+    }
     """
     settings = await db.settings.find_one({})
-    if not settings:
-        # Default: 2% service charge
-        return prc_required * 0.02
+    return {
+        "processing_fee_inr": settings.get("processing_fee_inr", 10) if settings else 10,
+        "admin_charge_percent": settings.get("admin_charge_percent", 20) if settings else 20,
+        "prc_to_inr_rate": 10  # Fixed: 10 PRC = 1 INR
+    }
+
+async def calculate_redemption_charges(amount_inr: float):
+    """
+    Calculate all charges for bill payment or gift voucher redemption
     
-    charge_type = settings.get("bill_payment_charge_type", "percentage")  # percentage or fixed
+    Formula: Total PRC = (Amount_INR + Processing_Fee + Admin_Charges) × PRC_Rate
     
-    if charge_type == "percentage":
-        percentage = settings.get("bill_payment_charge_percentage", 2.0)  # Default 2%
-        return (prc_required * percentage) / 100
-    else:
-        # Fixed charge in PRC
-        return settings.get("bill_payment_charge_fixed", 20.0)  # Default 20 PRC
+    Where:
+    - Processing Fee = Flat ₹10 (configurable)
+    - Admin Charges = 20% of Amount_INR (configurable)
+    - PRC Rate = 10 (10 PRC = ₹1)
+    
+    Returns breakdown dict
+    """
+    settings = await get_redemption_charge_settings()
+    
+    processing_fee_inr = settings["processing_fee_inr"]
+    admin_charge_percent = settings["admin_charge_percent"]
+    prc_rate = settings["prc_to_inr_rate"]
+    
+    # Calculate charges in INR
+    admin_charge_inr = (amount_inr * admin_charge_percent) / 100
+    total_inr = amount_inr + processing_fee_inr + admin_charge_inr
+    
+    # Convert to PRC
+    amount_prc = amount_inr * prc_rate
+    processing_fee_prc = processing_fee_inr * prc_rate
+    admin_charge_prc = admin_charge_inr * prc_rate
+    total_prc = total_inr * prc_rate
+    
+    return {
+        "amount_inr": round(amount_inr, 2),
+        "processing_fee_inr": round(processing_fee_inr, 2),
+        "admin_charge_inr": round(admin_charge_inr, 2),
+        "admin_charge_percent": admin_charge_percent,
+        "total_inr": round(total_inr, 2),
+        "amount_prc": round(amount_prc, 2),
+        "processing_fee_prc": round(processing_fee_prc, 2),
+        "admin_charge_prc": round(admin_charge_prc, 2),
+        "total_prc": round(total_prc, 2),
+        "prc_rate": prc_rate
+    }
+
+async def get_bill_payment_service_charge(amount_inr: float, prc_required: float):
+    """
+    Calculate service charge for bill payments
+    Uses new formula: Processing Fee (₹10) + Admin Charges (20%)
+    Returns service charge in PRC
+    """
+    charges = await calculate_redemption_charges(amount_inr)
+    # Service charge = Processing Fee + Admin Charges (in PRC)
+    return charges["processing_fee_prc"] + charges["admin_charge_prc"]
 
 async def get_gift_voucher_service_charge(prc_required: float):
     """
     Calculate service charge for gift voucher redemption
+    Uses new formula: Processing Fee (₹10) + Admin Charges (20%)
     Returns service charge in PRC
     """
-    settings = await db.settings.find_one({})
-    if not settings:
-        # Default: 5% service charge
-        return prc_required * 0.05
-    
-    charge_type = settings.get("gift_voucher_charge_type", "percentage")
-    
-    if charge_type == "percentage":
-        percentage = settings.get("gift_voucher_charge_percentage", 5.0)  # Default 5%
-        return (prc_required * percentage) / 100
-    else:
-        return settings.get("gift_voucher_charge_fixed", 50.0)  # Default 50 PRC
+    # Convert PRC to INR first (10 PRC = 1 INR)
+    amount_inr = prc_required / 10
+    charges = await calculate_redemption_charges(amount_inr)
+    # Service charge = Processing Fee + Admin Charges (in PRC)
+    return charges["processing_fee_prc"] + charges["admin_charge_prc"]
 
 # ==================== END BILL PAYMENT SYSTEM ====================
 
