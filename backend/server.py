@@ -291,11 +291,13 @@ is_atlas = 'mongodb+srv' in mongo_url or 'mongodb.net' in mongo_url
 
 # Configure connection options based on environment
 connection_options = {
-    'serverSelectionTimeoutMS': 60000,  # 60 second timeout for Atlas initial connection
-    'connectTimeoutMS': 30000,  # 30 second connection timeout
-    'socketTimeoutMS': 30000,  # 30 second socket timeout
-    'maxPoolSize': 50,  # Connection pool for production
-    'minPoolSize': 5,
+    'serverSelectionTimeoutMS': 120000,  # 120 second timeout for Atlas (increased for cold start)
+    'connectTimeoutMS': 60000,  # 60 second connection timeout (increased)
+    'socketTimeoutMS': 60000,  # 60 second socket timeout (increased)
+    'maxPoolSize': 100,  # Increased connection pool for production
+    'minPoolSize': 10,  # Keep more connections warm
+    'maxIdleTimeMS': 45000,  # Close idle connections after 45 seconds
+    'waitQueueTimeoutMS': 60000,  # Wait up to 60 seconds for connection from pool
     'retryWrites': True,  # Enable retryable writes for Atlas
     'retryReads': True,  # Enable retryable reads for Atlas
 }
