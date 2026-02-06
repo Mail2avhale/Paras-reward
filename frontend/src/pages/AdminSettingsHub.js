@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -6,13 +6,16 @@ import {
   ChevronRight, ArrowLeft, Sparkles, Receipt
 } from 'lucide-react';
 
+// Lazy load AdminSettings for embedded usage
+const AdminSettings = lazy(() => import('./AdminSettings'));
+
 const settingsCategories = [
   { 
     id: 'payment', 
     label: 'Payment Settings', 
     icon: CreditCard, 
     description: 'UPI ID, QR Code, Bank Transfer details for subscriptions',
-    path: '/admin/settings?tab=payment',
+    path: '/admin/settings-hub?tab=payment',
     color: 'from-amber-500 to-orange-500',
     bgColor: 'bg-amber-500/10',
     borderColor: 'border-amber-500/30'
@@ -22,7 +25,7 @@ const settingsCategories = [
     label: 'Redemption Charges', 
     icon: Receipt, 
     description: 'Processing fee, Admin charges for Bill Payments & Gift Vouchers',
-    path: '/admin/settings?tab=redemption',
+    path: '/admin/settings-hub?tab=redemption',
     color: 'from-emerald-500 to-teal-500',
     bgColor: 'bg-emerald-500/10',
     borderColor: 'border-emerald-500/30'
@@ -32,7 +35,7 @@ const settingsCategories = [
     label: 'System Settings', 
     icon: Cpu, 
     description: 'Subscription plans, Mining rates, Referral bonus, Registration control',
-    path: '/admin/settings?tab=system',
+    path: '/admin/settings-hub?tab=system',
     color: 'from-purple-500 to-violet-500',
     bgColor: 'bg-purple-500/10',
     borderColor: 'border-purple-500/30'
@@ -42,7 +45,7 @@ const settingsCategories = [
     label: 'Web Settings', 
     icon: Globe, 
     description: 'Homepage content, SEO settings, banners and app configuration',
-    path: '/admin/settings?tab=web',
+    path: '/admin/settings-hub?tab=web',
     color: 'from-blue-500 to-cyan-500',
     bgColor: 'bg-blue-500/10',
     borderColor: 'border-blue-500/30'
