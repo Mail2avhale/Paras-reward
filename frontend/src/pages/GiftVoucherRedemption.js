@@ -228,13 +228,25 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
                 <span className="text-gray-400">{t('prcRequired')}:</span>
                 <span className="text-white">{selectedInfo.prc} PRC</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">{t('serviceCharge')}:</span>
-                <span className="text-white">{estimatedServiceCharge.toFixed(2)} PRC</span>
-              </div>
-              <div className="border-t border-gray-800 pt-2 flex justify-between">
-                <span className="text-white font-bold">{t('total')}:</span>
-                <span className="text-amber-500 font-bold">{totalPRC.toFixed(2)} PRC</span>
+              
+              {/* Charge Breakdown */}
+              <div className="mt-3 pt-3 border-t border-gray-800 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Voucher Amount</span>
+                  <span className="text-white">₹{voucherAmountINR} = {voucherAmountPRC.toFixed(0)} PRC</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Processing Fee (Flat)</span>
+                  <span className="text-orange-400">+ ₹{processingFeeINR} = {processingFeePRC.toFixed(0)} PRC</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Admin Charges ({adminChargePercent}%)</span>
+                  <span className="text-orange-400">+ ₹{adminChargeINR.toFixed(0)} = {adminChargePRC.toFixed(0)} PRC</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t border-gray-700 font-semibold">
+                  <span className="text-amber-400">Total to Pay</span>
+                  <span className="text-amber-400">₹{totalINR.toFixed(0)} = {totalPRC.toFixed(0)} PRC</span>
+                </div>
               </div>
             </div>
           </div>
@@ -249,7 +261,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
           className="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-gray-900 font-bold rounded-xl flex items-center justify-center gap-2 hover:from-amber-400 hover:to-amber-500 transition-all disabled:opacity-50"
         >
           <Gift className="w-5 h-5" />
-          {loading ? t('processing') + '...' : t('redeemVoucher')}
+          {loading ? t('processing') + '...' : `Redeem for ${totalPRC.toFixed(0)} PRC`}
         </button>
       </div>
 
