@@ -958,7 +958,7 @@ const DashboardModern = ({ user, onLogout }) => {
               <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
                 <span className="text-xl">🏛️</span>
               </div>
-              <span className="text-[10px] text-gray-300 text-center">{t('loanEmi')}</span>
+              <span className="text-[10px] text-gray-300 text-center">Pay EMI</span>
             </button>
           </div>
         </div>
