@@ -22681,8 +22681,8 @@ async def create_bill_payment_request(request: Request):
             "request_id": bill_request["request_id"],
             "request_type": request_type,
             "amount_inr": amount_inr,
-            "prc_required": prc_required,
-            "service_charge": service_charge
+            "prc_required": charges["amount_prc"],
+            "service_charge": charges["processing_fee_prc"] + charges["admin_charge_prc"]
         },
         skip_balance_update=True  # Balance already updated atomically above
     )
