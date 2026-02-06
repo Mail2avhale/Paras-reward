@@ -630,9 +630,8 @@ const BillPayments = ({ user, onLogout }) => {
                       ⚠️ This is NOT a loan service. Use this to pay your existing loan EMIs using PRC.
                     </p>
                     <ul className="text-xs text-red-300 space-y-2">
-                      <li>✓ Enter your existing loan account number</li>
-                      <li>✓ Verify bank/lender name correctly</li>
-                      <li>✓ Double-check IFSC code and borrower name</li>
+                      <li>✓ Enter your loan account number</li>
+                      <li>✓ Provide bank/NBFC name</li>
                       <li>✓ We will pay the EMI on your behalf</li>
                     </ul>
                   </div>
