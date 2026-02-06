@@ -22504,6 +22504,60 @@ async def get_vip_plans_admin():
 
 # ==================== BILL PAYMENT & RECHARGE ENDPOINTS ====================
 
+@api_router.get("/redemption/calculate-charges")
+async def calculate_charges_api(amount_inr: float):
+    """
+    Calculate all charges for a given amount
+    Returns full breakdown in INR and PRC
+    
+    Formula: Total = Amount + Processing Fee (₹10) + Admin Charges (20%)
+    """
+    if amount_inr <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be positive")
+    
+    charges = await calculate_redemption_charges(amount_inr)
+    return charges
+
+@api_router.get("/redemption/charge-settings")
+async def get_charge_settings_api():
+    """Get current charge settings"""
+    settings = await get_redemption_charge_settings()
+    return settings
+
+@api_router.post("/admin/redemption/charge-settings")
+async def update_charge_settings_api(request: Request):
+    """Update redemption charge settings (Admin only)"""
+    data = await request.json()
+    
+    processing_fee = data.get("processing_fee_inr")
+    admin_charge = data.get("admin_charge_percent")
+    
+    update_data = {}
+    if processing_fee is not None:
+        if processing_fee < 0:
+            raise HTTPException(status_code=400, detail="Processing fee cannot be negative")
+        update_data["processing_fee_inr"] = float(processing_fee)
+    
+    if admin_charge is not None:
+        if admin_charge < 0 or admin_charge > 100:
+            raise HTTPException(status_code=400, detail="Admin charge must be between 0-100%")
+        update_data["admin_charge_percent"] = float(admin_charge)
+    
+    if update_data:
+        await db.settings.update_one(
+            {},
+            {"$set": update_data},
+            upsert=True
+        )
+    
+    # Return updated settings
+    settings = await get_redemption_charge_settings()
+    return {
+        "success": True,
+        "message": "Charge settings updated",
+        "settings": settings
+    }
+
 @api_router.post("/bill-payment/request")
 async def create_bill_payment_request(request: Request):
     """Create a bill payment or recharge request (User)"""
