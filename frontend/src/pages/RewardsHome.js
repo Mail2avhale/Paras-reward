@@ -721,16 +721,32 @@ const RewardsHome = () => {
             <div>
               <h4 className="font-semibold mb-4">Contact</h4>
               <ul className="space-y-2 text-gray-400 text-sm">
-                {contactInfo.email && (
-                  <li className="flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    {contactInfo.email}
+                {contactInfo.company_name && (
+                  <li className="font-medium text-white">{contactInfo.company_name}</li>
+                )}
+                {contactInfo.address && (
+                  <li className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0 text-green-400" />
+                    <span className="whitespace-pre-line">{contactInfo.address}</span>
                   </li>
                 )}
                 {contactInfo.phone && (
                   <li className="flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
+                    <Phone className="h-4 w-4 text-amber-400" />
                     {contactInfo.phone}
+                    {contactInfo.phone_secondary && ` / ${contactInfo.phone_secondary}`}
+                  </li>
+                )}
+                {contactInfo.email && (
+                  <li className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-blue-400" />
+                    {contactInfo.email}
+                  </li>
+                )}
+                {contactInfo.working_hours && (
+                  <li className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-cyan-400" />
+                    {contactInfo.working_hours}
                   </li>
                 )}
               </ul>
@@ -740,7 +756,7 @@ const RewardsHome = () => {
           <div className="border-t border-gray-800 pt-8">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               <p className="text-gray-400 text-sm">
-                © {new Date().getFullYear()} Paras Reward. {t('allRightsReserved')}
+                © {new Date().getFullYear()} {contactInfo.company_name || 'Paras Reward'}. {t('allRightsReserved')}
               </p>
               <p className="text-gray-500 text-xs">
                 {t('termsApply')}
