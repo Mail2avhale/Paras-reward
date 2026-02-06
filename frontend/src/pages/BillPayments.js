@@ -422,8 +422,25 @@ const BillPayments = ({ user, onLogout }) => {
                       </div>
                     </div>
 
-                    {/* Row 2: Borrower Name & Registered Mobile */}
+                    {/* Row 2: IFSC Code & Borrower Name */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="ifsc_code">IFSC Code *</Label>
+                        <Input
+                          id="ifsc_code"
+                          value={formData.ifsc_code}
+                          onChange={(e) => setFormData({ ...formData, ifsc_code: formatIFSC(e.target.value) })}
+                          placeholder="e.g., HDFC0001234"
+                          maxLength={11}
+                          required
+                        />
+                        {formData.ifsc_code && formData.ifsc_code.length > 0 && !validateIFSC(formData.ifsc_code).isValid && (
+                          <p className="text-red-500 text-xs mt-1">Enter valid IFSC (e.g., SBIN0001234)</p>
+                        )}
+                        {formData.ifsc_code && validateIFSC(formData.ifsc_code).isValid && (
+                          <p className="text-green-500 text-xs mt-1">✓ Bank: {validateIFSC(formData.ifsc_code).bankCode}</p>
+                        )}
+                      </div>
                       <div>
                         <Label htmlFor="borrower_name">Borrower Name *</Label>
                         <Input
@@ -434,27 +451,29 @@ const BillPayments = ({ user, onLogout }) => {
                           required
                         />
                       </div>
-                      <div>
-                        <Label htmlFor="registered_mobile">Registered Mobile *</Label>
-                        <Input
-                          id="registered_mobile"
-                          type="tel"
-                          value={formData.registered_mobile}
-                          onChange={(e) => setFormData({ ...formData, registered_mobile: formatMobile(e.target.value) })}
-                          placeholder="10-digit mobile number"
-                          maxLength={10}
-                          required
-                        />
-                        {formData.registered_mobile && formData.registered_mobile.length > 0 && !validateMobile(formData.registered_mobile).isValid && (
-                          <p className="text-red-500 text-xs mt-1">Enter valid 10-digit mobile (starts with 6-9)</p>
-                        )}
-                      </div>
+                    </div>
+
+                    {/* Row 3: Registered Mobile */}
+                    <div>
+                      <Label htmlFor="registered_mobile">Registered Mobile *</Label>
+                      <Input
+                        id="registered_mobile"
+                        type="tel"
+                        value={formData.registered_mobile}
+                        onChange={(e) => setFormData({ ...formData, registered_mobile: formatMobile(e.target.value) })}
+                        placeholder="10-digit mobile number"
+                        maxLength={10}
+                        required
+                      />
+                      {formData.registered_mobile && formData.registered_mobile.length > 0 && !validateMobile(formData.registered_mobile).isValid && (
+                        <p className="text-red-500 text-xs mt-1">Enter valid 10-digit mobile (starts with 6-9)</p>
+                      )}
                     </div>
 
                     {/* Info Box */}
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
                       <p className="text-sm text-blue-800">
-                        <strong>Note:</strong> Please ensure all details match your loan documents.
+                        <strong>Note:</strong> Please ensure all details match your loan documents. IFSC code is required for payment processing.
                       </p>
                     </div>
                   </>
