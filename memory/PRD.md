@@ -62,7 +62,14 @@ Build a comprehensive rewards and loyalty platform with:
 3. **P1: Search Bar Broken**
    - User-facing search functionality not working
 
-### Recently Completed ✅ (Feb 5, 2026)
+### Recently Completed ✅ (Feb 6, 2026)
+
+#### "Loan EMI" → "Pay EMI" Clarity Fix
+- [x] Changed "Loan EMI" label to "Pay EMI" on Dashboard
+- [x] Added sublabel: "Pay your existing loan EMIs" 
+- [x] Added clear disclaimer: "⚠️ This is NOT a loan service. Use this to pay your existing loan EMIs using PRC."
+- [x] Updated security notice with EMI-specific instructions
+- Files modified: `DashboardModern.js`, `BillPayments.js`
 
 #### Complete PRC Breakdown with All Categories
 - [x] Added "Luxury Life Savings" card showing accumulated 20% savings with INR value
