@@ -51,6 +51,13 @@ const AdminSettings = ({ user }) => {
   });
   const [savingMarketplace, setSavingMarketplace] = useState(false);
 
+  // Redemption Charges State
+  const [redemptionCharges, setRedemptionCharges] = useState({
+    processing_fee_inr: 10,
+    admin_charge_percent: 20
+  });
+  const [savingRedemption, setSavingRedemption] = useState(false);
+
   useEffect(() => {
     // Check if user is admin
     if (!user || user.role !== 'admin') {
