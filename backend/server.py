@@ -23596,6 +23596,55 @@ async def update_contact_settings(request: Request):
     
     return {"success": True, "message": "Contact settings updated successfully"}
 
+@api_router.get("/public/contact-info")
+async def get_public_contact_info():
+    """Get contact information for public display (Landing page, Contact Us, Footer)"""
+    settings = await db.settings.find_one({}, {"_id": 0, "contact_settings": 1})
+    
+    default_settings = {
+        "company_name": "PARAS REWARD",
+        "address_line1": "",
+        "address_line2": "",
+        "city": "",
+        "state": "",
+        "pincode": "",
+        "country": "India",
+        "phone_primary": "",
+        "phone_secondary": "",
+        "email_support": "",
+        "email_business": "",
+        "working_hours": "9:00 AM - 6:00 PM (Mon-Sat)"
+    }
+    
+    if settings and settings.get("contact_settings"):
+        contact = {**default_settings, **settings["contact_settings"]}
+    else:
+        contact = default_settings
+    
+    # Format full address
+    address_parts = [contact.get("address_line1"), contact.get("address_line2")]
+    city_state = f"{contact.get('city', '')}, {contact.get('state', '')} - {contact.get('pincode', '')}"
+    address_parts.append(city_state)
+    address_parts.append(contact.get("country", "India"))
+    
+    full_address = ", ".join([p for p in address_parts if p and p.strip() and p != ", , - "])
+    
+    return {
+        "company_name": contact.get("company_name"),
+        "address": full_address,
+        "address_line1": contact.get("address_line1"),
+        "address_line2": contact.get("address_line2"),
+        "city": contact.get("city"),
+        "state": contact.get("state"),
+        "pincode": contact.get("pincode"),
+        "country": contact.get("country"),
+        "phone": contact.get("phone_primary"),
+        "phone_secondary": contact.get("phone_secondary"),
+        "email": contact.get("email_support"),
+        "email_business": contact.get("email_business"),
+        "working_hours": contact.get("working_hours")
+    }
+
 @api_router.get("/admin/logo-settings")
 async def get_logo_settings():
     """Get logo and branding settings"""
