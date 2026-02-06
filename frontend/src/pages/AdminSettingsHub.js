@@ -55,7 +55,7 @@ const settingsCategories = [
     label: 'Social Media', 
     icon: Share2, 
     description: 'Connect social media profiles and configure sharing options',
-    path: '/admin/settings?tab=social',
+    path: '/admin/settings-hub?tab=social',
     color: 'from-pink-500 to-rose-500',
     bgColor: 'bg-pink-500/10',
     borderColor: 'border-pink-500/30'
