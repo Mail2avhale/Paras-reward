@@ -99,30 +99,43 @@ const AdminSettingsHub = ({ user, onLogout }) => {
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('tab');
 
-  // Map tabs to their actual routes
-  const tabRoutes = {
-    'redeem-safety': '/admin/redeem-limits',
+  // Tabs that should render AdminSettings component directly
+  const embeddedTabs = ['payment', 'system', 'web', 'social', 'redemption'];
+  
+  // Tabs that redirect to separate pages
+  const externalRoutes = {
+    'redeem-safety': '/admin/redeem-settings',
     'prc-rain': '/admin/prc-rain',
-    'payment': '/admin/settings?tab=payment',
-    'system': '/admin/settings?tab=system',
-    'web': '/admin/settings?tab=web',
-    'social': '/admin/settings?tab=social',
     'video-ads': '/admin/video-ads',
+    'redeem': '/admin/redeem-settings',
   };
 
-  // If a tab is selected, redirect to the actual page
+  // If a tab that needs external redirect is selected
   useEffect(() => {
-    if (activeTab && tabRoutes[activeTab]) {
-      navigate(tabRoutes[activeTab]);
+    if (activeTab && externalRoutes[activeTab]) {
+      navigate(externalRoutes[activeTab]);
     }
   }, [activeTab, navigate]);
 
-  // If tab is being redirected, show loading
-  if (activeTab && tabRoutes[activeTab]) {
+  // If redirecting to external page, show loading
+  if (activeTab && externalRoutes[activeTab]) {
     return (
       <div className="min-h-screen bg-gray-950 text-white p-6 flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full"></div>
       </div>
+    );
+  }
+
+  // If embedded tab is selected, render AdminSettings
+  if (activeTab && embeddedTabs.includes(activeTab)) {
+    return (
+      <Suspense fallback={
+        <div className="min-h-screen bg-gray-950 text-white p-6 flex items-center justify-center">
+          <div className="animate-spin w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full"></div>
+        </div>
+      }>
+        <AdminSettings user={user} />
+      </Suspense>
     );
   }
 
@@ -143,7 +156,7 @@ const AdminSettingsHub = ({ user, onLogout }) => {
             This settings section is being moved to Admin Settings.
           </p>
           <button
-            onClick={() => navigate('/admin/settings')}
+            onClick={() => navigate('/admin/settings-hub?tab=payment')}
             className="mt-4 px-4 py-2 bg-amber-500 hover:bg-amber-600 rounded-lg text-white"
           >
             Go to Admin Settings
