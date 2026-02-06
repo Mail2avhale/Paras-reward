@@ -107,9 +107,20 @@ const BillPayments = ({ user, onLogout }) => {
   ];
 
   const currentType = requestTypes.find(t => t.id === selectedType);
-  const prcRequired = formData.amount_inr ? parseFloat(formData.amount_inr) * 10 : 0;
-  const estimatedServiceCharge = prcRequired * 0.02; // Default 2%
-  const totalPRC = prcRequired + estimatedServiceCharge;
+  
+  // New charge calculation: Amount + ₹10 Processing + 20% Admin
+  const amountINR = formData.amount_inr ? parseFloat(formData.amount_inr) : 0;
+  const processingFeeINR = 10; // Flat ₹10
+  const adminChargePercent = 20; // 20%
+  const adminChargeINR = amountINR * (adminChargePercent / 100);
+  const totalINR = amountINR + processingFeeINR + adminChargeINR;
+  
+  // Convert to PRC (10 PRC = ₹1)
+  const prcRate = 10;
+  const amountPRC = amountINR * prcRate;
+  const processingFeePRC = processingFeeINR * prcRate;
+  const adminChargePRC = adminChargeINR * prcRate;
+  const totalPRC = totalINR * prcRate;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
