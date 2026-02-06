@@ -118,6 +118,32 @@ const AdminSettings = ({ user }) => {
     } catch (error) {
       console.error('Error fetching marketplace settings:', error);
     }
+
+    // Fetch redemption charge settings
+    try {
+      const redemptionResponse = await axios.get(`${API}/api/redemption/charge-settings`);
+      if (redemptionResponse.data) {
+        setRedemptionCharges({
+          processing_fee_inr: redemptionResponse.data.processing_fee_inr || 10,
+          admin_charge_percent: redemptionResponse.data.admin_charge_percent || 20
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching redemption charges:', error);
+    }
+  };
+
+  const handleSaveRedemptionCharges = async () => {
+    setSavingRedemption(true);
+    try {
+      await axios.post(`${API}/api/admin/redemption/charge-settings`, redemptionCharges);
+      toast.success('Redemption charges updated successfully!');
+    } catch (error) {
+      console.error('Error saving redemption charges:', error);
+      toast.error('Failed to save redemption charges');
+    } finally {
+      setSavingRedemption(false);
+    }
   };
 
   const handleChange = (field, value) => {

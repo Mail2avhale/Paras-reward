@@ -233,3 +233,5 @@ frontend/node_modules/.cache/default-development/5.pack_
 # Environment files
 *.env
 *.env.*
+frontend/node_modules/.cache/default-development/27.pack
+frontend/node_modules/.cache/default-development/26.pack
