@@ -585,16 +585,9 @@ const DashboardModern = ({ user, onLogout }) => {
                   {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </button>
                 <p className="text-gray-500 text-[10px] tracking-widest">BALANCE</p>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="w-3 h-3 text-gray-500 cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[200px]">
-                      <p className="text-xs">Your available PRC. Use it for bill payments, vouchers, or marketplace purchases. 10 PRC = ₹1</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <InfoTooltip>
+                  <p>Your available PRC. Use it for bill payments, vouchers, or marketplace purchases. 10 PRC = ₹1</p>
+                </InfoTooltip>
               </div>
               <div className="flex items-baseline gap-2">
                 <span 
@@ -640,16 +633,9 @@ const DashboardModern = ({ user, onLogout }) => {
               <div className="text-right">
                 <div className="flex items-center gap-1 justify-end">
                   <p className="text-gray-600 text-[8px] tracking-widest mb-0.5">MULTIPLIER</p>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="w-3 h-3 text-gray-500 cursor-help mb-0.5" />
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[200px]">
-                        <p className="text-xs">Mining speed multiplier based on your plan. Elite: 3x, Growth: 2x, Startup: 1.5x, Explorer: 1x</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <InfoTooltip>
+                    <p>Mining speed multiplier based on your plan. Elite: 3x, Growth: 2x, Startup: 1.5x, Explorer: 1x</p>
+                  </InfoTooltip>
                 </div>
                 <p className={`text-sm font-bold ${
                   stats.subscriptionPlan === 'elite' ? 'text-amber-400' :
