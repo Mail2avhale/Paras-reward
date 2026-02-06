@@ -14,7 +14,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import ImageCropUpload from '@/components/ImageCropUpload';
 import { LanguageSelectorFull } from '@/components/LanguageSelector';
 import ShareApp from '@/components/ShareApp';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { InfoTooltip } from '@/components/InfoTooltip';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
