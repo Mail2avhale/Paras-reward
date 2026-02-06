@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Settings, CreditCard, Cpu, Globe, Share2, Shield, Video, CloudRain,
-  ChevronRight, ArrowLeft, Sparkles, Receipt
+  ChevronRight, ArrowLeft, Sparkles, Receipt, Building2
 } from 'lucide-react';
 
 // Lazy load AdminSettings for embedded usage
@@ -31,6 +31,16 @@ const settingsCategories = [
     borderColor: 'border-emerald-500/30'
   },
   { 
+    id: 'contact', 
+    label: 'Contact Settings', 
+    icon: Building2, 
+    description: 'Company name, Address, Email, Phone for Landing page & Contact Us',
+    path: '/admin/contact-settings',
+    color: 'from-blue-500 to-cyan-500',
+    bgColor: 'bg-blue-500/10',
+    borderColor: 'border-blue-500/30'
+  },
+  { 
     id: 'system', 
     label: 'System Settings', 
     icon: Cpu, 
@@ -46,9 +56,9 @@ const settingsCategories = [
     icon: Globe, 
     description: 'Homepage content, SEO settings, banners and app configuration',
     path: '/admin/settings-hub?tab=web',
-    color: 'from-blue-500 to-cyan-500',
-    bgColor: 'bg-blue-500/10',
-    borderColor: 'border-blue-500/30'
+    color: 'from-cyan-500 to-teal-500',
+    bgColor: 'bg-cyan-500/10',
+    borderColor: 'border-cyan-500/30'
   },
   { 
     id: 'social', 
