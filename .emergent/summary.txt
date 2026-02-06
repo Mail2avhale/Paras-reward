@@ -1,203 +1,155 @@
-<analysis>**original_problem_statement:**
-The user's initial goals were to fix production bugs, verify a profile completion fix, and enhance the bill payment and gaming experience. Throughout the session, the scope expanded significantly to include:
-1.  **Logical Change:** Make bill payment  equivalent to , triggering the final state and confetti immediately.
-2.  **New Feature:** Allow admins to  completed bill payment requests.
-3.  **New Feature:** Allow admins to  an approved subscription request if it was approved by mistake, and revoke the user's plan.
-4.  **UX Improvement:** Sort KYC verification requests from oldest to newest (FIFO).
-5.  **Form Enhancement:** Add  and  fields to the Request Credit Card Services form.
-6.  **Architecture:** Separate the user-facing application from the admin panel, with the goal of deploying the admin panel to a separate subdomain ().
-7.  **Bug Fix:** The subscription rejection modal was not appearing; this needed to be fixed.
-8.  **Gamification:** Make the Rain Drop game more unpredictable by removing any color-based hints about positive or negative point values.
-9.  **Anti-Fraud:** Prevent users from inflating their referral bonus and mining rate by adding free (Explorer) users. The logic must be changed so only paid subscribers count towards referral benefits.
-10. **Data Integrity:** Verify all PRC (Points) calculations across the application for consistency and fix any discrepancies, especially the PRC-to-INR conversion rate.
-11. **Bug Fix:** Address a balance mismatch and confusing Total Earned labels between the Mining and Orders pages.
-12. **Critical Bug Fix:** Resolve a complete login failure in the preview environment.
+<analysis>An analysis of the conversation history has been completed. Here is the summary to assist the next agent.
 
-**User's preferred language**: The user communicates in a mix of English and Marathi. The next agent **MUST** start all responses with  and then continue the technical explanation in English.
+**original_problem_statement**: The user initiated a series of feature requests and bug fixes aimed at improving user experience and backend functionality. The key requests included:
+1.  **UI/UX Consistency**: Fix discrepancies in PRC balance and Total Earned labels between the Mining and Orders pages.
+2.  **Bug Fixes**:
+    *   Address the Total Referral Earnings bug where it incorrectly showed 0 PRC.
+    *   Fix tooltips not being responsive to taps on mobile devices.
+    *   Add a password visibility (eye) icon on the registration form.
+3.  **Feature Implementation**:
+    *   Implement a Full carry forward policy for unused monthly PRC redemption limits.
+    *   Add explanatory tooltips across the application to clarify various metrics and fields.
+    *   Create a detailed PRC breakdown to explain why Lifetime Earnings doesn't equal Balance + Redeemed, showing all deductions like Luxury Life Savings, Service Charges, Admin Adjustments, and Burned PRC.
+    *   Rename Loan EMI to Pay EMI to prevent user confusion and simplify the associated form to include only essential fields.
+    *   Implement a new configurable charging system for all bill payments and gift cards, based on the formula: . This includes creating an admin interface to manage these charges.
+4.  **Final Request**: Verify that the new admin settings page for charges is working correctly and then deploy the application.
+
+**User's preferred language**: The user communicates in a mix of **Marathi** and **English**. The next agent MUST respond in the same mixed language to maintain rapport and ensure clear communication.
 
 **what currently exists?**
-The application is a full-stack platform with a React frontend and a FastAPI backend. A significant amount of work was completed in this session:
--   **Core Logic:** The bill payment workflow was updated so that an approve action now immediately sets the request status to completed. The standalone Complete button was removed from the admin UI.
--   **Admin Features:**
-    -   A Delete feature was added for approved subscription payments, allowing admins to revoke a subscription with a reason.
-    -   A Review modal was added for completed bill payments.
-    -   The subscription rejection flow was fixed with a functioning rejection-reason modal.
-    -   KYC requests are now correctly sorted oldest-first.
--   **Form Enhancements:** The credit card payment request form now includes Bank Name and Linked Mobile Number fields.
--   **Gamification:** The Rain Drop game was updated to be more mysterious. All drops now have a  symbol, and UI hints that revealed positive/negative outcomes before tapping have been removed.
--   **Anti-Fraud:** The backend logic for calculating referral bonuses and team size was updated to exclude free 'Explorer' plan users, preventing manipulation of the system.
--   **Data Integrity:** Incorrect PRC-to-INR conversion rates were fixed on the Admin Analytics page.
--   **Architecture Prep:** The codebase was prepared for separating the admin panel. All admin-related frontend code was copied into a new  directory with the correct structure for a separate deployment. A downloadable artifact () containing this deploy-ready code was created. The live production MongoDB URL has been obtained and configured in the  backend's  file.
--   **Critical Bug Resolution:** A major login failure, introduced by an attempt to create a lightweight , was diagnosed and fixed by reverting to the original, stable .
+The project is a web application with a React.js frontend and a monolithic Python (FastAPI) backend using MongoDB as the database. It features a PRC (point-based currency) system where users can earn through mining and referrals, and redeem for bill payments and gift vouchers. Numerous UI/UX improvements and backend features have been added in this session, including a detailed PRC breakdown, mobile-friendly tooltips across the app, and a new configurable charging mechanism for redemptions.
 
 **Last working item**:
--   **Last item agent was working**: The user reported that the PRC balance and Total Earned values were inconsistent between the Mining page and the Orders page. The agent analyzed screenshots, confirmed the discrepancy, and began implementing the user's chosen solution: to fix the balance display and unify the Total Earned label to Lifetime Earnings across all relevant pages for consistency.
+-   **Last item agent was working**: The agent was implementing a new section in the admin panel () to allow administrators to configure the charges for bill payments and gift vouchers (flat processing fee and percentage-based admin charge). The agent had created the backend APIs, a new frontend component (), and integrated it into the main admin settings page (). The last action was adding the UI code for this new section.
 -   **Status**: IN PROGRESS
 -   **Agent Testing Done**: N
--   **Which testing method agent to use?**: screenshot tool. After implementing the fix, the agent must take screenshots of both the  and  pages to verify that the balance value is identical and the Lifetime Earnings label is used consistently.
+-   **Which testing method agent to use?**: frontend testing agent. The agent should first use the screenshot tool to visually verify that the new Redemption Charges section renders correctly on the  page. Then, it should functionally test the Save Changes button, verify the new values are saved in the backend, and confirm that these new charges are correctly reflected on the Bill Payments and Gift Voucher pages for a user.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1**: Balance and Label Mismatch on Mining/Orders Pages (P0 - HIGHEST)
--   **Issue 2**: Referral page data discrepancy in Production (P0 - CRITICAL, Recurring)
--   **Issue 3**: Admin dashboard data discrepancy in Production (P0 - CRITICAL, Recurring)
--   **Issue 4**: Mining auto-pause and reward rate not showing in Production (P1)
--   **Issue 5**: User-facing search bar functionality is broken (P1)
--   **Issue 6**: Login fails when  is refactored (P1, Recurring)
+-   **Issue 1**: (Priority: P0) The admin page for configuring redemption charges is not fully implemented or verified. The user explicitly asked to check if this page is working correctly before deployment.
 
-**Issues Detail:**
--   **Issue 1: Balance and Label Mismatch on Mining/Orders Pages**
-    -   **Attempted fixes**: Analysis is complete. The agent identified the relevant files (, ) and was about to begin coding.
+    -   **Attempted fixes**: The agent created the necessary backend endpoints in  and the frontend components (, ).
     -   **Next debug checklist**:
-        1.  Locate the state or prop responsible for displaying the user's balance on both  and . Ensure they draw from the same, single source of truth (e.g., a global user context).
-        2.  Find all instances of Total Earned on both pages and replace them with Lifetime Earnings.
-        3.  Ensure the value for Lifetime Earnings is calculated consistently, ideally from a single backend data point representing all accumulated PRC.
-        4.  Use the  tool to verify visual consistency on both pages after the changes.
-    -   **Why fix this issue and what will be achieved with the fix?**: This will eliminate significant user confusion and build trust by ensuring financial data is consistent and accurate across the application.
+        1.  Take a screenshot of the  page to check for UI errors and ensure the Redemption Charges section is visible.
+        2.  Check the browser's developer console for any frontend errors on that page.
+        3.  Functionally test the form: input new charge values, click Save Changes, and check for a success message and any console errors.
+        4.  Verify that the backend API () correctly persists the new values.
+        5.  As a user, navigate to the Bill Payments or Gift Vouchers page to confirm the charge breakdown reflects the newly set values.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical feature requested by the user. Completing it will allow administrators to dynamically manage service costs without requiring code changes. It is the final blocker before deployment.
     -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: frontend
-
--   **Issue 2, 3, 4, 5**: These are long-standing production issues from the previous handoff that have not been addressed in this session. They remain critical but are blocked or have not been prioritized.
-    -   **Status**: BLOCKED / NOT STARTED
-
--   **Issue 6: Login fails when  is refactored**
-    -   **Attempted fixes**: An attempt to create a lightweight  by removing admin code broke the login flow entirely. The fix was to revert  to its original state.
-    -   **Next debug checklist**: When re-attempting the refactor, use a git-like diff to compare the working  with the broken one. The issue was likely in the  component or the  function signature. Proceed with small, incremental changes, testing login after each change.
-    -   **Why fix this issue and what will be achieved with the fix?**: A lightweight user app is a prerequisite for a clean separation of the user and admin frontends, leading to better performance and maintainability.
-    -   **Status**: NOT STARTED (after revert)
-    -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: frontend
+    -   **Should Test frontend/backend/both after fix?**: both
+    -   **Blocked on other issue**: None
 
 **In progress Task List**:
--   **Task 1: Unify Earnings Display and Fix Balance Mismatch** (P0)
-    -   **Where to resume**: The agent needs to edit the files  and  to implement the required UI changes.
-    -   **What will be achieved with this?**: A consistent and less confusing user experience regarding their earnings and balance.
+-   **Task 1**: (Priority: P0) Complete and verify the Admin page for redemption charges.
+    -   **Where to resume**: Resume at . The next step is to test the visual and functional aspects of the newly added Redemption Charges section.
+    -   **What will be achieved with this?**: Admins will gain the ability to configure redemption charges, fulfilling a key user requirement and preparing the application for deployment.
     -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: frontend
+    -   **Should Test frontend/backend/both after fix?**: both
+    -   **Blocked on something**: None
 
 **Upcoming and Future Tasks**
--   **Upcoming Tasks:**
-    -   **P0: Deploy Separated Admin Panel**: The code is prepared in  and the live MongoDB URL is known. The next step is to guide the user on creating a new Emergent project, uploading the zip content, and deploying it to the  subdomain.
-    -   **P1: Lightweight User App Refactor**: Carefully remove admin-related code from the main  without breaking the login functionality again. This is crucial for performance and completes the separation.
-    -   **P1: Frontend Notification for Paid Referrals**: The backend now only counts paid referrals. Add a clear message or tooltip on the referral/mining page to inform users that only paid members in their downline contribute to their bonuses.
-    -   **P1: Enhance Rain Drop Game**: Implement further ideas like a Combo System, Fever Mode, Golden/Bomb Drops, a leaderboard, and achievements.
--   **Future Tasks:**
-    -   P2: Advanced Offer Management System for admins.
-    -   P2: ML Risk Scoring for payments.
-    -   P2: Full AdMob + Unity Ads Integration.
-    -   P3: Shareable Achievement Cards for social media.
-    -   P3: Refactor the monolithic .
+-   **Upcoming Tasks**:
+    -   **(P0) Deploy the application**: Once the admin charges feature is fully tested and verified, the user has requested to deploy the application.
 
 **Completed work in this session**
--   **Feature: Admin Deletes Approved Subscription**: Admins can now delete an incorrect subscription approval, which also revokes the user's plan.
--   **Feature:  Workflow**: Implemented logic where approving a bill payment automatically marks it as complete.
--   **Feature: Admin Panel Separation Prep**: Created a fully structured, deploy-ready  folder and  artifact, configured with the live production MongoDB URL.
--   **Bug Fix: Subscription Reject Modal**: Fixed the non-appearing modal for rejecting subscription payments.
--   **Enhancement: Rain Drop Game Mystery Mode**: Made the game unpredictable by removing color hints and adding a ? symbol to drops.
--   **Enhancement: Anti-Fraud for Referrals**: Backend logic updated to exclude free users from referral bonus calculations.
--   **Enhancement: KYC Oldest-First Sorting**: Implemented FIFO sorting for admin KYC review.
--   **Enhancement: Credit Card Form**: Added Bank Name and Linked Mobile Number fields.
--   **Bug Fix: PRC Rate on Admin Dashboard**: Corrected hardcoded PRC-to-INR conversion rate.
--   **Bug Fix: Critical Login Failure**: Diagnosed and resolved a login error by reverting a faulty refactor of .
+-   **PRC Calculation & Display**:
+    -   Fixed label inconsistency for Lifetime Earnings on  and .
+    -   Implemented a detailed PRC breakdown on  to show all credits and deductions (, , , etc.).
+-   **Referral System**:
+    -   Fixed a bug where Total Referral Earnings showed 0 by correctly tracking the referral bonus portion during mining claims in .
+-   **Redemption Logic**:
+    -   Implemented Full Carry Forward for unused monthly PRC redemption limits in .
+    -   Implemented a new, configurable charging system for bill payments and gift vouchers, with a user-facing breakdown.
+-   **UI/UX Enhancements**:
+    -   Added a mobile-responsive  component and deployed it across all major pages (, , , , , , ).
+    -   Renamed Loan EMI to Pay EMI on  and  and added clarifying text.
+    -   Simplified the Pay EMI form in  to essential fields only.
+    -   Added a password visibility toggle icon to the registration page ().
+-   **Admin Functionality**:
+    -   Began creating an admin interface to manage the new redemption charges (, ).
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Referral page data discrepancy in Production**: A critical, long-standing issue where referral data is incorrect on the live site. Status: BLOCKED.
--   **Issue 2: Mining auto-pause/reward rate in Production**: A bug from a previous session where mining features do not work correctly in production. Status: NOT STARTED.
--   **Issue 3: User-facing search bar is broken**: A known bug where the main search bar for users is non-functional. Status: NOT STARTED.
+None. The agent has addressed all issues raised by the user during this session.
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork**: Data inconsistency between preview and production environments remains the most critical underlying issue.
--   **Recurrence count**: 5+
--   **Status**: BLOCKED (This remains a top-priority blocker for the project).
+None.
 
 **Code Architecture**
-The project is being migrated from a single frontend to a dual-frontend architecture sharing one backend.
 
 
 **Key Technical Concepts**
--   **Monorepo-style Separation**: The codebase is being structured to support two separate frontend deployments (user and admin) from a single logical repository, sharing one backend API and database.
--   **State Management & UI Consistency**: The current task highlights the need for a robust way to manage and display user data (like PRC balance) consistently across different components/pages.
--   **Defensive Refactoring**: The  failure underscored the importance of testing critical paths like login after any significant code restructuring.
+-   **Frontend**: React, Material-UI (MUI)
+-   **Backend**: Python (FastAPI)
+-   **Database**: MongoDB
+-   **Architecture**: Monolithic backend with a separate React SPA frontend.
 
 **key DB schema**
--   **vip_payments**:
-    -   : (Boolean, new) Flag to mark a payment as deleted.
-    -   : (Timestamp, new) Records when the deletion occurred.
-    -   : (String, new) Admin who performed the deletion.
-    -   : (String, new) Reason for deletion.
--   **users**: The  field is now used in referral calculations to differentiate between 'explorer' (free) and paid users.
+-   **users**: 
+-   **transactions**:  (types: , , , , , , )
+-   **app_settings**: 
+
+**changes in tech stack**
+None.
 
 **All files of reference**
--   **Core Logic & Endpoints**:
-    -    (Heavily modified for new APIs and logic fixes).
--   **Admin Panel & Features**:
-    -    (Delete/Reject features added).
-    -    (Approve=Complete logic reflected).
-    -    (Sorting logic changed in backend).
-    -    (PRC rate fixed).
--   **User-facing Features & Fixes**:
-    -    (Credit card form updated).
-    -    (Mystery mode implemented).
-    -    (Needs balance/label fix).
-    -    (Needs balance/label fix).
--   **Application Entrypoint**:
-    -    (Reverted to stable version, core of a previous critical bug).
+-   **Created**:
+    -   : A mobile-friendly tooltip that works on tap.
+    -   : A new UI component for admins to manage redemption fees.
+-   **Updated**:
+    -   : Modified extensively to add carry-forward logic, track referral earnings, provide a detailed PRC breakdown, and implement the new configurable charging system.
+    -   : Major UI overhaul to display a comprehensive PRC credit/deduction breakdown.
+    -    & : Updated to display the new charge breakdown to users.
+    -   : Modified to include the new redemption charges component.
+    -   Multiple other frontend files to replace old tooltips with the new  component.
 
 **Areas that need refactoring**:
--   : Needs to be carefully refactored to remove admin code and create a lightweight user application without re-introducing the login bug.
--   The monolithic  is increasingly complex and is a prime candidate for being split into a modular, router-based structure.
+-   The backend file  is a monolith exceeding 25,000 lines. It urgently needs to be refactored into smaller, domain-specific modules/routers (e.g., , , ) to improve maintainability and reduce complexity.
 
 **key api endpoints**
--   : **(NEW)** Soft-deletes a subscription payment and revokes the associated plan.
--   : **(MODIFIED)** Frontend now uses a modal to send a  payload.
--   : **(MODIFIED)** The  action now sets the status directly to .
--   : **(MODIFIED)** Backend query now sorts by  in ascending order (oldest first).
--    & related referral endpoints: **(MODIFIED)** Backend logic now filters out users with the 'explorer' plan from counts.
+-   : GET - Fetches the detailed PRC breakdown for the Orders page.
+-   : POST - Submits a bill payment request, now using the new charging logic.
+-   : GET - Provides a calculated charge breakdown for a given amount.
+-   : GET/POST - A new endpoint for admins to view and update redemption charge settings.
 
 **Critical Info for New Agent**
--   **Language**: Start every response with  before providing English details.
--   **Immediate Task**: Your first action is to fix the PRC balance and Lifetime Earnings label inconsistency on the  and  pages.
--   **Admin Panel Deployment**: This is a top user priority. You have the  artifact and the live MongoDB URL. The next step is to guide the user on deploying this as a new Emergent project. Do not try to re-do the separation work.
--   **Frontend Fragility**: Be extremely cautious when refactoring . A previous attempt broke login completely. Test login thoroughly after any changes to this file.
--   **Production Discrepancies**: The root cause of data differences between preview and production is still unknown and is a major, long-standing blocker. Acknowledge this, but focus on the tasks you can complete in the preview environment.
+-   Your immediate task is to verify and complete the Redemption Charges section in the admin panel. This is the last step before the user's deployment request.
+-   Be extremely cautious when editing . It's a very large monolith, so use search to locate functions and avoid unintended side effects.
+-   The new charging formula is . The values for the admin charge and processing fee are now fetched from the new admin settings.
+-   The user is waiting for deployment, so prioritize testing the final feature thoroughly.
 
 **documents and test reports created in this job**
--    (A deployable artifact for the separated admin panel).
--    (Continuously updated with progress).
+-   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: Confirmed they want to proceed with Option B (GitHub Push) for deploying the admin app. (COMPLETED)
-2.  **User**: Reported the new admin deployment from GitHub shows a blank page. (COMPLETED - Agent fixed missing files and created )
-3.  **User**: Reported the Subscription request reject feature is not working (modal doesn't appear). (COMPLETED - Agent fixed it)
-4.  **User**: Requested to make the Rain Drop game unpredictable, so colors don't hint at outcomes. (COMPLETED - Agent added Mystery Mode)
-5.  **User**: Provided context about setting the MongoDB password via Emergent Support. (COMPLETED - Agent obtained and configured the live URL)
-6.  **User**: Asked for the best way to separate the user app (for mobile) and admin panel (for browser) to increase speed. (COMPLETED - Agent recommended a plan)
-7.  **User**: Confirmed to proceed with the separation plan within the current project. (COMPLETED - Agent stripped admin routes, which caused a login bug)
-8.  **User**: Reported a critical login error in the preview environment after the refactor. (COMPLETED - Agent diagnosed and reverted the change, fixing the login)
-9.  **User**: Confirmed login is now working after the revert. (COMPLETED)
-10. **User (LATEST & PENDING ACTION)**: Reported a PRC balance mismatch and confusing labels between the Mining and Orders pages. (IN PROGRESS)
+1.  **Deploy**: User wants to deploy the app. (PENDING)
+2.  **Deploy**: Repeated request. (PENDING)
+3.  **Admin setting page properly working hot aahet Ka te check kra**: User asks to check if the admin settings page is working. (PENDING)
+4.  **Yes all 1 to 3**: User confirmed all aspects of the new charging system implementation. (DONE)
+5.  **मला सर्व बिल payment आणि Gift Card साठी चार्जेस सेट करून दे...**: Detailed request to implement a new configurable charging system. (IN PROGRESS)
+6.  **Ragistration करताना password visible eye 👁️ icon not showing**: Bug report about missing password visibility toggle. (DONE)
+7.  **IFSC CODE IMP आहे**: Request to re-add the IFSC code to the Pay EMI form. (DONE)
+8.  **Pay EMI sathi आपल्याला minimum fields...**: Request to simplify the Pay EMI form. (DONE)
+9.  **Bill payment madhye जिथे loan /EMI आहे...**: Request to clarify the Loan EMI button. (DONE)
+10. **Tooltip not working in all pages check it**: Report that tooltips are not working on mobile. (DONE)
 
 **Project Health Check:**
--   **Broken**: Referral level display (Production only), User-facing search bar, Mining features (Production only).
+-   **Broken**: The admin settings page for redemption charges () is incomplete and unverified.
 -   **Mocked**: None.
 
 **3rd Party Integrations**
--   **Upstash Redis**: Used for backend caching.
--   **Recharts**: Used for charts on the Admin Analytics dashboard.
--   **canvas-confetti**: Used for the celebration animation in bill payments.
+-    (Icons)
 
 **Testing status**
 -   **Testing agent used after significant changes**: NO
 -   **Troubleshoot agent used after agent stuck in loop**: NO
 -   **Test files created**: None.
--   **Known regressions**: A major login regression was introduced and fixed during this session. This indicates that refactoring critical files like  is high-risk and requires thorough testing.
+-   **Known regressions**: None identified.
 
 **Credentials to test flow:**
--   **Admin User**:  / 
--   **Standard User**:  /  (This user has various test data associated with it)
+-   **User**:  / 
 
 **What agent forgot to execute**
--   The agent did not complete the final implementation of the 
-wtmp begins Mon Feb  2 14:44:16 2026 (fixing the balance/label mismatch).
--   The agent created the  for deployment but has not yet guided the user through the final steps of creating a new Emergent project and deploying it, which is the user's ultimate goal for that task.</analysis>
+The agent has not yet verified or tested the functionality of the new Redemption Charges section in the Admin Settings panel, which was the last feature being worked on. This verification is a direct prerequisite to the user's final request to deploy.</analysis>

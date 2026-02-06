@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://mining-orders-sync.preview.emergentagent.com",
+    "url": "https://charge-settings-hub.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
