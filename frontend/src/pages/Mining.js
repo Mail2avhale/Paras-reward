@@ -416,16 +416,9 @@ const DailyRewards = ({ user }) => {
               <div className="bg-black/20 rounded-2xl p-4 text-center">
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <p className="text-gray-400 text-xs">{globalT('currentBalance')}</p>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="w-3 h-3 text-gray-500 cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[200px]">
-                        <p className="text-xs">Your available PRC balance that can be used for bill payments, vouchers, and marketplace purchases</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <InfoTooltip>
+                    <p>Your available PRC balance that can be used for bill payments, vouchers, and marketplace purchases</p>
+                  </InfoTooltip>
                 </div>
                 <p className="text-2xl font-bold text-white">{(userData?.prc_balance || 0).toFixed(2)}</p>
                 <p className="text-amber-400 text-sm">PRC</p>
@@ -433,16 +426,9 @@ const DailyRewards = ({ user }) => {
               <div className="bg-black/20 rounded-2xl p-4 text-center">
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <p className="text-gray-400 text-xs">{globalT('rewardRate')}</p>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="w-3 h-3 text-gray-500 cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[200px]">
-                        <p className="text-xs">PRC earned per hour. Rate increases with your subscription plan and referral bonuses</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <InfoTooltip>
+                    <p>PRC earned per hour. Rate increases with your subscription plan and referral bonuses</p>
+                  </InfoTooltip>
                 </div>
                 <p className="text-2xl font-bold text-white">{miningRate.toFixed(1)}</p>
                 <p className="text-emerald-400 text-sm">{globalT('perHour')}</p>
