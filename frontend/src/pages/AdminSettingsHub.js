@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Settings, CreditCard, Cpu, Globe, Share2, Shield, Video, CloudRain,
-  ChevronRight, ArrowLeft, Sparkles
+  ChevronRight, ArrowLeft, Sparkles, Receipt
 } from 'lucide-react';
 
 const settingsCategories = [
@@ -16,6 +16,16 @@ const settingsCategories = [
     color: 'from-amber-500 to-orange-500',
     bgColor: 'bg-amber-500/10',
     borderColor: 'border-amber-500/30'
+  },
+  { 
+    id: 'redemption', 
+    label: 'Redemption Charges', 
+    icon: Receipt, 
+    description: 'Processing fee, Admin charges for Bill Payments & Gift Vouchers',
+    path: '/admin/settings?tab=redemption',
+    color: 'from-emerald-500 to-teal-500',
+    bgColor: 'bg-emerald-500/10',
+    borderColor: 'border-emerald-500/30'
   },
   { 
     id: 'system', 
