@@ -260,6 +260,9 @@ const BillPayments = ({ user, onLogout }) => {
                       >
                         <Icon className={`h-6 w-6 mx-auto mb-2 ${selectedType === type.id ? 'text-amber-500' : 'text-gray-500'}`} />
                         <p className={`text-xs font-medium ${selectedType === type.id ? 'text-amber-400' : 'text-gray-400'}`}>{type.label}</p>
+                        {type.sublabel && (
+                          <p className="text-[10px] text-gray-500 mt-0.5">{type.sublabel}</p>
+                        )}
                       </button>
                     );
                   })}
