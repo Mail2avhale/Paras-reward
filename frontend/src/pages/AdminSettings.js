@@ -702,6 +702,104 @@ const AdminSettings = ({ user }) => {
           )}
         </Card>
 
+        {/* Redemption Charges Settings */}
+        <Card className="p-6 shadow-xl mt-6 bg-gray-900/50 border-gray-800">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
+              <Receipt className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-100">Redemption Charges</h2>
+              <p className="text-gray-400">Configure charges for Bill Payments & Gift Vouchers</p>
+            </div>
+          </div>
+
+          {/* Formula Display */}
+          <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/30 rounded-xl p-4 mb-6">
+            <p className="text-emerald-400 text-sm font-semibold mb-2">Charge Formula:</p>
+            <p className="text-white font-mono text-sm">
+              Total PRC = (Amount + Processing Fee + Admin Charges) × 10
+            </p>
+            <p className="text-gray-400 text-xs mt-2">
+              Where: Processing Fee = Flat ₹{redemptionCharges.processing_fee_inr}, Admin = {redemptionCharges.admin_charge_percent}% of Amount, 10 PRC = ₹1
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Processing Fee */}
+            <div className="bg-gradient-to-br from-orange-500/10 to-amber-500/10 border border-orange-500/30 rounded-xl p-5">
+              <label className="flex items-center gap-2 text-sm font-semibold text-orange-400 mb-3">
+                <CreditCard className="h-5 w-5" />
+                Processing Fee (Flat ₹)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={redemptionCharges.processing_fee_inr}
+                onChange={(e) => setRedemptionCharges(prev => ({ ...prev, processing_fee_inr: parseFloat(e.target.value) || 0 }))}
+                className="w-full px-4 py-3 border border-orange-500/30 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-gray-900 text-gray-200 font-mono text-lg"
+              />
+              <p className="text-sm text-orange-400/80 mt-2">
+                Flat fee charged on every redemption
+              </p>
+            </div>
+
+            {/* Admin Charge Percent */}
+            <div className="bg-gradient-to-br from-purple-500/10 to-violet-500/10 border border-purple-500/30 rounded-xl p-5">
+              <label className="flex items-center gap-2 text-sm font-semibold text-purple-400 mb-3">
+                <Percent className="h-5 w-5" />
+                Admin Charges (%)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={redemptionCharges.admin_charge_percent}
+                onChange={(e) => setRedemptionCharges(prev => ({ ...prev, admin_charge_percent: parseFloat(e.target.value) || 0 }))}
+                className="w-full px-4 py-3 border border-purple-500/30 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-900 text-gray-200 font-mono text-lg"
+              />
+              <p className="text-sm text-purple-400/80 mt-2">
+                Percentage of bill amount as admin fee
+              </p>
+            </div>
+          </div>
+
+          {/* Example Calculation */}
+          <div className="mt-6 bg-gray-800/50 border border-gray-700 rounded-xl p-4">
+            <p className="text-gray-400 text-sm font-semibold mb-3">Example: ₹100 Bill Payment</p>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Bill Amount</span>
+                <span className="text-white">₹100 = 1000 PRC</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Processing Fee</span>
+                <span className="text-orange-400">+ ₹{redemptionCharges.processing_fee_inr} = {redemptionCharges.processing_fee_inr * 10} PRC</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Admin Charges ({redemptionCharges.admin_charge_percent}%)</span>
+                <span className="text-purple-400">+ ₹{100 * redemptionCharges.admin_charge_percent / 100} = {100 * redemptionCharges.admin_charge_percent / 100 * 10} PRC</span>
+              </div>
+              <div className="flex justify-between pt-2 border-t border-gray-700 font-semibold">
+                <span className="text-amber-400">Total User Pays</span>
+                <span className="text-amber-400">₹{100 + redemptionCharges.processing_fee_inr + (100 * redemptionCharges.admin_charge_percent / 100)} = {(100 + redemptionCharges.processing_fee_inr + (100 * redemptionCharges.admin_charge_percent / 100)) * 10} PRC</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end mt-6">
+            <Button 
+              onClick={handleSaveRedemptionCharges}
+              disabled={savingRedemption}
+              className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold rounded-lg hover:from-emerald-600 hover:to-teal-700"
+            >
+              {savingRedemption ? 'Saving...' : 'Save Charges'}
+            </Button>
+          </div>
+        </Card>
+
         {/* Marketplace Settings */}
         <Card className="p-6 shadow-xl mt-6 bg-gray-900/50 border-gray-800">
           <div className="flex items-center gap-3 mb-6">
