@@ -160,16 +160,9 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
             <div>
               <div className="flex items-center gap-1 mb-1">
                 <p className="text-gray-400 text-sm">{t('availablePrcBalance')}</p>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="w-3 h-3 text-gray-500 cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent className="bg-gray-800 text-white border-gray-700 max-w-[200px]">
-                      <p className="text-xs">PRC available for voucher redemption. Vouchers are delivered within 24-48 hours after admin approval</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <InfoTooltip>
+                  <p>PRC available for voucher redemption. Vouchers are delivered within 24-48 hours after admin approval</p>
+                </InfoTooltip>
               </div>
               <p className="text-3xl font-bold text-amber-500">{currentUser?.prc_balance?.toFixed(2) || '0.00'}</p>
             </div>
