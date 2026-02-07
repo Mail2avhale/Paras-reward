@@ -440,22 +440,23 @@ const BillPayments = ({ user, onLogout }) => {
 
                 {currentType?.fields.includes('consumer_number') && (
                   <div>
-                    <Label htmlFor="consumer">Consumer Number *</Label>
+                    <Label htmlFor="consumer" className="text-white text-sm font-medium mb-2 block">Consumer Number *</Label>
                     <Input
                       id="consumer"
                       value={formData.consumer_number}
                       onChange={(e) => setFormData({ ...formData, consumer_number: e.target.value })}
                       placeholder="Enter consumer number"
                       required
+                      className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
                     />
                   </div>
                 )}
 
-                {currentType.fields.includes('card_last4') && (
+                {currentType?.fields.includes('card_last4') && (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="card_last4">Card Number (Last 4 digits) *</Label>
+                        <Label htmlFor="card_last4" className="text-white text-sm font-medium mb-2 block">Card Number (Last 4 digits) *</Label>
                         <Input
                           id="card_last4"
                           value={formData.card_last4}
@@ -463,32 +464,35 @@ const BillPayments = ({ user, onLogout }) => {
                           placeholder="XXXX"
                           maxLength={4}
                           required
+                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="cardholder_name">Cardholder Name *</Label>
+                        <Label htmlFor="cardholder_name" className="text-white text-sm font-medium mb-2 block">Cardholder Name *</Label>
                         <Input
                           id="cardholder_name"
                           value={formData.cardholder_name}
                           onChange={(e) => setFormData({ ...formData, cardholder_name: e.target.value })}
                           placeholder="Name on card"
                           required
+                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
                         />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="bank_name">Issuing Bank *</Label>
+                        <Label htmlFor="bank_name" className="text-white text-sm font-medium mb-2 block">Issuing Bank *</Label>
                         <Input
                           id="bank_name"
                           value={formData.bank_name}
                           onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
                           placeholder="e.g., HDFC Bank, SBI, ICICI"
                           required
+                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="linked_mobile">Linked Mobile Number *</Label>
+                        <Label htmlFor="linked_mobile" className="text-white text-sm font-medium mb-2 block">Linked Mobile Number *</Label>
                         <Input
                           id="linked_mobile"
                           type="tel"
@@ -497,19 +501,23 @@ const BillPayments = ({ user, onLogout }) => {
                           placeholder="10-digit mobile number"
                           maxLength={10}
                           required
+                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
                         />
                         {formData.linked_mobile && formData.linked_mobile.length > 0 && !validateMobile(formData.linked_mobile).isValid && (
-                          <p className="text-red-500 text-xs mt-1">Enter valid 10-digit mobile (starts with 6-9)</p>
+                          <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            Enter valid 10-digit mobile (starts with 6-9)
+                          </p>
                         )}
                       </div>
                     </div>
                     <div>
-                      <Label htmlFor="card_type" className="text-gray-300">Card Type *</Label>
+                      <Label htmlFor="card_type" className="text-white text-sm font-medium mb-2 block">Card Type *</Label>
                       <select
                         id="card_type"
                         value={formData.card_type}
                         onChange={(e) => setFormData({ ...formData, card_type: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-700 rounded-md bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        className="w-full h-12 px-4 border border-gray-700/50 rounded-xl bg-gray-800/50 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                         required
                       >
                         <option value="">Select card type</option>
@@ -522,7 +530,7 @@ const BillPayments = ({ user, onLogout }) => {
                   </>
                 )}
 
-                {currentType.fields.includes('loan_account') && (
+                {currentType?.fields.includes('loan_account') && (
                   <>
                     {/* Row 1: Loan Account & Bank Name */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
