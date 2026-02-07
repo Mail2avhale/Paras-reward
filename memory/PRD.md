@@ -33,6 +33,11 @@ Build a PRC (point-based reward currency) system web application where users can
 ## What's Been Implemented (Latest: Feb 2026)
 
 ### Recently Completed
+- [x] **Forgot PIN with MSG91 OTP** (Feb 2026)
+  - Mobile number verification
+  - MSG91 OTP Widget integration
+  - Secure PIN reset after OTP verification
+  - APIs: `/auth/forgot-pin/check-mobile`, `/auth/forgot-pin/verify-otp`, `/auth/forgot-pin/reset`
 - [x] **Auto-login after PIN entry** (Feb 2026)
   - Automatically submits login form when 6 digits entered
   - No need to click "Sign In" button
