@@ -161,19 +161,30 @@ def check_login_rate_limit(identifier: str) -> tuple:
     return True, 0, attempts_left
 
 def record_login_attempt(identifier: str, success: bool):
-    """Record login attempt"""
+    """Record login attempt with progressive lockout"""
     key = f"login:{identifier}"
     current_time = time.time()
     
     if success:
-        # Reset on successful login
-        login_attempt_storage[key] = {"count": 0, "reset_time": current_time + RATE_LIMIT_WINDOW_SECONDS, "locked_until": 0}
+        # Reset everything on successful login
+        login_attempt_storage[key] = {"count": 0, "reset_time": current_time + RATE_LIMIT_WINDOW_SECONDS, "locked_until": 0, "lockout_level": 0}
     else:
         login_attempt_storage[key]["count"] += 1
+        failed_count = login_attempt_storage[key]["count"]
         
-        # Lock for 5 minutes after max attempts
-        if login_attempt_storage[key]["count"] >= RATE_LIMIT_LOGIN_ATTEMPTS:
-            login_attempt_storage[key]["locked_until"] = current_time + 300  # 5 minutes lockout
+        # Progressive lockout based on failed attempts
+        if failed_count >= 5:
+            # 5+ attempts: 24 hour lockout
+            login_attempt_storage[key]["locked_until"] = current_time + LOCKOUT_DURATION_FINAL
+            login_attempt_storage[key]["lockout_level"] = 3
+        elif failed_count >= 4:
+            # 4 attempts: 15 minute lockout
+            login_attempt_storage[key]["locked_until"] = current_time + LOCKOUT_DURATION_SECOND
+            login_attempt_storage[key]["lockout_level"] = 2
+        elif failed_count >= 3:
+            # 3 attempts: 5 minute lockout
+            login_attempt_storage[key]["locked_until"] = current_time + LOCKOUT_DURATION_FIRST
+            login_attempt_storage[key]["lockout_level"] = 1
 
 # ========== ADMIN AUDIT LOGGING ==========
 async def log_admin_action(
