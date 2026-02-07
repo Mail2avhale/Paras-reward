@@ -43,6 +43,7 @@ const Login = lazy(() => import("@/pages/LoginNew"));
 const RegisterSimple = lazy(() => import("@/pages/RegisterSimple"));
 const SetNewPin = lazy(() => import("@/pages/SetNewPin"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPasswordNew"));
+const ForgotPin = lazy(() => import("@/pages/ForgotPin"));
 const SupportTickets = lazy(() => import("@/pages/SupportTickets"));
 // Dashboard.js, DashboardNew.js, DashboardPremium.js removed - not in use
 
