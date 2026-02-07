@@ -3697,12 +3697,12 @@ async def login(
     if not ip_ok:
         raise HTTPException(status_code=429, detail=ip_msg)
     
-    # Check rate limit for login attempts
-    allowed, locked_seconds, attempts_left = check_login_rate_limit(identifier)
+    # Check rate limit for login attempts (Progressive lockout)
+    allowed, locked_seconds, attempts_left, lockout_message = check_login_rate_limit(identifier)
     if not allowed:
         raise HTTPException(
             status_code=429, 
-            detail=f"Too many login attempts. Please try again in {locked_seconds} seconds."
+            detail=lockout_message
         )
     
     # Normalize email to lowercase for case-insensitive matching
