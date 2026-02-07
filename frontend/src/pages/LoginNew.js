@@ -95,8 +95,18 @@ const LoginNew = ({ onLogin }) => {
     return () => clearTimeout(debounceTimer);
   }, [loginData.identifier]);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  // Auto-login when 6-digit PIN is complete
+  useEffect(() => {
+    if (authType === 'pin' && loginData.pin.length === 6 && loginData.identifier && !loading) {
+      // Small delay to show the last digit before submitting
+      const autoLoginTimer = setTimeout(() => {
+        handleLoginSubmit();
+      }, 300);
+      return () => clearTimeout(autoLoginTimer);
+    }
+  }, [loginData.pin, authType, loginData.identifier, loading]);
+
+  const handleLoginSubmit = async () => {
     setPinError('');
     setLoading(true);
 
@@ -184,6 +194,8 @@ const LoginNew = ({ onLogin }) => {
       if (errorMsg.includes('Invalid') || errorMsg.includes('password') || errorMsg.includes('PIN')) {
         if (authType === 'pin') {
           setPinError(errorMsg);
+          // Clear PIN on error so user can re-enter
+          setLoginData(prev => ({ ...prev, pin: '' }));
         } else {
           toast.error(errorMsg);
         }
@@ -194,6 +206,10 @@ const LoginNew = ({ onLogin }) => {
       setLoading(false);
     }
   };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    handleLoginSubmit();
 
   const handleBiometricLogin = async () => {
     if (!loginData.identifier) {
