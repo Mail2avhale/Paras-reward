@@ -1,15 +1,101 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Mail, Lock, User, AlertCircle, CheckCircle, Gift, Phone, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle, CheckCircle, Gift, Phone, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+
+// PIN Input Component
+const PinInput = ({ value, onChange, error, label, testId }) => {
+  const inputRefs = useRef([]);
+  const [pins, setPins] = useState(['', '', '', '', '', '']);
+
+  useEffect(() => {
+    // Update parent value when pins change
+    onChange(pins.join(''));
+  }, [pins]);
+
+  useEffect(() => {
+    // If value is cleared externally, reset pins
+    if (!value) {
+      setPins(['', '', '', '', '', '']);
+    }
+  }, [value]);
+
+  const handleChange = (index, val) => {
+    // Only allow numbers
+    if (val && !/^\d$/.test(val)) return;
+
+    const newPins = [...pins];
+    newPins[index] = val;
+    setPins(newPins);
+
+    // Auto-focus next input
+    if (val && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index, e) => {
+    // Handle backspace
+    if (e.key === 'Backspace') {
+      if (!pins[index] && index > 0) {
+        inputRefs.current[index - 1]?.focus();
+      }
+    }
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    const newPins = [...pins];
+    for (let i = 0; i < pastedData.length; i++) {
+      newPins[i] = pastedData[i];
+    }
+    setPins(newPins);
+    // Focus last filled or next empty
+    const focusIndex = Math.min(pastedData.length, 5);
+    inputRefs.current[focusIndex]?.focus();
+  };
+
+  return (
+    <div>
+      <Label className="mb-2 block">{label}</Label>
+      <div className="flex gap-2 justify-center">
+        {pins.map((pin, index) => (
+          <input
+            key={index}
+            ref={(el) => (inputRefs.current[index] = el)}
+            type="tel"
+            inputMode="numeric"
+            maxLength={1}
+            value={pin}
+            onChange={(e) => handleChange(index, e.target.value)}
+            onKeyDown={(e) => handleKeyDown(index, e)}
+            onPaste={handlePaste}
+            className={`w-12 h-14 text-center text-2xl font-bold rounded-xl border-2 transition-all
+              ${error ? 'border-red-500 bg-red-50' : 'border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200'}
+              ${pin ? 'bg-purple-50 border-purple-300' : 'bg-white'}
+            `}
+            data-testid={`${testId}-${index}`}
+          />
+        ))}
+      </div>
+      {error && (
+        <div className="flex items-center justify-center gap-1 mt-2 text-red-600 text-sm">
+          <AlertCircle className="h-4 w-4" />
+          <span>{error}</span>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const RegisterSimple = () => {
   const navigate = useNavigate();
@@ -20,15 +106,13 @@ const RegisterSimple = () => {
     full_name: '',
     mobile: '',
     email: '',
-    password: '',
-    confirmPassword: '',
+    pin: '',
+    confirmPin: '',
     role: 'user',
     referral_code: refCode
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     if (refCode) {
@@ -61,16 +145,20 @@ const RegisterSimple = () => {
       newErrors.email = 'Invalid email format';
     }
 
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    // PIN validation
+    if (!formData.pin || formData.pin.length !== 6) {
+      newErrors.pin = '6-digit PIN is required';
+    } else if (!/^\d{6}$/.test(formData.pin)) {
+      newErrors.pin = 'PIN must contain only numbers';
+    } else if (/^(\d)\1{5}$/.test(formData.pin)) {
+      newErrors.pin = 'PIN cannot be all same digits (e.g., 111111)';
+    } else if (/^(012345|123456|234567|345678|456789|567890|987654|876543|765432|654321|543210)$/.test(formData.pin)) {
+      newErrors.pin = 'PIN cannot be sequential numbers';
     }
 
-    // Confirm password validation
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+    // Confirm PIN validation
+    if (formData.pin !== formData.confirmPin) {
+      newErrors.confirmPin = 'PINs do not match';
     }
 
     setErrors(newErrors);
@@ -92,7 +180,7 @@ const RegisterSimple = () => {
         full_name: formData.full_name.trim(),
         mobile: formData.mobile,
         email: formData.email,
-        password: formData.password,
+        password: formData.pin, // Backend still uses 'password' field
         role: formData.role,
         referral_code: formData.referral_code || ''
       });
@@ -127,7 +215,7 @@ const RegisterSimple = () => {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md p-8 shadow-2xl">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <div className="w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <User className="h-10 w-10 text-white" />
           </div>
@@ -138,10 +226,10 @@ const RegisterSimple = () => {
         {/* Info Banner */}
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-start gap-3">
-            <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <KeyRound className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
             <div className="text-sm text-blue-900">
-              <p className="font-semibold mb-1">Easy Registration</p>
-              <p>Fill in your details to get started and earn rewards!</p>
+              <p className="font-semibold mb-1">Secure 6-Digit PIN</p>
+              <p>Use a 6-digit PIN for quick and secure login</p>
             </div>
           </div>
         </div>
@@ -179,12 +267,12 @@ const RegisterSimple = () => {
               <Input
                 id="mobile"
                 type="tel"
+                inputMode="numeric"
                 placeholder="10-digit mobile number"
                 value={formData.mobile}
                 onChange={(e) => handleChange('mobile', e.target.value.replace(/\D/g, '').slice(0, 10))}
                 className={`pl-10 ${errors.mobile ? 'border-red-500' : ''}`}
                 data-testid="register-mobile"
-                maxLength={10}
               />
             </div>
             {errors.mobile && (
@@ -207,6 +295,7 @@ const RegisterSimple = () => {
                 value={formData.email}
                 onChange={(e) => handleChange('email', e.target.value)}
                 className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
+                data-testid="register-email"
               />
             </div>
             {errors.email && (
@@ -217,69 +306,33 @@ const RegisterSimple = () => {
             )}
           </div>
 
-          {/* Password */}
-          <div>
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Min 6 characters"
-                value={formData.password}
-                onChange={(e) => handleChange('password', e.target.value)}
-                className={`pl-10 pr-10 ${errors.password ? 'border-red-500' : ''}`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </button>
-            </div>
-            {errors.password && (
-              <div className="flex items-center gap-1 mt-1 text-red-600 text-sm">
-                <AlertCircle className="h-4 w-4" />
-                <span>{errors.password}</span>
-              </div>
-            )}
+          {/* 6-Digit PIN */}
+          <div className="pt-2">
+            <PinInput
+              value={formData.pin}
+              onChange={(val) => handleChange('pin', val)}
+              error={errors.pin}
+              label="Create 6-Digit PIN *"
+              testId="register-pin"
+            />
           </div>
 
-          {/* Confirm Password */}
+          {/* Confirm PIN */}
           <div>
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Input
-                id="confirmPassword"
-                type={showConfirmPassword ? "text" : "password"}
-                placeholder="Re-enter password"
-                value={formData.confirmPassword}
-                onChange={(e) => handleChange('confirmPassword', e.target.value)}
-                className={`pl-10 pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </button>
-            </div>
-            {errors.confirmPassword && (
-              <div className="flex items-center gap-1 mt-1 text-red-600 text-sm">
-                <AlertCircle className="h-4 w-4" />
-                <span>{errors.confirmPassword}</span>
-              </div>
-            )}
+            <PinInput
+              value={formData.confirmPin}
+              onChange={(val) => handleChange('confirmPin', val)}
+              error={errors.confirmPin}
+              label="Confirm 6-Digit PIN *"
+              testId="register-confirm-pin"
+            />
           </div>
 
-          {/* Referral Code (Optional) */}
+          {/* Referral Code */}
           <div>
             <Label htmlFor="referral_code">Referral Code (Optional)</Label>
             <div className="relative">
-              <Gift className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-purple-400" />
+              <Gift className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
                 id="referral_code"
                 type="text"
@@ -287,32 +340,34 @@ const RegisterSimple = () => {
                 value={formData.referral_code}
                 onChange={(e) => handleChange('referral_code', e.target.value.toUpperCase())}
                 className="pl-10"
-                readOnly={!!refCode}
+                data-testid="register-referral"
               />
             </div>
-            {formData.referral_code && (
-              <div className="flex items-center gap-1 mt-1 text-green-600 text-sm">
-                <CheckCircle className="h-4 w-4" />
-                <span>Referral code will be applied</span>
-              </div>
-            )}
           </div>
 
-          {/* Terms Acceptance */}
-          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-            <p className="text-xs text-gray-600 leading-relaxed">
-              By registering, I understand that <span className="font-semibold text-amber-600">Paras Reward</span> is a digital engagement platform. The "mining" feature is for virtual rewards only and does not involve cryptocurrency or real money. 
-              <Link to="/disclaimer" className="text-purple-600 ml-1 hover:underline">Read full disclaimer →</Link>
-            </p>
+          {/* Terms */}
+          <div className="text-xs text-gray-500 text-center">
+            By registering, you agree to our{' '}
+            <Link to="/terms" className="text-purple-600 hover:underline">Terms & Conditions</Link>
+            {' '}and{' '}
+            <Link to="/privacy" className="text-purple-600 hover:underline">Privacy Policy</Link>
           </div>
 
           {/* Submit Button */}
           <Button
             type="submit"
+            className="w-full h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-6 text-lg font-semibold"
+            data-testid="register-submit"
           >
-            {loading ? 'Creating Account...' : 'Create Account'}
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Creating Account...
+              </div>
+            ) : (
+              'Create Account'
+            )}
           </Button>
         </form>
 
@@ -320,18 +375,10 @@ const RegisterSimple = () => {
         <div className="mt-6 text-center">
           <p className="text-gray-600">
             Already have an account?{' '}
-            <Link to="/login" className="text-purple-600 hover:text-purple-700 font-semibold">
-              Login here
+            <Link to="/login" className="text-purple-600 font-semibold hover:underline">
+              Login
             </Link>
           </p>
-        </div>
-
-        {/* Terms */}
-        <div className="mt-6 text-center text-xs text-gray-500">
-          By creating an account, you agree to our{' '}
-          <Link to="/disclaimer" className="text-purple-600 hover:underline">Terms & Disclaimer</Link>
-          {' '}and{' '}
-          <Link to="/privacy" className="text-purple-600 hover:underline">Privacy Policy</Link>
         </div>
       </Card>
     </div>
