@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Mail, LogIn, Eye, EyeOff, Fingerprint, ArrowRight } from 'lucide-react';
+import { Mail, LogIn, Fingerprint, ArrowRight, KeyRound, Phone } from 'lucide-react';
 import { isBiometricSupported, biometricLogin, isBiometricEnabled } from '@/utils/biometricAuth';
 import BiometricSetup from '@/components/BiometricSetup';
 import AnimatedFeedback from '@/components/AnimatedFeedback';
@@ -14,57 +14,138 @@ import AnimatedFeedback from '@/components/AnimatedFeedback';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// PIN Input Component for Login
+const PinInput = ({ value, onChange, error }) => {
+  const inputRefs = useRef([]);
+  const [pins, setPins] = useState(['', '', '', '', '', '']);
+
+  useEffect(() => {
+    onChange(pins.join(''));
+  }, [pins]);
+
+  useEffect(() => {
+    if (!value) {
+      setPins(['', '', '', '', '', '']);
+    }
+  }, [value]);
+
+  const handleChange = (index, val) => {
+    if (val && !/^\d$/.test(val)) return;
+
+    const newPins = [...pins];
+    newPins[index] = val;
+    setPins(newPins);
+
+    if (val && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index, e) => {
+    if (e.key === 'Backspace') {
+      if (!pins[index] && index > 0) {
+        inputRefs.current[index - 1]?.focus();
+      }
+    }
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    const newPins = [...pins];
+    for (let i = 0; i < pastedData.length; i++) {
+      newPins[i] = pastedData[i];
+    }
+    setPins(newPins);
+    const focusIndex = Math.min(pastedData.length, 5);
+    inputRefs.current[focusIndex]?.focus();
+  };
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-3">Enter 6-Digit PIN</label>
+      <div className="flex gap-2 justify-center">
+        {pins.map((pin, index) => (
+          <input
+            key={index}
+            ref={(el) => (inputRefs.current[index] = el)}
+            type="tel"
+            inputMode="numeric"
+            maxLength={1}
+            value={pin}
+            onChange={(e) => handleChange(index, e.target.value)}
+            onKeyDown={(e) => handleKeyDown(index, e)}
+            onPaste={handlePaste}
+            className={`w-12 h-14 text-center text-2xl font-bold rounded-xl border-2 transition-all
+              ${error ? 'border-red-500 bg-red-50 animate-shake' : 'border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200'}
+              ${pin ? 'bg-purple-50 border-purple-400' : 'bg-white'}
+            `}
+            data-testid={`login-pin-${index}`}
+          />
+        ))}
+      </div>
+      {error && (
+        <p className="text-red-500 text-sm text-center mt-2">{error}</p>
+      )}
+    </div>
+  );
+};
+
 const LoginNew = ({ onLogin }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [biometricLoading, setBiometricLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [showBiometricOption, setShowBiometricOption] = useState(false);
   const [showBiometricSetupPrompt, setShowBiometricSetupPrompt] = useState(false);
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [animatedFeedback, setAnimatedFeedback] = useState(null);
+  const [pinError, setPinError] = useState('');
   const [loginData, setLoginData] = useState({
-    identifier: '', // email, mobile, or uid
-    password: '',
+    identifier: '',
+    pin: '',
     device_id: '',
     ip_address: ''
   });
 
   // Generate device ID
-  useState(() => {
+  useEffect(() => {
     const deviceId = localStorage.getItem('device_id') || `DEV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     localStorage.setItem('device_id', deviceId);
     setLoginData(prev => ({ ...prev, device_id: deviceId }));
   }, []);
 
-  // Get IP address (optional - can use a service)
-  useState(async () => {
-    try {
-      const response = await fetch('https://api.ipify.org?format=json');
-      const data = await response.json();
-      setLoginData(prev => ({ ...prev, ip_address: data.ip }));
-    } catch (error) {
-      console.log('Could not fetch IP');
-    }
+  // Get IP address
+  useEffect(() => {
+    const fetchIP = async () => {
+      try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        setLoginData(prev => ({ ...prev, ip_address: data.ip }));
+      } catch (error) {
+        console.log('Could not fetch IP');
+      }
+    };
+    fetchIP();
   }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setPinError('');
     setLoading(true);
 
     try {
-      if (!loginData.identifier || !loginData.password) {
-        toast.error('Please enter your email/mobile and password');
+      if (!loginData.identifier) {
+        toast.error('Please enter your email or mobile number');
         setLoading(false);
         return;
       }
 
-      console.log('=== LOGIN DEBUG ===');
-      console.log('API URL:', API);
-      console.log('Identifier:', loginData.identifier);
-      console.log('Password length:', loginData.password.length);
-      console.log('Full URL:', `${API}/auth/login?identifier=${encodeURIComponent(loginData.identifier)}&password=${encodeURIComponent(loginData.password)}`);
+      if (!loginData.pin || loginData.pin.length !== 6) {
+        setPinError('Please enter your 6-digit PIN');
+        setLoading(false);
+        return;
+      }
 
       const response = await axios.post(
         `${API}/auth/login`,
@@ -72,88 +153,58 @@ const LoginNew = ({ onLogin }) => {
         {
           params: {
             identifier: loginData.identifier,
-            password: loginData.password,
+            password: loginData.pin,
             device_id: loginData.device_id,
             ip_address: loginData.ip_address
           }
         }
       );
 
-      // Check if user is banned
       if (response.data.is_banned) {
         toast.error('Your account has been suspended. Please contact support.');
         setLoading(false);
         return;
       }
 
-      // Show animated success message
+      // Check if user needs to set new PIN (migration)
+      if (response.data.needs_pin_migration) {
+        setLoggedInUser(response.data);
+        toast.info('Please set a new 6-digit PIN for enhanced security');
+        navigate('/set-new-pin', { state: { user: response.data } });
+        return;
+      }
+
       setAnimatedFeedback({
         message: `✅ Welcome Back!\n🎉 Login Successful!`,
         type: 'success',
         duration: 2000
       });
       
-      // CRITICAL: Call onLogin FIRST to set user state and allow authentication
       onLogin(response.data);
       
-      // Navigate based on role
       if (response.data.role === 'admin' || response.data.role === 'sub_admin') {
-        navigate('/admin');
-      } else if (response.data.role === 'manager') {
-        navigate('/manager');
-      } else if (response.data.role === 'master_stockist') {
-        navigate('/master-stockist');
-      } else if (response.data.role === 'sub_stockist') {
-        navigate('/sub-stockist');
+        setTimeout(() => navigate('/admin/dashboard'), 1500);
       } else if (response.data.role === 'outlet') {
-        navigate('/outlet');
+        setTimeout(() => navigate('/outlet/dashboard'), 1500);
+      } else if (response.data.role === 'delivery') {
+        setTimeout(() => navigate('/delivery/dashboard'), 1500);
       } else {
-        navigate('/dashboard');
+        setTimeout(() => navigate('/dashboard'), 1500);
       }
-      
-      // Check if biometric should be offered (skip for admin/manager roles)
-      const biometricSetupShown = localStorage.getItem('biometric_setup_shown');
-      const biometricEnabled = localStorage.getItem('biometric_enabled');
-      const skipBiometricRoles = ['admin', 'sub_admin', 'manager'];
-      
-      if (
-        isBiometricSupported() && 
-        !biometricEnabled && 
-        !biometricSetupShown && 
-        !skipBiometricRoles.includes(response.data.role)
-      ) {
-        // Show biometric setup prompt (non-blocking)
-        setLoggedInUser(response.data);
-        setShowBiometricSetupPrompt(true);
+
+      // Check for biometric setup
+      if (isBiometricSupported() && !isBiometricEnabled()) {
+        setTimeout(() => setShowBiometricSetupPrompt(true), 2000);
       }
+
     } catch (error) {
       console.error('Login error:', error);
+      const errorMsg = error.response?.data?.detail || 'Login failed. Please try again.';
       
-      // Handle specific error cases
-      if (error.response?.status === 404) {
-        // User not registered - show animated feedback
-        setAnimatedFeedback({
-          message: `❌ User Not Registered!\nPlease register to continue.`,
-          type: 'error',
-          duration: 4000
-        });
-        
-        setTimeout(() => {
-          toast.error('Click here to register now', {
-            duration: 5000,
-            action: {
-              label: 'Register Now',
-              onClick: () => navigate('/register')
-            }
-          });
-        }, 4500);
+      if (errorMsg.includes('Invalid') || errorMsg.includes('password') || errorMsg.includes('PIN')) {
+        setPinError('Invalid PIN. Please try again.');
       } else {
-        // Other errors - show animated feedback
-        setAnimatedFeedback({
-          message: `❌ Login Failed!\n${error.response?.data?.detail || 'Check your credentials'}`,
-          type: 'error',
-          duration: 3000
-        });
+        toast.error(errorMsg);
       }
     } finally {
       setLoading(false);
@@ -162,43 +213,28 @@ const LoginNew = ({ onLogin }) => {
 
   const handleBiometricLogin = async () => {
     if (!loginData.identifier) {
-      toast.error('Please enter your email first');
+      toast.error('Please enter your email/mobile first');
       return;
     }
 
     setBiometricLoading(true);
     try {
       const result = await biometricLogin(loginData.identifier);
-      
       if (result.success) {
-        toast.success('Biometric login successful!');
-        onLogin(result.user);
-        
-        // Navigate based on role
-        if (result.user.role === 'admin' || result.user.role === 'sub_admin') {
-          navigate('/admin');
-        } else if (result.user.role === 'manager') {
-          navigate('/manager');
-        } else if (result.user.role === 'master_stockist') {
-          navigate('/master-stockist');
-        } else if (result.user.role === 'sub_stockist') {
-          navigate('/sub-stockist');
-        } else if (result.user.role === 'outlet') {
-          navigate('/outlet');
-        } else {
-          navigate('/dashboard');
-        }
+        setLoginData({ ...loginData, pin: result.pin });
+        document.querySelector('form')?.dispatchEvent(
+          new Event('submit', { cancelable: true, bubbles: true })
+        );
       } else {
-        toast.error(result.error);
+        toast.error(result.error || 'Biometric authentication failed');
       }
     } catch (error) {
-      toast.error('Biometric login failed');
+      toast.error('Biometric authentication failed');
     } finally {
       setBiometricLoading(false);
     }
   };
 
-  // Check if biometric is available
   useEffect(() => {
     if (isBiometricSupported() && isBiometricEnabled()) {
       setShowBiometricOption(true);
@@ -217,83 +253,81 @@ const LoginNew = ({ onLogin }) => {
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
+          {/* Email/Mobile Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">{t('auth.email')} / {t('auth.mobile')} / UID</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Email / Mobile Number / UID
+            </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
                 data-testid="login-identifier-input"
                 type="text"
-                placeholder={t('auth.email')}
+                placeholder="Enter email, mobile or UID"
                 value={loginData.identifier}
-                onChange={(e) => setLoginData({ ...loginData, identifier: e.target.value })}
+                onChange={(e) => {
+                  setLoginData({ ...loginData, identifier: e.target.value });
+                  setPinError('');
+                }}
                 required
                 className="pl-10 py-6 rounded-xl border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">{t('auth.password')}</label>
-            <div className="relative">
-              <Input
-                data-testid="login-password-input"
-                type={showPassword ? "text" : "password"}
-                placeholder={t('auth.password')}
-                value={loginData.password}
-                onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                required
-                className="pr-10 py-6 rounded-xl border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </button>
-            </div>
+          {/* PIN Input */}
+          <div className="pt-2">
+            <PinInput
+              value={loginData.pin}
+              onChange={(val) => {
+                setLoginData({ ...loginData, pin: val });
+                setPinError('');
+              }}
+              error={pinError}
+            />
           </div>
 
+          {/* Forgot PIN */}
           <div className="text-right">
             <Link to="/forgot-password" className="text-sm text-purple-600 hover:text-purple-700 font-medium">
-              {t('auth.forgot_password')}
+              Forgot PIN?
             </Link>
           </div>
 
-          {/* Biometric Login Button */}
+          {/* Biometric Login */}
           {showBiometricOption && loginData.identifier && (
-            <Button
-              type="button"
-              onClick={handleBiometricLogin}
-              disabled={biometricLoading || loading}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-6 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
-            >
-              {biometricLoading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  {t('common.loading')}
+            <>
+              <Button
+                type="button"
+                onClick={handleBiometricLogin}
+                disabled={biometricLoading || loading}
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-6 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+              >
+                {biometricLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Authenticating...
+                  </div>
+                ) : (
+                  <>
+                    <Fingerprint className="h-6 w-6" />
+                    Login with Biometric
+                  </>
+                )}
+              </Button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300"></div>
                 </div>
-              ) : (
-                <>
-                  <Fingerprint className="h-6 w-6" />
-                  {t('auth.biometric_login')}
-                </>
-              )}
-            </Button>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">or use PIN</span>
+                </div>
+              </div>
+            </>
           )}
 
-          {showBiometricOption && loginData.identifier && (
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">or use password</span>
-              </div>
-            </div>
-          )}
-
+          {/* Login Button */}
           <Button
             data-testid="login-submit-btn"
             type="submit"
@@ -303,39 +337,29 @@ const LoginNew = ({ onLogin }) => {
             {loading ? (
               <div className="flex items-center justify-center">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                {t('common.loading')}
+                Signing in...
               </div>
             ) : (
               <>
-                {t('auth.sign_in')}
+                Sign In
                 <ArrowRight className="h-5 w-5" />
               </>
             )}
           </Button>
         </form>
 
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">{t('auth.dont_have_account')}</span>
-            </div>
-          </div>
-
-          <Link to="/register">
-            <Button
-              data-testid="goto-register-btn"
-              type="button"
-              className="w-full mt-4 bg-white border-2 border-purple-600 text-purple-600 hover:bg-purple-50 py-6 rounded-xl text-lg font-semibold transition-all"
-            >
-              {t('auth.sign_up')}
-            </Button>
-          </Link>
+        {/* Register Link */}
+        <div className="mt-6 text-center border-t border-gray-200 pt-6">
+          <p className="text-gray-600">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-purple-600 font-semibold hover:underline">
+              Sign Up
+            </Link>
+          </p>
         </div>
 
-        <p className="text-center text-xs text-gray-500 mt-6">
+        {/* Terms */}
+        <p className="text-xs text-center text-gray-500 mt-4">
           By signing in, you agree to our{' '}
           <Link to="/terms" className="text-purple-600 hover:underline">Terms & Conditions</Link>
           {' '}and{' '}
@@ -343,58 +367,20 @@ const LoginNew = ({ onLogin }) => {
         </p>
       </Card>
 
+      {/* Animated Feedback */}
+      {animatedFeedback && (
+        <AnimatedFeedback
+          {...animatedFeedback}
+          onComplete={() => setAnimatedFeedback(null)}
+        />
+      )}
+
       {/* Biometric Setup Prompt */}
       {showBiometricSetupPrompt && loggedInUser && (
         <BiometricSetup
-          user={loggedInUser}
-          onClose={() => {
-            localStorage.setItem('biometric_setup_shown', 'true');
-            setShowBiometricSetupPrompt(false);
-            onLogin(loggedInUser);
-            // Navigate based on role
-            if (loggedInUser.role === 'admin') {
-              navigate('/admin');
-            } else if (loggedInUser.role === 'manager') {
-              navigate('/manager');
-            } else if (loggedInUser.role === 'master_stockist') {
-              navigate('/master-stockist');
-            } else if (loggedInUser.role === 'sub_stockist') {
-              navigate('/sub-stockist');
-            } else if (loggedInUser.role === 'outlet') {
-              navigate('/outlet');
-            } else {
-              navigate('/dashboard');
-            }
-          }}
-          onSuccess={() => {
-            localStorage.setItem('biometric_setup_shown', 'true');
-            onLogin(loggedInUser);
-            // Navigate based on role
-            if (loggedInUser.role === 'admin') {
-              navigate('/admin');
-            } else if (loggedInUser.role === 'manager') {
-              navigate('/manager');
-            } else if (loggedInUser.role === 'master_stockist') {
-              navigate('/master-stockist');
-            } else if (loggedInUser.role === 'sub_stockist') {
-              navigate('/sub-stockist');
-            } else if (loggedInUser.role === 'outlet') {
-              navigate('/outlet');
-            } else {
-              navigate('/dashboard');
-            }
-          }}
-        />
-      )}
-      
-      {/* Animated Feedback Overlay */}
-      {animatedFeedback && (
-        <AnimatedFeedback
-          message={animatedFeedback.message}
-          type={animatedFeedback.type}
-          duration={animatedFeedback.duration}
-          onClose={() => setAnimatedFeedback(null)}
-          position="center"
+          userId={loggedInUser.uid}
+          onComplete={() => setShowBiometricSetupPrompt(false)}
+          onSkip={() => setShowBiometricSetupPrompt(false)}
         />
       )}
     </div>
