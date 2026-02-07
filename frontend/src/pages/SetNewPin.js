@@ -116,6 +116,7 @@ const SetNewPin = ({ onLogin }) => {
             }}
             error={errors.newPin}
             label="Create New 6-Digit PIN"
+            testId="new-pin"
           />
 
           <PinInput
@@ -126,6 +127,7 @@ const SetNewPin = ({ onLogin }) => {
             }}
             error={errors.confirmPin}
             label="Confirm 6-Digit PIN"
+            testId="confirm-pin"
           />
 
           {/* Tips */}
