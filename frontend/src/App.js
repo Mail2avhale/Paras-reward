@@ -192,6 +192,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/blog/:slug" element={<BlogArticle />} />
             <Route path="/login" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <Login onLogin={handleLogin} />} />
             <Route path="/register" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <RegisterSimple />} />
+            <Route path="/set-new-pin" element={<SetNewPin onLogin={handleLogin} />} />
             <Route path="/forgot-password" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <ForgotPassword />} />
             <Route path="/setup" element={<Setup />} />
             
