@@ -664,24 +664,38 @@ const BillPayments = ({ user, onLogout }) => {
                 <p className="text-amber-300/70 text-xs">PRC (10 PRC = ₹1)</p>
               </div>
             </div>
-              <p className="text-3xl font-bold text-amber-500">{currentUser?.prc_balance?.toFixed(2) || '0.00'}</p>
-              <p className="text-gray-500 text-xs mt-2">100 INR = 1000 PRC</p>
-            </div>
 
-            {/* How it Works */}
-            <div className="bg-gray-900/50 rounded-2xl p-5 border border-gray-800">
-              <h3 className="font-bold text-white mb-3 flex items-center gap-2">
-                <Receipt className="h-5 w-5 text-amber-500" />
+            {/* How it Works - Premium Card */}
+            <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-6 border border-gray-800/50">
+              <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-lg flex items-center justify-center">
+                  <Receipt className="h-4 w-4 text-amber-400" />
+                </div>
                 How It Works
               </h3>
-              <ol className="text-sm text-gray-400 space-y-2">
-                <li>1. Select service type</li>
-                <li>2. Enter amount and details</li>
-                <li>3. PRC deducted immediately</li>
-                <li>4. Admin processes request</li>
-                <li>5. Recharge/payment completed</li>
+              <ol className="text-sm text-gray-400 space-y-3">
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-full flex items-center justify-center text-xs font-bold text-amber-400 flex-shrink-0">1</span>
+                  <span>Select service type</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-full flex items-center justify-center text-xs font-bold text-amber-400 flex-shrink-0">2</span>
+                  <span>Enter amount and details</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-full flex items-center justify-center text-xs font-bold text-amber-400 flex-shrink-0">3</span>
+                  <span>PRC deducted immediately</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-full flex items-center justify-center text-xs font-bold text-amber-400 flex-shrink-0">4</span>
+                  <span>Admin processes request</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-full flex items-center justify-center text-xs font-bold text-green-400 flex-shrink-0">✓</span>
+                  <span>Recharge/payment completed</span>
+                </li>
               </ol>
-              <div className="mt-4 p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">
+              <div className="mt-5 p-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-2xl border border-amber-500/20">
                 <p className="text-xs text-amber-300">
                   <strong>Note:</strong> Service charges apply. PRC will be refunded if request is rejected.
                 </p>
@@ -690,7 +704,7 @@ const BillPayments = ({ user, onLogout }) => {
 
             {/* Security Note for Important Services */}
             {(selectedType === 'credit_card_payment' || selectedType === 'loan_emi') && (
-              <div className="bg-red-500/10 rounded-2xl p-5 border border-red-500/20">
+              <div className="bg-gradient-to-br from-red-500/10 to-rose-500/10 rounded-3xl p-6 border border-red-500/20">
                 <h3 className="font-bold text-red-400 mb-3 flex items-center gap-2">
                   <AlertCircle className="h-5 w-5 text-red-500" />
                   {selectedType === 'loan_emi' ? 'Pay Your Existing EMIs' : 'Security Notice'}
