@@ -30,19 +30,33 @@ Build a PRC (point-based reward currency) system web application where users can
 - Financial reporting
 - PRC analytics
 
-## What's Been Implemented (Latest: Dec 2025)
+## What's Been Implemented (Latest: Feb 2026)
 
 ### Recently Completed
+- [x] **Masked PIN Input with Show/Hide Toggle** (Feb 2026)
+  - Created reusable `PinInput.js` component
+  - PIN digits masked by default (shows • dots)
+  - Eye icon toggles visibility
+  - Applied to Login, Registration, and SetNewPin pages
+  - Fixed React infinite loop bug using useRef pattern
+- [x] **6-Digit PIN Authentication System** (Dec 2025)
+  - Replaced traditional password with 6-digit PIN
+  - Weak PIN validation (blocks sequential/repeated digits)
+  - Hybrid login for legacy password users
+  - Forced PIN migration for old users
+- [x] **Progressive Account Lockout** (Dec 2025)
+  - 5 min lock after 3 failed attempts
+  - 24 hour lock after 5 failed attempts
+  - Login history tracking
 - [x] Admin Redemption Charges configuration page
   - Processing Fee (flat INR)
   - Admin Charge (percentage)
   - Formula: Total PRC = (Amount + Processing Fee + Admin Charges) × 10
+- [x] Contact Details Feature (Admin + Landing page)
+- [x] Advanced Support Ticket System
+- [x] SEO & Policy Pages (Privacy, Terms, Disclaimer)
 - [x] Fixed infinite redirect loop in AdminSettingsHub
 - [x] Mobile-responsive InfoTooltip component across all pages
-- [x] "Pay EMI" feature (renamed from "Loan EMI")
-- [x] Password visibility toggle on registration
-- [x] Full carry-forward for unused monthly PRC limits
-- [x] Detailed PRC breakdown on Orders page
 
 ### Key API Endpoints
 - `/api/redemption/charge-settings` - GET charge settings
