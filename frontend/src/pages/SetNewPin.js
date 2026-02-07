@@ -1,92 +1,14 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { KeyRound, Shield, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
+import PinInput from '@/components/PinInput';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
-
-// PIN Input Component
-const PinInput = ({ value, onChange, error, label }) => {
-  const inputRefs = useRef([]);
-  const [pins, setPins] = useState(['', '', '', '', '', '']);
-
-  useEffect(() => {
-    onChange(pins.join(''));
-  }, [pins]);
-
-  useEffect(() => {
-    if (!value) {
-      setPins(['', '', '', '', '', '']);
-    }
-  }, [value]);
-
-  const handleChange = (index, val) => {
-    if (val && !/^\d$/.test(val)) return;
-
-    const newPins = [...pins];
-    newPins[index] = val;
-    setPins(newPins);
-
-    if (val && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyDown = (index, e) => {
-    if (e.key === 'Backspace') {
-      if (!pins[index] && index > 0) {
-        inputRefs.current[index - 1]?.focus();
-      }
-    }
-  };
-
-  const handlePaste = (e) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    const newPins = [...pins];
-    for (let i = 0; i < pastedData.length; i++) {
-      newPins[i] = pastedData[i];
-    }
-    setPins(newPins);
-    const focusIndex = Math.min(pastedData.length, 5);
-    inputRefs.current[focusIndex]?.focus();
-  };
-
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-3">{label}</label>
-      <div className="flex gap-2 justify-center">
-        {pins.map((pin, index) => (
-          <input
-            key={index}
-            ref={(el) => (inputRefs.current[index] = el)}
-            type="tel"
-            inputMode="numeric"
-            maxLength={1}
-            value={pin}
-            onChange={(e) => handleChange(index, e.target.value)}
-            onKeyDown={(e) => handleKeyDown(index, e)}
-            onPaste={handlePaste}
-            className={`w-12 h-14 text-center text-2xl font-bold rounded-xl border-2 transition-all
-              ${error ? 'border-red-500 bg-red-50' : 'border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200'}
-              ${pin ? 'bg-purple-50 border-purple-400' : 'bg-white'}
-            `}
-          />
-        ))}
-      </div>
-      {error && (
-        <p className="text-red-500 text-sm text-center mt-2 flex items-center justify-center gap-1">
-          <AlertCircle className="h-4 w-4" />
-          {error}
-        </p>
-      )}
-    </div>
-  );
-};
 
 const SetNewPin = ({ onLogin }) => {
   const navigate = useNavigate();

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -7,95 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Mail, Lock, User, AlertCircle, CheckCircle, Gift, Phone, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
+import PinInput from '@/components/PinInput';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
-
-// PIN Input Component
-const PinInput = ({ value, onChange, error, label, testId }) => {
-  const inputRefs = useRef([]);
-  const [pins, setPins] = useState(['', '', '', '', '', '']);
-
-  useEffect(() => {
-    // Update parent value when pins change
-    onChange(pins.join(''));
-  }, [pins]);
-
-  useEffect(() => {
-    // If value is cleared externally, reset pins
-    if (!value) {
-      setPins(['', '', '', '', '', '']);
-    }
-  }, [value]);
-
-  const handleChange = (index, val) => {
-    // Only allow numbers
-    if (val && !/^\d$/.test(val)) return;
-
-    const newPins = [...pins];
-    newPins[index] = val;
-    setPins(newPins);
-
-    // Auto-focus next input
-    if (val && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyDown = (index, e) => {
-    // Handle backspace
-    if (e.key === 'Backspace') {
-      if (!pins[index] && index > 0) {
-        inputRefs.current[index - 1]?.focus();
-      }
-    }
-  };
-
-  const handlePaste = (e) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    const newPins = [...pins];
-    for (let i = 0; i < pastedData.length; i++) {
-      newPins[i] = pastedData[i];
-    }
-    setPins(newPins);
-    // Focus last filled or next empty
-    const focusIndex = Math.min(pastedData.length, 5);
-    inputRefs.current[focusIndex]?.focus();
-  };
-
-  return (
-    <div>
-      <Label className="mb-2 block">{label}</Label>
-      <div className="flex gap-2 justify-center">
-        {pins.map((pin, index) => (
-          <input
-            key={index}
-            ref={(el) => (inputRefs.current[index] = el)}
-            type="tel"
-            inputMode="numeric"
-            maxLength={1}
-            value={pin}
-            onChange={(e) => handleChange(index, e.target.value)}
-            onKeyDown={(e) => handleKeyDown(index, e)}
-            onPaste={handlePaste}
-            className={`w-12 h-14 text-center text-2xl font-bold rounded-xl border-2 transition-all
-              ${error ? 'border-red-500 bg-red-50' : 'border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200'}
-              ${pin ? 'bg-purple-50 border-purple-300' : 'bg-white'}
-            `}
-            data-testid={`${testId}-${index}`}
-          />
-        ))}
-      </div>
-      {error && (
-        <div className="flex items-center justify-center gap-1 mt-2 text-red-600 text-sm">
-          <AlertCircle className="h-4 w-4" />
-          <span>{error}</span>
-        </div>
-      )}
-    </div>
-  );
-};
 
 const RegisterSimple = () => {
   const navigate = useNavigate();
