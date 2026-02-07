@@ -320,6 +320,51 @@ async def is_system_locked(feature: str = None) -> bool:
     locked_features = status.get("locked_features", [])
     return feature in locked_features if feature else False
 
+def parse_user_agent(user_agent: str) -> dict:
+    """Parse user agent string to extract device info"""
+    if not user_agent:
+        return {"device": "unknown", "os": "unknown", "browser": "unknown"}
+    
+    ua_lower = user_agent.lower()
+    
+    # Detect device type
+    if "mobile" in ua_lower or "android" in ua_lower or "iphone" in ua_lower:
+        device = "Mobile"
+    elif "tablet" in ua_lower or "ipad" in ua_lower:
+        device = "Tablet"
+    else:
+        device = "Desktop"
+    
+    # Detect OS
+    if "android" in ua_lower:
+        os_name = "Android"
+    elif "iphone" in ua_lower or "ipad" in ua_lower or "ios" in ua_lower:
+        os_name = "iOS"
+    elif "windows" in ua_lower:
+        os_name = "Windows"
+    elif "mac" in ua_lower:
+        os_name = "macOS"
+    elif "linux" in ua_lower:
+        os_name = "Linux"
+    else:
+        os_name = "Unknown"
+    
+    # Detect browser
+    if "chrome" in ua_lower and "edg" not in ua_lower:
+        browser = "Chrome"
+    elif "firefox" in ua_lower:
+        browser = "Firefox"
+    elif "safari" in ua_lower and "chrome" not in ua_lower:
+        browser = "Safari"
+    elif "edg" in ua_lower:
+        browser = "Edge"
+    elif "opera" in ua_lower:
+        browser = "Opera"
+    else:
+        browser = "Unknown"
+    
+    return {"device": device, "os": os_name, "browser": browser}
+
 # MongoDB connection with Atlas-compatible settings
 mongo_url = os.environ['MONGO_URL']
 
