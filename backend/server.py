@@ -145,20 +145,41 @@ def check_rate_limit(key: str, max_requests: int, window_seconds: int = RATE_LIM
     return True
 
 def check_login_rate_limit(identifier: str) -> tuple:
-    """Check login rate limit. Returns (allowed: bool, locked_until: int, attempts_left: int)"""
+    """Check login rate limit with progressive lockout. Returns (allowed: bool, locked_until: int, attempts_left: int, lockout_message: str)"""
     current_time = time.time()
     key = f"login:{identifier}"
     
     # Check if locked
     if login_attempt_storage[key]["locked_until"] > current_time:
-        return False, int(login_attempt_storage[key]["locked_until"] - current_time), 0
+        remaining_seconds = int(login_attempt_storage[key]["locked_until"] - current_time)
+        lockout_level = login_attempt_storage[key].get("lockout_level", 1)
+        
+        # Format time remaining
+        if remaining_seconds >= 3600:
+            hours = remaining_seconds // 3600
+            minutes = (remaining_seconds % 3600) // 60
+            time_msg = f"{hours} hour{'s' if hours > 1 else ''} {minutes} minute{'s' if minutes > 1 else ''}"
+        elif remaining_seconds >= 60:
+            minutes = remaining_seconds // 60
+            time_msg = f"{minutes} minute{'s' if minutes > 1 else ''}"
+        else:
+            time_msg = f"{remaining_seconds} second{'s' if remaining_seconds > 1 else ''}"
+        
+        if lockout_level >= 3:
+            message = f"🔒 Account locked for 24 hours due to multiple failed attempts. Try again in {time_msg}."
+        elif lockout_level == 2:
+            message = f"⚠️ Account temporarily locked (15 min). Try again in {time_msg}."
+        else:
+            message = f"⏳ Too many attempts. Try again in {time_msg}."
+            
+        return False, remaining_seconds, 0, message
     
     # Reset if window expired
     if current_time > login_attempt_storage[key]["reset_time"]:
-        login_attempt_storage[key] = {"count": 0, "reset_time": current_time + RATE_LIMIT_WINDOW_SECONDS, "locked_until": 0}
+        login_attempt_storage[key] = {"count": 0, "reset_time": current_time + RATE_LIMIT_WINDOW_SECONDS, "locked_until": 0, "lockout_level": 0}
     
     attempts_left = RATE_LIMIT_LOGIN_ATTEMPTS - login_attempt_storage[key]["count"]
-    return True, 0, attempts_left
+    return True, 0, attempts_left, ""
 
 def record_login_attempt(identifier: str, success: bool):
     """Record login attempt with progressive lockout"""
