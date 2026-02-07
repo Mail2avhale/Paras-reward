@@ -3795,6 +3795,33 @@ async def login(
     # Record successful login
     record_login_attempt(identifier, True)
     
+    # Save login history for user
+    login_history_entry = {
+        "user_id": user["uid"],
+        "login_time": datetime.now(timezone.utc).isoformat(),
+        "ip_address": real_ip,
+        "device_id": device_id or "unknown",
+        "user_agent": user_agent[:200] if user_agent else "unknown",
+        "device_info": parse_user_agent(user_agent) if user_agent else {},
+        "login_type": "pin",
+        "success": True
+    }
+    
+    # Insert login history
+    await db.login_history.insert_one(login_history_entry)
+    
+    # Update user's last login info
+    await db.users.update_one(
+        {"uid": user["uid"]},
+        {
+            "$set": {
+                "last_login": datetime.now(timezone.utc).isoformat(),
+                "last_login_ip": real_ip,
+                "last_login_device": device_id or "unknown"
+            }
+        }
+    )
+    
     # Check VIP membership expiry and add renewal message
     vip_expiry_message = None
     if user.get("membership_type") == "vip":
