@@ -195,6 +195,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/register" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <RegisterSimple />} />
             <Route path="/set-new-pin" element={<SetNewPin onLogin={handleLogin} />} />
             <Route path="/forgot-password" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <ForgotPassword />} />
+            <Route path="/forgot-pin" element={user ? <Navigate to={getRoleBasedRoute(user)} /> : <ForgotPin />} />
             <Route path="/setup" element={<Setup />} />
             
             {/* Static Pages */}
