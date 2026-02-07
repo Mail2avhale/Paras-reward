@@ -3585,6 +3585,63 @@ async def register_user(request: Request):
         "risk_level": fraud_check.get('risk_level', 'low')
     }
 
+@api_router.post("/auth/set-new-pin")
+async def set_new_pin(request: Request):
+    """Set new PIN for existing users (migration from password to PIN)"""
+    try:
+        body = await request.json()
+        user_id = body.get('user_id')
+        new_pin = body.get('new_pin')
+        
+        if not user_id or not new_pin:
+            raise HTTPException(status_code=400, detail="User ID and new PIN are required")
+        
+        # Validate PIN format
+        if not new_pin.isdigit() or len(new_pin) != 6:
+            raise HTTPException(status_code=400, detail="PIN must be exactly 6 digits")
+        
+        # Check for weak PINs
+        if len(set(new_pin)) == 1:  # All same digits
+            raise HTTPException(status_code=400, detail="PIN cannot be all same digits")
+        
+        sequential = ['012345', '123456', '234567', '345678', '456789', '567890', 
+                      '987654', '876543', '765432', '654321', '543210']
+        if new_pin in sequential:
+            raise HTTPException(status_code=400, detail="PIN cannot be sequential numbers")
+        
+        # Find user
+        user = await db.users.find_one({
+            "$or": [
+                {"uid": user_id},
+                {"email": {"$regex": f"^{user_id}$", "$options": "i"}}
+            ]
+        })
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Hash and save new PIN
+        hashed_pin = pwd_context.hash(new_pin)
+        
+        await db.users.update_one(
+            {"_id": user["_id"]},
+            {
+                "$set": {
+                    "password": hashed_pin,
+                    "password_hash": hashed_pin,
+                    "pin_migrated": True,
+                    "pin_migrated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        return {"success": True, "message": "PIN set successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.post("/auth/login")
 async def login(
     request: Request,
