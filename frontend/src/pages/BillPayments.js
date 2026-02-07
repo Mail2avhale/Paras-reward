@@ -414,9 +414,31 @@ const BillPayments = ({ user, onLogout }) => {
                     </div>
                   )}
                 </div>
+
+                {/* Dynamic Fields Based on Service Type */}
+                {currentType?.fields.includes('phone_number') && (
+                  <div>
+                    <Label htmlFor="phone" className="text-gray-300 text-sm font-medium mb-2 block">Mobile Number *</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={formData.phone_number}
+                      onChange={(e) => setFormData({ ...formData, phone_number: formatMobile(e.target.value) })}
+                      placeholder="10-digit mobile number"
+                      maxLength={10}
+                      required
+                      className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
+                    />
+                    {formData.phone_number && formData.phone_number.length > 0 && !validateMobile(formData.phone_number).isValid && (
+                      <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        Enter valid 10-digit mobile (starts with 6-9)
+                      </p>
+                    )}
+                  </div>
                 )}
 
-                {currentType.fields.includes('consumer_number') && (
+                {currentType?.fields.includes('consumer_number') && (
                   <div>
                     <Label htmlFor="consumer">Consumer Number *</Label>
                     <Input
