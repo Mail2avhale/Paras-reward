@@ -4007,6 +4007,11 @@ async def login(
     
     # Build response with tokens
     response_data = User(**user).model_dump()
+    
+    # Check if user needs PIN migration (old password users)
+    if not user.get("pin_migrated", False):
+        response_data["needs_pin_migration"] = True
+    
     if access_token:
         response_data["access_token"] = access_token
         response_data["refresh_token"] = refresh_token
