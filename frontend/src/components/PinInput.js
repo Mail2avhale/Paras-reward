@@ -108,7 +108,8 @@ const PinInput = ({ value, onChange, error, label, testId = 'pin', autoFocus = f
                 onChange={(e) => handleChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 onPaste={handlePaste}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                className="absolute inset-0 w-full h-full z-10"
+                style={{ opacity: 0, caretColor: 'transparent' }}
                 data-testid={`${testId}-${index}`}
                 autoComplete="off"
               />
