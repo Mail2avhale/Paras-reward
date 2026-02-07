@@ -719,15 +719,22 @@ const BillPayments = ({ user, onLogout }) => {
           </div>
         </div>
 
-        {/* Request History */}
-        <div className="bg-gray-900/50 rounded-2xl p-5 border border-gray-800 mt-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-white">Request History</h2>
-            <p className="text-sm text-gray-500">Processing: 3-7 days</p>
+        {/* Request History - Premium Card */}
+        <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-6 border border-gray-800/50 shadow-2xl mt-8">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl flex items-center justify-center">
+                <Clock className="h-5 w-5 text-purple-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white">Request History</h2>
+                <p className="text-xs text-gray-500">Processing time: 3-7 days</p>
+              </div>
+            </div>
           </div>
           
           {/* Status Filter Tabs */}
-          <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+          <div className="flex gap-2 mb-5 overflow-x-auto pb-2 scrollbar-hide">
             {[
               { id: 'all', label: 'All', count: requests.length },
               { id: 'pending', label: 'Pending', count: requests.filter(r => r.status === 'pending').length, color: 'yellow' },
@@ -738,14 +745,14 @@ const BillPayments = ({ user, onLogout }) => {
               <button
                 key={tab.id}
                 onClick={() => { setStatusFilter(tab.id); setCurrentPage(1); }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
                   statusFilter === tab.id
-                    ? tab.color === 'yellow' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                    : tab.color === 'blue' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                    : tab.color === 'green' ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                    : tab.color === 'red' ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                    : 'bg-gray-700 text-white border border-gray-600'
-                    : 'bg-gray-800/50 text-gray-400 border border-gray-700 hover:bg-gray-800'
+                    ? tab.color === 'yellow' ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 text-yellow-400 border border-yellow-500/40'
+                    : tab.color === 'blue' ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-400 border border-blue-500/40'
+                    : tab.color === 'green' ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-400 border border-green-500/40'
+                    : tab.color === 'red' ? 'bg-gradient-to-r from-red-500/20 to-rose-500/20 text-red-400 border border-red-500/40'
+                    : 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400 border border-amber-500/40'
+                    : 'bg-gray-800/50 text-gray-400 border border-gray-700/50 hover:bg-gray-800 hover:border-gray-600'
                 }`}
               >
                 {tab.label}
