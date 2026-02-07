@@ -605,49 +605,65 @@ const BillPayments = ({ user, onLogout }) => {
                   </>
                 )}
 
-                {currentType.fields.includes('operator') && (
+                {currentType?.fields.includes('operator') && (
                   <div>
-                    <Label htmlFor="operator">Operator/Provider *</Label>
+                    <Label htmlFor="operator" className="text-gray-300 text-sm font-medium mb-2 block">Operator/Provider *</Label>
                     <Input
                       id="operator"
                       value={formData.operator}
                       onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
                       placeholder="e.g., Airtel, Jio, Vi"
                       required
+                      className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
                     />
                   </div>
                 )}
 
-                {currentType.fields.includes('biller_name') && (
+                {currentType?.fields.includes('biller_name') && (
                   <div>
-                    <Label htmlFor="biller">Biller Name *</Label>
+                    <Label htmlFor="biller" className="text-gray-300 text-sm font-medium mb-2 block">Biller Name *</Label>
                     <Input
                       id="biller"
                       value={formData.biller_name}
                       onChange={(e) => setFormData({ ...formData, biller_name: e.target.value })}
                       placeholder="Enter biller/provider name"
                       required
+                      className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
                     />
                   </div>
                 )}
 
+                {/* Submit Button - Premium */}
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-900 font-bold rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                  className="w-full py-4 mt-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:via-orange-400 hover:to-amber-400 text-gray-900 font-bold rounded-2xl flex items-center justify-center gap-3 transition-all disabled:opacity-50 shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 transform hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  <Send className="h-4 w-4" />
-                  {loading ? 'Processing...' : 'Redeem'}
+                  <Send className="h-5 w-5" />
+                  {loading ? 'Processing...' : `Pay ${totalPRC > 0 ? totalPRC.toFixed(0) + ' PRC' : 'Now'}`}
                 </button>
               </form>
             </div>
           </div>
 
-          {/* Right: Balance & Info */}
-          <div className="space-y-4">
-            {/* PRC Balance */}
-            <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 rounded-2xl p-5 border border-amber-500/30">
-              <p className="text-gray-400 text-sm mb-2">Available PRC Balance</p>
+          {/* Right: Balance & Previous Requests */}
+          <div className="space-y-6">
+            {/* PRC Balance Card - Premium */}
+            <div className="bg-gradient-to-br from-amber-500/20 via-orange-500/10 to-amber-600/20 rounded-3xl p-6 border border-amber-500/30 relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/20 rounded-full blur-2xl"></div>
+              <div className="relative">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <span className="text-white text-xl font-bold">₹</span>
+                  </div>
+                  <div>
+                    <p className="text-amber-300/70 text-xs uppercase tracking-wide">Available Balance</p>
+                    <p className="text-3xl font-bold text-white">{currentUser?.prc_balance?.toLocaleString() || 0}</p>
+                  </div>
+                </div>
+                <p className="text-amber-300/70 text-xs">PRC (10 PRC = ₹1)</p>
+              </div>
+            </div>
               <p className="text-3xl font-bold text-amber-500">{currentUser?.prc_balance?.toFixed(2) || '0.00'}</p>
               <p className="text-gray-500 text-xs mt-2">100 INR = 1000 PRC</p>
             </div>
