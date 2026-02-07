@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Mail, LogIn, Fingerprint, ArrowRight, KeyRound, Phone } from 'lucide-react';
+import { Mail, LogIn, Fingerprint, ArrowRight, KeyRound, Eye, EyeOff, Lock } from 'lucide-react';
 import { isBiometricSupported, biometricLogin, isBiometricEnabled } from '@/utils/biometricAuth';
 import BiometricSetup from '@/components/BiometricSetup';
 import AnimatedFeedback from '@/components/AnimatedFeedback';
@@ -95,15 +95,23 @@ const LoginNew = ({ onLogin }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [checkingAuthType, setCheckingAuthType] = useState(false);
   const [biometricLoading, setBiometricLoading] = useState(false);
   const [showBiometricOption, setShowBiometricOption] = useState(false);
   const [showBiometricSetupPrompt, setShowBiometricSetupPrompt] = useState(false);
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [animatedFeedback, setAnimatedFeedback] = useState(null);
   const [pinError, setPinError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // Auth type: 'unknown', 'pin', 'password'
+  const [authType, setAuthType] = useState('unknown');
+  const [identifierChecked, setIdentifierChecked] = useState(false);
+  
   const [loginData, setLoginData] = useState({
     identifier: '',
     pin: '',
+    password: '',
     device_id: '',
     ip_address: ''
   });
@@ -129,6 +137,40 @@ const LoginNew = ({ onLogin }) => {
     fetchIP();
   }, []);
 
+  // Check auth type when identifier changes (with debounce)
+  useEffect(() => {
+    const checkAuthType = async () => {
+      if (!loginData.identifier || loginData.identifier.length < 3) {
+        setAuthType('unknown');
+        setIdentifierChecked(false);
+        return;
+      }
+
+      setCheckingAuthType(true);
+      try {
+        const response = await axios.get(`${API}/auth/check-auth-type`, {
+          params: { identifier: loginData.identifier }
+        });
+        
+        setAuthType(response.data.auth_type);
+        setIdentifierChecked(true);
+        
+        // Clear previous credential when switching
+        setLoginData(prev => ({ ...prev, pin: '', password: '' }));
+        setPinError('');
+      } catch (error) {
+        console.error('Error checking auth type:', error);
+        setAuthType('pin'); // Default to PIN for new users
+        setIdentifierChecked(true);
+      } finally {
+        setCheckingAuthType(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(checkAuthType, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [loginData.identifier]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setPinError('');
@@ -141,8 +183,17 @@ const LoginNew = ({ onLogin }) => {
         return;
       }
 
-      if (!loginData.pin || loginData.pin.length !== 6) {
+      // Validate based on auth type
+      const credential = authType === 'password' ? loginData.password : loginData.pin;
+      
+      if (authType === 'pin' && (!loginData.pin || loginData.pin.length !== 6)) {
         setPinError('Please enter your 6-digit PIN');
+        setLoading(false);
+        return;
+      }
+      
+      if (authType === 'password' && !loginData.password) {
+        toast.error('Please enter your password');
         setLoading(false);
         return;
       }
@@ -153,7 +204,7 @@ const LoginNew = ({ onLogin }) => {
         {
           params: {
             identifier: loginData.identifier,
-            password: loginData.pin,
+            password: credential,
             device_id: loginData.device_id,
             ip_address: loginData.ip_address
           }
@@ -166,10 +217,12 @@ const LoginNew = ({ onLogin }) => {
         return;
       }
 
-      // Check if user needs to set new PIN (migration)
+      // Check if user needs to set new PIN (migration from password)
       if (response.data.needs_pin_migration) {
-        setLoggedInUser(response.data);
-        toast.info('Please set a new 6-digit PIN for enhanced security');
+        toast.info('Please set a new 6-digit PIN for enhanced security', {
+          duration: 4000,
+          icon: <KeyRound className="h-5 w-5" />
+        });
         navigate('/set-new-pin', { state: { user: response.data } });
         return;
       }
@@ -194,7 +247,10 @@ const LoginNew = ({ onLogin }) => {
 
       // Check for biometric setup
       if (isBiometricSupported() && !isBiometricEnabled()) {
-        setTimeout(() => setShowBiometricSetupPrompt(true), 2000);
+        setTimeout(() => {
+          setLoggedInUser(response.data);
+          setShowBiometricSetupPrompt(true);
+        }, 2000);
       }
 
     } catch (error) {
@@ -202,7 +258,11 @@ const LoginNew = ({ onLogin }) => {
       const errorMsg = error.response?.data?.detail || 'Login failed. Please try again.';
       
       if (errorMsg.includes('Invalid') || errorMsg.includes('password') || errorMsg.includes('PIN')) {
-        setPinError('Invalid PIN. Please try again.');
+        if (authType === 'pin') {
+          setPinError(errorMsg);
+        } else {
+          toast.error(errorMsg);
+        }
       } else {
         toast.error(errorMsg);
       }
@@ -272,30 +332,82 @@ const LoginNew = ({ onLogin }) => {
                 required
                 className="pl-10 py-6 rounded-xl border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
               />
+              {checkingAuthType && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* PIN Input */}
-          <div className="pt-2">
-            <PinInput
-              value={loginData.pin}
-              onChange={(val) => {
-                setLoginData({ ...loginData, pin: val });
-                setPinError('');
-              }}
-              error={pinError}
-            />
-          </div>
+          {/* Auth Type Badge */}
+          {identifierChecked && authType !== 'unknown' && (
+            <div className="flex justify-center">
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                authType === 'pin' 
+                  ? 'bg-green-100 text-green-700' 
+                  : 'bg-amber-100 text-amber-700'
+              }`}>
+                {authType === 'pin' ? '🔢 Login with 6-Digit PIN' : '🔑 Login with Password'}
+              </span>
+            </div>
+          )}
 
-          {/* Forgot PIN */}
-          <div className="text-right">
-            <Link to="/forgot-password" className="text-sm text-purple-600 hover:text-purple-700 font-medium">
-              Forgot PIN?
-            </Link>
-          </div>
+          {/* PIN Input (for migrated users / new users) */}
+          {authType === 'pin' && identifierChecked && (
+            <div className="pt-2">
+              <PinInput
+                value={loginData.pin}
+                onChange={(val) => {
+                  setLoginData({ ...loginData, pin: val });
+                  setPinError('');
+                }}
+                error={pinError}
+              />
+            </div>
+          )}
+
+          {/* Password Input (for old users who haven't migrated) */}
+          {authType === 'password' && identifierChecked && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Input
+                  data-testid="login-password-input"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Enter your password"
+                  value={loginData.password}
+                  onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                  className="pl-10 pr-10 py-6 rounded-xl border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+              <p className="text-xs text-amber-600 mt-2 text-center">
+                After login, you'll be asked to set a new 6-digit PIN
+              </p>
+            </div>
+          )}
+
+          {/* Forgot PIN/Password */}
+          {identifierChecked && authType !== 'unknown' && (
+            <div className="text-right">
+              <Link to="/forgot-password" className="text-sm text-purple-600 hover:text-purple-700 font-medium">
+                {authType === 'pin' ? 'Forgot PIN?' : 'Forgot Password?'}
+              </Link>
+            </div>
+          )}
 
           {/* Biometric Login */}
-          {showBiometricOption && loginData.identifier && (
+          {showBiometricOption && loginData.identifier && authType === 'pin' && (
             <>
               <Button
                 type="button"
@@ -331,7 +443,7 @@ const LoginNew = ({ onLogin }) => {
           <Button
             data-testid="login-submit-btn"
             type="submit"
-            disabled={loading || biometricLoading}
+            disabled={loading || biometricLoading || checkingAuthType || (!identifierChecked && loginData.identifier.length > 2)}
             className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-6 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
           >
             {loading ? (
