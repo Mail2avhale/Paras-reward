@@ -4049,6 +4049,198 @@ async def forgot_password(email: str):
         "reset_token": reset_token  # Remove in production
     }
 
+# ========== FORGOT PIN WITH MSG91 OTP ==========
+
+class ForgotPinRequest(BaseModel):
+    mobile: str
+
+class VerifyOTPTokenRequest(BaseModel):
+    mobile: str
+    access_token: str
+
+class ResetPinRequest(BaseModel):
+    mobile: str
+    new_pin: str
+    reset_token: str
+
+@api_router.post("/auth/forgot-pin/check-mobile")
+async def forgot_pin_check_mobile(request: ForgotPinRequest):
+    """Check if mobile number exists and return widget ID for OTP"""
+    mobile = request.mobile.strip()
+    
+    # Normalize mobile - add 91 if not present
+    if not mobile.startswith("91") and not mobile.startswith("+91"):
+        mobile = "91" + mobile
+    mobile = mobile.replace("+", "")
+    
+    # Check if user exists with this mobile
+    user = await db.users.find_one({
+        "$or": [
+            {"mobile": mobile},
+            {"mobile": mobile[-10:]},  # Last 10 digits
+            {"mobile_number": mobile},
+            {"mobile_number": mobile[-10:]}
+        ]
+    })
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="Mobile number not registered")
+    
+    # Return widget ID for frontend to initiate OTP
+    widget_id = os.environ.get("MSG91_WIDGET_ID", "")
+    
+    return {
+        "success": True,
+        "message": "Mobile number verified",
+        "widget_id": widget_id,
+        "mobile": mobile
+    }
+
+@api_router.post("/auth/forgot-pin/verify-otp")
+async def forgot_pin_verify_otp(request: VerifyOTPTokenRequest):
+    """Verify MSG91 OTP access token and generate reset token"""
+    import httpx
+    
+    mobile = request.mobile.strip().replace("+", "")
+    if not mobile.startswith("91"):
+        mobile = "91" + mobile
+    
+    auth_key = os.environ.get("MSG91_AUTH_KEY", "")
+    
+    if not auth_key:
+        raise HTTPException(status_code=500, detail="MSG91 not configured")
+    
+    # Verify access token with MSG91
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://control.msg91.com/api/v5/widget/verifyAccessToken",
+                headers={"Content-Type": "application/json"},
+                json={
+                    "authkey": auth_key,
+                    "access-token": request.access_token
+                }
+            )
+            
+            result = response.json()
+            
+            if result.get("type") != "success":
+                raise HTTPException(status_code=400, detail="OTP verification failed")
+            
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=500, detail=f"MSG91 API error: {str(e)}")
+    
+    # Find user by mobile
+    user = await db.users.find_one({
+        "$or": [
+            {"mobile": mobile},
+            {"mobile": mobile[-10:]},
+            {"mobile_number": mobile},
+            {"mobile_number": mobile[-10:]}
+        ]
+    })
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Generate PIN reset token
+    reset_token = secrets.token_urlsafe(32)
+    reset_expiry = datetime.now(timezone.utc) + timedelta(minutes=10)
+    
+    await db.users.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {
+                "pin_reset_token": reset_token,
+                "pin_reset_expiry": reset_expiry.isoformat()
+            }
+        }
+    )
+    
+    return {
+        "success": True,
+        "message": "OTP verified successfully",
+        "reset_token": reset_token,
+        "mobile": mobile[-4:]  # Last 4 digits for display
+    }
+
+@api_router.post("/auth/forgot-pin/reset")
+async def forgot_pin_reset(request: ResetPinRequest):
+    """Reset PIN after OTP verification"""
+    mobile = request.mobile.strip().replace("+", "")
+    if not mobile.startswith("91"):
+        mobile = "91" + mobile
+    
+    new_pin = request.new_pin.strip()
+    
+    # Validate PIN format
+    if not new_pin or len(new_pin) != 6 or not new_pin.isdigit():
+        raise HTTPException(status_code=400, detail="PIN must be 6 digits")
+    
+    # Check for weak PINs
+    if len(set(new_pin)) == 1:  # All same digits
+        raise HTTPException(status_code=400, detail="PIN cannot be all same digits")
+    
+    sequential = ["012345", "123456", "234567", "345678", "456789", "567890", 
+                  "987654", "876543", "765432", "654321", "543210"]
+    if new_pin in sequential:
+        raise HTTPException(status_code=400, detail="PIN cannot be sequential numbers")
+    
+    # Find user with valid reset token
+    user = await db.users.find_one({
+        "$or": [
+            {"mobile": mobile},
+            {"mobile": mobile[-10:]},
+            {"mobile_number": mobile},
+            {"mobile_number": mobile[-10:]}
+        ],
+        "pin_reset_token": request.reset_token
+    })
+    
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    
+    # Check token expiry
+    expiry_str = user.get("pin_reset_expiry", "")
+    if expiry_str:
+        try:
+            expiry = datetime.fromisoformat(expiry_str.replace("Z", "+00:00"))
+            if datetime.now(timezone.utc) > expiry:
+                raise HTTPException(status_code=400, detail="Reset token expired")
+        except:
+            pass
+    
+    # Hash new PIN and update
+    hashed_pin = hash_password(new_pin)
+    
+    await db.users.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {
+                "password": hashed_pin,
+                "pin_migrated": True
+            },
+            "$unset": {
+                "pin_reset_token": "",
+                "pin_reset_expiry": ""
+            }
+        }
+    )
+    
+    # Clear any login attempts/lockouts
+    await db.login_attempts.delete_many({
+        "$or": [
+            {"identifier": mobile},
+            {"identifier": mobile[-10:]},
+            {"identifier": user.get("email", "")}
+        ]
+    })
+    
+    return {
+        "success": True,
+        "message": "PIN reset successfully. Please login with your new PIN."
+    }
+
 # ========== BIOMETRIC AUTHENTICATION ROUTES ==========
 
 @api_router.post("/auth/biometric/register-options")
