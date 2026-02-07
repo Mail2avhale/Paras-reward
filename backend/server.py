@@ -3667,6 +3667,30 @@ async def register_user(request: Request):
         "risk_level": fraud_check.get('risk_level', 'low')
     }
 
+@api_router.get("/auth/check-auth-type")
+async def check_auth_type(identifier: str):
+    """Check if user should use PIN or Password login"""
+    normalized_identifier = identifier.lower().strip()
+    
+    # Find user
+    user = await db.users.find_one({
+        "$or": [
+            {"email": {"$regex": f"^{normalized_identifier}$", "$options": "i"}},
+            {"mobile": normalized_identifier},
+            {"uid": normalized_identifier}
+        ]
+    }, {"_id": 0, "pin_migrated": 1, "email": 1})
+    
+    if not user:
+        # User not found - assume new user will use PIN
+        return {"auth_type": "pin", "user_exists": False}
+    
+    # Check if user has migrated to PIN
+    if user.get("pin_migrated", False):
+        return {"auth_type": "pin", "user_exists": True}
+    else:
+        return {"auth_type": "password", "user_exists": True, "needs_migration": True}
+
 @api_router.post("/auth/set-new-pin")
 async def set_new_pin(request: Request):
     """Set new PIN for existing users (migration from password to PIN)"""
