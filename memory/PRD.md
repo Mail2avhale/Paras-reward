@@ -65,16 +65,19 @@ Build a PRC (point-based reward currency) system web application where users can
 - `/api/get-charge-breakdown` - Get charge calculation
 
 ## Test Credentials
-- Admin: `admin@parasreward.com` / `Admin@123`
+- Admin (PIN): `admin@paras.com` / PIN: `123456`
+- Legacy User (Password): `mail2avhale@gmail.com` / Password: `Secure*123`
 
 ## Prioritized Backlog
 
 ### P0 (Critical)
-- [x] Admin Redemption Charges page - DONE
+- [x] Masked PIN Input with Show/Hide Toggle - DONE
+- [x] 6-Digit PIN Authentication System - DONE
 - [ ] Production deployment
 
 ### P1 (High)
-- [ ] Refactor `main.py` into smaller modules
+- [ ] Refactor `server.py` into smaller modules
+  - `routes/auth.py`
   - `routes/users.py`
   - `routes/transactions.py`
   - `routes/admin.py`
@@ -82,10 +85,18 @@ Build a PRC (point-based reward currency) system web application where users can
 ### P2 (Medium)
 - [ ] Add rate limiting for redemption requests
 - [ ] Email notifications for transactions
+- [ ] Two-factor authentication (OTP via SMS/Email)
 
 ### P3 (Low)
 - [ ] Mobile app APK build
 - [ ] Performance optimization
+
+## Key Files Reference
+- `/app/frontend/src/components/PinInput.js` - Reusable PIN input with masking
+- `/app/frontend/src/pages/LoginNew.js` - Hybrid PIN/Password login
+- `/app/frontend/src/pages/RegisterSimple.js` - Registration with PIN
+- `/app/frontend/src/pages/SetNewPin.js` - PIN migration page
+- `/app/backend/server.py` - All backend APIs
 
 ## Database Schema (Key Collections)
 - `users`: User profiles with PRC balance
