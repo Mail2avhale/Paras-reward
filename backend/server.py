@@ -43,16 +43,21 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 hour
 JWT_REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 # Rate limiting configuration
-RATE_LIMIT_LOGIN_ATTEMPTS = 5  # Max login attempts per minute
+RATE_LIMIT_LOGIN_ATTEMPTS = 5  # Max login attempts before final lockout
 RATE_LIMIT_API_CALLS = 100  # Max API calls per minute for admin
-RATE_LIMIT_WINDOW_SECONDS = 60
+RATE_LIMIT_WINDOW_SECONDS = 3600  # 1 hour window for tracking attempts
+
+# Progressive lockout durations (in seconds)
+LOCKOUT_DURATION_FIRST = 300      # 5 minutes after 3 failed attempts
+LOCKOUT_DURATION_SECOND = 900     # 15 minutes after 4 failed attempts  
+LOCKOUT_DURATION_FINAL = 86400    # 24 hours after 5 failed attempts
 
 # Session timeout (30 minutes)
 SESSION_TIMEOUT_MINUTES = 30
 
 # Rate limiting storage (in-memory, per-process)
 rate_limit_storage = defaultdict(lambda: {"count": 0, "reset_time": time.time()})
-login_attempt_storage = defaultdict(lambda: {"count": 0, "reset_time": time.time(), "locked_until": 0})
+login_attempt_storage = defaultdict(lambda: {"count": 0, "reset_time": time.time(), "locked_until": 0, "lockout_level": 0})
 
 # Security bearer
 security = HTTPBearer(auto_error=False)
