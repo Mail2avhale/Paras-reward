@@ -210,6 +210,7 @@ const LoginNew = ({ onLogin }) => {
   const handleLogin = async (e) => {
     e.preventDefault();
     handleLoginSubmit();
+  };
 
   const handleBiometricLogin = async () => {
     if (!loginData.identifier) {
