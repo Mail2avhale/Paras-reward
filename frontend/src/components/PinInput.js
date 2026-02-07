@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
@@ -16,18 +16,25 @@ const PinInput = ({ value, onChange, error, label, testId = 'pin', autoFocus = f
   const inputRefs = useRef([]);
   const [pins, setPins] = useState(['', '', '', '', '', '']);
   const [showPin, setShowPin] = useState(false);
-
-  // Update parent value when pins change
+  const onChangeRef = useRef(onChange);
+  
+  // Keep onChangeRef updated
   useEffect(() => {
-    onChange(pins.join(''));
-  }, [pins, onChange]);
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  // Update parent value when pins change - use ref to avoid infinite loop
+  useEffect(() => {
+    const newValue = pins.join('');
+    onChangeRef.current(newValue);
+  }, [pins]);
 
   // If value is cleared externally, reset pins
   useEffect(() => {
-    if (!value) {
+    if (!value && pins.some(p => p !== '')) {
       setPins(['', '', '', '', '', '']);
     }
-  }, [value]);
+  }, [value, pins]);
 
   // Auto-focus first input on mount if autoFocus is true
   useEffect(() => {
