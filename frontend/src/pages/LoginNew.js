@@ -236,7 +236,7 @@ const LoginNew = ({ onLogin }) => {
       onLogin(response.data);
       
       if (response.data.role === 'admin' || response.data.role === 'sub_admin') {
-        setTimeout(() => navigate('/admin/dashboard'), 1500);
+        setTimeout(() => navigate('/admin'), 1500);
       } else if (response.data.role === 'outlet') {
         setTimeout(() => navigate('/outlet/dashboard'), 1500);
       } else if (response.data.role === 'delivery') {
