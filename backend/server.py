@@ -3796,14 +3796,24 @@ async def login(
             if attempts_left <= 1:
                 await create_security_alert(
                     alert_type="brute_force",
-                    severity="high",
-                    title="🚨 Brute Force Attack Detected",
-                    message=f"Account {user.get('email', identifier)} locked for 5 minutes due to multiple failed login attempts.",
-                    details={"identifier": identifier, "email": user.get('email'), "lockout_minutes": 5},
+                    severity="critical",
+                    title="🚨 Account Locked - 24 Hour Lockout",
+                    message=f"Account {user.get('email', identifier)} has been locked for 24 hours due to 5 failed login attempts. Possible brute force attack.",
+                    details={"identifier": identifier, "email": user.get('email'), "lockout_hours": 24, "ip": real_ip},
                     ip_address=real_ip,
                     user_identifier=identifier
                 )
-            raise HTTPException(status_code=401, detail=f"Invalid password. {attempts_left - 1} attempts remaining.")
+            elif attempts_left <= 2:
+                await create_security_alert(
+                    alert_type="suspicious_login",
+                    severity="high",
+                    title="⚠️ Account Temporarily Locked",
+                    message=f"Account {user.get('email', identifier)} temporarily locked (15 min) after 4 failed attempts.",
+                    details={"identifier": identifier, "email": user.get('email'), "lockout_minutes": 15},
+                    ip_address=real_ip,
+                    user_identifier=identifier
+                )
+            raise HTTPException(status_code=401, detail=f"Invalid PIN. {attempts_left - 1} attempts remaining.")
     else:
         # No password stored - reject login for security
         record_login_attempt(identifier, False)
