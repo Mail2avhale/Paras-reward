@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://charge-settings-hub.preview.emergentagent.com/setup
+   https://pin-input-toggle.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

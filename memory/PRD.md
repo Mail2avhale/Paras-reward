@@ -81,6 +81,6 @@ Build a PRC (point-based reward currency) system web application where users can
 - `gift_voucher_requests`: Voucher redemptions
 
 ## Deployment
-- **Preview URL**: https://charge-settings-hub.preview.emergentagent.com
+- **Preview URL**: https://pin-input-toggle.preview.emergentagent.com
 - **Status**: Ready for production deployment
 - **Action**: Use Emergent "Deploy" button
