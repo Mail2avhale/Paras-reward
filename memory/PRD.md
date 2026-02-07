@@ -33,6 +33,10 @@ Build a PRC (point-based reward currency) system web application where users can
 ## What's Been Implemented (Latest: Feb 2026)
 
 ### Recently Completed
+- [x] **Auto-login after PIN entry** (Feb 2026)
+  - Automatically submits login form when 6 digits entered
+  - No need to click "Sign In" button
+  - 300ms delay to show last digit before submitting
 - [x] **Masked PIN Input with Show/Hide Toggle** (Feb 2026)
   - Created reusable `PinInput.js` component
   - PIN digits masked by default (shows • dots)
