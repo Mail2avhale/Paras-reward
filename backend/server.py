@@ -23761,6 +23761,45 @@ async def update_contact_settings(request: Request):
     
     return {"success": True, "message": "Contact settings updated successfully"}
 
+@api_router.get("/user/security-info/{user_id}")
+async def get_user_security_info(user_id: str):
+    """Get user's security information including last login and login history"""
+    user = await db.users.find_one(
+        {"uid": user_id},
+        {"_id": 0, "last_login": 1, "last_login_ip": 1, "last_login_device": 1, "created_at": 1}
+    )
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get recent login history
+    login_history = await db.login_history.find(
+        {"user_id": user_id},
+        {"_id": 0}
+    ).sort("login_time", -1).limit(10).to_list(10)
+    
+    # Format login history
+    formatted_history = []
+    for login in login_history:
+        device_info = login.get("device_info", {})
+        formatted_history.append({
+            "login_time": login.get("login_time"),
+            "ip_address": login.get("ip_address", "Unknown"),
+            "device": device_info.get("device", "Unknown"),
+            "os": device_info.get("os", "Unknown"),
+            "browser": device_info.get("browser", "Unknown"),
+            "device_id": login.get("device_id", "")[:8] if login.get("device_id") else ""
+        })
+    
+    return {
+        "last_login": user.get("last_login"),
+        "last_login_ip": user.get("last_login_ip"),
+        "last_login_device": user.get("last_login_device"),
+        "account_created": user.get("created_at"),
+        "login_history": formatted_history,
+        "total_logins": len(login_history)
+    }
+
 @api_router.get("/public/contact-info")
 async def get_public_contact_info():
     """Get contact information for public display (Landing page, Contact Us, Footer)"""
