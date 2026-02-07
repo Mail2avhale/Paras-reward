@@ -527,23 +527,25 @@ const BillPayments = ({ user, onLogout }) => {
                     {/* Row 1: Loan Account & Bank Name */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="loan_account">Loan Account Number *</Label>
+                        <Label htmlFor="loan_account" className="text-white text-sm font-medium mb-2 block">Loan Account Number *</Label>
                         <Input
                           id="loan_account"
                           value={formData.loan_account}
                           onChange={(e) => setFormData({ ...formData, loan_account: e.target.value })}
                           placeholder="Enter loan account number"
                           required
+                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="bank_name">Bank/NBFC Name *</Label>
+                        <Label htmlFor="bank_name" className="text-white text-sm font-medium mb-2 block">Bank/NBFC Name *</Label>
                         <Input
                           id="bank_name"
                           value={formData.bank_name}
                           onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
                           placeholder="e.g., HDFC Bank, Bajaj Finance"
                           required
+                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
                         />
                       </div>
                     </div>
@@ -551,7 +553,7 @@ const BillPayments = ({ user, onLogout }) => {
                     {/* Row 2: IFSC Code & Borrower Name */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="ifsc_code">IFSC Code *</Label>
+                        <Label htmlFor="ifsc_code" className="text-white text-sm font-medium mb-2 block">IFSC Code *</Label>
                         <Input
                           id="ifsc_code"
                           value={formData.ifsc_code}
@@ -559,29 +561,37 @@ const BillPayments = ({ user, onLogout }) => {
                           placeholder="e.g., HDFC0001234"
                           maxLength={11}
                           required
+                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
                         />
                         {formData.ifsc_code && formData.ifsc_code.length > 0 && !validateIFSC(formData.ifsc_code).isValid && (
-                          <p className="text-red-500 text-xs mt-1">Enter valid IFSC (e.g., SBIN0001234)</p>
+                          <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            Enter valid IFSC (e.g., SBIN0001234)
+                          </p>
                         )}
                         {formData.ifsc_code && validateIFSC(formData.ifsc_code).isValid && (
-                          <p className="text-green-500 text-xs mt-1">✓ Bank: {validateIFSC(formData.ifsc_code).bankCode}</p>
+                          <p className="text-green-400 text-xs mt-1.5 flex items-center gap-1">
+                            <CheckCircle className="h-3 w-3" />
+                            Bank: {validateIFSC(formData.ifsc_code).bankCode}
+                          </p>
                         )}
                       </div>
                       <div>
-                        <Label htmlFor="borrower_name">Borrower Name *</Label>
+                        <Label htmlFor="borrower_name" className="text-white text-sm font-medium mb-2 block">Borrower Name *</Label>
                         <Input
                           id="borrower_name"
                           value={formData.borrower_name}
                           onChange={(e) => setFormData({ ...formData, borrower_name: e.target.value })}
                           placeholder="Full name as per bank records"
                           required
+                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
                         />
                       </div>
                     </div>
 
                     {/* Row 3: Registered Mobile */}
                     <div>
-                      <Label htmlFor="registered_mobile">Registered Mobile *</Label>
+                      <Label htmlFor="registered_mobile" className="text-white text-sm font-medium mb-2 block">Registered Mobile *</Label>
                       <Input
                         id="registered_mobile"
                         type="tel"
@@ -590,16 +600,20 @@ const BillPayments = ({ user, onLogout }) => {
                         placeholder="10-digit mobile number"
                         maxLength={10}
                         required
+                        className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
                       />
                       {formData.registered_mobile && formData.registered_mobile.length > 0 && !validateMobile(formData.registered_mobile).isValid && (
-                        <p className="text-red-500 text-xs mt-1">Enter valid 10-digit mobile (starts with 6-9)</p>
+                        <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          Enter valid 10-digit mobile (starts with 6-9)
+                        </p>
                       )}
                     </div>
 
                     {/* Info Box */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
-                      <p className="text-sm text-blue-800">
-                        <strong>Note:</strong> Please ensure all details match your loan documents. IFSC code is required for payment processing.
+                    <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-2xl p-4 mt-2">
+                      <p className="text-sm text-blue-300">
+                        <strong className="text-blue-200">Note:</strong> Please ensure all details match your loan documents. IFSC code is required for payment processing.
                       </p>
                     </div>
                   </>
