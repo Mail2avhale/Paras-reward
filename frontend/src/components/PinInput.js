@@ -23,18 +23,23 @@ const PinInput = ({ value, onChange, error, label, testId = 'pin', autoFocus = f
     onChangeRef.current = onChange;
   }, [onChange]);
 
+  // Track previous value to detect external clear
+  const prevValueRef = useRef(value);
+
   // Update parent value when pins change - use ref to avoid infinite loop
   useEffect(() => {
     const newValue = pins.join('');
     onChangeRef.current(newValue);
   }, [pins]);
 
-  // If value is cleared externally, reset pins
+  // If value is cleared externally (was not empty, now is empty), reset pins
   useEffect(() => {
-    if (!value && pins.some(p => p !== '')) {
+    // Only reset if value was previously set and is now cleared externally
+    if (prevValueRef.current && !value) {
       setPins(['', '', '', '', '', '']);
     }
-  }, [value, pins]);
+    prevValueRef.current = value;
+  }, [value]);
 
   // Auto-focus first input on mount if autoFocus is true
   useEffect(() => {
