@@ -233,28 +233,56 @@ const BillPayments = ({ user, onLogout }) => {
     return typeObj ? typeObj.label : type;
   };
 
+  // Get color classes for service type
+  const getServiceColor = (color, isSelected) => {
+    const colors = {
+      blue: isSelected ? 'from-blue-500 to-cyan-500 border-blue-400' : 'border-blue-500/30 hover:border-blue-500/60',
+      purple: isSelected ? 'from-purple-500 to-pink-500 border-purple-400' : 'border-purple-500/30 hover:border-purple-500/60',
+      yellow: isSelected ? 'from-yellow-500 to-orange-500 border-yellow-400' : 'border-yellow-500/30 hover:border-yellow-500/60',
+      green: isSelected ? 'from-green-500 to-emerald-500 border-green-400' : 'border-green-500/30 hover:border-green-500/60',
+      red: isSelected ? 'from-red-500 to-rose-500 border-red-400' : 'border-red-500/30 hover:border-red-500/60'
+    };
+    return colors[color] || colors.blue;
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24 pt-16">
-      <div className="container mx-auto px-5 max-w-6xl pt-4" style={{ paddingBottom: '1.5rem' }}>
-        {/* Header - with safe area padding */}
-        <div className="flex items-center gap-4 mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 pb-24 pt-16">
+      {/* Animated Background Pattern */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+      </div>
+
+      <div className="container mx-auto px-4 max-w-6xl pt-4 relative z-10" style={{ paddingBottom: '1.5rem' }}>
+        {/* Premium Header */}
+        <div className="flex items-center gap-4 mb-8">
           <button
             onClick={() => navigate('/dashboard')}
-            className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition-colors"
+            className="w-12 h-12 rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700/50 flex items-center justify-center hover:border-amber-500/50 transition-all group shadow-lg"
           >
-            <ArrowLeft className="h-5 w-5 text-white" />
+            <ArrowLeft className="h-5 w-5 text-gray-400 group-hover:text-amber-400 transition-colors" />
           </button>
-          <div>
-            <h1 className="text-xl font-bold text-white">
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-white via-amber-100 to-amber-200 bg-clip-text text-transparent">
               Bill Payments & Recharge
             </h1>
-            <p className="text-gray-500 text-sm">Pay bills using your PRC balance</p>
+            <p className="text-gray-400 text-sm mt-0.5">Pay bills instantly using your PRC balance</p>
+          </div>
+          {/* PRC Balance Badge */}
+          <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-2xl">
+            <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center">
+              <span className="text-white text-xs font-bold">₹</span>
+            </div>
+            <div>
+              <p className="text-[10px] text-amber-300/70 uppercase tracking-wide">Balance</p>
+              <p className="text-sm font-bold text-amber-400">{currentUser?.prc_balance?.toLocaleString() || 0} PRC</p>
             </div>
           </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Create Request Form */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-6">
             {/* Profile Completion Prompt - Show before form */}
             <RedemptionProfilePrompt 
               user={user}
@@ -262,92 +290,130 @@ const BillPayments = ({ user, onLogout }) => {
               onContinue={() => {}}
             />
             
-            <div className="bg-gray-900/50 rounded-2xl p-5 border border-gray-800">
-              <h2 className="text-lg font-bold text-white mb-4">Create New Request</h2>
-
-              {/* Service Type Selection */}
-              <div className="mb-6">
-                <label className="mb-3 block text-gray-400 text-sm">Select Service Type</label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {requestTypes.map((type) => {
-                    const Icon = type.icon;
-                    return (
-                      <button
-                        key={type.id}
-                        onClick={() => setSelectedType(type.id)}
-                        className={`p-4 rounded-xl border transition-all ${
-                          selectedType === type.id
-                            ? 'border-amber-500 bg-amber-500/10'
-                            : 'border-gray-800 bg-gray-800/50 hover:border-gray-700'
-                        }`}
-                      >
-                        <Icon className={`h-6 w-6 mx-auto mb-2 ${selectedType === type.id ? 'text-amber-500' : 'text-gray-500'}`} />
-                        <p className={`text-xs font-medium ${selectedType === type.id ? 'text-amber-400' : 'text-gray-400'}`}>{type.label}</p>
-                        {type.sublabel && (
-                          <p className="text-[10px] text-gray-500 mt-0.5">{type.sublabel}</p>
-                        )}
-                      </button>
-                    );
-                  })}
+            {/* Service Type Selection - Premium Cards */}
+            <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-6 border border-gray-800/50 shadow-2xl">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-lg font-bold text-white">Select Service</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">Choose bill type to pay</p>
+                </div>
+                <div className="w-10 h-10 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-xl flex items-center justify-center">
+                  <Receipt className="h-5 w-5 text-amber-400" />
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4 [&_input]:bg-gray-800 [&_input]:border-gray-700 [&_input]:text-white [&_input]:placeholder:text-gray-500 [&_select]:bg-gray-800 [&_select]:border-gray-700 [&_select]:text-white [&_label]:text-gray-300">
-                {/* Amount */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                {requestTypes.map((type) => {
+                  const Icon = type.icon;
+                  const isSelected = selectedType === type.id;
+                  return (
+                    <button
+                      key={type.id}
+                      onClick={() => setSelectedType(type.id)}
+                      className={`relative p-4 rounded-2xl border-2 transition-all duration-300 transform hover:scale-[1.02] ${
+                        isSelected
+                          ? `bg-gradient-to-br ${getServiceColor(type.color, true)} shadow-lg shadow-${type.color}-500/20`
+                          : `bg-gray-800/30 ${getServiceColor(type.color, false)} hover:bg-gray-800/50`
+                      }`}
+                      data-testid={`service-${type.id}`}
+                    >
+                      {isSelected && (
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-lg">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        </div>
+                      )}
+                      <div className={`w-12 h-12 mx-auto mb-3 rounded-2xl flex items-center justify-center ${
+                        isSelected 
+                          ? 'bg-white/20 backdrop-blur' 
+                          : 'bg-gray-700/50'
+                      }`}>
+                        <Icon className={`h-6 w-6 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+                      </div>
+                      <p className={`text-xs font-semibold text-center ${isSelected ? 'text-white' : 'text-gray-300'}`}>
+                        {type.label}
+                      </p>
+                      {type.sublabel && (
+                        <p className={`text-[9px] text-center mt-1 ${isSelected ? 'text-white/70' : 'text-gray-500'}`}>
+                          {type.sublabel}
+                        </p>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Payment Form - Premium Card */}
+            <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-6 border border-gray-800/50 shadow-2xl">
+              <div className="flex items-center gap-3 mb-5">
+                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${getServiceColor(currentType?.color || 'blue', true)} flex items-center justify-center`}>
+                  {currentType && <currentType.icon className="h-6 w-6 text-white" />}
+                </div>
                 <div>
-                  <Label htmlFor="amount" className="text-gray-300">Amount (₹) *</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    value={formData.amount_inr}
-                    onChange={(e) => setFormData({ ...formData, amount_inr: e.target.value })}
-                    placeholder="Enter amount in INR"
-                    min="1"
-                    step="0.01"
-                    required
-                  />
+                  <h2 className="text-lg font-bold text-white">{currentType?.label || 'Payment'} Details</h2>
+                  <p className="text-xs text-gray-500">Fill in the payment information</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Amount Input - Premium Style */}
+                <div className="relative">
+                  <Label htmlFor="amount" className="text-gray-300 text-sm font-medium mb-2 block">Amount (₹) *</Label>
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-amber-400">₹</div>
+                    <Input
+                      id="amount"
+                      type="number"
+                      value={formData.amount_inr}
+                      onChange={(e) => setFormData({ ...formData, amount_inr: e.target.value })}
+                      placeholder="0.00"
+                      min="1"
+                      step="0.01"
+                      required
+                      className="pl-12 h-14 text-xl font-semibold bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500 focus:ring-amber-500/20"
+                    />
+                  </div>
+                  
+                  {/* Charge Breakdown - Premium */}
                   {formData.amount_inr && amountINR > 0 && (
-                    <div className="mt-3 bg-gray-800/50 rounded-xl p-3 border border-gray-700">
-                      <p className="text-xs text-gray-400 mb-2 font-semibold">Charge Breakdown:</p>
-                      <div className="space-y-1.5 text-xs">
-                        <div className="flex justify-between">
+                    <div className="mt-4 bg-gradient-to-br from-gray-800/50 to-gray-800/30 rounded-2xl p-4 border border-gray-700/50">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Info className="h-4 w-4 text-amber-400" />
+                        <p className="text-xs text-amber-300 font-semibold">Charge Breakdown</p>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between items-center">
                           <span className="text-gray-400">Bill Amount</span>
-                          <span className="text-white">₹{amountINR.toFixed(2)} = {amountPRC.toFixed(0)} PRC</span>
+                          <div className="text-right">
+                            <span className="text-white font-medium">₹{amountINR.toFixed(2)}</span>
+                            <span className="text-gray-500 text-xs ml-2">({amountPRC.toFixed(0)} PRC)</span>
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Processing Fee (Flat)</span>
-                          <span className="text-orange-400">+ ₹{processingFeeINR.toFixed(2)} = {processingFeePRC.toFixed(0)} PRC</span>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400">Processing Fee</span>
+                          <div className="text-right">
+                            <span className="text-orange-400 font-medium">+₹{processingFeeINR.toFixed(2)}</span>
+                            <span className="text-gray-500 text-xs ml-2">({processingFeePRC.toFixed(0)} PRC)</span>
+                          </div>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex justify-between items-center">
                           <span className="text-gray-400">Admin Charges ({adminChargePercent}%)</span>
-                          <span className="text-orange-400">+ ₹{adminChargeINR.toFixed(2)} = {adminChargePRC.toFixed(0)} PRC</span>
+                          <div className="text-right">
+                            <span className="text-orange-400 font-medium">+₹{adminChargeINR.toFixed(2)}</span>
+                            <span className="text-gray-500 text-xs ml-2">({adminChargePRC.toFixed(0)} PRC)</span>
+                          </div>
                         </div>
-                        <div className="flex justify-between pt-2 border-t border-gray-700 font-semibold">
-                          <span className="text-amber-400">Total to Pay</span>
-                          <span className="text-amber-400">₹{totalINR.toFixed(2)} = {totalPRC.toFixed(0)} PRC</span>
+                        <div className="flex justify-between items-center pt-3 border-t border-gray-700">
+                          <span className="text-amber-400 font-bold">Total to Pay</span>
+                          <div className="text-right">
+                            <span className="text-xl font-bold text-amber-400">₹{totalINR.toFixed(2)}</span>
+                            <span className="text-amber-300/70 text-sm ml-2">= {totalPRC.toFixed(0)} PRC</span>
+                          </div>
                         </div>
                       </div>
                     </div>
                   )}
                 </div>
-
-                {/* Dynamic Fields Based on Service Type */}
-                {currentType.fields.includes('phone_number') && (
-                  <div>
-                    <Label htmlFor="phone">Mobile Number *</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phone_number}
-                      onChange={(e) => setFormData({ ...formData, phone_number: formatMobile(e.target.value) })}
-                      placeholder="10-digit mobile number"
-                      maxLength={10}
-                      required
-                    />
-                    {formData.phone_number && formData.phone_number.length > 0 && !validateMobile(formData.phone_number).isValid && (
-                      <p className="text-red-500 text-xs mt-1">Enter valid 10-digit mobile (starts with 6-9)</p>
-                    )}
-                  </div>
                 )}
 
                 {currentType.fields.includes('consumer_number') && (
