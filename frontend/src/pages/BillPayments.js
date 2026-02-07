@@ -61,6 +61,14 @@ const BillPayments = ({ user, onLogout }) => {
     emi_amount: ''
   });
 
+  // Update selected type when URL param changes
+  useEffect(() => {
+    const typeFromUrl = searchParams.get('type');
+    if (typeFromUrl && ['mobile_recharge', 'dish_recharge', 'electricity_bill', 'credit_card_payment', 'loan_emi'].includes(typeFromUrl)) {
+      setSelectedType(typeFromUrl);
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     if (!user) {
       navigate('/login');
