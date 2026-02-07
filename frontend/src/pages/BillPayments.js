@@ -24,11 +24,15 @@ const API = process.env.REACT_APP_BACKEND_URL || '';
 
 const BillPayments = ({ user, onLogout }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState([]);
   const [currentUser, setCurrentUser] = useState(user);
-  const [selectedType, setSelectedType] = useState('mobile_recharge');
+  
+  // Get service type from URL query param or default to mobile_recharge
+  const initialType = searchParams.get('type') || 'mobile_recharge';
+  const [selectedType, setSelectedType] = useState(initialType);
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('all'); // NEW: Status filter
   const [expandedRequest, setExpandedRequest] = useState(null); // For timeline expansion
