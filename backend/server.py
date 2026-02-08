@@ -583,7 +583,43 @@ async def get_index_status():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@api_router.post("/admin/cache/clear")
+@api_router.post("/admin/clear-all-lockouts")
+async def clear_all_login_lockouts():
+    """
+    Emergency API to clear ALL login lockouts from database and memory.
+    Use when multiple users report lockout issues.
+    """
+    try:
+        # Clear in-memory lockouts
+        global login_attempt_storage
+        login_attempt_storage.clear()
+        
+        # Clear database login_attempts
+        db_result = await db.login_attempts.delete_many({})
+        
+        # Also clear any user-level lock flags
+        await db.users.update_many(
+            {"$or": [
+                {"failed_login_attempts": {"$gt": 0}},
+                {"locked_until": {"$ne": None}}
+            ]},
+            {
+                "$set": {
+                    "failed_login_attempts": 0,
+                    "locked_until": None
+                }
+            }
+        )
+        
+        return {
+            "success": True,
+            "message": "All login lockouts cleared",
+            "memory_cleared": True,
+            "db_records_deleted": db_result.deleted_count,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 async def clear_admin_cache():
     """
     Clear all admin dashboard caches to force fresh data load.
