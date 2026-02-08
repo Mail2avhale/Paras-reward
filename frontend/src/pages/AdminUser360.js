@@ -573,21 +573,6 @@ const AdminUser360 = ({ user: adminUser }) => {
               )}
 
               {activeTab === 'vouchers' && (
-                          <p className="text-gray-400 text-sm">₹{bill.amount_inr} • {formatDate(bill.created_at)}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-white">{bill.total_prc_deducted} PRC</p>
-                          <span className={`px-2 py-0.5 rounded text-xs ${getStatusBadge(bill.status)}`}>
-                            {bill.status}
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'vouchers' && (
                 <div className="space-y-2">
                   {userData.transactions.gift_vouchers?.length === 0 ? (
                     <p className="text-gray-500 text-center py-8">No gift vouchers found</p>
