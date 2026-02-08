@@ -4118,10 +4118,6 @@ async def forgot_pin_check_mobile(request: ForgotPinRequest):
         "mobile": mobile[-4:]  # Return last 4 digits for display
     }
 
-class VerifyOTPRequest(BaseModel):
-    mobile: str
-    otp: str
-
 @api_router.post("/auth/forgot-pin/verify-otp")
 async def forgot_pin_verify_otp(request: VerifyOTPRequest):
     """Verify OTP and generate reset token"""
