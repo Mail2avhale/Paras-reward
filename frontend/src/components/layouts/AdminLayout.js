@@ -139,7 +139,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
       icon: Shield,
       subItems: [
         { id: 'prc-economy', label: 'PRC Emergency Controls', icon: AlertOctagon, path: '/admin/prc-economy' },
-        { id: 'user-controls', label: 'User Controls', icon: UserCog, path: '/admin/user-controls' },
         { id: 'security-dashboard', label: 'Security Dashboard', icon: Shield, path: '/admin/security' },
         { id: 'fraud-dashboard', label: 'Fraud Detection', icon: ShieldAlert, path: '/admin/fraud-dashboard' },
         { id: 'fraud-alerts', label: 'Fraud Alerts', icon: AlertTriangle, path: '/admin/fraud-alerts' },
