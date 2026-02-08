@@ -85,16 +85,25 @@ class FraudDetector:
         if not ip_address:
             return True, "ok"
         
+        # Skip check for common/shared IPs or if IP is localhost
+        if ip_address in ["127.0.0.1", "localhost", "::1"]:
+            return True, "ok"
+        
         one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
         
+        # Check for IP-only blocking (extreme cases - more than 50 attempts)
         failed_attempts = await self.db.login_attempts.count_documents({
             "ip_address": ip_address,
             "success": False,
             "timestamp": {"$gte": one_hour_ago}
         })
         
-        if failed_attempts >= self.config["max_login_attempts_per_ip_per_hour"]:
-            return False, "Too many login attempts. Please try after 1 hour."
+        # Increased threshold from config to 50 - IP-only blocking should be rare
+        # Individual user lockout handles most cases
+        ip_limit = max(self.config.get("max_login_attempts_per_ip_per_hour", 50), 50)
+        
+        if failed_attempts >= ip_limit:
+            return False, "Too many login attempts from this network. Please try after 1 hour or use a different network."
         
         return True, "ok"
     
