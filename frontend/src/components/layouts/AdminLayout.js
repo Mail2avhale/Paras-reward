@@ -20,7 +20,7 @@ const MENU_TO_PERMISSION = {
   'dashboard': 'dashboard',
   'users': 'users',
   'user-360': 'users',
-  'user-controls': 'user_controls',
+  'user-controls': 'user_360',
   'analytics': 'analytics',
   'kyc': 'kyc',
   'orders': 'orders',
