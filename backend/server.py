@@ -4054,9 +4054,9 @@ async def forgot_password(email: str):
 class ForgotPinRequest(BaseModel):
     mobile: str
 
-class VerifyOTPTokenRequest(BaseModel):
+class VerifyOTPRequest(BaseModel):
     mobile: str
-    access_token: str
+    otp: str
 
 class ResetPinRequest(BaseModel):
     mobile: str
