@@ -13178,13 +13178,20 @@ async def get_user_360_view(query: str):
     # ========== KYC INFORMATION ==========
     kyc_docs = await db.kyc_documents.find_one({"user_id": uid}, {"_id": 0})
     
+    # ========== LOGIN HISTORY ==========
+    login_history = await db.login_history.find(
+        {"user_id": uid},
+        {"_id": 0, "timestamp": 1, "created_at": 1, "ip_address": 1, "user_agent": 1, "device": 1, "success": 1}
+    ).sort("timestamp", -1).limit(50).to_list(50)
+    
     return {
         "user": user,
         "stats": stats,
         "referral": referral_data,
         "transactions": transactions,
         "activity": activity[:30],
-        "kyc": kyc_docs
+        "kyc": kyc_docs,
+        "login_history": login_history
     }
 
 
