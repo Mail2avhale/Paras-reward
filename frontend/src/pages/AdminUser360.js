@@ -582,17 +582,61 @@ const AdminUser360 = ({ user: adminUser }) => {
               )}
 
               {activeTab === 'subscriptions' && (
-                <div className="space-y-2">
-                  {userData.transactions.subscriptions?.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">No subscriptions found</p>
-                  ) : (
-                    userData.transactions.subscriptions?.map((sub, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                        <div>
-                          <p className="text-white font-medium capitalize">{sub.subscription_plan} - {sub.plan_type}</p>
-                          <p className="text-gray-400 text-sm">₹{sub.amount} • {formatDate(sub.submitted_at)}</p>
+                <div className="space-y-4">
+                  {/* Current Active Plan */}
+                  {userData.user?.subscription_plan && userData.user?.subscription_plan !== 'explorer' && (
+                    <div className="p-4 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-xl">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                            <Crown className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-purple-300 uppercase tracking-wider">Current Plan</p>
+                            <p className="text-xl font-bold text-white capitalize">{userData.user?.subscription_plan || 'Explorer'}</p>
+                          </div>
                         </div>
                         <div className="text-right">
+                          <p className="text-xs text-gray-400">Expires</p>
+                          <p className="text-white font-medium">
+                            {userData.user?.subscription_expiry 
+                              ? formatDate(userData.user.subscription_expiry)
+                              : 'Never (Lifetime)'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Subscription History */}
+                  <p className="text-gray-400 text-sm font-medium">Payment History</p>
+                  {userData.transactions.subscriptions?.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">No subscription payments found</p>
+                  ) : (
+                    userData.transactions.subscriptions?.map((sub, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-4 bg-gray-800 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                            sub.status === 'approved' ? 'bg-green-500/20' : 
+                            sub.status === 'pending' ? 'bg-yellow-500/20' : 'bg-red-500/20'
+                          }`}>
+                            <Crown className={`w-5 h-5 ${
+                              sub.status === 'approved' ? 'text-green-400' : 
+                              sub.status === 'pending' ? 'text-yellow-400' : 'text-red-400'
+                            }`} />
+                          </div>
+                          <div>
+                            <p className="text-white font-medium capitalize">
+                              {sub.subscription_plan || sub.plan_name || 'Plan'} 
+                              {sub.plan_type && ` - ${sub.plan_type}`}
+                            </p>
+                            <p className="text-gray-400 text-xs">
+                              {sub.duration ? `${sub.duration} months` : ''} • {formatDate(sub.submitted_at || sub.created_at)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-white font-medium">₹{sub.amount || sub.amount_paid || 0}</p>
                           <span className={`px-2 py-0.5 rounded text-xs ${getStatusBadge(sub.status)}`}>
                             {sub.status}
                           </span>
