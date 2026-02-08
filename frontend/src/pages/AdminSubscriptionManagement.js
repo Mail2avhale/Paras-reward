@@ -123,35 +123,76 @@ const AdminSubscriptionManagement = ({ user }) => {
     // Filter by status
     filtered = filtered.filter(p => p.status === paymentFilter);
     
-    // Filter by time
-    const now = new Date();
-    if (timeFilter === 'today') {
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      filtered = filtered.filter(p => new Date(p.submitted_at || p.created_at) >= todayStart);
-    } else if (timeFilter === 'week') {
-      const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      filtered = filtered.filter(p => new Date(p.submitted_at || p.created_at) >= weekStart);
-    } else if (timeFilter === 'month') {
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      filtered = filtered.filter(p => new Date(p.submitted_at || p.created_at) >= monthStart);
+    // Custom date range filter (takes priority over timeFilter)
+    if (dateFrom || dateTo) {
+      if (dateFrom) {
+        const fromDate = new Date(dateFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        filtered = filtered.filter(p => new Date(p.submitted_at || p.created_at) >= fromDate);
+      }
+      if (dateTo) {
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        filtered = filtered.filter(p => new Date(p.submitted_at || p.created_at) <= toDate);
+      }
+    } else {
+      // Filter by time (preset filters)
+      const now = new Date();
+      if (timeFilter === 'today') {
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        filtered = filtered.filter(p => new Date(p.submitted_at || p.created_at) >= todayStart);
+      } else if (timeFilter === 'week') {
+        const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        filtered = filtered.filter(p => new Date(p.submitted_at || p.created_at) >= weekStart);
+      } else if (timeFilter === 'month') {
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        filtered = filtered.filter(p => new Date(p.submitted_at || p.created_at) >= monthStart);
+      }
     }
     
-    // Filter by search
+    // Advanced search - search across ALL fields
     if (paymentSearch) {
-      const search = paymentSearch.toLowerCase();
-      filtered = filtered.filter(p => 
-        (p.user_name || '').toLowerCase().includes(search) ||
-        (p.user_email || '').toLowerCase().includes(search) ||
-        (p.utr_number || '').toLowerCase().includes(search) ||
-        (p.user_id || '').toLowerCase().includes(search)
-      );
+      const search = paymentSearch.toLowerCase().trim();
+      filtered = filtered.filter(p => {
+        // User details
+        if ((p.user_name || '').toLowerCase().includes(search)) return true;
+        if ((p.user_email || '').toLowerCase().includes(search)) return true;
+        if ((p.user_id || '').toLowerCase().includes(search)) return true;
+        if ((p.user_mobile || '').includes(search)) return true;
+        
+        // Payment details
+        if ((p.utr_number || '').toLowerCase().includes(search)) return true;
+        if ((p.transaction_id || '').toLowerCase().includes(search)) return true;
+        if ((p.payment_reference || '').toLowerCase().includes(search)) return true;
+        if ((p.payment_method || '').toLowerCase().includes(search)) return true;
+        
+        // Plan details
+        if ((p.plan_name || '').toLowerCase().includes(search)) return true;
+        if ((p.plan || '').toLowerCase().includes(search)) return true;
+        if ((p.duration || '').toString().includes(search)) return true;
+        
+        // Amount
+        if ((p.amount || '').toString().includes(search)) return true;
+        if ((p.amount_paid || '').toString().includes(search)) return true;
+        
+        // Notes
+        if ((p.admin_notes || '').toLowerCase().includes(search)) return true;
+        if ((p.rejection_reason || '').toLowerCase().includes(search)) return true;
+        if ((p.notes || '').toLowerCase().includes(search)) return true;
+        
+        return false;
+      });
     }
     
-    // Sort by date (newest first)
-    filtered.sort((a, b) => new Date(b.submitted_at || b.created_at || 0) - new Date(a.submitted_at || a.created_at || 0));
+    // Sort by date
+    if (sortOrder === 'newest') {
+      filtered.sort((a, b) => new Date(b.submitted_at || b.created_at || 0) - new Date(a.submitted_at || a.created_at || 0));
+    } else {
+      filtered.sort((a, b) => new Date(a.submitted_at || a.created_at || 0) - new Date(b.submitted_at || b.created_at || 0));
+    }
     
     return filtered;
-  }, [payments, paymentFilter, timeFilter, paymentSearch]);
+  }, [payments, paymentFilter, timeFilter, paymentSearch, dateFrom, dateTo, sortOrder]);
 
   // Paginated payments
   const paginatedPayments = React.useMemo(() => {
