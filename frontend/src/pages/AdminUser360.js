@@ -681,6 +681,44 @@ const AdminUser360 = ({ user: adminUser }) => {
                   )}
                 </div>
               )}
+
+              {activeTab === 'login_history' && (
+                <div className="space-y-2">
+                  {userData.login_history?.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">No login history found</p>
+                  ) : (
+                    userData.login_history?.slice(0, 50).map((login, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            login.success !== false ? 'bg-green-500/20' : 'bg-red-500/20'
+                          }`}>
+                            {login.success !== false ? (
+                              <Eye className="w-4 h-4 text-green-400" />
+                            ) : (
+                              <XCircle className="w-4 h-4 text-red-400" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-white font-medium text-sm">
+                              {login.success !== false ? 'Successful Login' : 'Failed Attempt'}
+                            </p>
+                            <p className="text-gray-400 text-xs">{formatDate(login.timestamp || login.created_at)}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-gray-400 text-xs truncate max-w-32" title={login.ip_address}>
+                            IP: {login.ip_address || 'N/A'}
+                          </p>
+                          <p className="text-gray-500 text-xs truncate max-w-40" title={login.user_agent || login.device}>
+                            {login.device || login.user_agent?.slice(0, 30) || 'Unknown device'}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           </Card>
 
