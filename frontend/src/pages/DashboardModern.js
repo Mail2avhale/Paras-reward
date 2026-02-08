@@ -6,7 +6,8 @@ import { motion } from 'framer-motion';
 import { 
   TrendingUp, Star, Gift, ArrowUpRight, Clock,
   Home, UserPlus, Gamepad2, User, Zap, Crown, Eye, EyeOff,
-  ChevronRight, Sparkles, ShoppingBag, CreditCard, Info
+  ChevronRight, Sparkles, ShoppingBag, CreditCard, Info,
+  Sun, Moon, Sunrise, Sunset
 } from 'lucide-react';
 import PRCExpiryTimer from '@/components/PRCExpiryTimer';
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
@@ -19,6 +20,41 @@ import { DashboardSkeleton } from '@/components/skeletons';
 import { InfoTooltip } from '@/components/InfoTooltip';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
+
+// Get time-based greeting with emoji
+const getTimeGreeting = (language = 'en') => {
+  const hour = new Date().getHours();
+  
+  if (hour >= 5 && hour < 12) {
+    return {
+      text: language === 'hi' ? 'सुप्रभात' : language === 'mr' ? 'सुप्रभात' : 'Good Morning',
+      emoji: '🌅',
+      icon: Sunrise,
+      color: 'from-orange-400 to-yellow-400'
+    };
+  } else if (hour >= 12 && hour < 17) {
+    return {
+      text: language === 'hi' ? 'शुभ दोपहर' : language === 'mr' ? 'शुभ दुपार' : 'Good Afternoon',
+      emoji: '☀️',
+      icon: Sun,
+      color: 'from-yellow-400 to-orange-400'
+    };
+  } else if (hour >= 17 && hour < 21) {
+    return {
+      text: language === 'hi' ? 'शुभ संध्या' : language === 'mr' ? 'शुभ संध्याकाळ' : 'Good Evening',
+      emoji: '🌆',
+      icon: Sunset,
+      color: 'from-purple-400 to-pink-400'
+    };
+  } else {
+    return {
+      text: language === 'hi' ? 'शुभ रात्रि' : language === 'mr' ? 'शुभ रात्री' : 'Good Night',
+      emoji: '🌙',
+      icon: Moon,
+      color: 'from-indigo-400 to-purple-400'
+    };
+  }
+};
 
 // Bottom Navigation Item
 const BottomNavItem = ({ icon: Icon, label, isActive, onClick }) => (
@@ -37,6 +73,8 @@ const DashboardModern = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
   
+  // Time-based greeting
+  const greeting = useMemo(() => getTimeGreeting(language), [language]);
   
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
