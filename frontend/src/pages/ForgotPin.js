@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { Card } from '@/components/ui/card';
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Phone, KeyRound, Shield, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
+import { Phone, KeyRound, Shield, ArrowLeft, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import PinInput from '@/components/PinInput';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -14,100 +14,34 @@ const API = `${BACKEND_URL}/api`;
 
 const ForgotPin = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1); // 1: Mobile, 2: OTP Widget, 3: New PIN
+  const [step, setStep] = useState(1); // 1: Mobile, 2: OTP, 3: New PIN
   const [loading, setLoading] = useState(false);
   const [mobile, setMobile] = useState('');
-  const [widgetId, setWidgetId] = useState('');
+  const [otp, setOtp] = useState('');
   const [resetToken, setResetToken] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [errors, setErrors] = useState({});
-  const otpContainerRef = useRef(null);
+  const [resendTimer, setResendTimer] = useState(0);
 
-  // Load MSG91 OTP Widget script
-  useEffect(() => {
-    if (step === 2 && widgetId) {
-      loadOTPWidget();
-    }
-  }, [step, widgetId]);
-
-  const loadOTPWidget = () => {
-    // Remove any existing scripts
-    const existingScript = document.getElementById('msg91-otp-script');
-    if (existingScript) {
-      existingScript.remove();
-    }
-
-    // Configuration for MSG91 widget
-    window.configuration = {
-      widgetId: widgetId,
-      tokenAuth: "", // Will be set by widget
-      identifier: `91${mobile.replace(/^91/, '')}`,
-      exposeMethods: true,
-      success: (data) => {
-        console.log('OTP Success:', data);
-        handleOTPSuccess(data);
-      },
-      failure: (error) => {
-        console.log('OTP Failure:', error);
-        toast.error('OTP verification failed. Please try again.');
-      }
-    };
-
-    // Load MSG91 scripts
-    const urls = [
-      'https://verify.msg91.com/otp-provider.js',
-      'https://verify.phone91.com/otp-provider.js'
-    ];
-
-    let i = 0;
-    const attempt = () => {
-      const script = document.createElement('script');
-      script.id = 'msg91-otp-script';
-      script.src = urls[i];
-      script.async = true;
-      script.onload = () => {
-        if (typeof window.initSendOTP === 'function') {
-          window.initSendOTP(window.configuration);
+  // Start resend timer
+  const startResendTimer = () => {
+    setResendTimer(30);
+    const interval = setInterval(() => {
+      setResendTimer(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
         }
-      };
-      script.onerror = () => {
-        i++;
-        if (i < urls.length) {
-          attempt();
-        }
-      };
-      document.head.appendChild(script);
-    };
-    attempt();
-  };
-
-  const handleOTPSuccess = async (data) => {
-    setLoading(true);
-    try {
-      const response = await axios.post(`${API}/auth/forgot-pin/verify-otp`, {
-        mobile: mobile,
-        access_token: data.token || data.message
+        return prev - 1;
       });
-
-      if (response.data.success) {
-        setResetToken(response.data.reset_token);
-        setStep(3);
-        toast.success('OTP verified! Now set your new PIN');
-      }
-    } catch (error) {
-      console.error('OTP verification error:', error);
-      toast.error(error.response?.data?.detail || 'Verification failed');
-    } finally {
-      setLoading(false);
-    }
+    }, 1000);
   };
 
-  const handleCheckMobile = async (e) => {
+  const handleSendOTP = async (e) => {
     e.preventDefault();
     setErrors({});
 
-    // Validate mobile
     const cleanMobile = mobile.replace(/\D/g, '');
     if (cleanMobile.length < 10) {
       setErrors({ mobile: 'Enter valid 10-digit mobile number' });
@@ -121,14 +55,60 @@ const ForgotPin = () => {
       });
 
       if (response.data.success) {
-        setWidgetId(response.data.widget_id);
         setMobile(cleanMobile);
         setStep(2);
-        toast.success('Mobile verified! Enter OTP sent to your phone');
+        startResendTimer();
+        toast.success('OTP sent to your mobile number');
       }
     } catch (error) {
-      console.error('Check mobile error:', error);
-      toast.error(error.response?.data?.detail || 'Mobile number not found');
+      console.error('Send OTP error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to send OTP');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    if (resendTimer > 0) return;
+    
+    setLoading(true);
+    try {
+      await axios.post(`${API}/auth/forgot-pin/check-mobile`, {
+        mobile: mobile
+      });
+      startResendTimer();
+      toast.success('OTP resent successfully');
+    } catch (error) {
+      toast.error('Failed to resend OTP');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    
+    if (!otp || otp.length < 4) {
+      setErrors({ otp: 'Enter valid OTP' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API}/auth/forgot-pin/verify-otp`, {
+        mobile: mobile,
+        otp: otp
+      });
+
+      if (response.data.success) {
+        setResetToken(response.data.reset_token);
+        setStep(3);
+        toast.success('OTP verified! Now set your new PIN');
+      }
+    } catch (error) {
+      console.error('Verify OTP error:', error);
+      toast.error(error.response?.data?.detail || 'Invalid OTP');
+      setOtp('');
     } finally {
       setLoading(false);
     }
@@ -158,9 +138,7 @@ const ForgotPin = () => {
   const handleResetPin = async (e) => {
     e.preventDefault();
 
-    if (!validatePin()) {
-      return;
-    }
+    if (!validatePin()) return;
 
     setLoading(true);
     try {
@@ -210,9 +188,9 @@ const ForgotPin = () => {
 
         {/* Step 1: Mobile Number */}
         {step === 1 && (
-          <form onSubmit={handleCheckMobile} className="space-y-6">
+          <form onSubmit={handleSendOTP} className="space-y-6">
             <div>
-              <Label htmlFor="mobile" className="mb-2 block">Mobile Number</Label>
+              <Label htmlFor="mobile" className="mb-2 block text-gray-700 font-medium">Mobile Number</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <div className="absolute left-10 top-1/2 -translate-y-1/2 text-gray-500 font-medium">+91</div>
@@ -248,7 +226,7 @@ const ForgotPin = () => {
               {loading ? (
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Verifying...
+                  Sending OTP...
                 </div>
               ) : (
                 'Send OTP'
@@ -257,49 +235,82 @@ const ForgotPin = () => {
           </form>
         )}
 
-        {/* Step 2: OTP Widget */}
+        {/* Step 2: OTP Verification */}
         {step === 2 && (
-          <div className="space-y-6">
+          <form onSubmit={handleVerifyOTP} className="space-y-6">
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
               <p className="text-sm text-blue-800">
-                OTP sent to <strong>+91 {mobile.slice(-10, -5)}*****</strong>
+                OTP sent to <strong>+91 {mobile.slice(0, 5)}*****</strong>
               </p>
             </div>
 
-            {/* MSG91 OTP Widget Container */}
-            <div 
-              id="otp-widget-container" 
-              ref={otpContainerRef}
-              className="min-h-[200px] flex items-center justify-center"
-            >
-              {loading ? (
-                <div className="text-center">
-                  <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                  <p className="text-gray-600">Verifying OTP...</p>
-                </div>
-              ) : (
-                <div className="text-center">
-                  <p className="text-gray-500 mb-4">MSG91 OTP Widget Loading...</p>
-                  <Button
-                    onClick={loadOTPWidget}
-                    variant="outline"
-                    className="text-purple-600"
-                  >
-                    Reload Widget
-                  </Button>
-                </div>
+            {/* OTP Input */}
+            <div>
+              <Label htmlFor="otp" className="mb-2 block text-gray-700 font-medium">Enter OTP</Label>
+              <Input
+                id="otp"
+                type="text"
+                inputMode="numeric"
+                placeholder="Enter 4-6 digit OTP"
+                value={otp}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                  setOtp(val);
+                  if (errors.otp) setErrors({});
+                }}
+                className={`text-center text-2xl tracking-widest py-6 rounded-xl ${errors.otp ? 'border-red-500' : ''}`}
+                maxLength={6}
+                data-testid="forgot-pin-otp"
+              />
+              {errors.otp && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="h-4 w-4" />
+                  {errors.otp}
+                </p>
               )}
             </div>
 
+            {/* Resend OTP */}
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={handleResendOTP}
+                disabled={resendTimer > 0 || loading}
+                className={`text-sm font-medium flex items-center gap-2 mx-auto ${
+                  resendTimer > 0 ? 'text-gray-400' : 'text-purple-600 hover:text-purple-700'
+                }`}
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : 'Resend OTP'}
+              </button>
+            </div>
+
             <Button
+              type="submit"
+              disabled={loading || otp.length < 4}
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-6 rounded-xl text-lg font-semibold"
+              data-testid="verify-otp-submit"
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Verifying...
+                </div>
+              ) : (
+                'Verify OTP'
+              )}
+            </Button>
+
+            <Button
+              type="button"
               variant="ghost"
-              onClick={() => setStep(1)}
+              onClick={() => { setStep(1); setOtp(''); }}
               className="w-full text-gray-600"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Change Mobile Number
             </Button>
-          </div>
+          </form>
         )}
 
         {/* Step 3: Set New PIN */}
