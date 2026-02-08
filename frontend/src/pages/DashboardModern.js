@@ -287,7 +287,12 @@ const DashboardModern = ({ user, onLogout }) => {
       <div className="px-5 pb-4 pt-20" style={{ paddingTop: 'max(5rem, calc(env(safe-area-inset-top, 0px) + 4rem))' }}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-gray-400 text-sm">{t('welcomeBack')}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg">{greeting.emoji}</span>
+              <p className={`text-transparent bg-clip-text bg-gradient-to-r ${greeting.color} text-sm font-medium`}>
+                {greeting.text}
+              </p>
+            </div>
             <h1 className="text-white text-xl font-bold">
               {userData?.name || user?.email?.split('@')[0] || 'User'}
             </h1>
