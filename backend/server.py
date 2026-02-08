@@ -4086,38 +4086,72 @@ async def forgot_pin_check_mobile(request: ForgotPinRequest):
     if not user:
         raise HTTPException(status_code=404, detail="Mobile number not registered")
     
-    # Return widget ID for frontend to initiate OTP
-    widget_id = os.environ.get("MSG91_WIDGET_ID", "")
+    # Send OTP via MSG91 API
+    auth_key = os.environ.get("MSG91_AUTH_KEY", "")
+    template_id = os.environ.get("MSG91_TEMPLATE_ID", "")
+    
+    if not auth_key:
+        raise HTTPException(status_code=500, detail="MSG91 not configured")
+    
+    try:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            # Send OTP using MSG91 API
+            response = await client.post(
+                f"https://control.msg91.com/api/v5/otp?template_id={template_id}&mobile={mobile}",
+                headers={
+                    "authkey": auth_key,
+                    "Content-Type": "application/json"
+                }
+            )
+            result = response.json()
+            
+            if result.get("type") == "error":
+                raise HTTPException(status_code=400, detail=result.get("message", "Failed to send OTP"))
+                
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send OTP: {str(e)}")
     
     return {
         "success": True,
-        "message": "Mobile number verified",
-        "widget_id": widget_id,
-        "mobile": mobile
+        "message": "OTP sent successfully",
+        "mobile": mobile[-4:]  # Return last 4 digits for display
     }
 
+class VerifyOTPRequest(BaseModel):
+    mobile: str
+    otp: str
+
 @api_router.post("/auth/forgot-pin/verify-otp")
-async def forgot_pin_verify_otp(request: VerifyOTPTokenRequest):
-    """Verify MSG91 OTP access token and generate reset token"""
+async def forgot_pin_verify_otp(request: VerifyOTPRequest):
+    """Verify OTP and generate reset token"""
     import httpx
     
     mobile = request.mobile.strip().replace("+", "")
     if not mobile.startswith("91"):
         mobile = "91" + mobile
     
+    otp = request.otp.strip()
+    if not otp or len(otp) < 4:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+    
     auth_key = os.environ.get("MSG91_AUTH_KEY", "")
     
     if not auth_key:
         raise HTTPException(status_code=500, detail="MSG91 not configured")
     
-    # Verify access token with MSG91
+    # Verify OTP with MSG91
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://control.msg91.com/api/v5/widget/verifyAccessToken",
-                headers={"Content-Type": "application/json"},
-                json={
-                    "authkey": auth_key,
+            response = await client.get(
+                f"https://control.msg91.com/api/v5/otp/verify?mobile={mobile}&otp={otp}",
+                headers={"authkey": auth_key}
+            )
+            
+            result = response.json()
+            
+            if result.get("type") == "error" or result.get("message") != "OTP verified successfully":
+                raise HTTPException(status_code=400, detail=result.get("message", "Invalid OTP"))
                     "access-token": request.access_token
                 }
             )
