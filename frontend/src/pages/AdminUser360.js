@@ -777,6 +777,17 @@ const AdminUser360 = ({ user: adminUser }) => {
                 </Button>
                 <Button
                   onClick={() => {
+                    if (confirm('Clear login lockout for this user? They will be able to login immediately.')) handleQuickAction('clear_lockout');
+                  }}
+                  disabled={processing}
+                  variant="outline"
+                  className="h-auto py-3 border-orange-500/50 text-orange-400"
+                >
+                  <Clock className="w-4 h-4 mr-2" />
+                  Clear Lockout
+                </Button>
+                <Button
+                  onClick={() => {
                     const message = prompt('Enter notification message:');
                     if (message) handleQuickAction('send_notification', { message });
                   }}
