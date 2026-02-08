@@ -54,6 +54,8 @@ const AdminUser360 = ({ user: adminUser }) => {
   };
 
   // Quick Actions
+  const [passwordModal, setPasswordModal] = useState({ show: false, password: '' });
+  
   const handleQuickAction = async (action, params = {}) => {
     if (!userData?.user?.uid) return;
     
@@ -66,28 +68,12 @@ const AdminUser360 = ({ user: adminUser }) => {
         ...params
       });
       
-      // Special handling for password reset - show the temporary password
+      // Special handling for password reset - show in center modal
       if (action === 'reset_password' && response.data?.message) {
         const passwordMatch = response.data.message.match(/Temporary password: (\w+)/);
         if (passwordMatch) {
           const tempPassword = passwordMatch[1];
-          // Show password in a more prominent way
-          toast.success(
-            <div>
-              <p className="font-bold">Password Reset Successful!</p>
-              <p className="mt-1">Temporary Password: <span className="font-mono bg-gray-800 px-2 py-1 rounded">{tempPassword}</span></p>
-              <button 
-                onClick={() => {
-                  navigator.clipboard.writeText(tempPassword);
-                  toast.success('Password copied!');
-                }}
-                className="mt-2 text-xs underline"
-              >
-                Click to copy
-              </button>
-            </div>,
-            { duration: 15000 }  // Show for 15 seconds
-          );
+          setPasswordModal({ show: true, password: tempPassword });
         } else {
           toast.success(response.data.message);
         }
