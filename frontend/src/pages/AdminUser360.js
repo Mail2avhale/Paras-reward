@@ -443,7 +443,8 @@ const AdminUser360 = ({ user: adminUser }) => {
                 { id: 'mining', label: 'Mining', icon: Zap, count: userData.transactions.mining_history?.length || 0 },
                 { id: 'vouchers', label: 'Vouchers', icon: Gift, count: userData.transactions.gift_vouchers?.length || 0 },
                 { id: 'subscriptions', label: 'Plans', icon: Crown, count: userData.transactions.subscriptions?.length || 0 },
-                { id: 'prc_ledger', label: 'PRC Ledger', icon: FileText, count: userData.transactions.prc_ledger?.length || 0 }
+                { id: 'prc_ledger', label: 'PRC Ledger', icon: FileText, count: userData.transactions.prc_ledger?.length || 0 },
+                { id: 'login_history', label: 'Logins', icon: Activity, count: userData.login_history?.length || 0 }
               ].map(tab => (
                 <button
                   key={tab.id}
