@@ -78,6 +78,12 @@ const AdminBillPayments = ({ user }) => {
   const [pendingRejectId, setPendingRejectId] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [showBulkActions, setShowBulkActions] = useState(false);
+  
+  // Date Range Filter States
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [sortOrder, setSortOrder] = useState('newest'); // 'newest' or 'oldest'
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [stats, setStats] = useState({
     today: { pending: 0, approved: 0, rejected: 0, pendingPRC: 0, approvedPRC: 0, rejectedPRC: 0, pendingINR: 0, approvedINR: 0, rejectedINR: 0 },
     allTime: { pending: 0, approved: 0, rejected: 0, pendingPRC: 0, approvedPRC: 0, rejectedPRC: 0, pendingINR: 0, approvedINR: 0, rejectedINR: 0 },
