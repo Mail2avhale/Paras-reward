@@ -453,8 +453,11 @@ const AdminUser360 = ({ user: adminUser }) => {
               {[
                 { id: 'orders', label: 'Orders', icon: ShoppingBag, count: userData.transactions.orders?.length || 0 },
                 { id: 'bills', label: 'Bill Payments', icon: Receipt, count: userData.transactions.bill_payments?.length || 0 },
-                { id: 'vouchers', label: 'Gift Vouchers', icon: Gift, count: userData.transactions.gift_vouchers?.length || 0 },
-                { id: 'subscriptions', label: 'Subscriptions', icon: Crown, count: userData.transactions.subscriptions?.length || 0 }
+                { id: 'redemptions', label: 'Redemptions', icon: Wallet, count: userData.transactions.redemptions?.length || 0 },
+                { id: 'mining', label: 'Mining', icon: Zap, count: userData.transactions.mining_history?.length || 0 },
+                { id: 'vouchers', label: 'Vouchers', icon: Gift, count: userData.transactions.gift_vouchers?.length || 0 },
+                { id: 'subscriptions', label: 'Plans', icon: Crown, count: userData.transactions.subscriptions?.length || 0 },
+                { id: 'prc_ledger', label: 'PRC Ledger', icon: FileText, count: userData.transactions.prc_ledger?.length || 0 }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -508,6 +511,68 @@ const AdminUser360 = ({ user: adminUser }) => {
                       <div key={idx} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                         <div>
                           <p className="text-white font-medium capitalize">{bill.request_type?.replace('_', ' ')}</p>
+                          <p className="text-gray-400 text-xs">{formatDate(bill.created_at)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-white">₹{bill.amount_inr}</p>
+                          <span className={`px-2 py-0.5 rounded text-xs ${getStatusBadge(bill.status)}`}>{bill.status}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'redemptions' && (
+                <div className="space-y-2">
+                  {userData.transactions.redemptions?.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">No redemption requests found</p>
+                  ) : (
+                    userData.transactions.redemptions?.map((redeem, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                        <div>
+                          <p className="text-white font-medium">{redeem.type || 'Bank Transfer'}</p>
+                          <p className="text-gray-400 text-xs">
+                            {redeem.account_number ? `A/C: ****${redeem.account_number.slice(-4)}` : ''}
+                            {' • '}{formatDate(redeem.created_at)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-amber-400 font-bold">{redeem.prc_amount || redeem.amount} PRC</p>
+                          <p className="text-green-400 text-sm">₹{redeem.inr_amount || (redeem.amount / 10)}</p>
+                          <span className={`px-2 py-0.5 rounded text-xs ${getStatusBadge(redeem.status)}`}>{redeem.status}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'mining' && (
+                <div className="space-y-2">
+                  {userData.transactions.mining_history?.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">No mining history found</p>
+                  ) : (
+                    userData.transactions.mining_history?.slice(0, 50).map((mine, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                        <div>
+                          <p className="text-white font-medium flex items-center gap-2">
+                            <Zap className="w-4 h-4 text-yellow-400" />
+                            Mining Session
+                          </p>
+                          <p className="text-gray-400 text-xs">{formatDate(mine.created_at || mine.timestamp)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-green-400 font-bold">+{mine.prc_earned || mine.amount} PRC</p>
+                          <p className="text-gray-400 text-xs">{mine.session_duration || mine.duration || '0'} min</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'vouchers' && (
                           <p className="text-gray-400 text-sm">₹{bill.amount_inr} • {formatDate(bill.created_at)}</p>
                         </div>
                         <div className="text-right">
