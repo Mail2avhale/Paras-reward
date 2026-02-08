@@ -13313,6 +13313,34 @@ async def user_360_quick_action(request: Request):
             "created_at": now.isoformat()
         })
         result_message = "Notification sent to user"
+    
+    elif action == "clear_lockout":
+        # Clear login attempts lockout
+        user_email = user.get("email", "")
+        user_mobile = user.get("mobile", "") or user.get("mobile_number", "")
+        
+        # Delete from login_attempts collection
+        delete_result = await db.login_attempts.delete_many({
+            "$or": [
+                {"identifier": user_email},
+                {"identifier": user_mobile},
+                {"identifier": user_id}
+            ]
+        })
+        
+        # Also clear any user-level lock flags
+        await db.users.update_one(
+            {"uid": user_id},
+            {
+                "$set": {
+                    "failed_login_attempts": 0,
+                    "locked_until": None,
+                    "updated_at": now.isoformat()
+                }
+            }
+        )
+        
+        result_message = f"Lockout cleared. {delete_result.deleted_count} attempt records removed. User can login now."
         
     elif action == "block_user":
         await db.users.update_one(
