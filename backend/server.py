@@ -4152,14 +4152,6 @@ async def forgot_pin_verify_otp(request: VerifyOTPRequest):
             
             if result.get("type") == "error" or result.get("message") != "OTP verified successfully":
                 raise HTTPException(status_code=400, detail=result.get("message", "Invalid OTP"))
-                    "access-token": request.access_token
-                }
-            )
-            
-            result = response.json()
-            
-            if result.get("type") != "success":
-                raise HTTPException(status_code=400, detail="OTP verification failed")
             
     except httpx.RequestError as e:
         raise HTTPException(status_code=500, detail=f"MSG91 API error: {str(e)}")
