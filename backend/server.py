@@ -13087,8 +13087,59 @@ async def get_user_360_view(query: str):
         "orders": orders,
         "bill_payments": bill_payments,
         "gift_vouchers": gift_vouchers,
-        "subscriptions": all_subscriptions[:20]
+        "subscriptions": all_subscriptions[:20],
+        "redemptions": [],
+        "mining_history": [],
+        "prc_ledger": []
     }
+    
+    # ========== REDEMPTION REQUESTS ==========
+    # Check multiple possible collections for redemptions
+    redemptions = await db.redemption_requests.find(
+        {"user_id": uid},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(50).to_list(50)
+    
+    if not redemptions:
+        # Also try bank_transfers collection
+        redemptions = await db.bank_transfers.find(
+            {"user_id": uid},
+            {"_id": 0}
+        ).sort("created_at", -1).limit(50).to_list(50)
+    
+    transactions["redemptions"] = redemptions
+    
+    # ========== MINING HISTORY ==========
+    mining_history = await db.mining_sessions.find(
+        {"user_id": uid},
+        {"_id": 0, "prc_earned": 1, "session_duration": 1, "created_at": 1, "timestamp": 1, "amount": 1, "duration": 1}
+    ).sort("created_at", -1).limit(100).to_list(100)
+    
+    if not mining_history:
+        # Get from transactions with type mining
+        mining_history = await db.transactions.find(
+            {"user_id": uid, "type": {"$in": ["mining", "tap_game"]}},
+            {"_id": 0, "amount": 1, "type": 1, "created_at": 1, "description": 1}
+        ).sort("created_at", -1).limit(100).to_list(100)
+        # Format for frontend
+        for m in mining_history:
+            m["prc_earned"] = m.get("amount", 0)
+    
+    transactions["mining_history"] = mining_history
+    
+    # ========== PRC LEDGER (All Transactions) ==========
+    prc_ledger = await db.transactions.find(
+        {"user_id": uid},
+        {"_id": 0, "type": 1, "amount": 1, "description": 1, "reason": 1, "created_at": 1, "timestamp": 1, "balance_after": 1}
+    ).sort("created_at", -1).limit(200).to_list(200)
+    
+    # Format ledger entries
+    for entry in prc_ledger:
+        amount = entry.get("amount", 0)
+        entry["type"] = "credit" if amount > 0 else "debit"
+        entry["amount"] = abs(amount)
+    
+    transactions["prc_ledger"] = prc_ledger
     
     # ========== ACTIVITY TIMELINE ==========
     # Get recent transactions as activity
