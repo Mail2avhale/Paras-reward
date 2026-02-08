@@ -69,6 +69,12 @@ const AdminSubscriptionManagement = ({ user }) => {
   const [timeFilter, setTimeFilter] = useState('all');
   const [paymentSearch, setPaymentSearch] = useState('');
   
+  // Advanced date range filter
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [sortOrder, setSortOrder] = useState('newest'); // 'newest' or 'oldest'
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  
   // Fraud prevention - Plan correction
   const [correctPlan, setCorrectPlan] = useState('');
   const [correctDuration, setCorrectDuration] = useState('');
