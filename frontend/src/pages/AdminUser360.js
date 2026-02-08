@@ -616,6 +616,40 @@ const AdminUser360 = ({ user: adminUser }) => {
                   )}
                 </div>
               )}
+
+              {activeTab === 'prc_ledger' && (
+                <div className="space-y-2">
+                  {userData.transactions.prc_ledger?.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">No PRC transactions found</p>
+                  ) : (
+                    userData.transactions.prc_ledger?.slice(0, 100).map((txn, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            txn.type === 'credit' ? 'bg-green-500/20' : 'bg-red-500/20'
+                          }`}>
+                            {txn.type === 'credit' ? (
+                              <TrendingUp className="w-4 h-4 text-green-400" />
+                            ) : (
+                              <TrendingDown className="w-4 h-4 text-red-400" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-white font-medium text-sm">{txn.description || txn.reason || 'Transaction'}</p>
+                            <p className="text-gray-400 text-xs">{formatDate(txn.created_at || txn.timestamp)}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={`font-bold ${txn.type === 'credit' ? 'text-green-400' : 'text-red-400'}`}>
+                            {txn.type === 'credit' ? '+' : '-'}{txn.amount} PRC
+                          </p>
+                          <p className="text-gray-500 text-xs">Bal: {txn.balance_after || 'N/A'}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           </Card>
 
