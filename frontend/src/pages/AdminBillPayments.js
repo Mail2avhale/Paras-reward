@@ -158,9 +158,9 @@ const AdminBillPayments = ({ user }) => {
   useEffect(() => {
     setCurrentPage(1);
     setSelectedRequests([]);
-  }, [activeCategory, statusFilter, searchTerm]);
+  }, [activeCategory, statusFilter, searchTerm, dateFrom, dateTo, sortOrder]);
 
-  // Filter and sort requests (OLDEST FIRST for processing queue)
+  // Filter and sort requests
   const filteredRequests = useMemo(() => {
     let filtered = [...requests];
 
@@ -178,23 +178,67 @@ const AdminBillPayments = ({ user }) => {
       filtered = filtered.filter(r => r.status === 'rejected');
     }
 
-    // Search filter
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      filtered = filtered.filter(r =>
-        (r.user_name || '').toLowerCase().includes(search) ||
-        (r.user_email || '').toLowerCase().includes(search) ||
-        (r.request_id || '').toLowerCase().includes(search) ||
-        (r.details?.phone_number || '').includes(search) ||
-        (r.details?.account_number || '').includes(search)
-      );
+    // Date range filter
+    if (dateFrom) {
+      const fromDate = new Date(dateFrom);
+      fromDate.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(r => new Date(r.created_at) >= fromDate);
+    }
+    if (dateTo) {
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(r => new Date(r.created_at) <= toDate);
     }
 
-    // Sort OLDEST FIRST (FIFO for processing)
-    filtered.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    // Advanced search filter - search across ALL fields
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(r => {
+        // Basic fields
+        if ((r.user_name || '').toLowerCase().includes(search)) return true;
+        if ((r.user_email || '').toLowerCase().includes(search)) return true;
+        if ((r.request_id || '').toLowerCase().includes(search)) return true;
+        if ((r.user_mobile || '').includes(search)) return true;
+        
+        // Amount search
+        if ((r.amount_inr?.toString() || '').includes(search)) return true;
+        if ((r.total_prc_deducted?.toString() || '').includes(search)) return true;
+        
+        // Details fields - search all nested fields
+        const details = r.details || {};
+        if ((details.phone_number || '').includes(search)) return true;
+        if ((details.account_number || '').includes(search)) return true;
+        if ((details.consumer_number || '').toLowerCase().includes(search)) return true;
+        if ((details.operator || '').toLowerCase().includes(search)) return true;
+        if ((details.biller_name || '').toLowerCase().includes(search)) return true;
+        if ((details.utr_number || '').toLowerCase().includes(search)) return true;
+        if ((details.transaction_id || '').toLowerCase().includes(search)) return true;
+        if ((details.card_last4 || '').includes(search)) return true;
+        if ((details.cardholder_name || '').toLowerCase().includes(search)) return true;
+        if ((details.bank_name || '').toLowerCase().includes(search)) return true;
+        if ((details.loan_account || '').toLowerCase().includes(search)) return true;
+        if ((details.borrower_name || '').toLowerCase().includes(search)) return true;
+        if ((details.ifsc_code || '').toLowerCase().includes(search)) return true;
+        if ((details.linked_mobile || '').includes(search)) return true;
+        if ((details.registered_mobile || '').includes(search)) return true;
+        
+        // Admin notes
+        if ((r.admin_notes || '').toLowerCase().includes(search)) return true;
+        if ((r.rejection_reason || '').toLowerCase().includes(search)) return true;
+        
+        return false;
+      });
+    }
+
+    // Sort - NEWEST FIRST by default (latest requests on top)
+    if (sortOrder === 'newest') {
+      filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    } else {
+      filtered.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    }
 
     return filtered;
-  }, [requests, activeCategory, statusFilter, searchTerm]);
+  }, [requests, activeCategory, statusFilter, searchTerm, dateFrom, dateTo, sortOrder]);
 
   // Pagination
   const totalPages = Math.ceil(filteredRequests.length / ITEMS_PER_PAGE);
