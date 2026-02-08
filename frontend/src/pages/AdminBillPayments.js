@@ -771,7 +771,7 @@ const AdminBillPayments = ({ user }) => {
               Select All
             </button>
             <span className="text-xs text-gray-500">
-              Showing {filteredRequests.length} requests (Oldest First)
+              Showing {filteredRequests.length} requests ({sortOrder === 'newest' ? 'Latest First' : 'Oldest First'})
             </span>
           </div>
         )}
