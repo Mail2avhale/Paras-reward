@@ -209,6 +209,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
             <Route path="/refund" element={<RefundPolicy />} />
+            <Route path="/plme-demo" element={<PLMEDemo />} />
             <Route path="/rewards-home" element={<RewardsHome />} />
             
             {/* Protected Routes */}
