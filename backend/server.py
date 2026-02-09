@@ -3838,27 +3838,13 @@ async def check_user_birthday(uid: str):
 # - /auth/reset-password
 # - /auth/change-password
 # - /auth/user/{uid}
+# 
+# Original routes below are disabled by renaming decorator path to avoid conflicts
 
-# ORIGINAL CODE COMMENTED OUT - START
+# DISABLED - Moved to routes/auth.py
 # @api_router.post("/auth/register/simple")
-# async def simple_register(request: Request):
-#     """Simplified registration - MOVED TO routes/auth.py"""
-#     pass
-
-# Note: Original auth routes from lines 3826-5571 are now in routes/auth.py
-# Keeping one dummy function to maintain line references
-async def _auth_routes_moved_placeholder():
-    """Placeholder - auth routes moved to routes/auth.py"""
-    pass
-
-# ========== LEGACY AUTH ROUTES - KEPT FOR REFERENCE ==========
-# These routes below (refresh-token, logout, etc.) are NOT moved yet
-# They will be moved in future refactoring iterations
-
-# ORIGINAL simple_register START (COMMENTED)
-"""
-@api_router.post("/auth/register/simple")
-async def simple_register(request: Request):
+@api_router.post("/_disabled_auth/register/simple")
+async def _disabled_simple_register(request: Request):
     """Simplified registration - full name, mobile, email, password required"""
     # Check if registration is enabled
     settings = await db.settings.find_one({}, {"_id": 0, "registration_enabled": 1, "registration_message": 1})
