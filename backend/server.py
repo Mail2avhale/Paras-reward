@@ -3810,14 +3810,23 @@ async def login(
     real_ip = get_client_ip(request) or ip_address or "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
     
+    # DEBUG: Log login attempt details
+    logging.info(f"[LOGIN DEBUG] Attempt for: {identifier}, IP: {real_ip}")
+    
     # ========== FRAUD DETECTION: IP Login Limit ==========
     ip_ok, ip_msg = await fraud_detector.check_ip_login_limit(real_ip)
     if not ip_ok:
+        logging.warning(f"[LOGIN DEBUG] IP BLOCKED for {identifier}: {ip_msg}")
         raise HTTPException(status_code=429, detail=ip_msg)
     
     # Check rate limit for login attempts (Progressive lockout)
     allowed, locked_seconds, attempts_left, lockout_message = check_login_rate_limit(identifier)
+    
+    # DEBUG: Log rate limit status
+    logging.info(f"[LOGIN DEBUG] Rate limit check for {identifier}: allowed={allowed}, locked_seconds={locked_seconds}, attempts_left={attempts_left}")
+    
     if not allowed:
+        logging.warning(f"[LOGIN DEBUG] USER RATE LIMITED: {identifier}, message: {lockout_message}")
         raise HTTPException(
             status_code=429, 
             detail=lockout_message
