@@ -3822,7 +3822,41 @@ async def check_user_birthday(uid: str):
         logging.error(f"Birthday check error: {e}")
         return {"is_birthday": False, "message": None}
 
-# ========== AUTH ROUTES ==========
+# ========== AUTH ROUTES - MOVED TO routes/auth.py ==========
+# The following auth routes have been moved to routes/auth.py for better code organization:
+# - /auth/register/simple
+# - /auth/register
+# - /auth/check-auth-type
+# - /auth/set-new-pin
+# - /auth/login
+# - /auth/forgot-password
+# - /auth/forgot-pin/check-mobile
+# - /auth/forgot-pin/verify-otp
+# - /auth/forgot-pin/reset
+# - /auth/biometric/* (all biometric routes)
+# - /auth/reset-password-request
+# - /auth/reset-password
+# - /auth/change-password
+# - /auth/user/{uid}
+
+# ORIGINAL CODE COMMENTED OUT - START
+# @api_router.post("/auth/register/simple")
+# async def simple_register(request: Request):
+#     """Simplified registration - MOVED TO routes/auth.py"""
+#     pass
+
+# Note: Original auth routes from lines 3826-5571 are now in routes/auth.py
+# Keeping one dummy function to maintain line references
+async def _auth_routes_moved_placeholder():
+    """Placeholder - auth routes moved to routes/auth.py"""
+    pass
+
+# ========== LEGACY AUTH ROUTES - KEPT FOR REFERENCE ==========
+# These routes below (refresh-token, logout, etc.) are NOT moved yet
+# They will be moved in future refactoring iterations
+
+# ORIGINAL simple_register START (COMMENTED)
+"""
 @api_router.post("/auth/register/simple")
 async def simple_register(request: Request):
     """Simplified registration - full name, mobile, email, password required"""
