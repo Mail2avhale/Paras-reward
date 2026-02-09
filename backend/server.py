@@ -3892,6 +3892,7 @@ async def login(
     else:
         # No password stored - reject login for security
         record_login_attempt(identifier, False)
+        await record_login_attempt_db(db, identifier, False, real_ip)
         raise HTTPException(status_code=401, detail="Account has no password set. Please contact support.")
     
     if user.get("is_banned"):
