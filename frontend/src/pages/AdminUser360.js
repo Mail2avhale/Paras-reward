@@ -791,6 +791,18 @@ const AdminUser360 = ({ user: adminUser }) => {
                 </Button>
                 <Button
                   onClick={() => {
+                    if (confirm('Generate a new 6-digit PIN for this user?')) handleQuickAction('reset_pin');
+                  }}
+                  disabled={processing}
+                  variant="outline"
+                  className="h-auto py-3 border-teal-500/50 text-teal-400"
+                  data-testid="reset-pin-button"
+                >
+                  <Key className="w-4 h-4 mr-2" />
+                  Reset PIN
+                </Button>
+                <Button
+                  onClick={() => {
                     if (confirm('Clear login lockout for this user? They will be able to login immediately.')) handleQuickAction('clear_lockout');
                   }}
                   disabled={processing}
