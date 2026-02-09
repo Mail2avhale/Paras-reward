@@ -27,6 +27,7 @@ const LoginNew = ({ onLogin }) => {
   const [animatedFeedback, setAnimatedFeedback] = useState(null);
   const [pinError, setPinError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   
   // Auth type: 'unknown', 'pin', 'password'
   const [authType, setAuthType] = useState('unknown');
@@ -39,6 +40,16 @@ const LoginNew = ({ onLogin }) => {
     device_id: '',
     ip_address: ''
   });
+
+  // Load saved login ID on mount
+  useEffect(() => {
+    const savedIdentifier = localStorage.getItem('saved_login_id');
+    const savedRememberMe = localStorage.getItem('remember_me') === 'true';
+    if (savedIdentifier && savedRememberMe) {
+      setLoginData(prev => ({ ...prev, identifier: savedIdentifier }));
+      setRememberMe(true);
+    }
+  }, []);
 
   // Generate device ID
   useEffect(() => {
