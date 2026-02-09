@@ -26749,6 +26749,60 @@ async def get_referral_tree(user_id: str):
     tree = await build_tree(user_id)
     return {"tree": tree}
 
+@api_router.get("/referrals/network-tree/{user_id}")
+async def get_network_tree_advanced(user_id: str):
+    """
+    Get advanced network tree structure for NetworkTreeAdvanced page.
+    Returns complete tree with subscription info, activity status, and referral counts.
+    """
+    
+    async def build_advanced_tree(uid, level=1, max_level=5):
+        if level > max_level:
+            return None
+        
+        # Get user info
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            return None
+        
+        # Get direct referrals
+        referrals = await db.users.find({"referred_by": uid}).to_list(length=None)
+        
+        # Check if user is active (has paid subscription)
+        subscription_plan = user.get("subscription_plan", "explorer")
+        is_active = subscription_plan in ["startup", "growth", "elite"]
+        
+        # Calculate referral count for this user
+        referral_count = len(referrals)
+        
+        node = {
+            "id": uid,
+            "name": user.get("name", "Unknown"),
+            "email": user.get("email", ""),
+            "mobile": user.get("mobile", ""),
+            "level": level,
+            "subscription_plan": subscription_plan,
+            "is_active": is_active,
+            "referral_count": referral_count,
+            "prc_balance": user.get("prc_balance", 0),
+            "joined_at": user.get("created_at", ""),
+            "last_active": user.get("last_login", user.get("last_active", "")),
+            "earnings_generated": user.get("total_referral_earnings", 0),
+            "children": []
+        }
+        
+        # Recursively build children (no limit for advanced view)
+        for referral in referrals:
+            child_tree = await build_advanced_tree(referral["uid"], level + 1, max_level)
+            if child_tree:
+                node["children"].append(child_tree)
+        
+        return node
+    
+    tree = await build_advanced_tree(user_id)
+    return tree or {"id": user_id, "name": "User", "children": []}
+
+
 @api_router.get("/referrals/{user_id}/stats")
 async def get_referral_stats(user_id: str):
     """
