@@ -1258,10 +1258,7 @@ Download now & start earning!`;
       {/* Network Tree View Button */}
       <div className="px-5 mb-6">
         <button
-          onClick={() => {
-            setShowNetworkTree(true);
-            fetchNetworkTree();
-          }}
+          onClick={() => navigate('/network-tree')}
           className="w-full bg-gradient-to-r from-cyan-500/20 to-blue-600/10 border border-cyan-500/30 rounded-2xl p-4 flex items-center justify-between hover:from-cyan-500/30 hover:to-blue-600/20 transition-all"
           data-testid="view-network-tree"
         >
@@ -1271,7 +1268,7 @@ Download now & start earning!`;
             </div>
             <div className="text-left">
               <p className="text-white font-bold">Network Tree View</p>
-              <p className="text-cyan-400 text-sm">See your complete referral network</p>
+              <p className="text-cyan-400 text-sm">Advanced network visualization</p>
             </div>
           </div>
           <ChevronRight className="w-6 h-6 text-cyan-400" />
