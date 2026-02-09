@@ -20,6 +20,7 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
     this_week: 0,
     today: 0
   });
+  const [levelBreakdown, setLevelBreakdown] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [filterPeriod, setFilterPeriod] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
