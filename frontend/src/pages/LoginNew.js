@@ -360,14 +360,26 @@ const LoginNew = ({ onLogin }) => {
             </div>
           )}
 
-          {/* Forgot PIN/Password */}
-          {identifierChecked && authType !== 'unknown' && (
-            <div className="text-right">
+          {/* Remember Me & Forgot PIN/Password Row */}
+          <div className="flex items-center justify-between">
+            {/* Remember Me Checkbox */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+              />
+              <span className="text-sm text-gray-600">Remember ID</span>
+            </label>
+            
+            {/* Forgot PIN/Password */}
+            {identifierChecked && authType !== 'unknown' && (
               <Link to={authType === 'pin' ? '/forgot-pin' : '/forgot-password'} className="text-sm text-purple-600 hover:text-purple-700 font-medium">
                 {authType === 'pin' ? 'Forgot PIN?' : 'Forgot Password?'}
               </Link>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Biometric Login */}
           {showBiometricOption && loginData.identifier && authType === 'pin' && (
