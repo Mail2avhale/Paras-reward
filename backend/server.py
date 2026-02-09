@@ -13658,6 +13658,7 @@ async def user_360_quick_action(request: Request):
         
     elif action == "reset_password":
         # Admin can set a temporary password directly
+        # For PIN-migrated users, this also resets their PIN
         temp_password = data.get("temp_password", "")
         if not temp_password:
             # Generate a random temporary password
@@ -13666,24 +13667,39 @@ async def user_360_quick_action(request: Request):
         # Hash the temporary password using pwd_context
         hashed_password = pwd_context.hash(temp_password)
         
-        # Update BOTH password fields to ensure login works (password_hash takes priority)
+        # Check if user is PIN-migrated
+        is_pin_user = user.get("pin_migrated", False)
+        
+        update_fields = {
+            "password": hashed_password,
+            "password_hash": hashed_password,
+            "password_reset_required": True,
+            "password_reset_at": now.isoformat(),
+            "password_reset_by": admin_id,
+            "failed_login_attempts": 0,
+            "locked_until": None,
+            "updated_at": now.isoformat()
+        }
+        
+        # If PIN user, also update PIN hash (password and PIN should be same for consistency)
+        if is_pin_user:
+            update_fields["pin_hash"] = hashed_password
+            update_fields["failed_pin_attempts"] = 0
+            update_fields["pin_locked_until"] = None
+        
         await db.users.update_one(
             {"uid": user_id},
-            {"$set": {
-                "password": hashed_password,
-                "password_hash": hashed_password,  # CRITICAL: Also update password_hash
-                "password_reset_required": True,
-                "password_reset_at": now.isoformat(),
-                "password_reset_by": admin_id,
-                "failed_login_attempts": 0,  # Reset failed attempts
-                "locked_until": None,  # Remove any lock
-                "updated_at": now.isoformat()
-            }}
+            {"$set": update_fields}
         )
-        result_message = f"Password reset successful. Temporary password: {temp_password}"
+        
+        if is_pin_user:
+            result_message = f"Password & PIN reset successful. Temporary credential: {temp_password}. User should use this as their new PIN."
+        else:
+            result_message = f"Password reset successful. Temporary password: {temp_password}"
     
     elif action == "reset_pin":
         # Admin can reset user's 6-digit PIN
+        # This also updates password fields for consistency
         temp_pin = data.get("temp_pin", "")
         if not temp_pin:
             # Generate a random 6-digit PIN
@@ -13697,15 +13713,21 @@ async def user_360_quick_action(request: Request):
         # Hash the PIN using pwd_context
         hashed_pin = pwd_context.hash(temp_pin)
         
+        # Update ALL credential fields for consistency
         await db.users.update_one(
             {"uid": user_id},
             {"$set": {
                 "pin_hash": hashed_pin,
+                "password": hashed_pin,           # Keep in sync
+                "password_hash": hashed_pin,      # Keep in sync
+                "pin_migrated": True,             # Ensure marked as PIN user
                 "pin_reset_required": True,
                 "pin_reset_at": now.isoformat(),
                 "pin_reset_by": admin_id,
-                "failed_pin_attempts": 0,  # Reset failed attempts
-                "pin_locked_until": None,  # Remove any PIN lock
+                "failed_pin_attempts": 0,
+                "pin_locked_until": None,
+                "failed_login_attempts": 0,       # Clear password lockout too
+                "locked_until": None,
                 "updated_at": now.isoformat()
             }}
         )
