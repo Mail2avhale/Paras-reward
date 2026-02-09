@@ -27475,6 +27475,15 @@ async def get_referral_earnings_history(user_id: str, period: str = "all"):
         except Exception as e:
             logging.error(f"Error generating estimated earnings: {e}")
     
+    # Calculate level breakdown
+    level_breakdown = {}
+    for level in range(1, 6):
+        level_earnings = [e for e in earnings if e.get("level") == level]
+        level_breakdown[f"level_{level}"] = {
+            "count": len(level_earnings),
+            "total": round(sum(e.get("prc_earned", 0) for e in level_earnings), 2)
+        }
+    
     return {
         "earnings": earnings,
         "summary": {
@@ -27482,7 +27491,8 @@ async def get_referral_earnings_history(user_id: str, period: str = "all"):
             "this_month": round(month_earned, 2),
             "this_week": round(week_earned, 2),
             "today": round(today_earned, 2)
-        }
+        },
+        "level_breakdown": level_breakdown
     }
 
 
