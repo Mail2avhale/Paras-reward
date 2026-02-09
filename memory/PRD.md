@@ -128,6 +128,6 @@ Build a PRC (point-based reward currency) system web application where users can
 - `gift_voucher_requests`: Voucher redemptions
 
 ## Deployment
-- **Preview URL**: https://user-360-mgmt.preview.emergentagent.com
+- **Preview URL**: https://animal-overlay.preview.emergentagent.com
 - **Status**: Ready for production deployment
 - **Action**: Use Emergent "Deploy" button

@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://user-360-mgmt.preview.emergentagent.com",
+    "url": "https://animal-overlay.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
