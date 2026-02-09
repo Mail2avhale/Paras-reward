@@ -38029,6 +38029,32 @@ set_referral_db(db)
 set_referral_helpers(get_multi_level_referrals, get_base_rate)
 api_router.include_router(referral_router)
 
+# Include auth router (refactored)
+set_auth_db(db)
+set_auth_helpers({
+    'hash_password': hash_password,
+    'verify_password': verify_password,
+    'generate_reset_token': generate_reset_token,
+    'pwd_context': pwd_context,
+    'get_client_ip': get_client_ip,
+    'fraud_detector': fraud_detector,
+    'create_security_alert': create_security_alert,
+    'check_login_rate_limit': check_login_rate_limit,
+    'check_login_rate_limit_db': check_login_rate_limit_db,
+    'record_login_attempt': record_login_attempt,
+    'record_login_attempt_db': record_login_attempt_db,
+    'create_access_token': create_access_token,
+    'create_refresh_token': create_refresh_token,
+    'check_ip_whitelist': check_ip_whitelist,
+    'log_admin_action': log_admin_action,
+    'log_activity': log_activity,
+    'create_social_notification': create_social_notification,
+    'parse_user_agent': parse_user_agent,
+    'User': User,
+    'JWT_ACCESS_TOKEN_EXPIRE_MINUTES': JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+})
+api_router.include_router(auth_router)
+
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
 
