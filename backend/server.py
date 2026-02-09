@@ -5603,6 +5603,8 @@ async def get_user(uid: str):
         user['membership_expiry'] = datetime.fromisoformat(user['membership_expiry'])
     
     return User(**user)
+"""
+# END OF COMMENTED AUTH ROUTES - MOVED TO routes/auth.py
 
 # ========== MINING ROUTES ==========
 @api_router.post("/mining/start/{uid}")
