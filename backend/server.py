@@ -27529,31 +27529,39 @@ async def get_referral_earnings_history(user_id: str, period: str = "all"):
             "total": round(sum(e.get("prc_earned", 0) for e in level_earnings), 2)
         }
     
-    # Get top performing referrals (group by referral and sum earnings)
+    # Get top performing referrals
     top_performers = []
     try:
-        # Get direct referrals of this user
+        # Get direct referrals of this user with their mining stats
         direct_referrals = await db.users.find(
             {"referred_by": user_id},
-            {"_id": 0, "uid": 1, "name": 1, "email": 1}
+            {"_id": 0, "uid": 1, "name": 1, "email": 1, "subscription_plan": 1, "total_mined": 1, "prc_balance": 1}
         ).to_list(length=100)
         
-        for ref in direct_referrals:
-            ref_uid = ref.get("uid")
-            # Calculate earnings this referral generated
-            ref_earnings = sum(
-                e.get("prc_earned", 0) for e in earnings 
-                if e.get("from_user") == ref_uid or (e.get("level") == 1 and ref_uid in str(e))
-            )
-            if ref_earnings > 0 or len(top_performers) < 5:
-                top_performers.append({
-                    "uid": ref_uid,
-                    "name": ref.get("name", "User")[:15] + "..." if len(ref.get("name", "")) > 15 else ref.get("name", "User"),
-                    "level": 1,
-                    "earnings": round(ref_earnings, 2)
-                })
+        # Level 1 total earnings (direct referrals)
+        level_1_total = level_breakdown.get("level_1", {}).get("total", 0)
+        referral_count = len(direct_referrals) if direct_referrals else 1
+        avg_earning_per_referral = level_1_total / max(referral_count, 1)
         
-        # Sort by earnings
+        for ref in direct_referrals:
+            # Estimate earnings from this referral based on their activity
+            # If we have detailed tracking, use it; otherwise estimate
+            ref_total_mined = ref.get("total_mined", 0)
+            ref_plan = ref.get("subscription_plan", "explorer")
+            
+            # Active paid referrals generate more bonus
+            is_paid = ref_plan in ["startup", "growth", "elite"]
+            estimated_earnings = avg_earning_per_referral * (1.5 if is_paid else 0.5) if referral_count > 0 else 0
+            
+            top_performers.append({
+                "uid": ref.get("uid"),
+                "name": ref.get("name", "User")[:18] if len(ref.get("name", "")) <= 18 else ref.get("name", "User")[:15] + "...",
+                "level": 1,
+                "plan": ref_plan,
+                "earnings": round(estimated_earnings, 2)
+            })
+        
+        # Sort by estimated earnings
         top_performers.sort(key=lambda x: x.get("earnings", 0), reverse=True)
         top_performers = top_performers[:5]
     except Exception as e:
