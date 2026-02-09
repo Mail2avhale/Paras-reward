@@ -520,7 +520,7 @@ const NetworkTreeAdvanced = ({ user }) => {
 
       {/* Search & Filters */}
       <div className="px-4 mb-4">
-        <Card className="p-3 bg-gray-900/50 border-gray-800">
+        <Card className="p-3 bg-gray-900/50 border-gray-800" data-testid="search-filters-card">
           {/* Search */}
           <div className="relative mb-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
@@ -529,11 +529,13 @@ const NetworkTreeAdvanced = ({ user }) => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 bg-gray-800 border-gray-700 text-white"
+              data-testid="search-input"
             />
             {searchTerm && (
               <button 
                 onClick={() => setSearchTerm('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2"
+                data-testid="clear-search-button"
               >
                 <X className="w-4 h-4 text-gray-400" />
               </button>
@@ -547,6 +549,7 @@ const NetworkTreeAdvanced = ({ user }) => {
               value={selectedLevel}
               onChange={(e) => setSelectedLevel(e.target.value)}
               className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white"
+              data-testid="level-filter"
             >
               <option value="all">All Levels</option>
               <option value="1">Level 1</option>
@@ -561,6 +564,7 @@ const NetworkTreeAdvanced = ({ user }) => {
               value={selectedPlan}
               onChange={(e) => setSelectedPlan(e.target.value)}
               className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white"
+              data-testid="plan-filter"
             >
               <option value="all">All Plans</option>
               <option value="free">Free</option>
