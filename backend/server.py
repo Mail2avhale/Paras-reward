@@ -9015,7 +9015,8 @@ async def cancel_order(order_id: str):
 
 
 # ========== WALLET ROUTES ==========
-@api_router.get("/wallet/{uid}")
+# DISABLED - Moved to routes/wallet.py
+@api_router.get("/_disabled_wallet/{uid}")
 async def get_wallet(uid: str):
     """Get wallet balance and status"""
     user = await db.users.find_one({"uid": uid})
@@ -9953,7 +9954,8 @@ async def request_profit_withdrawal(request: Request):
         "status": "pending"
     }
 
-@api_router.get("/wallet/withdrawals/{uid}")
+# DISABLED - Moved to routes/wallet.py
+@api_router.get("/_disabled_wallet/withdrawals/{uid}")
 async def get_user_withdrawals(uid: str):
     """Get user's withdrawal history"""
     cashback_withdrawals = await db.cashback_withdrawals.find(
@@ -9972,7 +9974,8 @@ async def get_user_withdrawals(uid: str):
     }
 
 
-@api_router.get("/wallet/transactions/{uid}")
+# DISABLED - Moved to routes/wallet.py
+@api_router.get("/_disabled_wallet/transactions/{uid}")
 async def get_wallet_transactions(uid: str, wallet_type: str = None, page: int = 1, limit: int = 10):
     """Get user's comprehensive wallet transaction history with pagination (default 10 per page)"""
     query = {"user_id": uid}
@@ -10008,8 +10011,9 @@ async def get_wallet_transactions(uid: str, wallet_type: str = None, page: int =
         "has_prev": page > 1
     }
 
-@api_router.get("/transactions/user/{uid}")
-async def get_user_transactions_simple(uid: str, page: int = 1, limit: int = 5):
+# DISABLED - Moved to routes/wallet.py
+@api_router.get("/_disabled_transactions/user/{uid}")
+async def _disabled_get_user_transactions_simple(uid: str, page: int = 1, limit: int = 5):
     """Get recent transactions for user dashboard with pagination - 5 records per page"""
     try:
         skip = (page - 1) * limit
@@ -10084,7 +10088,8 @@ async def get_user_transactions_simple(uid: str, page: int = 1, limit: int = 5):
         }
 
 
-@api_router.get("/transactions/user/{uid}/detailed")
+# DISABLED - Moved to routes/wallet.py
+@api_router.get("/_disabled_transactions/user/{uid}/detailed")
 async def get_detailed_transaction_history(
     uid: str, 
     wallet_type: str = None,
