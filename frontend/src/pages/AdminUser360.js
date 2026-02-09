@@ -135,33 +135,58 @@ const AdminUser360 = ({ user: adminUser }) => {
         ...params
       });
       
+      const message = response.data?.message || '';
+      
       // Special handling for password reset - show in center modal
-      if (action === 'reset_password' && response.data?.message) {
-        const passwordMatch = response.data.message.match(/Temporary password: (\w+)/);
-        if (passwordMatch) {
-          const tempPassword = passwordMatch[1];
-          setPasswordModal({ show: true, password: tempPassword });
+      if (action === 'reset_password' && message) {
+        // Match both old and new format
+        const credentialMatch = message.match(/Temporary (?:password|credential): (\w+)/);
+        if (credentialMatch) {
+          const tempCredential = credentialMatch[1];
+          setPasswordModal({ show: true, password: tempCredential, isPinUser: message.includes('PIN') });
         } else {
-          toast.success(response.data.message);
+          setSuccessModal({ show: true, title: 'Password Reset', message: message, type: 'success' });
         }
       } 
       // Special handling for PIN reset - show in center modal
-      else if (action === 'reset_pin' && response.data?.message) {
-        const pinMatch = response.data.message.match(/New temporary PIN: (\d{6})/);
+      else if (action === 'reset_pin' && message) {
+        const pinMatch = message.match(/New temporary PIN: (\d{6})/);
         if (pinMatch) {
           const tempPin = pinMatch[1];
           setPinModal({ show: true, pin: tempPin });
         } else {
-          toast.success(response.data.message);
+          setSuccessModal({ show: true, title: 'PIN Reset', message: message, type: 'success' });
         }
-      } else {
-        toast.success(`Action "${action}" completed successfully`);
+      }
+      // All other actions - show in center modal
+      else {
+        const actionTitles = {
+          'pause_mining': 'Mining Paused',
+          'resume_mining': 'Mining Resumed',
+          'adjust_balance': 'Balance Adjusted',
+          'set_cap': 'Daily Cap Set',
+          'send_notification': 'Notification Sent',
+          'block_user': 'User Blocked',
+          'unblock_user': 'User Unblocked',
+          'clear_lockout': 'Lockout Cleared',
+          'update_user_details': 'Details Updated',
+          'save_notes': 'Notes Saved'
+        };
+        
+        const title = actionTitles[action] || 'Action Completed';
+        setSuccessModal({ 
+          show: true, 
+          title: title, 
+          message: message || `${action} completed successfully`,
+          type: action === 'block_user' ? 'warning' : 'success'
+        });
       }
       
       // Silently refresh data without showing loading state
       refreshUserData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Action failed');
+      const errorMsg = error.response?.data?.detail || 'Action failed';
+      setSuccessModal({ show: true, title: 'Error', message: errorMsg, type: 'error' });
     } finally {
       setProcessing(false);
     }
