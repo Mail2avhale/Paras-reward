@@ -36,6 +36,9 @@ from fraud_detection import FraudDetector, get_client_ip, generate_device_finger
 from cache_manager import cache, CacheTTL, user_cache_key, user_balance_key, admin_stats_key, leaderboard_key, global_stats_key
 from db_indexes import create_performance_indexes, get_index_stats
 
+# Import routers
+from routes.referral import router as referral_router, set_db as set_referral_db, set_helpers as set_referral_helpers
+
 # ========== SECURITY CONFIGURATION ==========
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
 JWT_ALGORITHM = "HS256"
