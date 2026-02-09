@@ -872,6 +872,65 @@ async def force_fix_user(identifier: str):
     }
 
 
+@api_router.post("/admin/migrate-user-to-pin/{identifier}")
+async def migrate_user_to_pin(identifier: str, new_pin: str = None):
+    """
+    Migrate a user from password to PIN system.
+    If no PIN provided, generates a random 6-digit PIN.
+    Use this for users who have password but no PIN.
+    """
+    import random
+    
+    # Find user
+    user = await db.users.find_one({
+        "$or": [
+            {"email": {"$regex": f"^{identifier}$", "$options": "i"}},
+            {"mobile": identifier},
+            {"uid": identifier}
+        ]
+    })
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Generate PIN if not provided
+    if not new_pin:
+        new_pin = str(random.randint(100000, 999999))
+    
+    # Validate PIN
+    if not new_pin.isdigit() or len(new_pin) != 6:
+        raise HTTPException(status_code=400, detail="PIN must be exactly 6 digits")
+    
+    # Hash the PIN
+    pin_hash = pwd_context.hash(new_pin)
+    
+    # Update user
+    await db.users.update_one(
+        {"uid": user.get("uid")},
+        {
+            "$set": {
+                "pin_hash": pin_hash,
+                "pin_migrated": True,
+                "password_hash": pin_hash,  # Also set password_hash for backward compatibility
+                "password": pin_hash,       # Legacy field
+                "failed_login_attempts": 0,
+                "locked_until": None,
+                "failed_pin_attempts": 0,
+                "pin_locked_until": None
+            }
+        }
+    )
+    
+    return {
+        "success": True,
+        "user_id": user.get("uid"),
+        "email": user.get("email"),
+        "mobile": user.get("mobile"),
+        "new_pin": new_pin,
+        "message": f"User migrated to PIN. New PIN: {new_pin}. Please share this securely with the user."
+    }
+
+
 @api_router.post("/admin/clear-cache")
 async def clear_admin_cache():
     """
