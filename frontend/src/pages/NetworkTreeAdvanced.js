@@ -578,6 +578,7 @@ const NetworkTreeAdvanced = ({ user }) => {
               value={activityFilter}
               onChange={(e) => setActivityFilter(e.target.value)}
               className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white"
+              data-testid="activity-filter"
             >
               <option value="all">All Activity</option>
               <option value="active_7d">Active (7 days)</option>
@@ -596,6 +597,7 @@ const NetworkTreeAdvanced = ({ user }) => {
                   setActivityFilter('all');
                 }}
                 className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-sm"
+                data-testid="clear-filters-button"
               >
                 Clear All
               </button>
@@ -604,13 +606,13 @@ const NetworkTreeAdvanced = ({ user }) => {
 
           {/* Filter Summary */}
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-800">
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-400" data-testid="filter-summary">
               Showing {filteredUsers.length} of {allUsers.length} users
             </p>
             <div className="flex items-center gap-2">
-              <button onClick={expandAll} className="text-xs text-blue-400 hover:underline">Expand All</button>
+              <button onClick={expandAll} className="text-xs text-blue-400 hover:underline" data-testid="expand-all-button">Expand All</button>
               <span className="text-gray-600">|</span>
-              <button onClick={collapseAll} className="text-xs text-blue-400 hover:underline">Collapse All</button>
+              <button onClick={collapseAll} className="text-xs text-blue-400 hover:underline" data-testid="collapse-all-button">Collapse All</button>
             </div>
           </div>
         </Card>
