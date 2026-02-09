@@ -15814,17 +15814,24 @@ async def reject_cashback_withdrawal(withdrawal_id: str, request: Request):
     # NEW LOGIC: Refund only the requested amount (since only that was debited)
     refund_amount = withdrawal.get("amount_requested", withdrawal.get("amount", 0))
     
-    # Log refund transaction
+    # Get user's current balance for transparency
+    user = await db.users.find_one({"uid": withdrawal["user_id"]}, {"_id": 0, "cashback_balance": 1})
+    balance_before = user.get("cashback_balance", 0) if user else 0
+    balance_after = balance_before + refund_amount
+    
+    # Log refund transaction with before/after details
     await log_transaction(
         user_id=withdrawal["user_id"],
         wallet_type="cashback",
         transaction_type="withdrawal_rejected",
         amount=refund_amount,
-        description=f"Withdrawal refund - Request rejected by admin. Reason: {admin_notes}",
+        description=f"Withdrawal rejected - Amount Refunded",
         metadata={
             "withdrawal_id": withdrawal_id,
             "original_amount": refund_amount,
-            "admin_notes": admin_notes
+            "admin_notes": admin_notes,
+            "balance_before": balance_before,
+            "balance_after": balance_after
         },
         related_id=withdrawal_id,
         related_type="withdrawal_rejection"
@@ -15835,24 +15842,34 @@ async def reject_cashback_withdrawal(withdrawal_id: str, request: Request):
         {"$set": {
             "status": "rejected",
             "admin_notes": admin_notes,
-            "processed_at": datetime.now(timezone.utc).isoformat()
+            "processed_at": datetime.now(timezone.utc).isoformat(),
+            "refund_details": {
+                "amount_refunded": refund_amount,
+                "balance_before": balance_before,
+                "balance_after": balance_after,
+                "refunded_at": datetime.now(timezone.utc).isoformat()
+            }
         }}
     )
     
-    # Create notification for withdrawal rejection
+    # Create notification for withdrawal rejection WITH BALANCE DETAILS
     await create_notification(
         user_id=withdrawal["user_id"],
-        title="Withdrawal Rejected ❌",
-        message=f"Your withdrawal of ₹{refund_amount} was rejected. Amount refunded to wallet. Reason: {admin_notes}",
-        notification_type="withdrawal",
+        title="💰 Withdrawal Rejected - Amount Refunded",
+        message=f"Your withdrawal of ₹{refund_amount} was rejected.\n\n💰 Refund Details:\n• Refunded: ₹{refund_amount:.2f}\n• Balance Before: ₹{balance_before:.2f}\n• Balance After: ₹{balance_after:.2f}\n\n❓ Reason: {admin_notes}",
+        notification_type="withdrawal_refund",
         related_id=withdrawal_id,
-        icon="❌"
+        icon="💰"
     )
     
     return {
         "message": "Withdrawal rejected and refunded",
         "withdrawal_id": withdrawal_id,
-        "refunded_amount": refund_amount
+        "refunded_amount": refund_amount,
+        "refund_details": {
+            "balance_before": balance_before,
+            "balance_after": balance_after
+        }
     }
 
 @api_router.post("/admin/withdrawals/cashback/{withdrawal_id}/complete")
