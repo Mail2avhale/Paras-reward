@@ -11185,7 +11185,8 @@ async def ai_scan_and_update_profile(
 
 # ========== ADMIN SECURITY ENDPOINTS ==========
 
-@api_router.post("/auth/refresh-token")
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/refresh-token")
 async def refresh_access_token(refresh_token: str):
     """Refresh access token using refresh token"""
     payload = verify_token(refresh_token, token_type="refresh")
@@ -11222,8 +11223,9 @@ async def refresh_access_token(refresh_token: str):
         "expires_in": JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60
     }
 
-@api_router.post("/auth/logout")
-async def logout(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/logout")
+async def _disabled_logout(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Logout and invalidate session"""
     if not credentials:
         return {"message": "Already logged out"}
@@ -11253,7 +11255,8 @@ async def logout(request: Request, credentials: HTTPAuthorizationCredentials = D
     
     return {"message": "Logged out successfully"}
 
-@api_router.post("/auth/logout-all-sessions")
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/logout-all-sessions")
 async def logout_all_sessions(uid: str, admin_uid: str):
     """Logout from all sessions (admin only)"""
     admin = await db.users.find_one({"uid": admin_uid})
@@ -18572,7 +18575,8 @@ class PasswordRecoveryResetRequest(BaseModel):
     verification_fields: Dict[str, str]
     new_password: str
 
-@api_router.post("/auth/password-recovery/verify")
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/password-recovery/verify")
 async def verify_recovery_fields(request: PasswordRecoveryVerifyRequest):
     """Verify user identity using profile fields (2-field verification)"""
     email = request.email.lower()
@@ -18609,7 +18613,8 @@ async def verify_recovery_fields(request: PasswordRecoveryVerifyRequest):
         "uid": user.get("uid", "")
     }
 
-@api_router.post("/auth/password-recovery/reset")
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/password-recovery/reset")
 async def reset_password_with_verification(request: PasswordRecoveryResetRequest):
     """Reset password after successful verification"""
     email = request.email.lower()
