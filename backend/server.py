@@ -13,7 +13,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 import uuid
 from datetime import datetime, timezone, timedelta
 import secrets
