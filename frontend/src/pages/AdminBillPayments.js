@@ -275,13 +275,23 @@ const AdminBillPayments = ({ user }) => {
         payload.reject_reason = reason || rejectReason;
       }
       
-      await axios.post(`${API}/api/admin/bill-payment/process`, payload);
-      toast.success(`Request ${action}ed successfully`);
+      const response = await axios.post(`${API}/api/admin/bill-payment/process`, payload);
+      
+      // Update local state immediately for better UX
+      setRequests(prev => prev.map(r => 
+        r.request_id === requestId 
+          ? { ...r, status: action === 'reject' ? 'rejected' : (action === 'approve' ? 'approved' : 'completed'), reject_reason: action === 'reject' ? (reason || rejectReason) : undefined }
+          : r
+      ));
+      
+      toast.success(response.data?.message || `Request ${action}ed successfully`);
       setSelectedRequest(null);
       setAdminNotes('');
       setRejectReason('');
       setShowRejectDialog(false);
       setPendingRejectId(null);
+      
+      // Also refresh from server to ensure data consistency
       fetchRequests();
     } catch (error) {
       toast.error(error.response?.data?.detail || `Failed to ${action} request`);
