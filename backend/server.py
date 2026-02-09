@@ -144,6 +144,48 @@ def check_rate_limit(key: str, max_requests: int, window_seconds: int = RATE_LIM
     rate_limit_storage[key]["count"] += 1
     return True
 
+
+async def check_login_rate_limit_db(db, identifier: str) -> Tuple[bool, int, str]:
+    """Check if user is locked out in DATABASE (persistent across server restarts)"""
+    # Find user and check their lockout status
+    user = await db.users.find_one({
+        "$or": [
+            {"email": identifier.lower() if '@' in identifier else identifier},
+            {"mobile": identifier},
+            {"uid": identifier}
+        ]
+    }, {"_id": 0, "failed_login_attempts": 1, "locked_until": 1, "email": 1})
+    
+    if not user:
+        return True, 0, ""  # User not found, let login flow handle it
+    
+    locked_until = user.get("locked_until")
+    if locked_until:
+        try:
+            # Parse locked_until timestamp
+            if isinstance(locked_until, str):
+                lock_time = datetime.fromisoformat(locked_until.replace('Z', '+00:00'))
+            else:
+                lock_time = locked_until
+            
+            now = datetime.now(timezone.utc)
+            if lock_time > now:
+                remaining = int((lock_time - now).total_seconds())
+                if remaining >= 3600:
+                    hours = remaining // 3600
+                    mins = (remaining % 3600) // 60
+                    time_msg = f"{hours}h {mins}m"
+                else:
+                    mins = remaining // 60
+                    time_msg = f"{mins} minute{'s' if mins > 1 else ''}"
+                
+                return False, remaining, f"🔒 Account locked. Try again in {time_msg}. Contact admin if you need immediate access."
+        except Exception as e:
+            logging.error(f"Error parsing locked_until for {identifier}: {e}")
+    
+    return True, 0, ""
+
+
 def check_login_rate_limit(identifier: str) -> tuple:
     """Check login rate limit with progressive lockout. Returns (allowed: bool, locked_until: int, attempts_left: int, lockout_message: str)"""
     current_time = time.time()
