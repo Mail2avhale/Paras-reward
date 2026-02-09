@@ -56,6 +56,71 @@ const AdminUser360 = ({ user: adminUser }) => {
   // Quick Actions
   const [passwordModal, setPasswordModal] = useState({ show: false, password: '' });
   const [pinModal, setPinModal] = useState({ show: false, pin: '' });
+  const [editModal, setEditModal] = useState({ show: false });
+  const [editForm, setEditForm] = useState({
+    name: '', email: '', mobile: '', alternate_mobile: '',
+    address: '', city: '', state: '', pincode: '',
+    pan_number: '', aadhaar_number: '',
+    bank_name: '', bank_account_number: '', bank_ifsc: '', upi_id: '',
+    date_of_birth: '', gender: '',
+    nominee_name: '', nominee_relation: '', nominee_mobile: ''
+  });
+  
+  // Open edit modal with current user data
+  const openEditModal = () => {
+    if (!userData?.user) return;
+    const user = userData.user;
+    setEditForm({
+      name: user.name || '',
+      email: user.email || '',
+      mobile: user.mobile || '',
+      alternate_mobile: user.alternate_mobile || '',
+      address: user.address || '',
+      city: user.city || '',
+      state: user.state || '',
+      pincode: user.pincode || '',
+      pan_number: user.pan_number || '',
+      aadhaar_number: user.aadhaar_number || '',
+      bank_name: user.bank_name || '',
+      bank_account_number: user.bank_account_number || '',
+      bank_ifsc: user.bank_ifsc || '',
+      upi_id: user.upi_id || '',
+      date_of_birth: user.date_of_birth || '',
+      gender: user.gender || '',
+      nominee_name: user.nominee_name || '',
+      nominee_relation: user.nominee_relation || '',
+      nominee_mobile: user.nominee_mobile || ''
+    });
+    setEditModal({ show: true });
+  };
+  
+  // Handle edit form submission
+  const handleSaveUserDetails = async () => {
+    setProcessing(true);
+    try {
+      // Only send changed fields
+      const updates = {};
+      const user = userData.user;
+      Object.keys(editForm).forEach(key => {
+        if (editForm[key] !== (user[key] || '')) {
+          updates[key] = editForm[key];
+        }
+      });
+      
+      if (Object.keys(updates).length === 0) {
+        toast.info('No changes to save');
+        setEditModal({ show: false });
+        return;
+      }
+      
+      await handleQuickAction('update_user_details', { updates });
+      setEditModal({ show: false });
+    } catch (error) {
+      // Error handled in handleQuickAction
+    } finally {
+      setProcessing(false);
+    }
+  };
   
   const handleQuickAction = async (action, params = {}) => {
     if (!userData?.user?.uid) return;
