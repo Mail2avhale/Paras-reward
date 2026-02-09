@@ -679,6 +679,199 @@ async def clear_all_login_lockouts():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.get("/admin/diagnose-user/{identifier}")
+async def diagnose_user_login(identifier: str):
+    """
+    Diagnose why a specific user cannot login.
+    Returns all relevant fields that could block login.
+    """
+    # Find user
+    user = await db.users.find_one({
+        "$or": [
+            {"email": {"$regex": f"^{identifier}$", "$options": "i"}},
+            {"mobile": identifier},
+            {"uid": identifier}
+        ]
+    })
+    
+    if not user:
+        return {
+            "found": False,
+            "error": "User NOT found in database",
+            "identifier_searched": identifier,
+            "possible_issues": [
+                "Email/mobile might be different",
+                "User may not be registered",
+                "Check for typos in email"
+            ]
+        }
+    
+    # Check all possible blocking conditions
+    diagnosis = {
+        "found": True,
+        "user_info": {
+            "uid": user.get("uid"),
+            "email": user.get("email"),
+            "mobile": user.get("mobile"),
+            "name": user.get("name"),
+            "created_at": user.get("created_at")
+        },
+        "lockout_status": {
+            "failed_login_attempts": user.get("failed_login_attempts", 0),
+            "locked_until": user.get("locked_until"),
+            "failed_pin_attempts": user.get("failed_pin_attempts", 0),
+            "pin_locked_until": user.get("pin_locked_until"),
+            "lockout_level": user.get("lockout_level", 0)
+        },
+        "account_status": {
+            "is_blocked": user.get("is_blocked", False),
+            "account_locked": user.get("account_locked", False),
+            "is_suspended": user.get("is_suspended", False),
+            "suspension_reason": user.get("suspension_reason"),
+            "kyc_status": user.get("kyc_status"),
+            "status": user.get("status")
+        },
+        "password_info": {
+            "has_password": bool(user.get("password")),
+            "has_password_hash": bool(user.get("password_hash")),
+            "has_pin_hash": bool(user.get("pin_hash")),
+            "password_reset_required": user.get("password_reset_required", False),
+            "pin_reset_required": user.get("pin_reset_required", False)
+        },
+        "possible_issues": []
+    }
+    
+    # Analyze issues
+    issues = []
+    
+    if user.get("locked_until"):
+        issues.append(f"LOCKED_UNTIL is set: {user.get('locked_until')}")
+    
+    if user.get("pin_locked_until"):
+        issues.append(f"PIN_LOCKED_UNTIL is set: {user.get('pin_locked_until')}")
+    
+    if user.get("failed_login_attempts", 0) >= 3:
+        issues.append(f"HIGH failed_login_attempts: {user.get('failed_login_attempts')}")
+    
+    if user.get("is_blocked"):
+        issues.append("Account is BLOCKED (is_blocked=true)")
+    
+    if user.get("account_locked"):
+        issues.append("Account is LOCKED (account_locked=true)")
+    
+    if user.get("is_suspended"):
+        issues.append(f"Account is SUSPENDED: {user.get('suspension_reason')}")
+    
+    if not user.get("password") and not user.get("password_hash") and not user.get("pin_hash"):
+        issues.append("NO PASSWORD/PIN SET - User cannot login!")
+    
+    if not issues:
+        issues.append("No obvious issues found. User should be able to login.")
+    
+    diagnosis["possible_issues"] = issues
+    
+    # Check login_attempts collection
+    login_attempts = await db.login_attempts.find({
+        "$or": [
+            {"identifier": user.get("email")},
+            {"identifier": user.get("mobile")},
+            {"identifier": user.get("uid")}
+        ]
+    }).sort("timestamp", -1).limit(10).to_list(10)
+    
+    diagnosis["recent_login_attempts"] = [
+        {
+            "timestamp": a.get("timestamp"),
+            "success": a.get("success"),
+            "ip": a.get("ip_address")
+        }
+        for a in login_attempts
+    ]
+    
+    # Check in-memory lockout
+    identifiers = [user.get("email"), user.get("mobile"), user.get("uid")]
+    in_memory_status = {}
+    for ident in identifiers:
+        if ident:
+            key = f"login:{ident}"
+            if key in login_attempt_storage:
+                in_memory_status[ident] = login_attempt_storage[key]
+    
+    diagnosis["in_memory_lockout"] = in_memory_status if in_memory_status else "No in-memory lockout found"
+    
+    return diagnosis
+
+
+@api_router.post("/admin/force-fix-user/{identifier}")
+async def force_fix_user(identifier: str):
+    """
+    Force fix a user's account - clears ALL possible blocking conditions.
+    Use this when a user cannot login despite clear_lockout.
+    """
+    # Find user
+    user = await db.users.find_one({
+        "$or": [
+            {"email": {"$regex": f"^{identifier}$", "$options": "i"}},
+            {"mobile": identifier},
+            {"uid": identifier}
+        ]
+    })
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user_id = user.get("uid")
+    
+    # Clear EVERYTHING that could possibly block login
+    await db.users.update_one(
+        {"uid": user_id},
+        {
+            "$set": {
+                "failed_login_attempts": 0,
+                "locked_until": None,
+                "failed_pin_attempts": 0,
+                "pin_locked_until": None,
+                "lockout_level": 0,
+                "is_blocked": False,
+                "account_locked": False,
+                "is_suspended": False,
+                "suspension_reason": None,
+                "password_reset_required": False,
+                "pin_reset_required": False
+            }
+        }
+    )
+    
+    # Clear from login_attempts collection
+    delete_result = await db.login_attempts.delete_many({
+        "$or": [
+            {"identifier": user.get("email")},
+            {"identifier": user.get("mobile")},
+            {"identifier": user_id}
+        ]
+    })
+    
+    # Clear from in-memory storage
+    identifiers = [user.get("email"), user.get("mobile"), user_id]
+    cleared_memory = []
+    for ident in identifiers:
+        if ident:
+            key = f"login:{ident}"
+            if key in login_attempt_storage:
+                login_attempt_storage[key] = {"count": 0, "reset_time": time.time() + RATE_LIMIT_WINDOW_SECONDS, "locked_until": 0, "lockout_level": 0}
+                cleared_memory.append(ident)
+    
+    return {
+        "success": True,
+        "user_id": user_id,
+        "email": user.get("email"),
+        "message": "All blocking conditions cleared",
+        "db_fields_reset": True,
+        "login_attempts_deleted": delete_result.deleted_count,
+        "memory_cleared_for": cleared_memory
+    }
+
+
 @api_router.post("/admin/clear-cache")
 async def clear_admin_cache():
     """
