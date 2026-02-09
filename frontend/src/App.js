@@ -86,6 +86,7 @@ const Messages = lazy(() => import("@/pages/Messages"));
 const FollowersList = lazy(() => import("@/pages/FollowersList"));
 const Notifications = lazy(() => import("@/pages/Notifications"));
 const ParasLuxuryLife = lazy(() => import("@/pages/ParasLuxuryLife"));
+const NetworkTreeAdvanced = lazy(() => import("@/pages/NetworkTreeAdvanced"));
 
 // ============ ADMIN PAGES - Code Split into separate chunk ============
 // These pages are only loaded when admin users access them (~1% of users)
