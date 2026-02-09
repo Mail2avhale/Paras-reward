@@ -680,6 +680,7 @@ async def clear_all_login_lockouts():
 
 
 @api_router.post("/admin/clear-cache")
+async def clear_admin_cache():
     """
     Clear all admin dashboard caches to force fresh data load.
     Use this when production data seems incorrect/stale.
