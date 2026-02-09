@@ -5,7 +5,7 @@ import axios from 'axios';
 const API = process.env.REACT_APP_BACKEND_URL;
 
 // PLMEOverlay - Paras Living Moments Engine
-// Shows real animal video clips as an overlay on the dashboard
+// Shows real animal images/videos as an overlay on the dashboard
 const PLMEOverlay = ({ user }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [currentMoment, setCurrentMoment] = useState(null);
@@ -13,20 +13,45 @@ const PLMEOverlay = ({ user }) => {
   const [isLoading, setIsLoading] = useState(false);
   const videoRef = useRef(null);
   const timeoutRef = useRef(null);
+  const durationTimeoutRef = useRef(null);
   const hasTriggeredRef = useRef(false);
 
   // Random position generator for overlay
   const getRandomPosition = useCallback(() => {
     const positions = [
       { x: '5%', y: '15%' },
-      { x: '65%', y: '10%' },
+      { x: '60%', y: '10%' },
       { x: '5%', y: '45%' },
-      { x: '60%', y: '40%' },
-      { x: '10%', y: '65%' },
-      { x: '55%', y: '60%' },
+      { x: '55%', y: '40%' },
+      { x: '10%', y: '60%' },
+      { x: '50%', y: '55%' },
     ];
     return positions[Math.floor(Math.random() * positions.length)];
   }, []);
+
+  // Handle moment end (close overlay)
+  const handleMomentEnd = useCallback(() => {
+    setIsVisible(false);
+    
+    // Clear any pending duration timeout
+    if (durationTimeoutRef.current) {
+      clearTimeout(durationTimeoutRef.current);
+    }
+    
+    // Record view in backend
+    if (currentMoment && user?.uid) {
+      axios.post(`${API}/api/plme/record-view/${user.uid}`, {
+        asset_id: currentMoment.id,
+        reward: currentMoment.reward || 0
+      }).catch(console.error);
+    }
+    
+    // Reset for next trigger after 45 seconds
+    setTimeout(() => {
+      hasTriggeredRef.current = false;
+      fetchNextMoment();
+    }, 45000);
+  }, [currentMoment, user?.uid]);
 
   // Fetch next moment from backend
   const fetchNextMoment = useCallback(async () => {
@@ -39,83 +64,66 @@ const PLMEOverlay = ({ user }) => {
         const moment = response.data.moment;
         setCurrentMoment(moment);
         
-        // Schedule the moment to appear
-        const triggerDelay = (moment.trigger_delay || 60) * 1000;
+        // Schedule the moment to appear (use shorter delay for testing: 10-30 seconds)
+        const triggerDelay = Math.min(moment.trigger_delay || 30, 30) * 1000;
         
         timeoutRef.current = setTimeout(() => {
           hasTriggeredRef.current = true;
           setIsLoading(true);
           setPosition(getRandomPosition());
           setIsVisible(true);
+          
+          // Set auto-hide timeout based on duration
+          const duration = (moment.duration || 15) * 1000;
+          durationTimeoutRef.current = setTimeout(() => {
+            handleMomentEnd();
+          }, duration);
         }, triggerDelay);
       }
     } catch (error) {
       console.error('PLME fetch error:', error);
     }
-  }, [user?.uid, getRandomPosition]);
+  }, [user?.uid, getRandomPosition, handleMomentEnd]);
 
   // Initial fetch after mount
   useEffect(() => {
-    // For testing: set to 2 seconds, production should be 5+ seconds
+    // Wait 3 seconds after dashboard loads, then fetch
     const initialDelay = setTimeout(() => {
       fetchNextMoment();
-    }, 2000); // Wait 2 seconds after dashboard loads
+    }, 3000);
     
     return () => {
       clearTimeout(initialDelay);
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (durationTimeoutRef.current) clearTimeout(durationTimeoutRef.current);
     };
   }, [fetchNextMoment]);
 
-  // Handle video load
-  const handleVideoLoaded = () => {
+  // Handle image/video load complete
+  const handleMediaLoaded = () => {
     setIsLoading(false);
-    if (videoRef.current) {
-      videoRef.current.play().catch(console.error);
-    }
-  };
-
-  // Handle video end
-  const handleVideoEnded = useCallback(() => {
-    setIsVisible(false);
-    
-    // Record view in backend
-    if (currentMoment && user?.uid) {
-      axios.post(`${API}/api/plme/record-view/${user.uid}`, {
-        asset_id: currentMoment.id,
-        reward: currentMoment.reward || 0
-      }).catch(console.error);
-    }
-    
-    // Reset for next trigger after 30 seconds
-    setTimeout(() => {
-      hasTriggeredRef.current = false;
-      fetchNextMoment();
-    }, 30000);
-  }, [currentMoment, user?.uid, fetchNextMoment]);
-
-  // Handle tap/click interaction
-  const handleTap = () => {
-    if (videoRef.current) {
-      // Add a gentle bounce effect
-      videoRef.current.style.transform = 'scale(1.1)';
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.style.transform = 'scale(1)';
-        }
-      }, 200);
-    }
   };
 
   // Handle close button
   const handleClose = () => {
-    setIsVisible(false);
-    handleVideoEnded();
+    handleMomentEnd();
+  };
+
+  // Handle tap/click interaction - gentle bounce effect
+  const handleTap = () => {
+    const element = document.getElementById('plme-media');
+    if (element) {
+      element.style.transform = 'scale(1.08)';
+      setTimeout(() => {
+        if (element) element.style.transform = 'scale(1)';
+      }, 200);
+    }
   };
 
   if (!isVisible || !currentMoment) return null;
+
+  const isVideo = currentMoment.asset_type === 'video';
+  const isImage = currentMoment.asset_type === 'image' || !currentMoment.asset_type;
 
   return (
     <AnimatePresence>
@@ -130,11 +138,11 @@ const PLMEOverlay = ({ user }) => {
         data-testid="plme-overlay"
       >
         <div className="relative">
-          {/* Glow effect behind video */}
+          {/* Glow effect behind media */}
           <div 
-            className="absolute -inset-4 rounded-3xl blur-2xl opacity-50"
+            className="absolute -inset-4 rounded-3xl blur-2xl opacity-60"
             style={{
-              background: 'radial-gradient(circle, rgba(255, 200, 100, 0.4) 0%, rgba(255, 150, 50, 0.2) 50%, transparent 100%)'
+              background: 'radial-gradient(circle, rgba(255, 200, 100, 0.5) 0%, rgba(255, 150, 50, 0.3) 50%, transparent 100%)'
             }}
           />
           
@@ -144,16 +152,26 @@ const PLMEOverlay = ({ user }) => {
               e.stopPropagation();
               handleClose();
             }}
-            className="absolute -top-2 -right-2 z-20 w-6 h-6 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center transition-colors"
+            className="absolute -top-2 -right-2 z-20 w-7 h-7 bg-black/70 hover:bg-black/90 rounded-full flex items-center justify-center transition-colors shadow-lg"
             data-testid="plme-close-btn"
           >
-            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
 
-          {/* Video container */}
-          <div className="relative w-36 h-36 sm:w-44 sm:h-44 overflow-hidden rounded-2xl shadow-2xl border-2 border-white/20">
+          {/* Media container with gentle breathing animation for images */}
+          <motion.div 
+            className="relative w-32 h-32 sm:w-40 sm:h-40 overflow-hidden rounded-2xl shadow-2xl border-2 border-white/30"
+            animate={isImage ? {
+              scale: [1, 1.02, 1],
+            } : {}}
+            transition={isImage ? {
+              duration: 3,
+              repeat: Infinity,
+              ease: "easeInOut"
+            } : {}}
+          >
             {/* Loading spinner */}
             {isLoading && (
               <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 z-10">
@@ -161,35 +179,49 @@ const PLMEOverlay = ({ user }) => {
               </div>
             )}
             
-            {/* Video element */}
-            <video
-              ref={videoRef}
-              src={currentMoment.url}
-              className="w-full h-full object-cover transition-transform duration-200"
-              style={{ transform: 'scale(1)' }}
-              muted
-              playsInline
-              autoPlay
-              onLoadedData={handleVideoLoaded}
-              onEnded={handleVideoEnded}
-              onError={(e) => {
-                console.error('Video load error:', e);
-                handleVideoEnded();
-              }}
-            />
+            {/* Render image or video based on asset_type */}
+            {isVideo ? (
+              <video
+                ref={videoRef}
+                id="plme-media"
+                src={currentMoment.url}
+                className="w-full h-full object-cover transition-transform duration-200"
+                muted
+                playsInline
+                autoPlay
+                onLoadedData={handleMediaLoaded}
+                onEnded={handleMomentEnd}
+                onError={(e) => {
+                  console.error('Video load error:', e);
+                  handleMomentEnd();
+                }}
+              />
+            ) : (
+              <img
+                id="plme-media"
+                src={currentMoment.url}
+                alt={currentMoment.name}
+                className="w-full h-full object-cover transition-transform duration-200"
+                onLoad={handleMediaLoaded}
+                onError={(e) => {
+                  console.error('Image load error:', e);
+                  handleMomentEnd();
+                }}
+              />
+            )}
             
             {/* Gradient overlay at bottom */}
-            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-black/60 to-transparent" />
-          </div>
+            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-black/70 to-transparent" />
+          </motion.div>
           
           {/* Moment name tooltip */}
           <motion.div
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="absolute -bottom-7 left-1/2 -translate-x-1/2 whitespace-nowrap"
+            className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap"
           >
-            <span className="text-xs text-white/90 bg-black/50 px-3 py-1 rounded-full backdrop-blur-sm font-medium">
+            <span className="text-xs text-white bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-sm font-medium shadow-lg">
               {currentMoment.name}
             </span>
           </motion.div>
