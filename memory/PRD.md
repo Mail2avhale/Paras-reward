@@ -113,6 +113,7 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ## Key Files Reference
 - `/app/frontend/src/pages/NetworkTreeAdvanced.js` - Advanced network tree visualization
+- `/app/backend/routes/referral.py` - **NEW** Extracted referral routes (refactored from server.py)
 - `/app/frontend/src/components/PinInput.js` - Reusable PIN input with masking
 - `/app/frontend/src/pages/LoginNew.js` - Hybrid PIN/Password login
 - `/app/frontend/src/pages/RegisterSimple.js` - Registration with PIN
