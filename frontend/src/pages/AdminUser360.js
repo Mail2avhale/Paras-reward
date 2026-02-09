@@ -901,6 +901,16 @@ const AdminUser360 = ({ user: adminUser }) => {
                   Send Notification
                 </Button>
                 <Button
+                  onClick={openEditModal}
+                  disabled={processing}
+                  variant="outline"
+                  className="h-auto py-3 border-indigo-500/50 text-indigo-400"
+                  data-testid="edit-user-details-button"
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  Edit Details
+                </Button>
+                <Button
                   onClick={() => {
                     if (confirm('⚠️ Are you sure you want to block this user?')) handleQuickAction('block_user');
                   }}
