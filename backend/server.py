@@ -638,6 +638,23 @@ async def get_index_status():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Browser-friendly GET versions of admin APIs
+@api_router.get("/admin/clear-all-lockouts-now")
+async def clear_all_lockouts_get():
+    """GET version of clear-all-lockouts for easy browser access"""
+    return await clear_all_login_lockouts()
+
+@api_router.get("/admin/force-fix/{identifier}")
+async def force_fix_get(identifier: str):
+    """GET version of force-fix-user for easy browser access"""
+    return await force_fix_user(identifier)
+
+@api_router.get("/admin/migrate-to-pin/{identifier}")
+async def migrate_to_pin_get(identifier: str):
+    """GET version of migrate-user-to-pin for easy browser access"""
+    return await migrate_user_to_pin(identifier)
+
+
 @api_router.post("/admin/clear-all-lockouts")
 async def clear_all_login_lockouts():
     """
