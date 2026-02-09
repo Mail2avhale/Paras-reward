@@ -33,6 +33,16 @@ Build a PRC (point-based reward currency) system web application where users can
 ## What's Been Implemented (Latest: Feb 2026)
 
 ### Recently Completed
+- [x] **PLME - Paras Living Moments Engine** (Feb 2026) - NEW
+  - Real photorealistic animal images appearing on dashboard
+  - AI-generated cute animals: kitten, puppy, bunny, butterfly
+  - Backend API: `/api/plme/next-moment/{user_id}`, `/api/plme/record-view/{user_id}`
+  - Frontend: `PLMEOverlay.js` component integrated in `DashboardModern.js`
+  - Demo page: `/plme-demo` to preview images
+  - Features: auto-hide after duration, close button, gentle breathing animation
+  - Configuration: daily limits, category weights (70% cute, 30% calm)
+  - Anti-repeat logic: shows different images each time
+  - Files: `server.py` (lines 37670-37900), `PLMEOverlay.js`, `PLMEDemo.js`
 - [x] **Advanced Network Tree View** (Feb 2026)
   - New dedicated `/network-tree` page
   - Backend API: `/api/referrals/network-tree/{user_id}`
