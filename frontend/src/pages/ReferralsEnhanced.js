@@ -1193,7 +1193,7 @@ Download now & start earning!`;
                   <div 
                     className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
                       activeUsers > 0 
-                        ? `bg-${config.color}-500/20 border-${config.color}-500/30 hover:bg-${config.color}-500/30` 
+                        ? `${config.bgClass} ${config.borderClass} ${config.hoverClass}` 
                         : 'bg-gray-800/50 border-gray-700/50 hover:bg-gray-800'
                     }`}
                     style={{ maxWidth: `${widthPercent}%` }}
@@ -1215,7 +1215,7 @@ Download now & start earning!`;
                     <div className="flex items-center gap-2">
                       <div className={`px-3 py-1 rounded-full text-sm font-bold ${
                         activeUsers > 0 
-                          ? `bg-${config.color}-500/30 text-${config.color}-300` 
+                          ? `${config.badgeBgClass} ${config.badgeTextClass}` 
                           : 'bg-gray-700/50 text-gray-500'
                       }`}>
                         +{config.percent}%
