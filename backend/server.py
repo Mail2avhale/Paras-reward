@@ -3783,7 +3783,8 @@ async def update_mined_coins(uid: str):
     return 0
 
 # ========== BIRTHDAY CHECK ==========
-@api_router.get("/user/{uid}/birthday-check")
+# DISABLED - Moved to routes/users.py
+@api_router.get("/_disabled_user/{uid}/birthday-check")
 async def check_user_birthday(uid: str):
     """
     Check if today is the user's birthday
@@ -5040,7 +5041,8 @@ async def delete_biometric_credential(credential_id: str, user_id: str):
 # ========== USER PROFILE ROUTES ==========
 
 
-@api_router.get("/users/{uid}")
+# DISABLED - Moved to routes/users.py
+@api_router.get("/_disabled_users/{uid}")
 async def get_user(uid: str):
     """Get user data by UID"""
     user = await db.users.find_one({"uid": uid})
@@ -5054,7 +5056,8 @@ async def get_user(uid: str):
     
     return user
 
-@api_router.get("/users/children/{uid}")
+# DISABLED - Moved to routes/users.py
+@api_router.get("/_disabled_users/children/{uid}")
 async def get_user_children(uid: str):
     """Get children (subordinates) of a user"""
     try:
@@ -5078,7 +5081,8 @@ async def get_user_children(uid: str):
         print(f"Error fetching children: {str(e)}")
         return {"children": [], "count": 0}
 
-@api_router.put("/user/{uid}/profile")
+# DISABLED - Moved to routes/users.py
+@api_router.put("/_disabled_user/{uid}/profile")
 async def update_profile(uid: str, request: Request):
     """Update user profile"""
     user = await db.users.find_one({"uid": uid})
@@ -5149,7 +5153,8 @@ async def update_profile(uid: str, request: Request):
     
     return {"message": "Profile updated successfully"}
 
-@api_router.post("/user/{uid}/upload-profile-picture")
+# DISABLED - Moved to routes/users.py
+@api_router.post("/_disabled_user/{uid}/upload-profile-picture")
 async def upload_profile_picture(uid: str, file: UploadFile = File(...)):
     """Upload profile picture (stores as base64)"""
     user = await db.users.find_one({"uid": uid})
@@ -5185,7 +5190,8 @@ async def upload_profile_picture(uid: str, file: UploadFile = File(...)):
         "profile_picture": image_data_url[:100] + "..."  # Return truncated preview
     }
 
-@api_router.delete("/user/{uid}/profile-picture")
+# DISABLED - Moved to routes/users.py
+@api_router.delete("/_disabled_user/{uid}/profile-picture")
 async def delete_profile_picture(uid: str):
     """Delete profile picture"""
     user = await db.users.find_one({"uid": uid})
@@ -5202,7 +5208,8 @@ async def delete_profile_picture(uid: str):
     
     return {"message": "Profile picture deleted successfully"}
 
-@api_router.put("/user/{uid}/complete-profile")
+# DISABLED - Moved to routes/users.py
+@api_router.put("/_disabled_user/{uid}/complete-profile")
 async def complete_profile(uid: str, request: Request):
     """Complete user profile with all additional fields"""
     user = await db.users.find_one({"uid": uid})
@@ -5286,7 +5293,8 @@ async def complete_profile(uid: str, request: Request):
     
     return {"message": "Profile completed successfully", "profile_complete": True}
 
-@api_router.post("/user/{uid}/change-password")
+# DISABLED - Moved to routes/users.py
+@api_router.post("/_disabled_user/{uid}/change-password")
 async def change_password(uid: str, request: Request):
     """Change user password"""
     user = await db.users.find_one({"uid": uid})
@@ -5409,7 +5417,8 @@ async def change_password(uid: str, old_password: str, new_password: str):
 
 # ========== ACCOUNT DELETION ROUTES ==========
 
-@api_router.post("/user/{uid}/request-account-deletion")
+# DISABLED - Moved to routes/users.py
+@api_router.post("/_disabled_user/{uid}/request-account-deletion")
 async def request_account_deletion(uid: str, request: Request):
     """
     Request account deletion with soft delete.
@@ -5495,7 +5504,8 @@ async def request_account_deletion(uid: str, request: Request):
         "warning": "Your account will be permanently deleted after 30 days. You can cancel this within 30 days by logging in."
     }
 
-@api_router.post("/user/{uid}/cancel-account-deletion")
+# DISABLED - Moved to routes/users.py
+@api_router.post("/_disabled_user/{uid}/cancel-account-deletion")
 async def cancel_account_deletion(uid: str, request: Request):
     """
     Cancel account deletion request within 30-day grace period.
@@ -5556,7 +5566,8 @@ async def cancel_account_deletion(uid: str, request: Request):
         "note": "Your account has been restored. Note: Forfeited PRC and cashback cannot be recovered."
     }
 
-@api_router.get("/user/{uid}/deletion-status")
+# DISABLED - Moved to routes/users.py
+@api_router.get("/_disabled_user/{uid}/deletion-status")
 async def get_deletion_status(uid: str):
     """Get account deletion status"""
     user = await db.users.find_one({"uid": uid}, {"_id": 0})
@@ -5989,7 +6000,8 @@ async def claim_mining(uid: str):
 
 # ============ USER DASHBOARD COMBINED API ============
 
-@api_router.get("/user/{uid}/dashboard")
+# DISABLED - Moved to routes/users.py
+@api_router.get("/_disabled_user/{uid}/dashboard")
 async def get_user_dashboard_combined(uid: str):
     """
     Combined API for User Dashboard - returns ALL data in ONE call.
@@ -6410,7 +6422,8 @@ async def collect_mining_rewards(uid: str, request: MiningCollectRequest = None)
         "expires_at": expiry_date
     }
 
-@api_router.get("/user/stats/today/{uid}")
+# DISABLED - Moved to routes/users.py
+@api_router.get("/_disabled_user/stats/today/{uid}")
 async def get_user_today_stats(uid: str):
     """Get today's PRC earned and spent for a user"""
     try:
@@ -6473,7 +6486,8 @@ async def get_user_today_stats(uid: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@api_router.get("/user/stats/redeemed/{uid}")
+# DISABLED - Moved to routes/users.py
+@api_router.get("/_disabled_user/stats/redeemed/{uid}")
 async def get_user_redeemed_stats(uid: str):
     """Get total PRC redeemed and its rupee value for a user"""
     try:
