@@ -37667,6 +37667,240 @@ async def view_archived_data(collection: str, page: int = 1, limit: int = 50):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== PARAS LIVING MOMENTS ENGINE (PLME) ====================
+# Unique "live feeling" system - cute playful animals & calm nature visuals
+
+# Default PLME Configuration
+PLME_DEFAULT_CONFIG = {
+    "plme_enabled": True,
+    "daily_limits": {"free_user": 4, "vip_user": 7},
+    "trigger_window_seconds": {"min": 30, "max": 180},
+    "duration_seconds": {"min": 12, "max": 25},
+    "category_weights": {"cute_playful": 70, "calm_nature": 30},
+    "reward": {"enabled": False, "min_prc": 1, "max_prc": 2},
+    "night_mode": {"start_hour": 20, "end_hour": 6, "prefer_calm": True},
+    "history_buffer": {"free_user": 5, "vip_user": 7}
+}
+
+# PLME Assets - Lottie Animation URLs (from LottieFiles CDN)
+PLME_ASSETS = {
+    "cute_playful": [
+        {"id": "dog_walk", "name": "Happy Dog Walking", "url": "https://lottie.host/4db68bbd-31f6-4cd8-84eb-189571c34cae/Vw5EPTqLKb.json", "duration": 15},
+        {"id": "cat_sleep", "name": "Sleeping Cat", "url": "https://lottie.host/e4f453e8-ee7a-4e24-a5a1-62b6b5c9d6e0/k1qU3LDnPy.json", "duration": 18},
+        {"id": "bunny_hop", "name": "Bunny Hopping", "url": "https://lottie.host/2de1b866-f5d1-4ed5-89f2-5e1f98e79fab/TbHBWrPyLj.json", "duration": 12},
+        {"id": "butterfly", "name": "Butterfly Flying", "url": "https://lottie.host/d8f6c0ab-6b2b-4c3f-8b2e-9c0f8f8f8f8f/butterfly.json", "duration": 20},
+        {"id": "duck_swim", "name": "Duck Swimming", "url": "https://lottie.host/b7a8f2c1-4d5e-6f7g-8h9i-0j1k2l3m4n5o/duck.json", "duration": 16},
+        {"id": "squirrel", "name": "Squirrel with Nut", "url": "https://lottie.host/c8b9d0e1-2f3g-4h5i-6j7k-8l9m0n1o2p3q/squirrel.json", "duration": 14},
+        {"id": "puppy_play", "name": "Puppy Playing", "url": "https://lottie.host/d9c0e1f2-3g4h-5i6j-7k8l-9m0n1o2p3q4r/puppy.json", "duration": 17},
+        {"id": "kitten_ball", "name": "Kitten with Ball", "url": "https://lottie.host/e0d1f2g3-4h5i-6j7k-8l9m-0n1o2p3q4r5s/kitten.json", "duration": 15},
+        {"id": "balloon_fly", "name": "Balloon Flying", "url": "https://lottie.host/f1e2g3h4-5i6j-7k8l-9m0n-1o2p3q4r5s6t/balloon.json", "duration": 20},
+        {"id": "cloud_happy", "name": "Happy Cloud", "url": "https://lottie.host/g2f3h4i5-6j7k-8l9m-0n1o-2p3q4r5s6t7u/cloud.json", "duration": 18},
+    ],
+    "calm_nature": [
+        {"id": "bird_fly", "name": "Bird Flying", "url": "https://lottie.host/h3g4i5j6-7k8l-9m0n-1o2p-3q4r5s6t7u8v/bird.json", "duration": 15},
+        {"id": "leaves_fall", "name": "Falling Leaves", "url": "https://lottie.host/i4h5j6k7-8l9m-0n1o-2p3q-4r5s6t7u8v9w/leaves.json", "duration": 20},
+        {"id": "fireflies", "name": "Fireflies Night", "url": "https://lottie.host/j5i6k7l8-9m0n-1o2p-3q4r-5s6t7u8v9w0x/fireflies.json", "duration": 25},
+        {"id": "rain_drops", "name": "Gentle Rain", "url": "https://lottie.host/k6j7l8m9-0n1o-2p3q-4r5s-6t7u8v9w0x1y/rain.json", "duration": 22},
+        {"id": "wind_blow", "name": "Wind Blowing", "url": "https://lottie.host/l7k8m9n0-1o2p-3q4r-5s6t-7u8v9w0x1y2z/wind.json", "duration": 18},
+        {"id": "mist_fog", "name": "Misty Morning", "url": "https://lottie.host/m8l9n0o1-2p3q-4r5s-6t7u-8v9w0x1y2z3a/mist.json", "duration": 20},
+        {"id": "stars_twinkle", "name": "Twinkling Stars", "url": "https://lottie.host/n9m0o1p2-3q4r-5s6t-7u8v-9w0x1y2z3a4b/stars.json", "duration": 25},
+    ]
+}
+
+
+@api_router.get("/plme/config")
+async def get_plme_config():
+    """Get PLME configuration for frontend"""
+    config = await db.app_config.find_one({"config_type": "plme"})
+    if not config:
+        return PLME_DEFAULT_CONFIG
+    
+    # Remove MongoDB _id
+    result = {k: v for k, v in config.items() if k != "_id" and k != "config_type"}
+    return {**PLME_DEFAULT_CONFIG, **result}
+
+
+@api_router.get("/plme/next-moment/{user_id}")
+async def get_next_plme_moment(user_id: str):
+    """
+    Get next PLME moment for user.
+    Respects daily limits, anti-repeat logic, and day/night behavior.
+    """
+    import hashlib
+    import random
+    
+    # Get config
+    config = await db.app_config.find_one({"config_type": "plme"})
+    if not config:
+        config = PLME_DEFAULT_CONFIG
+    else:
+        config = {**PLME_DEFAULT_CONFIG, **{k: v for k, v in config.items() if k not in ["_id", "config_type"]}}
+    
+    if not config.get("plme_enabled", True):
+        return {"show_moment": False, "reason": "PLME disabled"}
+    
+    # Get user to check VIP status
+    user = await db.users.find_one({"uid": user_id}, {"_id": 0, "subscription_plan": 1})
+    is_vip = user and user.get("subscription_plan") in ["startup", "growth", "elite"]
+    
+    # Check daily limit
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    daily_key = f"plme:{user_id}:{today}"
+    
+    user_plme = await db.plme_history.find_one({"user_id": user_id, "date": today})
+    moments_today = user_plme.get("count", 0) if user_plme else 0
+    shown_assets = user_plme.get("shown_assets", []) if user_plme else []
+    
+    daily_limit = config["daily_limits"]["vip_user" if is_vip else "free_user"]
+    
+    if moments_today >= daily_limit:
+        return {"show_moment": False, "reason": "Daily limit reached", "shown_today": moments_today}
+    
+    # Determine category based on time of day and weights
+    current_hour = datetime.now(timezone.utc).hour
+    night_mode = config.get("night_mode", {})
+    is_night = current_hour >= night_mode.get("start_hour", 20) or current_hour < night_mode.get("end_hour", 6)
+    
+    weights = config.get("category_weights", {"cute_playful": 70, "calm_nature": 30})
+    
+    if is_night and night_mode.get("prefer_calm", True):
+        # Night mode - prefer calm nature
+        weights = {"cute_playful": 30, "calm_nature": 70}
+    
+    # Select category
+    category = random.choices(
+        ["cute_playful", "calm_nature"],
+        weights=[weights["cute_playful"], weights["calm_nature"]]
+    )[0]
+    
+    # Get available assets (not in recent history)
+    available_assets = [a for a in PLME_ASSETS[category] if a["id"] not in shown_assets]
+    
+    if not available_assets:
+        # Reset history for this category
+        available_assets = PLME_ASSETS[category]
+    
+    # Select random asset using user_id + date as seed for consistency
+    seed = int(hashlib.md5(f"{user_id}{today}{moments_today}".encode()).hexdigest(), 16)
+    random.seed(seed)
+    selected_asset = random.choice(available_assets)
+    random.seed()  # Reset seed
+    
+    # Calculate trigger delay
+    trigger_window = config.get("trigger_window_seconds", {"min": 30, "max": 180})
+    trigger_delay = random.randint(trigger_window["min"], trigger_window["max"])
+    
+    # Calculate duration
+    duration_config = config.get("duration_seconds", {"min": 12, "max": 25})
+    duration = min(max(selected_asset.get("duration", 15), duration_config["min"]), duration_config["max"])
+    
+    # Check if reward enabled
+    reward_config = config.get("reward", {"enabled": False})
+    reward = None
+    if reward_config.get("enabled", False):
+        reward = random.randint(reward_config.get("min_prc", 1), reward_config.get("max_prc", 2))
+    
+    return {
+        "show_moment": True,
+        "moment": {
+            "id": selected_asset["id"],
+            "name": selected_asset["name"],
+            "url": selected_asset["url"],
+            "category": category,
+            "duration": duration,
+            "trigger_delay": trigger_delay,
+            "reward": reward
+        },
+        "is_vip": is_vip,
+        "is_night": is_night,
+        "shown_today": moments_today,
+        "daily_limit": daily_limit
+    }
+
+
+@api_router.post("/plme/record-view/{user_id}")
+async def record_plme_view(user_id: str, request: Request):
+    """Record that user viewed a PLME moment"""
+    data = await request.json()
+    asset_id = data.get("asset_id")
+    reward = data.get("reward", 0)
+    
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    # Update user's PLME history
+    await db.plme_history.update_one(
+        {"user_id": user_id, "date": today},
+        {
+            "$inc": {"count": 1},
+            "$push": {"shown_assets": asset_id},
+            "$set": {"last_shown": datetime.now(timezone.utc).isoformat()}
+        },
+        upsert=True
+    )
+    
+    # If reward enabled, add to user balance
+    if reward and reward > 0:
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$inc": {"prc_balance": reward}}
+        )
+        
+        # Log transaction
+        await log_transaction(
+            user_id=user_id,
+            wallet_type="prc",
+            transaction_type="plme_reward",
+            amount=reward,
+            description=f"PLME Moment Reward",
+            metadata={"asset_id": asset_id}
+        )
+    
+    return {"success": True, "recorded": True}
+
+
+@api_router.post("/admin/plme/config")
+async def update_plme_config(request: Request):
+    """Admin: Update PLME configuration"""
+    data = await request.json()
+    
+    await db.app_config.update_one(
+        {"config_type": "plme"},
+        {"$set": {**data, "config_type": "plme", "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True
+    )
+    
+    return {"success": True, "message": "PLME config updated"}
+
+
+@api_router.get("/admin/plme/stats")
+async def get_plme_stats():
+    """Admin: Get PLME statistics"""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    # Today's stats
+    today_views = await db.plme_history.count_documents({"date": today})
+    total_moments_today = await db.plme_history.aggregate([
+        {"$match": {"date": today}},
+        {"$group": {"_id": None, "total": {"$sum": "$count"}}}
+    ]).to_list(1)
+    
+    # All time stats
+    all_time = await db.plme_history.aggregate([
+        {"$group": {"_id": None, "total_views": {"$sum": "$count"}, "unique_users": {"$addToSet": "$user_id"}}}
+    ]).to_list(1)
+    
+    return {
+        "today": {
+            "unique_users": today_views,
+            "total_moments": total_moments_today[0]["total"] if total_moments_today else 0
+        },
+        "all_time": {
+            "total_moments": all_time[0]["total_views"] if all_time else 0,
+            "unique_users": len(all_time[0]["unique_users"]) if all_time else 0
+        }
+    }
+
+
 # ==================== PARAS LUXURY LIFE ====================
 # Auto-save 20% of earned PRC for luxury products (Mobile, Bike, Car)
 
