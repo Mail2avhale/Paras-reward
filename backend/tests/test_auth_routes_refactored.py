@@ -218,7 +218,7 @@ class TestSetNewPin:
         
         payload = {
             "user_id": user_id,
-            "new_pin": "654321"  # Non-sequential valid PIN
+            "new_pin": "582736"  # Non-sequential, non-repeating valid PIN
         }
         
         response = api_client.post(f"{BASE_URL}/api/auth/set-new-pin", json=payload)
