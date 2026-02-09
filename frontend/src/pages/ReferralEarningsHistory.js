@@ -76,9 +76,10 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
       
       setEarnings(earningsData);
       setSummary(summaryData);
+      setLevelBreakdown(response.data?.level_breakdown || {});
       setIsEstimated(false);
       
-      console.log('Set earnings:', earningsData.length, 'Summary:', summaryData);
+      console.log('Set earnings:', earningsData.length, 'Summary:', summaryData, 'Level breakdown:', response.data?.level_breakdown);
       
     } catch (error) {
       console.error('Error fetching earnings:', error);
