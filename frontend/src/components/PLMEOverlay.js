@@ -56,9 +56,10 @@ const PLMEOverlay = ({ user }) => {
 
   // Initial fetch after mount
   useEffect(() => {
+    // For testing: set to 2 seconds, production should be 5+ seconds
     const initialDelay = setTimeout(() => {
       fetchNextMoment();
-    }, 5000); // Wait 5 seconds after dashboard loads
+    }, 2000); // Wait 2 seconds after dashboard loads
     
     return () => {
       clearTimeout(initialDelay);
