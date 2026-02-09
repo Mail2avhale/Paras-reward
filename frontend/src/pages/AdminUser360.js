@@ -957,6 +957,65 @@ const AdminUser360 = ({ user: adminUser }) => {
           </div>
         </div>
       )}
+
+      {/* PIN Reset Modal */}
+      {pinModal.show && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" data-testid="pin-reset-modal">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center">
+              {/* Success Icon */}
+              <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Key className="w-10 h-10 text-white" />
+              </div>
+              
+              <h2 className="text-2xl font-bold text-white mb-2">PIN Reset Successful!</h2>
+              <p className="text-gray-400 mb-6">New 6-digit PIN has been generated</p>
+              
+              {/* PIN Display */}
+              <div className="bg-gray-800 border-2 border-teal-500/30 rounded-2xl p-6 mb-6">
+                <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">New Temporary PIN</p>
+                <div className="flex justify-center gap-2">
+                  {pinModal.pin.split('').map((digit, index) => (
+                    <div 
+                      key={index}
+                      className="w-12 h-14 bg-gray-700 border border-teal-500/50 rounded-xl flex items-center justify-center"
+                    >
+                      <span className="text-2xl font-bold text-teal-400">{digit}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => {
+                    navigator.clipboard.writeText(pinModal.pin);
+                    toast.success('PIN copied to clipboard!');
+                  }}
+                  className="flex-1 bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white"
+                  data-testid="copy-pin-button"
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy PIN
+                </Button>
+                <Button
+                  onClick={() => setPinModal({ show: false, pin: '' })}
+                  variant="outline"
+                  className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
+                  data-testid="close-pin-modal-button"
+                >
+                  Close
+                </Button>
+              </div>
+              
+              <p className="text-xs text-gray-500 mt-4">
+                Please share this PIN securely with the user. They can use it to login immediately.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
