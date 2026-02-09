@@ -81,7 +81,7 @@ class FraudDetector:
         return True, "ok"
     
     async def check_ip_login_limit(self, ip_address: str) -> Tuple[bool, str]:
-        """Check if IP has too many failed login attempts"""
+        """Check if IP has too many failed login attempts - RELAXED for shared networks"""
         if not ip_address:
             return True, "ok"
         
@@ -91,19 +91,20 @@ class FraudDetector:
         
         one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
         
-        # Check for IP-only blocking (extreme cases - more than 50 attempts)
+        # Count ONLY failed attempts from this IP (not successful ones)
         failed_attempts = await self.db.login_attempts.count_documents({
             "ip_address": ip_address,
             "success": False,
             "timestamp": {"$gte": one_hour_ago}
         })
         
-        # Increased threshold from config to 50 - IP-only blocking should be rare
-        # Individual user lockout handles most cases
-        ip_limit = max(self.config.get("max_login_attempts_per_ip_per_hour", 50), 50)
+        # VERY HIGH threshold (100) - IP blocking should be extremely rare
+        # because shared networks (offices, homes, colleges) can have many users
+        # Individual user lockout handles most security cases
+        ip_limit = 100  # Was 50, increased to reduce false positives on shared networks
         
         if failed_attempts >= ip_limit:
-            return False, "Too many login attempts from this network. Please try after 1 hour or use a different network."
+            return False, "🔒 Network temporarily blocked due to unusual activity. Please try after 1 hour or use mobile data."
         
         return True, "ok"
     
