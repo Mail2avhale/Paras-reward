@@ -55,6 +55,7 @@ const AdminUser360 = ({ user: adminUser }) => {
 
   // Quick Actions
   const [passwordModal, setPasswordModal] = useState({ show: false, password: '' });
+  const [pinModal, setPinModal] = useState({ show: false, pin: '' });
   
   const handleQuickAction = async (action, params = {}) => {
     if (!userData?.user?.uid) return;
@@ -74,6 +75,16 @@ const AdminUser360 = ({ user: adminUser }) => {
         if (passwordMatch) {
           const tempPassword = passwordMatch[1];
           setPasswordModal({ show: true, password: tempPassword });
+        } else {
+          toast.success(response.data.message);
+        }
+      } 
+      // Special handling for PIN reset - show in center modal
+      else if (action === 'reset_pin' && response.data?.message) {
+        const pinMatch = response.data.message.match(/New temporary PIN: (\d{6})/);
+        if (pinMatch) {
+          const tempPin = pinMatch[1];
+          setPinModal({ show: true, pin: tempPin });
         } else {
           toast.success(response.data.message);
         }
