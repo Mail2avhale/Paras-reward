@@ -12,7 +12,7 @@ import {
   Activity, Eye, Download, Bell, MessageSquare, RefreshCw, Loader2,
   ChevronRight, ArrowLeft, Copy, ExternalLink, Ban, Play, Pause,
   Wallet, Receipt, BadgeCheck, AlertCircle, Info, Star, Zap,
-  BarChart3, PieChart, Network, History, Settings, Send
+  BarChart3, PieChart, Network, History, Settings, Send, Key
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
