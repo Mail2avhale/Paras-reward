@@ -178,6 +178,15 @@ const LoginNew = ({ onLogin }) => {
         duration: 2000
       });
       
+      // Save login ID if Remember Me is checked
+      if (rememberMe) {
+        localStorage.setItem('saved_login_id', loginData.identifier);
+        localStorage.setItem('remember_me', 'true');
+      } else {
+        localStorage.removeItem('saved_login_id');
+        localStorage.removeItem('remember_me');
+      }
+      
       onLogin(response.data);
       
       if (response.data.role === 'admin' || response.data.role === 'sub_admin') {
