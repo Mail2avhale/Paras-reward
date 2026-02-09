@@ -1140,6 +1140,9 @@ const DashboardModern = ({ user, onLogout }) => {
           />
         </div>
       </div>
+      
+      {/* PLME - Paras Living Moments Engine */}
+      <PLMEOverlay user={user} />
     </div>
   );
 };
