@@ -3855,6 +3855,7 @@ async def login(
     if stored_password:
         if not verify_password(password, stored_password):
             record_login_attempt(identifier, False)
+            await record_login_attempt_db(db, identifier, False, real_ip)
             # Create security alert for failed password
             alert_severity = "medium" if attempts_left <= 2 else "low"
             await create_security_alert(
