@@ -375,7 +375,7 @@ const NetworkTreeAdvanced = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 pb-24">
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 pb-24" data-testid="network-tree-page">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-gray-950/90 backdrop-blur-xl border-b border-gray-800">
         <div className="flex items-center justify-between p-4">
@@ -383,6 +383,7 @@ const NetworkTreeAdvanced = ({ user }) => {
             <button 
               onClick={() => navigate(-1)}
               className="p-2 hover:bg-gray-800 rounded-xl transition-colors"
+              data-testid="back-button"
             >
               <ArrowLeft className="w-5 h-5 text-white" />
             </button>
@@ -395,12 +396,14 @@ const NetworkTreeAdvanced = ({ user }) => {
             <button 
               onClick={fetchNetworkData}
               className="p-2 hover:bg-gray-800 rounded-xl"
+              data-testid="refresh-button"
             >
               <RefreshCw className={`w-5 h-5 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <button 
               onClick={exportToCSV}
               className="p-2 hover:bg-gray-800 rounded-xl"
+              data-testid="export-csv-button"
             >
               <Download className="w-5 h-5 text-gray-400" />
             </button>
@@ -410,14 +413,14 @@ const NetworkTreeAdvanced = ({ user }) => {
 
       {/* Analytics Dashboard */}
       {analytics && (
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4" data-testid="analytics-dashboard">
           {/* Quick Stats */}
           <div className="grid grid-cols-4 gap-3">
-            <Card className="p-3 bg-gradient-to-br from-purple-500/20 to-purple-600/10 border-purple-500/30">
+            <Card className="p-3 bg-gradient-to-br from-purple-500/20 to-purple-600/10 border-purple-500/30" data-testid="stat-total">
               <p className="text-2xl font-bold text-white">{analytics.total}</p>
               <p className="text-xs text-purple-300">Total Network</p>
             </Card>
-            <Card className="p-3 bg-gradient-to-br from-green-500/20 to-green-600/10 border-green-500/30">
+            <Card className="p-3 bg-gradient-to-br from-green-500/20 to-green-600/10 border-green-500/30" data-testid="stat-active">
               <p className="text-2xl font-bold text-green-400">{analytics.active}</p>
               <p className="text-xs text-green-300">Active (Paid)</p>
             </Card>
