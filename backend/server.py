@@ -3942,7 +3942,8 @@ async def _disabled_simple_register(request: Request):
         "referred_by": referrer["name"] if referrer else None
     }
 
-@api_router.post("/auth/register")
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/register")
 async def register_user(request: Request):
     """Enhanced user registration with fraud detection"""
     # Check if registration is enabled
@@ -4056,7 +4057,8 @@ async def register_user(request: Request):
         "risk_level": fraud_check.get('risk_level', 'low')
     }
 
-@api_router.get("/auth/check-auth-type")
+# DISABLED - Moved to routes/auth.py
+@api_router.get("/_disabled_auth/check-auth-type")
 async def check_auth_type(identifier: str):
     """Check if user should use PIN or Password login"""
     normalized_identifier = identifier.lower().strip()
@@ -4080,7 +4082,8 @@ async def check_auth_type(identifier: str):
     else:
         return {"auth_type": "password", "user_exists": True, "needs_migration": True}
 
-@api_router.post("/auth/set-new-pin")
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/set-new-pin")
 async def set_new_pin(request: Request):
     """Set new PIN for existing users (migration from password to PIN)"""
     try:
@@ -4137,7 +4140,8 @@ async def set_new_pin(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.post("/auth/login")
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/login")
 async def login(
     request: Request,
     identifier: str,
@@ -4428,7 +4432,8 @@ async def login(
     
     return response_data
 
-@api_router.post("/auth/forgot-password")
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/forgot-password")
 async def forgot_password(email: str):
     """Request password reset"""
     user = await db.users.find_one({"email": email})
@@ -4471,7 +4476,8 @@ class ResetPinRequest(BaseModel):
     new_pin: str
     reset_token: str
 
-@api_router.post("/auth/forgot-pin/check-mobile")
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/forgot-pin/check-mobile")
 async def forgot_pin_check_mobile(request: ForgotPinRequest):
     """Check if mobile number exists and return widget ID for OTP"""
     mobile = request.mobile.strip()
@@ -4526,7 +4532,8 @@ async def forgot_pin_check_mobile(request: ForgotPinRequest):
         "mobile": mobile[-4:]  # Return last 4 digits for display
     }
 
-@api_router.post("/auth/forgot-pin/verify-otp")
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/forgot-pin/verify-otp")
 async def forgot_pin_verify_otp(request: VerifyOTPRequest):
     """Verify OTP and generate reset token"""
     import httpx
@@ -4594,7 +4601,8 @@ async def forgot_pin_verify_otp(request: VerifyOTPRequest):
         "mobile": mobile[-4:]  # Last 4 digits for display
     }
 
-@api_router.post("/auth/forgot-pin/reset")
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/forgot-pin/reset")
 async def forgot_pin_reset(request: ResetPinRequest):
     """Reset PIN after OTP verification"""
     mobile = request.mobile.strip().replace("+", "")
@@ -4673,7 +4681,8 @@ async def forgot_pin_reset(request: ResetPinRequest):
 
 # ========== BIOMETRIC AUTHENTICATION ROUTES ==========
 
-@api_router.post("/auth/biometric/register-options")
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/biometric/register-options")
 async def get_biometric_register_options(user_id: str):
     """Get WebAuthn registration options for biometric setup"""
     from webauthn import generate_registration_options
@@ -4743,7 +4752,8 @@ async def get_biometric_register_options(user_id: str):
         }
     }
 
-@api_router.post("/auth/biometric/register")
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/biometric/register")
 async def register_biometric_credential(
     user_id: str,
     device_name: str,
@@ -4835,7 +4845,8 @@ async def register_biometric_credential(
         print(f"Biometric registration error: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Failed to register biometric: {str(e)}")
 
-@api_router.post("/auth/biometric/login-options")
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/biometric/login-options")
 async def get_biometric_login_options(email: str):
     """Get WebAuthn authentication options for biometric login"""
     from webauthn import generate_authentication_options
@@ -4884,7 +4895,8 @@ async def get_biometric_login_options(email: str):
         }
     }
 
-@api_router.post("/auth/biometric/login")
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/biometric/login")
 async def biometric_login(
     email: str,
     credential_data: Dict
@@ -4985,7 +4997,8 @@ async def biometric_login(
         print(f"Biometric authentication error: {str(e)}")
         raise HTTPException(status_code=401, detail="Biometric authentication failed")
 
-@api_router.get("/auth/biometric/credentials/{user_id}")
+# DISABLED - Moved to routes/auth.py
+@api_router.get("/_disabled_auth/biometric/credentials/{user_id}")
 async def get_user_biometric_credentials(user_id: str):
     """Get list of registered biometric credentials for a user"""
     credentials = await db.biometric_credentials.find({"user_id": user_id}).to_list(None)
@@ -5001,7 +5014,8 @@ async def get_user_biometric_credentials(user_id: str):
         "max_devices": 5
     }
 
-@api_router.delete("/auth/biometric/credentials/{credential_id}")
+# DISABLED - Moved to routes/auth.py
+@api_router.delete("/_disabled_auth/biometric/credentials/{credential_id}")
 async def delete_biometric_credential(credential_id: str, user_id: str):
     """Delete a biometric credential"""
     result = await db.biometric_credentials.delete_one({
@@ -5310,7 +5324,8 @@ async def change_password(uid: str, request: Request):
 
 # ========== PASSWORD RESET ROUTES ==========
 
-@api_router.post("/auth/reset-password-request")
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/reset-password-request")
 async def reset_password_request(email: str):
     """Request password reset"""
     user = await db.users.find_one({"email": email})
@@ -5340,7 +5355,8 @@ async def reset_password_request(email: str):
         "note": "In production, this would be sent via email"
     }
 
-@api_router.post("/auth/reset-password")
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/reset-password")
 async def reset_password(reset_token: str, new_password: str):
     """Reset password using token"""
     user = await db.users.find_one({"reset_token": reset_token})
@@ -5368,7 +5384,8 @@ async def reset_password(reset_token: str, new_password: str):
     
     return {"message": "Password reset successful"}
 
-@api_router.post("/auth/change-password")
+# DISABLED - Moved to routes/auth.py
+@api_router.post("/_disabled_auth/change-password")
 async def change_password(uid: str, old_password: str, new_password: str):
     """Change password for logged in user"""
     user = await db.users.find_one({"uid": uid})
@@ -5574,7 +5591,8 @@ async def get_deletion_status(uid: str):
         "message": "Account is scheduled for permanent deletion"
     }
 
-@api_router.get("/auth/user/{uid}", response_model=User)
+# DISABLED - Moved to routes/auth.py
+@api_router.get("/_disabled_auth/user/{uid}", response_model=User)
 async def get_user(uid: str):
     """Get user details"""
     user = await db.users.find_one({"uid": uid})
