@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://pin-input-toggle.preview.emergentagent.com/setup
+   https://user-360-mgmt.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
