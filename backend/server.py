@@ -27418,10 +27418,16 @@ async def get_referral_earnings_history(user_id: str, period: str = "all"):
     elif period == "month":
         filter_date = now - timedelta(days=30)
     
-    # Build query
-    query = {"user_id": user_id, "type": "referral_bonus"}
+    # Build query - include both referral_bonus and session_bonus types
+    query = {
+        "user_id": user_id, 
+        "type": {"$in": ["referral_bonus", "session_bonus"]}
+    }
     if filter_date:
-        query["created_at"] = {"$gte": filter_date.isoformat()}
+        query["$or"] = [
+            {"created_at": {"$gte": filter_date.isoformat()}},
+            {"timestamp": {"$gte": filter_date.isoformat()}}
+        ]
     
     # Get transactions
     transactions = await db.transactions.find(query).sort("created_at", -1).to_list(length=500)
@@ -27429,15 +27435,41 @@ async def get_referral_earnings_history(user_id: str, period: str = "all"):
     # Transform to earnings format
     earnings = []
     for txn in transactions:
-        earnings.append({
-            "id": txn.get("transaction_id", str(uuid.uuid4())),
-            "date": txn.get("created_at", now.isoformat()),
-            "level": txn.get("level", 1),
-            "referral_name": txn.get("referral_name", f"Level {txn.get('level', 1)} Bonus"),
-            "prc_earned": txn.get("amount", 0),
-            "active_referrals": txn.get("active_count", 1),
-            "type": "session_bonus"
-        })
+        timestamp = txn.get("timestamp") or txn.get("created_at") or now.isoformat()
+        
+        # Handle old transactions with referral_breakdown (combined transactions)
+        if txn.get("referral_breakdown") and not txn.get("level"):
+            # Split old combined transaction into level-wise entries
+            breakdown = txn.get("referral_breakdown", {})
+            for level_key, level_data in breakdown.items():
+                level_num = int(level_key.replace("level_", ""))
+                level_bonus = level_data.get("bonus", 0)
+                if level_bonus > 0:
+                    earnings.append({
+                        "id": f"{txn.get('transaction_id', '')}_{level_num}",
+                        "date": timestamp,
+                        "timestamp": timestamp,
+                        "created_at": timestamp,
+                        "level": level_num,
+                        "description": f"Level {level_num} Bonus",
+                        "prc_earned": level_bonus,
+                        "active_referrals": level_data.get("active_count", 0),
+                        "type": txn.get("type", "referral_bonus")
+                    })
+        else:
+            # New format or simple transaction
+            level = txn.get("level", 1)
+            earnings.append({
+                "id": txn.get("transaction_id", str(uuid.uuid4())),
+                "date": timestamp,
+                "timestamp": timestamp,
+                "created_at": timestamp,
+                "level": level,
+                "description": txn.get("description", f"Level {level} Bonus"),
+                "prc_earned": txn.get("prc_earned") or txn.get("amount", 0),
+                "active_referrals": txn.get("active_referrals") or txn.get("active_count", 1),
+                "type": txn.get("type", "referral_bonus")
+            })
     
     # Calculate summaries
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
@@ -27445,9 +27477,9 @@ async def get_referral_earnings_history(user_id: str, period: str = "all"):
     month_start = (now - timedelta(days=30)).isoformat()
     
     total_earned = sum(e["prc_earned"] for e in earnings) if earnings else 0
-    today_earned = sum(e["prc_earned"] for e in earnings if e["date"] >= today_start)
-    week_earned = sum(e["prc_earned"] for e in earnings if e["date"] >= week_start)
-    month_earned = sum(e["prc_earned"] for e in earnings if e["date"] >= month_start)
+    today_earned = sum(e["prc_earned"] for e in earnings if (e.get("timestamp") or e.get("date", "")) >= today_start)
+    week_earned = sum(e["prc_earned"] for e in earnings if (e.get("timestamp") or e.get("date", "")) >= week_start)
+    month_earned = sum(e["prc_earned"] for e in earnings if (e.get("timestamp") or e.get("date", "")) >= month_start)
     
     # If no transaction history, generate from mining data
     if not earnings:
