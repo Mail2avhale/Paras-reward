@@ -406,7 +406,10 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
         </h2>
         <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
           {[1, 2, 3, 4, 5].map((level) => {
-            const levelEarnings = (earnings || [])
+            // Use level_breakdown from API if available, otherwise calculate from earnings
+            const levelKey = `level_${level}`;
+            const levelData = levelBreakdown[levelKey] || {};
+            const levelEarnings = levelData.total || (earnings || [])
               .filter(e => e?.level === level)
               .reduce((sum, e) => sum + (e?.prc_earned || 0), 0);
             
@@ -418,7 +421,7 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
                 <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${levelColors[level]} flex items-center justify-center mb-2`}>
                   <span className="text-white font-bold text-sm">L{level}</span>
                 </div>
-                <p className="text-white font-bold">{levelEarnings.toFixed(1)}</p>
+                <p className="text-white font-bold">{(levelEarnings || 0).toFixed(1)}</p>
                 <p className="text-gray-500 text-[10px]">{levelBonuses[level].percent}% bonus</p>
               </div>
             );
