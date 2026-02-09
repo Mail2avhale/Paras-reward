@@ -13529,17 +13529,27 @@ async def user_360_quick_action(request: Request):
             ]
         })
         
-        # Also clear any user-level lock flags
+        # Also clear any user-level lock flags in database
         await db.users.update_one(
             {"uid": user_id},
             {
                 "$set": {
                     "failed_login_attempts": 0,
                     "locked_until": None,
+                    "failed_pin_attempts": 0,
+                    "pin_locked_until": None,
                     "updated_at": now.isoformat()
                 }
             }
         )
+        
+        # CRITICAL: Also clear in-memory lockout storage
+        identifiers_to_clear = [user_email, user_mobile, user_id]
+        for ident in identifiers_to_clear:
+            if ident:
+                key = f"login:{ident}"
+                if key in login_attempt_storage:
+                    login_attempt_storage[key] = {"count": 0, "reset_time": time.time() + RATE_LIMIT_WINDOW_SECONDS, "locked_until": 0, "lockout_level": 0}
         
         result_message = f"Lockout cleared. {delete_result.deleted_count} attempt records removed. User can login now."
         
