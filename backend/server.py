@@ -3837,6 +3837,7 @@ async def login(
     
     if not user:
         record_login_attempt(identifier, False)
+        await record_login_attempt_db(db, identifier, False, real_ip)
         # Create security alert for failed login
         await create_security_alert(
             alert_type="failed_login",
