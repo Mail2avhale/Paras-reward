@@ -23873,31 +23873,40 @@ async def process_bill_payment_request(request: Request):
         if not reject_reason:
             raise HTTPException(status_code=400, detail="Reject reason is required")
         
-        # Refund PRC to user
+        # Refund PRC to user - RECORD BEFORE/AFTER for transparency
         user = await db.users.find_one({"uid": user_id}, {"_id": 0})
         if not user:
             print(f"⚠️ WARNING: User {user_id} not found for bill payment refund")
             raise HTTPException(status_code=404, detail="User not found for refund")
         
-        new_balance = user.get("prc_balance", 0) + total_prc
+        balance_before = user.get("prc_balance", 0)
+        balance_after = balance_before + total_prc
+        
         await db.users.update_one(
             {"uid": user_id},
-            {"$set": {"prc_balance": new_balance}}
+            {"$set": {"prc_balance": balance_after}}
         )
         
-        print(f"✅ Refunded {total_prc} PRC to user {user_id}. New balance: {new_balance}")
+        print(f"✅ Refunded {total_prc} PRC to user {user_id}. Balance: {balance_before} → {balance_after}")
         
-        # Log refund transaction
+        # Log refund transaction with before/after details
         await log_transaction(
             user_id=user_id,
             wallet_type="prc",
             transaction_type="bill_payment_refund",
             amount=total_prc,
-            description=f"Bill payment request rejected - Refund (Request ID: {request_id[:8]})",
-            metadata={"request_id": request_id, "reason": reject_reason}
+            description=f"Bill payment rejected - PRC Refunded",
+            metadata={
+                "request_id": request_id, 
+                "reason": reject_reason,
+                "balance_before": balance_before,
+                "balance_after": balance_after,
+                "service_type": bill_request.get('request_type', ''),
+                "amount_inr": bill_request.get('amount_inr', 0)
+            }
         )
         
-        # Update request status
+        # Update request status with refund details
         await db.bill_payment_requests.update_one(
             {"request_id": request_id},
             {"$set": {
@@ -23906,21 +23915,36 @@ async def process_bill_payment_request(request: Request):
                 "processed_at": datetime.now(timezone.utc).isoformat(),
                 "admin_notes": admin_notes or reject_reason,
                 "processed_by": admin_name,
-                "processed_by_uid": admin_uid
+                "processed_by_uid": admin_uid,
+                "refund_details": {
+                    "prc_refunded": total_prc,
+                    "balance_before": balance_before,
+                    "balance_after": balance_after,
+                    "refunded_at": datetime.now(timezone.utc).isoformat()
+                }
             }}
         )
         
-        # Notify user about rejection
+        # Notify user about rejection WITH BALANCE DETAILS
         await create_notification(
             user_id=user_id,
-            title="❌ Bill Payment Rejected",
-            message=f"Your ₹{bill_request.get('amount_inr')} {bill_request.get('request_type', '').replace('_', ' ')} request was rejected. Reason: {reject_reason}. PRC has been refunded.",
-            notification_type="bill_payment",
+            title="❌ Request Rejected - PRC Refunded",
+            message=f"Your ₹{bill_request.get('amount_inr')} {bill_request.get('request_type', '').replace('_', ' ')} request was rejected.\n\n💰 PRC Refund Details:\n• Refunded: {total_prc:.2f} PRC\n• Balance Before: {balance_before:.2f} PRC\n• Balance After: {balance_after:.2f} PRC\n\n❓ Reason: {reject_reason}",
+            notification_type="bill_payment_refund",
             related_id=request_id,
-            icon="❌"
+            icon="💰"
         )
         
-        return {"message": "Request rejected and PRC refunded", "status": "rejected", "reject_reason": reject_reason}
+        return {
+            "message": "Request rejected and PRC refunded", 
+            "status": "rejected", 
+            "reject_reason": reject_reason,
+            "refund_details": {
+                "prc_refunded": total_prc,
+                "balance_before": balance_before,
+                "balance_after": balance_after
+            }
+        }
     
     elif action == "approve":
         # APPROVE = COMPLETE - Direct completion on approval
