@@ -3874,6 +3874,12 @@ async def login(
             detail=lockout_message
         )
     
+    # ========== DATABASE-BASED LOCKOUT CHECK (Persistent) ==========
+    db_allowed, db_locked_seconds, db_lockout_msg = await check_login_rate_limit_db(db, identifier)
+    if not db_allowed:
+        logging.warning(f"[LOGIN DEBUG] USER DB LOCKED: {identifier}, message: {db_lockout_msg}")
+        raise HTTPException(status_code=429, detail=db_lockout_msg)
+    
     # Normalize email to lowercase for case-insensitive matching
     normalized_identifier = identifier.lower() if '@' in identifier else identifier
     
