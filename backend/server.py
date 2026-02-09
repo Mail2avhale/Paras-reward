@@ -27497,6 +27497,36 @@ async def get_referral_earnings_history(user_id: str, period: str = "all"):
             "total": round(sum(e.get("prc_earned", 0) for e in level_earnings), 2)
         }
     
+    # Get top performing referrals (group by referral and sum earnings)
+    top_performers = []
+    try:
+        # Get direct referrals of this user
+        direct_referrals = await db.users.find(
+            {"referred_by": user_id},
+            {"_id": 0, "uid": 1, "name": 1, "email": 1}
+        ).to_list(length=100)
+        
+        for ref in direct_referrals:
+            ref_uid = ref.get("uid")
+            # Calculate earnings this referral generated
+            ref_earnings = sum(
+                e.get("prc_earned", 0) for e in earnings 
+                if e.get("from_user") == ref_uid or (e.get("level") == 1 and ref_uid in str(e))
+            )
+            if ref_earnings > 0 or len(top_performers) < 5:
+                top_performers.append({
+                    "uid": ref_uid,
+                    "name": ref.get("name", "User")[:15] + "..." if len(ref.get("name", "")) > 15 else ref.get("name", "User"),
+                    "level": 1,
+                    "earnings": round(ref_earnings, 2)
+                })
+        
+        # Sort by earnings
+        top_performers.sort(key=lambda x: x.get("earnings", 0), reverse=True)
+        top_performers = top_performers[:5]
+    except Exception as e:
+        logging.error(f"Error getting top performers: {e}")
+    
     return {
         "earnings": earnings,
         "summary": {
@@ -27505,7 +27535,8 @@ async def get_referral_earnings_history(user_id: str, period: str = "all"):
             "this_week": round(week_earned, 2),
             "today": round(today_earned, 2)
         },
-        "level_breakdown": level_breakdown
+        "level_breakdown": level_breakdown,
+        "top_performers": top_performers
     }
 
 
