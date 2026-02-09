@@ -955,7 +955,8 @@ async def migrate_user_to_pin(identifier: str, new_pin: str = None):
     }
 
 
-@api_router.post("/admin/clear-cache")
+# DISABLED - Moved to routes/admin.py
+@api_router.post("/_disabled_admin/clear-cache")
 async def clear_admin_cache():
     """
     Clear all admin dashboard caches to force fresh data load.
@@ -11279,7 +11280,8 @@ async def logout_all_sessions(uid: str, admin_uid: str):
     
     return {"message": f"Logged out {result.modified_count} sessions"}
 
-@api_router.get("/admin/security/sessions/{uid}")
+# DISABLED - Moved to routes/admin.py
+@api_router.get("/_disabled_admin/security/sessions/{uid}")
 async def get_user_sessions(uid: str, admin_uid: str):
     """Get all active sessions for a user"""
     admin = await db.users.find_one({"uid": admin_uid})
@@ -11297,7 +11299,8 @@ async def get_user_sessions(uid: str, admin_uid: str):
         "active_count": len([s for s in sessions if s.get("is_active")])
     }
 
-@api_router.get("/admin/security/audit-logs")
+# DISABLED - Moved to routes/admin.py
+@api_router.get("/_disabled_admin/security/audit-logs")
 async def get_admin_audit_logs(
     admin_uid: str,
     page: int = 1,
@@ -11336,7 +11339,8 @@ async def get_admin_audit_logs(
         "pages": (total + limit - 1) // limit
     }
 
-@api_router.get("/admin/security/ip-whitelist")
+# DISABLED - Moved to routes/admin.py
+@api_router.get("/_disabled_admin/security/ip-whitelist")
 async def get_ip_whitelist(admin_uid: str):
     """Get IP whitelist settings"""
     admin = await db.users.find_one({"uid": admin_uid})
@@ -11351,7 +11355,8 @@ async def get_ip_whitelist(admin_uid: str):
         "updated_at": None
     }
 
-@api_router.post("/admin/security/ip-whitelist")
+# DISABLED - Moved to routes/admin.py
+@api_router.post("/_disabled_admin/security/ip-whitelist")
 async def update_ip_whitelist(
     admin_uid: str,
     enabled: bool,
@@ -11398,7 +11403,8 @@ async def update_ip_whitelist(
     
     return {"message": "IP whitelist updated", "valid_ips": len(valid_ips)}
 
-@api_router.get("/admin/security/lockdown-status")
+# DISABLED - Moved to routes/admin.py
+@api_router.get("/_disabled_admin/security/lockdown-status")
 async def get_lockdown_status_api(admin_uid: str):
     """Get current system lockdown status"""
     admin = await db.users.find_one({"uid": admin_uid})
@@ -11408,8 +11414,9 @@ async def get_lockdown_status_api(admin_uid: str):
     status = await get_lockdown_status()
     return status
 
-@api_router.post("/admin/security/lockdown")
-async def activate_lockdown(
+# DISABLED - Moved to routes/admin.py
+@api_router.post("/_disabled_admin/security/lockdown")
+async def _disabled_activate_lockdown(
     request: Request,
     admin_uid: str,
     lockdown_type: str = "full",  # full, partial
@@ -11460,7 +11467,8 @@ async def activate_lockdown(
     
     return {"message": f"System lockdown activated ({lockdown_type})", "locked_features": locked_features}
 
-@api_router.post("/admin/security/lockdown/deactivate")
+# DISABLED - Moved to routes/admin.py
+@api_router.post("/_disabled_admin/security/lockdown/deactivate")
 async def deactivate_lockdown(request: Request, admin_uid: str):
     """Deactivate system lockdown"""
     admin = await db.users.find_one({"uid": admin_uid})
@@ -11491,7 +11499,8 @@ async def deactivate_lockdown(request: Request, admin_uid: str):
     
     return {"message": "System lockdown deactivated"}
 
-@api_router.get("/admin/security/dashboard")
+# DISABLED - Moved to routes/admin.py
+@api_router.get("/_disabled_admin/security/dashboard")
 async def get_security_dashboard(admin_uid: str):
     """Get comprehensive security dashboard"""
     admin = await db.users.find_one({"uid": admin_uid})
@@ -11547,7 +11556,8 @@ async def update_session_activity(uid: str, token_id: str):
     return {"message": "Activity updated"}
 
 # ========== SECURITY ALERTS API ==========
-@api_router.get("/admin/security/alerts")
+# DISABLED - Moved to routes/admin.py
+@api_router.get("/_disabled_admin/security/alerts")
 async def get_security_alerts(
     admin_uid: str,
     page: int = 1,
