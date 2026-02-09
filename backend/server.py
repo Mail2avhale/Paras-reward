@@ -41,6 +41,7 @@ from routes.referral import router as referral_router, set_db as set_referral_db
 from routes.auth import router as auth_router, set_db as set_auth_db, set_helpers as set_auth_helpers, set_verify_token as set_auth_verify_token
 from routes.users import router as users_router, set_db as set_users_db, set_cache as set_users_cache, set_helpers as set_users_helpers
 from routes.wallet import router as wallet_router, set_db as set_wallet_db
+from routes.admin import router as admin_router, set_db as set_admin_db, set_cache as set_admin_cache, set_helpers as set_admin_helpers
 
 # ========== SECURITY CONFIGURATION ==========
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
