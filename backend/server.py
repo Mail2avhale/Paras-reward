@@ -3924,6 +3924,7 @@ async def login(
     
     # Record successful login
     record_login_attempt(identifier, True)
+    await record_login_attempt_db(db, identifier, True, real_ip)
     
     # Save login history for user
     login_history_entry = {
