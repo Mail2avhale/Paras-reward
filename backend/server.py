@@ -37682,29 +37682,28 @@ PLME_DEFAULT_CONFIG = {
     "history_buffer": {"free_user": 5, "vip_user": 7}
 }
 
-# PLME Assets - Real Animal Videos from Pexels CDN (Free Stock Videos)
-# asset_type: "video" for real animal videos, "lottie" for animations
+# PLME Assets - Real Animal Videos from Mixkit CDN (Free Stock Videos - No Hotlink Protection)
+# asset_type: "video" for real animal videos
 PLME_ASSETS = {
     "cute_playful": [
-        # Real Cat Videos from Pexels
-        {"id": "cat_play_1", "name": "Playful Kitten", "url": "https://videos.pexels.com/video-files/855282/855282-sd_640_360_24fps.mp4", "asset_type": "video", "duration": 15, "thumbnail": "https://images.pexels.com/videos/855282/free-video-855282.jpg?auto=compress&cs=tinysrgb&w=300"},
-        {"id": "cat_walk_2", "name": "Cat Walking", "url": "https://videos.pexels.com/video-files/1390942/1390942-sd_640_360_30fps.mp4", "asset_type": "video", "duration": 12, "thumbnail": "https://images.pexels.com/videos/1390942/free-video-1390942.jpg?auto=compress&cs=tinysrgb&w=300"},
-        {"id": "cat_cute_3", "name": "Cute Cat", "url": "https://videos.pexels.com/video-files/4588037/4588037-sd_640_360_25fps.mp4", "asset_type": "video", "duration": 18, "thumbnail": "https://images.pexels.com/videos/4588037/free-video-4588037.jpg?auto=compress&cs=tinysrgb&w=300"},
-        # Real Dog Videos from Pexels
-        {"id": "dog_run_1", "name": "Dog Running", "url": "https://videos.pexels.com/video-files/4841382/4841382-sd_640_360_25fps.mp4", "asset_type": "video", "duration": 14, "thumbnail": "https://images.pexels.com/videos/4841382/free-video-4841382.jpg?auto=compress&cs=tinysrgb&w=300"},
-        {"id": "puppy_play_1", "name": "Puppy Playing", "url": "https://videos.pexels.com/video-files/3191242/3191242-sd_640_360_25fps.mp4", "asset_type": "video", "duration": 16, "thumbnail": "https://images.pexels.com/videos/3191242/free-video-3191242.jpg?auto=compress&cs=tinysrgb&w=300"},
-        {"id": "dog_happy_2", "name": "Happy Dog", "url": "https://videos.pexels.com/video-files/4523007/4523007-sd_640_360_25fps.mp4", "asset_type": "video", "duration": 15, "thumbnail": "https://images.pexels.com/videos/4523007/free-video-4523007.jpg?auto=compress&cs=tinysrgb&w=300"},
-        # Other Cute Animals
-        {"id": "rabbit_hop_1", "name": "Bunny Hopping", "url": "https://videos.pexels.com/video-files/5607952/5607952-sd_640_360_25fps.mp4", "asset_type": "video", "duration": 12, "thumbnail": "https://images.pexels.com/videos/5607952/free-video-5607952.jpg?auto=compress&cs=tinysrgb&w=300"},
-        {"id": "bird_cute_1", "name": "Cute Bird", "url": "https://videos.pexels.com/video-files/2098989/2098989-sd_640_360_30fps.mp4", "asset_type": "video", "duration": 14, "thumbnail": "https://images.pexels.com/videos/2098989/free-video-2098989.jpg?auto=compress&cs=tinysrgb&w=300"},
+        # Real Cat & Dog Videos from Mixkit (royalty-free, no hotlink protection)
+        {"id": "cat_play_1", "name": "Playful Cat", "url": "https://assets.mixkit.co/videos/preview/mixkit-cat-sleeping-and-breathing-close-up-44981-large.mp4", "asset_type": "video", "duration": 15},
+        {"id": "dog_run_1", "name": "Happy Dog", "url": "https://assets.mixkit.co/videos/preview/mixkit-dog-running-in-a-park-42609-large.mp4", "asset_type": "video", "duration": 14},
+        {"id": "bird_cute_1", "name": "Cute Bird", "url": "https://assets.mixkit.co/videos/preview/mixkit-little-bird-standing-on-a-post-4815-large.mp4", "asset_type": "video", "duration": 12},
+        {"id": "duck_swim_1", "name": "Duck Swimming", "url": "https://assets.mixkit.co/videos/preview/mixkit-a-duck-swimming-in-green-water-4908-large.mp4", "asset_type": "video", "duration": 16},
+        {"id": "squirrel_eat_1", "name": "Squirrel Eating", "url": "https://assets.mixkit.co/videos/preview/mixkit-squirrel-eating-a-nut-41723-large.mp4", "asset_type": "video", "duration": 13},
+        {"id": "rabbit_hop_1", "name": "Cute Rabbit", "url": "https://assets.mixkit.co/videos/preview/mixkit-white-rabbit-in-the-grass-1546-large.mp4", "asset_type": "video", "duration": 15},
+        {"id": "horse_run_1", "name": "Horse Running", "url": "https://assets.mixkit.co/videos/preview/mixkit-white-horse-galloping-across-a-field-4150-large.mp4", "asset_type": "video", "duration": 18},
+        {"id": "chicken_walk_1", "name": "Cute Chicken", "url": "https://assets.mixkit.co/videos/preview/mixkit-rooster-crowing-at-the-break-of-dawn-27526-large.mp4", "asset_type": "video", "duration": 14},
     ],
     "calm_nature": [
-        # Nature & Wildlife
-        {"id": "butterfly_fly_1", "name": "Butterfly Flying", "url": "https://videos.pexels.com/video-files/854386/854386-sd_640_360_30fps.mp4", "asset_type": "video", "duration": 18, "thumbnail": "https://images.pexels.com/videos/854386/free-video-854386.jpg?auto=compress&cs=tinysrgb&w=300"},
-        {"id": "fish_swim_1", "name": "Fish Swimming", "url": "https://videos.pexels.com/video-files/857251/857251-sd_640_360_24fps.mp4", "asset_type": "video", "duration": 20, "thumbnail": "https://images.pexels.com/videos/857251/free-video-857251.jpg?auto=compress&cs=tinysrgb&w=300"},
-        {"id": "bird_nature_1", "name": "Bird in Nature", "url": "https://videos.pexels.com/video-files/1093665/1093665-sd_640_360_30fps.mp4", "asset_type": "video", "duration": 15, "thumbnail": "https://images.pexels.com/videos/1093665/free-video-1093665.jpg?auto=compress&cs=tinysrgb&w=300"},
-        {"id": "nature_calm_1", "name": "Calm Nature", "url": "https://videos.pexels.com/video-files/857195/857195-sd_640_360_24fps.mp4", "asset_type": "video", "duration": 22, "thumbnail": "https://images.pexels.com/videos/857195/free-video-857195.jpg?auto=compress&cs=tinysrgb&w=300"},
-        {"id": "sunset_bird_1", "name": "Bird at Sunset", "url": "https://videos.pexels.com/video-files/854648/854648-sd_640_360_24fps.mp4", "asset_type": "video", "duration": 18, "thumbnail": "https://images.pexels.com/videos/854648/free-video-854648.jpg?auto=compress&cs=tinysrgb&w=300"},
+        # Nature & Wildlife Videos from Mixkit
+        {"id": "butterfly_fly_1", "name": "Butterfly Flying", "url": "https://assets.mixkit.co/videos/preview/mixkit-butterfly-on-a-flower-1536-large.mp4", "asset_type": "video", "duration": 18},
+        {"id": "fish_swim_1", "name": "Fish Swimming", "url": "https://assets.mixkit.co/videos/preview/mixkit-clown-fish-swimming-in-an-aquarium-4679-large.mp4", "asset_type": "video", "duration": 20},
+        {"id": "bird_nature_1", "name": "Bird in Nature", "url": "https://assets.mixkit.co/videos/preview/mixkit-two-birds-eating-seeds-on-the-ground-7626-large.mp4", "asset_type": "video", "duration": 15},
+        {"id": "deer_forest_1", "name": "Deer in Forest", "url": "https://assets.mixkit.co/videos/preview/mixkit-deer-eating-leaves-in-the-forest-27594-large.mp4", "asset_type": "video", "duration": 16},
+        {"id": "flamingo_1", "name": "Pink Flamingo", "url": "https://assets.mixkit.co/videos/preview/mixkit-flamingo-eating-4714-large.mp4", "asset_type": "video", "duration": 14},
+        {"id": "turtle_swim_1", "name": "Turtle Swimming", "url": "https://assets.mixkit.co/videos/preview/mixkit-sea-turtle-swimming-close-up-view-4679-large.mp4", "asset_type": "video", "duration": 18},
     ]
 }
 
