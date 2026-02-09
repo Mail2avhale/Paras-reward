@@ -38139,6 +38139,15 @@ api_router.include_router(users_router)
 set_wallet_db(db)
 api_router.include_router(wallet_router)
 
+# Include admin router (refactored)
+set_admin_db(db)
+set_admin_cache(cache)
+set_admin_helpers({
+    'log_admin_action': log_admin_action,
+    'create_security_alert': create_security_alert
+})
+api_router.include_router(admin_router)
+
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
 
