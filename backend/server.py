@@ -181,8 +181,21 @@ def check_login_rate_limit(identifier: str) -> tuple:
     attempts_left = RATE_LIMIT_LOGIN_ATTEMPTS - login_attempt_storage[key]["count"]
     return True, 0, attempts_left, ""
 
+async def record_login_attempt_db(db, identifier: str, success: bool, ip_address: str = None):
+    """Record login attempt in database for persistent tracking"""
+    try:
+        await db.login_attempts.insert_one({
+            "identifier": identifier,
+            "ip_address": ip_address,
+            "success": success,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+    except Exception as e:
+        logging.error(f"Failed to record login attempt: {e}")
+
+
 def record_login_attempt(identifier: str, success: bool):
-    """Record login attempt with progressive lockout"""
+    """Record login attempt with progressive lockout (in-memory for speed)"""
     key = f"login:{identifier}"
     current_time = time.time()
     
