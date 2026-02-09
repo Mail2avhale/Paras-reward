@@ -38123,6 +38123,10 @@ set_users_helpers({
 })
 api_router.include_router(users_router)
 
+# Include wallet router (refactored)
+set_wallet_db(db)
+api_router.include_router(wallet_router)
+
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
 
