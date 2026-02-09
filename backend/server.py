@@ -37682,28 +37682,29 @@ PLME_DEFAULT_CONFIG = {
     "history_buffer": {"free_user": 5, "vip_user": 7}
 }
 
-# PLME Assets - Lottie Animation URLs (from LottieFiles CDN)
+# PLME Assets - Real Animal Videos from Pexels CDN (Free Stock Videos)
+# asset_type: "video" for real animal videos, "lottie" for animations
 PLME_ASSETS = {
     "cute_playful": [
-        {"id": "dog_walk", "name": "Happy Dog Walking", "url": "https://lottie.host/4db68bbd-31f6-4cd8-84eb-189571c34cae/Vw5EPTqLKb.json", "duration": 15},
-        {"id": "cat_sleep", "name": "Sleeping Cat", "url": "https://lottie.host/e4f453e8-ee7a-4e24-a5a1-62b6b5c9d6e0/k1qU3LDnPy.json", "duration": 18},
-        {"id": "bunny_hop", "name": "Bunny Hopping", "url": "https://lottie.host/2de1b866-f5d1-4ed5-89f2-5e1f98e79fab/TbHBWrPyLj.json", "duration": 12},
-        {"id": "butterfly", "name": "Butterfly Flying", "url": "https://lottie.host/d8f6c0ab-6b2b-4c3f-8b2e-9c0f8f8f8f8f/butterfly.json", "duration": 20},
-        {"id": "duck_swim", "name": "Duck Swimming", "url": "https://lottie.host/b7a8f2c1-4d5e-6f7g-8h9i-0j1k2l3m4n5o/duck.json", "duration": 16},
-        {"id": "squirrel", "name": "Squirrel with Nut", "url": "https://lottie.host/c8b9d0e1-2f3g-4h5i-6j7k-8l9m0n1o2p3q/squirrel.json", "duration": 14},
-        {"id": "puppy_play", "name": "Puppy Playing", "url": "https://lottie.host/d9c0e1f2-3g4h-5i6j-7k8l-9m0n1o2p3q4r/puppy.json", "duration": 17},
-        {"id": "kitten_ball", "name": "Kitten with Ball", "url": "https://lottie.host/e0d1f2g3-4h5i-6j7k-8l9m-0n1o2p3q4r5s/kitten.json", "duration": 15},
-        {"id": "balloon_fly", "name": "Balloon Flying", "url": "https://lottie.host/f1e2g3h4-5i6j-7k8l-9m0n-1o2p3q4r5s6t/balloon.json", "duration": 20},
-        {"id": "cloud_happy", "name": "Happy Cloud", "url": "https://lottie.host/g2f3h4i5-6j7k-8l9m-0n1o-2p3q4r5s6t7u/cloud.json", "duration": 18},
+        # Real Cat Videos from Pexels
+        {"id": "cat_play_1", "name": "Playful Kitten", "url": "https://videos.pexels.com/video-files/855282/855282-sd_640_360_24fps.mp4", "asset_type": "video", "duration": 15, "thumbnail": "https://images.pexels.com/videos/855282/free-video-855282.jpg?auto=compress&cs=tinysrgb&w=300"},
+        {"id": "cat_walk_2", "name": "Cat Walking", "url": "https://videos.pexels.com/video-files/1390942/1390942-sd_640_360_30fps.mp4", "asset_type": "video", "duration": 12, "thumbnail": "https://images.pexels.com/videos/1390942/free-video-1390942.jpg?auto=compress&cs=tinysrgb&w=300"},
+        {"id": "cat_cute_3", "name": "Cute Cat", "url": "https://videos.pexels.com/video-files/4588037/4588037-sd_640_360_25fps.mp4", "asset_type": "video", "duration": 18, "thumbnail": "https://images.pexels.com/videos/4588037/free-video-4588037.jpg?auto=compress&cs=tinysrgb&w=300"},
+        # Real Dog Videos from Pexels
+        {"id": "dog_run_1", "name": "Dog Running", "url": "https://videos.pexels.com/video-files/4841382/4841382-sd_640_360_25fps.mp4", "asset_type": "video", "duration": 14, "thumbnail": "https://images.pexels.com/videos/4841382/free-video-4841382.jpg?auto=compress&cs=tinysrgb&w=300"},
+        {"id": "puppy_play_1", "name": "Puppy Playing", "url": "https://videos.pexels.com/video-files/3191242/3191242-sd_640_360_25fps.mp4", "asset_type": "video", "duration": 16, "thumbnail": "https://images.pexels.com/videos/3191242/free-video-3191242.jpg?auto=compress&cs=tinysrgb&w=300"},
+        {"id": "dog_happy_2", "name": "Happy Dog", "url": "https://videos.pexels.com/video-files/4523007/4523007-sd_640_360_25fps.mp4", "asset_type": "video", "duration": 15, "thumbnail": "https://images.pexels.com/videos/4523007/free-video-4523007.jpg?auto=compress&cs=tinysrgb&w=300"},
+        # Other Cute Animals
+        {"id": "rabbit_hop_1", "name": "Bunny Hopping", "url": "https://videos.pexels.com/video-files/5607952/5607952-sd_640_360_25fps.mp4", "asset_type": "video", "duration": 12, "thumbnail": "https://images.pexels.com/videos/5607952/free-video-5607952.jpg?auto=compress&cs=tinysrgb&w=300"},
+        {"id": "bird_cute_1", "name": "Cute Bird", "url": "https://videos.pexels.com/video-files/2098989/2098989-sd_640_360_30fps.mp4", "asset_type": "video", "duration": 14, "thumbnail": "https://images.pexels.com/videos/2098989/free-video-2098989.jpg?auto=compress&cs=tinysrgb&w=300"},
     ],
     "calm_nature": [
-        {"id": "bird_fly", "name": "Bird Flying", "url": "https://lottie.host/h3g4i5j6-7k8l-9m0n-1o2p-3q4r5s6t7u8v/bird.json", "duration": 15},
-        {"id": "leaves_fall", "name": "Falling Leaves", "url": "https://lottie.host/i4h5j6k7-8l9m-0n1o-2p3q-4r5s6t7u8v9w/leaves.json", "duration": 20},
-        {"id": "fireflies", "name": "Fireflies Night", "url": "https://lottie.host/j5i6k7l8-9m0n-1o2p-3q4r-5s6t7u8v9w0x/fireflies.json", "duration": 25},
-        {"id": "rain_drops", "name": "Gentle Rain", "url": "https://lottie.host/k6j7l8m9-0n1o-2p3q-4r5s-6t7u8v9w0x1y/rain.json", "duration": 22},
-        {"id": "wind_blow", "name": "Wind Blowing", "url": "https://lottie.host/l7k8m9n0-1o2p-3q4r-5s6t-7u8v9w0x1y2z/wind.json", "duration": 18},
-        {"id": "mist_fog", "name": "Misty Morning", "url": "https://lottie.host/m8l9n0o1-2p3q-4r5s-6t7u-8v9w0x1y2z3a/mist.json", "duration": 20},
-        {"id": "stars_twinkle", "name": "Twinkling Stars", "url": "https://lottie.host/n9m0o1p2-3q4r-5s6t-7u8v-9w0x1y2z3a4b/stars.json", "duration": 25},
+        # Nature & Wildlife
+        {"id": "butterfly_fly_1", "name": "Butterfly Flying", "url": "https://videos.pexels.com/video-files/854386/854386-sd_640_360_30fps.mp4", "asset_type": "video", "duration": 18, "thumbnail": "https://images.pexels.com/videos/854386/free-video-854386.jpg?auto=compress&cs=tinysrgb&w=300"},
+        {"id": "fish_swim_1", "name": "Fish Swimming", "url": "https://videos.pexels.com/video-files/857251/857251-sd_640_360_24fps.mp4", "asset_type": "video", "duration": 20, "thumbnail": "https://images.pexels.com/videos/857251/free-video-857251.jpg?auto=compress&cs=tinysrgb&w=300"},
+        {"id": "bird_nature_1", "name": "Bird in Nature", "url": "https://videos.pexels.com/video-files/1093665/1093665-sd_640_360_30fps.mp4", "asset_type": "video", "duration": 15, "thumbnail": "https://images.pexels.com/videos/1093665/free-video-1093665.jpg?auto=compress&cs=tinysrgb&w=300"},
+        {"id": "nature_calm_1", "name": "Calm Nature", "url": "https://videos.pexels.com/video-files/857195/857195-sd_640_360_24fps.mp4", "asset_type": "video", "duration": 22, "thumbnail": "https://images.pexels.com/videos/857195/free-video-857195.jpg?auto=compress&cs=tinysrgb&w=300"},
+        {"id": "sunset_bird_1", "name": "Bird at Sunset", "url": "https://videos.pexels.com/video-files/854648/854648-sd_640_360_24fps.mp4", "asset_type": "video", "duration": 18, "thumbnail": "https://images.pexels.com/videos/854648/free-video-854648.jpg?auto=compress&cs=tinysrgb&w=300"},
     ]
 }
 
