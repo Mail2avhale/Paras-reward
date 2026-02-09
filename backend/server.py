@@ -38094,6 +38094,20 @@ set_auth_helpers({
 })
 api_router.include_router(auth_router)
 
+# Include users router (refactored)
+set_users_db(db)
+set_users_cache(cache)
+set_users_helpers({
+    'hash_password': hash_password,
+    'verify_password': verify_password,
+    'check_unique_fields': check_unique_fields,
+    'get_duplicate_field_owner': get_duplicate_field_owner,
+    'log_activity': log_activity,
+    'log_transaction': log_transaction,
+    'create_social_notification': create_social_notification
+})
+api_router.include_router(users_router)
+
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
 
