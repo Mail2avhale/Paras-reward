@@ -661,7 +661,9 @@ async def clear_all_login_lockouts():
             {
                 "$set": {
                     "failed_login_attempts": 0,
-                    "locked_until": None
+                    "locked_until": None,
+                    "failed_pin_attempts": 0,
+                    "pin_locked_until": None
                 }
             }
         )
@@ -675,7 +677,9 @@ async def clear_all_login_lockouts():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-async def clear_admin_cache():
+
+
+@api_router.post("/admin/clear-cache")
     """
     Clear all admin dashboard caches to force fresh data load.
     Use this when production data seems incorrect/stale.
