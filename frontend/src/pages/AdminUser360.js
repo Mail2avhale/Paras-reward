@@ -1019,12 +1019,20 @@ const AdminUser360 = ({ user: adminUser }) => {
                 <Key className="w-10 h-10 text-white" />
               </div>
               
-              <h2 className="text-2xl font-bold text-white mb-2">Password Reset Successful!</h2>
-              <p className="text-gray-400 mb-6">New temporary password has been generated</p>
+              <h2 className="text-2xl font-bold text-white mb-2">
+                {passwordModal.isPinUser ? 'Password & PIN Reset!' : 'Password Reset Successful!'}
+              </h2>
+              <p className="text-gray-400 mb-6">
+                {passwordModal.isPinUser 
+                  ? 'New temporary credential has been generated. User can use this as PIN.'
+                  : 'New temporary password has been generated'}
+              </p>
               
-              {/* Password Display */}
+              {/* Password/PIN Display */}
               <div className="bg-gray-800 border-2 border-green-500/30 rounded-2xl p-6 mb-6">
-                <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Temporary Password</p>
+                <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">
+                  {passwordModal.isPinUser ? 'Temporary Credential (Use as PIN)' : 'Temporary Password'}
+                </p>
                 <p className="text-3xl font-mono font-bold text-green-400 tracking-widest">
                   {passwordModal.password}
                 </p>
@@ -1035,15 +1043,15 @@ const AdminUser360 = ({ user: adminUser }) => {
                 <Button
                   onClick={() => {
                     navigator.clipboard.writeText(passwordModal.password);
-                    toast.success('Password copied to clipboard!');
+                    toast.success('Copied to clipboard!');
                   }}
                   className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
                 >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Copy Password
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy
                 </Button>
                 <Button
-                  onClick={() => setPasswordModal({ show: false, password: '' })}
+                  onClick={() => setPasswordModal({ show: false, password: '', isPinUser: false })}
                   variant="outline"
                   className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
                 >
@@ -1052,7 +1060,9 @@ const AdminUser360 = ({ user: adminUser }) => {
               </div>
               
               <p className="text-xs text-gray-500 mt-4">
-                Please share this password securely with the user. They should change it after first login.
+                {passwordModal.isPinUser 
+                  ? 'Share this securely. User should enter this 6-character code as their new PIN.'
+                  : 'Please share this password securely with the user.'}
               </p>
             </div>
           </div>
