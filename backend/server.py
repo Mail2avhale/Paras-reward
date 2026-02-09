@@ -38023,12 +38023,13 @@ async def get_luxury_settings():
 
 
 # Include all API routes (must be after all route definitions)
-app.include_router(api_router)
-
 # Include referral router (refactored)
 set_referral_db(db)
 set_referral_helpers(get_multi_level_referrals, get_base_rate)
 api_router.include_router(referral_router)
+
+# Include all API routes (must be after all route definitions and sub-routers)
+app.include_router(api_router)
 
 # Note: Health check endpoint is defined earlier in the file at line ~408
 # The /health and /api/health endpoints now return 200 even during DB warmup
