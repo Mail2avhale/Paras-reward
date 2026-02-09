@@ -38112,6 +38112,7 @@ set_auth_helpers({
     'User': User,
     'JWT_ACCESS_TOKEN_EXPIRE_MINUTES': JWT_ACCESS_TOKEN_EXPIRE_MINUTES
 })
+set_auth_verify_token(verify_token)
 api_router.include_router(auth_router)
 
 # Include users router (refactored)
