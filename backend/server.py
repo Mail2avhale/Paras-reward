@@ -13362,6 +13362,68 @@ async def user_360_quick_action(request: Request):
             }}
         )
         result_message = f"PIN reset successful. New temporary PIN: {temp_pin}"
+    
+    elif action == "update_user_details":
+        # Admin can update user profile details
+        updates = data.get("updates", {})
+        if not updates:
+            raise HTTPException(status_code=400, detail="No updates provided")
+        
+        # Define allowed fields that admin can update
+        allowed_fields = {
+            "name", "email", "mobile", "address", "city", "state", "pincode",
+            "pan_number", "aadhaar_number", "bank_name", "bank_account_number",
+            "bank_ifsc", "upi_id", "date_of_birth", "gender", "alternate_mobile",
+            "nominee_name", "nominee_relation", "nominee_mobile"
+        }
+        
+        # Filter only allowed fields
+        filtered_updates = {}
+        for key, value in updates.items():
+            if key in allowed_fields:
+                # Validate specific fields
+                if key == "email" and value:
+                    # Check if email already exists for another user
+                    existing = await db.users.find_one({"email": value, "uid": {"$ne": user_id}})
+                    if existing:
+                        raise HTTPException(status_code=400, detail=f"Email '{value}' already registered to another user")
+                
+                if key == "mobile" and value:
+                    # Check if mobile already exists for another user
+                    existing = await db.users.find_one({"mobile": value, "uid": {"$ne": user_id}})
+                    if existing:
+                        raise HTTPException(status_code=400, detail=f"Mobile '{value}' already registered to another user")
+                
+                if key == "pan_number" and value:
+                    # Basic PAN validation (10 chars, format AAAAA0000A)
+                    import re
+                    if not re.match(r'^[A-Z]{5}[0-9]{4}[A-Z]$', value.upper()):
+                        raise HTTPException(status_code=400, detail="Invalid PAN format. Should be like ABCDE1234F")
+                    value = value.upper()
+                
+                if key == "aadhaar_number" and value:
+                    # Aadhaar is 12 digits
+                    clean_aadhaar = re.sub(r'\s|-', '', str(value))
+                    if not clean_aadhaar.isdigit() or len(clean_aadhaar) != 12:
+                        raise HTTPException(status_code=400, detail="Invalid Aadhaar. Should be 12 digits")
+                    value = clean_aadhaar
+                
+                filtered_updates[key] = value
+        
+        if not filtered_updates:
+            raise HTTPException(status_code=400, detail="No valid fields to update")
+        
+        # Add audit trail
+        filtered_updates["updated_at"] = now.isoformat()
+        filtered_updates["last_updated_by"] = admin_id
+        
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": filtered_updates}
+        )
+        
+        updated_fields = ", ".join(filtered_updates.keys())
+        result_message = f"User details updated: {updated_fields}"
         
     elif action == "send_notification":
         message = data.get("message", "")
