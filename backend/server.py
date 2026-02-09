@@ -37682,28 +37682,16 @@ PLME_DEFAULT_CONFIG = {
     "history_buffer": {"free_user": 5, "vip_user": 7}
 }
 
-# PLME Assets - Real Animal Videos from Mixkit CDN (Free Stock Videos - No Hotlink Protection)
-# asset_type: "video" for real animal videos
+# PLME Assets - Real Animal Images (Photorealistic AI-Generated)
+# asset_type: "image" for static images with gentle animation
 PLME_ASSETS = {
     "cute_playful": [
-        # Real Cat & Dog Videos from Mixkit (royalty-free, no hotlink protection)
-        {"id": "cat_play_1", "name": "Playful Cat", "url": "https://assets.mixkit.co/videos/preview/mixkit-cat-sleeping-and-breathing-close-up-44981-large.mp4", "asset_type": "video", "duration": 15},
-        {"id": "dog_run_1", "name": "Happy Dog", "url": "https://assets.mixkit.co/videos/preview/mixkit-dog-running-in-a-park-42609-large.mp4", "asset_type": "video", "duration": 14},
-        {"id": "bird_cute_1", "name": "Cute Bird", "url": "https://assets.mixkit.co/videos/preview/mixkit-little-bird-standing-on-a-post-4815-large.mp4", "asset_type": "video", "duration": 12},
-        {"id": "duck_swim_1", "name": "Duck Swimming", "url": "https://assets.mixkit.co/videos/preview/mixkit-a-duck-swimming-in-green-water-4908-large.mp4", "asset_type": "video", "duration": 16},
-        {"id": "squirrel_eat_1", "name": "Squirrel Eating", "url": "https://assets.mixkit.co/videos/preview/mixkit-squirrel-eating-a-nut-41723-large.mp4", "asset_type": "video", "duration": 13},
-        {"id": "rabbit_hop_1", "name": "Cute Rabbit", "url": "https://assets.mixkit.co/videos/preview/mixkit-white-rabbit-in-the-grass-1546-large.mp4", "asset_type": "video", "duration": 15},
-        {"id": "horse_run_1", "name": "Horse Running", "url": "https://assets.mixkit.co/videos/preview/mixkit-white-horse-galloping-across-a-field-4150-large.mp4", "asset_type": "video", "duration": 18},
-        {"id": "chicken_walk_1", "name": "Cute Chicken", "url": "https://assets.mixkit.co/videos/preview/mixkit-rooster-crowing-at-the-break-of-dawn-27526-large.mp4", "asset_type": "video", "duration": 14},
+        {"id": "cat_cute_1", "name": "Adorable Kitten", "url": "https://static.prod-images.emergentagent.com/jobs/da8d81ed-23f4-42fa-8a15-2a22db3b57bc/images/a2ff95e8647f07ce427286a1b76ce958a71d14f67f6f53c24086e3eb19b70e65.png", "asset_type": "image", "duration": 15},
+        {"id": "dog_happy_1", "name": "Happy Puppy", "url": "https://static.prod-images.emergentagent.com/jobs/da8d81ed-23f4-42fa-8a15-2a22db3b57bc/images/ec258d65a41584a4cd07eb6965e4adf12ea2c35eeab5c96818b3aef4c19741d8.png", "asset_type": "image", "duration": 15},
+        {"id": "bunny_cute_1", "name": "Cute Bunny", "url": "https://static.prod-images.emergentagent.com/jobs/da8d81ed-23f4-42fa-8a15-2a22db3b57bc/images/1033facfee2a3b628bbca365ab6f2bbd4525eef007dfb7a14c7d828e53641c5f.png", "asset_type": "image", "duration": 15},
     ],
     "calm_nature": [
-        # Nature & Wildlife Videos from Mixkit
-        {"id": "butterfly_fly_1", "name": "Butterfly Flying", "url": "https://assets.mixkit.co/videos/preview/mixkit-butterfly-on-a-flower-1536-large.mp4", "asset_type": "video", "duration": 18},
-        {"id": "fish_swim_1", "name": "Fish Swimming", "url": "https://assets.mixkit.co/videos/preview/mixkit-clown-fish-swimming-in-an-aquarium-4679-large.mp4", "asset_type": "video", "duration": 20},
-        {"id": "bird_nature_1", "name": "Bird in Nature", "url": "https://assets.mixkit.co/videos/preview/mixkit-two-birds-eating-seeds-on-the-ground-7626-large.mp4", "asset_type": "video", "duration": 15},
-        {"id": "deer_forest_1", "name": "Deer in Forest", "url": "https://assets.mixkit.co/videos/preview/mixkit-deer-eating-leaves-in-the-forest-27594-large.mp4", "asset_type": "video", "duration": 16},
-        {"id": "flamingo_1", "name": "Pink Flamingo", "url": "https://assets.mixkit.co/videos/preview/mixkit-flamingo-eating-4714-large.mp4", "asset_type": "video", "duration": 14},
-        {"id": "turtle_swim_1", "name": "Turtle Swimming", "url": "https://assets.mixkit.co/videos/preview/mixkit-sea-turtle-swimming-close-up-view-4679-large.mp4", "asset_type": "video", "duration": 18},
+        {"id": "butterfly_1", "name": "Beautiful Butterfly", "url": "https://static.prod-images.emergentagent.com/jobs/da8d81ed-23f4-42fa-8a15-2a22db3b57bc/images/026dd889cef446f779572c04aef24a580fbeb3c2f1526f4c0c6fa89bce63bdcb.png", "asset_type": "image", "duration": 18},
     ]
 }
 
