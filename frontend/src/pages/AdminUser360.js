@@ -1091,6 +1091,297 @@ const AdminUser360 = ({ user: adminUser }) => {
           </div>
         </div>
       )}
+
+      {/* Edit User Details Modal */}
+      {editModal.show && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 overflow-y-auto" data-testid="edit-user-modal">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-3xl p-6 max-w-3xl w-full mx-4 my-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <User className="w-6 h-6 text-indigo-400" />
+                Edit User Details
+              </h2>
+              <button
+                onClick={() => setEditModal({ show: false })}
+                className="p-2 hover:bg-gray-700 rounded-lg"
+              >
+                <XCircle className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Personal Information */}
+              <div>
+                <h3 className="text-sm font-semibold text-indigo-400 mb-3 flex items-center gap-2">
+                  <User className="w-4 h-4" /> Personal Information
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Full Name</label>
+                    <input
+                      type="text"
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      data-testid="edit-name-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Date of Birth</label>
+                    <input
+                      type="date"
+                      value={editForm.date_of_birth}
+                      onChange={(e) => setEditForm({...editForm, date_of_birth: e.target.value})}
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Gender</label>
+                    <select
+                      value={editForm.gender}
+                      onChange={(e) => setEditForm({...editForm, gender: e.target.value})}
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Information */}
+              <div>
+                <h3 className="text-sm font-semibold text-green-400 mb-3 flex items-center gap-2">
+                  <Phone className="w-4 h-4" /> Contact Information
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Email</label>
+                    <input
+                      type="email"
+                      value={editForm.email}
+                      onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      data-testid="edit-email-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Mobile Number</label>
+                    <input
+                      type="tel"
+                      value={editForm.mobile}
+                      onChange={(e) => setEditForm({...editForm, mobile: e.target.value})}
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      data-testid="edit-mobile-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Alternate Mobile</label>
+                    <input
+                      type="tel"
+                      value={editForm.alternate_mobile}
+                      onChange={(e) => setEditForm({...editForm, alternate_mobile: e.target.value})}
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Address */}
+              <div>
+                <h3 className="text-sm font-semibold text-amber-400 mb-3 flex items-center gap-2">
+                  <MapPin className="w-4 h-4" /> Address
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="text-xs text-gray-400 mb-1 block">Street Address</label>
+                    <input
+                      type="text"
+                      value={editForm.address}
+                      onChange={(e) => setEditForm({...editForm, address: e.target.value})}
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      data-testid="edit-address-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">City</label>
+                    <input
+                      type="text"
+                      value={editForm.city}
+                      onChange={(e) => setEditForm({...editForm, city: e.target.value})}
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">State</label>
+                    <input
+                      type="text"
+                      value={editForm.state}
+                      onChange={(e) => setEditForm({...editForm, state: e.target.value})}
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Pincode</label>
+                    <input
+                      type="text"
+                      value={editForm.pincode}
+                      onChange={(e) => setEditForm({...editForm, pincode: e.target.value})}
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* KYC Documents */}
+              <div>
+                <h3 className="text-sm font-semibold text-red-400 mb-3 flex items-center gap-2">
+                  <Shield className="w-4 h-4" /> KYC Documents
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">PAN Number</label>
+                    <input
+                      type="text"
+                      value={editForm.pan_number}
+                      onChange={(e) => setEditForm({...editForm, pan_number: e.target.value.toUpperCase()})}
+                      placeholder="ABCDE1234F"
+                      maxLength={10}
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white uppercase focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      data-testid="edit-pan-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Aadhaar Number</label>
+                    <input
+                      type="text"
+                      value={editForm.aadhaar_number}
+                      onChange={(e) => setEditForm({...editForm, aadhaar_number: e.target.value.replace(/\D/g, '')})}
+                      placeholder="123456789012"
+                      maxLength={12}
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      data-testid="edit-aadhaar-input"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Bank Details */}
+              <div>
+                <h3 className="text-sm font-semibold text-cyan-400 mb-3 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4" /> Bank Details
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Bank Name</label>
+                    <input
+                      type="text"
+                      value={editForm.bank_name}
+                      onChange={(e) => setEditForm({...editForm, bank_name: e.target.value})}
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Account Number</label>
+                    <input
+                      type="text"
+                      value={editForm.bank_account_number}
+                      onChange={(e) => setEditForm({...editForm, bank_account_number: e.target.value})}
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">IFSC Code</label>
+                    <input
+                      type="text"
+                      value={editForm.bank_ifsc}
+                      onChange={(e) => setEditForm({...editForm, bank_ifsc: e.target.value.toUpperCase()})}
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white uppercase focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">UPI ID</label>
+                    <input
+                      type="text"
+                      value={editForm.upi_id}
+                      onChange={(e) => setEditForm({...editForm, upi_id: e.target.value})}
+                      placeholder="name@upi"
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Nominee Details */}
+              <div>
+                <h3 className="text-sm font-semibold text-purple-400 mb-3 flex items-center gap-2">
+                  <Users className="w-4 h-4" /> Nominee Details
+                </h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Nominee Name</label>
+                    <input
+                      type="text"
+                      value={editForm.nominee_name}
+                      onChange={(e) => setEditForm({...editForm, nominee_name: e.target.value})}
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Relation</label>
+                    <select
+                      value={editForm.nominee_relation}
+                      onChange={(e) => setEditForm({...editForm, nominee_relation: e.target.value})}
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    >
+                      <option value="">Select Relation</option>
+                      <option value="spouse">Spouse</option>
+                      <option value="father">Father</option>
+                      <option value="mother">Mother</option>
+                      <option value="son">Son</option>
+                      <option value="daughter">Daughter</option>
+                      <option value="brother">Brother</option>
+                      <option value="sister">Sister</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Nominee Mobile</label>
+                    <input
+                      type="tel"
+                      value={editForm.nominee_mobile}
+                      onChange={(e) => setEditForm({...editForm, nominee_mobile: e.target.value})}
+                      className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 mt-6 pt-6 border-t border-gray-700">
+              <Button
+                onClick={handleSaveUserDetails}
+                disabled={processing}
+                className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white"
+                data-testid="save-user-details-button"
+              >
+                {processing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                Save Changes
+              </Button>
+              <Button
+                onClick={() => setEditModal({ show: false })}
+                variant="outline"
+                className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
