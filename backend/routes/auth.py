@@ -1196,3 +1196,172 @@ async def get_auth_user(uid: str):
         user['membership_expiry'] = datetime.fromisoformat(user['membership_expiry'])
     
     return User(**user)
+
+
+
+# ========== SESSION MANAGEMENT ==========
+
+# Reference to verify_token - will be set during initialization
+verify_token = None
+
+def set_verify_token(func):
+    global verify_token
+    verify_token = func
+
+
+@router.post("/refresh-token")
+async def refresh_access_token(refresh_token: str):
+    """Refresh access token using refresh token"""
+    payload = verify_token(refresh_token, token_type="refresh")
+    
+    uid = payload.get("uid")
+    user = await db.users.find_one({"uid": uid}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    token_id = str(uuid.uuid4())
+    token_data = {
+        "uid": user["uid"],
+        "email": user.get("email"),
+        "role": user.get("role"),
+        "token_id": token_id
+    }
+    new_access_token = create_access_token(token_data)
+    
+    if user.get("role") in ["admin", "sub_admin"]:
+        await db.admin_sessions.update_one(
+            {"uid": uid, "is_active": True},
+            {"$set": {
+                "token_id": token_id,
+                "last_activity": datetime.now(timezone.utc).isoformat(),
+                "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=JWT_ACCESS_TOKEN_EXPIRE_MINUTES)).isoformat()
+            }}
+        )
+    
+    return {
+        "access_token": new_access_token,
+        "token_type": "bearer",
+        "expires_in": JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    }
+
+
+@router.post("/logout")
+async def logout(request: Request):
+    """Logout and invalidate session"""
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return {"message": "Already logged out"}
+    
+    token = auth_header.replace("Bearer ", "")
+    
+    try:
+        payload = verify_token(token)
+        uid = payload.get("uid")
+        token_id = payload.get("token_id")
+        
+        await db.admin_sessions.update_one(
+            {"uid": uid, "token_id": token_id},
+            {"$set": {"is_active": False, "logged_out_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        real_ip = request.client.host if request.client else "unknown"
+        if log_admin_action:
+            await log_admin_action(
+                admin_uid=uid,
+                action="logout",
+                entity_type="auth",
+                ip_address=real_ip,
+                user_agent=request.headers.get("user-agent", "unknown")
+            )
+    except:
+        pass
+    
+    return {"message": "Logged out successfully"}
+
+
+@router.post("/logout-all-sessions")
+async def logout_all_sessions(uid: str, admin_uid: str):
+    """Logout from all sessions (admin only)"""
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin or admin.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    result = await db.admin_sessions.update_many(
+        {"uid": uid, "is_active": True},
+        {"$set": {"is_active": False, "logged_out_at": datetime.now(timezone.utc).isoformat(), "logout_reason": "admin_forced"}}
+    )
+    
+    if log_admin_action:
+        await log_admin_action(
+            admin_uid=admin_uid,
+            action="force_logout_all",
+            entity_type="security",
+            entity_id=uid,
+            details={"sessions_terminated": result.modified_count}
+        )
+    
+    return {"message": f"Logged out {result.modified_count} sessions"}
+
+
+# ========== PASSWORD RECOVERY ==========
+
+@router.post("/password-recovery/verify")
+async def verify_password_recovery(request: Request):
+    """Verify password recovery token"""
+    data = await request.json()
+    token = data.get("token")
+    
+    if not token:
+        raise HTTPException(status_code=400, detail="Token is required")
+    
+    user = await db.users.find_one({"reset_token": token})
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+    
+    if user.get("reset_token_expiry"):
+        try:
+            expiry = datetime.fromisoformat(user["reset_token_expiry"].replace('Z', '+00:00'))
+            if datetime.now(timezone.utc) > expiry:
+                raise HTTPException(status_code=400, detail="Reset token has expired")
+        except ValueError:
+            pass
+    
+    return {"valid": True, "email": user.get("email", "")[:3] + "***"}
+
+
+@router.post("/password-recovery/reset")
+async def reset_password_recovery(request: Request):
+    """Reset password using recovery token"""
+    data = await request.json()
+    token = data.get("token")
+    new_password = data.get("new_password")
+    
+    if not token or not new_password:
+        raise HTTPException(status_code=400, detail="Token and new password are required")
+    
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    user = await db.users.find_one({"reset_token": token})
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+    
+    if user.get("reset_token_expiry"):
+        try:
+            expiry = datetime.fromisoformat(user["reset_token_expiry"].replace('Z', '+00:00'))
+            if datetime.now(timezone.utc) > expiry:
+                raise HTTPException(status_code=400, detail="Reset token has expired")
+        except ValueError:
+            pass
+    
+    hashed_password = hash_password(new_password)
+    
+    await db.users.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {"password_hash": hashed_password, "password": hashed_password},
+            "$unset": {"reset_token": "", "reset_token_expiry": ""}
+        }
+    )
+    
+    return {"success": True, "message": "Password reset successfully"}
