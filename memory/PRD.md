@@ -33,6 +33,17 @@ Build a PRC (point-based reward currency) system web application where users can
 ## What's Been Implemented (Latest: Feb 2026)
 
 ### Recently Completed
+- [x] **Advanced Network Tree View** (Feb 2026)
+  - New dedicated `/network-tree` page
+  - Backend API: `/api/referrals/network-tree/{user_id}`
+  - Analytics dashboard with level distribution
+  - Search by name/email/mobile
+  - Filter by level, subscription plan, activity
+  - Export to CSV functionality
+  - Tree view with expand/collapse nodes
+  - User details modal on click
+  - Responsive design with data-testid attributes
+  - Files: `NetworkTreeAdvanced.js`, `server.py` (line 26752)
 - [x] **Forgot PIN with MSG91 OTP** (Feb 2026)
   - Mobile number verification
   - MSG91 OTP Widget integration
