@@ -57,6 +57,7 @@ const AdminUser360 = ({ user: adminUser }) => {
   const [passwordModal, setPasswordModal] = useState({ show: false, password: '' });
   const [pinModal, setPinModal] = useState({ show: false, pin: '' });
   const [editModal, setEditModal] = useState({ show: false });
+  const [successModal, setSuccessModal] = useState({ show: false, title: '', message: '', type: 'success' });
   const [editForm, setEditForm] = useState({
     name: '', email: '', mobile: '', alternate_mobile: '',
     address: '', city: '', state: '', pincode: '',
