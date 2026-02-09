@@ -13333,6 +13333,35 @@ async def user_360_quick_action(request: Request):
             }}
         )
         result_message = f"Password reset successful. Temporary password: {temp_password}"
+    
+    elif action == "reset_pin":
+        # Admin can reset user's 6-digit PIN
+        temp_pin = data.get("temp_pin", "")
+        if not temp_pin:
+            # Generate a random 6-digit PIN
+            import random
+            temp_pin = str(random.randint(100000, 999999))
+        
+        # Validate PIN is 6 digits
+        if not temp_pin.isdigit() or len(temp_pin) != 6:
+            raise HTTPException(status_code=400, detail="PIN must be exactly 6 digits")
+        
+        # Hash the PIN using pwd_context
+        hashed_pin = pwd_context.hash(temp_pin)
+        
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {
+                "pin_hash": hashed_pin,
+                "pin_reset_required": True,
+                "pin_reset_at": now.isoformat(),
+                "pin_reset_by": admin_id,
+                "failed_pin_attempts": 0,  # Reset failed attempts
+                "pin_locked_until": None,  # Remove any PIN lock
+                "updated_at": now.isoformat()
+            }}
+        )
+        result_message = f"PIN reset successful. New temporary PIN: {temp_pin}"
         
     elif action == "send_notification":
         message = data.get("message", "")
