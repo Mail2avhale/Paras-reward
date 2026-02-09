@@ -81,11 +81,25 @@ const AdminUser360 = ({ user: adminUser }) => {
         toast.success(`Action "${action}" completed successfully`);
       }
       
-      handleSearch(); // Refresh data
+      // Silently refresh data without showing loading state
+      refreshUserData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Action failed');
     } finally {
       setProcessing(false);
+    }
+  };
+
+  // Silent refresh without loading state
+  const refreshUserData = async () => {
+    if (!userData?.user?.uid) return;
+    try {
+      const response = await axios.get(`${API}/api/admin/user-360?query=${encodeURIComponent(userData.user.uid)}`);
+      setUserData(response.data);
+      setAdminNotes(response.data.user?.admin_notes || '');
+    } catch (error) {
+      console.error('Silent refresh error:', error);
+      // Don't clear userData on refresh error - keep existing data
     }
   };
 
