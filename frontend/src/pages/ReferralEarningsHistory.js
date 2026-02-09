@@ -114,7 +114,10 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
       const dayName = date.toLocaleDateString('en', { weekday: 'short' });
       
       const dayEarnings = earnings
-        .filter(e => e.timestamp?.startsWith(dateStr) || e.created_at?.startsWith(dateStr))
+        .filter(e => {
+          const eTimestamp = e.timestamp || e.created_at || e.date || '';
+          return eTimestamp.startsWith(dateStr);
+        })
         .reduce((sum, e) => sum + (e.prc_earned || e.amount || 0), 0);
       
       days.push({
