@@ -1128,6 +1128,59 @@ const AdminUser360 = ({ user: adminUser }) => {
         </div>
       )}
 
+      {/* General Success/Error Modal - Centered */}
+      {successModal.show && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" data-testid="success-modal">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center">
+              {/* Icon based on type */}
+              <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${
+                successModal.type === 'error' 
+                  ? 'bg-gradient-to-br from-red-500 to-red-600' 
+                  : successModal.type === 'warning'
+                    ? 'bg-gradient-to-br from-amber-500 to-orange-600'
+                    : 'bg-gradient-to-br from-green-500 to-emerald-600'
+              }`}>
+                {successModal.type === 'error' ? (
+                  <XCircle className="w-10 h-10 text-white" />
+                ) : successModal.type === 'warning' ? (
+                  <AlertTriangle className="w-10 h-10 text-white" />
+                ) : (
+                  <CheckCircle className="w-10 h-10 text-white" />
+                )}
+              </div>
+              
+              <h2 className={`text-2xl font-bold mb-4 ${
+                successModal.type === 'error' ? 'text-red-400' 
+                  : successModal.type === 'warning' ? 'text-amber-400' 
+                  : 'text-green-400'
+              }`}>
+                {successModal.title}
+              </h2>
+              
+              <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-4 mb-6">
+                <p className="text-white text-lg">
+                  {successModal.message}
+                </p>
+              </div>
+              
+              <Button
+                onClick={() => setSuccessModal({ show: false, title: '', message: '', type: 'success' })}
+                className={`w-full ${
+                  successModal.type === 'error' 
+                    ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700' 
+                    : successModal.type === 'warning'
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700'
+                      : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700'
+                } text-white`}
+              >
+                OK
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edit User Details Modal */}
       {editModal.show && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 overflow-y-auto" data-testid="edit-user-modal">
