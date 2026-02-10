@@ -117,7 +117,6 @@ async def create_manager():
         print("Manager Permissions:")
         print("  ✅ KYC Verification")
         print("  ✅ VIP Payment Approval")
-        print("  ✅ Stock Movement Approval")
         print("  ✅ Support Tickets (View-Only)")
         print()
         print("Access URL: /manager (after login)")
