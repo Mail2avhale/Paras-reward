@@ -1,0 +1,512 @@
+/* ============================================
+   PARAS REWARD - ADMIN DARK THEME
+   ============================================
+   Apply consistent dark theme across all admin pages
+*/
+
+/* ============================================
+   BASE VARIABLES
+   ============================================ */
+:root {
+  /* Admin Dark Theme Colors */
+  --admin-bg-primary: #030712;      /* gray-950 */
+  --admin-bg-secondary: #111827;    /* gray-900 */
+  --admin-bg-tertiary: #1f2937;     /* gray-800 */
+  --admin-bg-card: #111827;         /* gray-900 */
+  
+  --admin-border: #374151;          /* gray-700 */
+  --admin-border-light: #4b5563;    /* gray-600 */
+  
+  --admin-text-primary: #ffffff;    /* white */
+  --admin-text-secondary: #e5e7eb;  /* gray-200 */
+  --admin-text-muted: #9ca3af;      /* gray-400 */
+  --admin-text-disabled: #6b7280;   /* gray-500 */
+  
+  --admin-accent-primary: #8b5cf6;  /* purple-500 */
+  --admin-accent-hover: #7c3aed;    /* purple-600 */
+  
+  --admin-success: #22c55e;         /* green-500 */
+  --admin-warning: #f59e0b;         /* amber-500 */
+  --admin-error: #ef4444;           /* red-500 */
+  --admin-info: #3b82f6;            /* blue-500 */
+}
+
+/* ============================================
+   ADMIN PAGE WRAPPER
+   ============================================ */
+.admin-page {
+  background-color: var(--admin-bg-primary);
+  color: var(--admin-text-primary);
+  min-height: 100%;
+}
+
+/* ============================================
+   CARDS
+   ============================================ */
+.admin-card {
+  background-color: var(--admin-bg-card);
+  border: 1px solid var(--admin-border);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+}
+
+.admin-card-header {
+  color: var(--admin-text-primary);
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.admin-card-body {
+  color: var(--admin-text-secondary);
+}
+
+/* ============================================
+   TEXT UTILITIES
+   ============================================ */
+.admin-text-primary {
+  color: var(--admin-text-primary) !important;
+}
+
+.admin-text-secondary {
+  color: var(--admin-text-secondary) !important;
+}
+
+.admin-text-muted {
+  color: var(--admin-text-muted) !important;
+}
+
+.admin-text-label {
+  color: var(--admin-text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.admin-text-value {
+  color: var(--admin-text-primary);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* ============================================
+   FORM ELEMENTS
+   ============================================ */
+.admin-input {
+  background-color: var(--admin-bg-tertiary) !important;
+  border: 1px solid var(--admin-border) !important;
+  color: var(--admin-text-primary) !important;
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.875rem;
+}
+
+.admin-input::placeholder {
+  color: var(--admin-text-disabled) !important;
+}
+
+.admin-input:focus {
+  border-color: var(--admin-accent-primary) !important;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+.admin-select {
+  background-color: var(--admin-bg-tertiary) !important;
+  border: 1px solid var(--admin-border) !important;
+  color: var(--admin-text-primary) !important;
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.875rem;
+}
+
+.admin-textarea {
+  background-color: var(--admin-bg-tertiary) !important;
+  border: 1px solid var(--admin-border) !important;
+  color: var(--admin-text-primary) !important;
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  resize: vertical;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+.admin-btn {
+  font-weight: 500;
+  border-radius: 0.5rem;
+  padding: 0.625rem 1rem;
+  transition: all 0.15s ease;
+}
+
+.admin-btn-primary {
+  background-color: var(--admin-accent-primary);
+  color: white;
+  border: none;
+}
+
+.admin-btn-primary:hover {
+  background-color: var(--admin-accent-hover);
+}
+
+.admin-btn-secondary {
+  background-color: var(--admin-bg-tertiary);
+  color: var(--admin-text-primary);
+  border: 1px solid var(--admin-border);
+}
+
+.admin-btn-secondary:hover {
+  background-color: var(--admin-border);
+}
+
+.admin-btn-success {
+  background-color: var(--admin-success);
+  color: white;
+  border: none;
+}
+
+.admin-btn-success:hover {
+  background-color: #16a34a;
+}
+
+.admin-btn-danger {
+  background-color: var(--admin-error);
+  color: white;
+  border: none;
+}
+
+.admin-btn-danger:hover {
+  background-color: #dc2626;
+}
+
+.admin-btn-outline {
+  background-color: transparent;
+  color: var(--admin-text-primary);
+  border: 1px solid var(--admin-border);
+}
+
+.admin-btn-outline:hover {
+  background-color: var(--admin-bg-tertiary);
+}
+
+/* ============================================
+   TABLES
+   ============================================ */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th {
+  background-color: var(--admin-bg-tertiary);
+  color: var(--admin-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-table td {
+  color: var(--admin-text-secondary);
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-table tr:hover td {
+  background-color: var(--admin-bg-tertiary);
+}
+
+/* ============================================
+   MODALS
+   ============================================ */
+.admin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1rem;
+}
+
+.admin-modal {
+  background-color: var(--admin-bg-card);
+  border: 1px solid var(--admin-border);
+  border-radius: 0.75rem;
+  max-width: 32rem;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.admin-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-modal-title {
+  color: var(--admin-text-primary);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.admin-modal-close {
+  color: var(--admin-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+.admin-modal-close:hover {
+  color: var(--admin-text-primary);
+}
+
+.admin-modal-body {
+  padding: 1.5rem;
+}
+
+.admin-modal-footer {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--admin-border);
+}
+
+/* ============================================
+   BADGES & STATUS
+   ============================================ */
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.admin-badge-success {
+  background-color: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.admin-badge-warning {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.admin-badge-error {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.admin-badge-info {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.admin-badge-purple {
+  background-color: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
+}
+
+/* ============================================
+   STAT CARDS
+   ============================================ */
+.admin-stat-card {
+  background-color: var(--admin-bg-card);
+  border: 1px solid var(--admin-border);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+}
+
+.admin-stat-label {
+  color: var(--admin-text-muted);
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.admin-stat-value {
+  color: var(--admin-text-primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.admin-stat-change {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.admin-stat-change.positive {
+  color: var(--admin-success);
+}
+
+.admin-stat-change.negative {
+  color: var(--admin-error);
+}
+
+/* ============================================
+   SECTION HEADERS
+   ============================================ */
+.admin-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.admin-section-title {
+  color: var(--admin-text-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.admin-section-subtitle {
+  color: var(--admin-text-muted);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+/* ============================================
+   INFO BOXES
+   ============================================ */
+.admin-info-box {
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.admin-info-box.purple {
+  background-color: rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.admin-info-box.blue {
+  background-color: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.admin-info-box.amber {
+  background-color: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.admin-info-box.green {
+  background-color: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.admin-info-box.red {
+  background-color: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* ============================================
+   LOADING STATES
+   ============================================ */
+.admin-skeleton {
+  background: linear-gradient(90deg, var(--admin-bg-tertiary) 25%, var(--admin-border) 50%, var(--admin-bg-tertiary) 75%);
+  background-size: 200% 100%;
+  animation: admin-skeleton-loading 1.5s infinite;
+  border-radius: 0.375rem;
+}
+
+@keyframes admin-skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ============================================
+   EMPTY STATE
+   ============================================ */
+.admin-empty-state {
+  text-align: center;
+  padding: 3rem 1.5rem;
+}
+
+.admin-empty-state-icon {
+  color: var(--admin-text-disabled);
+  margin-bottom: 1rem;
+}
+
+.admin-empty-state-title {
+  color: var(--admin-text-primary);
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.admin-empty-state-text {
+  color: var(--admin-text-muted);
+  font-size: 0.875rem;
+}
+
+/* ============================================
+   OVERRIDE SHADCN/UI FOR ADMIN
+   ============================================ */
+
+/* Card component dark theme */
+[data-admin="true"] .bg-card,
+.admin-page .bg-card {
+  background-color: var(--admin-bg-card) !important;
+}
+
+/* Input components */
+[data-admin="true"] input,
+[data-admin="true"] select,
+[data-admin="true"] textarea,
+.admin-page input:not([type="checkbox"]):not([type="radio"]),
+.admin-page select,
+.admin-page textarea {
+  background-color: var(--admin-bg-tertiary) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text-primary) !important;
+}
+
+/* Fix white backgrounds */
+[data-admin="true"] .bg-white,
+.admin-page .bg-white {
+  background-color: var(--admin-bg-card) !important;
+}
+
+/* Fix text colors */
+[data-admin="true"] .text-gray-900,
+.admin-page .text-gray-900 {
+  color: var(--admin-text-primary) !important;
+}
+
+[data-admin="true"] .text-gray-700,
+.admin-page .text-gray-700 {
+  color: var(--admin-text-secondary) !important;
+}
+
+[data-admin="true"] .text-gray-600,
+.admin-page .text-gray-600 {
+  color: var(--admin-text-muted) !important;
+}
+
+/* Fix border colors */
+[data-admin="true"] .border-gray-200,
+[data-admin="true"] .border-gray-300,
+.admin-page .border-gray-200,
+.admin-page .border-gray-300 {
+  border-color: var(--admin-border) !important;
+}
+
+/* Fix backgrounds */
+[data-admin="true"] .bg-gray-50,
+[data-admin="true"] .bg-gray-100,
+.admin-page .bg-gray-50,
+.admin-page .bg-gray-100 {
+  background-color: var(--admin-bg-tertiary) !important;
+}
