@@ -15551,26 +15551,11 @@ async def get_admin_kpis(request: Request):
     total_vip_payments = await db.vip_payments.count_documents({"status": "approved"})
     total_membership_fees = total_vip_payments * 1000  # ₹1000 per VIP
     
-    # Security deposits
-    approved_deposits = await db.security_deposits.find({"status": "approved"}).to_list(1000)
-    total_security_deposits = sum(d.get("amount", 0) for d in approved_deposits)
-    
-    # Annual renewals
-    approved_renewals = await db.annual_renewals.count_documents({"status": "approved"})
-    
-    # Stockist counts
-    master_count = await db.users.count_documents({"role": "master_stockist"})
-    sub_count = await db.users.count_documents({"role": "sub_stockist"})
-    outlet_count = await db.users.count_documents({"role": "outlet"})
-    
     return {
         "users": {
             "total": total_users,
             "active": active_users,
-            "vip": vip_count,
-            "master_stockists": master_count,
-            "sub_stockists": sub_count,
-            "outlets": outlet_count
+            "vip": vip_count
         },
         "mining": {
             "active_miners": active_miners,
@@ -15582,9 +15567,7 @@ async def get_admin_kpis(request: Request):
             "total_cashback": round(total_cashback, 2),
             "pending_cashback_withdrawals": pending_cashback_withdrawals,
             "pending_profit_withdrawals": pending_profit_withdrawals,
-            "total_membership_fees": total_membership_fees,
-            "total_security_deposits": total_security_deposits,
-            "approved_renewals": approved_renewals
+            "total_membership_fees": total_membership_fees
         },
         "orders": {
             "pending": pending_orders,
