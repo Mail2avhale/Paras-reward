@@ -43,6 +43,13 @@ Build a PRC (point-based reward currency) system web application where users can
   - Deleted: fix_stockist_parents.py, fix_parent_assignments.py
   - Models: Removed Stockist class, StockistCreate
 
+- [x] **Admin Frontend Separation** (Feb 2026)
+  - Created `/app/admin-frontend/` - separate admin React app
+  - Build successful: 389 KB JS + 23 KB CSS (gzipped)
+  - Production ready: `/app/admin-frontend/build/`
+  - Same backend API, separate frontend
+  - Admin-only login (admin & manager roles)
+
 - [x] **Route Deduplication (P1)**
   - Disabled 33 duplicate routes in server.py
   - Routes now served exclusively by modular router files
