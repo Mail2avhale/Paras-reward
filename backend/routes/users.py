@@ -78,11 +78,7 @@ async def get_user_children(uid: str):
     """Get children (subordinates) of a user"""
     try:
         children = await db.users.find({
-            "$or": [
-                {"parent_id": uid},
-                {"assigned_master_stockist": uid},
-                {"assigned_sub_stockist": uid}
-            ]
+            "parent_id": uid
         }).to_list(None)
         
         for child in children:
