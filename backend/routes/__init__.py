@@ -16,4 +16,8 @@ from .admin_finance import router as admin_finance_router
 from .admin_users import router as admin_users_router
 from .admin_fraud import router as admin_fraud_router
 from .admin_reports import router as admin_reports_router
+from .admin_accounting import router as admin_accounting_router
+from .admin_orders import router as admin_orders_router
+from .admin_settings import router as admin_settings_router
+from .admin_withdrawals import router as admin_withdrawals_router
 # from .mining import router as mining_router
