@@ -96,16 +96,20 @@ Build a PRC (point-based reward currency) system web application where users can
 - [ ] Production deployment
 
 ### P1 (High)
-- [x] Refactor `server.py` into smaller modules - SIGNIFICANT PROGRESS
-  - [x] `routes/referral.py` - DONE (Dec 2025) - 5 endpoints
-  - [x] `routes/auth.py` - DONE (Dec 2025) - 24 auth endpoints + session management
-  - [x] `routes/users.py` - DONE (Dec 2025) - 14 user endpoints
-  - [x] `routes/wallet.py` - DONE (Dec 2025) - 5 wallet endpoints
-  - [x] `routes/admin.py` - DONE (Dec 2025) - 10 security endpoints
-  - [x] `routes/admin_vip.py` - DONE (Dec 2025) - 12 VIP/subscription endpoints
-  - [x] `routes/admin_delivery.py` - DONE (Dec 2025) - 10 delivery partner endpoints
-  - [x] `routes/admin_system.py` - DONE (Dec 2025) - 14 system/database endpoints
-  - [ ] Remaining admin routes (~322 routes) - charts, fraud, stats, etc.
+- [x] Refactor `server.py` into smaller modules - MAJOR PROGRESS
+  - [x] `routes/referral.py` - DONE - 5 endpoints
+  - [x] `routes/auth.py` - DONE - 24 endpoints
+  - [x] `routes/users.py` - DONE - 14 endpoints
+  - [x] `routes/wallet.py` - DONE - 5 endpoints
+  - [x] `routes/admin.py` - DONE - 10 security endpoints
+  - [x] `routes/admin_vip.py` - DONE - 12 VIP/subscription endpoints
+  - [x] `routes/admin_delivery.py` - DONE - 10 delivery partner endpoints
+  - [x] `routes/admin_system.py` - DONE - 14 system/database endpoints
+  - [x] `routes/admin_finance.py` - DONE - 26 P&L, expenses, wallet endpoints
+  - [x] `routes/admin_users.py` - DONE - 16 user management endpoints
+  - [x] `routes/admin_fraud.py` - DONE - 14 fraud detection endpoints
+  - [x] `routes/admin_reports.py` - DONE - 16 charts & analytics endpoints
+  - [ ] Remaining routes (~292) - stockists, orders, settings, video-ads, etc.
 
 ### P2 (Medium)
 - [ ] Add rate limiting for redemption requests
