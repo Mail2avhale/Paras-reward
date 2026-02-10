@@ -18942,7 +18942,8 @@ class StockistAssignRequest(BaseModel):
     stockist_id: str
     parent_id: str
 
-@api_router.post("/admin/stockists/create")
+# DEPRECATED - Stockist system removed
+# @api_router.post("/admin/stockists/create")
 async def create_stockist(request: StockistCreateRequest):
     """Admin creates a new stockist (Master/Sub/Outlet)"""
     # Validate role
@@ -19015,7 +19016,8 @@ async def create_stockist(request: StockistCreateRequest):
         "role": user_data["role"]
     }
 
-@api_router.put("/admin/stockists/{uid}/edit")
+# DEPRECATED - Stockist system removed
+# @api_router.put("/admin/stockists/{uid}/edit")
 async def edit_stockist(uid: str, request: StockistEditRequest):
     """Admin edits stockist details"""
     user = await db.users.find_one({"uid": uid})
@@ -19061,7 +19063,8 @@ async def edit_stockist(uid: str, request: StockistEditRequest):
     
     return {"message": "Stockist updated successfully", "updates": update_data}
 
-@api_router.delete("/admin/stockists/{uid}")
+# DEPRECATED - Stockist system removed
+# @api_router.delete("/admin/stockists/{uid}")
 async def delete_stockist(uid: str):
     """Admin deletes/deactivates a stockist"""
     user = await db.users.find_one({"uid": uid})
@@ -19093,7 +19096,8 @@ async def delete_stockist(uid: str):
     
     return {"message": "Stockist deactivated successfully"}
 
-@api_router.post("/admin/stockists/assign")
+# DEPRECATED - Stockist system removed
+# @api_router.post("/admin/stockists/assign")
 async def assign_stockist(request: StockistAssignRequest):
     """Admin assigns a stockist to a parent"""
     stockist = await db.users.find_one({"uid": request.stockist_id})
@@ -19149,7 +19153,8 @@ async def assign_stockist(request: StockistAssignRequest):
         "parent_name": parent.get("name")
     }
 
-@api_router.get("/admin/stockists")
+# DEPRECATED - Stockist system removed
+# @api_router.get("/admin/stockists")
 async def get_all_stockists(role: Optional[str] = None, status: Optional[str] = None):
     """Admin gets all stockists with optional filters"""
     query = {"role": {"$in": ["master_stockist", "sub_stockist", "outlet"]}}
@@ -19414,7 +19419,8 @@ async def edit_renewal(renewal_id: str, request: Request):
 
 # ========== STOCKIST FINANCIAL INFO ROUTES ==========
 
-@api_router.get("/stockist/{uid}/financial-info")
+# DEPRECATED - Stockist system removed
+# @api_router.get("/stockist/{uid}/financial-info")
 async def get_stockist_financial_info(uid: str):
     """Get security deposit and renewal info for a stockist"""
     user = await db.users.find_one({"uid": uid})
@@ -20872,7 +20878,8 @@ async def update_ticket(ticket_id: str, request: Request, uid: str):
 
 # ========== PHASE 3: STOCKIST MANAGEMENT ==========
 
-@api_router.get("/manager/stockists")
+# DEPRECATED - Stockist system removed
+# @api_router.get("/manager/stockists")
 async def get_manager_stockists(
     uid: str,
     role: Optional[str] = None,
@@ -25486,7 +25493,8 @@ async def remove_from_cart(uid: str, product_id: str):
     return {"message": "Item removed"}
 
 # Stockist Management
-@api_router.post("/v2/stockist/register")
+# DEPRECATED - Stockist system removed
+# @api_router.post("/v2/stockist/register")
 async def register_stockist(
     business_name: str,
     owner_full_name: str,
@@ -25543,13 +25551,15 @@ async def register_stockist(
     await db.stockists.insert_one(stockist_data)
     return {"message": "Registration submitted for approval", "stockist_id": stockist_data["stockist_id"]}
 
-@api_router.get("/v2/stockists/pending")
+# DEPRECATED - Stockist system removed
+# @api_router.get("/v2/stockists/pending")
 async def get_pending_stockists():
     """Get all pending stockist registrations (Admin)"""
     stockists = await db.stockists.find({"approval_status": "pending"}, {"_id": 0}).to_list(1000)
     return {"stockists": stockists}
 
-@api_router.post("/v2/stockist/{stockist_id}/approve")
+# DEPRECATED - Stockist system removed
+# @api_router.post("/v2/stockist/{stockist_id}/approve")
 async def approve_stockist(stockist_id: str, approved: bool):
     """Approve or reject stockist (Admin)"""
     stockist = await db.stockists.find_one({"stockist_id": stockist_id})
@@ -25743,7 +25753,8 @@ async def update_withdrawal(
     return {"message": f"Withdrawal {action}"}
 
 # Profit Wallet Stats
-@api_router.get("/v2/stockist/{stockist_id}/profit")
+# DEPRECATED - Stockist system removed
+# @api_router.get("/v2/stockist/{stockist_id}/profit")
 async def get_stockist_profit(stockist_id: str):
     """Get stockist profit wallet details"""
     stockist = await db.stockists.find_one({"stockist_id": stockist_id})
