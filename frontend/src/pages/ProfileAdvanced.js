@@ -75,6 +75,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     editProfile: language === 'mr' ? 'प्रोफाइल संपादित करा' : language === 'hi' ? 'प्रोफ़ाइल संपादित करें' : 'Edit Profile',
     save: language === 'mr' ? 'जतन करा' : language === 'hi' ? 'सहेजें' : 'Save',
     changePassword: language === 'mr' ? 'पासवर्ड बदला' : language === 'hi' ? 'पासवर्ड बदलें' : 'Change Password',
+    changePin: language === 'mr' ? 'PIN बदला' : language === 'hi' ? 'PIN बदलें' : 'Change PIN',
     deleteAccount: language === 'mr' ? 'खाते हटवा' : language === 'hi' ? 'खाता हटाएं' : 'Delete Account',
     logout: language === 'mr' ? 'बाहेर पडा' : language === 'hi' ? 'लॉग आउट' : 'Logout',
     kycVerification: language === 'mr' ? 'KYC सत्यापन' : language === 'hi' ? 'KYC सत्यापन' : 'KYC Verification',
