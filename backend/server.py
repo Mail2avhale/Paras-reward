@@ -52,7 +52,7 @@ from routes.admin_reports import router as admin_reports_router, set_db as set_a
 from routes.admin_accounting import router as admin_accounting_router, set_db as set_admin_accounting_db
 from routes.admin_orders import router as admin_orders_router, set_db as set_admin_orders_db, set_helpers as set_admin_orders_helpers, set_cache as set_admin_orders_cache
 from routes.admin_settings import router as admin_settings_router, set_db as set_admin_settings_db, set_helpers as set_admin_settings_helpers
-from routes.admin_withdrawals import router as admin_withdrawals_router, set_db as set_admin_withdrawals_db, set_helpers as set_admin_withdrawals_helpers
+from routes.admin_withdrawals import router as admin_withdrawals_router, set_db as set_admin_withdrawals_db, set_helpers as set_admin_withdrawals_helpers, set_cache as set_admin_withdrawals_cache
 from routes.admin_dashboard import router as admin_dashboard_router, set_db as set_admin_dashboard_db, set_cache as set_admin_dashboard_cache
 from routes.admin_products import router as admin_products_router, set_db as set_admin_products_db
 from routes.admin_misc import router as admin_misc_router, set_db as set_admin_misc_db, set_helpers as set_admin_misc_helpers
