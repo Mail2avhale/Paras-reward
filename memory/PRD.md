@@ -168,6 +168,15 @@ Build a PRC (point-based reward currency) system web application where users can
 - `bill_payment_requests`: Pending/completed payments
 - `gift_voucher_requests`: Voucher redemptions
 
+## Removed Systems (Feb 2026)
+The following systems have been deprecated and removed:
+- **Stockist Hierarchy**: master_stockist, sub_stockist, outlet roles
+- **Stock Management**: stock_inventory, stock_requests, stock_movements
+- **Security Deposits**: Stockist security deposit system
+- **Annual Renewals**: Stockist renewal payment system
+- **Commission Distribution**: 15% delivery charge distribution to stockist hierarchy
+- **Profit Wallet**: Profit wallet withdrawal (stockist-only feature)
+
 ## Deployment
 - **Preview URL**: https://modular-routes-4.preview.emergentagent.com
 - **Status**: Ready for production deployment
