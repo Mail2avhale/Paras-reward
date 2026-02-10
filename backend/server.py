@@ -12436,7 +12436,8 @@ async def get_orders_chart():
         logging.error(f"Orders chart error: {e}")
         return {"data": [], "error": str(e)}
 
-@api_router.get("/admin/charts/subscriptions")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/charts/subscriptions")
 async def get_subscriptions_chart():
     """Get subscription distribution and recent purchases - PRODUCTION FIX"""
     from datetime import timedelta
@@ -12693,7 +12694,8 @@ async def get_user_fraud_profile(uid: str):
 
 # ========== ADMIN USER MANAGEMENT ROUTES ==========
 
-@api_router.get("/admin/check-admin-exists")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/check-admin-exists")
 async def check_admin_exists():
     """Check if any admin user exists in the system"""
     admin = await db.users.find_one({"role": "admin"})
@@ -17785,7 +17787,8 @@ async def assign_order_to_outlet(order_id: str, request: Request):
 
 # ========== FINANCIAL REPORTS & ANALYTICS ==========
 
-@api_router.get("/admin/reports/revenue")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/reports/revenue")
 async def get_revenue_report(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None
@@ -18317,7 +18320,8 @@ async def get_withdrawal_patterns(days: int = 30):
         "data": list(date_map.values())
     }
 
-@api_router.get("/admin/analytics/overview")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/analytics/overview")
 async def get_analytics_overview():
     """Get comprehensive analytics overview"""
     from datetime import timedelta
@@ -19562,7 +19566,8 @@ async def check_duplicate_data():
     
     return duplicates
 
-@api_router.post("/admin/users/{uid}/adjust-balance")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/users/{uid}/adjust-balance")
 async def adjust_user_balance(uid: str, request: BalanceAdjustRequest):
     """Admin adjusts user balance (PRC, cashback, profit)"""
     user = await db.users.find_one({"uid": uid})
@@ -21728,7 +21733,8 @@ async def mark_alert_read(alert_id: str):
 
 # ==================== 2. PROFIT & LOSS + EXPENSE MANAGEMENT ====================
 
-@api_router.get("/admin/finance/profit-loss")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/finance/profit-loss")
 async def get_profit_loss_statement(period: str = "month", year: int = None, month: int = None):
     """Get comprehensive Profit & Loss statement"""
     try:
@@ -21941,7 +21947,8 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         logging.error(f"Error in P&L statement: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.post("/admin/finance/expense")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/finance/expense")
 async def add_expense(request: Request):
     """Add a new expense entry"""
     try:
@@ -21981,7 +21988,8 @@ async def add_expense(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.get("/admin/finance/expenses")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/finance/expenses")
 async def get_expenses(
     page: int = 1,
     limit: int = 20,
@@ -22023,7 +22031,8 @@ async def get_expenses(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.put("/admin/finance/expense/{expense_id}")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.put("/_disabled_admin/finance/expense/{expense_id}")
 async def update_expense(expense_id: str, request: Request):
     """Update an expense entry"""
     try:
@@ -22057,7 +22066,8 @@ async def update_expense(expense_id: str, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.delete("/admin/finance/expense/{expense_id}")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.delete("/_disabled_admin/finance/expense/{expense_id}")
 async def delete_expense(expense_id: str, admin_id: str = None):
     """Delete an expense entry"""
     try:
@@ -22103,7 +22113,8 @@ async def add_other_income(request: Request):
 
 # ==================== COMPANY MASTER WALLETS ====================
 
-@api_router.get("/admin/finance/company-wallets")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/finance/company-wallets")
 async def get_company_wallets():
     """Get all company master wallets"""
     try:
@@ -22148,7 +22159,8 @@ async def get_company_wallets():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.post("/admin/finance/company-wallet/transfer")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/finance/company-wallet/transfer")
 async def transfer_company_wallet(request: Request):
     """Transfer amount between company wallets"""
     try:
@@ -22199,7 +22211,8 @@ async def transfer_company_wallet(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.post("/admin/finance/company-wallet/adjust")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/finance/company-wallet/adjust")
 async def adjust_company_wallet(request: Request):
     """Manual credit/debit to company wallet"""
     try:
@@ -22247,7 +22260,8 @@ async def adjust_company_wallet(request: Request):
 
 # ==================== ADS INCOME MODULE ====================
 
-@api_router.get("/admin/finance/ads-income")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/finance/ads-income")
 async def get_ads_income(page: int = 1, limit: int = 20):
     """Get ads income entries"""
     try:
@@ -22279,7 +22293,8 @@ async def get_ads_income(page: int = 1, limit: int = 20):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.post("/admin/finance/ads-income")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/finance/ads-income")
 async def add_ads_income(request: Request):
     """Add ads income entry (manual)"""
     try:
@@ -22314,7 +22329,8 @@ async def add_ads_income(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.delete("/admin/finance/ads-income/{entry_id}")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.delete("/_disabled_admin/finance/ads-income/{entry_id}")
 async def delete_ads_income(entry_id: str):
     """Delete ads income entry"""
     try:
@@ -22337,7 +22353,8 @@ async def delete_ads_income(entry_id: str):
 
 # ==================== FIXED EXPENSES MODULE ====================
 
-@api_router.get("/admin/finance/fixed-expenses")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/finance/fixed-expenses")
 async def get_fixed_expenses(page: int = 1, limit: int = 20, month: str = None):
     """Get fixed monthly expenses"""
     try:
@@ -22370,7 +22387,8 @@ async def get_fixed_expenses(page: int = 1, limit: int = 20, month: str = None):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.post("/admin/finance/fixed-expense")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/finance/fixed-expense")
 async def add_fixed_expense(request: Request):
     """Add fixed expense entry"""
     try:
@@ -22396,7 +22414,8 @@ async def add_fixed_expense(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.put("/admin/finance/fixed-expense/{expense_id}")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.put("/_disabled_admin/finance/fixed-expense/{expense_id}")
 async def update_fixed_expense(expense_id: str, request: Request):
     """Update fixed expense"""
     try:
@@ -22422,7 +22441,8 @@ async def update_fixed_expense(expense_id: str, request: Request):
 
 # ==================== FRAUD DETECTION & RISK CONTROL ====================
 
-@api_router.get("/admin/fraud/alerts")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/fraud/alerts")
 async def get_fraud_alerts(page: int = 1, limit: int = 20, status: str = None):
     """Get fraud alerts"""
     try:
@@ -22665,7 +22685,8 @@ async def unfreeze_user_wallet(uid: str, request: Request):
 
 # ==================== EXPORT & REPORTING ====================
 
-@api_router.get("/admin/finance/export/profit-loss")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/finance/export/profit-loss")
 async def export_profit_loss(year: int = None, month: int = None, format: str = "csv"):
     """Export P&L statement as CSV"""
     try:
@@ -22732,7 +22753,8 @@ async def export_profit_loss(year: int = None, month: int = None, format: str = 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.get("/admin/finance/export/user-ledger/{uid}")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/finance/export/user-ledger/{uid}")
 async def export_user_ledger(uid: str, format: str = "csv"):
     """Export user transaction ledger as CSV"""
     try:
@@ -22767,7 +22789,8 @@ async def export_user_ledger(uid: str, format: str = "csv"):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.get("/admin/finance/export/company-wallets")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/finance/export/company-wallets")
 async def export_company_wallets(format: str = "csv"):
     """Export company wallet statements as CSV"""
     try:
@@ -22807,7 +22830,8 @@ async def export_company_wallets(format: str = "csv"):
 
 # ==================== MONTHLY P&L SNAPSHOT ====================
 
-@api_router.post("/admin/finance/snapshot/monthly")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/finance/snapshot/monthly")
 async def create_monthly_pl_snapshot():
     """Create monthly P&L snapshot for historical records"""
     try:
@@ -22890,7 +22914,8 @@ async def create_monthly_pl_snapshot():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.get("/admin/finance/snapshots")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/finance/snapshots")
 async def get_pl_snapshots(limit: int = 12):
     """Get historical P&L snapshots"""
     try:
@@ -30360,7 +30385,8 @@ async def daily_wallet_reconciliation():
         logging.error(f"Error in daily wallet reconciliation: {e}")
         return {"error": str(e)}
 
-@api_router.get("/admin/finance/reconciliation/history")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/finance/reconciliation/history")
 async def get_reconciliation_history(limit: int = 30):
     """Get wallet reconciliation history"""
     try:
@@ -30372,7 +30398,8 @@ async def get_reconciliation_history(limit: int = 30):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.post("/admin/finance/reconciliation/run")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/finance/reconciliation/run")
 async def run_manual_reconciliation():
     """Manually trigger wallet reconciliation"""
     try:
@@ -30381,7 +30408,8 @@ async def run_manual_reconciliation():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.get("/admin/finance/reconciliation/status")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/finance/reconciliation/status")
 async def get_reconciliation_status():
     """Get current wallet status with expected vs actual balances"""
     try:
@@ -30513,7 +30541,8 @@ async def get_all_user_ledger(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.get("/admin/finance/user-ledger/{uid}")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/finance/user-ledger/{uid}")
 async def get_user_wallet_ledger(uid: str, page: int = 1, limit: int = 50):
     """Get complete wallet ledger for a specific user (Admin view)"""
     try:
@@ -30567,7 +30596,8 @@ async def get_user_wallet_ledger(uid: str, page: int = 1, limit: int = 50):
 
 # ==================== REDEEM SAFETY SETTINGS ====================
 
-@api_router.get("/admin/finance/redeem-settings")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/finance/redeem-settings")
 async def get_redeem_settings():
     """Get current redemption safety settings"""
     try:
