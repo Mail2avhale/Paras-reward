@@ -8964,12 +8964,9 @@ async def deliver_order(order_id: str, request: Request):
         }}
     )
     
-    # Trigger automatic commission distribution
-    distribution_result = await distribute_delivery_charge(order_id)
-    
     return {
         "message": "Order delivered successfully",
-        "commission_distributed": distribution_result
+        "order_id": order_id
     }
 
 
