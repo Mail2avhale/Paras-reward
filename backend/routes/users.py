@@ -359,6 +359,49 @@ async def change_user_password(uid: str, request: Request):
     return {"message": "Password changed successfully"}
 
 
+@router.post("/user/{uid}/change-pin")
+async def change_user_pin(uid: str, request: Request):
+    """Change user PIN"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    data = await request.json()
+    current_pin = data.get("current_pin")
+    new_pin = data.get("new_pin")
+    
+    if not current_pin or not new_pin:
+        raise HTTPException(status_code=400, detail="Both current and new PIN are required")
+    
+    if len(new_pin) != 6 or not new_pin.isdigit():
+        raise HTTPException(status_code=400, detail="PIN must be exactly 6 digits")
+    
+    # Check for weak PINs (all same digits)
+    if len(set(new_pin)) == 1:
+        raise HTTPException(status_code=400, detail="PIN cannot have all same digits")
+    
+    # Verify current PIN (stored as hashed password)
+    stored_password = user.get("password") or user.get("password_hash")
+    if not stored_password:
+        raise HTTPException(status_code=400, detail="PIN not set for this account")
+    
+    if not verify_password(current_pin, stored_password):
+        raise HTTPException(status_code=401, detail="Current PIN is incorrect")
+    
+    # Hash and save new PIN
+    new_hash = hash_password(new_pin)
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": {
+            "password": new_hash,
+            "pin_migrated": True,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "PIN changed successfully"}
+
+
 # ========== ACCOUNT DELETION ==========
 
 @router.post("/user/{uid}/request-account-deletion")
