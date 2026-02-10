@@ -120,17 +120,6 @@ const Navbar = ({ user, onLogout }) => {
                   </DropdownMenuItem>
                 )}
                 
-                {/* Stockist Panels */}
-                {user.role === 'master_stockist' && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/master-stockist" className="cursor-pointer font-semibold text-blue-600">Stockist Panel</Link>
-                  </DropdownMenuItem>
-                )}
-                {user.role === 'sub_stockist' && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/sub-stockist" className="cursor-pointer font-semibold text-blue-600">Stockist Panel</Link>
-                  </DropdownMenuItem>
-                )}
                 
                 {/* Outlet Panel */}
                 {isOutlet && (
@@ -254,17 +243,6 @@ const Navbar = ({ user, onLogout }) => {
                   </DropdownMenuItem>
                 )}
                 
-                {/* Stockist Panels */}
-                {user.role === 'master_stockist' && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/master-stockist" className="cursor-pointer font-semibold text-blue-600">Stockist Panel</Link>
-                  </DropdownMenuItem>
-                )}
-                {user.role === 'sub_stockist' && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/sub-stockist" className="cursor-pointer font-semibold text-blue-600">Stockist Panel</Link>
-                  </DropdownMenuItem>
-                )}
                 
                 {/* Outlet Panel */}
                 {isOutlet && (
