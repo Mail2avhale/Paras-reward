@@ -96,7 +96,7 @@ Build a PRC (point-based reward currency) system web application where users can
 - [ ] Production deployment
 
 ### P1 (High)
-- [x] Refactor `server.py` into smaller modules - MAJOR PROGRESS
+- [x] Refactor `server.py` into smaller modules - EXTENSIVE PROGRESS
   - [x] `routes/referral.py` - DONE - 5 endpoints
   - [x] `routes/auth.py` - DONE - 24 endpoints
   - [x] `routes/users.py` - DONE - 14 endpoints
@@ -109,7 +109,11 @@ Build a PRC (point-based reward currency) system web application where users can
   - [x] `routes/admin_users.py` - DONE - 16 user management endpoints
   - [x] `routes/admin_fraud.py` - DONE - 14 fraud detection endpoints
   - [x] `routes/admin_reports.py` - DONE - 16 charts & analytics endpoints
-  - [ ] Remaining routes (~292) - stockists, orders, settings, video-ads, etc.
+  - [x] `routes/admin_accounting.py` - DONE - 20 accounting & ledger endpoints
+  - [x] `routes/admin_orders.py` - DONE - 10 order management endpoints
+  - [x] `routes/admin_settings.py` - DONE - 18 settings & config endpoints
+  - [x] `routes/admin_withdrawals.py` - DONE - 8 withdrawal management endpoints
+  - [ ] Remaining routes (~287) - stockists, renewals, notifications, etc.
 
 ### P2 (Medium)
 - [ ] Add rate limiting for redemption requests
