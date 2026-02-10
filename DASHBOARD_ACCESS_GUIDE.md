@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://server-cleanup-8.preview.emergentagent.com/setup
+   https://modular-routes-4.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

@@ -151,6 +151,6 @@ Build a PRC (point-based reward currency) system web application where users can
 - `gift_voucher_requests`: Voucher redemptions
 
 ## Deployment
-- **Preview URL**: https://server-cleanup-8.preview.emergentagent.com
+- **Preview URL**: https://modular-routes-4.preview.emergentagent.com
 - **Status**: Ready for production deployment
 - **Action**: Use Emergent "Deploy" button
