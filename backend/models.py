@@ -140,54 +140,8 @@ class UserProfileUpdate(BaseModel):
     gpay_number: Optional[str] = None
     paytm_number: Optional[str] = None
 
-# ========== STOCKIST/OUTLET MODELS ==========
-class Stockist(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    stockist_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    user_id: str  # Reference to user document
-    
-    # Business Info
-    business_name: str
-    owner_full_name: str
-    business_type: str  # master, sub, outlet
-    
-    # Contact
-    contact_number: str
-    email: str
-    
-    # Address
-    state: str
-    district: str
-    taluka: str
-    village: str
-    pincode: str
-    full_address: str
-    
-    # Documents
-    udyog_aadhaar: Optional[str] = None
-    shop_act: Optional[str] = None
-    gst_certificate: Optional[str] = None
-    gst_number: Optional[str] = None
-    pan_number: str
-    aadhaar_number: str
-    
-    # Hierarchy
-    master_stockist_id: Optional[str] = None
-    sub_stockist_id: Optional[str] = None
-    assigned_region: Optional[str] = None
-    
-    # Financial
-    security_deposit: float = 0.0
-    renewal_fee: float = 0.0
-    profit_wallet: float = 0.0
-    
-    # Status
-    approval_status: str = "pending"  # pending, approved, rejected
-    is_active: bool = False
-    
-    # Timestamps
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    approved_at: Optional[datetime] = None
+# ========== STOCKIST/OUTLET MODELS - DEPRECATED ==========
+# Stockist system has been deprecated and removed
 
 # ========== PRODUCT & ORDER MODELS ==========
 class Product(BaseModel):
