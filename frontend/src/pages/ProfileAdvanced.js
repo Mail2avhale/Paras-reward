@@ -51,6 +51,15 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   });
   const [showPassword, setShowPassword] = useState(false);
 
+  // PIN change
+  const [showPinSection, setShowPinSection] = useState(false);
+  const [pinData, setPinData] = useState({
+    current: '',
+    new: '',
+    confirm: ''
+  });
+  const [changingPin, setChangingPin] = useState(false);
+
   // Delete account
   const [showDeleteSection, setShowDeleteSection] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
