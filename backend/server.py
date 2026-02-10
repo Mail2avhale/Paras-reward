@@ -38161,6 +38161,27 @@ set_admin_helpers({
 })
 api_router.include_router(admin_router)
 
+# Include admin VIP router (refactored)
+set_admin_vip_db(db)
+set_admin_vip_cache(cache)
+set_admin_vip_helpers({
+    'log_admin_action': log_admin_action,
+    'check_and_grant_referral_reward': check_and_grant_referral_reward
+})
+api_router.include_router(admin_vip_router)
+
+# Include admin delivery router (refactored)
+set_admin_delivery_db(db)
+api_router.include_router(admin_delivery_router)
+
+# Include admin system router (refactored)
+set_admin_system_db(db)
+set_admin_system_cache(cache)
+set_admin_system_helpers({
+    'log_admin_action': log_admin_action
+})
+api_router.include_router(admin_system_router)
+
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
 
