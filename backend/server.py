@@ -38283,6 +38283,25 @@ set_admin_reports_db(db)
 set_admin_reports_cache(cache)
 api_router.include_router(admin_reports_router)
 
+# Include admin accounting router (refactored)
+set_admin_accounting_db(db)
+api_router.include_router(admin_accounting_router)
+
+# Include admin orders router (refactored)
+set_admin_orders_db(db)
+set_admin_orders_helpers({'log_admin_action': log_admin_action})
+api_router.include_router(admin_orders_router)
+
+# Include admin settings router (refactored)
+set_admin_settings_db(db)
+set_admin_settings_helpers({'log_admin_action': log_admin_action})
+api_router.include_router(admin_settings_router)
+
+# Include admin withdrawals router (refactored)
+set_admin_withdrawals_db(db)
+set_admin_withdrawals_helpers({'log_admin_action': log_admin_action})
+api_router.include_router(admin_withdrawals_router)
+
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
 
