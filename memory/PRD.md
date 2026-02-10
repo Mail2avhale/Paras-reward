@@ -96,13 +96,16 @@ Build a PRC (point-based reward currency) system web application where users can
 - [ ] Production deployment
 
 ### P1 (High)
-- [x] Refactor `server.py` into smaller modules - MOSTLY COMPLETE
-  - [x] `routes/referral.py` - DONE (Dec 2025)
-  - [x] `routes/auth.py` - DONE (Dec 2025) - All authentication routes + session management + password recovery
-  - [x] `routes/users.py` - DONE (Dec 2025) - User profile, dashboard, stats, account deletion
-  - [x] `routes/wallet.py` - DONE (Dec 2025) - Wallet balance, transactions, withdrawals
-  - [x] `routes/admin.py` - DONE (Dec 2025) - Security dashboard, audit logs, lockdown, IP whitelist
-  - [ ] Remaining admin routes (358+ routes) - Future iteration
+- [x] Refactor `server.py` into smaller modules - SIGNIFICANT PROGRESS
+  - [x] `routes/referral.py` - DONE (Dec 2025) - 5 endpoints
+  - [x] `routes/auth.py` - DONE (Dec 2025) - 24 auth endpoints + session management
+  - [x] `routes/users.py` - DONE (Dec 2025) - 14 user endpoints
+  - [x] `routes/wallet.py` - DONE (Dec 2025) - 5 wallet endpoints
+  - [x] `routes/admin.py` - DONE (Dec 2025) - 10 security endpoints
+  - [x] `routes/admin_vip.py` - DONE (Dec 2025) - 12 VIP/subscription endpoints
+  - [x] `routes/admin_delivery.py` - DONE (Dec 2025) - 10 delivery partner endpoints
+  - [x] `routes/admin_system.py` - DONE (Dec 2025) - 14 system/database endpoints
+  - [ ] Remaining admin routes (~322 routes) - charts, fraud, stats, etc.
 
 ### P2 (Medium)
 - [ ] Add rate limiting for redemption requests
