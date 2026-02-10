@@ -378,10 +378,38 @@ async def get_subscription_stats():
         total_users = await db.users.count_documents({})
         vip_users = await db.users.count_documents({"membership_type": "vip"})
         
+        # Convert to plan_counts format for frontend
+        plan_counts = {
+            "explorer": 0,
+            "startup": 0,
+            "growth": 0,
+            "elite": 0
+        }
+        for stat in stats:
+            plan_name = stat.get("_id")
+            if plan_name in plan_counts:
+                plan_counts[plan_name] = stat.get("count", 0)
+        
+        # Get pending payments count
+        pending_payments = await db.vip_payments.count_documents({"status": "pending"})
+        
+        # Get monthly revenue (current month VIP payments)
+        now = datetime.now(timezone.utc)
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        monthly_revenue_pipeline = [
+            {"$match": {"status": "approved", "approved_at": {"$gte": month_start.isoformat()}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]
+        monthly_revenue_result = await db.vip_payments.aggregate(monthly_revenue_pipeline).to_list(1)
+        monthly_revenue = monthly_revenue_result[0]["total"] if monthly_revenue_result else 0
+        
         return {
             "by_plan": stats,
             "total_users": total_users,
-            "vip_users": vip_users
+            "vip_users": vip_users,
+            "plan_counts": plan_counts,
+            "pending_payments": pending_payments,
+            "monthly_revenue": monthly_revenue
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
