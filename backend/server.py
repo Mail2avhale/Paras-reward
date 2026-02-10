@@ -38222,6 +38222,33 @@ set_admin_system_helpers({
 })
 api_router.include_router(admin_system_router)
 
+# Include admin finance router (refactored)
+set_admin_finance_db(db)
+set_admin_finance_cache(cache)
+api_router.include_router(admin_finance_router)
+
+# Include admin users router (refactored)
+set_admin_users_db(db)
+set_admin_users_cache(cache)
+set_admin_users_helpers({
+    'log_admin_action': log_admin_action,
+    'hash_password': hash_password
+})
+api_router.include_router(admin_users_router)
+
+# Include admin fraud router (refactored)
+set_admin_fraud_db(db)
+set_admin_fraud_helpers({
+    'log_admin_action': log_admin_action,
+    'fraud_detector': fraud_detector
+})
+api_router.include_router(admin_fraud_router)
+
+# Include admin reports router (refactored)
+set_admin_reports_db(db)
+set_admin_reports_cache(cache)
+api_router.include_router(admin_reports_router)
+
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
 
