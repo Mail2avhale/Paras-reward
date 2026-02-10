@@ -334,7 +334,7 @@ async def get_user_risk_assessment(uid: str):
         {"_id": 0, "ip_address": 1, "login_time": 1}
     ).sort("login_time", -1).limit(20).to_list(20)
     
-    unique_ips = len(set(l.get("ip_address") for l in recent_logins if l.get("ip_address")))
+    unique_ips = len(set(login.get("ip_address") for login in recent_logins if login.get("ip_address")))
     
     # Calculate risk score
     risk_score = 0
