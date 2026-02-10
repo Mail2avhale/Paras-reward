@@ -19578,35 +19578,6 @@ async def update_product(product_id: str, request: Request, uid: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.get("/manager/stock-movements")
-async def get_stock_movements(
-    uid: str,
-    product_id: Optional[str] = None,
-    skip: int = 0,
-    limit: int = 50
-):
-    """Get stock movement history (Manager access)"""
-    if not await verify_management(uid):
-        raise HTTPException(status_code=403, detail="Manager access required")
-    
-    try:
-        query = {}
-        if product_id:
-            query["product_id"] = product_id
-        
-        total = await db.stock_movements.count_documents(query)
-        movements = await db.stock_movements.find(query).skip(skip).limit(limit).sort("timestamp", -1).to_list(length=limit)
-        
-        for movement in movements:
-            movement.pop("_id", None)
-        
-        return {
-            "movements": movements,
-            "total": total
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 # ========== PHASE 2: FINANCIAL MANAGEMENT ==========
 
 @api_router.get("/manager/withdrawals")
