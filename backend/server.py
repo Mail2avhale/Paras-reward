@@ -36493,6 +36493,7 @@ api_router.include_router(admin_accounting_router)
 
 # Include admin orders router (refactored)
 set_admin_orders_db(db)
+set_admin_orders_cache(cache)
 set_admin_orders_helpers({'log_admin_action': log_admin_action})
 api_router.include_router(admin_orders_router)
 
