@@ -115,14 +115,17 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ## Key Files Reference
 - `/app/frontend/src/pages/NetworkTreeAdvanced.js` - Advanced network tree visualization
-- `/app/backend/routes/referral.py` - **NEW** Extracted referral routes (refactored from server.py)
-- `/app/backend/routes/auth.py` - **NEW** Extracted auth routes (Dec 2025) - registration, login, PIN, biometric, password reset
+- `/app/backend/routes/referral.py` - **REFACTORED** Referral routes (Dec 2025)
+- `/app/backend/routes/auth.py` - **REFACTORED** Auth routes (Dec 2025) - registration, login, PIN, biometric, password reset, session management
+- `/app/backend/routes/users.py` - **REFACTORED** User routes (Dec 2025) - profile, dashboard, stats, account deletion
+- `/app/backend/routes/wallet.py` - **REFACTORED** Wallet routes (Dec 2025) - balance, transactions, withdrawals
+- `/app/backend/routes/admin.py` - **REFACTORED** Admin security routes (Dec 2025) - dashboard, audit, lockdown, IP whitelist
 - `/app/frontend/src/components/PinInput.js` - Reusable PIN input with masking
 - `/app/frontend/src/pages/LoginNew.js` - Hybrid PIN/Password login
 - `/app/frontend/src/pages/RegisterSimple.js` - Registration with PIN
 - `/app/frontend/src/pages/SetNewPin.js` - PIN migration page
 - `/app/frontend/src/pages/ReferralsEnhanced.js` - Referral system with link to network tree
-- `/app/backend/server.py` - Main backend APIs (being refactored)
+- `/app/backend/server.py` - Main backend APIs (partially refactored - ~358 admin routes remaining)
 
 ## Database Schema (Key Collections)
 - `users`: User profiles with PRC balance
