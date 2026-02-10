@@ -12,4 +12,8 @@ from .admin import router as admin_router
 from .admin_vip import router as admin_vip_router
 from .admin_delivery import router as admin_delivery_router
 from .admin_system import router as admin_system_router
+from .admin_finance import router as admin_finance_router
+from .admin_users import router as admin_users_router
+from .admin_fraud import router as admin_fraud_router
+from .admin_reports import router as admin_reports_router
 # from .mining import router as mining_router
