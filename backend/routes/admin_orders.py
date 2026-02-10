@@ -85,8 +85,15 @@ async def get_admin_orders(
 
 @router.get("/orders/stats")
 async def get_order_stats():
-    """Get order statistics"""
+    """Get order statistics (cached for 60 seconds)"""
     try:
+        # Try cache first
+        cache_key = "admin:order_stats"
+        if cache:
+            cached = await cache.get(cache_key)
+            if cached:
+                return cached
+        
         total = await db.orders.count_documents({})
         pending = await db.orders.count_documents({"status": "pending"})
         verified = await db.orders.count_documents({"status": "verified"})
@@ -98,7 +105,7 @@ async def get_order_stats():
         today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
         today_orders = await db.orders.count_documents({"created_at": {"$gte": today_start}})
         
-        return {
+        result = {
             "total": total,
             "pending": pending,
             "verified": verified,
@@ -107,6 +114,12 @@ async def get_order_stats():
             "cancelled": cancelled,
             "today": today_orders
         }
+        
+        # Cache for 60 seconds
+        if cache:
+            await cache.set(cache_key, result, ttl=60)
+        
+        return result
     except Exception as e:
         return {"error": str(e)}
 
