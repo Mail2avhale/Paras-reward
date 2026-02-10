@@ -38310,6 +38310,20 @@ set_admin_withdrawals_db(db)
 set_admin_withdrawals_helpers({'log_admin_action': log_admin_action})
 api_router.include_router(admin_withdrawals_router)
 
+# Include admin dashboard router (refactored)
+set_admin_dashboard_db(db)
+set_admin_dashboard_cache(cache)
+api_router.include_router(admin_dashboard_router)
+
+# Include admin products router (refactored)
+set_admin_products_db(db)
+api_router.include_router(admin_products_router)
+
+# Include admin misc router (refactored)
+set_admin_misc_db(db)
+set_admin_misc_helpers({'log_admin_action': log_admin_action, 'hash_password': hash_password})
+api_router.include_router(admin_misc_router)
+
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
 
