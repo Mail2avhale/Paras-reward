@@ -13,7 +13,7 @@ from passlib.context import CryptContext
 
 # Import models
 from models import (
-    User, UserProfileUpdate, Stockist, Product, Cart, CartItem, Order, OrderItem,
+    User, UserProfileUpdate, Product, Cart, CartItem, Order, OrderItem,
     WithdrawalRequest, CommissionEntry, SupportTicket, TicketResponse, SystemSettings
 )
 
