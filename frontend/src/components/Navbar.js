@@ -19,7 +19,6 @@ const Navbar = ({ user, onLogout }) => {
   const isRegularUser = !user || !user.role || user.role === 'user';
   const isAdmin = user?.role === 'admin';
   const isManager = user?.role === 'manager';
-  const isStockist = user?.role && ['master_stockist', 'sub_stockist'].includes(user.role);
   const isOutlet = user?.role === 'outlet';
   
   return (
