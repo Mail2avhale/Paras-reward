@@ -49,6 +49,10 @@ from routes.admin_finance import router as admin_finance_router, set_db as set_a
 from routes.admin_users import router as admin_users_router, set_db as set_admin_users_db, set_cache as set_admin_users_cache, set_helpers as set_admin_users_helpers
 from routes.admin_fraud import router as admin_fraud_router, set_db as set_admin_fraud_db, set_helpers as set_admin_fraud_helpers
 from routes.admin_reports import router as admin_reports_router, set_db as set_admin_reports_db, set_cache as set_admin_reports_cache
+from routes.admin_accounting import router as admin_accounting_router, set_db as set_admin_accounting_db
+from routes.admin_orders import router as admin_orders_router, set_db as set_admin_orders_db, set_helpers as set_admin_orders_helpers
+from routes.admin_settings import router as admin_settings_router, set_db as set_admin_settings_db, set_helpers as set_admin_settings_helpers
+from routes.admin_withdrawals import router as admin_withdrawals_router, set_db as set_admin_withdrawals_db, set_helpers as set_admin_withdrawals_helpers
 
 # ========== SECURITY CONFIGURATION ==========
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
