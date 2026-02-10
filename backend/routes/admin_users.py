@@ -94,7 +94,7 @@ async def get_admin_users(
     }
 
 
-@router.get("/users/stats")
+@router.get("/user-stats")
 async def get_admin_user_stats():
     """Get user statistics for admin dashboard"""
     try:
