@@ -17720,7 +17720,8 @@ async def get_all_orders_admin(
         "orders": orders
     }
 
-@api_router.get("/admin/orders/{order_id}")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/orders/{order_id}")
 async def get_order_details_admin(order_id: str):
     """Get detailed order information (Admin)"""
     order = await db.orders.find_one({"order_id": order_id})
@@ -24442,7 +24443,8 @@ async def submit_contact_form(request: Request):
     
     return {"success": True, "message": "Thank you for your message! We'll get back to you soon."}
 
-@api_router.get("/admin/contact-submissions")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/contact-submissions")
 async def get_contact_submissions(
     status: Optional[str] = None,
     page: int = 1,
@@ -24493,7 +24495,8 @@ async def update_contact_submission(submission_id: str, request: Request):
     
     return {"success": True, "message": "Submission updated"}
 
-@api_router.delete("/admin/contact-submissions/{submission_id}")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.delete("/_disabled_admin/contact-submissions/{submission_id}")
 async def delete_contact_submission(submission_id: str):
     """Delete contact submission"""
     result = await db.contact_submissions.delete_one({"submission_id": submission_id})
@@ -32574,7 +32577,8 @@ class VideoAdRequest(BaseModel):
     end_date: Optional[str] = None
     target_roles: List[str] = ["user"]  # Can target specific user roles
 
-@api_router.post("/admin/video-ads")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/video-ads")
 async def create_video_ad(request: VideoAdRequest):
     """Admin: Create a new video advertisement"""
     try:
@@ -35339,7 +35343,8 @@ async def set_opening_balance(account_type: str, amount: float, bank_name: str =
         logging.error(f"Error setting opening balance: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.get("/admin/accounting/summary")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/accounting/summary")
 async def get_accounting_summary():
     """Get summary of all accounts"""
     try:
