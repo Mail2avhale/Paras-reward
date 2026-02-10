@@ -183,6 +183,41 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     }
   };
 
+  const handleChangePin = async () => {
+    if (pinData.new !== pinData.confirm) {
+      toast.error(language === 'mr' ? 'नवीन PIN जुळत नाही' : 'New PINs do not match');
+      return;
+    }
+    if (pinData.new.length !== 6) {
+      toast.error(language === 'mr' ? 'PIN 6 अंकी असावा' : 'PIN must be 6 digits');
+      return;
+    }
+    if (pinData.current.length !== 6) {
+      toast.error(language === 'mr' ? 'सध्याचा PIN टाका' : 'Enter current PIN');
+      return;
+    }
+    // Check for weak PINs
+    if (new Set(pinData.new).size === 1) {
+      toast.error(language === 'mr' ? 'कमकुवत PIN - सर्व अंक सारखे नसावेत' : 'Weak PIN - all digits cannot be same');
+      return;
+    }
+    
+    setChangingPin(true);
+    try {
+      await axios.post(`${API}/api/user/${user.uid}/change-pin`, {
+        current_pin: pinData.current,
+        new_pin: pinData.new
+      });
+      toast.success(language === 'mr' ? 'PIN बदलला!' : 'PIN changed successfully!');
+      setShowPinSection(false);
+      setPinData({ current: '', new: '', confirm: '' });
+    } catch (error) {
+      toast.error(error.response?.data?.detail || (language === 'mr' ? 'PIN बदलता आला नाही' : 'Failed to change PIN'));
+    } finally {
+      setChangingPin(false);
+    }
+  };
+
   const handlePrivacyToggle = async (field, value) => {
     setSavingPrivacy(true);
     try {
