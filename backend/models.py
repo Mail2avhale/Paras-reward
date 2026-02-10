@@ -158,7 +158,6 @@ class Product(BaseModel):
     
     # Stock
     stock_quantity: int = 0
-    stock_allocations: Dict[str, int] = {}  # {region_id: quantity}
     
     # Visibility
     is_visible: bool = True
