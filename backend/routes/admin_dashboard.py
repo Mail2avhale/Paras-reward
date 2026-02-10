@@ -96,6 +96,12 @@ async def get_admin_stats():
             {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
         ]).to_list(1)
         
+        # Subscription stats
+        explorer_count = await db.users.count_documents({"subscription_plan": "explorer"})
+        startup_count = await db.users.count_documents({"subscription_plan": "startup"})
+        growth_count = await db.users.count_documents({"subscription_plan": "growth"})
+        elite_count = await db.users.count_documents({"subscription_plan": "elite"})
+        
         result = {
             "users": {
                 "total": total_users,
@@ -103,6 +109,12 @@ async def get_admin_stats():
                 "new_week": new_week,
                 "new_month": new_month,
                 "vip": vip_users
+            },
+            "subscription_stats": {
+                "explorer": explorer_count,
+                "startup": startup_count,
+                "growth": growth_count,
+                "elite": elite_count
             },
             "revenue": {
                 "month": round(month_revenue[0]["total"], 2) if month_revenue else 0
@@ -116,6 +128,13 @@ async def get_admin_stats():
             },
             "generated_at": now.isoformat()
         }
+        
+        # Cache result
+        if cache:
+            await cache.set(cache_key, result, ttl=60)
+        
+        return result
+        
     except Exception as e:
         logging.error(f"Admin stats error: {e}")
         return {"error": str(e)}
