@@ -9878,29 +9878,8 @@ async def request_cashback_withdrawal(request: Request):
 
 @api_router.post("/wallet/profit/withdraw")
 async def request_profit_withdrawal(request: Request):
-    """Request profit wallet withdrawal (for stockists/outlets) with enhanced fee logic"""
-    data = await request.json()
-    user_id = data.get("user_id")
-    amount = data.get("amount", 0)
-    payment_mode = data.get("payment_mode", "upi")
-    upi_id = data.get("upi_id")
-    phone_number = data.get("phone_number")
-    account_holder_name = data.get("account_holder_name")
-    bank_name = data.get("bank_name")
-    bank_account = data.get("bank_account")
-    ifsc_code = data.get("ifsc_code")
-    
-    # Validate minimum withdrawal
-    if amount < 50:
-        raise HTTPException(status_code=400, detail="Minimum withdrawal amount is ₹50")
-    
-    user = await db.users.find_one({"uid": user_id})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # Check role
-    if user.get("role") not in ["master_stockist", "sub_stockist", "outlet"]:
-        raise HTTPException(status_code=403, detail="Only stockists and outlets can withdraw from profit wallet")
+    """DEPRECATED: Profit wallet withdrawal was for stockists/outlets - system removed"""
+    raise HTTPException(status_code=410, detail="Profit wallet withdrawal system has been discontinued")
     
     # Check withdrawal eligibility (includes balance and lien checks)
     eligibility = await check_withdrawal_eligibility(user_id, amount, "profit")
