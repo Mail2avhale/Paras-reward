@@ -1016,7 +1016,7 @@ async def clear_admin_cache():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@api_router.get("/admin/debug/stats-live")
+@api_router.get("/_disabled_server/admin/debug/stats-live")
 async def get_admin_stats_live():
     """
     Get admin stats WITHOUT cache - for debugging production issues.
@@ -7246,7 +7246,7 @@ async def get_admin_subscription_pricing():
     pricing = await get_subscription_pricing()
     return {"pricing": pricing}
 
-@api_router.post("/admin/run-explorer-burn")
+@api_router.post("/_disabled_server/admin/run-explorer-burn")
 async def run_explorer_burn_job():
     """Admin: Manually trigger Explorer user PRC burn job"""
     result = await burn_expired_prc_for_explorer_users()
@@ -7391,7 +7391,7 @@ async def get_public_settings():
 
 # ========== AUTO-RENEWAL NOTIFICATIONS ==========
 
-@api_router.post("/admin/send-renewal-notifications")
+@api_router.post("/_disabled_server/admin/send-renewal-notifications")
 async def send_renewal_notifications():
     """Send renewal notifications to users whose subscription is expiring within 7 days"""
     now = datetime.now(timezone.utc)
@@ -9345,7 +9345,7 @@ async def mark_order_delivered_by_partner(order_id: str, request: Request):
     
     return {"message": "Order marked as delivered"}
 
-@api_router.post("/admin/profit-wallet/credit")
+@api_router.post("/_disabled_server/admin/profit-wallet/credit")
 async def admin_credit_profit_wallet(request: Request):
     """Admin: Credit amount to user's profit wallet"""
     data = await request.json()
@@ -9404,7 +9404,7 @@ async def admin_credit_profit_wallet(request: Request):
         "new_balance": new_balance
     }
 
-@api_router.post("/admin/profit-wallet/deduct")
+@api_router.post("/_disabled_server/admin/profit-wallet/deduct")
 async def admin_deduct_profit_wallet(request: Request):
     """Admin: Deduct amount from user's profit wallet (with lien if insufficient)"""
     data = await request.json()
@@ -9487,7 +9487,7 @@ async def admin_deduct_profit_wallet(request: Request):
         "total_lien": new_lien
     }
 
-@api_router.post("/admin/profit-wallet/adjust")
+@api_router.post("/_disabled_server/admin/profit-wallet/adjust")
 async def admin_adjust_profit_wallet(request: Request):
     """Admin: Set profit wallet to specific amount (adjustment)"""
     data = await request.json()
@@ -9546,7 +9546,7 @@ async def admin_adjust_profit_wallet(request: Request):
         "adjustment": difference
     }
 
-@api_router.post("/admin/apply-monthly-fees")
+@api_router.post("/_disabled_server/admin/apply-monthly-fees")
 async def apply_monthly_fees_to_all_users(request: Request):
     """Admin: Apply monthly maintenance fee to all VIP users' cashback AND profit wallets"""
     data = await request.json()
@@ -11579,7 +11579,7 @@ async def clear_old_alerts(admin_uid: str, days_old: int = 30):
     return {"message": f"Deleted {result.deleted_count} old alerts"}
 
 # ========== ADMIN ROUTES ==========
-@api_router.post("/admin/promote")
+@api_router.post("/_disabled_server/admin/promote")
 async def promote_user(email: str, role: str):
     """Promote user to admin or outlet role"""
     if role not in ["admin", "outlet", "user", "master_stockist", "sub_stockist"]:
@@ -11721,7 +11721,7 @@ async def get_stats_breakdown():
     except Exception as e:
         return {"error": str(e)}
 
-@api_router.get("/admin/stats")
+@api_router.get("/_disabled_server/admin/stats")
 async def get_admin_stats():
     """Get comprehensive admin dashboard KPIs with caching - OPTIMIZED for 400+ users"""
     
@@ -11901,7 +11901,7 @@ async def get_admin_stats():
 
 # ============ COMBINED ADMIN DASHBOARD API ============
 
-@api_router.get("/admin/dashboard-all")
+@api_router.get("/_disabled_server/admin/dashboard-all")
 async def get_admin_dashboard_all():
     """
     Combined API for Admin Dashboard - returns ALL data in ONE call.
@@ -12096,7 +12096,7 @@ async def refresh_dashboard_data():
         return {"status": "error", "message": str(e)}
 
 
-@api_router.get("/admin/charts/user-growth")
+@api_router.get("/_disabled_server/admin/charts/user-growth")
 async def get_user_growth_chart():
     """Get user registration data for the last 30 days - PRODUCTION FIX"""
     from datetime import timedelta
@@ -12165,7 +12165,7 @@ async def get_user_growth_chart():
         logging.error(f"User growth chart error: {e}")
         return {"data": [], "error": str(e)}
 
-@api_router.get("/admin/charts/prc-circulation")
+@api_router.get("/_disabled_server/admin/charts/prc-circulation")
 async def get_prc_circulation_chart():
     """Get PRC circulation trend for the last 30 days - PRODUCTION FIX"""
     from datetime import timedelta
@@ -12244,7 +12244,7 @@ async def get_prc_circulation_chart():
         return {"data": [], "error": str(e)}
 
 
-@api_router.get("/admin/charts/orders")
+@api_router.get("/_disabled_server/admin/charts/orders")
 async def get_orders_chart():
     """Get orders trend for the last 30 days - PRODUCTION FIX"""
     from datetime import timedelta
@@ -12588,7 +12588,7 @@ async def check_admin_exists():
     admin = await db.users.find_one({"role": "admin"})
     return {"admin_exists": admin is not None}
 
-@api_router.post("/admin/create-first-admin")
+@api_router.post("/_disabled_server/admin/create-first-admin")
 async def create_first_admin(request: Request):
     """Create the first admin user - only works if no admin exists"""
     # Check if admin already exists
@@ -12646,7 +12646,7 @@ async def create_first_admin(request: Request):
         "email": user.email
     }
 
-@api_router.get("/admin/users")
+@api_router.get("/_disabled_server/admin/users")
 async def get_all_users(
     role: Optional[str] = None,
     search: Optional[str] = None,
@@ -12764,7 +12764,7 @@ async def get_all_users(
         "users": users
     }
 
-@api_router.put("/admin/users/{uid}/role")
+@api_router.put("/_disabled_server/admin/users/{uid}/role")
 async def update_user_role(uid: str, request: Request):
     """Update user role (Admin only)"""
     data = await request.json()
@@ -12794,7 +12794,7 @@ async def update_user_role(uid: str, request: Request):
     else:
         return {"message": "No changes made", "uid": uid, "role": new_role}
 
-@api_router.put("/admin/users/{uid}/status")
+@api_router.put("/_disabled_server/admin/users/{uid}/status")
 async def update_user_status(uid: str, request: Request):
     """Activate or deactivate user account (Admin only)"""
     data = await request.json()
@@ -12820,7 +12820,7 @@ async def update_user_status(uid: str, request: Request):
     status_text = "activated" if is_active else "deactivated"
     return {"message": f"User {status_text} successfully", "uid": uid, "is_active": is_active}
 
-@api_router.delete("/admin/users/{uid}")
+@api_router.delete("/_disabled_server/admin/users/{uid}")
 async def delete_user(uid: str):
     """Delete a user (Admin only) - Use with caution"""
     # Find user
@@ -12840,7 +12840,7 @@ async def delete_user(uid: str):
     return {"message": "User deleted successfully", "uid": uid}
 
 
-@api_router.post("/admin/users/{uid}/subscription")
+@api_router.post("/_disabled_server/admin/users/{uid}/subscription")
 async def admin_update_user_subscription(uid: str, request: Request):
     """
     Admin endpoint to manually update user subscription.
@@ -12937,7 +12937,7 @@ async def admin_update_user_subscription(uid: str, request: Request):
     }
 
 
-@api_router.get("/admin/users/{uid}/subscription-history")
+@api_router.get("/_disabled_server/admin/users/{uid}/subscription-history")
 async def get_user_subscription_history(uid: str, page: int = 1, limit: int = 20):
     """
     Get subscription/payment history for a specific user.
@@ -13062,7 +13062,7 @@ async def get_all_users_admin(
         "pages": (total + limit - 1) // limit
     }
 
-@api_router.get("/admin/users/{uid}")
+@api_router.get("/_disabled_server/admin/users/{uid}")
 async def get_user_details(uid: str):
     """Get detailed user information (Admin only)"""
     user = await db.users.find_one({"uid": uid})
@@ -14113,7 +14113,7 @@ class Order(BaseModel):
 
 # ========== PRODUCT MANAGEMENT (ADMIN) ==========
 
-@api_router.post("/admin/products")
+@api_router.post("/_disabled_server/admin/products")
 async def create_product(
     name: str = Form(...),
     description: str = Form(""),
@@ -14217,7 +14217,7 @@ async def create_product(
         "image_url": image_url
     }
 
-@api_router.get("/admin/products")
+@api_router.get("/_disabled_server/admin/products")
 async def get_all_products_admin(
     page: int = 1, 
     limit: int = 20, 
@@ -14304,7 +14304,7 @@ async def get_all_products_admin(
         "products": products
     }
 
-@api_router.put("/admin/products/{product_id}")
+@api_router.put("/_disabled_server/admin/products/{product_id}")
 async def update_product(
     product_id: str,
     name: str = Form(None),
@@ -14406,7 +14406,7 @@ async def update_product(
     
     return {"message": "Product updated successfully", "product_id": product_id}
 
-@api_router.delete("/admin/products/{product_id}")
+@api_router.delete("/_disabled_server/admin/products/{product_id}")
 async def delete_product(product_id: str):
     """Delete product (Admin)"""
     await db.products.delete_one({"product_id": product_id})
@@ -14415,7 +14415,7 @@ async def delete_product(product_id: str):
 
 # ==================== STRICT REDEMPTION SETTINGS (Admin) ====================
 
-@api_router.get("/admin/settings/redemption-rules")
+@api_router.get("/_disabled_server/admin/settings/redemption-rules")
 async def get_redemption_rules():
     """Get all redemption rules and settings"""
     settings = await db.settings.find_one({}, {"_id": 0, "redemption_rules": 1, "monthly_redeem_settings": 1})
@@ -14450,7 +14450,7 @@ async def get_redemption_rules():
     }
 
 
-@api_router.put("/admin/settings/redemption-rules")
+@api_router.put("/_disabled_server/admin/settings/redemption-rules")
 async def update_redemption_rules(request: Request):
     """Update strict redemption rules"""
     data = await request.json()
@@ -14475,7 +14475,7 @@ async def update_redemption_rules(request: Request):
     return {"message": "Redemption rules updated", "rules": redemption_rules}
 
 
-@api_router.get("/admin/settings/marketplace")
+@api_router.get("/_disabled_server/admin/settings/marketplace")
 async def get_marketplace_settings():
     """Get marketplace settings including PRC to INR rate"""
     settings = await db.marketplace_settings.find_one({"setting_type": "general"}, {"_id": 0})
@@ -14489,7 +14489,7 @@ async def get_marketplace_settings():
         }
     return settings
 
-@api_router.put("/admin/settings/marketplace")
+@api_router.put("/_disabled_server/admin/settings/marketplace")
 async def update_marketplace_settings(request: Request):
     """Update marketplace settings"""
     data = await request.json()
@@ -14505,13 +14505,13 @@ async def update_marketplace_settings(request: Request):
 
 # ========== REDEMPTION LIMIT SETTINGS (ADMIN) ==========
 
-@api_router.get("/admin/settings/redeem-limits")
+@api_router.get("/_disabled_server/admin/settings/redeem-limits")
 async def get_redeem_limit_settings_admin():
     """Get monthly redemption limit settings (Admin only)"""
     settings = await get_monthly_redeem_limit_settings()
     return settings
 
-@api_router.put("/admin/settings/redeem-limits")
+@api_router.put("/_disabled_server/admin/settings/redeem-limits")
 async def update_redeem_limit_settings_admin(request: Request):
     """Update monthly redemption limit settings (Admin only)"""
     data = await request.json()
@@ -14544,7 +14544,7 @@ async def update_redeem_limit_settings_admin(request: Request):
     
     return {"message": "Monthly redemption limit settings updated", "settings": monthly_redeem_settings}
 
-@api_router.get("/admin/user/{uid}/redeem-limit")
+@api_router.get("/_disabled_server/admin/user/{uid}/redeem-limit")
 async def get_user_redeem_limit_admin(uid: str):
     """Get a user's redemption limit details (Admin only - for debugging/support)"""
     user = await db.users.find_one({"uid": uid})
@@ -28678,7 +28678,7 @@ async def get_reconciliation_status():
 
 # ==================== USER WALLET LEDGER (Admin Only) ====================
 
-@api_router.get("/admin/finance/user-ledger")
+@api_router.get("/_disabled_server/admin/finance/user-ledger")
 async def get_all_user_ledger(
     page: int = 1, 
     limit: int = 50, 
