@@ -15,12 +15,19 @@ router = APIRouter(prefix="/admin", tags=["Admin Orders"])
 # Database reference
 db = None
 
+# Cache reference
+cache = None
+
 # Helpers
 log_admin_action = None
 
 def set_db(database):
     global db
     db = database
+
+def set_cache(cache_manager):
+    global cache
+    cache = cache_manager
 
 def set_helpers(helpers: dict):
     global log_admin_action
