@@ -32,7 +32,25 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ## What's Been Implemented (Latest: Feb 2026)
 
-### Recently Completed
+### Recently Completed (Feb 10, 2026)
+- [x] **Stock/Stockist System Removal**
+  - Removed Stock Request System (~820 lines)
+  - Removed Stockist Distribution System (~314 lines)
+  - Removed Security Deposit System (~249 lines)
+  - Removed Annual Renewal System (~241 lines)
+  - Cleaned stockist counts from Admin KPIs
+  - Deprecated profit wallet withdrawal (stockist-only)
+  - Deleted: fix_stockist_parents.py, fix_parent_assignments.py
+  - Models: Removed Stockist class, StockistCreate
+
+- [x] **"Stockist" Code Removal** (Feb 10, 2026)
+  - Removed all stockist-related code from backend and frontend
+  - Cleaned Navbar.js of stockist links
+
+- [x] **Code Refactoring - Route Modularization**
+  - Extracted routes from monolithic server.py into 19 router files
+  - New structure: /app/backend/routes/*.py
+
 - [x] **Advanced Network Tree View** (Feb 2026)
   - New dedicated `/network-tree` page
   - Backend API: `/api/referrals/network-tree/{user_id}`
