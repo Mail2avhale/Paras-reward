@@ -96,12 +96,13 @@ Build a PRC (point-based reward currency) system web application where users can
 - [ ] Production deployment
 
 ### P1 (High)
-- [x] Refactor `server.py` into smaller modules - IN PROGRESS
+- [x] Refactor `server.py` into smaller modules - MOSTLY COMPLETE
   - [x] `routes/referral.py` - DONE (Dec 2025)
-  - [x] `routes/auth.py` - DONE (Dec 2025) - All authentication routes
-  - [ ] `routes/users.py` - Pending
-  - [ ] `routes/wallet.py` - Pending
-  - [ ] `routes/admin.py` - Pending
+  - [x] `routes/auth.py` - DONE (Dec 2025) - All authentication routes + session management + password recovery
+  - [x] `routes/users.py` - DONE (Dec 2025) - User profile, dashboard, stats, account deletion
+  - [x] `routes/wallet.py` - DONE (Dec 2025) - Wallet balance, transactions, withdrawals
+  - [x] `routes/admin.py` - DONE (Dec 2025) - Security dashboard, audit logs, lockdown, IP whitelist
+  - [ ] Remaining admin routes (358+ routes) - Future iteration
 
 ### P2 (Medium)
 - [ ] Add rate limiting for redemption requests
