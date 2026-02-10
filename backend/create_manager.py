@@ -5,7 +5,6 @@ Script to create a Manager user for PARAS REWARD application.
 Manager Role Permissions:
 - KYC verification (approve/reject)
 - VIP payment verification (approve/reject)
-- Stock movement approval (approve/reject)
 - Support tickets (view-only)
 
 Restrictions:
