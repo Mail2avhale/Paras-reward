@@ -118,17 +118,20 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ## Key Files Reference
 - `/app/frontend/src/pages/NetworkTreeAdvanced.js` - Advanced network tree visualization
-- `/app/backend/routes/referral.py` - **REFACTORED** Referral routes (Dec 2025)
-- `/app/backend/routes/auth.py` - **REFACTORED** Auth routes (Dec 2025) - registration, login, PIN, biometric, password reset, session management
-- `/app/backend/routes/users.py` - **REFACTORED** User routes (Dec 2025) - profile, dashboard, stats, account deletion
-- `/app/backend/routes/wallet.py` - **REFACTORED** Wallet routes (Dec 2025) - balance, transactions, withdrawals
-- `/app/backend/routes/admin.py` - **REFACTORED** Admin security routes (Dec 2025) - dashboard, audit, lockdown, IP whitelist
+- `/app/backend/routes/referral.py` - **REFACTORED** Referral routes (5 endpoints)
+- `/app/backend/routes/auth.py` - **REFACTORED** Auth routes (24 endpoints)
+- `/app/backend/routes/users.py` - **REFACTORED** User routes (14 endpoints)
+- `/app/backend/routes/wallet.py` - **REFACTORED** Wallet routes (5 endpoints)
+- `/app/backend/routes/admin.py` - **REFACTORED** Admin security routes (10 endpoints)
+- `/app/backend/routes/admin_vip.py` - **REFACTORED** VIP payment/subscription routes (12 endpoints)
+- `/app/backend/routes/admin_delivery.py` - **REFACTORED** Delivery partner routes (10 endpoints)
+- `/app/backend/routes/admin_system.py` - **REFACTORED** System/database management routes (14 endpoints)
 - `/app/frontend/src/components/PinInput.js` - Reusable PIN input with masking
 - `/app/frontend/src/pages/LoginNew.js` - Hybrid PIN/Password login
 - `/app/frontend/src/pages/RegisterSimple.js` - Registration with PIN
 - `/app/frontend/src/pages/SetNewPin.js` - PIN migration page
 - `/app/frontend/src/pages/ReferralsEnhanced.js` - Referral system with link to network tree
-- `/app/backend/server.py` - Main backend APIs (partially refactored - ~358 admin routes remaining)
+- `/app/backend/server.py` - Main backend APIs (~322 admin routes remaining)
 
 ## Database Schema (Key Collections)
 - `users`: User profiles with PRC balance
