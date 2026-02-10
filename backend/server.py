@@ -600,7 +600,8 @@ async def get_cache_stats():
 
 # ==================== DATABASE OPTIMIZATION ADMIN ENDPOINTS ====================
 
-@api_router.post("/admin/db/create-indexes")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/db/create-indexes")
 async def create_all_indexes():
     """
     Admin endpoint to manually trigger index creation on production database.
@@ -617,7 +618,8 @@ async def create_all_indexes():
         raise HTTPException(status_code=500, detail=f"Error creating indexes: {str(e)}")
 
 
-@api_router.get("/admin/db/index-status")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/db/index-status")
 async def get_index_status():
     """Get status of all database indexes for monitoring"""
     try:
@@ -649,23 +651,27 @@ async def get_index_status():
 
 
 # Browser-friendly GET versions of admin APIs
-@api_router.get("/admin/clear-all-lockouts-now")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/clear-all-lockouts-now")
 async def clear_all_lockouts_get():
     """GET version of clear-all-lockouts for easy browser access"""
     return await clear_all_login_lockouts()
 
-@api_router.get("/admin/force-fix/{identifier}")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/force-fix/{identifier}")
 async def force_fix_get(identifier: str):
     """GET version of force-fix-user for easy browser access"""
     return await force_fix_user(identifier)
 
-@api_router.get("/admin/migrate-to-pin/{identifier}")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/migrate-to-pin/{identifier}")
 async def migrate_to_pin_get(identifier: str):
     """GET version of migrate-user-to-pin for easy browser access"""
     return await migrate_user_to_pin(identifier)
 
 
-@api_router.post("/admin/clear-all-lockouts")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/clear-all-lockouts")
 async def clear_all_login_lockouts():
     """
     Emergency API to clear ALL login lockouts from database and memory.
@@ -706,7 +712,8 @@ async def clear_all_login_lockouts():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@api_router.get("/admin/diagnose-user/{identifier}")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/diagnose-user/{identifier}")
 async def diagnose_user_login(identifier: str):
     """
     Diagnose why a specific user cannot login.
@@ -829,7 +836,8 @@ async def diagnose_user_login(identifier: str):
     return diagnosis
 
 
-@api_router.post("/admin/force-fix-user/{identifier}")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/force-fix-user/{identifier}")
 async def force_fix_user(identifier: str):
     """
     Force fix a user's account - clears ALL possible blocking conditions.
@@ -899,7 +907,8 @@ async def force_fix_user(identifier: str):
     }
 
 
-@api_router.post("/admin/migrate-user-to-pin/{identifier}")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/migrate-user-to-pin/{identifier}")
 async def migrate_user_to_pin(identifier: str, new_pin: str = None):
     """
     Migrate a user from password to PIN system.
@@ -7134,7 +7143,8 @@ async def submit_subscription_payment(uid: str, request: Request):
         "message": "Payment submitted for verification"
     }
 
-@api_router.post("/admin/subscription/pricing")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/subscription/pricing")
 async def update_subscription_pricing(request: Request):
     """Admin: Update subscription pricing"""
     data = await request.json()
@@ -7168,7 +7178,8 @@ async def update_subscription_pricing(request: Request):
     
     return {"success": True, "pricing": pricing}
 
-@api_router.get("/admin/subscription-stats")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/subscription-stats")
 async def get_subscription_stats():
     """Get subscription statistics using fast aggregation queries"""
     try:
@@ -7217,7 +7228,8 @@ async def get_subscription_stats():
     except Exception as e:
         return {"error": str(e)}
 
-@api_router.get("/admin/subscription/pricing")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/subscription/pricing")
 async def get_admin_subscription_pricing():
     """Admin: Get current subscription pricing"""
     pricing = await get_subscription_pricing()
@@ -7229,7 +7241,8 @@ async def run_explorer_burn_job():
     result = await burn_expired_prc_for_explorer_users()
     return {"success": True, "result": result}
 
-@api_router.post("/admin/database/cleanup")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/database/cleanup")
 async def cleanup_database(request: Request):
     """
     Admin: Clean up test data from database
@@ -7302,7 +7315,8 @@ async def cleanup_database(request: Request):
         logging.error(f"Database cleanup error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.get("/admin/database/stats")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/database/stats")
 async def get_database_stats():
     """Get database statistics"""
     stats = {
@@ -7582,7 +7596,8 @@ async def submit_vip_payment(uid: str, payment: VIPPaymentCreate):
 
 # ==================== ADMIN VIP PAYMENT VERIFICATION ====================
 
-@api_router.get("/admin/vip-payments/pending-count")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/vip-payments/pending-count")
 async def get_pending_payments_count():
     """Super fast endpoint to get just the pending payments count"""
     try:
@@ -7598,7 +7613,8 @@ async def get_pending_payments_count():
         return {"count": 0, "error": str(e)}
 
 
-@api_router.get("/admin/vip-payments")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/vip-payments")
 async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int = 50):
     """Get VIP payments for admin verification - OPTIMIZED with caching"""
     try:
@@ -7713,7 +7729,8 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.post("/admin/vip-payment/{payment_id}/approve")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/vip-payment/{payment_id}/approve")
 async def approve_vip_payment(payment_id: str, request: Request):
     """Approve VIP payment and activate membership with fraud prevention"""
     try:
@@ -7911,7 +7928,8 @@ def is_paid_subscriber(user: dict) -> bool:
     return False
 
 
-@api_router.post("/admin/migrate-vip-users")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/migrate-vip-users")
 async def migrate_vip_users_to_subscription(request: Request):
     """
     Migrate legacy VIP users to new subscription system.
@@ -7988,7 +8006,8 @@ async def migrate_vip_users_to_subscription(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@api_router.get("/admin/vip-migration-status")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/vip-migration-status")
 async def get_vip_migration_status():
     """Get current migration status - how many users are on old vs new system"""
     
@@ -8032,7 +8051,8 @@ async def get_vip_migration_status():
     }
 
 
-@api_router.get("/admin/subscription-pricing-reference")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/subscription-pricing-reference")
 async def get_subscription_pricing_reference():
     """Get pricing reference for admin to verify payments and detect fraud"""
     # Get pricing from settings or use defaults
@@ -8204,7 +8224,8 @@ async def get_referral_uids(referrer_uid: str) -> list:
     ).to_list(None)
     return [r["uid"] for r in referrals]
 
-@api_router.post("/admin/vip-payment/{payment_id}/reject")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/vip-payment/{payment_id}/reject")
 async def reject_vip_payment(payment_id: str, request: Request):
     """Reject VIP payment"""
     try:
@@ -8267,7 +8288,8 @@ async def reject_vip_payment(payment_id: str, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.delete("/admin/vip-payment/{payment_id}")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.delete("/_disabled_admin/vip-payment/{payment_id}")
 async def delete_vip_payment(payment_id: str, request: Request):
     """Delete VIP payment (for mistakenly approved payments)"""
     try:
@@ -9038,7 +9060,8 @@ async def get_wallet(uid: str):
 
 # ========== DELIVERY PARTNER MANAGEMENT ==========
 
-@api_router.get("/admin/delivery-partners")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/delivery-partners")
 async def get_delivery_partners(status: str = "all", page: int = 1, limit: int = 20):
     """Get all delivery partners with optional filtering"""
     query = {}
@@ -9069,7 +9092,8 @@ async def get_delivery_partners(status: str = "all", page: int = 1, limit: int =
         "pages": (total + limit - 1) // limit
     }
 
-@api_router.get("/admin/delivery-partners/stats")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/delivery-partners/stats")
 async def get_delivery_partner_stats():
     """Get delivery partner statistics"""
     total_partners = await db.delivery_partners.count_documents({})
@@ -9091,7 +9115,8 @@ async def get_delivery_partner_stats():
         "out_for_delivery": out_for_delivery
     }
 
-@api_router.get("/admin/delivery-partners/{partner_id}")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/delivery-partners/{partner_id}")
 async def get_delivery_partner(partner_id: str):
     """Get single delivery partner details"""
     partner = await db.delivery_partners.find_one({"partner_id": partner_id})
@@ -9117,7 +9142,8 @@ async def get_delivery_partner(partner_id: str):
         "recent_orders": recent_orders
     }
 
-@api_router.post("/admin/delivery-partners")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/delivery-partners")
 async def create_delivery_partner(partner: DeliveryPartnerCreate):
     """Create a new delivery partner"""
     partner_data = DeliveryPartner(
@@ -9146,7 +9172,8 @@ async def create_delivery_partner(partner: DeliveryPartnerCreate):
         "partner": partner_dict
     }
 
-@api_router.put("/admin/delivery-partners/{partner_id}")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.put("/_disabled_admin/delivery-partners/{partner_id}")
 async def update_delivery_partner(partner_id: str, request: Request):
     """Update delivery partner details"""
     data = await request.json()
@@ -9173,7 +9200,8 @@ async def update_delivery_partner(partner_id: str, request: Request):
     
     return {"message": "Delivery partner updated successfully"}
 
-@api_router.delete("/admin/delivery-partners/{partner_id}")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.delete("/_disabled_admin/delivery-partners/{partner_id}")
 async def delete_delivery_partner(partner_id: str):
     """Delete a delivery partner (soft delete - set inactive)"""
     partner = await db.delivery_partners.find_one({"partner_id": partner_id})
@@ -9200,7 +9228,8 @@ async def delete_delivery_partner(partner_id: str):
     
     return {"message": "Delivery partner deactivated successfully"}
 
-@api_router.get("/admin/delivery-partners/available/{state}")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/delivery-partners/available/{state}")
 async def get_available_partners_for_state(state: str):
     """Get delivery partners available for a specific state"""
     partners = await db.delivery_partners.find({
@@ -9216,7 +9245,8 @@ async def get_available_partners_for_state(state: str):
     
     return {"partners": partners}
 
-@api_router.post("/admin/orders/{order_id}/assign-partner")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/orders/{order_id}/assign-partner")
 async def assign_delivery_partner(order_id: str, request: Request):
     """Assign a delivery partner to an order"""
     data = await request.json()
@@ -9283,7 +9313,8 @@ async def assign_delivery_partner(order_id: str, request: Request):
         "tracking_number": tracking_number
     }
 
-@api_router.post("/admin/orders/{order_id}/mark-delivered")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/orders/{order_id}/mark-delivered")
 async def mark_order_delivered_by_partner(order_id: str, request: Request):
     """Mark order as delivered by delivery partner"""
     data = await request.json()
@@ -12050,7 +12081,8 @@ async def get_admin_dashboard_all():
 
 # ============ SYSTEM PERFORMANCE APIs ============
 
-@api_router.get("/admin/system/cache-stats")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/system/cache-stats")
 async def get_cache_statistics():
     """Get cache system statistics"""
     stats = await cache.get_stats()
@@ -12059,7 +12091,8 @@ async def get_cache_statistics():
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
-@api_router.get("/admin/system/index-stats")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/system/index-stats")
 async def get_index_statistics():
     """Get database index statistics"""
     stats = await get_index_stats(db)
@@ -12068,7 +12101,8 @@ async def get_index_statistics():
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
-@api_router.post("/admin/system/clear-cache")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/system/clear-cache")
 async def clear_system_cache(key_pattern: str = None):
     """Clear cache - optionally by pattern"""
     if key_pattern:
@@ -12079,7 +12113,8 @@ async def clear_system_cache(key_pattern: str = None):
         return {"message": "All cache cleared"}
 
 
-@api_router.get("/admin/system/dashboard-diagnostic")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.get("/_disabled_admin/system/dashboard-diagnostic")
 async def dashboard_diagnostic():
     """
     DIAGNOSTIC: Check database data and help debug production issues.
@@ -12138,7 +12173,8 @@ async def dashboard_diagnostic():
         return {"status": "error", "message": str(e)}
 
 
-@api_router.post("/admin/system/refresh-dashboard")
+# DISABLED - Moved to routes/admin_*.py
+@api_router.post("/_disabled_admin/system/refresh-dashboard")
 async def refresh_dashboard_data():
     """
     Force refresh all dashboard data by clearing cache and returning fresh stats.
