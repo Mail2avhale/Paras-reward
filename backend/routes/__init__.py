@@ -20,4 +20,7 @@ from .admin_accounting import router as admin_accounting_router
 from .admin_orders import router as admin_orders_router
 from .admin_settings import router as admin_settings_router
 from .admin_withdrawals import router as admin_withdrawals_router
+from .admin_dashboard import router as admin_dashboard_router
+from .admin_products import router as admin_products_router
+from .admin_misc import router as admin_misc_router
 # from .mining import router as mining_router
