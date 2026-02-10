@@ -43,6 +43,16 @@ Build a PRC (point-based reward currency) system web application where users can
   - Deleted: fix_stockist_parents.py, fix_parent_assignments.py
   - Models: Removed Stockist class, StockistCreate
 
+- [x] **Route Deduplication (P1)**
+  - Disabled 33 duplicate routes in server.py
+  - Routes now served exclusively by modular router files
+  - No more route conflicts between server.py and routes/*.py
+
+- [x] **Performance Optimization (P2)**
+  - Added caching to admin_orders.py (order stats - 60s TTL)
+  - Added caching to admin_withdrawals.py (pending count - 30s TTL)
+  - Cache system: In-memory with Upstash Redis support
+
 - [x] **"Stockist" Code Removal** (Feb 10, 2026)
   - Removed all stockist-related code from backend and frontend
   - Cleaned Navbar.js of stockist links
