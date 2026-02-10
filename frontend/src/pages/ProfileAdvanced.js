@@ -730,6 +730,75 @@ const ProfileAdvanced = ({ user, onLogout }) => {
           </div>
         )}
 
+        {/* Change PIN */}
+        <button 
+          onClick={() => setShowPinSection(!showPinSection)}
+          className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl p-4 flex items-center justify-between"
+        >
+          <span className="flex items-center gap-3 text-white">
+            <Shield className="w-5 h-5 text-green-500" />
+            {t.changePin}
+          </span>
+          <ChevronRight className="w-5 h-5 text-gray-500" />
+        </button>
+
+        {showPinSection && (
+          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 space-y-4">
+            <p className="text-gray-400 text-sm">
+              {language === 'mr' ? '6 अंकी PIN वापरून लॉगिन करा' : 'Use 6-digit PIN to login'}
+            </p>
+            <div>
+              <label className="text-gray-400 text-sm mb-1 block">
+                {language === 'mr' ? 'सध्याचा PIN' : 'Current PIN'}
+              </label>
+              <Input 
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                value={pinData.current}
+                onChange={(e) => setPinData({...pinData, current: e.target.value.replace(/\D/g, '').slice(0, 6)})}
+                className="bg-gray-800 border-gray-700 text-white text-center text-xl tracking-widest"
+                placeholder="••••••"
+              />
+            </div>
+            <div>
+              <label className="text-gray-400 text-sm mb-1 block">
+                {language === 'mr' ? 'नवीन PIN' : 'New PIN'}
+              </label>
+              <Input 
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                value={pinData.new}
+                onChange={(e) => setPinData({...pinData, new: e.target.value.replace(/\D/g, '').slice(0, 6)})}
+                className="bg-gray-800 border-gray-700 text-white text-center text-xl tracking-widest"
+                placeholder="••••••"
+              />
+            </div>
+            <div>
+              <label className="text-gray-400 text-sm mb-1 block">
+                {language === 'mr' ? 'नवीन PIN पुन्हा टाका' : 'Confirm New PIN'}
+              </label>
+              <Input 
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                value={pinData.confirm}
+                onChange={(e) => setPinData({...pinData, confirm: e.target.value.replace(/\D/g, '').slice(0, 6)})}
+                className="bg-gray-800 border-gray-700 text-white text-center text-xl tracking-widest"
+                placeholder="••••••"
+              />
+            </div>
+            <Button 
+              onClick={handleChangePin}
+              disabled={changingPin}
+              className="w-full bg-green-600 hover:bg-green-700"
+            >
+              {changingPin ? (language === 'mr' ? 'बदलत आहे...' : 'Changing...') : t.changePin}
+            </Button>
+          </div>
+        )}
+
         {/* Delete Account */}
         <button 
           onClick={() => setShowDeleteSection(!showDeleteSection)}
