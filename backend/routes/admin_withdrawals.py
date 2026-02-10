@@ -81,15 +81,26 @@ async def get_withdrawals(
 
 @router.get("/withdrawals/pending-count")
 async def get_pending_withdrawals_count():
-    """Get count of pending withdrawals"""
+    """Get count of pending withdrawals (cached for 30 seconds)"""
+    cache_key = "admin:withdrawals_pending_count"
+    if cache:
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
+    
     cashback_pending = await db.cashback_withdrawals.count_documents({"status": "pending"})
     profit_pending = await db.profit_withdrawals.count_documents({"status": "pending"})
     
-    return {
+    result = {
         "cashback_pending": cashback_pending,
         "profit_pending": profit_pending,
         "total_pending": cashback_pending + profit_pending
     }
+    
+    if cache:
+        await cache.set(cache_key, result, ttl=30)
+    
+    return result
 
 
 @router.get("/withdrawals/stats")
