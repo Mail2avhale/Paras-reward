@@ -36504,6 +36504,7 @@ api_router.include_router(admin_settings_router)
 
 # Include admin withdrawals router (refactored)
 set_admin_withdrawals_db(db)
+set_admin_withdrawals_cache(cache)
 set_admin_withdrawals_helpers({'log_admin_action': log_admin_action})
 api_router.include_router(admin_withdrawals_router)
 
