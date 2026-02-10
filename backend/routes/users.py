@@ -573,7 +573,15 @@ async def get_user_today_stats(uid: str):
 
 @router.get("/user/stats/redeemed/{uid}")
 async def get_user_redeemed_stats(uid: str):
-    """Get user's total redeemed PRC statistics"""
+    """Get user's total redeemed PRC statistics - CACHED 5 min"""
+    # Cache key for redeemed stats
+    cache_key = f"user:stats:redeemed:{uid}"
+    
+    if cache:
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
+    
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -596,7 +604,7 @@ async def get_user_redeemed_stats(uid: str):
         {"$group": {"_id": None, "total": {"$sum": "$total_prc"}}}
     ]).to_list(1)
     
-    return {
+    result = {
         "bill_payments": round(bp_total[0]["total"] if bp_total else 0, 2),
         "gift_vouchers": round(gv_total[0]["total"] if gv_total else 0, 2),
         "marketplace": round(orders_total[0]["total"] if orders_total else 0, 2),
@@ -607,6 +615,12 @@ async def get_user_redeemed_stats(uid: str):
             2
         )
     }
+    
+    # Cache for 5 minutes
+    if cache:
+        await cache.set(cache_key, result, ttl=300)
+    
+    return result
 
 
 @router.get("/user/{uid}/dashboard")
