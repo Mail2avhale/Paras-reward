@@ -511,7 +511,15 @@ async def get_deletion_status(uid: str):
 
 @router.get("/user/stats/today/{uid}")
 async def get_user_today_stats(uid: str):
-    """Get today's PRC earned and spent for a user"""
+    """Get today's PRC earned and spent for a user - CACHED 60 sec"""
+    # Cache key for today's stats
+    cache_key = f"user:stats:today:{uid}"
+    
+    if cache:
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
+    
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -549,12 +557,18 @@ async def get_user_today_stats(uid: str):
     spending_result = await db.transactions.aggregate(spending_pipeline).to_list(1)
     today_spent = spending_result[0]["total"] if spending_result else 0
     
-    return {
+    result = {
         "today_earned": round(today_earned, 4),
         "today_spent": round(today_spent, 4),
         "net_change": round(today_earned - today_spent, 4),
         "date": today_start.strftime("%Y-%m-%d")
     }
+    
+    # Cache for 60 seconds
+    if cache:
+        await cache.set(cache_key, result, ttl=60)
+    
+    return result
 
 
 @router.get("/user/stats/redeemed/{uid}")
