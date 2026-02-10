@@ -28,27 +28,46 @@ def set_cache(cache_manager):
 
 @router.get("/debug/stats-live")
 async def get_live_stats():
-    """Get live statistics for debugging"""
+    """Get live statistics for debugging - CACHED 30 sec"""
+    cache_key = "admin:debug:stats_live"
+    
+    if cache:
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
+    
     try:
         total_users = await db.users.count_documents({})
         vip_users = await db.users.count_documents({"membership_type": "vip"})
         pending_payments = await db.vip_payments.count_documents({"status": "pending"})
         pending_orders = await db.orders.count_documents({"status": "pending"})
         
-        return {
+        result = {
             "total_users": total_users,
             "vip_users": vip_users,
             "pending_payments": pending_payments,
             "pending_orders": pending_orders,
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
+        
+        if cache:
+            await cache.set(cache_key, result, ttl=30)
+        
+        return result
     except Exception as e:
         return {"error": str(e)}
 
 
 @router.get("/stats")
 async def get_admin_stats():
-    """Get comprehensive admin statistics"""
+    """Get comprehensive admin statistics - CACHED 60 sec"""
+    cache_key = "admin:stats:comprehensive"
+    
+    if cache:
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
+    
     try:
         now = datetime.now(timezone.utc)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
@@ -77,7 +96,7 @@ async def get_admin_stats():
             {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
         ]).to_list(1)
         
-        return {
+        result = {
             "users": {
                 "total": total_users,
                 "new_today": new_today,
