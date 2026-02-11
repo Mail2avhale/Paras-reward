@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://modular-backend-44.preview.emergentagent.com/setup
+   https://user-mgmt-360.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
