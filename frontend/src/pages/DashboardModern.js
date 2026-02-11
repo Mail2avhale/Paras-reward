@@ -870,8 +870,12 @@ const DashboardModern = ({ user, onLogout }) => {
                       <p className="text-amber-200/60 text-xs">{t('startupElitePlan')} • {t('unlockRedeemServices')}</p>
                     </div>
                   </div>
-                  <div className="bg-yellow-400 text-black px-3 py-1.5 rounded-lg font-bold text-sm">
-                    ₹299
+                  <div className="text-right">
+                    <div className="bg-yellow-400 text-black px-3 py-1.5 rounded-lg font-bold text-sm">
+                      <span className="line-through text-black/50 text-xs mr-1">₹500</span>
+                      ₹199
+                    </div>
+                    <p className="text-yellow-400/80 text-xs mt-0.5">60% OFF</p>
                   </div>
                 </div>
               </div>
