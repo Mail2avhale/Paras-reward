@@ -157,7 +157,12 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
 async def approve_vip_payment(payment_id: str, request: Request):
     """Approve VIP payment and activate membership"""
     try:
-        data = await request.json()
+        # Handle empty body
+        try:
+            data = await request.json()
+        except:
+            data = {}
+        
         admin_id = data.get("admin_id")
         notes = data.get("notes", "")
         correct_plan = data.get("correct_plan")
