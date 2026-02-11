@@ -32,6 +32,14 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ## What's Been Implemented (Latest: Feb 2026)
 
+### Recently Completed (Feb 11, 2026)
+- [x] **Admin Sidebar - Request Approvals Collapsible Menu**
+  - Created new "Request Approvals" collapsible parent menu in admin sidebar
+  - Sub-items: KYC, Subscription, Bill, Gift Vouchers, Luxury Life Claim
+  - Removed incorrect "Approval Hub" page (AdminApprovalHub.js deleted)
+  - Updated both desktop and mobile sidebar navigation
+  - File: `/app/frontend/src/components/layouts/AdminLayout.js`
+
 ### Recently Completed (Feb 10, 2026)
 - [x] **Stock/Stockist System Removal**
   - Removed Stock Request System (~820 lines)
