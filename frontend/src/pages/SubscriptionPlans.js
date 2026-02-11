@@ -191,7 +191,9 @@ const SubscriptionPlans = ({ user }) => {
         time: formData.time
       });
       
-      toast.success('Payment submitted! We will verify and activate your subscription.');
+      toast.success('✅ Payment Submitted Successfully!\n\nYour subscription will be activated within 24 hours after verification. You will receive a notification once approved.', {
+        duration: 6000,
+      });
       setCurrentStep(5);
       
     } catch (error) {
