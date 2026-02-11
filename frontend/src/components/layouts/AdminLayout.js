@@ -59,7 +59,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({
-    subscriptions: false,
+    requestApprovals: false,
     finance: false,
     controls: false,
     settings: false
