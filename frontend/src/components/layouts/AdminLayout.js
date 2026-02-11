@@ -146,16 +146,28 @@ const AdminLayout = ({ children, user, onLogout }) => {
   ];
 
   // Grouped menu items - Simplified structure
+  // Pending counts mapping for Request Approvals sub-items
+  const pendingCountsMap = {
+    'kyc': pendingCounts.kyc,
+    'subscriptions': pendingCounts.subscriptions,
+    'bill-payments': pendingCounts.bills,
+    'gift-vouchers': pendingCounts.gifts,
+    'luxury-claims': pendingCounts.luxury
+  };
+  
+  const totalPendingApprovals = pendingCounts.kyc + pendingCounts.subscriptions + pendingCounts.bills + pendingCounts.gifts + pendingCounts.luxury;
+
   const menuGroups = {
     requestApprovals: {
       label: 'Request Approvals',
       icon: CheckCircle,
+      totalPending: totalPendingApprovals,
       subItems: [
-        { id: 'kyc', label: 'KYC', icon: Shield, path: '/admin/kyc' },
-        { id: 'subscriptions', label: 'Subscription', icon: Crown, path: '/admin/subscriptions' },
-        { id: 'bill-payments', label: 'Bill', icon: FileText, path: '/admin/bill-payments' },
-        { id: 'gift-vouchers', label: 'Gift Vouchers', icon: Gift, path: '/admin/gift-vouchers' },
-        { id: 'luxury-claims', label: 'Luxury Life Claim', icon: Crown, path: '/admin/luxury-claims' },
+        { id: 'kyc', label: 'KYC', icon: Shield, path: '/admin/kyc', pendingCount: pendingCounts.kyc },
+        { id: 'subscriptions', label: 'Subscription', icon: Crown, path: '/admin/subscriptions', pendingCount: pendingCounts.subscriptions },
+        { id: 'bill-payments', label: 'Bill', icon: FileText, path: '/admin/bill-payments', pendingCount: pendingCounts.bills },
+        { id: 'gift-vouchers', label: 'Gift Vouchers', icon: Gift, path: '/admin/gift-vouchers', pendingCount: pendingCounts.gifts },
+        { id: 'luxury-claims', label: 'Luxury Life Claim', icon: Crown, path: '/admin/luxury-claims', pendingCount: pendingCounts.luxury },
       ]
     },
     finance: {
