@@ -330,8 +330,9 @@ const LoginNew = ({ onLogin }) => {
     
     setForgotPinLoading(true);
     try {
-      const response = await axios.post(`${API}/auth/forgot-pin/reset`, {
-        identifier: forgotPinEmail,
+      // Use Email reset API
+      const response = await axios.post(`${API}/auth/forgot-pin/reset-by-email`, {
+        email: forgotPinEmail,
         reset_token: forgotPinResetToken,
         new_pin: newPin
       });
