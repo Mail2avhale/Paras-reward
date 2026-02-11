@@ -528,7 +528,7 @@ const StatCard = ({ icon, label, value, color, subtitle }) => {
   );
 };
 
-// Payment Row Component
+// Payment Row Component - Enhanced with Screenshot & Details
 const PaymentRow = ({ payment, onApprove, onReject, processing, type = 'pending' }) => {
   const planColors = {
     startup: 'text-blue-400 bg-blue-500/10',
@@ -538,104 +538,100 @@ const PaymentRow = ({ payment, onApprove, onReject, processing, type = 'pending'
 
   return (
     <div className="p-4 hover:bg-gray-800/50 transition-colors">
-      <div className="flex items-center justify-between">
-        {/* User Info */}
-        <div className="flex items-center gap-4 flex-1">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold">
-            {payment.user_name?.charAt(0) || 'U'}
+      {/* Two Column Layout: Screenshot | Details */}
+      <div className="flex flex-col md:flex-row gap-4">
+        
+        {/* LEFT: Payment Screenshot */}
+        <div className="md:w-40 flex-shrink-0">
+          {payment.screenshot_url ? (
+            <a 
+              href={payment.screenshot_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="block relative group"
+            >
+              <img 
+                src={payment.screenshot_url} 
+                alt="Payment Screenshot" 
+                className="w-full h-40 md:h-48 object-cover rounded-lg border-2 border-gray-700 group-hover:border-amber-500 transition-all"
+              />
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center transition-all">
+                <Eye className="w-6 h-6 text-white" />
+              </div>
+            </a>
+          ) : (
+            <div className="w-full h-40 md:h-48 bg-gray-800 rounded-lg border-2 border-dashed border-gray-700 flex items-center justify-center">
+              <p className="text-gray-500 text-xs text-center">No Screenshot</p>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT: All Details */}
+        <div className="flex-1 flex flex-col">
+          {/* User Name & Plan */}
+          <div className="flex items-start justify-between mb-2">
+            <div>
+              <h3 className="text-white font-bold text-lg">{payment.user_name || 'Unknown User'}</h3>
+              <p className="text-gray-400 text-sm">{payment.user_email}</p>
+              {payment.user_phone && <p className="text-gray-500 text-xs">📱 {payment.user_phone}</p>}
+            </div>
+            <span className={`px-3 py-1 rounded-lg text-sm font-bold ${planColors[payment.plan] || 'text-gray-400 bg-gray-700'}`}>
+              {payment.plan?.toUpperCase() || 'VIP'}
+            </span>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-white font-medium truncate">
-              {payment.user_name || 'Unknown User'}
-            </p>
-            <p className="text-gray-500 text-sm truncate">
-              {payment.user_email || payment.user_id}
-            </p>
+
+          {/* Key Details Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+            <div className="bg-gray-800/50 rounded-lg p-2">
+              <p className="text-gray-500 text-xs">Amount</p>
+              <p className="text-green-400 font-bold text-lg">₹{payment.amount}</p>
+            </div>
+            <div className="bg-gray-800/50 rounded-lg p-2">
+              <p className="text-gray-500 text-xs">Duration</p>
+              <p className="text-white font-medium capitalize">{payment.duration || 'Monthly'}</p>
+            </div>
+            <div className="bg-gray-800/50 rounded-lg p-2">
+              <p className="text-gray-500 text-xs">UTR Number</p>
+              <p className="text-white font-mono text-sm truncate">{payment.utr_number || 'N/A'}</p>
+            </div>
+            <div className="bg-gray-800/50 rounded-lg p-2">
+              <p className="text-gray-500 text-xs">Submitted</p>
+              <p className="text-white text-sm">
+                {new Date(payment.submitted_at).toLocaleDateString('en-IN', {
+                  day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                })}
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Plan Badge */}
-        <div className="px-3">
-          <span className={`px-2 py-1 rounded-lg text-xs font-medium ${planColors[payment.plan] || 'text-gray-400 bg-gray-700'}`}>
-            {payment.plan?.toUpperCase() || 'N/A'}
-          </span>
-        </div>
-
-        {/* Amount */}
-        <div className="px-4 text-right">
-          <p className="text-white font-bold">₹{payment.amount}</p>
-          <p className="text-gray-500 text-xs">{payment.duration || 'monthly'}</p>
-        </div>
-
-        {/* UTR */}
-        <div className="px-4 w-36">
-          <p className="text-gray-300 text-sm font-mono truncate" title={payment.utr_number}>
-            {payment.utr_number || 'No UTR'}
-          </p>
-          <p className="text-gray-500 text-xs">
-            {new Date(payment.submitted_at).toLocaleDateString()}
-          </p>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2">
-          <Button
-            onClick={onApprove}
-            disabled={processing}
-            size="sm"
-            className="bg-green-600 hover:bg-green-700 text-white h-9 px-4"
-          >
-            {processing ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <>
-                <CheckCircle className="w-4 h-4 mr-1" />
-                Approve
-              </>
-            )}
-          </Button>
-          <Button
-            onClick={onReject}
-            disabled={processing}
-            size="sm"
-            variant="outline"
-            className="border-red-500/50 text-red-400 hover:bg-red-500/10 h-9 px-4"
-          >
-            <XCircle className="w-4 h-4 mr-1" />
-            Reject
-          </Button>
+          {/* Action Buttons */}
+          <div className="flex gap-2 mt-auto">
+            <Button
+              onClick={onApprove}
+              disabled={processing}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white h-10"
+            >
+              {processing ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Approve
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={onReject}
+              disabled={processing}
+              variant="outline"
+              className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10 h-10"
+            >
+              <XCircle className="w-4 h-4 mr-2" />
+              Reject
+            </Button>
+          </div>
         </div>
       </div>
-
-      {/* Screenshot Preview (if available) */}
-      {payment.screenshot_url && (
-        <div className="mt-3 ml-14 flex items-center gap-3">
-          <a 
-            href={payment.screenshot_url} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="relative group"
-          >
-            <img 
-              src={payment.screenshot_url} 
-              alt="Payment Screenshot" 
-              className="w-16 h-16 object-cover rounded-lg border border-gray-700 group-hover:border-purple-500 transition-all"
-            />
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center transition-all">
-              <Eye className="w-5 h-5 text-white" />
-            </div>
-          </a>
-          <a 
-            href={payment.screenshot_url} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300"
-          >
-            View Full Size
-            <ChevronRight className="w-3 h-3" />
-          </a>
-        </div>
-      )}
     </div>
   );
 };
