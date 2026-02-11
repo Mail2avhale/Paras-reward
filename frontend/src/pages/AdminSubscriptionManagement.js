@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   Crown, Users, TrendingUp, Rocket, Clock, CheckCircle, XCircle,
-  Search, RefreshCw, Eye, ChevronRight, AlertCircle
+  Search, RefreshCw, Eye, ChevronRight, AlertCircle, Edit, Trash2, X,
+  Calendar, CreditCard
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
