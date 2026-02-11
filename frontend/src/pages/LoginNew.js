@@ -299,7 +299,7 @@ const LoginNew = ({ onLogin }) => {
     setForgotPinLoading(true);
     try {
       const response = await axios.post(`${API}/auth/forgot-pin/verify-otp`, {
-        identifier: forgotPinEmail,
+        mobile: forgotPinEmail,
         otp: forgotPinOtp
       });
       
