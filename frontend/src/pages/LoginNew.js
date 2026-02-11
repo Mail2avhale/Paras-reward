@@ -266,6 +266,104 @@ const LoginNew = ({ onLogin }) => {
     }
   };
 
+  // Forgot PIN functions
+  const handleForgotPinSendOtp = async () => {
+    if (!forgotPinEmail) {
+      toast.error('कृपया Email किंवा Mobile टाका');
+      return;
+    }
+    
+    setForgotPinLoading(true);
+    try {
+      const response = await axios.post(`${API}/auth/forgot-pin/send-otp`, {
+        identifier: forgotPinEmail
+      });
+      
+      if (response.data.success) {
+        toast.success('OTP पाठवला! तुमचा Email/SMS तपासा');
+        setForgotPinStep(2);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'OTP पाठवता आला नाही');
+    } finally {
+      setForgotPinLoading(false);
+    }
+  };
+
+  const handleForgotPinVerifyOtp = async () => {
+    if (!forgotPinOtp || forgotPinOtp.length < 4) {
+      toast.error('कृपया OTP टाका');
+      return;
+    }
+    
+    setForgotPinLoading(true);
+    try {
+      const response = await axios.post(`${API}/auth/forgot-pin/verify-otp`, {
+        identifier: forgotPinEmail,
+        otp: forgotPinOtp
+      });
+      
+      if (response.data.reset_token) {
+        setForgotPinResetToken(response.data.reset_token);
+        toast.success('OTP Verified! नवीन PIN सेट करा');
+        setForgotPinStep(3);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'चुकीचा OTP');
+    } finally {
+      setForgotPinLoading(false);
+    }
+  };
+
+  const handleForgotPinReset = async () => {
+    if (newPin.length !== 6) {
+      toast.error('PIN 6 अंकी असावा');
+      return;
+    }
+    if (newPin !== confirmNewPin) {
+      toast.error('PIN जुळत नाही');
+      return;
+    }
+    if (new Set(newPin).size === 1) {
+      toast.error('सर्व अंक सारखे नसावेत');
+      return;
+    }
+    
+    setForgotPinLoading(true);
+    try {
+      const response = await axios.post(`${API}/auth/forgot-pin/reset`, {
+        identifier: forgotPinEmail,
+        reset_token: forgotPinResetToken,
+        new_pin: newPin
+      });
+      
+      if (response.data.success) {
+        toast.success('PIN बदलला! आता Login करा');
+        setShowForgotPin(false);
+        setForgotPinStep(1);
+        setForgotPinEmail('');
+        setForgotPinOtp('');
+        setNewPin('');
+        setConfirmNewPin('');
+        setForgotPinResetToken('');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'PIN बदलता आला नाही');
+    } finally {
+      setForgotPinLoading(false);
+    }
+  };
+
+  const resetForgotPin = () => {
+    setShowForgotPin(false);
+    setForgotPinStep(1);
+    setForgotPinEmail('');
+    setForgotPinOtp('');
+    setNewPin('');
+    setConfirmNewPin('');
+    setForgotPinResetToken('');
+  };
+
   useEffect(() => {
     if (isBiometricSupported() && isBiometricEnabled()) {
       setShowBiometricOption(true);
