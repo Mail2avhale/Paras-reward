@@ -22253,17 +22253,19 @@ async def process_bill_payment_request(request: Request):
         )
         
         # Notify user about completion with processing time
-        notify_msg = f"Your ₹{bill_request.get('amount_inr')} {bill_request.get('request_type', '').replace('_', ' ')} is done! TXN: {txn_number}"
+        service_name = bill_request.get('request_type', 'bill payment').replace('_', ' ').title()
+        notify_msg = f"Your ₹{bill_request.get('amount_inr')} {service_name} has been completed successfully!\n\n🧾 Transaction ID: {txn_number}"
         if processing_time_str:
-            notify_msg += f" (Completed in {processing_time_str})"
+            notify_msg += f"\n⏱️ Processed in: {processing_time_str}"
         
         await create_notification(
             user_id=user_id,
-            title="✅ Bill Payment Complete!",
+            title="✅ Bill Payment Completed!",
             message=notify_msg,
-            notification_type="bill_payment",
+            notification_type="bill_payment_approved",
             related_id=request_id,
-            icon="✅"
+            icon="✅",
+            action_url="/bill-payments"
         )
         
         return {"message": "Request approved and completed!", "status": "completed", "txn_number": txn_number, "processing_time": processing_time_str}
