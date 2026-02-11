@@ -14,7 +14,6 @@ import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
 import { ProfileCompletionRing, ProfileFloatingReminder } from '@/components/ProfileCompletionComponents';
 import AIChatbotEnhanced from '@/components/AIChatbotEnhanced';
 import PRCRain from '@/components/PRCRain';
-import NotificationBell from '@/components/NotificationBell';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSkeleton } from '@/components/skeletons';
 import { InfoTooltip } from '@/components/InfoTooltip';
