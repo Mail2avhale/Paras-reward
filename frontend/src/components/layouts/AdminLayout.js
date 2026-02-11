@@ -604,21 +604,13 @@ const AdminLayout = ({ children, user, onLogout }) => {
                 <p className="text-sm font-medium">{user?.name || 'Admin'}</p>
                 <p className="text-xs text-gray-400">{user?.email}</p>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { navigate('/dashboard'); setMobileMenuOpen(false); }}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm"
-                >
-                  <Zap className="h-4 w-4" />
-                  <span>User View</span>
-                </button>
-                <button
-                  onClick={onLogout}
-                  className="flex items-center justify-center p-2 bg-red-600 hover:bg-red-700 rounded-lg"
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
-              </div>
+              <button
+                onClick={onLogout}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
+              </button>
             </div>
           </aside>
         </div>
