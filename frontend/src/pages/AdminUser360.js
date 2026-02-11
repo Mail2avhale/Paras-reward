@@ -126,6 +126,29 @@ const AdminUser360 = ({ user: adminUser }) => {
   const [pinModal, setPinModal] = useState({ show: false, pin: '' });
   const [editModal, setEditModal] = useState({ show: false });
   const [successModal, setSuccessModal] = useState({ show: false, title: '', message: '', type: 'success' });
+  
+  // Adjust Balance Modal State
+  const [balanceModal, setBalanceModal] = useState({ show: false });
+  const [balanceForm, setBalanceForm] = useState({
+    balanceType: 'prc_balance',
+    operation: 'add',
+    amount: '',
+    notes: ''
+  });
+  
+  // Subscription Management Modal State
+  const [subscriptionModal, setSubscriptionModal] = useState({ show: false });
+  const [subscriptionTab, setSubscriptionTab] = useState('update'); // 'update' or 'history'
+  const [subscriptionForm, setSubscriptionForm] = useState({
+    plan: 'explorer',
+    duration: 30,
+    customDuration: 30,
+    expiryMode: 'auto', // 'auto' or 'manual'
+    manualExpiry: '',
+    isFree: true,
+    adminNotes: ''
+  });
+
   const [editForm, setEditForm] = useState({
     name: '', email: '', mobile: '', alternate_mobile: '',
     address: '', city: '', state: '', pincode: '',
