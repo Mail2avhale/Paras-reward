@@ -66,6 +66,43 @@ const AdminLayout = ({ children, user, onLogout }) => {
   });
   const [userPermissions, setUserPermissions] = useState([]);
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
+  const [pendingCounts, setPendingCounts] = useState({
+    kyc: 0,
+    subscriptions: 0,
+    bills: 0,
+    gifts: 0,
+    luxury: 0
+  });
+
+  // Fetch pending approval counts
+  useEffect(() => {
+    const fetchPendingCounts = async () => {
+      try {
+        const [kycRes, subRes, billRes, giftRes, luxuryRes] = await Promise.all([
+          axios.get(`${API}/api/admin/kyc/pending?limit=1`).catch(() => ({ data: { total: 0 } })),
+          axios.get(`${API}/api/admin/vip-payments?status=pending&limit=1`).catch(() => ({ data: { total: 0 } })),
+          axios.get(`${API}/api/admin/bill-payments?status=pending&limit=1`).catch(() => ({ data: { total: 0 } })),
+          axios.get(`${API}/api/admin/gift-vouchers?status=pending&limit=1`).catch(() => ({ data: { total: 0 } })),
+          axios.get(`${API}/api/admin/luxury-claims?status=pending&limit=1`).catch(() => ({ data: { total: 0 } }))
+        ]);
+        
+        setPendingCounts({
+          kyc: kycRes.data?.total || kycRes.data?.users?.length || 0,
+          subscriptions: subRes.data?.total || subRes.data?.payments?.length || 0,
+          bills: billRes.data?.total || (Array.isArray(billRes.data) ? billRes.data.length : 0),
+          gifts: giftRes.data?.total || (Array.isArray(giftRes.data) ? giftRes.data.length : 0),
+          luxury: luxuryRes.data?.total || (Array.isArray(luxuryRes.data) ? luxuryRes.data.length : 0)
+        });
+      } catch (error) {
+        console.error('Error fetching pending counts:', error);
+      }
+    };
+    
+    fetchPendingCounts();
+    // Refresh counts every 2 minutes
+    const interval = setInterval(fetchPendingCounts, 120000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Fetch manager permissions on mount
   useEffect(() => {
