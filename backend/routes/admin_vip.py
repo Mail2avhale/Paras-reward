@@ -79,7 +79,7 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
                 "amount": 1, "utr_number": 1, "screenshot_url": 1, "date": 1, "time": 1,
                 "status": 1, "submitted_at": 1, "approved_at": 1, "rejected_at": 1, "admin_notes": 1
             }
-        ).sort("submitted_at", -1).skip(skip).limit(limit).to_list(limit)
+        ).sort("submitted_at", 1).skip(skip).limit(limit).to_list(limit)
         
         if not payments:
             result = {"payments": [], "total": total, "page": page, "pages": 0}
