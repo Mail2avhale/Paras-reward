@@ -4272,8 +4272,9 @@ async def login(
         )
         raise HTTPException(status_code=404, detail="User not registered. Please register to continue.")
     
-    # Verify password - check both password_hash (new format) and password (legacy format)
-    stored_password = user.get("password_hash") or user.get("password")
+    # Verify password - check password_hash, pin_hash (new format), and password (legacy format)
+    # Priority: pin_hash > password_hash > password (legacy)
+    stored_password = user.get("pin_hash") or user.get("password_hash") or user.get("password")
     if stored_password:
         if not verify_password(password, stored_password):
             record_login_attempt(identifier, False)
@@ -4312,10 +4313,11 @@ async def login(
                 )
             raise HTTPException(status_code=401, detail=f"Invalid PIN. {attempts_left - 1} attempts remaining.")
     else:
-        # No password stored - reject login for security
+        # No password/PIN stored - reject login for security
         record_login_attempt(identifier, False)
         await record_login_attempt_db(db, identifier, False, real_ip)
-        raise HTTPException(status_code=401, detail="Account has no password set. Please contact support.")
+        logging.warning(f"[LOGIN DEBUG] No password/PIN found for user: {identifier}")
+        raise HTTPException(status_code=401, detail="Account has no PIN set. Please contact support.")
     
     if user.get("is_banned"):
         raise HTTPException(status_code=403, detail=f"Account suspended: {user.get('suspension_reason', 'Contact support')}")
