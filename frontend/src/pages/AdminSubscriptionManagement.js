@@ -436,6 +436,38 @@ const AdminSubscriptionManagement = () => {
           processing={processing === editModal.payment.payment_id}
         />
       )}
+      
+      {/* Full Image Preview Modal */}
+      {fullImageModal.show && fullImageModal.url && (
+        <div 
+          className="fixed inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center z-[100] p-4"
+          onClick={() => setFullImageModal({ show: false, url: null, userName: '', amount: '', plan: '' })}
+        >
+          <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center">
+            {/* Close Button */}
+            <button
+              onClick={() => setFullImageModal({ show: false, url: null, userName: '', amount: '', plan: '' })}
+              className="absolute -top-12 right-0 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-all"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            
+            {/* Image */}
+            <img 
+              src={fullImageModal.url} 
+              alt="Payment Screenshot" 
+              className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+            
+            {/* User Info Footer */}
+            <div className="mt-4 bg-gray-900/80 rounded-lg px-6 py-3 text-center">
+              <p className="text-white font-bold">{fullImageModal.userName || 'Unknown User'}</p>
+              <p className="text-green-400 font-medium">₹{fullImageModal.amount} • {fullImageModal.plan?.toUpperCase()}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
