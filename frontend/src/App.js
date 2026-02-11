@@ -347,7 +347,15 @@ function AppContent({ user, handleLogin, handleLogout }) {
           </>
         )}
       </BrowserRouter>
-      <Toaster position="top-center" richColors />
+      <Toaster 
+        position="top-center" 
+        richColors 
+        toastOptions={{
+          style: {
+            marginTop: '40vh',
+          },
+        }}
+      />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
     </>
   );
