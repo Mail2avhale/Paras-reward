@@ -57,11 +57,13 @@ const AdminSubscriptionManagement = () => {
       // Handle pending payments
       if (pendingRes.status === 'fulfilled') {
         setPendingPayments(pendingRes.value.data?.payments || []);
+        setPendingTotal(pendingRes.value.data?.total || 0);
       }
       
       // Handle approved payments
       if (approvedRes.status === 'fulfilled') {
         setApprovedPayments(approvedRes.value.data?.payments || []);
+        setApprovedTotal(approvedRes.value.data?.total || 0);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
