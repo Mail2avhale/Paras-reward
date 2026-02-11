@@ -24,11 +24,18 @@ const AdminSubscriptionManagement = () => {
   const [editModal, setEditModal] = useState({ show: false, payment: null });
   const [viewModal, setViewModal] = useState({ show: false, payment: null });
   const [fullImageModal, setFullImageModal] = useState({ show: false, url: null, userName: '', amount: '' });
+  
+  // Pagination states
+  const [pendingPage, setPendingPage] = useState(1);
+  const [approvedPage, setApprovedPage] = useState(1);
+  const [pendingTotal, setPendingTotal] = useState(0);
+  const [approvedTotal, setApprovedTotal] = useState(0);
+  const ITEMS_PER_PAGE = 10;
 
-  // Fetch data on mount
+  // Fetch data on mount and page change
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [pendingPage, approvedPage]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -36,8 +43,8 @@ const AdminSubscriptionManagement = () => {
       // Fetch data with individual error handling
       const [statsRes, pendingRes, approvedRes] = await Promise.allSettled([
         axios.get(`${API}/api/admin/subscription-stats`),
-        axios.get(`${API}/api/admin/vip-payments?status=pending&limit=20`),
-        axios.get(`${API}/api/admin/vip-payments?status=approved&limit=50`)
+        axios.get(`${API}/api/admin/vip-payments?status=pending&page=${pendingPage}&limit=${ITEMS_PER_PAGE}`),
+        axios.get(`${API}/api/admin/vip-payments?status=approved&page=${approvedPage}&limit=${ITEMS_PER_PAGE}`)
       ]);
       
       // Handle stats - may fail on some deployments
