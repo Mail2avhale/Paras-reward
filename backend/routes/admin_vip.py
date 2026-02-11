@@ -112,6 +112,11 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
         # Enrich payments
         for payment in payments:
             user_id = payment.get("user_id")
+            
+            # Add plan and duration fields for frontend compatibility
+            payment["plan"] = payment.get("subscription_plan") or payment.get("plan", "")
+            payment["duration"] = payment.get("plan_type") or payment.get("duration", "monthly")
+            
             if user_id and user_id in users_data:
                 user = users_data[user_id]
                 payment["user_name"] = user.get("name", "Unknown")
