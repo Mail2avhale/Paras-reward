@@ -110,14 +110,15 @@ const AdminLayout = ({ children, user, onLogout }) => {
 
   // Grouped menu items - Simplified structure
   const menuGroups = {
-    subscriptions: {
-      label: 'Subscriptions & Payments',
-      icon: Crown,
+    requestApprovals: {
+      label: 'Request Approvals',
+      icon: CheckCircle,
       subItems: [
-        { id: 'subscriptions', label: 'Subscription Management', icon: Crown, path: '/admin/subscriptions' },
-        { id: 'bill-payments', label: 'Bill Payments', icon: FileText, path: '/admin/bill-payments' },
+        { id: 'kyc', label: 'KYC', icon: Shield, path: '/admin/kyc' },
+        { id: 'subscriptions', label: 'Subscription', icon: Crown, path: '/admin/subscriptions' },
+        { id: 'bill-payments', label: 'Bill', icon: FileText, path: '/admin/bill-payments' },
         { id: 'gift-vouchers', label: 'Gift Vouchers', icon: Gift, path: '/admin/gift-vouchers' },
-        { id: 'luxury-claims', label: 'Luxury Life Claims', icon: Crown, path: '/admin/luxury-claims' },
+        { id: 'luxury-claims', label: 'Luxury Life Claim', icon: Crown, path: '/admin/luxury-claims' },
       ]
     },
     finance: {
