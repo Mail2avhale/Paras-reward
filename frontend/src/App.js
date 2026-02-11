@@ -310,8 +310,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/contact-settings" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminContactSettings user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/vip-verification" element={<Navigate to="/admin/subscriptions" replace />} /> {/* Legacy route redirect */}
             <Route path="/admin/subscriptions" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminSubscriptionManagement user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
-            <Route path="/bill-payments" element={user ? <BillPayments user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-            <Route path="/gift-vouchers" element={user ? <GiftVoucherRedemption user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} />
+            <Route path="/bill-payments" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <BillPayments user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
+            <Route path="/gift-vouchers" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <GiftVoucherRedemption user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             {/* Manager routes now redirect to Admin - Manager uses Admin panel with permission-based access */}
             <Route path="/manager" element={<Navigate to="/admin" replace />} />
             <Route path="/manager/*" element={<Navigate to="/admin" replace />} />
