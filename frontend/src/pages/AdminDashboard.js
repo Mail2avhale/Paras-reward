@@ -79,13 +79,46 @@ const AdminDashboard = ({ user }) => {
   const totalUsers = stats?.users?.total || 0;
   const conversionRate = totalUsers > 0 ? ((totalPaidUsers / totalUsers) * 100).toFixed(1) : 0;
 
+  // Skeleton Loading State
   if (loading && !stats) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw className="w-10 h-10 text-purple-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Loading Dashboard...</p>
+      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-4 md:p-6 pb-24 space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="h-8 bg-gray-800 rounded w-48 mb-2 animate-pulse"></div>
+            <div className="h-4 bg-gray-800 rounded w-32 animate-pulse"></div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gray-800 rounded-full animate-pulse"></div>
+            <div className="w-24 h-9 bg-gray-800 rounded animate-pulse"></div>
+          </div>
         </div>
+        
+        {/* Stats Cards Skeleton */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+        
+        {/* Subscription Overview Skeleton */}
+        <div className="grid grid-cols-4 gap-3">
+          <SkeletonCard className="h-24" />
+          <SkeletonCard className="h-24" />
+          <SkeletonCard className="h-24" />
+          <SkeletonCard className="h-24" />
+        </div>
+        
+        {/* KYC & PRC Cards Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <SkeletonCard className="h-40" />
+          <SkeletonCard className="h-40" />
+        </div>
+        
+        {/* Quick Actions Skeleton */}
+        <SkeletonCard className="h-32" />
       </div>
     );
   }
@@ -103,11 +136,12 @@ const AdminDashboard = ({ user }) => {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={fetchDashboardData}
+            onClick={() => fetchDashboardData(true)}
+            disabled={refreshing}
             className="text-gray-300 border-gray-700 hover:bg-gray-800"
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
           <div className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 text-xs rounded-full flex items-center gap-2">
             <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
