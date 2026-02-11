@@ -71,7 +71,7 @@ RATE_LIMIT_WINDOW_SECONDS = 3600  # 1 hour window for tracking attempts
 # Progressive lockout durations (in seconds)
 LOCKOUT_DURATION_FIRST = 300      # 5 minutes after 3 failed attempts
 LOCKOUT_DURATION_SECOND = 900     # 15 minutes after 4 failed attempts  
-LOCKOUT_DURATION_FINAL = 86400    # 24 hours after 5 failed attempts
+LOCKOUT_DURATION_FINAL = 7200     # 2 hours after 5 failed attempts (changed from 24 hours)
 
 # Session timeout (30 minutes)
 SESSION_TIMEOUT_MINUTES = 30
