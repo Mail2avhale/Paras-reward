@@ -106,7 +106,9 @@ const KYCVerification = ({ user }) => {
         pan_number: kycData.pan_number
       });
       
-      toast.success('KYC submitted! Verification in 24-48 hours.');
+      toast.success('✅ KYC Documents Submitted Successfully!\n\nYour verification will be completed within 1-3 business days. You will receive a notification once approved.', {
+        duration: 6000,
+      });
       navigate('/profile');
       
     } catch (error) {
