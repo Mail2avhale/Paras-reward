@@ -160,8 +160,8 @@ const PinInput = ({ value, onChange, error, label, testId = 'pin', autoFocus = f
 
       {/* Error Message - Centered and Prominent */}
       {error && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
-          <div className="flex items-center justify-center gap-2 text-red-600">
+        <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+          <div className="flex items-center justify-center gap-2 text-red-400">
             <AlertCircle className="h-5 w-5 flex-shrink-0" />
             <span className="text-sm font-medium text-center">{error}</span>
           </div>
