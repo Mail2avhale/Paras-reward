@@ -447,31 +447,39 @@ async def get_pending_kyc(page: int = 1, limit: int = 50):
 @router.post("/kyc/{uid}/approve")
 async def approve_kyc(uid: str, request: Request):
     """Approve user KYC"""
-    data = await request.json()
-    admin_id = data.get("admin_id")
-    
-    user = await db.users.find_one({"uid": uid})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    await db.users.update_one(
-        {"uid": uid},
-        {"$set": {
-            "kyc_status": "approved",
-            "kyc_approved_at": datetime.now(timezone.utc).isoformat(),
-            "kyc_approved_by": admin_id
-        }}
-    )
-    
-    if log_admin_action:
-        await log_admin_action(
-            admin_uid=admin_id,
-            action="kyc_approved",
-            entity_type="user",
-            entity_id=uid
+    try:
+        try:
+            data = await request.json()
+        except:
+            data = {}
+        admin_id = data.get("admin_id")
+        
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {
+                "kyc_status": "approved",
+                "kyc_approved_at": datetime.now(timezone.utc).isoformat(),
+                "kyc_approved_by": admin_id
+            }}
         )
-    
-    return {"success": True, "message": "KYC approved"}
+        
+        if log_admin_action:
+            await log_admin_action(
+                admin_uid=admin_id,
+                action="kyc_approved",
+                entity_type="user",
+                entity_id=uid
+            )
+        
+        return {"success": True, "message": "KYC approved"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/kyc/{uid}/reject")
