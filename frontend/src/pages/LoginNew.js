@@ -610,8 +610,8 @@ const LoginNew = ({ onLogin }) => {
             {forgotPinStep === 1 && (
               <div className="space-y-4">
                 <Input
-                  type="text"
-                  placeholder="Email or Mobile"
+                  type="email"
+                  placeholder="Enter your Email"
                   value={forgotPinEmail}
                   onChange={(e) => setForgotPinEmail(e.target.value)}
                   className="w-full"
@@ -623,6 +623,9 @@ const LoginNew = ({ onLogin }) => {
                 >
                   {forgotPinLoading ? 'Sending...' : 'Send OTP'}
                 </Button>
+                <p className="text-xs text-gray-400 text-center">
+                  Or contact Admin to reset your PIN
+                </p>
               </div>
             )}
 
