@@ -53,6 +53,15 @@ Build a PRC (point-based reward currency) system web application where users can
   - Removed "User View" button from Admin sidebar
   - File: `/app/frontend/src/App.js`, `/app/frontend/src/components/layouts/AdminLayout.js`
 
+- [x] **Merged Advanced User Management into User 360°**
+  - Added "Browse All" mode to User 360° page with user list
+  - Filters: Search, Role, Plan, KYC Status, Show Deleted
+  - Pagination support for large user lists
+  - "View" button to switch to user 360° details
+  - Removed "Users" tab from sidebar menu
+  - Deleted AdvancedUserManagement.js file
+  - File: `/app/frontend/src/pages/AdminUser360.js`
+
 ### Recently Completed (Feb 10, 2026)
 - [x] **Stock/Stockist System Removal**
   - Removed Stock Request System (~820 lines)
