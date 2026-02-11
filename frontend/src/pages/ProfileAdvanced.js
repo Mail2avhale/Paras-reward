@@ -686,11 +686,11 @@ const ProfileAdvanced = ({ user, onLogout }) => {
         {showPinSection && (
           <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 space-y-4">
             <p className="text-gray-400 text-sm">
-              {language === 'mr' ? '6 अंकी PIN वापरून लॉगिन करा' : 'Use 6-digit PIN to login'}
+              Use 6-digit PIN to login
             </p>
             <div>
               <label className="text-gray-400 text-sm mb-1 block">
-                {language === 'mr' ? 'सध्याचा PIN' : 'Current PIN'}
+                Current PIN
               </label>
               <Input 
                 type="password"
