@@ -380,6 +380,7 @@ async def reject_vip_payment(payment_id: str, request: Request):
             raise HTTPException(status_code=400, detail=f"Payment already {payment.get('status')}")
         
         now = datetime.now(timezone.utc)
+        user_id = payment.get("user_id")
         
         await db.vip_payments.update_one(
             {"payment_id": payment_id},
@@ -394,12 +395,23 @@ async def reject_vip_payment(payment_id: str, request: Request):
         await db.activity_logs.insert_one({
             "log_id": str(uuid.uuid4()),
             "action": "vip_payment_rejected",
-            "user_id": payment.get("user_id"),
+            "user_id": user_id,
             "admin_id": admin_id,
             "payment_id": payment_id,
             "reason": reason,
             "timestamp": now.isoformat()
         })
+        
+        # Send notification to user about rejection
+        if user_id:
+            await send_notification(
+                user_id=user_id,
+                title="❌ Payment Rejected",
+                message=f"Your subscription payment has been rejected. Reason: {reason}. Please submit a new payment with correct details.",
+                notif_type="subscription_rejected",
+                icon="❌",
+                action_url="/subscription"
+            )
         
         if cache:
             try:
