@@ -22182,11 +22182,12 @@ async def process_bill_payment_request(request: Request):
         # Notify user about rejection WITH BALANCE DETAILS
         await create_notification(
             user_id=user_id,
-            title="❌ Request Rejected - PRC Refunded",
-            message=f"Your ₹{bill_request.get('amount_inr')} {bill_request.get('request_type', '').replace('_', ' ')} request was rejected.\n\n💰 PRC Refund Details:\n• Refunded: {total_prc:.2f} PRC\n• Balance Before: {balance_before:.2f} PRC\n• Balance After: {balance_after:.2f} PRC\n\n❓ Reason: {reject_reason}",
-            notification_type="bill_payment_refund",
+            title="❌ Bill Payment Rejected - PRC Refunded",
+            message=f"Your ₹{bill_request.get('amount_inr')} {bill_request.get('request_type', '').replace('_', ' ')} request was rejected.\n\n💰 PRC Refund: {total_prc:.2f} PRC returned to your wallet.\n\n❌ Reason: {reject_reason}",
+            notification_type="bill_payment_rejected",
             related_id=request_id,
-            icon="💰"
+            icon="❌",
+            action_url="/bill-payments"
         )
         
         return {
