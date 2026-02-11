@@ -266,18 +266,19 @@ const LoginNew = ({ onLogin }) => {
   // Forgot PIN functions
   const handleForgotPinSendOtp = async () => {
     if (!forgotPinEmail) {
-      toast.error('Please enter Email or Mobile');
+      toast.error('Please enter Email');
       return;
     }
     
     setForgotPinLoading(true);
     try {
-      const response = await axios.post(`${API}/auth/forgot-pin/check-mobile`, {
-        mobile: forgotPinEmail
+      // Use Email OTP API
+      const response = await axios.post(`${API}/auth/forgot-pin/send-email-otp`, {
+        email: forgotPinEmail
       });
       
       if (response.data.success) {
-        toast.success('OTP sent! Check your Email/SMS');
+        toast.success('OTP sent to your email!');
         setForgotPinStep(2);
       }
     } catch (error) {
@@ -295,8 +296,9 @@ const LoginNew = ({ onLogin }) => {
     
     setForgotPinLoading(true);
     try {
-      const response = await axios.post(`${API}/auth/forgot-pin/verify-otp`, {
-        mobile: forgotPinEmail,
+      // Use Email OTP verification API
+      const response = await axios.post(`${API}/auth/forgot-pin/verify-email-otp`, {
+        email: forgotPinEmail,
         otp: forgotPinOtp
       });
       
