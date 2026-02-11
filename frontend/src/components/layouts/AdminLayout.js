@@ -539,11 +539,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
             {!sidebarCollapsed && <span>Logout</span>}
           </button>
         </div>
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
       </aside>
 
       {/* Mobile Sidebar Overlay */}
