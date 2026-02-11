@@ -40,6 +40,13 @@ Build a PRC (point-based reward currency) system web application where users can
   - Updated both desktop and mobile sidebar navigation
   - File: `/app/frontend/src/components/layouts/AdminLayout.js`
 
+- [x] **Pending Count Badges in Request Approvals Menu**
+  - Added real-time pending count badges to Request Approvals menu
+  - Total pending count shown on parent menu (red badge)
+  - Individual pending counts on each sub-item (amber badge)
+  - Auto-refresh every 2 minutes
+  - APIs used: `/api/admin/kyc/pending`, `/api/admin/vip-payments`, `/api/admin/bill-payments`, `/api/admin/gift-vouchers`, `/api/admin/luxury-claims`
+
 ### Recently Completed (Feb 10, 2026)
 - [x] **Stock/Stockist System Removal**
   - Removed Stock Request System (~820 lines)
