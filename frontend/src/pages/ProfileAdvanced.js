@@ -704,7 +704,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
             </div>
             <div>
               <label className="text-gray-400 text-sm mb-1 block">
-                {language === 'mr' ? 'नवीन PIN' : 'New PIN'}
+                New PIN
               </label>
               <Input 
                 type="password"
@@ -718,7 +718,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
             </div>
             <div>
               <label className="text-gray-400 text-sm mb-1 block">
-                {language === 'mr' ? 'नवीन PIN पुन्हा टाका' : 'Confirm New PIN'}
+                Confirm New PIN
               </label>
               <Input 
                 type="password"
@@ -735,7 +735,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
               disabled={changingPin}
               className="w-full bg-green-600 hover:bg-green-700"
             >
-              {changingPin ? (language === 'mr' ? 'बदलत आहे...' : 'Changing...') : t.changePin}
+              {changingPin ? 'Changing...' : 'Change PIN'}
             </Button>
           </div>
         )}
