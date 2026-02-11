@@ -513,7 +513,7 @@ const HeroStatCard = ({ icon: Icon, label, value, subValue, color, onClick }) =>
 };
 
 // Subscription Card Component
-const SubscriptionCard = ({ plan, count, total, color, icon, onClick }) => {
+const SubscriptionCard = ({ plan, count, total, color, icon, onClick, price }) => {
   const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
   
   const colorClasses = {
@@ -533,8 +533,9 @@ const SubscriptionCard = ({ plan, count, total, color, icon, onClick }) => {
         <span className={`text-xs ${colorClasses[color].text}`}>{percentage}%</span>
       </div>
       <p className="text-xl font-bold text-white">{count.toLocaleString()}</p>
-      <p className="text-xs text-gray-500 mb-2">{plan}</p>
-      <div className={`h-1.5 ${colorClasses[color].bg} rounded-full overflow-hidden`}>
+      <p className="text-xs text-gray-500">{plan}</p>
+      {price && <p className={`text-xs ${colorClasses[color].text} mt-1`}>{price}</p>}
+      <div className={`h-1.5 ${colorClasses[color].bg} rounded-full overflow-hidden mt-2`}>
         <div 
           className={`h-full ${colorClasses[color].bar} rounded-full transition-all duration-500`}
           style={{ width: `${percentage}%` }}
