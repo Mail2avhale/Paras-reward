@@ -812,6 +812,8 @@ const ApprovedRow = ({ payment, onView, onEdit, onDelete, processing }) => {
     elite: 'text-amber-400 bg-amber-500/10'
   };
 
+  // Get plan from subscription_plan or plan field
+  const planName = payment.subscription_plan || payment.plan || payment.current_plan;
   const isExpired = payment.expires_at && new Date(payment.expires_at) < new Date();
 
   return (
@@ -834,15 +836,15 @@ const ApprovedRow = ({ payment, onView, onEdit, onDelete, processing }) => {
 
         {/* Plan Badge */}
         <div className="px-3">
-          <span className={`px-2 py-1 rounded-lg text-xs font-medium ${planColors[payment.plan] || 'text-gray-400 bg-gray-700'}`}>
-            {payment.plan?.toUpperCase() || 'N/A'}
+          <span className={`px-2 py-1 rounded-lg text-xs font-medium ${planColors[planName] || 'text-gray-400 bg-gray-700'}`}>
+            {planName?.toUpperCase() || 'N/A'}
           </span>
         </div>
 
         {/* Amount */}
         <div className="px-4 text-right">
-          <p className="text-white font-bold">₹{payment.amount}</p>
-          <p className="text-gray-500 text-xs">{payment.duration || 'monthly'}</p>
+          <p className="text-white font-bold">₹{payment.amount || 0}</p>
+          <p className="text-gray-500 text-xs">{payment.plan_type || payment.duration || 'monthly'}</p>
         </div>
 
         {/* Status */}
