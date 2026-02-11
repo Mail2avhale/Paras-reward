@@ -1,148 +1,157 @@
-<analysis>**original_problem_statement:** The user provided a series of feature requests and bug fixes for an admin dashboard and user management system. The key requirements included:
-1.  **Admin Sidebar:** Create a new collapsible menu Request Approvals with sub-items (Kyc, Subscription, Bill, Gift vouchers, Luxury life claim).
-2.  **Pending Badges:** Add numeric badges to the Request Approvals menu and its sub-items to show pending counts.
-3.  **Access Control:** Prevent Admin and Manager roles from accessing user-specific pages and remove the User View button from the admin layout.
-4.  **Feature Consolidation:** Merge all features from the Advanced User Management page into the User 360 page and remove the original page and its menu item.
-5.  **User 360 Enhancements:**
-    *   Add Adjust Balance and Manage Subscription modals.
-    *   Display detailed subscription status in the Plans tab, including plan name, expiry, remaining days, and an Active/Expired status.
-6.  **Login Page Fixes:**
-    *   Translate PIN विसरलात? to Forgot PIN?.
-    *   Ensure an error message is displayed for incorrect PIN entries.
-7.  **Profile Page:** Add a show PIN (eye icon) functionality to the PIN input fields in the user's profile section.
-8.  **Performance:** Optimize the Admin Dashboard to load faster.
-9.  **User Migration:** Check if a default PIN is set for old users who have not migrated from a password system and set one if not.
-10. **Bug Fixes & Verification:**
-    *   Fix the routing for the Total PRC card on the admin dashboard.
-    *   Verify that admins can see the payment screenshot submitted by a user for a pending subscription request.
-    *   Create a test user and submit a subscription request with a screenshot to perform a full end-to-end test of the screenshot visibility feature.
+<analysis>**original_problem_statement:**
+The user requested a series of fixes and features:
+1.  Fix the payment screenshot display in the Review Payment modal, which was getting cut off.
+2.  Fix the PIN authentication logic, as some users were unable to log in.
+3.  Improve the UI of the admin subscription management page to directly show the payment screenshot image instead of a URL, along with all important user and subscription details (Username, Amount, Plan, etc.) to simplify the approval process.
+4.  Resolve a Not Found error that occurred when an admin tried to approve a subscription request.
+5.  Add routing to the static cards on the admin dashboard and subscription pages to make them clickable and navigate to the relevant sections.
+6.  Display both the actual (strikethrough) and discounted prices on the landing page's pricing plans and the subscription duration selection page.
+7.  **PRODUCT REQUIREMENTS (New):** The user wants to launch a new high-level subscription plan called DIRECTOR 365. This plan cannot be purchased. It should be awarded to users who achieve 365 direct paid referrals within their first year of joining. The referrals must have maintained a subscription for at least 3 months. Benefits include a lifetime free ELITE subscription, entry into the DIRECTOR CLUB, a SPECIAL DIRECTOR BADGE, and HIGH VOLTAGE WITHDRAWAL. The user has asked for an explanation of how this can be implemented.
 
-**User's preferred language**: The user communicates in **Marathi**. The next agent MUST respond in **Marathi** only.
+**User's preferred language**: Marathi. The user consistently communicates in Marathi. The next agent MUST respond in Marathi only.
 
 **what currently exists?**
-The application is a web portal with distinct user and admin roles. The admin panel features a dashboard with statistics, user management capabilities, and approval workflows. Most of the user's initial requests have been implemented. The admin sidebar now has the Request Approvals menu with pending count badges. The User 360 page has been significantly enhanced to become the central hub for user management, incorporating features from the now-deleted Advanced User Management page. The admin dashboard's performance has been optimized, and several UI/UX bugs on the login and profile pages have been fixed. A default PIN has been set for all users without one.
+The application is a subscription-based platform with a Python/Flask backend, a primary React frontend (used as a PWA), and a separate . The system supports user authentication via password or PIN. The agent has successfully implemented fixes for PIN authentication, the subscription approval workflow, and UI enhancements for displaying pricing and reviewing payments.
 
 **Last working item**:
--   **Last item agent was working**: The user requested a full, end-to-end test to confirm that when a user submits a subscription request with a payment screenshot, the admin can view that screenshot in the approval queue. The agent was in the process of creating a new test user to initiate this flow.
--   **Status**: IN PROGRESS
--   **Agent Testing Done**: N
--   **Which testing method agent to use?**: Manual testing. The agent must:
-    1.  Create a new test user.
-    2.  Log in as the new user.
-    3.  Navigate to the subscription upgrade page and submit a request, including uploading a dummy payment screenshot.
-    4.  Log out and log in as an admin ( / PIN ).
-    5.  Go to Request Approvals -> Subscription.
-    6.  Verify that the new request is present and that the payment screenshot is visible (both as a link and as a thumbnail). Use the screenshot tool to capture the result for the user.
--   **User Testing Done**: N
+-   **Last item agent was working:** The user has just proposed a new, complex feature: the DIRECTOR 365 subscription plan. The agent has acknowledged the request and was about to explain the implementation plan and technical requirements to the user.
+-   **Status:** NOT STARTED
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** both. The backend logic for tracking referrals and awarding the plan needs to be created and tested (backend testing agent). The frontend needs to be updated to display the new status and badge (frontend testing agent).
+-   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-There are no other pending issues apart from the Last working item.
+There are no pending bugs. The main pending item is a new feature request.
 
 **In progress Task List**:
--   **Task 1**: End-to-end test of the subscription request screenshot visibility (P0)
-    -   **Where to resume**: The agent has just run the  tool. The next step is to use the credentials of the newly created user to log in and submit a subscription request with a screenshot.
-    -   **What will be achieved with this?**: This will provide the user with concrete proof that the entire workflow for subscription approval, including payment verification via screenshot, is functioning correctly.
-    -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: Both.
-    -   **Blocked on something**: No.
+No tasks are currently in progress.
 
 **Upcoming and Future Tasks**
-The agent suggested several advanced features for the Admin Dashboard, which the user has not yet prioritized.
--   **High Impact (P1):**
-    -   Revenue Chart/Graph (Weekly/Monthly subscription revenue trends).
-    -   User Growth Chart (Daily new user signups).
-    -   Real-time Activity Feed (Live notifications for logins, orders, etc.).
--   **Medium Impact (P2):**
-    -   System Health Status card.
-    -   Export Reports button (Quick download of daily/weekly reports).
-    -   Admin Activity Log (Track admin actions).
--   **Nice to Have (P3):**
-    -   Dark/Light Mode Toggle.
-    -   Customizable Dashboard (Drag & drop cards).
-    -   Global Search functionality.
+
+**Upcoming Tasks:**
+-   **P0: Design and Implement DIRECTOR 365 Subscription Plan:** This is the highest priority task requested by the user.
+    -   **Backend:**
+        -   Develop a robust mechanism to track direct referrals for each user. This likely involves a  table linking new users to their referrers.
+        -   Create logic to verify the conditions:
+            -   Count 365 direct referrals within 365 days of the referrer's join date.
+            -   For each of those referrals, confirm they have an active subscription for at least 3 months.
+        -   Implement an automated process (e.g., a nightly cron job or a trigger-based system) to check for eligible users and automatically upgrade them.
+        -   Grant the lifetime ELITE subscription.
+        -   Add fields/tables to represent DIRECTOR CLUB status, the SPECIAL DIRECTOR BADGE, and handle HIGH VOLTAGE WITHDRAWAL logic.
+    -   **Frontend:**
+        -   Display the SPECIAL DIRECTOR BADGE on the user's profile and other relevant areas.
+        -   Update the UI to reflect the user's DIRECTOR CLUB status and lifetime ELITE plan.
+
+**Future Tasks:**
+-   **P1: Add Force PIN Change Feature:** The agent suggested prompting users who are on the default PIN () to change it after their first login for security reasons.
+-   **P2: Update Backend Subscription Pricing:** The agent noted a discrepancy between the pricing shown in the UI () and the pricing fetched from the backend. The backend pricing data in  might need to be updated to reflect the actual business prices.
 
 **Completed work in this session**
--   **Request Approvals Menu**: Implemented a collapsible menu with sub-items and dynamic pending count badges in .
--   **Admin/Manager Access Restriction**: Blocked access to user routes and removed the User View button in  and .
--   **User Management Consolidation**: Merged Advanced User Management into User 360 () and removed the old page and menu items.
--   **User 360 Modals**: Added Adjust Balance and Manage Subscription modals in  and a supporting backend action in .
--   **Subscription Status Display**: Enhanced the Plans tab in  to show detailed subscription status.
--   **Login Page Fixes**: Corrected the Forgot PIN text and implemented a visible error message for wrong PINs in  and .
--   **Show PIN Functionality**: Added an eye icon to toggle PIN visibility in the user's profile page ().
--   **Dashboard Performance Optimization**: Refactored  to use a single, cached backend endpoint () and added skeleton loaders for better perceived performance.
--   **Default PIN Migration**: Set a default PIN for ~200 users who had not yet migrated from a password-based system.
--   **Route & UI Verification**: Confirmed the Total PRC card routing works and added screenshot thumbnail previews to the  page.
+-   **PIN Authentication Fix:** Modified backend logic to correctly check the  field during login, allowing PIN-only users to authenticate successfully.
+    -   
+    -   
+-   **Admin Subscription Review UI Overhaul:** Redesigned the payment review card on the admin page to show the screenshot image directly, along with user name, amount, plan, UTR, and submission date, making approvals easier.
+    -   
+    -   
+-   **Subscription Approval Not Found Error Fix:** Corrected the API endpoint in the frontend for approving/rejecting subscriptions from  (plural) to  (singular) to match the backend route.
+    -   
+-   **Dashboard Card Routing:** Added  handlers and  to make various stat cards on the admin dashboard and subscription pages clickable, routing the admin to the corresponding detailed pages.
+    -   
+    -   
+    -   
+-   **Pricing Display Update:** Updated the UI on the public landing page and the subscription duration selection page to display both the original price (with a strikethrough) and the discounted price, along with a discount % badge.
+    -   
+    -   
+    -   
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1**: The backend PIN authentication logic is potentially fragile.
-    -   **Debug checklist**: In  (around line 474), the code checks for  and returns an error if it's missing, instead of falling back to check for . This could cause login failures for users who only have a PIN and no password hash.
-    -   **Why to solve this issue and what will be achieved with this?**: Fixing this will make the authentication system more robust and prevent future login issues for PIN-only users.
-    -   **Should Test frontend/backend/both after fix?**: Backend.
-    -   **Is recurring issue?**: Y (The agent encountered this during testing but had to work around it).
+-   **Issue 1: Unknown User on Admin Payment List:** When displaying pending payments, some records show Unknown User even if a valid  exists. The agent suspected an issue in the backend logic that fetches user details for the payment list but postponed the fix as minor because it was observed with manually inserted test data.
+    -   **Debug checklist:** Review the  function in . Check the database join or lookup logic that retrieves the  based on the  from the  table.
+    -   **Why to solve this issue and what will be achieved with this?** This will ensure the admin always sees the correct username for every pending payment, avoiding confusion.
+    -   **Should Test frontend/backend/both after fix:** Backend.
+    -   **Is recurring issue?** N
 
 **Known issue recurrence from previous fork**
--   None.
+N/A
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Frontend**: React (with Hooks), React Router, TailwindCSS, Axios
--   **Backend**: Python (Flask)
--   **Database**: MongoDB
--   **Architecture**: REST API with a separate frontend client.
--   **Performance**: Backend caching and frontend optimizations (single API call, skeleton loaders).
+-   **Frontend:** React.js, TailwindCSS, Axios
+-   **Backend:** Python (Flask)
+-   **Database:** PostgreSQL
+-   **Architecture:** Monorepo with separate frontend and backend services. The project contains two distinct frontend applications:  (the main app) and .
 
 **key DB schema**
--   **users**: 
--   **subscriptions**: 
+-   **users:** 
+-   **vip_payments:** 
+-   **subscriptions:** 
 
 **changes in tech stack**
--   None.
+None.
 
 **All files of reference**
--   : Central file for user management, heavily modified to include browsing, modals, and detailed views.
--   : Modified for all sidebar navigation changes.
--   : Optimized for faster loading.
--   : Fixed PIN login UI issues.
--   : Modified to add screenshot thumbnail previews.
--   : Modified to add new actions and the unified dashboard endpoint.
--   : Contains the fragile PIN authentication logic that may need fixing.
+*   : Modified for PIN authentication logic.
+*   : Modified for PIN authentication logic.
+*   : Contains subscription approval/rejection endpoints.
+*   : Modified to fix API URL and improve UI.
+*   : Modified to add routing to stat cards.
+*   : Modified to accept  props.
+*   : Modified to show discounted prices.
+*   : Modified to show original (strikethrough) price.
+*   : Modified to show discounted prices.
+*   : Modified to improve payment review UI.
+*   : Modified to add routing to cards.
+
+**Areas that need refactoring**:
+The project contains two separate React applications ( and ) with some overlapping functionality (e.g., admin components). While  seems more detailed, the user appears to be using the admin section within the main  app. This could lead to code duplication and maintenance overhead. It may be beneficial to consolidate all admin features into one of the projects and deprecate the other.
+
+**key api endpoints**
+-   : User login with email and password/PIN.
+-   : Approves a pending subscription payment.
+-   : Rejects a pending subscription payment.
+-   : Fetches all pending subscription payments for review.
+-   : Fetches statistics for the admin dashboard.
+-   : Provides subscription pricing data to the frontend.
 
 **Critical Info for New Agent**
--   You MUST communicate in **Marathi**.
--   The immediate task is to complete the end-to-end test for subscription screenshot visibility. Start by logging in as the newly created user and submitting a subscription request.
--   The Advanced User Management page no longer exists; all its functionality has been moved to a Browse mode within the User 360 page.
--   The Admin Dashboard now loads its data from a single optimized endpoint: .
+-   **Primary Frontend:** The user primarily uses the main  project, which functions as their PWA, for both regular users and admins. While  exists, changes requested for the admin experience should be applied to  unless specified otherwise.
+-   **PIN Migration:** A migration script has been run on  to set a PIN for all users. The default PIN is . While the agent confirmed this is safe for deployment, you should verify the state of the production database before running any migration scripts there.
+-   **New Feature Request:** The immediate next step is to break down and explain the implementation plan for the DIRECTOR 365 feature to the user, as they have specifically asked for an explanation.
 
 **documents and test reports created in this job**
--   None.
+-   : Updated with the status of completed tasks.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (Msg 633):** Create a test user, submit a subscription request with a screenshot, check if the admin can see it, and provide a screenshot. (IN PROGRESS)
-2.  **User (Msg 612):** Does the admin see the screenshot in a pending subscription request? (Completed - agent is now performing the full E2E test).
-3.  **User (Msg 595):** The Total PRC card on the admin dashboard isn't routed. (Completed - agent verified it works).
-4.  **User (Msg 550):** Optimize the admin dashboard for speed & check for a default PIN for unmigrated users. (Completed).
-5.  **User (Msg 536):** Check dashboard card routing & suggest advanced features. (Completed).
-6.  **User (Msg 528):** Re-confirmed if the Subscription Management modal was added to User 360. (Completed - agent confirmed it was).
-7.  **User (Msg 519):** Go - Prompt to continue testing. (Handled).
-8.  **User (Msg 426):** Add a show pin eye icon to the profile's PIN change section. (Completed).
-9.  **User (Msg 369):** Fix PIN login page issues (translation and error message). (Completed).
-10. **User (Msg 346):** Show detailed subscription status in User 360. (Completed).
+1.  **User:** Asks to launch a new DIRECTOR 365 plan with complex rules (365 referrals, lifetime ELITE subscription, etc.) and wants to know how it can be implemented. (PENDING)
+2.  **User:** Confirms the pricing update on the landing page is what they wanted. (RESOLVED)
+3.  **User:** Corrects the agent's implementation of homepage pricing, providing the exact original and discounted prices. (RESOLVED)
+4.  **User:** Requests to show actual and discounted prices on the subscription duration selection page and the homepage. (RESOLVED)
+5.  **User:** Asks if the actual subscription amount can be shown on the admin dashboard cards. (RESOLVED)
+6.  **User:** Reports that cards on the deployed admin dashboard are not routed/clickable. (RESOLVED)
+7.  **User:** Clarifies that the Not Found error happens when an admin *approves* a subscription, and it fails to activate. (RESOLVED)
+8.  **User:** Reports a User not found error with a screenshot. (RESOLVED, was Not Found)
+9.  **User:** Asks to improve the admin subscription page to show the screenshot image directly and all important details to simplify approvals. (RESOLVED)
+10. **User:** Asks what will happen to users who haven't migrated from password to PIN and if their set PINs will change upon deployment. (RESOLVED)
 
 **Project Health Check:**
--   **Broken**: The backend PIN authentication logic in  does not correctly handle users who only have a  but no . This should be addressed to prevent future login failures.
--   **Mocked**: No critical components are mocked. The current task involves a real end-to-end test.
+-   **Broken:** None.
+-   **Mocked:** None.
 
 **3rd Party Integrations**
--   None identified.
+- No specific 3rd party service integrations (like Stripe, OpenAI, etc.) were mentioned or used in this session.
 
 **Testing status**
--   **Testing agent used after significant changes**: YES
--   **Troubleshoot agent used after agent stuck in loop**: NO
--   **Test files created**: None
--   **Known regressions**: None
+-   **Testing agent used after significant changes:** NO
+-   **Troubleshoot agent used after agent stuck in loop:** NO
+-   **Test files created:** []
+-   **Known regressions:** None.
 
 **Credentials to test flow:**
--   **Admin**:  / PIN: 
--   A new test user was just created; its credentials should be available in the tool output from the previous turn.</analysis>
+-   **Username:** 
+-   **PIN:** 
+(This user was created in the  for testing the PIN login fix).
+
+**What agent forgot to execute**
+- The agent identified but postponed fixing an issue where pending payments sometimes show Unknown User on the admin review page. The agent deemed it a minor issue related to test data.</analysis>

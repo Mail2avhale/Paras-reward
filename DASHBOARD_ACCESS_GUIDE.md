@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://user-mgmt-360.preview.emergentagent.com/setup
+   https://director-365-launch.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
