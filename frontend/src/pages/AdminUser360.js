@@ -1258,8 +1258,10 @@ const AdminUser360 = ({ user: adminUser }) => {
                           </span>
                         </div>
                       </div>
-                    ))
+                    ))}
+                    </div>
                   )}
+                  </div>
                 </div>
               )}
 
