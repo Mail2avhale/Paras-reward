@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
@@ -15,6 +15,15 @@ import NotificationBell from '@/components/NotificationBell';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
+// Skeleton Loading Component
+const SkeletonCard = ({ className = "" }) => (
+  <div className={`animate-pulse bg-gray-800/50 rounded-xl p-4 ${className}`}>
+    <div className="h-4 bg-gray-700 rounded w-1/3 mb-3"></div>
+    <div className="h-8 bg-gray-700 rounded w-1/2 mb-2"></div>
+    <div className="h-3 bg-gray-700 rounded w-2/3"></div>
+  </div>
+);
+
 const AdminDashboard = ({ user }) => {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
@@ -22,15 +31,19 @@ const AdminDashboard = ({ user }) => {
   const [recentOrders, setRecentOrders] = useState([]);
   const [pendingKYC, setPendingKYC] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
+  const fetchDashboardData = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    
     try {
+      // Parallel API calls for faster loading
       const [statsRes, deliveryRes, ordersRes, kycRes] = await Promise.all([
         axios.get(`${API}/api/admin/stats`).catch(() => ({ data: {} })),
         axios.get(`${API}/api/admin/delivery-partners/stats`).catch(() => ({ data: {} })),
         axios.get(`${API}/api/admin/orders/all?limit=5`).catch(() => ({ data: { orders: [] } })),
-        axios.get(`${API}/api/kyc/list`).catch(() => ({ data: [] }))
+        axios.get(`${API}/api/kyc/list?limit=10`).catch(() => ({ data: [] }))
       ]);
       
       setStats(statsRes.data);
@@ -40,24 +53,27 @@ const AdminDashboard = ({ user }) => {
       setPendingKYC(allKyc.filter(k => k.status === 'pending').slice(0, 5));
     } catch (error) {
       console.error('Error fetching dashboard:', error);
-      toast.error('Failed to load dashboard data');
+      if (!isRefresh) toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
     fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 120000);
+    // Auto-refresh every 2 minutes
+    const interval = setInterval(() => fetchDashboardData(true), 120000);
     return () => clearInterval(interval);
   }, []);
 
-  const subscriptionStats = {
+  // Memoize computed values
+  const subscriptionStats = useMemo(() => ({
     explorer: stats?.subscription_stats?.explorer || 0,
     startup: stats?.subscription_stats?.startup || 0,
     growth: stats?.subscription_stats?.growth || 0,
     elite: stats?.subscription_stats?.elite || 0
-  };
+  }), [stats]);
 
   const totalPaidUsers = subscriptionStats.startup + subscriptionStats.growth + subscriptionStats.elite;
   const totalUsers = stats?.users?.total || 0;
