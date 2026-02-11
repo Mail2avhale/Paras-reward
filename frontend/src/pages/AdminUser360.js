@@ -296,6 +296,101 @@ const AdminUser360 = ({ user: adminUser }) => {
     }
   };
 
+  // Open Balance Modal
+  const openBalanceModal = () => {
+    setBalanceForm({
+      balanceType: 'prc_balance',
+      operation: 'add',
+      amount: '',
+      notes: ''
+    });
+    setBalanceModal({ show: true });
+  };
+
+  // Handle Balance Adjustment
+  const handleBalanceAdjust = async () => {
+    if (!balanceForm.amount || isNaN(parseFloat(balanceForm.amount))) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    
+    let finalAmount = parseFloat(balanceForm.amount);
+    if (balanceForm.operation === 'deduct') {
+      finalAmount = -finalAmount;
+    } else if (balanceForm.operation === 'set') {
+      // For 'set' operation, calculate the difference
+      const currentBalance = userData?.user?.prc_balance || 0;
+      finalAmount = finalAmount - currentBalance;
+    }
+    
+    setProcessing(true);
+    try {
+      await handleQuickAction('adjust_balance', { 
+        amount: finalAmount, 
+        notes: balanceForm.notes,
+        balance_type: balanceForm.balanceType
+      });
+      setBalanceModal({ show: false });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Open Subscription Modal
+  const openSubscriptionModal = () => {
+    const currentPlan = userData?.user?.subscription_plan || 'explorer';
+    const today = new Date();
+    const defaultExpiry = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+    
+    setSubscriptionForm({
+      plan: currentPlan,
+      duration: 30,
+      customDuration: 30,
+      expiryMode: 'auto',
+      manualExpiry: defaultExpiry.toISOString().split('T')[0],
+      isFree: true,
+      adminNotes: ''
+    });
+    setSubscriptionTab('update');
+    setSubscriptionModal({ show: true });
+  };
+
+  // Calculate auto expiry date
+  const getAutoExpiryDate = () => {
+    const days = subscriptionForm.duration === 'custom' ? subscriptionForm.customDuration : subscriptionForm.duration;
+    const today = new Date();
+    const expiry = new Date(today.getTime() + days * 24 * 60 * 60 * 1000);
+    return expiry.toISOString().split('T')[0];
+  };
+
+  // Handle Subscription Update
+  const handleSubscriptionUpdate = async () => {
+    setProcessing(true);
+    try {
+      const expiryDate = subscriptionForm.expiryMode === 'auto' 
+        ? getAutoExpiryDate() 
+        : subscriptionForm.manualExpiry;
+      
+      const response = await axios.post(`${API}/api/admin/user-360/action`, {
+        user_id: userData.user.uid,
+        action: 'update_subscription',
+        admin_id: adminUser?.uid,
+        plan: subscriptionForm.plan,
+        expiry_date: expiryDate,
+        is_free: subscriptionForm.isFree,
+        admin_notes: subscriptionForm.adminNotes
+      });
+      
+      toast.success(response.data?.message || 'Subscription updated successfully');
+      setSubscriptionModal({ show: false });
+      refreshUserData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to update subscription');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const saveAdminNotes = async () => {
     await handleQuickAction('save_notes', { notes: adminNotes });
   };
