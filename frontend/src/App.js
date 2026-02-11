@@ -20,6 +20,11 @@ const canAccessAdmin = (user) => {
   return user && (user.role === "admin" || user.role === "manager");
 };
 
+// Helper function to check if user is admin/manager (should not access user pages)
+const isAdminOrManager = (user) => {
+  return user && (user.role === "admin" || user.role === "sub_admin" || user.role === "manager");
+};
+
 // Loading component - optimized with skeleton
 const LoadingFallback = () => (
   <div className="min-h-screen bg-gray-950 flex items-center justify-center">
