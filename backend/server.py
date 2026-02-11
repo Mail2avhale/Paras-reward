@@ -663,7 +663,7 @@ async def get_index_status():
 
 # Browser-friendly GET versions of admin APIs
 # DISABLED - Moved to routes/admin_*.py
-@api_router.get("/_disabled_admin/clear-all-lockouts-now")
+@api_router.get("/admin/clear-all-lockouts")
 async def clear_all_lockouts_get():
     """GET version of clear-all-lockouts for easy browser access"""
     return await clear_all_login_lockouts()
