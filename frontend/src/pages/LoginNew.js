@@ -29,6 +29,16 @@ const LoginNew = ({ onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   
+  // Forgot PIN states
+  const [showForgotPin, setShowForgotPin] = useState(false);
+  const [forgotPinStep, setForgotPinStep] = useState(1); // 1: Enter email, 2: Enter OTP, 3: Set new PIN
+  const [forgotPinEmail, setForgotPinEmail] = useState('');
+  const [forgotPinOtp, setForgotPinOtp] = useState('');
+  const [forgotPinResetToken, setForgotPinResetToken] = useState('');
+  const [newPin, setNewPin] = useState('');
+  const [confirmNewPin, setConfirmNewPin] = useState('');
+  const [forgotPinLoading, setForgotPinLoading] = useState(false);
+  
   // Auth type: 'unknown', 'pin', 'password'
   const [authType, setAuthType] = useState('unknown');
   const [identifierChecked, setIdentifierChecked] = useState(false);
