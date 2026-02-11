@@ -370,16 +370,23 @@ const AdminSubscriptionManagement = () => {
               
               {viewModal.payment.screenshot_url && (
                 <div>
-                  <p className="text-gray-500 text-sm mb-2">Screenshot</p>
+                  <p className="text-gray-500 text-sm mb-2">Payment Screenshot</p>
                   <a 
                     href={viewModal.payment.screenshot_url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300"
+                    className="relative group inline-block"
                   >
-                    <Eye className="w-4 h-4" />
-                    View Payment Screenshot
+                    <img 
+                      src={viewModal.payment.screenshot_url} 
+                      alt="Payment Screenshot" 
+                      className="max-w-full max-h-48 object-contain rounded-lg border border-gray-700 group-hover:border-purple-500 transition-all"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center transition-all">
+                      <Eye className="w-6 h-6 text-white" />
+                    </div>
                   </a>
+                  <p className="text-xs text-gray-500 mt-1">Click to view full size</p>
                 </div>
               )}
             </div>
