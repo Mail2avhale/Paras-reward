@@ -19,6 +19,7 @@ cache = None
 # Helper function references
 log_admin_action = None
 check_and_grant_referral_reward = None
+create_user_notification = None
 
 def set_db(database):
     global db
