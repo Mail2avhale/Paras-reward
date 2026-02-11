@@ -440,7 +440,7 @@ async def get_subscription_stats():
         ]
         stats = await db.users.aggregate(pipeline).to_list(10)
         
-        # Convert to plan_counts format
+        # Convert to plan_counts format - null/empty/missing plans count as explorer
         plan_counts = {"explorer": 0, "startup": 0, "growth": 0, "elite": 0}
         total_users = 0
         for stat in stats:
@@ -449,6 +449,9 @@ async def get_subscription_stats():
             total_users += count
             if plan_name in plan_counts:
                 plan_counts[plan_name] = count
+            elif plan_name is None or plan_name == "" or plan_name is False:
+                # Count null/empty/missing subscription_plan as explorer (free users)
+                plan_counts["explorer"] += count
         
         # Get pending payments count (fast query)
         pending_payments = await db.vip_payments.count_documents({"status": "pending"})
@@ -457,7 +460,7 @@ async def get_subscription_stats():
         result = {
             "by_plan": stats,
             "total_users": total_users,
-            "vip_users": sum(plan_counts.values()),  # All subscription plans are VIP
+            "vip_users": plan_counts["startup"] + plan_counts["growth"] + plan_counts["elite"],
             "plan_counts": plan_counts,
             "pending_payments": pending_payments,
             "monthly_revenue": 0  # Calculated separately if needed
