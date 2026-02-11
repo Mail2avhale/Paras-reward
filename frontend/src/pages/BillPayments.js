@@ -171,8 +171,8 @@ const BillPayments = ({ user, onLogout }) => {
         details
       });
 
-      toast.success('Request submitted successfully!', {
-        description: 'Admin will process your request shortly'
+      toast.success('✅ Bill Payment Request Submitted Successfully!\n\nYour request will be processed within 3-7 business days. You will receive a notification once completed.', {
+        duration: 6000,
       });
 
       // Reset form
