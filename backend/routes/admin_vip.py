@@ -54,12 +54,12 @@ async def get_pending_payments_count():
 
 
 @router.get("/vip-payments")
-async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int = 50):
+async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int = 50, nocache: bool = False):
     """Get VIP payments for admin verification - OPTIMIZED with caching"""
     try:
         cache_key = f"admin_vip_payments:{status or 'all'}:p{page}:l{limit}"
         
-        if cache:
+        if cache and not nocache:
             cached = await cache.get(cache_key)
             if cached:
                 return cached
@@ -67,6 +67,10 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
         query = {}
         if status:
             query["status"] = status
+        
+        # Filter out entries without user_id for approved status
+        if status == "approved":
+            query["user_id"] = {"$exists": True, "$ne": None, "$ne": ""}
         
         skip = (page - 1) * limit
         total = await db.vip_payments.count_documents(query)
