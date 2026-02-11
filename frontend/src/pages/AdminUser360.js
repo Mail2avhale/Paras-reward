@@ -998,66 +998,6 @@ const AdminUser360 = ({ user: adminUser }) => {
         </Card>
       )}
 
-      {/* Password Reset Modal - Centered */}
-      {passwordModal.show && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
-            <div className="text-center">
-              {/* Success Icon */}
-              <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Key className="w-10 h-10 text-white" />
-              </div>
-              
-              <h2 className="text-2xl font-bold text-white mb-2">
-                {passwordModal.isPinUser ? 'Password & PIN Reset!' : 'Password Reset Successful!'}
-              </h2>
-              <p className="text-gray-400 mb-6">
-                {passwordModal.isPinUser 
-                  ? 'New temporary credential has been generated. User can use this as PIN.'
-                  : 'New temporary password has been generated'}
-              </p>
-              
-              {/* Password/PIN Display */}
-              <div className="bg-gray-800 border-2 border-green-500/30 rounded-2xl p-6 mb-6">
-                <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">
-                  {passwordModal.isPinUser ? 'Temporary Credential (Use as PIN)' : 'Temporary Password'}
-                </p>
-                <p className="text-3xl font-mono font-bold text-green-400 tracking-widest">
-                  {passwordModal.password}
-                </p>
-              </div>
-              
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => {
-                    navigator.clipboard.writeText(passwordModal.password);
-                    toast.success('Copied to clipboard!');
-                  }}
-                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
-                >
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copy
-                </Button>
-                <Button
-                  onClick={() => setPasswordModal({ show: false, password: '', isPinUser: false })}
-                  variant="outline"
-                  className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
-                >
-                  Close
-                </Button>
-              </div>
-              
-              <p className="text-xs text-gray-500 mt-4">
-                {passwordModal.isPinUser 
-                  ? 'Share this securely. User should enter this 6-character code as their new PIN.'
-                  : 'Please share this password securely with the user.'}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* PIN Reset Modal */}
       {pinModal.show && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" data-testid="pin-reset-modal">
