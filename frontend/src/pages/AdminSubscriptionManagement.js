@@ -23,6 +23,7 @@ const AdminSubscriptionManagement = () => {
   const [activeTab, setActiveTab] = useState('pending'); // pending, approved
   const [editModal, setEditModal] = useState({ show: false, payment: null });
   const [viewModal, setViewModal] = useState({ show: false, payment: null });
+  const [fullImageModal, setFullImageModal] = useState({ show: false, url: null, userName: '', amount: '' });
 
   // Fetch data on mount
   useEffect(() => {
