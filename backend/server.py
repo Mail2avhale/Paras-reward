@@ -36978,6 +36978,24 @@ async def startup_db():
             replace_existing=True
         )
         
+        # Auto clear all lockouts at 12 PM (noon)
+        scheduler.add_job(
+            auto_clear_all_lockouts,
+            CronTrigger(hour=12, minute=0),  # Daily at 12:00 PM
+            id='auto_clear_lockouts_noon',
+            name='Auto clear all user lockouts at noon',
+            replace_existing=True
+        )
+        
+        # Auto clear all lockouts at 12 AM (midnight)
+        scheduler.add_job(
+            auto_clear_all_lockouts,
+            CronTrigger(hour=0, minute=0),  # Daily at 12:00 AM
+            id='auto_clear_lockouts_midnight',
+            name='Auto clear all user lockouts at midnight',
+            replace_existing=True
+        )
+        
         # Start the scheduler
         scheduler.start()
         print("✅ Scheduled tasks started:")
@@ -36987,6 +37005,7 @@ async def startup_db():
         print("   - Daily system summary: Daily at 12:05 AM")
         print("   - Inactive user PRC burn: Weekly Sunday at 4 AM")
         print("   - Account hard delete: Daily at 3:30 AM")
+        print("   - Auto lockout clear: Daily at 12 PM & 12 AM")
     except Exception as e:
         print(f"⚠️ Error starting scheduler (non-critical): {e}")
 
