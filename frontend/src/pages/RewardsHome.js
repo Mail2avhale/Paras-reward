@@ -393,6 +393,7 @@ const RewardsHome = () => {
     {
       name: 'Startup',
       price: '299',
+      originalPrice: '500',
       icon: Zap,
       color: 'from-blue-500 to-blue-600',
       features: [
@@ -405,6 +406,7 @@ const RewardsHome = () => {
     {
       name: 'Growth',
       price: '549',
+      originalPrice: '1000',
       icon: TrendingUp,
       color: 'from-purple-500 to-pink-600',
       isPopular: true,
@@ -418,6 +420,7 @@ const RewardsHome = () => {
     {
       name: 'Elite',
       price: '799',
+      originalPrice: '2000',
       icon: Crown,
       color: 'from-amber-500 to-orange-600',
       features: [
