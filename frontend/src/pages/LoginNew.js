@@ -266,7 +266,7 @@ const LoginNew = ({ onLogin }) => {
   // Forgot PIN functions
   const handleForgotPinSendOtp = async () => {
     if (!forgotPinEmail) {
-      toast.error('कृपया Email किंवा Mobile टाका');
+      toast.error('Please enter Email or Mobile');
       return;
     }
     
@@ -277,11 +277,11 @@ const LoginNew = ({ onLogin }) => {
       });
       
       if (response.data.success) {
-        toast.success('OTP पाठवला! तुमचा Email/SMS तपासा');
+        toast.success('OTP sent! Check your Email/SMS');
         setForgotPinStep(2);
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'OTP पाठवता आला नाही');
+      toast.error(error.response?.data?.detail || 'Failed to send OTP');
     } finally {
       setForgotPinLoading(false);
     }
@@ -289,7 +289,7 @@ const LoginNew = ({ onLogin }) => {
 
   const handleForgotPinVerifyOtp = async () => {
     if (!forgotPinOtp || forgotPinOtp.length < 4) {
-      toast.error('कृपया OTP टाका');
+      toast.error('Please enter OTP');
       return;
     }
     
@@ -302,11 +302,11 @@ const LoginNew = ({ onLogin }) => {
       
       if (response.data.reset_token) {
         setForgotPinResetToken(response.data.reset_token);
-        toast.success('OTP Verified! नवीन PIN सेट करा');
+        toast.success('OTP Verified! Set your new PIN');
         setForgotPinStep(3);
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'चुकीचा OTP');
+      toast.error(error.response?.data?.detail || 'Invalid OTP');
     } finally {
       setForgotPinLoading(false);
     }
@@ -314,15 +314,15 @@ const LoginNew = ({ onLogin }) => {
 
   const handleForgotPinReset = async () => {
     if (newPin.length !== 6) {
-      toast.error('PIN 6 अंकी असावा');
+      toast.error('PIN must be 6 digits');
       return;
     }
     if (newPin !== confirmNewPin) {
-      toast.error('PIN जुळत नाही');
+      toast.error('PINs do not match');
       return;
     }
     if (new Set(newPin).size === 1) {
-      toast.error('सर्व अंक सारखे नसावेत');
+      toast.error('All digits cannot be same');
       return;
     }
     
@@ -335,7 +335,7 @@ const LoginNew = ({ onLogin }) => {
       });
       
       if (response.data.success) {
-        toast.success('PIN बदलला! आता Login करा');
+        toast.success('PIN changed! Please login now');
         setShowForgotPin(false);
         setForgotPinStep(1);
         setForgotPinEmail('');
@@ -345,7 +345,7 @@ const LoginNew = ({ onLogin }) => {
         setForgotPinResetToken('');
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'PIN बदलता आला नाही');
+      toast.error(error.response?.data?.detail || 'Failed to change PIN');
     } finally {
       setForgotPinLoading(false);
     }
