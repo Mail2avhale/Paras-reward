@@ -470,7 +470,7 @@ async def login(
                     ip_address=real_ip,
                     user_identifier=identifier
                 )
-            raise HTTPException(status_code=401, detail=f"Invalid PIN. {attempts_left - 1} attempts remaining.")
+            raise HTTPException(status_code=401, detail=f"चुकीचा PIN. {attempts_left - 1} प्रयत्न बाकी आहेत. (Wrong PIN. {attempts_left - 1} attempts remaining)")
     else:
         record_login_attempt(identifier, False)
         await record_login_attempt_db(db, identifier, False, real_ip)
