@@ -474,7 +474,7 @@ async def login(
     else:
         record_login_attempt(identifier, False)
         await record_login_attempt_db(db, identifier, False, real_ip)
-        raise HTTPException(status_code=401, detail="Account has no password set. Please contact support.")
+        raise HTTPException(status_code=401, detail="तुमचा PIN सेट नाही. कृपया Admin शी संपर्क करा. (PIN not set. Please contact Admin)")
     
     if user.get("is_banned"):
         raise HTTPException(status_code=403, detail=f"Account suspended: {user.get('suspension_reason', 'Contact support')}")
