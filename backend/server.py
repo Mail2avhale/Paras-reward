@@ -7010,8 +7010,15 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
 
 @api_router.get("/subscription/plans")
 async def get_subscription_plans():
-    """Get all subscription plans with pricing"""
+    """Get all subscription plans with pricing and special offers"""
     pricing = await get_subscription_pricing()
+    
+    # Special Offer Prices (Limited Time)
+    special_offers = {
+        "startup": {"original": 500, "offer": 299, "discount": 40},
+        "growth": {"original": 1000, "offer": 549, "discount": 45},
+        "elite": {"original": 2000, "offer": 799, "discount": 60}
+    }
     
     plans = []
     for plan_id, config in SUBSCRIPTION_PLANS.items():
@@ -7024,10 +7031,16 @@ async def get_subscription_plans():
                 "tap_limit": config["tap_limit"],
                 "can_redeem": config["can_redeem"],
                 "is_free": True,
-                "pricing": None
+                "pricing": None,
+                "offer": None
             })
         else:
             plan_pricing = pricing.get(plan_id, {})
+            offer = special_offers.get(plan_id)
+            
+            # Use offer price if available
+            monthly_price = offer["offer"] if offer else plan_pricing.get("monthly", config["default_price"])
+            
             plans.append({
                 "id": plan_id,
                 "name": config["name"],
@@ -7037,14 +7050,20 @@ async def get_subscription_plans():
                 "can_redeem": config["can_redeem"],
                 "is_free": False,
                 "pricing": {
-                    "monthly": plan_pricing.get("monthly", config["default_price"]),
-                    "quarterly": plan_pricing.get("quarterly", config["default_price"] * 3),
-                    "half_yearly": plan_pricing.get("half_yearly", config["default_price"] * 5),
-                    "yearly": plan_pricing.get("yearly", config["default_price"] * 10)
-                }
+                    "monthly": monthly_price,
+                    "quarterly": int(monthly_price * 2.7),  # 10% off
+                    "half_yearly": int(monthly_price * 5.1),  # 15% off
+                    "yearly": int(monthly_price * 9)  # 25% off
+                },
+                "offer": offer
             })
     
-    return {"plans": plans, "durations": SUBSCRIPTION_DURATIONS}
+    return {
+        "plans": plans, 
+        "durations": SUBSCRIPTION_DURATIONS,
+        "has_active_offer": True,
+        "offer_name": "Limited Time Offer - Up to 60% OFF!"
+    }
 
 @api_router.get("/subscription/user/{uid}")
 async def get_user_subscription(uid: str):
