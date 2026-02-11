@@ -160,6 +160,7 @@ const AdminSubscriptionManagement = () => {
           value={planCounts.explorer || 0}
           color="gray"
           subtitle="Free"
+          onClick={() => navigate('/admin/users?plan=explorer')}
         />
         <StatCard
           icon={<Rocket className="w-5 h-5" />}
@@ -167,6 +168,7 @@ const AdminSubscriptionManagement = () => {
           value={planCounts.startup || 0}
           color="blue"
           subtitle="₹299/mo"
+          onClick={() => setActiveTab('approved')}
         />
         <StatCard
           icon={<TrendingUp className="w-5 h-5" />}
@@ -174,6 +176,7 @@ const AdminSubscriptionManagement = () => {
           value={planCounts.growth || 0}
           color="emerald"
           subtitle="₹549/mo"
+          onClick={() => setActiveTab('approved')}
         />
         <StatCard
           icon={<Crown className="w-5 h-5" />}
@@ -181,6 +184,7 @@ const AdminSubscriptionManagement = () => {
           value={planCounts.elite || 0}
           color="amber"
           subtitle="₹799/mo"
+          onClick={() => setActiveTab('approved')}
         />
       </div>
 
