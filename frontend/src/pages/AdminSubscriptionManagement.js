@@ -554,6 +554,8 @@ const StatCard = ({ icon, label, value, color, subtitle, onClick }) => {
 
 // Payment Row Component - Enhanced with Screenshot & Details
 const PaymentRow = ({ payment, onApprove, onReject, processing, type = 'pending' }) => {
+  const [showImageModal, setShowImageModal] = useState(false);
+  
   const planColors = {
     startup: 'text-blue-400 bg-blue-500/10',
     growth: 'text-emerald-400 bg-emerald-500/10',
@@ -561,34 +563,65 @@ const PaymentRow = ({ payment, onApprove, onReject, processing, type = 'pending'
   };
 
   return (
-    <div className="p-4 hover:bg-gray-800/50 transition-colors">
-      {/* Two Column Layout: Screenshot | Details */}
-      <div className="flex flex-col md:flex-row gap-4">
-        
-        {/* LEFT: Payment Screenshot */}
-        <div className="md:w-40 flex-shrink-0">
-          {payment.screenshot_url ? (
-            <a 
-              href={payment.screenshot_url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="block relative group"
+    <>
+      {/* Image Preview Modal */}
+      {showImageModal && payment.screenshot_url && (
+        <div 
+          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[100] p-4"
+          onClick={() => setShowImageModal(false)}
+        >
+          <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center">
+            {/* Close Button */}
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute -top-12 right-0 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-all"
             >
-              <img 
-                src={payment.screenshot_url} 
-                alt="Payment Screenshot" 
-                className="w-full h-40 md:h-48 object-cover rounded-lg border-2 border-gray-700 group-hover:border-amber-500 transition-all"
-              />
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center transition-all">
-                <Eye className="w-6 h-6 text-white" />
-              </div>
-            </a>
-          ) : (
-            <div className="w-full h-40 md:h-48 bg-gray-800 rounded-lg border-2 border-dashed border-gray-700 flex items-center justify-center">
-              <p className="text-gray-500 text-xs text-center">No Screenshot</p>
+              <X className="w-6 h-6" />
+            </button>
+            
+            {/* Image */}
+            <img 
+              src={payment.screenshot_url} 
+              alt="Payment Screenshot" 
+              className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+            
+            {/* User Info Footer */}
+            <div className="mt-4 bg-gray-900/80 rounded-lg px-6 py-3 text-center">
+              <p className="text-white font-bold">{payment.user_name || 'Unknown User'}</p>
+              <p className="text-green-400 font-medium">₹{payment.amount} • {payment.plan?.toUpperCase()}</p>
             </div>
-          )}
+          </div>
         </div>
+      )}
+      
+      <div className="p-4 hover:bg-gray-800/50 transition-colors">
+        {/* Two Column Layout: Screenshot | Details */}
+        <div className="flex flex-col md:flex-row gap-4">
+          
+          {/* LEFT: Payment Screenshot */}
+          <div className="md:w-40 flex-shrink-0">
+            {payment.screenshot_url ? (
+              <button 
+                onClick={() => setShowImageModal(true)}
+                className="block relative group w-full cursor-pointer"
+              >
+                <img 
+                  src={payment.screenshot_url} 
+                  alt="Payment Screenshot" 
+                  className="w-full h-40 md:h-48 object-cover rounded-lg border-2 border-gray-700 group-hover:border-amber-500 transition-all"
+                />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center transition-all">
+                  <Eye className="w-6 h-6 text-white" />
+                </div>
+              </button>
+            ) : (
+              <div className="w-full h-40 md:h-48 bg-gray-800 rounded-lg border-2 border-dashed border-gray-700 flex items-center justify-center">
+                <p className="text-gray-500 text-xs text-center">No Screenshot</p>
+              </div>
+            )}
+          </div>
 
         {/* RIGHT: All Details */}
         <div className="flex-1 flex flex-col">
