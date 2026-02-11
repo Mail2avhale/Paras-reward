@@ -98,7 +98,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
   // Regular menu items (not grouped) - Simplified and organized
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/admin' },
-    { id: 'approval-hub', label: 'Approval Hub', icon: CheckCircle, path: '/admin/approval-hub' },
     { id: 'users', label: 'Users', icon: Users, path: '/admin/users' },
     { id: 'user-360', label: 'User 360° View', icon: Eye, path: '/admin/user-360' },
     { id: 'orders', label: 'Orders', icon: ShoppingCart, path: '/admin/orders' },
