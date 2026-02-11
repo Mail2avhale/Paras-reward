@@ -1094,30 +1094,137 @@ const AdminUser360 = ({ user: adminUser }) => {
 
               {activeTab === 'subscriptions' && (
                 <div className="space-y-4">
-                  {/* Current Active Plan */}
-                  {userData.user?.subscription_plan && userData.user?.subscription_plan !== 'explorer' && (
-                    <div className="p-4 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-xl">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                            <Crown className="w-6 h-6 text-white" />
-                          </div>
-                          <div>
-                            <p className="text-xs text-purple-300 uppercase tracking-wider">Current Plan</p>
-                            <p className="text-xl font-bold text-white capitalize">{userData.user?.subscription_plan || 'Explorer'}</p>
-                          </div>
+                  {/* Current Subscription Status Card */}
+                  <div className={`p-5 rounded-xl border ${
+                    userData.user?.subscription_plan === 'elite' 
+                      ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-amber-500/30'
+                      : userData.user?.subscription_plan === 'growth'
+                        ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border-emerald-500/30'
+                        : userData.user?.subscription_plan === 'startup'
+                          ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border-blue-500/30'
+                          : 'bg-gradient-to-r from-gray-500/20 to-slate-500/20 border-gray-500/30'
+                  }`}>
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
+                          userData.user?.subscription_plan === 'elite' 
+                            ? 'bg-gradient-to-br from-amber-500 to-orange-600'
+                            : userData.user?.subscription_plan === 'growth'
+                              ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                              : userData.user?.subscription_plan === 'startup'
+                                ? 'bg-gradient-to-br from-blue-500 to-cyan-600'
+                                : 'bg-gradient-to-br from-gray-500 to-slate-600'
+                        }`}>
+                          <Crown className="w-8 h-8 text-white" />
                         </div>
-                        <div className="text-right">
-                          <p className="text-xs text-gray-400">Expires</p>
-                          <p className="text-white font-medium">
-                            {userData.user?.subscription_expiry 
-                              ? formatDate(userData.user.subscription_expiry)
-                              : 'Never (Lifetime)'}
+                        <div>
+                          <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Current Plan</p>
+                          <p className="text-2xl font-bold text-white capitalize">
+                            {userData.user?.subscription_plan || 'Explorer'}
                           </p>
                         </div>
                       </div>
+                      {/* Status Badge */}
+                      {(() => {
+                        const expiry = userData.user?.subscription_expiry || userData.user?.membership_expiry;
+                        if (!expiry || userData.user?.subscription_plan === 'explorer') {
+                          return (
+                            <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-500/30 text-gray-300">
+                              Free Plan
+                            </span>
+                          );
+                        }
+                        const expiryDate = new Date(expiry);
+                        const today = new Date();
+                        const isExpired = expiryDate < today;
+                        return (
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            isExpired 
+                              ? 'bg-red-500/30 text-red-400' 
+                              : 'bg-green-500/30 text-green-400'
+                          }`}>
+                            {isExpired ? '❌ Expired' : '✅ Active'}
+                          </span>
+                        );
+                      })()}
                     </div>
-                  )}
+                    
+                    {/* Expiry & Remaining Days */}
+                    {userData.user?.subscription_plan && userData.user?.subscription_plan !== 'explorer' && (
+                      <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/10">
+                        <div className="bg-black/20 rounded-xl p-4">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <p className="text-xs text-gray-400">Expiry Date</p>
+                          </div>
+                          <p className="text-lg font-semibold text-white">
+                            {userData.user?.subscription_expiry || userData.user?.membership_expiry
+                              ? new Date(userData.user?.subscription_expiry || userData.user?.membership_expiry).toLocaleDateString('en-IN', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric'
+                                })
+                              : 'Not Set'}
+                          </p>
+                        </div>
+                        <div className="bg-black/20 rounded-xl p-4">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Clock className="w-4 h-4 text-gray-400" />
+                            <p className="text-xs text-gray-400">Remaining</p>
+                          </div>
+                          {(() => {
+                            const expiry = userData.user?.subscription_expiry || userData.user?.membership_expiry;
+                            if (!expiry) return <p className="text-lg font-semibold text-gray-500">N/A</p>;
+                            
+                            const expiryDate = new Date(expiry);
+                            const today = new Date();
+                            const diffTime = expiryDate - today;
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            
+                            if (diffDays < 0) {
+                              return (
+                                <p className="text-lg font-semibold text-red-400">
+                                  Expired {Math.abs(diffDays)} days ago
+                                </p>
+                              );
+                            } else if (diffDays === 0) {
+                              return <p className="text-lg font-semibold text-yellow-400">Expires Today!</p>;
+                            } else if (diffDays <= 7) {
+                              return (
+                                <p className="text-lg font-semibold text-yellow-400">
+                                  {diffDays} day{diffDays !== 1 ? 's' : ''} left
+                                </p>
+                              );
+                            } else {
+                              return (
+                                <p className="text-lg font-semibold text-green-400">
+                                  {diffDays} days left
+                                </p>
+                              );
+                            }
+                          })()}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Manage Button */}
+                    <div className="mt-4">
+                      <Button
+                        onClick={openSubscriptionModal}
+                        className="w-full bg-purple-600 hover:bg-purple-700"
+                      >
+                        <Crown className="w-4 h-4 mr-2" />
+                        Manage Subscription
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Subscription History */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+                      <History className="w-4 h-4" />
+                      Subscription History ({userData.transactions.subscriptions?.length || 0})
+                    </h4>
                   
                   {/* Subscription History */}
                   <p className="text-gray-400 text-sm font-medium">Payment History</p>
