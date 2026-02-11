@@ -141,7 +141,7 @@ const AdminRedeemSettings = lazy(() => import(/* webpackChunkName: "admin" */ "@
 const AdminAccountingDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAccountingDashboard"));
 const PRCEmergencyControls = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/PRCEmergencyControls"));
 // AdminUserControls removed - functionality merged into AdminUser360
-const AdvancedUserManagement = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdvancedUserManagement"));
+// AdvancedUserManagement removed - functionality merged into AdminUser360
 const AdminDeliveryPartners = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminDeliveryPartners"));
 const AdminUser360 = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUser360"));
 const AdminLuxuryClaims = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminLuxuryClaims"));
