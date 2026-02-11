@@ -74,6 +74,34 @@ const AdminSubscriptionManagement = () => {
     }
   };
 
+  const handleDelete = async (paymentId) => {
+    if (!confirm('Are you sure you want to delete this subscription? This action cannot be undone.')) return;
+    setProcessing(paymentId);
+    try {
+      await axios.delete(`${API}/api/admin/vip-payments/${paymentId}`);
+      toast.success('Subscription deleted');
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleEdit = async (paymentId, updates) => {
+    setProcessing(paymentId);
+    try {
+      await axios.put(`${API}/api/admin/vip-payments/${paymentId}`, updates);
+      toast.success('Subscription updated');
+      setEditModal({ show: false, payment: null });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to update');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
