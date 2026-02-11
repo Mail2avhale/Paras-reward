@@ -320,6 +320,178 @@ const AdminSubscriptionManagement = () => {
           value={`₹${(stats?.monthly_revenue || 0).toLocaleString()}`} 
         />
       </div>
+
+      {/* View Modal */}
+      {viewModal.show && viewModal.payment && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6 max-w-lg w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">Subscription Details</h3>
+              <button 
+                onClick={() => setViewModal({ show: false, payment: null })}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-gray-500 text-sm">User</p>
+                  <p className="text-white font-medium">{viewModal.payment.user_name}</p>
+                  <p className="text-gray-400 text-sm">{viewModal.payment.user_email}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm">Plan</p>
+                  <p className="text-white font-medium capitalize">{viewModal.payment.plan}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm">Amount</p>
+                  <p className="text-white font-medium">₹{viewModal.payment.amount}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm">Duration</p>
+                  <p className="text-white font-medium capitalize">{viewModal.payment.duration}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm">UTR Number</p>
+                  <p className="text-white font-mono">{viewModal.payment.utr_number || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm">Approved At</p>
+                  <p className="text-white">{viewModal.payment.approved_at ? new Date(viewModal.payment.approved_at).toLocaleString() : 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm">Expires At</p>
+                  <p className="text-white">{viewModal.payment.expires_at ? new Date(viewModal.payment.expires_at).toLocaleString() : 'N/A'}</p>
+                </div>
+              </div>
+              
+              {viewModal.payment.screenshot_url && (
+                <div>
+                  <p className="text-gray-500 text-sm mb-2">Screenshot</p>
+                  <a 
+                    href={viewModal.payment.screenshot_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300"
+                  >
+                    <Eye className="w-4 h-4" />
+                    View Payment Screenshot
+                  </a>
+                </div>
+              )}
+            </div>
+            
+            <Button 
+              onClick={() => setViewModal({ show: false, payment: null })}
+              className="w-full mt-6 bg-gray-800 hover:bg-gray-700"
+            >
+              Close
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editModal.show && editModal.payment && (
+        <EditSubscriptionModal
+          payment={editModal.payment}
+          onClose={() => setEditModal({ show: false, payment: null })}
+          onSave={(updates) => handleEdit(editModal.payment.payment_id, updates)}
+          processing={processing === editModal.payment.payment_id}
+        />
+      )}
+    </div>
+  );
+};
+
+// Edit Modal Component
+const EditSubscriptionModal = ({ payment, onClose, onSave, processing }) => {
+  const [formData, setFormData] = useState({
+    plan: payment.plan || 'startup',
+    duration: payment.duration || 'monthly',
+    amount: payment.amount || 0,
+    expires_at: payment.expires_at ? payment.expires_at.split('T')[0] : ''
+  });
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6 max-w-md w-full">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-white">Edit Subscription</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="text-gray-400 text-sm block mb-1">Plan</label>
+            <select
+              value={formData.plan}
+              onChange={(e) => setFormData({ ...formData, plan: e.target.value })}
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white"
+            >
+              <option value="startup">Startup (₹299)</option>
+              <option value="growth">Growth (₹549)</option>
+              <option value="elite">Elite (₹799)</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="text-gray-400 text-sm block mb-1">Duration</label>
+            <select
+              value={formData.duration}
+              onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white"
+            >
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="half_yearly">Half Yearly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="text-gray-400 text-sm block mb-1">Amount (₹)</label>
+            <Input
+              type="number"
+              value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: parseInt(e.target.value) || 0 })}
+              className="bg-gray-800 border-gray-700 text-white"
+            />
+          </div>
+          
+          <div>
+            <label className="text-gray-400 text-sm block mb-1">Expires At</label>
+            <Input
+              type="date"
+              value={formData.expires_at}
+              onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
+              className="bg-gray-800 border-gray-700 text-white"
+            />
+          </div>
+        </div>
+        
+        <div className="flex gap-3 mt-6">
+          <Button 
+            onClick={onClose}
+            variant="outline"
+            className="flex-1 border-gray-700"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => onSave(formData)}
+            disabled={processing}
+            className="flex-1 bg-blue-600 hover:bg-blue-700"
+          >
+            {processing ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Save Changes'}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };
