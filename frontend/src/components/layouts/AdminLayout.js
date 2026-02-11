@@ -410,8 +410,8 @@ const AdminLayout = ({ children, user, onLogout }) => {
           {/* Divider */}
           <div className="my-2 mx-4 border-t border-gray-800"></div>
           
-          {/* Subscriptions & Payments Group */}
-          {renderMenuGroup('subscriptions')}
+          {/* Request Approvals Group */}
+          {renderMenuGroup('requestApprovals')}
           
           {/* Finance Group */}
           {renderMenuGroup('finance')}
