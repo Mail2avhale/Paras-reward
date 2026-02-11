@@ -53,6 +53,31 @@ async def get_pending_payments_count():
         return {"count": 0, "error": str(e)}
 
 
+@router.post("/clear-cache")
+async def clear_admin_cache():
+    """Clear admin cache for fresh data"""
+    try:
+        if cache:
+            # Clear common cache keys
+            keys_to_clear = [
+                "pending_payments_count",
+                "subscription_stats",
+                "admin_stats"
+            ]
+            for key in keys_to_clear:
+                await cache.delete(key)
+            
+            # Clear paginated cache (first 10 pages)
+            for status in ["pending", "approved", "rejected", "all"]:
+                for page in range(1, 11):
+                    for limit in [10, 20, 50]:
+                        await cache.delete(f"admin_vip_payments:{status}:p{page}:l{limit}")
+        
+        return {"success": True, "message": "Cache cleared"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 @router.get("/vip-payments")
 async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int = 50, nocache: bool = False):
     """Get VIP payments for admin verification - OPTIMIZED with caching"""
