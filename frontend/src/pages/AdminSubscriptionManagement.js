@@ -602,15 +602,29 @@ const PaymentRow = ({ payment, onApprove, onReject, processing, type = 'pending'
 
       {/* Screenshot Preview (if available) */}
       {payment.screenshot_url && (
-        <div className="mt-3 ml-14">
+        <div className="mt-3 ml-14 flex items-center gap-3">
+          <a 
+            href={payment.screenshot_url} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="relative group"
+          >
+            <img 
+              src={payment.screenshot_url} 
+              alt="Payment Screenshot" 
+              className="w-16 h-16 object-cover rounded-lg border border-gray-700 group-hover:border-purple-500 transition-all"
+            />
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center transition-all">
+              <Eye className="w-5 h-5 text-white" />
+            </div>
+          </a>
           <a 
             href={payment.screenshot_url} 
             target="_blank" 
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300"
           >
-            <Eye className="w-3 h-3" />
-            View Screenshot
+            View Full Size
             <ChevronRight className="w-3 h-3" />
           </a>
         </div>
