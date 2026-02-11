@@ -15,6 +15,26 @@ import AdminLayout from "@/components/layouts/AdminLayout";
 // ManagerLayout removed - Manager uses AdminLayout with permission-based access
 // StockistLayout removed - stockist system deprecated
 
+// Axios response interceptor - suppress 404 toast errors for optional APIs
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    // Don't show toast for 404 errors on optional/stats endpoints
+    const url = error.config?.url || '';
+    const is404 = error.response?.status === 404;
+    const isOptionalEndpoint = url.includes('subscription-stats') || 
+                               url.includes('pricing-reference') ||
+                               url.includes('dashboard-stats');
+    
+    if (is404 && isOptionalEndpoint) {
+      console.warn(`Optional API not found: ${url}`);
+      return Promise.reject(error); // Reject but don't show toast
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
 // Helper function to check if user can access admin pages
 const canAccessAdmin = (user) => {
   return user && (user.role === "admin" || user.role === "manager");
