@@ -1789,6 +1789,345 @@ const AdminUser360 = ({ user: adminUser }) => {
           </div>
         </div>
       )}
+
+      {/* Adjust Balance Modal */}
+      {balanceModal.show && userData && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 rounded-2xl w-full max-w-md border border-gray-700 shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-700">
+              <h3 className="text-xl font-bold text-white">Adjust Balance</h3>
+              <button onClick={() => setBalanceModal({ show: false })} className="text-gray-400 hover:text-white">
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            
+            {/* User Info */}
+            <div className="p-4 mx-6 mt-4 bg-gray-800/50 rounded-xl">
+              <p className="text-gray-400">User: <span className="text-white font-medium">{userData.user.name}</span></p>
+              <p className="text-gray-400">Current PRC: <span className="text-green-400 font-bold">{(userData.user.prc_balance || 0).toLocaleString()}</span></p>
+              <p className="text-gray-400">Plan: <span className="text-purple-400 capitalize">{userData.user.subscription_plan || 'Explorer'}</span></p>
+            </div>
+            
+            {/* Form */}
+            <div className="p-6 space-y-4">
+              {/* Balance Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">Balance Type</label>
+                <select
+                  value={balanceForm.balanceType}
+                  onChange={(e) => setBalanceForm({...balanceForm, balanceType: e.target.value})}
+                  className="w-full p-3 bg-gray-800 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="prc_balance">PRC Balance</option>
+                  <option value="cashback_wallet_balance">Cashback Wallet</option>
+                </select>
+              </div>
+              
+              {/* Operation */}
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">Operation</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => setBalanceForm({...balanceForm, operation: 'add'})}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-xl font-medium transition-all ${
+                      balanceForm.operation === 'add' 
+                        ? 'bg-green-500 text-white' 
+                        : 'bg-gray-800 text-gray-400 border border-gray-700 hover:border-green-500'
+                    }`}
+                  >
+                    <Plus className="w-4 h-4" /> Add
+                  </button>
+                  <button
+                    onClick={() => setBalanceForm({...balanceForm, operation: 'deduct'})}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-xl font-medium transition-all ${
+                      balanceForm.operation === 'deduct' 
+                        ? 'bg-red-500 text-white' 
+                        : 'bg-gray-800 text-gray-400 border border-gray-700 hover:border-red-500'
+                    }`}
+                  >
+                    <Minus className="w-4 h-4" /> Deduct
+                  </button>
+                  <button
+                    onClick={() => setBalanceForm({...balanceForm, operation: 'set'})}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-xl font-medium transition-all ${
+                      balanceForm.operation === 'set' 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-gray-800 text-gray-400 border border-gray-700 hover:border-blue-500'
+                    }`}
+                  >
+                    <Settings className="w-4 h-4" /> Set
+                  </button>
+                </div>
+              </div>
+              
+              {/* Amount */}
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">Amount</label>
+                <Input
+                  type="number"
+                  placeholder="Enter amount"
+                  value={balanceForm.amount}
+                  onChange={(e) => setBalanceForm({...balanceForm, amount: e.target.value})}
+                  className="w-full bg-gray-800 border-gray-700 text-white"
+                />
+              </div>
+              
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">Notes (Optional)</label>
+                <textarea
+                  placeholder="Reason for adjustment..."
+                  value={balanceForm.notes}
+                  onChange={(e) => setBalanceForm({...balanceForm, notes: e.target.value})}
+                  className="w-full p-3 bg-gray-800 border border-gray-700 rounded-xl text-white resize-none h-20 focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            
+            {/* Actions */}
+            <div className="flex gap-3 p-6 pt-0">
+              <Button
+                onClick={() => setBalanceModal({ show: false })}
+                variant="outline"
+                className="flex-1 border-gray-600 text-gray-300"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBalanceAdjust}
+                disabled={processing || !balanceForm.amount}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              >
+                {processing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Adjust Balance
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subscription Management Modal */}
+      {subscriptionModal.show && userData && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-gray-900 rounded-2xl w-full max-w-lg border border-gray-700 shadow-2xl my-8">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-700">
+              <h3 className="text-xl font-bold text-white">Subscription Management</h3>
+              <button onClick={() => setSubscriptionModal({ show: false })} className="text-gray-400 hover:text-white">
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            
+            {/* User Info */}
+            <div className="p-4 mx-6 mt-4 bg-gray-800/50 rounded-xl">
+              <p className="text-white font-semibold text-lg">{userData.user.name}</p>
+              <p className="text-gray-400 text-sm">{userData.user.email}</p>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-gray-400 text-sm">Current Plan:</span>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  userData.user.subscription_plan === 'elite' ? 'bg-amber-500/20 text-amber-400' :
+                  userData.user.subscription_plan === 'growth' ? 'bg-emerald-500/20 text-emerald-400' :
+                  userData.user.subscription_plan === 'startup' ? 'bg-blue-500/20 text-blue-400' :
+                  'bg-gray-500/20 text-gray-400'
+                }`}>
+                  {(userData.user.subscription_plan || 'Explorer').charAt(0).toUpperCase() + (userData.user.subscription_plan || 'explorer').slice(1)}
+                </span>
+              </div>
+            </div>
+            
+            {/* Tabs */}
+            <div className="flex gap-2 px-6 mt-4">
+              <button
+                onClick={() => setSubscriptionTab('update')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
+                  subscriptionTab === 'update' 
+                    ? 'bg-purple-600 text-white' 
+                    : 'bg-gray-800 text-gray-400'
+                }`}
+              >
+                <Edit className="w-4 h-4" /> Update Plan
+              </button>
+              <button
+                onClick={() => setSubscriptionTab('history')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
+                  subscriptionTab === 'history' 
+                    ? 'bg-purple-600 text-white' 
+                    : 'bg-gray-800 text-gray-400'
+                }`}
+              >
+                <Clock className="w-4 h-4" /> History ({userData.transactions.subscriptions?.length || 0})
+              </button>
+            </div>
+            
+            {subscriptionTab === 'update' ? (
+              <div className="p-6 space-y-5">
+                {/* Step 1: Select Plan */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-3">Step 1: Select Plan</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {['explorer', 'startup', 'growth', 'elite'].map(plan => (
+                      <button
+                        key={plan}
+                        onClick={() => setSubscriptionForm({...subscriptionForm, plan})}
+                        className={`p-3 rounded-xl font-medium capitalize transition-all ${
+                          subscriptionForm.plan === plan 
+                            ? 'bg-purple-600 text-white border-2 border-purple-400' 
+                            : 'bg-gray-800 text-gray-400 border border-gray-700 hover:border-purple-500'
+                        }`}
+                      >
+                        {plan}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Step 2: Set Duration */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-3">Step 2: Set Duration (Days)</label>
+                  <div className="grid grid-cols-4 gap-2 mb-3">
+                    {[30, 90, 180, 365].map(days => (
+                      <button
+                        key={days}
+                        onClick={() => setSubscriptionForm({...subscriptionForm, duration: days})}
+                        className={`p-3 rounded-xl font-medium transition-all ${
+                          subscriptionForm.duration === days 
+                            ? 'bg-purple-600 text-white border-2 border-purple-400' 
+                            : 'bg-gray-800 text-gray-400 border border-gray-700 hover:border-purple-500'
+                        }`}
+                      >
+                        {days === 365 ? '1 Year' : `${days} Days`}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-gray-400">Custom:</span>
+                    <Input
+                      type="number"
+                      value={subscriptionForm.customDuration}
+                      onChange={(e) => setSubscriptionForm({...subscriptionForm, customDuration: parseInt(e.target.value) || 30, duration: 'custom'})}
+                      className="w-24 bg-gray-800 border-gray-700 text-white"
+                    />
+                    <span className="text-gray-400">days</span>
+                  </div>
+                </div>
+                
+                {/* Step 3: Expiry Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-3">Step 3: Expiry Date</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setSubscriptionForm({...subscriptionForm, expiryMode: 'auto'})}
+                      className={`p-4 rounded-xl transition-all text-left ${
+                        subscriptionForm.expiryMode === 'auto' 
+                          ? 'bg-green-600/20 border-2 border-green-500 text-green-400' 
+                          : 'bg-gray-800 border border-gray-700 text-gray-400'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <Calendar className="w-4 h-4" />
+                        <span className="font-medium">Auto: {getAutoExpiryDate()}</span>
+                      </div>
+                      <p className="text-xs opacity-75">Today + {subscriptionForm.duration === 'custom' ? subscriptionForm.customDuration : subscriptionForm.duration} days</p>
+                    </button>
+                    <button
+                      onClick={() => setSubscriptionForm({...subscriptionForm, expiryMode: 'manual'})}
+                      className={`p-4 rounded-xl transition-all text-left ${
+                        subscriptionForm.expiryMode === 'manual' 
+                          ? 'bg-blue-600/20 border-2 border-blue-500 text-blue-400' 
+                          : 'bg-gray-800 border border-gray-700 text-gray-400'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <Edit className="w-4 h-4" />
+                        <span className="font-medium">Manual Date</span>
+                      </div>
+                      <p className="text-xs opacity-75">Set specific date</p>
+                    </button>
+                  </div>
+                  {subscriptionForm.expiryMode === 'manual' && (
+                    <Input
+                      type="date"
+                      value={subscriptionForm.manualExpiry}
+                      onChange={(e) => setSubscriptionForm({...subscriptionForm, manualExpiry: e.target.value})}
+                      className="mt-3 w-full bg-gray-800 border-gray-700 text-white"
+                    />
+                  )}
+                </div>
+                
+                {/* Free Subscription Toggle */}
+                <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-xl">
+                  <div>
+                    <p className="text-white font-medium">Free Subscription</p>
+                    <p className="text-gray-400 text-sm">Grant without payment</p>
+                  </div>
+                  <button
+                    onClick={() => setSubscriptionForm({...subscriptionForm, isFree: !subscriptionForm.isFree})}
+                    className={`w-14 h-8 rounded-full transition-all ${subscriptionForm.isFree ? 'bg-green-500' : 'bg-gray-700'}`}
+                  >
+                    <div className={`w-6 h-6 bg-white rounded-full shadow transform transition-transform ${subscriptionForm.isFree ? 'translate-x-7' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+                
+                {/* Admin Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Admin Notes</label>
+                  <textarea
+                    placeholder="Notes about this update..."
+                    value={subscriptionForm.adminNotes}
+                    onChange={(e) => setSubscriptionForm({...subscriptionForm, adminNotes: e.target.value})}
+                    className="w-full p-3 bg-gray-800 border border-gray-700 rounded-xl text-white resize-none h-20"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 max-h-64 overflow-y-auto">
+                {userData.transactions.subscriptions?.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No subscription history</p>
+                ) : (
+                  <div className="space-y-2">
+                    {userData.transactions.subscriptions?.map((sub, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                        <div>
+                          <p className="text-white font-medium capitalize">{sub.plan || sub.subscription_plan}</p>
+                          <p className="text-gray-400 text-xs">{formatDate(sub.created_at || sub.start_date)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-gray-400 text-sm">Expires: {formatDate(sub.expiry || sub.end_date)}</p>
+                          <span className={`px-2 py-0.5 rounded text-xs ${sub.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                            {sub.status || 'completed'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Actions */}
+            {subscriptionTab === 'update' && (
+              <div className="flex gap-3 p-6 pt-0">
+                <Button
+                  onClick={() => setSubscriptionModal({ show: false })}
+                  variant="outline"
+                  className="flex-1 border-gray-600 text-gray-300"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSubscriptionUpdate}
+                  disabled={processing}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {processing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Crown className="w-4 h-4 mr-2" />}
+                  Update Subscription
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
         </>
       )}
     </div>
