@@ -333,6 +333,17 @@ async def approve_vip_payment(payment_id: str, request: Request):
             except Exception as e:
                 logging.error(f"Error checking referral reward: {e}")
         
+        # Send notification to user
+        plan_name = subscription_plan.upper()
+        await send_notification(
+            user_id=user_id,
+            title="🎉 Subscription Activated!",
+            message=f"Congratulations! Your {plan_name} subscription has been activated for {duration_days} days. Enjoy premium benefits!",
+            notif_type="subscription_approved",
+            icon="🎉",
+            action_url="/subscription"
+        )
+        
         if start_date != now:
             remaining = (start_date - now).days
             message = f"Payment approved! Subscription extended. {remaining} remaining + {duration_days} new = {remaining + duration_days} total days"
