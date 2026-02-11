@@ -30,14 +30,29 @@ const AdminSubscriptionManagement = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, pendingRes, approvedRes] = await Promise.all([
+      // Fetch data with individual error handling
+      const [statsRes, pendingRes, approvedRes] = await Promise.allSettled([
         axios.get(`${API}/api/admin/subscription-stats`),
         axios.get(`${API}/api/admin/vip-payments?status=pending&limit=20`),
         axios.get(`${API}/api/admin/vip-payments?status=approved&limit=50`)
       ]);
-      setStats(statsRes.data);
-      setPendingPayments(pendingRes.data?.payments || []);
-      setApprovedPayments(approvedRes.data?.payments || []);
+      
+      // Handle stats - may fail on some deployments
+      if (statsRes.status === 'fulfilled') {
+        setStats(statsRes.value.data);
+      } else {
+        console.warn('Stats API not available:', statsRes.reason?.response?.status);
+      }
+      
+      // Handle pending payments
+      if (pendingRes.status === 'fulfilled') {
+        setPendingPayments(pendingRes.value.data?.payments || []);
+      }
+      
+      // Handle approved payments
+      if (approvedRes.status === 'fulfilled') {
+        setApprovedPayments(approvedRes.value.data?.payments || []);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load data');
