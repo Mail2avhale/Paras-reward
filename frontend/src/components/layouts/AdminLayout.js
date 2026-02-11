@@ -6,7 +6,7 @@ import {
   Gift, ShoppingCart, Video, Award, Activity, Package,
   Truck, Store, HeadphonesIcon, UserCog, DollarSign,
   ChevronLeft, ChevronRight, LogOut, Bell, Search,
-  Menu, X, Shield, Zap, Wallet, TrendingUp, ChevronDown,
+  Menu, X, Shield, Wallet, TrendingUp, ChevronDown,
   Globe, Phone, Mail, Image, Share2, Cpu, ToggleLeft,
   AlertTriangle, Smartphone, Building, Crown, CloudRain, AlertOctagon, Database, Eye,
   ShieldAlert, CheckCircle
