@@ -98,7 +98,7 @@ const FeatureCard = ({ icon: Icon, title, description, color, isNew, onClick, ct
 );
 
 // Subscription plan card
-const PlanCard = ({ name, price, features, color, icon: Icon, isPopular, onClick, ctaText }) => (
+const PlanCard = ({ name, price, originalPrice, features, color, icon: Icon, isPopular, onClick, ctaText }) => (
   <motion.div
     whileHover={{ y: -8 }}
     className={`relative ${isPopular ? 'z-10' : ''}`}
@@ -120,10 +120,20 @@ const PlanCard = ({ name, price, features, color, icon: Icon, isPopular, onClick
           {price === 'FREE' ? (
             <span className="text-3xl font-bold text-gray-900">{price}</span>
           ) : (
-            <>
+            <div>
+              {originalPrice && (
+                <span className="text-lg text-gray-400 line-through mr-2">₹{originalPrice}</span>
+              )}
               <span className="text-3xl font-bold text-gray-900">₹{price}</span>
               <span className="text-gray-500">/month</span>
-            </>
+              {originalPrice && (
+                <div className="mt-1">
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                    {Math.round((1 - parseInt(price) / parseInt(originalPrice)) * 100)}% OFF
+                  </span>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
