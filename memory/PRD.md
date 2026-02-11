@@ -33,6 +33,22 @@ Build a PRC (point-based reward currency) system web application where users can
 ## What's Been Implemented (Latest: Feb 2026)
 
 ### Recently Completed (Feb 11, 2026)
+
+- [x] **PIN Authentication Logic Fix (P1 - Critical)**
+  - Fixed login for users with only `pin_hash` (no password_hash or password)
+  - Priority order: `pin_hash` > `password_hash` > `password` (legacy)
+  - Files modified:
+    - `/app/backend/server.py` (line ~4275)
+    - `/app/backend/routes/auth.py` (line ~438)
+  - Testing: Created `pinonly@test.com` user - login successful
+
+- [x] **Screenshot Visibility Fix in Admin Subscription Modal**
+  - Fixed Review Payment modal in admin-frontend
+  - Screenshot now bounded with `max-h-64` and `object-contain`
+  - Added clickable overlay to view full size in new tab
+  - Added hint text: "Tap/Click image to view full screenshot"
+  - File: `/app/admin-frontend/src/pages/AdminSubscriptionManagement.js`
+
 - [x] **Admin Sidebar - Request Approvals Collapsible Menu**
   - Created new "Request Approvals" collapsible parent menu in admin sidebar
   - Sub-items: KYC, Subscription, Bill, Gift Vouchers, Luxury Life Claim
