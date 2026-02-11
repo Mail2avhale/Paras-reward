@@ -14,8 +14,12 @@ const AdminSubscriptionManagement = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
   const [pendingPayments, setPendingPayments] = useState([]);
+  const [approvedPayments, setApprovedPayments] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [processing, setProcessing] = useState(null);
+  const [activeTab, setActiveTab] = useState('pending'); // pending, approved
+  const [editModal, setEditModal] = useState({ show: false, payment: null });
+  const [viewModal, setViewModal] = useState({ show: false, payment: null });
 
   // Fetch data on mount
   useEffect(() => {
@@ -25,12 +29,14 @@ const AdminSubscriptionManagement = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, pendingRes] = await Promise.all([
+      const [statsRes, pendingRes, approvedRes] = await Promise.all([
         axios.get(`${API}/api/admin/subscription-stats`),
-        axios.get(`${API}/api/admin/vip-payments?status=pending&limit=20`)
+        axios.get(`${API}/api/admin/vip-payments?status=pending&limit=20`),
+        axios.get(`${API}/api/admin/vip-payments?status=approved&limit=50`)
       ]);
       setStats(statsRes.data);
       setPendingPayments(pendingRes.data?.payments || []);
+      setApprovedPayments(approvedRes.data?.payments || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load data');
