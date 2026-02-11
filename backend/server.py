@@ -24933,6 +24933,80 @@ async def clear_all_notifications(uid: str):
     return {"success": True, "deleted_count": result.deleted_count}
 
 
+@api_router.post("/notifications/send")
+async def send_notification_to_user(request: Request):
+    """Send a notification to a specific user - Admin only"""
+    data = await request.json()
+    user_uid = data.get("user_uid")
+    title = data.get("title", "New Notification")
+    message = data.get("message", "")
+    notification_type = data.get("type", "system")
+    icon = data.get("icon", "🔔")
+    action_url = data.get("action_url")
+    
+    if not user_uid:
+        raise HTTPException(status_code=400, detail="user_uid is required")
+    
+    notification = {
+        "notification_id": str(uuid.uuid4()),
+        "user_id": user_uid,
+        "user_uid": user_uid,
+        "title": title,
+        "message": message,
+        "type": notification_type,
+        "icon": icon,
+        "action_url": action_url,
+        "read": False,
+        "is_read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.notifications.insert_one(notification)
+    
+    return {"success": True, "notification_id": notification["notification_id"]}
+
+
+@api_router.post("/notifications/broadcast")
+async def broadcast_notification(request: Request):
+    """Broadcast notification to all users or specific plan users - Admin only"""
+    data = await request.json()
+    title = data.get("title", "New Announcement")
+    message = data.get("message", "")
+    notification_type = data.get("type", "announcement")
+    icon = data.get("icon", "📢")
+    action_url = data.get("action_url")
+    target_plan = data.get("target_plan")  # Optional: startup, growth, elite, all
+    
+    # Get target users
+    query = {}
+    if target_plan and target_plan != "all":
+        query["subscription_plan"] = target_plan
+    
+    users = await db.users.find(query, {"uid": 1}).to_list(10000)
+    
+    notifications = []
+    now = datetime.now(timezone.utc).isoformat()
+    
+    for user in users:
+        notifications.append({
+            "notification_id": str(uuid.uuid4()),
+            "user_id": user["uid"],
+            "user_uid": user["uid"],
+            "title": title,
+            "message": message,
+            "type": notification_type,
+            "icon": icon,
+            "action_url": action_url,
+            "read": False,
+            "is_read": False,
+            "created_at": now
+        })
+    
+    if notifications:
+        await db.notifications.insert_many(notifications)
+    
+    return {"success": True, "sent_count": len(notifications)}
+
+
 # ========== USER SEARCH & DISCOVERY ==========
 
 @api_router.get("/social/search-users")
