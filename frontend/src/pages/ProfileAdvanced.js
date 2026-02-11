@@ -671,65 +671,6 @@ const ProfileAdvanced = ({ user, onLogout }) => {
           </div>
         </div>
 
-        {/* Change Password */}
-        <button 
-          onClick={() => setShowPasswordSection(!showPasswordSection)}
-          className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl p-4 flex items-center justify-between"
-        >
-          <span className="flex items-center gap-3 text-white">
-            <Lock className="w-5 h-5 text-purple-500" />
-            {t.changePassword}
-          </span>
-          <ChevronRight className="w-5 h-5 text-gray-500" />
-        </button>
-
-        {showPasswordSection && (
-          <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 space-y-4">
-            <div>
-              <label className="text-gray-400 text-sm mb-1 block">Current Password</label>
-              <div className="relative">
-                <Input 
-                  type={showPassword ? 'text' : 'password'}
-                  value={passwordData.current}
-                  onChange={(e) => setPasswordData({...passwordData, current: e.target.value})}
-                  className="bg-gray-800 border-gray-700 text-white pr-10"
-                />
-                <button 
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="text-gray-400 text-sm mb-1 block">New Password</label>
-              <Input 
-                type="password"
-                value={passwordData.new}
-                onChange={(e) => setPasswordData({...passwordData, new: e.target.value})}
-                className="bg-gray-800 border-gray-700 text-white"
-              />
-            </div>
-            <div>
-              <label className="text-gray-400 text-sm mb-1 block">Confirm Password</label>
-              <Input 
-                type="password"
-                value={passwordData.confirm}
-                onChange={(e) => setPasswordData({...passwordData, confirm: e.target.value})}
-                className="bg-gray-800 border-gray-700 text-white"
-              />
-            </div>
-            <Button 
-              onClick={handleChangePassword}
-              disabled={saving}
-              className="w-full bg-purple-600 hover:bg-purple-700"
-            >
-              {saving ? 'Changing...' : 'Change Password'}
-            </Button>
-          </div>
-        )}
-
         {/* Change PIN */}
         <button 
           onClick={() => setShowPinSection(!showPinSection)}
