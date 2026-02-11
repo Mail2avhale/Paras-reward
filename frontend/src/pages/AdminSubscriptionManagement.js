@@ -168,7 +168,7 @@ const AdminSubscriptionManagement = () => {
           label="Startup"
           value={planCounts.startup || 0}
           color="blue"
-          subtitle="₹199 - ₹1,799"
+          subtitle="₹299/month"
           onClick={() => setActiveTab('approved')}
         />
         <StatCard
@@ -176,7 +176,7 @@ const AdminSubscriptionManagement = () => {
           label="Growth"
           value={planCounts.growth || 0}
           color="emerald"
-          subtitle="₹499 - ₹4,499"
+          subtitle="₹549/month"
           onClick={() => setActiveTab('approved')}
         />
         <StatCard
@@ -184,7 +184,7 @@ const AdminSubscriptionManagement = () => {
           label="Elite"
           value={planCounts.elite || 0}
           color="amber"
-          subtitle="₹799 - ₹7,191"
+          subtitle="₹799/month"
           onClick={() => setActiveTab('approved')}
         />
       </div>
