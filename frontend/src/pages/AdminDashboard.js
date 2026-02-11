@@ -496,7 +496,7 @@ const HeroStatCard = ({ icon: Icon, label, value, subValue, color, onClick }) =>
 };
 
 // Subscription Card Component
-const SubscriptionCard = ({ plan, count, total, color, icon }) => {
+const SubscriptionCard = ({ plan, count, total, color, icon, onClick }) => {
   const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
   
   const colorClasses = {
@@ -507,7 +507,10 @@ const SubscriptionCard = ({ plan, count, total, color, icon }) => {
   };
 
   return (
-    <div className="p-3 bg-gray-800/50 rounded-xl">
+    <div 
+      className={`p-3 bg-gray-800/50 rounded-xl ${onClick ? 'cursor-pointer hover:bg-gray-800/80 transition-all' : ''}`}
+      onClick={onClick}
+    >
       <div className="flex items-center justify-between mb-2">
         <span className="text-lg">{icon}</span>
         <span className={`text-xs ${colorClasses[color].text}`}>{percentage}%</span>
