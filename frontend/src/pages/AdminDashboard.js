@@ -259,15 +259,24 @@ const AdminDashboard = ({ user }) => {
 
         {/* Revenue Stats */}
         <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-800">
-          <div className="text-center">
+          <div 
+            className="text-center p-2 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-all"
+            onClick={() => navigate('/admin/finance')}
+          >
             <p className="text-2xl font-bold text-emerald-400">₹{(stats?.revenue?.vip_fees || 0).toLocaleString()}</p>
             <p className="text-xs text-gray-500">Subscription Revenue</p>
           </div>
-          <div className="text-center">
+          <div 
+            className="text-center p-2 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-all"
+            onClick={() => navigate('/admin/subscriptions?tab=approved')}
+          >
             <p className="text-2xl font-bold text-purple-400">{stats?.vip_payments?.approved || 0}</p>
             <p className="text-xs text-gray-500">Approved Payments</p>
           </div>
-          <div className="text-center">
+          <div 
+            className="text-center p-2 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-all"
+            onClick={() => navigate('/admin/subscriptions?tab=pending')}
+          >
             <p className="text-2xl font-bold text-amber-400">{stats?.vip_payments?.pending || 0}</p>
             <p className="text-xs text-gray-500">Pending Approval</p>
           </div>
