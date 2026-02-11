@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://modular-routes-4.preview.emergentagent.com",
+    "url": "https://modular-backend-44.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
