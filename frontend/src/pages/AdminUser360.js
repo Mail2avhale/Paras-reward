@@ -1250,28 +1250,24 @@ const AdminUser360 = ({ user: adminUser }) => {
                   {userData.user.mining_active ? 'Pause Mining' : 'Resume Mining'}
                 </Button>
                 <Button
-                  onClick={() => {
-                    const amount = prompt('Enter PRC amount to add/subtract (use negative for deduction):');
-                    if (amount) handleQuickAction('adjust_balance', { amount: parseFloat(amount) });
-                  }}
+                  onClick={openBalanceModal}
                   disabled={processing}
                   variant="outline"
                   className="h-auto py-3 border-blue-500/50 text-blue-400"
+                  data-testid="adjust-balance-button"
                 >
                   <Coins className="w-4 h-4 mr-2" />
                   Adjust Balance
                 </Button>
                 <Button
-                  onClick={() => {
-                    const cap = prompt('Enter daily PRC cap (0 for unlimited):');
-                    if (cap !== null) handleQuickAction('set_cap', { cap: parseInt(cap) });
-                  }}
+                  onClick={openSubscriptionModal}
                   disabled={processing}
                   variant="outline"
                   className="h-auto py-3 border-purple-500/50 text-purple-400"
+                  data-testid="manage-subscription-button"
                 >
-                  <BarChart3 className="w-4 h-4 mr-2" />
-                  Set Daily Cap
+                  <Crown className="w-4 h-4 mr-2" />
+                  Manage Plan
                 </Button>
                 <Button
                   onClick={() => {
@@ -1298,15 +1294,15 @@ const AdminUser360 = ({ user: adminUser }) => {
                 </Button>
                 <Button
                   onClick={() => {
-                    const message = prompt('Enter notification message:');
-                    if (message) handleQuickAction('send_notification', { message });
+                    const cap = prompt('Enter daily PRC cap (0 for unlimited):');
+                    if (cap !== null) handleQuickAction('set_cap', { cap: parseInt(cap) });
                   }}
                   disabled={processing}
                   variant="outline"
-                  className="h-auto py-3 border-amber-500/50 text-amber-400"
+                  className="h-auto py-3 border-cyan-500/50 text-cyan-400"
                 >
-                  <Bell className="w-4 h-4 mr-2" />
-                  Send Notification
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Set Daily Cap
                 </Button>
                 <Button
                   onClick={openEditModal}
