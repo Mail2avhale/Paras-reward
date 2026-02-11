@@ -215,43 +215,43 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/refund" element={<RefundPolicy />} />
             <Route path="/rewards-home" element={<RewardsHome />} />
             
-            {/* Protected Routes */}
-            <Route path="/dashboard" element={user ? <DashboardModern user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            {/* Protected Routes - User Only (Admin/Manager redirected to /admin) */}
+            <Route path="/dashboard" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DashboardModern user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             {/* fintech route removed - not in use */}
-            <Route path="/support" element={user ? <SupportTickets user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-            <Route path="/daily-rewards" element={user ? <DailyRewards user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/support" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <SupportTickets user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
+            <Route path="/daily-rewards" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DailyRewards user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             <Route path="/mining" element={<Navigate to="/daily-rewards" />} /> {/* Redirect old route */}
-            <Route path="/game" element={user ? <TapGame user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/game" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <TapGame user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             {/* Removed: Treasure Hunt and Scratch Card games */}
-            <Route path="/referrals" element={user ? <Referrals user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/referrals" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Referrals user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             <Route path="/referrals/dashboard" element={<Navigate to="/referrals" replace />} />
             <Route path="/referrals/ai" element={<Navigate to="/referrals" replace />} />
             <Route path="/network" element={<Navigate to="/referrals" replace />} />
-            <Route path="/marketplace" element={user ? <Marketplace user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-            <Route path="/flash-sales" element={user ? <FlashSalesPage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-            <Route path="/orders" element={user ? <Orders user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-            <Route path="/activity" element={user ? <MyActivity user={user} /> : <Navigate to="/login" />} />
+            <Route path="/marketplace" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Marketplace user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
+            <Route path="/flash-sales" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <FlashSalesPage user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
+            <Route path="/orders" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Orders user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
+            <Route path="/activity" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <MyActivity user={user} />) : <Navigate to="/login" />} />
             <Route path="/vip" element={<Navigate to="/subscription" replace />} /> {/* Legacy VIP route redirects to new subscription system */}
-            <Route path="/subscription" element={user ? <SubscriptionPlans user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-            <Route path="/kyc" element={user ? <KYCVerification user={user} /> : <Navigate to="/login" />} />
+            <Route path="/subscription" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <SubscriptionPlans user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
+            <Route path="/kyc" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <KYCVerification user={user} />) : <Navigate to="/login" />} />
             {/* Removed: Wallet/Withdrawal functionality */}
             {/* Removed: Leaderboard page for AdMob compliance */}
-            <Route path="/referral-earnings" element={user ? <ReferralEarningsHistory user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/referral-earnings" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <ReferralEarningsHistory user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             {/* Removed: Gamification/Achievements page for AdMob compliance */}
-            <Route path="/profile" element={user ? <ProfileAdvanced user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/profile" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <ProfileAdvanced user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             {/* Legacy route redirect - keeping for backward compatibility */}
             <Route path="/profile-advanced" element={<Navigate to="/profile" replace />} />
             
-            {/* Social Feature Routes */}
+            {/* Social Feature Routes - User Only */}
             <Route path="/profile/:uid" element={<PublicProfile user={user} />} />
-            <Route path="/network-feed" element={user ? <NetworkFeed user={user} /> : <Navigate to="/login" />} />
-            <Route path="/messages" element={user ? <Messages user={user} /> : <Navigate to="/login" />} />
-            <Route path="/messages/:recipientUid" element={user ? <Messages user={user} /> : <Navigate to="/login" />} />
+            <Route path="/network-feed" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <NetworkFeed user={user} />) : <Navigate to="/login" />} />
+            <Route path="/messages" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Messages user={user} />) : <Navigate to="/login" />} />
+            <Route path="/messages/:recipientUid" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Messages user={user} />) : <Navigate to="/login" />} />
             <Route path="/followers/:uid" element={<FollowersList user={user} type="followers" />} />
             <Route path="/following/:uid" element={<FollowersList user={user} type="following" />} />
-            <Route path="/notifications" element={user ? <Notifications user={user} /> : <Navigate to="/login" />} />
-            <Route path="/luxury-life" element={user ? <ParasLuxuryLife user={user} /> : <Navigate to="/login" />} />
-            <Route path="/network-tree" element={user ? <NetworkTreeAdvanced user={user} /> : <Navigate to="/login" />} />
+            <Route path="/notifications" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Notifications user={user} />) : <Navigate to="/login" />} />
+            <Route path="/luxury-life" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <ParasLuxuryLife user={user} />) : <Navigate to="/login" />} />
+            <Route path="/network-tree" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <NetworkTreeAdvanced user={user} />) : <Navigate to="/login" />} />
             
             {/* Stock requests removed - stockist system deprecated */}
             <Route path="/admin" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminDashboard user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
