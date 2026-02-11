@@ -205,7 +205,7 @@ async def approve_vip_payment(payment_id: str, request: Request):
                     start_date = now
         
         new_expiry = (start_date + timedelta(days=duration_days)).isoformat()
-        subscription_plan = payment.get("subscription_plan", "startup")
+        # Note: subscription_plan is already set above using correct_plan or original_plan
         
         await db.users.update_one(
             {"uid": user_id},
