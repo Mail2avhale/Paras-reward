@@ -490,6 +490,16 @@ async def approve_kyc(uid: str, request: Request):
             }}
         )
         
+        # Send notification to user
+        await send_notification(
+            user_id=uid,
+            title="✅ KYC Verified Successfully!",
+            message="Congratulations! Your KYC verification is complete. You can now access all features and make withdrawals.",
+            notif_type="kyc_approved",
+            icon="✅",
+            action_url="/profile"
+        )
+        
         if log_admin_action:
             await log_admin_action(
                 admin_uid=admin_id,
