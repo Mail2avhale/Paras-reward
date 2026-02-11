@@ -485,34 +485,42 @@ async def approve_kyc(uid: str, request: Request):
 @router.post("/kyc/{uid}/reject")
 async def reject_kyc(uid: str, request: Request):
     """Reject user KYC"""
-    data = await request.json()
-    admin_id = data.get("admin_id")
-    reason = data.get("reason", "Documents not valid")
-    
-    user = await db.users.find_one({"uid": uid})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    await db.users.update_one(
-        {"uid": uid},
-        {"$set": {
-            "kyc_status": "rejected",
-            "kyc_rejection_reason": reason,
-            "kyc_rejected_at": datetime.now(timezone.utc).isoformat(),
-            "kyc_rejected_by": admin_id
-        }}
-    )
-    
-    if log_admin_action:
-        await log_admin_action(
-            admin_uid=admin_id,
-            action="kyc_rejected",
-            entity_type="user",
-            entity_id=uid,
-            details={"reason": reason}
+    try:
+        try:
+            data = await request.json()
+        except:
+            data = {}
+        admin_id = data.get("admin_id")
+        reason = data.get("reason", "Documents not valid")
+        
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {
+                "kyc_status": "rejected",
+                "kyc_rejection_reason": reason,
+                "kyc_rejected_at": datetime.now(timezone.utc).isoformat(),
+                "kyc_rejected_by": admin_id
+            }}
         )
-    
-    return {"success": True, "message": "KYC rejected"}
+        
+        if log_admin_action:
+            await log_admin_action(
+                admin_uid=admin_id,
+                action="kyc_rejected",
+                entity_type="user",
+                entity_id=uid,
+                details={"reason": reason}
+            )
+        
+        return {"success": True, "message": "KYC rejected"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ========== ADMIN EXISTENCE CHECK ==========
