@@ -540,6 +540,16 @@ async def reject_kyc(uid: str, request: Request):
             }}
         )
         
+        # Send notification to user
+        await send_notification(
+            user_id=uid,
+            title="❌ KYC Verification Failed",
+            message=f"Your KYC verification was rejected. Reason: {reason}. Please re-submit with correct documents.",
+            notif_type="kyc_rejected",
+            icon="❌",
+            action_url="/kyc"
+        )
+        
         if log_admin_action:
             await log_admin_action(
                 admin_uid=admin_id,
