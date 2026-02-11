@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { 
   Crown, Users, TrendingUp, Rocket, Clock, CheckCircle, XCircle,
   Search, RefreshCw, Eye, ChevronRight, AlertCircle, Edit, Trash2, X,
@@ -12,6 +13,7 @@ import { toast } from 'sonner';
 const API = process.env.REACT_APP_BACKEND_URL;
 
 const AdminSubscriptionManagement = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
   const [pendingPayments, setPendingPayments] = useState([]);
