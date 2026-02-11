@@ -1225,13 +1225,11 @@ const AdminUser360 = ({ user: adminUser }) => {
                       <History className="w-4 h-4" />
                       Subscription History ({userData.transactions.subscriptions?.length || 0})
                     </h4>
-                  
-                  {/* Subscription History */}
-                  <p className="text-gray-400 text-sm font-medium">Payment History</p>
                   {userData.transactions.subscriptions?.length === 0 ? (
                     <p className="text-gray-500 text-center py-8">No subscription payments found</p>
                   ) : (
-                    userData.transactions.subscriptions?.map((sub, idx) => (
+                    <div className="space-y-2">
+                    {userData.transactions.subscriptions?.map((sub, idx) => (
                       <div key={idx} className="flex items-center justify-between p-4 bg-gray-800 rounded-xl">
                         <div className="flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
