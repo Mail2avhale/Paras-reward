@@ -62,6 +62,23 @@ Build a PRC (point-based reward currency) system web application where users can
   - Deleted AdvancedUserManagement.js file
   - File: `/app/frontend/src/pages/AdminUser360.js`
 
+- [x] **Adjust Balance Modal in User 360°**
+  - Professional modal with user info (Name, Current PRC, Plan)
+  - Balance Type dropdown: PRC Balance, Cashback Wallet
+  - Operation buttons: Add (green), Deduct (red), Set (blue)
+  - Amount input + Notes textarea
+  - Backend action handler for balance adjustment
+  - File: `/app/frontend/src/pages/AdminUser360.js`
+
+- [x] **Subscription Management Modal in User 360°**
+  - Update Plan / History tabs
+  - Step 1: Plan selection (Explorer, Startup, Growth, Elite)
+  - Step 2: Duration (30, 90, 180, 365 days + Custom)
+  - Step 3: Expiry Date (Auto-calculated or Manual)
+  - Free Subscription toggle
+  - Admin Notes
+  - Backend action: update_subscription in `/app/backend/server.py`
+
 ### Recently Completed (Feb 10, 2026)
 - [x] **Stock/Stockist System Removal**
   - Removed Stock Request System (~820 lines)
