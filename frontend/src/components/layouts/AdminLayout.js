@@ -530,19 +530,15 @@ const AdminLayout = ({ children, user, onLogout }) => {
               <p className="text-xs text-gray-400 truncate">{user?.email}</p>
             </div>
           )}
-          <div className="flex gap-2">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm"
-              title="Switch to User View"
-            >
-              <Zap className="h-4 w-4" />
-              {!sidebarCollapsed && <span>User View</span>}
-            </button>
-            <button
-              onClick={onLogout}
-              className="flex items-center justify-center p-2 bg-red-600 hover:bg-red-700 rounded-lg"
-              title="Logout"
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm"
+            title="Logout"
+          >
+            <LogOut className="h-4 w-4" />
+            {!sidebarCollapsed && <span>Logout</span>}
+          </button>
+        </div>
             >
               <LogOut className="h-4 w-4" />
             </button>
