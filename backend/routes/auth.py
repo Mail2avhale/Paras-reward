@@ -454,9 +454,9 @@ async def login(
                 await create_security_alert(
                     alert_type="brute_force",
                     severity="critical",
-                    title="🚨 Account Locked - 24 Hour Lockout",
-                    message=f"Account {user.get('email', identifier)} has been locked for 24 hours due to 5 failed login attempts.",
-                    details={"identifier": identifier, "email": user.get('email'), "lockout_hours": 24, "ip": real_ip},
+                    title="🚨 Account Locked - 2 Hour Lockout",
+                    message=f"Account {user.get('email', identifier)} has been locked for 2 hours due to 5 failed login attempts.",
+                    details={"identifier": identifier, "email": user.get('email'), "lockout_hours": 2, "ip": real_ip},
                     ip_address=real_ip,
                     user_identifier=identifier
                 )
