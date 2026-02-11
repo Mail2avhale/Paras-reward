@@ -45,6 +45,21 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ### Recently Completed (Feb 11, 2026)
 
+- [x] **Subscription Approval "Expecting value" Bug Fix (P0 - Critical)**
+  - Fixed JSON parse error when clicking Approve button
+  - Root cause: Frontend sending POST with no body, backend expecting JSON
+  - Frontend fix: Added empty `{}` body to axios.post call
+  - Backend fix: Added try/except to handle empty request body
+  - Also fixed subscription_plan being overwritten incorrectly
+  - Files: `/app/frontend/src/pages/AdminSubscriptionManagement.js`, `/app/backend/routes/admin_vip.py`
+  - Testing: 14/14 tests passed (100%)
+
+- [x] **Image Preview Modal Fix**
+  - Payment screenshot now opens in modal instead of blank page
+  - Added close button and backdrop click to close
+  - Added user name and amount info in modal footer
+  - File: `/app/frontend/src/pages/AdminSubscriptionManagement.js`
+
 - [x] **PIN Authentication Logic Fix (P1 - Critical)**
   - Fixed login for users with only `pin_hash` (no password_hash or password)
   - Priority order: `pin_hash` > `password_hash` > `password` (legacy)
